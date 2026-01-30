@@ -46,8 +46,10 @@ const DEMO_VACATIONS = [
   { id: '2', personName: 'Julia Groen', startDate: '2026-01-29', endDate: '2026-02-02', note: 'Lang weekend', color: '#f9ff85' },
   { id: '3', personName: 'Bas den Ridder', startDate: '2026-01-30', endDate: '2026-01-30', note: 'Tandarts', color: '#a78bfa' },
   { id: '4', personName: 'Hanna Blaauboer', startDate: '2026-02-03', endDate: '2026-02-07', note: 'Voorjaarsvakantie', color: '#34d399' },
-  { id: '5', personName: 'Kay Maes', startDate: '2026-02-10', endDate: '2026-02-14', note: null, color: '#fb923c' },
-  { id: '6', personName: 'Emma van der Vos', startDate: '2026-01-28', endDate: '2026-01-29', note: 'Ziek', color: '#f87171' },
+  { id: '5', personName: 'Kay Maes', startDate: '2026-02-03', endDate: '2026-02-05', note: null, color: '#fb923c' },
+  { id: '6', personName: 'Emma van der Vos', startDate: '2026-01-28', endDate: '2026-01-30', note: 'Ziek', color: '#f87171' },
+  { id: '7', personName: 'Lotte van Sint Truiden', startDate: '2026-02-03', endDate: '2026-02-04', note: 'Cursus', color: '#22d3ee' },
+  { id: '8', personName: 'Justine Schellekens', startDate: '2026-02-03', endDate: '2026-02-03', note: null, color: '#f472b6' },
 ]
 
 // Demo vakantiedagen data (alsof Hanna dit heeft ingevoerd)
@@ -274,9 +276,9 @@ export default function DashboardHome() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Events & Absence Column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
           {/* Absence Overview - 2 Weeks */}
           <div className="card p-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -326,7 +328,7 @@ export default function DashboardHome() {
                       return (
                         <div
                           key={i}
-                          className={`rounded-xl p-3 min-h-[100px] transition-all ${
+                          className={`rounded-xl p-3 min-h-[140px] transition-all ${
                             isToday
                               ? 'bg-workx-lime/10 ring-2 ring-workx-lime/40'
                               : isPast
@@ -344,30 +346,30 @@ export default function DashboardHome() {
                           </div>
 
                           {absences.length === 0 ? (
-                            <div className="flex items-center justify-center h-12">
-                              <Icons.check size={16} className="text-green-500/40" />
+                            <div className="flex items-center justify-center h-16">
+                              <Icons.check size={18} className="text-green-500/40" />
                             </div>
                           ) : (
-                            <div className="space-y-1">
-                              {absences.slice(0, 3).map((v, j) => (
+                            <div className="space-y-1.5">
+                              {absences.slice(0, 5).map((v, j) => (
                                 <div
                                   key={j}
                                   className="flex items-center gap-1.5 group/person"
                                   title={v.personName}
                                 >
                                   <div
-                                    className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
                                     style={{ backgroundColor: v.color + '30', color: v.color }}
                                   >
                                     {v.personName.charAt(0)}
                                   </div>
-                                  <span className="text-[11px] text-white/70 truncate">
+                                  <span className="text-xs text-white/70 truncate">
                                     {v.personName.split(' ')[0]}
                                   </span>
                                 </div>
                               ))}
-                              {absences.length > 3 && (
-                                <p className="text-[10px] text-white/40 pl-6">+{absences.length - 3} meer</p>
+                              {absences.length > 5 && (
+                                <p className="text-[10px] text-white/40 pl-7">+{absences.length - 5} meer</p>
                               )}
                             </div>
                           )}
@@ -390,7 +392,7 @@ export default function DashboardHome() {
                       return (
                         <div
                           key={i}
-                          className="rounded-xl p-3 min-h-[100px] bg-white/[0.03] hover:bg-white/5 transition-all"
+                          className="rounded-xl p-3 min-h-[140px] bg-white/[0.03] hover:bg-white/5 transition-all"
                         >
                           <div className="text-center mb-2 pb-2 border-b border-white/5">
                             <p className="text-lg font-bold text-white/80">
@@ -402,30 +404,30 @@ export default function DashboardHome() {
                           </div>
 
                           {absences.length === 0 ? (
-                            <div className="flex items-center justify-center h-12">
-                              <Icons.check size={16} className="text-green-500/30" />
+                            <div className="flex items-center justify-center h-16">
+                              <Icons.check size={18} className="text-green-500/30" />
                             </div>
                           ) : (
-                            <div className="space-y-1">
-                              {absences.slice(0, 3).map((v, j) => (
+                            <div className="space-y-1.5">
+                              {absences.slice(0, 5).map((v, j) => (
                                 <div
                                   key={j}
                                   className="flex items-center gap-1.5"
                                   title={v.personName}
                                 >
                                   <div
-                                    className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
                                     style={{ backgroundColor: v.color + '30', color: v.color }}
                                   >
                                     {v.personName.charAt(0)}
                                   </div>
-                                  <span className="text-[11px] text-white/60 truncate">
+                                  <span className="text-xs text-white/60 truncate">
                                     {v.personName.split(' ')[0]}
                                   </span>
                                 </div>
                               ))}
-                              {absences.length > 3 && (
-                                <p className="text-[10px] text-white/40 pl-6">+{absences.length - 3} meer</p>
+                              {absences.length > 5 && (
+                                <p className="text-[10px] text-white/40 pl-7">+{absences.length - 5} meer</p>
                               )}
                             </div>
                           )}
