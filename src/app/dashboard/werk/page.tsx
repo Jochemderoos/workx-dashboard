@@ -105,6 +105,12 @@ export default function WerkOverzichtPage() {
   const [clientName, setClientName] = useState('')
   const [caseNumber, setCaseNumber] = useState('')
 
+  // Dropdown states for premium selects
+  const [showStatusFilterDropdown, setShowStatusFilterDropdown] = useState(false)
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
+  const [openItemStatusDropdown, setOpenItemStatusDropdown] = useState<string | null>(null)
+
   // Calculate last 3 workdays
   const last3Workdays = useMemo(() => {
     const days: Date[] = []
@@ -563,16 +569,54 @@ export default function WerkOverzichtPage() {
             />
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30 transition-all"
-          >
-            <option value="all">Alle statussen</option>
-            {Object.entries(statusConfig).map(([key, config]) => (
-              <option key={key} value={key}>{config.label}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              onClick={() => setShowStatusFilterDropdown(!showStatusFilterDropdown)}
+              className="flex items-center gap-3 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
+            >
+              {statusFilter === 'all' ? (
+                <span className="text-white/70">Alle statussen</span>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${statusConfig[statusFilter as keyof typeof statusConfig].color}`} />
+                  <span>{statusConfig[statusFilter as keyof typeof statusConfig].label}</span>
+                </div>
+              )}
+              <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showStatusFilterDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showStatusFilterDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowStatusFilterDropdown(false)} />
+                <div className="absolute left-0 top-full mt-2 w-48 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setStatusFilter('all'); setShowStatusFilterDropdown(false) }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${statusFilter === 'all' ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center">
+                        <Icons.layers size={12} className="text-white/50" />
+                      </div>
+                      <span>Alle statussen</span>
+                      {statusFilter === 'all' && <Icons.check size={16} className="ml-auto text-workx-lime" />}
+                    </button>
+                    {Object.entries(statusConfig).map(([key, config]) => (
+                      <button
+                        key={key}
+                        onClick={() => { setStatusFilter(key); setShowStatusFilterDropdown(false) }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${statusFilter === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                      >
+                        <div className={`w-6 h-6 rounded-lg ${config.bg} flex items-center justify-center`}>
+                          <config.icon size={12} className={config.text} />
+                        </div>
+                        <span>{config.label}</span>
+                        {statusFilter === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
@@ -671,16 +715,38 @@ export default function WerkOverzichtPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <select
-                        value={item.status}
-                        onChange={(e) => handleStatusChange(item.id, e.target.value as WorkItem['status'])}
-                        className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-workx-lime/30"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {Object.entries(statusConfig).map(([key, config]) => (
-                          <option key={key} value={key}>{config.label}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setOpenItemStatusDropdown(openItemStatusDropdown === item.id ? null : item.id) }}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${statusCfg.bg} ${statusCfg.text} hover:opacity-80`}
+                        >
+                          <statusCfg.icon size={12} />
+                          <span>{statusCfg.label}</span>
+                          <Icons.chevronDown size={12} className={`transition-transform ${openItemStatusDropdown === item.id ? 'rotate-180' : ''}`} />
+                        </button>
+                        {openItemStatusDropdown === item.id && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setOpenItemStatusDropdown(null)} />
+                            <div className="absolute right-0 top-full mt-1 w-40 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                              <div className="py-1">
+                                {Object.entries(statusConfig).map(([key, config]) => (
+                                  <button
+                                    key={key}
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange(item.id, key as WorkItem['status']); setOpenItemStatusDropdown(null) }}
+                                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-all ${item.status === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                                  >
+                                    <div className={`w-5 h-5 rounded ${config.bg} flex items-center justify-center`}>
+                                      <config.icon size={10} className={config.text} />
+                                    </div>
+                                    <span>{config.label}</span>
+                                    {item.status === key && <Icons.check size={12} className="ml-auto text-workx-lime" />}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
                       <button
                         onClick={() => handleEdit(item)}
                         className="p-2 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
@@ -817,27 +883,77 @@ export default function WerkOverzichtPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Status</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as WorkItem['status'])}
-                    className="input-field"
-                  >
-                    {Object.entries(statusConfig).map(([key, config]) => (
-                      <option key={key} value={key}>{config.label}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                      className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
+                    >
+                      <div className={`w-7 h-7 rounded-lg ${statusConfig[status].bg} flex items-center justify-center`}>
+                        {(() => { const Icon = statusConfig[status].icon; return <Icon size={14} className={statusConfig[status].text} /> })()}
+                      </div>
+                      <span className="flex-1 text-white text-sm">{statusConfig[status].label}</span>
+                      <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showStatusDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                          <div className="py-1">
+                            {Object.entries(statusConfig).map(([key, config]) => (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => { setStatus(key as WorkItem['status']); setShowStatusDropdown(false) }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm transition-all ${status === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                              >
+                                <div className={`w-7 h-7 rounded-lg ${config.bg} flex items-center justify-center`}>
+                                  <config.icon size={14} className={config.text} />
+                                </div>
+                                <span>{config.label}</span>
+                                {status === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Prioriteit</label>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value as WorkItem['priority'])}
-                    className="input-field"
-                  >
-                    {Object.entries(priorityConfig).map(([key, config]) => (
-                      <option key={key} value={key}>{config.label}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
+                      className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
+                    >
+                      <div className={`w-3 h-3 rounded-full ${priorityConfig[priority].color}`} />
+                      <span className="flex-1 text-white text-sm">{priorityConfig[priority].label}</span>
+                      <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showPriorityDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showPriorityDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowPriorityDropdown(false)} />
+                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                          <div className="py-1">
+                            {Object.entries(priorityConfig).map(([key, config]) => (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => { setPriority(key as WorkItem['priority']); setShowPriorityDropdown(false) }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm transition-all ${priority === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                              >
+                                <div className={`w-3 h-3 rounded-full ${config.color}`} />
+                                <span>{config.label}</span>
+                                {priority === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 

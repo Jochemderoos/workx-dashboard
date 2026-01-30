@@ -27,6 +27,7 @@ export default function TeamPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false)
 
   useEffect(() => { fetchMembers() }, [])
 
@@ -143,16 +144,51 @@ export default function TeamPage() {
             />
           </div>
 
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-          >
-            <option value="all">Alle rollen</option>
-            <option value="ADMIN">Administrator</option>
-            <option value="MANAGER">Manager</option>
-            <option value="EMPLOYEE">Medewerker</option>
-          </select>
+          <div className="relative">
+            <button
+              onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+              className="flex items-center gap-3 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
+            >
+              {filterRole === 'all' ? (
+                <span className="text-white/70">Alle rollen</span>
+              ) : (
+                <span className={roleConfig[filterRole]?.color}>{roleConfig[filterRole]?.label}</span>
+              )}
+              <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showRoleDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowRoleDropdown(false)} />
+                <div className="absolute left-0 top-full mt-2 w-48 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setFilterRole('all'); setShowRoleDropdown(false) }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${filterRole === 'all' ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center">
+                        <Icons.users size={12} className="text-white/50" />
+                      </div>
+                      <span>Alle rollen</span>
+                      {filterRole === 'all' && <Icons.check size={16} className="ml-auto text-workx-lime" />}
+                    </button>
+                    {Object.entries(roleConfig).map(([key, config]) => (
+                      <button
+                        key={key}
+                        onClick={() => { setFilterRole(key); setShowRoleDropdown(false) }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${filterRole === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                      >
+                        <div className={`w-6 h-6 rounded-lg ${config.bg} flex items-center justify-center`}>
+                          <Icons.user size={12} className={config.color} />
+                        </div>
+                        <span>{config.label}</span>
+                        {filterRole === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
