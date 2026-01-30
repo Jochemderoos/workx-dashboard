@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 
@@ -18,6 +18,56 @@ interface WorkItem {
   createdAt: string
   assignee: { id: string; name: string } | null
   createdBy: { id: string; name: string }
+}
+
+// Workload types
+type WorkloadLevel = 'green' | 'yellow' | 'orange' | 'red' | null
+
+interface WorkloadEntry {
+  personName: string
+  date: string // YYYY-MM-DD
+  level: WorkloadLevel
+}
+
+// Employees whose workload is tracked (NOT the admins)
+const TRACKED_EMPLOYEES = [
+  'Marlieke Schipper',
+  'Kay Maes',
+  'Justine Schellekens',
+  'Julia Groen',
+  'Erika van Zadelhof',
+  'Emma van der Vos',
+  'Barbara Rip',
+  'Lotte van Sint Truiden',
+]
+
+// Demo workload data
+const INITIAL_WORKLOAD: WorkloadEntry[] = [
+  { personName: 'Marlieke Schipper', date: '2026-01-30', level: 'yellow' },
+  { personName: 'Kay Maes', date: '2026-01-30', level: 'red' },
+  { personName: 'Julia Groen', date: '2026-01-30', level: 'orange' },
+  { personName: 'Erika van Zadelhof', date: '2026-01-30', level: 'yellow' },
+  { personName: 'Emma van der Vos', date: '2026-01-30', level: 'green' },
+  { personName: 'Barbara Rip', date: '2026-01-30', level: 'orange' },
+  { personName: 'Marlieke Schipper', date: '2026-01-29', level: 'orange' },
+  { personName: 'Kay Maes', date: '2026-01-29', level: 'orange' },
+  { personName: 'Justine Schellekens', date: '2026-01-29', level: 'yellow' },
+  { personName: 'Julia Groen', date: '2026-01-29', level: 'red' },
+  { personName: 'Erika van Zadelhof', date: '2026-01-29', level: 'orange' },
+  { personName: 'Barbara Rip', date: '2026-01-29', level: 'yellow' },
+  { personName: 'Lotte van Sint Truiden', date: '2026-01-29', level: 'green' },
+  { personName: 'Marlieke Schipper', date: '2026-01-28', level: 'red' },
+  { personName: 'Kay Maes', date: '2026-01-28', level: 'yellow' },
+  { personName: 'Justine Schellekens', date: '2026-01-28', level: 'orange' },
+  { personName: 'Julia Groen', date: '2026-01-28', level: 'orange' },
+  { personName: 'Emma van der Vos', date: '2026-01-28', level: 'yellow' },
+]
+
+const workloadConfig = {
+  green: { label: 'Rustig', color: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/30' },
+  yellow: { label: 'Normaal', color: 'bg-yellow-400', text: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30' },
+  orange: { label: 'Druk', color: 'bg-orange-400', text: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/30' },
+  red: { label: 'Zeer druk', color: 'bg-red-400', text: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
 }
 
 const statusConfig = {
@@ -42,6 +92,11 @@ export default function WerkOverzichtPage() {
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
+  const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk'>('zaken')
+
+  // Workload state
+  const [workloadEntries, setWorkloadEntries] = useState<WorkloadEntry[]>(INITIAL_WORKLOAD)
+  const [editingWorkload, setEditingWorkload] = useState<{ person: string; date: string } | null>(null)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -51,6 +106,58 @@ export default function WerkOverzichtPage() {
   const [estimatedHours, setEstimatedHours] = useState('')
   const [clientName, setClientName] = useState('')
   const [caseNumber, setCaseNumber] = useState('')
+
+  // Calculate last 3 workdays
+  const last3Workdays = useMemo(() => {
+    const days: Date[] = []
+    const today = new Date()
+    let current = new Date(today)
+
+    while (days.length < 3) {
+      const dayOfWeek = current.getDay()
+      // Skip weekends (0 = Sunday, 6 = Saturday)
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        days.push(new Date(current))
+      }
+      current.setDate(current.getDate() - 1)
+    }
+
+    return days.reverse() // Oldest first
+  }, [])
+
+  // Get workload for a specific person and date
+  const getWorkload = (person: string, date: Date): WorkloadLevel => {
+    const dateStr = date.toISOString().split('T')[0]
+    const entry = workloadEntries.find(e => e.personName === person && e.date === dateStr)
+    return entry?.level || null
+  }
+
+  // Set workload for a person on a date
+  const setWorkload = (person: string, date: Date, level: WorkloadLevel) => {
+    const dateStr = date.toISOString().split('T')[0]
+    setWorkloadEntries(prev => {
+      const filtered = prev.filter(e => !(e.personName === person && e.date === dateStr))
+      if (level) {
+        return [...filtered, { personName: person, date: dateStr, level }]
+      }
+      return filtered
+    })
+    toast.success(`Werkdruk bijgewerkt voor ${person.split(' ')[0]}`)
+    setEditingWorkload(null)
+  }
+
+  // Count workload levels for today
+  const todayStats = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const todayEntries = workloadEntries.filter(e => e.date === today)
+    return {
+      green: todayEntries.filter(e => e.level === 'green').length,
+      yellow: todayEntries.filter(e => e.level === 'yellow').length,
+      orange: todayEntries.filter(e => e.level === 'orange').length,
+      red: todayEntries.filter(e => e.level === 'red').length,
+      notFilled: TRACKED_EMPLOYEES.length - todayEntries.length,
+    }
+  }, [workloadEntries])
 
   useEffect(() => { fetchData() }, [])
 
@@ -164,60 +271,287 @@ export default function WerkOverzichtPage() {
             </div>
             <h1 className="text-2xl font-semibold text-white">Werk</h1>
           </div>
-          <p className="text-white/40">Beheer zaken, taken en deadlines</p>
+          <p className="text-white/40">
+            {pageMode === 'zaken' ? 'Beheer zaken, taken en deadlines' : 'Werkdruk overzicht van het team'}
+          </p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
-          <Icons.plus size={16} />
-          Nieuw item
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Mode Toggle */}
+          <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
+            <button
+              onClick={() => setPageMode('zaken')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pageMode === 'zaken' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icons.briefcase size={16} />
+              Zaken
+            </button>
+            <button
+              onClick={() => setPageMode('werkdruk')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pageMode === 'werkdruk' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icons.activity size={16} />
+              Werkdruk
+            </button>
+          </div>
+          {pageMode === 'zaken' && (
+            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+              <Icons.plus size={16} />
+              Nieuw item
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
-              <Icons.layers className="text-blue-400" size={18} />
+      {/* WERKDRUK MODE */}
+      {pageMode === 'werkdruk' && (
+        <div className="space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-3">
+                  <Icons.check className="text-green-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-green-400">{todayStats.green}</p>
+                <p className="text-sm text-white/40">Rustig</p>
+              </div>
             </div>
-            <p className="text-2xl font-semibold text-white">{stats.total}</p>
-            <p className="text-sm text-white/40">Totaal</p>
-          </div>
-        </div>
 
-        <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-3">
-              <Icons.play className="text-yellow-400" size={18} />
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-3">
+                  <Icons.minus className="text-yellow-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-yellow-400">{todayStats.yellow}</p>
+                <p className="text-sm text-white/40">Normaal</p>
+              </div>
             </div>
-            <p className="text-2xl font-semibold text-yellow-400">{stats.inProgress}</p>
-            <p className="text-sm text-white/40">In behandeling</p>
-          </div>
-        </div>
 
-        <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-3">
-              <Icons.check className="text-green-400" size={18} />
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center mb-3">
+                  <Icons.alertTriangle className="text-orange-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-orange-400">{todayStats.orange}</p>
+                <p className="text-sm text-white/40">Druk</p>
+              </div>
             </div>
-            <p className="text-2xl font-semibold text-green-400">{stats.completed}</p>
-            <p className="text-sm text-white/40">Afgerond</p>
-          </div>
-        </div>
 
-        <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-red-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-3">
-              <Icons.flag className="text-red-400" size={18} />
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-red-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-3">
+                  <Icons.alertTriangle className="text-red-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-red-400">{todayStats.red}</p>
+                <p className="text-sm text-white/40">Zeer druk</p>
+              </div>
             </div>
-            <p className="text-2xl font-semibold text-red-400">{workItems.filter(i => i.priority === 'URGENT').length}</p>
-            <p className="text-sm text-white/40">Urgent</p>
+
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-3">
+                  <Icons.help className="text-white/40" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-white/40">{todayStats.notFilled}</p>
+                <p className="text-sm text-white/40">Niet ingevuld</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Workload Overview */}
+          <div className="card overflow-hidden">
+            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.activity className="text-workx-lime" size={16} />
+                </div>
+                <h2 className="font-medium text-white">Werkdruk laatste 3 werkdagen</h2>
+              </div>
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+                  <span className="text-white/50">Rustig</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <span className="text-white/50">Normaal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-orange-400" />
+                  <span className="text-white/50">Druk</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <span className="text-white/50">Zeer druk</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Table header */}
+            <div className="grid gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider"
+              style={{ gridTemplateColumns: '1fr repeat(3, 120px)' }}
+            >
+              <div>Medewerker</div>
+              {last3Workdays.map(day => (
+                <div key={day.toISOString()} className="text-center">
+                  {day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
+                </div>
+              ))}
+            </div>
+
+            {/* Table body */}
+            <div className="divide-y divide-white/5">
+              {TRACKED_EMPLOYEES.map((person, index) => {
+                const initials = person.split(' ').map(n => n[0]).join('').slice(0, 2)
+                const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10', 'from-red-500/30 to-red-600/10', 'from-indigo-500/30 to-indigo-600/10']
+                const colorClass = colors[index % colors.length]
+
+                return (
+                  <div
+                    key={person}
+                    className="grid gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors"
+                    style={{ gridTemplateColumns: '1fr repeat(3, 120px)' }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-sm text-white`}>
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{person}</p>
+                      </div>
+                    </div>
+                    {last3Workdays.map(day => {
+                      const dateStr = day.toISOString().split('T')[0]
+                      const level = getWorkload(person, day)
+                      const isEditing = editingWorkload?.person === person && editingWorkload?.date === dateStr
+                      const isToday = day.toDateString() === new Date().toDateString()
+
+                      return (
+                        <div key={dateStr} className="flex justify-center">
+                          {isEditing ? (
+                            <div className="flex items-center gap-1 bg-workx-dark/80 border border-white/10 rounded-xl p-2">
+                              {(['green', 'yellow', 'orange', 'red'] as const).map(l => (
+                                <button
+                                  key={l}
+                                  onClick={() => setWorkload(person, day, l)}
+                                  className={`w-8 h-8 rounded-lg ${workloadConfig[l].bg} ${workloadConfig[l].border} border-2 hover:scale-110 transition-transform flex items-center justify-center`}
+                                >
+                                  {level === l && <Icons.check size={14} className={workloadConfig[l].text} />}
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => setEditingWorkload(null)}
+                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40"
+                              >
+                                <Icons.x size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setEditingWorkload({ person, date: dateStr })}
+                              className={`w-full h-12 rounded-xl flex items-center justify-center transition-all hover:scale-105 ${
+                                level
+                                  ? `${workloadConfig[level].bg} ${workloadConfig[level].border} border`
+                                  : 'bg-white/5 border border-dashed border-white/10 hover:border-white/20'
+                              } ${isToday ? 'ring-2 ring-workx-lime/30 ring-offset-2 ring-offset-workx-dark' : ''}`}
+                            >
+                              {level ? (
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-3 h-3 rounded-full ${workloadConfig[level].color}`} />
+                                  <span className={`text-sm font-medium ${workloadConfig[level].text}`}>
+                                    {workloadConfig[level].label}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-white/30">Invullen</span>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Info card */}
+          <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <Icons.info className="text-blue-400" size={18} />
+              </div>
+              <div>
+                <h3 className="font-medium text-white mb-1">Over werkdruk tracking</h3>
+                <p className="text-sm text-white/50 leading-relaxed">
+                  Klik op een cel om de werkdruk van een medewerker voor die dag in te vullen.
+                  Dit overzicht helpt om snel te zien wie er veel aan het hoofd heeft en wie ruimte heeft om bij te springen.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* ZAKEN MODE */}
+      {pageMode === 'zaken' && (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
+                  <Icons.layers className="text-blue-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-white">{stats.total}</p>
+                <p className="text-sm text-white/40">Totaal</p>
+              </div>
+            </div>
+
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-3">
+                  <Icons.play className="text-yellow-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-yellow-400">{stats.inProgress}</p>
+                <p className="text-sm text-white/40">In behandeling</p>
+              </div>
+            </div>
+
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-3">
+                  <Icons.check className="text-green-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-green-400">{stats.completed}</p>
+                <p className="text-sm text-white/40">Afgerond</p>
+              </div>
+            </div>
+
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-red-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-3">
+                  <Icons.flag className="text-red-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-red-400">{workItems.filter(i => i.priority === 'URGENT').length}</p>
+                <p className="text-sm text-white/40">Urgent</p>
+              </div>
+            </div>
+          </div>
 
       {/* Filters & View toggle */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -429,6 +763,8 @@ export default function WerkOverzichtPage() {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
 
       {/* Form modal */}

@@ -13,6 +13,32 @@ interface Vacation {
   color: string
 }
 
+interface VacationBalance {
+  personName: string
+  overgedragenVorigJaar: number  // Dagen overgedragen van vorige jaren
+  opbouwLopendJaar: number       // Dagen die dit jaar worden opgebouwd (wettelijk + bovenwettelijk)
+  opgenomenLopendJaar: number    // Dagen opgenomen dit jaar
+  // Berekend: resterend = overgedragen + opbouw - opgenomen
+}
+
+// Demo vakantiesaldo data (Hanna heeft dit ingevoerd)
+const INITIAL_VACATION_BALANCES: VacationBalance[] = [
+  { personName: 'Marnix Ritmeester', overgedragenVorigJaar: 5, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
+  { personName: 'Maaike de Jong', overgedragenVorigJaar: 2, opbouwLopendJaar: 25, opgenomenLopendJaar: 3 },
+  { personName: 'Marlieke Schipper', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, opgenomenLopendJaar: 8 },
+  { personName: 'Kay Maes', overgedragenVorigJaar: 8, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
+  { personName: 'Justine Schellekens', overgedragenVorigJaar: 3, opbouwLopendJaar: 25, opgenomenLopendJaar: 1 },
+  { personName: 'Juliette Niersman', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, opgenomenLopendJaar: 10 },
+  { personName: 'Jochem de Roos', overgedragenVorigJaar: 3.5, opbouwLopendJaar: 25, opgenomenLopendJaar: 8 },
+  { personName: 'Julia Groen', overgedragenVorigJaar: 4, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
+  { personName: 'Hanna Blaauboer', overgedragenVorigJaar: 2, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
+  { personName: 'Erika van Zadelhof', overgedragenVorigJaar: 6, opbouwLopendJaar: 25, opgenomenLopendJaar: 12 },
+  { personName: 'Emma van der Vos', overgedragenVorigJaar: 1, opbouwLopendJaar: 25, opgenomenLopendJaar: 2 },
+  { personName: 'Bas den Ridder', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, opgenomenLopendJaar: 4 },
+  { personName: 'Barbara Rip', overgedragenVorigJaar: 7, opbouwLopendJaar: 25, opgenomenLopendJaar: 7 },
+  { personName: 'Lotte van Sint Truiden', overgedragenVorigJaar: 4, opbouwLopendJaar: 25, opgenomenLopendJaar: 1 },
+]
+
 const COLORS = [
   { name: 'Lime', value: '#f9ff85', bg: 'bg-workx-lime/20', text: 'text-workx-lime' },
   { name: 'Blauw', value: '#60a5fa', bg: 'bg-blue-400/20', text: 'text-blue-400' },
@@ -47,6 +73,18 @@ export default function VakantiesPage() {
   const [showForm, setShowForm] = useState(false)
   const [viewMode, setViewMode] = useState<'week' | 'month' | 'timeline'>('week')
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [pageMode, setPageMode] = useState<'overzicht' | 'beheer'>('overzicht')
+
+  // Vacation balances state (Hanna's admin)
+  const [vacationBalances, setVacationBalances] = useState<VacationBalance[]>(INITIAL_VACATION_BALANCES)
+  const [editingBalance, setEditingBalance] = useState<string | null>(null)
+  const [balanceForm, setBalanceForm] = useState({
+    overgedragenVorigJaar: 0,
+    opbouwLopendJaar: 25,
+    opgenomenLopendJaar: 0,
+  })
+  const [showBalanceDropdown, setShowBalanceDropdown] = useState(false)
+  const [selectedBalancePerson, setSelectedBalancePerson] = useState('')
 
   // Form state
   const [personName, setPersonName] = useState('')
@@ -56,6 +94,37 @@ export default function VakantiesPage() {
   const [selectedColor, setSelectedColor] = useState(COLORS[0].value)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
+
+  // Balance management functions
+  const handleEditBalance = (personName: string) => {
+    const balance = vacationBalances.find(b => b.personName === personName)
+    if (balance) {
+      setSelectedBalancePerson(personName)
+      setBalanceForm({
+        overgedragenVorigJaar: balance.overgedragenVorigJaar,
+        opbouwLopendJaar: balance.opbouwLopendJaar,
+        opgenomenLopendJaar: balance.opgenomenLopendJaar,
+      })
+      setEditingBalance(personName)
+    }
+  }
+
+  const handleSaveBalance = () => {
+    if (!selectedBalancePerson) return
+
+    setVacationBalances(prev => prev.map(b =>
+      b.personName === selectedBalancePerson
+        ? { ...b, ...balanceForm }
+        : b
+    ))
+    toast.success(`Saldo bijgewerkt voor ${selectedBalancePerson.split(' ')[0]}`)
+    setEditingBalance(null)
+    setSelectedBalancePerson('')
+  }
+
+  const calculateResterend = (balance: VacationBalance) => {
+    return balance.overgedragenVorigJaar + balance.opbouwLopendJaar - balance.opgenomenLopendJaar
+  }
 
   useEffect(() => { fetchVacations() }, [])
 
@@ -205,49 +274,304 @@ export default function VakantiesPage() {
             </div>
             <h1 className="text-2xl font-semibold text-white">Vakanties</h1>
           </div>
-          <p className="text-white/40">Wie is er wanneer met vakantie</p>
+          <p className="text-white/40">
+            {pageMode === 'overzicht' ? 'Wie is er wanneer met vakantie' : 'Beheer vakantiedagen per medewerker'}
+          </p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
-          <Icons.plus size={16} />
-          Vakantie toevoegen
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Mode Toggle */}
+          <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
+            <button
+              onClick={() => setPageMode('overzicht')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pageMode === 'overzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icons.calendar size={16} />
+              Overzicht
+            </button>
+            <button
+              onClick={() => setPageMode('beheer')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pageMode === 'beheer' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icons.settings size={16} />
+              Beheer
+            </button>
+          </div>
+          {pageMode === 'overzicht' && (
+            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+              <Icons.plus size={16} />
+              Vakantie toevoegen
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-3">
-              <Icons.sun className="text-yellow-400" size={18} />
+      {/* BEHEER MODE - Admin interface for Hanna */}
+      {pageMode === 'beheer' && (
+        <div className="space-y-6">
+          {/* Stats cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center mb-3">
+                  <Icons.users className="text-workx-lime" size={18} />
+                </div>
+                <p className="text-3xl font-semibold text-white">{vacationBalances.length}</p>
+                <p className="text-sm text-white/40">Medewerkers</p>
+              </div>
             </div>
-            <p className="text-3xl font-semibold text-white">{awayThisWeek.length}</p>
-            <p className="text-sm text-white/40">Afwezig deze week</p>
-          </div>
-        </div>
 
-        <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
-              <Icons.calendar className="text-blue-400" size={18} />
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
+                  <Icons.sun className="text-blue-400" size={18} />
+                </div>
+                <p className="text-3xl font-semibold text-white">
+                  {vacationBalances.reduce((sum, b) => sum + calculateResterend(b), 0).toFixed(1)}
+                </p>
+                <p className="text-sm text-white/40">Totaal resterend (team)</p>
+              </div>
             </div>
-            <p className="text-3xl font-semibold text-white">{vacations.length}</p>
-            <p className="text-sm text-white/40">Geplande vakanties</p>
-          </div>
-        </div>
 
-        <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
-              <Icons.users className="text-purple-400" size={18} />
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
+                  <Icons.calendar className="text-purple-400" size={18} />
+                </div>
+                <p className="text-3xl font-semibold text-white">
+                  {vacationBalances.reduce((sum, b) => sum + b.opgenomenLopendJaar, 0)}
+                </p>
+                <p className="text-sm text-white/40">Opgenomen dit jaar (team)</p>
+              </div>
             </div>
-            <p className="text-3xl font-semibold text-white">{uniquePeople.length}</p>
-            <p className="text-sm text-white/40">Teamleden met vakantie</p>
+          </div>
+
+          {/* Edit form (when editing) */}
+          {editingBalance && (
+            <div className="card p-6 border-workx-lime/20 bg-gradient-to-br from-workx-lime/5 to-transparent">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                    <Icons.edit className="text-workx-lime" size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">Saldo bewerken</h3>
+                    <p className="text-sm text-white/40">{selectedBalancePerson}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingBalance(null)
+                    setSelectedBalancePerson('')
+                  }}
+                  className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  <Icons.x size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Overgedragen van vorige jaren</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={balanceForm.overgedragenVorigJaar}
+                    onChange={e => setBalanceForm({ ...balanceForm, overgedragenVorigJaar: parseFloat(e.target.value) || 0 })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Opbouw lopend jaar</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={balanceForm.opbouwLopendJaar}
+                    onChange={e => setBalanceForm({ ...balanceForm, opbouwLopendJaar: parseFloat(e.target.value) || 0 })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Opgenomen dit jaar</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={balanceForm.opgenomenLopendJaar}
+                    onChange={e => setBalanceForm({ ...balanceForm, opgenomenLopendJaar: parseFloat(e.target.value) || 0 })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Resterend saldo</label>
+                  <div className="px-4 py-3 bg-workx-lime/10 border border-workx-lime/20 rounded-xl text-workx-lime font-semibold">
+                    {(balanceForm.overgedragenVorigJaar + balanceForm.opbouwLopendJaar - balanceForm.opgenomenLopendJaar).toFixed(1)} dagen
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setEditingBalance(null)
+                    setSelectedBalancePerson('')
+                  }}
+                  className="btn-secondary"
+                >
+                  Annuleren
+                </button>
+                <button onClick={handleSaveBalance} className="btn-primary flex items-center gap-2">
+                  <Icons.check size={16} />
+                  Opslaan
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Balances Table */}
+          <div className="card overflow-hidden">
+            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.list className="text-workx-lime" size={16} />
+                </div>
+                <h2 className="font-medium text-white">Vakantiesaldo per medewerker</h2>
+              </div>
+              <span className="badge badge-lime">{new Date().getFullYear()}</span>
+            </div>
+
+            {/* Table header */}
+            <div className="grid grid-cols-6 gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider">
+              <div className="col-span-2">Medewerker</div>
+              <div className="text-right">Overgedragen</div>
+              <div className="text-right">Opbouw</div>
+              <div className="text-right">Opgenomen</div>
+              <div className="text-right">Resterend</div>
+            </div>
+
+            {/* Table body */}
+            <div className="divide-y divide-white/5">
+              {vacationBalances
+                .sort((a, b) => a.personName.localeCompare(b.personName))
+                .map((balance, index) => {
+                  const resterend = calculateResterend(balance)
+                  const isLow = resterend < 5
+                  const initials = balance.personName.split(' ').map(n => n[0]).join('').slice(0, 2)
+                  const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
+                  const colorClass = colors[index % colors.length]
+
+                  return (
+                    <div
+                      key={balance.personName}
+                      className={`grid grid-cols-6 gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors group ${
+                        editingBalance === balance.personName ? 'bg-workx-lime/5' : ''
+                      }`}
+                    >
+                      <div className="col-span-2 flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-sm text-white`}>
+                          {initials}
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">{balance.personName}</p>
+                          <p className="text-xs text-white/40">
+                            {balance.personName === 'Hanna Blaauboer' ? 'Admin' : 'Medewerker'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-white/70">{balance.overgedragenVorigJaar}</span>
+                        <span className="text-white/30 text-sm ml-1">d</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-white/70">{balance.opbouwLopendJaar}</span>
+                        <span className="text-white/30 text-sm ml-1">d</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-white/70">{balance.opgenomenLopendJaar}</span>
+                        <span className="text-white/30 text-sm ml-1">d</span>
+                      </div>
+                      <div className="text-right flex items-center justify-end gap-3">
+                        <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${
+                          isLow
+                            ? 'bg-orange-500/10 text-orange-400'
+                            : 'bg-workx-lime/10 text-workx-lime'
+                        }`}>
+                          {resterend.toFixed(1)} d
+                        </div>
+                        <button
+                          onClick={() => handleEditBalance(balance.personName)}
+                          className="p-2 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Icons.edit size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+
+          {/* Info card */}
+          <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <Icons.info className="text-blue-400" size={18} />
+              </div>
+              <div>
+                <h3 className="font-medium text-white mb-1">Over vakantiedagen beheer</h3>
+                <p className="text-sm text-white/50 leading-relaxed">
+                  Hier kun je de vakantiedagen van alle medewerkers beheren. Klik op het bewerk-icoon om het saldo aan te passen.
+                  Wijzigingen worden direct zichtbaar in het persoonlijke dashboard van de medewerker.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* OVERZICHT MODE - Regular vacation calendar view */}
+      {pageMode === 'overzicht' && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-3">
+                  <Icons.sun className="text-yellow-400" size={18} />
+                </div>
+                <p className="text-3xl font-semibold text-white">{awayThisWeek.length}</p>
+                <p className="text-sm text-white/40">Afwezig deze week</p>
+              </div>
+            </div>
+
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
+                  <Icons.calendar className="text-blue-400" size={18} />
+                </div>
+                <p className="text-3xl font-semibold text-white">{vacations.length}</p>
+                <p className="text-sm text-white/40">Geplande vakanties</p>
+              </div>
+            </div>
+
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
+                  <Icons.users className="text-purple-400" size={18} />
+                </div>
+                <p className="text-3xl font-semibold text-white">{uniquePeople.length}</p>
+                <p className="text-sm text-white/40">Teamleden met vakantie</p>
+              </div>
+            </div>
+          </div>
 
       {/* Away This Week - Quick Overview */}
       {awayThisWeek.length > 0 && (
@@ -526,6 +850,8 @@ export default function VakantiesPage() {
             )}
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Add/Edit Form Modal */}

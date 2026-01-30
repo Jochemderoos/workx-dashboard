@@ -496,6 +496,19 @@ export const Icons = {
       <rect x="14" y="4" width="4" height="16" />
     </svg>
   ),
+
+  minus: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M5 12h14" />
+    </svg>
+  ),
+
+  help: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
+    </svg>
+  ),
 }
 
 // Workx Logo Component - Premium version
