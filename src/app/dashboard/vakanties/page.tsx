@@ -1,0 +1,652 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
+import { Icons } from '@/components/ui/Icons'
+
+interface Vacation {
+  id: string
+  personName: string
+  startDate: string
+  endDate: string
+  note: string | null
+  color: string
+}
+
+const COLORS = [
+  { name: 'Lime', value: '#f9ff85', bg: 'bg-workx-lime/20', text: 'text-workx-lime' },
+  { name: 'Blauw', value: '#60a5fa', bg: 'bg-blue-400/20', text: 'text-blue-400' },
+  { name: 'Paars', value: '#a78bfa', bg: 'bg-purple-400/20', text: 'text-purple-400' },
+  { name: 'Roze', value: '#f472b6', bg: 'bg-pink-400/20', text: 'text-pink-400' },
+  { name: 'Oranje', value: '#fb923c', bg: 'bg-orange-400/20', text: 'text-orange-400' },
+  { name: 'Groen', value: '#34d399', bg: 'bg-emerald-400/20', text: 'text-emerald-400' },
+  { name: 'Cyan', value: '#22d3ee', bg: 'bg-cyan-400/20', text: 'text-cyan-400' },
+  { name: 'Rood', value: '#f87171', bg: 'bg-red-400/20', text: 'text-red-400' },
+]
+
+const TEAM_MEMBERS = [
+  'Marnix Ritmeester',
+  'Maaike de Jong',
+  'Marlieke Schipper',
+  'Kay Maes',
+  'Justine Schellekens',
+  'Juliette Niersman',
+  'Jochem de Roos',
+  'Julia Groen',
+  'Hanna Blaauboer',
+  'Erika van Zadelhof',
+  'Emma van der Vos',
+  'Bas den Ridder',
+  'Barbara Rip',
+  'Lotte van Sint Truiden',
+]
+
+export default function VakantiesPage() {
+  const [vacations, setVacations] = useState<Vacation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'timeline'>('week')
+  const [currentDate, setCurrentDate] = useState(new Date())
+
+  // Form state
+  const [personName, setPersonName] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [note, setNote] = useState('')
+  const [selectedColor, setSelectedColor] = useState(COLORS[0].value)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  useEffect(() => { fetchVacations() }, [])
+
+  const fetchVacations = async () => {
+    try {
+      const res = await fetch('/api/vacations')
+      if (res.ok) setVacations(await res.json())
+    } catch (error) {
+      // Use mock data for now
+      setVacations([
+        { id: '1', personName: 'Marnix Ritmeester', startDate: '2025-02-03', endDate: '2025-02-07', note: 'Skivakantie', color: '#60a5fa' },
+        { id: '2', personName: 'Julia Groen', startDate: '2025-02-10', endDate: '2025-02-14', note: 'Voorjaarsvakantie', color: '#f9ff85' },
+        { id: '3', personName: 'Bas den Ridder', startDate: '2025-02-05', endDate: '2025-02-06', note: null, color: '#a78bfa' },
+        { id: '4', personName: 'Hanna Blaauboer', startDate: '2025-02-17', endDate: '2025-02-21', note: 'Familiebezoek', color: '#34d399' },
+        { id: '5', personName: 'Kay Maes', startDate: '2025-02-12', endDate: '2025-02-14', note: null, color: '#fb923c' },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const resetForm = () => {
+    setPersonName('')
+    setStartDate('')
+    setEndDate('')
+    setNote('')
+    setSelectedColor(COLORS[0].value)
+    setEditingId(null)
+    setShowForm(false)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!personName || !startDate || !endDate) return toast.error('Vul naam en datums in')
+
+    const newVacation: Vacation = {
+      id: editingId || Date.now().toString(),
+      personName,
+      startDate,
+      endDate,
+      note: note || null,
+      color: selectedColor,
+    }
+
+    if (editingId) {
+      setVacations(vacations.map(v => v.id === editingId ? newVacation : v))
+      toast.success('Vakantie bijgewerkt')
+    } else {
+      setVacations([...vacations, newVacation])
+      toast.success('Vakantie toegevoegd')
+    }
+    resetForm()
+  }
+
+  const handleEdit = (vacation: Vacation) => {
+    setPersonName(vacation.personName)
+    setStartDate(vacation.startDate)
+    setEndDate(vacation.endDate)
+    setNote(vacation.note || '')
+    setSelectedColor(vacation.color)
+    setEditingId(vacation.id)
+    setShowForm(true)
+  }
+
+  const handleDelete = (id: string) => {
+    setVacations(vacations.filter(v => v.id !== id))
+    toast.success('Vakantie verwijderd')
+  }
+
+  // Helper functions
+  const getWeekDays = (date: Date) => {
+    const start = new Date(date)
+    start.setDate(start.getDate() - start.getDay() + 1) // Monday
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start)
+      d.setDate(d.getDate() + i)
+      return d
+    })
+  }
+
+  const getMonthDays = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const days: { date: Date; isCurrentMonth: boolean }[] = []
+    const startingDay = (firstDay.getDay() + 6) % 7
+
+    for (let i = startingDay - 1; i >= 0; i--) {
+      days.push({ date: new Date(year, month, -i), isCurrentMonth: false })
+    }
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push({ date: new Date(year, month, i), isCurrentMonth: true })
+    }
+    while (days.length < 42) {
+      days.push({ date: new Date(year, month + 1, days.length - lastDay.getDate() - startingDay + 1), isCurrentMonth: false })
+    }
+    return days
+  }
+
+  const isDateInRange = (date: Date, start: string, end: string) => {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const s = new Date(start)
+    const e = new Date(end)
+    return d >= s && d <= e
+  }
+
+  const getVacationsForDate = (date: Date) =>
+    vacations.filter(v => isDateInRange(date, v.startDate, v.endDate))
+
+  const isToday = (date: Date) => date.toDateString() === new Date().toDateString()
+  const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
+
+  const formatDate = (date: Date) => date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+  const formatDateFull = (dateStr: string) => new Date(dateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
+
+  // Get unique people for timeline
+  const uniquePeople = Array.from(new Set(vacations.map(v => v.personName)))
+
+  // Get current week's vacations for summary
+  const thisWeek = getWeekDays(new Date())
+  const awayThisWeek = vacations.filter(v =>
+    thisWeek.some(d => isDateInRange(d, v.startDate, v.endDate))
+  )
+
+  if (isLoading) {
+    return (
+      <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
+        <div className="text-center">
+          <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
+          <p className="text-white/40">Vakanties laden...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8 fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/10 flex items-center justify-center">
+              <Icons.sun className="text-yellow-400" size={20} />
+            </div>
+            <h1 className="text-2xl font-semibold text-white">Vakanties</h1>
+          </div>
+          <p className="text-white/40">Wie is er wanneer met vakantie</p>
+        </div>
+        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+          <Icons.plus size={16} />
+          Vakantie toevoegen
+        </button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
+          <div className="relative">
+            <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-3">
+              <Icons.sun className="text-yellow-400" size={18} />
+            </div>
+            <p className="text-3xl font-semibold text-white">{awayThisWeek.length}</p>
+            <p className="text-sm text-white/40">Afwezig deze week</p>
+          </div>
+        </div>
+
+        <div className="card p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
+          <div className="relative">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
+              <Icons.calendar className="text-blue-400" size={18} />
+            </div>
+            <p className="text-3xl font-semibold text-white">{vacations.length}</p>
+            <p className="text-sm text-white/40">Geplande vakanties</p>
+          </div>
+        </div>
+
+        <div className="card p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
+          <div className="relative">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
+              <Icons.users className="text-purple-400" size={18} />
+            </div>
+            <p className="text-3xl font-semibold text-white">{uniquePeople.length}</p>
+            <p className="text-sm text-white/40">Teamleden met vakantie</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Away This Week - Quick Overview */}
+      {awayThisWeek.length > 0 && (
+        <div className="card p-5 border-yellow-500/20">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+              <Icons.alertTriangle className="text-yellow-400" size={16} />
+            </div>
+            <h2 className="font-medium text-white">Afwezig deze week</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {awayThisWeek.map(v => (
+              <div
+                key={v.id}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
+                style={{ backgroundColor: v.color + '20', color: v.color }}
+              >
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: v.color + '30' }}>
+                  {v.personName.charAt(0)}
+                </div>
+                <span className="font-medium text-white">{v.personName}</span>
+                <span className="text-white/40 text-xs">
+                  {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* View Toggle & Navigation */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
+          <button
+            onClick={() => setViewMode('week')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              viewMode === 'week' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Icons.calendar size={16} />
+            Week
+          </button>
+          <button
+            onClick={() => setViewMode('month')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              viewMode === 'month' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Icons.grid size={16} />
+            Maand
+          </button>
+          <button
+            onClick={() => setViewMode('timeline')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              viewMode === 'timeline' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Icons.list size={16} />
+            Timeline
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const newDate = new Date(currentDate)
+              if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7)
+              else newDate.setMonth(newDate.getMonth() - 1)
+              setCurrentDate(newDate)
+            }}
+            className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+          >
+            <Icons.chevronLeft size={18} />
+          </button>
+          <button
+            onClick={() => setCurrentDate(new Date())}
+            className="px-4 py-2 text-sm text-workx-lime hover:bg-workx-lime/10 rounded-xl transition-colors"
+          >
+            Vandaag
+          </button>
+          <button
+            onClick={() => {
+              const newDate = new Date(currentDate)
+              if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7)
+              else newDate.setMonth(newDate.getMonth() + 1)
+              setCurrentDate(newDate)
+            }}
+            className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+          >
+            <Icons.chevronRight size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Week View */}
+      {viewMode === 'week' && (
+        <div className="card overflow-hidden">
+          <div className="p-5 border-b border-white/5">
+            <h2 className="font-semibold text-white">
+              Week van {formatDate(getWeekDays(currentDate)[0])} - {formatDate(getWeekDays(currentDate)[6])}
+            </h2>
+          </div>
+          <div className="grid grid-cols-7">
+            {getWeekDays(currentDate).map((day, i) => {
+              const dayVacations = getVacationsForDate(day)
+              return (
+                <div
+                  key={i}
+                  className={`min-h-[200px] p-3 border-r border-white/5 last:border-r-0 ${
+                    isToday(day) ? 'bg-workx-lime/5' : isWeekend(day) ? 'bg-white/[0.02]' : ''
+                  }`}
+                >
+                  <div className={`text-center mb-3 ${isToday(day) ? 'text-workx-lime' : 'text-white/40'}`}>
+                    <p className="text-xs font-medium uppercase">
+                      {day.toLocaleDateString('nl-NL', { weekday: 'short' })}
+                    </p>
+                    <p className={`text-2xl font-semibold ${isToday(day) ? 'text-workx-lime' : 'text-white'}`}>
+                      {day.getDate()}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {dayVacations.map(v => (
+                      <button
+                        key={v.id}
+                        onClick={() => handleEdit(v)}
+                        className="w-full p-2 rounded-lg text-left transition-all hover:scale-105"
+                        style={{ backgroundColor: v.color + '20' }}
+                      >
+                        <p className="text-xs font-medium text-white truncate">{v.personName}</p>
+                        {v.note && <p className="text-[10px] text-white/40 truncate">{v.note}</p>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Month View */}
+      {viewMode === 'month' && (
+        <div className="card overflow-hidden">
+          <div className="p-5 border-b border-white/5">
+            <h2 className="font-semibold text-white capitalize">
+              {currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
+            </h2>
+          </div>
+          <div className="p-5">
+            <div className="grid grid-cols-7 mb-3">
+              {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map(day => (
+                <div key={day} className="text-center text-xs text-white/40 py-2 font-medium">{day}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {getMonthDays(currentDate).map((day, i) => {
+                const dayVacations = getVacationsForDate(day.date)
+                return (
+                  <div
+                    key={i}
+                    className={`min-h-[100px] p-2 rounded-xl transition-colors ${
+                      day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
+                    } ${isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''} ${
+                      isWeekend(day.date) && day.isCurrentMonth ? 'bg-white/[0.02]' : ''
+                    }`}
+                  >
+                    <span className={`text-sm font-medium ${
+                      isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
+                    }`}>
+                      {day.date.getDate()}
+                    </span>
+                    <div className="mt-1 space-y-0.5">
+                      {dayVacations.slice(0, 3).map(v => (
+                        <div
+                          key={v.id}
+                          className="text-[10px] px-1.5 py-0.5 rounded truncate font-medium"
+                          style={{ backgroundColor: v.color + '20', color: v.color }}
+                        >
+                          {v.personName.split(' ')[0]}
+                        </div>
+                      ))}
+                      {dayVacations.length > 3 && (
+                        <span className="text-[10px] text-white/40">+{dayVacations.length - 3}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Timeline View */}
+      {viewMode === 'timeline' && (
+        <div className="card overflow-hidden">
+          <div className="p-5 border-b border-white/5">
+            <h2 className="font-semibold text-white">Overzicht per persoon</h2>
+          </div>
+          <div className="divide-y divide-white/5">
+            {vacations.length === 0 ? (
+              <div className="p-16 text-center">
+                <div className="w-20 h-20 rounded-2xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+                  <Icons.sun className="text-yellow-400/50" size={32} />
+                </div>
+                <h3 className="text-lg font-medium text-white mb-2">Geen vakanties gepland</h3>
+                <p className="text-white/40 mb-4">Voeg een vakantie toe om te beginnen</p>
+                <button onClick={() => setShowForm(true)} className="btn-primary inline-flex items-center gap-2">
+                  <Icons.plus size={16} />
+                  Vakantie toevoegen
+                </button>
+              </div>
+            ) : (
+              vacations
+                .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                .map((v, i) => {
+                  const start = new Date(v.startDate)
+                  const end = new Date(v.endDate)
+                  const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                  const isPast = end < new Date()
+                  const isActive = start <= new Date() && end >= new Date()
+
+                  return (
+                    <div
+                      key={v.id}
+                      className={`p-5 flex items-center gap-5 hover:bg-white/[0.02] transition-colors group ${isPast ? 'opacity-50' : ''}`}
+                      style={{ animationDelay: `${i * 50}ms` }}
+                    >
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-lg flex-shrink-0"
+                        style={{ backgroundColor: v.color + '20', color: v.color }}
+                      >
+                        {v.personName.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-medium text-white">{v.personName}</h3>
+                          {isActive && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-400">
+                              Nu afwezig
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-sm text-white/40">
+                          <span className="flex items-center gap-1.5">
+                            <Icons.calendar size={12} />
+                            {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
+                          </span>
+                          <span className="text-white/20">•</span>
+                          <span>{days} {days === 1 ? 'dag' : 'dagen'}</span>
+                          {v.note && (
+                            <>
+                              <span className="text-white/20">•</span>
+                              <span>{v.note}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleEdit(v)}
+                          className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                        >
+                          <Icons.edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(v.id)}
+                          className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                        >
+                          <Icons.trash size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={resetForm}>
+          <div
+            className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                  <Icons.sun className="text-yellow-400" size={18} />
+                </div>
+                <h2 className="font-semibold text-white text-lg">
+                  {editingId ? 'Vakantie bewerken' : 'Vakantie toevoegen'}
+                </h2>
+              </div>
+              <button
+                onClick={resetForm}
+                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Wie gaat er met vakantie?</label>
+                <div className="relative">
+                  <Icons.user className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none z-10" size={16} />
+                  <select
+                    value={personName}
+                    onChange={e => setPersonName(e.target.value)}
+                    className="input-field pl-10 appearance-none cursor-pointer"
+                    required
+                  >
+                    <option value="">Selecteer een teamlid...</option>
+                    {TEAM_MEMBERS.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                  <Icons.chevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" size={16} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Van</label>
+                  <div className="relative">
+                    <Icons.calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={e => setStartDate(e.target.value)}
+                      className="input-field pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Tot en met</label>
+                  <div className="relative">
+                    <Icons.calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={e => setEndDate(e.target.value)}
+                      min={startDate}
+                      className="input-field pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Notitie (optioneel)</label>
+                <div className="relative">
+                  <Icons.edit className="absolute left-3 top-3 text-white/30" size={16} />
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={e => setNote(e.target.value)}
+                    placeholder="Bijv. skivakantie, familiebezoek..."
+                    className="input-field pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Kleur</label>
+                <div className="flex flex-wrap gap-2">
+                  {COLORS.map(color => (
+                    <button
+                      key={color.value}
+                      type="button"
+                      onClick={() => setSelectedColor(color.value)}
+                      className={`w-10 h-10 rounded-xl transition-all ${
+                        selectedColor === color.value ? 'ring-2 ring-white scale-110' : 'hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: color.value + '40' }}
+                    >
+                      {selectedColor === color.value && (
+                        <Icons.check size={16} className="mx-auto" style={{ color: color.value }} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button type="button" onClick={resetForm} className="flex-1 btn-secondary">
+                  Annuleren
+                </button>
+                <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
+                  <Icons.check size={16} />
+                  {editingId ? 'Bijwerken' : 'Toevoegen'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

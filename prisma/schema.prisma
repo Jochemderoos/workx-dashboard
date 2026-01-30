@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String
+  password       String
+  role           String    @default("EMPLOYEE")
+  avatarUrl      String?
+  department     String?
+  phoneNumber    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Chat relations
+  sentMessages      ChatMessage[]     @relation("SentMessages")
+  channelMemberships ChannelMember[]
+
+  // Bonus calculations
+  bonusCalculations BonusCalculation[]
+
+  // Vacation
+  vacationDays      VacationDays?
+  vacationRequests  VacationRequest[]
+
+  // Work items
+  assignedWork      WorkItem[]        @relation("AssignedWork")
+  createdWork       WorkItem[]        @relation("CreatedWork")
+
+  // Calendar events
+  createdEvents     CalendarEvent[]   @relation("CreatedEvents")
+
+  // Sessions for NextAuth
+  sessions          Session[]
+  accounts          Account[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==================== CHAT ====================
+
+model ChatChannel {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  isPrivate   Boolean   @default(false)
+  isDirect    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  messages    ChatMessage[]
+  members     ChannelMember[]
+}
+
+model ChannelMember {
+  id        String   @id @default(cuid())
+  userId    String
+  channelId String
+  joinedAt  DateTime @default(now())
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String
+  senderId  String
+  channelId String
+  parentId  String?  // For threads
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isEdited  Boolean  @default(false)
+
+  sender    User        @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  parent    ChatMessage? @relation("ThreadReplies", fields: [parentId], references: [id])
+  replies   ChatMessage[] @relation("ThreadReplies")
+}
+
+// ==================== BONUS CALCULATOR ====================
+
+model BonusCalculation {
+  id              String   @id @default(cuid())
+  userId          String
+  invoiceAmount   Float    // Bedrag excl. BTW
+  bonusPercentage Float    // Bonuspercentage
+  isPaid          Boolean  @default(false)
+  bonusAmount     Float    // Berekend bonusbedrag
+  description     String?
+  invoiceNumber   String?
+  clientName      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==================== VACATION ====================
+
+model VacationDays {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  totalDays       Float    @default(25) // Totaal vakantiedagen per jaar
+  usedDays        Float    @default(0)  // Opgenomen dagen
+  year            Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VacationRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  startDate   DateTime
+  endDate     DateTime
+  days        Float         // Aantal dagen
+  reason      String?
+  status      String   @default("PENDING")
+  approvedBy  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==================== WORK ITEMS ====================
+
+model WorkItem {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  status       String    @default("NEW")
+  priority     String    @default("MEDIUM")
+  dueDate      DateTime?
+  estimatedHours Float?
+  actualHours  Float?
+  assigneeId   String?
+  createdById  String
+  clientName   String?
+  caseNumber   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  assignee     User?     @relation("AssignedWork", fields: [assigneeId], references: [id])
+  createdBy    User      @relation("CreatedWork", fields: [createdById], references: [id])
+}
+
+// ==================== TRANSITIEVERGOEDING (voor opslag berekeningen) ====================
+
+model TransitieCalculation {
+  id              String   @id @default(cuid())
+  employeeName    String
+  startDate       DateTime
+  endDate         DateTime
+  monthlySalary   Float
+  vacationMoney   Float    @default(0)
+  thirteenthMonth Float    @default(0)
+  otherFixed      Float    @default(0)
+  totalAmount     Float
+  createdAt       DateTime @default(now())
+  calculatedBy    String?
+}
+
+// ==================== GEDEELDE AGENDA ====================
+
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  isAllDay    Boolean  @default(false)
+  location    String?
+  color       String   @default("#f9ff85") // Workx lime als default
+  category    String   @default("GENERAL")
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy   User     @relation("CreatedEvents", fields: [createdById], references: [id])
+}
