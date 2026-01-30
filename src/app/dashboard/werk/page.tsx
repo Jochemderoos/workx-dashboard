@@ -38,7 +38,6 @@ const TRACKED_EMPLOYEES = [
   'Erika van Zadelhof',
   'Emma van der Vos',
   'Barbara Rip',
-  'Lotte van Sint Truiden',
 ]
 
 // Demo workload data
@@ -55,7 +54,6 @@ const INITIAL_WORKLOAD: WorkloadEntry[] = [
   { personName: 'Julia Groen', date: '2026-01-29', level: 'red' },
   { personName: 'Erika van Zadelhof', date: '2026-01-29', level: 'orange' },
   { personName: 'Barbara Rip', date: '2026-01-29', level: 'yellow' },
-  { personName: 'Lotte van Sint Truiden', date: '2026-01-29', level: 'green' },
   { personName: 'Marlieke Schipper', date: '2026-01-28', level: 'red' },
   { personName: 'Kay Maes', date: '2026-01-28', level: 'yellow' },
   { personName: 'Justine Schellekens', date: '2026-01-28', level: 'orange' },

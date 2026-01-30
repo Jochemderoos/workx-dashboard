@@ -22,19 +22,15 @@ interface VacationBalance {
 }
 
 // Demo vakantiesaldo data (Hanna heeft dit ingevoerd)
+// Alleen medewerkers, niet de partners/directie (Marnix, Jochem, Maaike, Juliette, Bas)
 const INITIAL_VACATION_BALANCES: VacationBalance[] = [
-  { personName: 'Marnix Ritmeester', overgedragenVorigJaar: 5, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
-  { personName: 'Maaike de Jong', overgedragenVorigJaar: 2, opbouwLopendJaar: 25, opgenomenLopendJaar: 3 },
   { personName: 'Marlieke Schipper', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, opgenomenLopendJaar: 8 },
   { personName: 'Kay Maes', overgedragenVorigJaar: 8, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
   { personName: 'Justine Schellekens', overgedragenVorigJaar: 3, opbouwLopendJaar: 25, opgenomenLopendJaar: 1 },
-  { personName: 'Juliette Niersman', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, opgenomenLopendJaar: 10 },
-  { personName: 'Jochem de Roos', overgedragenVorigJaar: 3.5, opbouwLopendJaar: 25, opgenomenLopendJaar: 8 },
   { personName: 'Julia Groen', overgedragenVorigJaar: 4, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
   { personName: 'Hanna Blaauboer', overgedragenVorigJaar: 2, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
   { personName: 'Erika van Zadelhof', overgedragenVorigJaar: 6, opbouwLopendJaar: 25, opgenomenLopendJaar: 12 },
   { personName: 'Emma van der Vos', overgedragenVorigJaar: 1, opbouwLopendJaar: 25, opgenomenLopendJaar: 2 },
-  { personName: 'Bas den Ridder', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, opgenomenLopendJaar: 4 },
   { personName: 'Barbara Rip', overgedragenVorigJaar: 7, opbouwLopendJaar: 25, opgenomenLopendJaar: 7 },
   { personName: 'Lotte van Sint Truiden', overgedragenVorigJaar: 4, opbouwLopendJaar: 25, opgenomenLopendJaar: 1 },
 ]
