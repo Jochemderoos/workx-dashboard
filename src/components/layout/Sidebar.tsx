@@ -26,7 +26,6 @@ const toolsMenuItems = [
 
 const manageMenuItems = [
   { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk' },
-  { href: '/dashboard/team', icon: Icons.users, label: 'Team' },
 ]
 
 export default function Sidebar({ user }: SidebarProps) {

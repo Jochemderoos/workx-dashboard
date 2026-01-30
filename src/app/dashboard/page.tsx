@@ -69,7 +69,6 @@ const quickLinks = [
   { href: '/dashboard/transitie', Icon: Icons.calculator, label: 'Transitie', desc: 'Vergoeding', color: 'from-purple-500/20 to-purple-600/10' },
   { href: '/dashboard/vakanties', Icon: Icons.sun, label: 'Vakanties', desc: 'Wie is er weg', color: 'from-orange-500/20 to-orange-600/10' },
   { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10' },
-  { href: '/dashboard/team', Icon: Icons.users, label: 'Team', desc: "Collega's", color: 'from-cyan-500/20 to-cyan-600/10' },
 ]
 
 export default function DashboardHome() {
