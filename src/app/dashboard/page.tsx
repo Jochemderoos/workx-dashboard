@@ -40,6 +40,16 @@ interface WorkItem {
   clientName: string | null
 }
 
+// Demo vakanties deze week (voor overzicht wie er weg is)
+const DEMO_VACATIONS = [
+  { id: '1', personName: 'Marnix Ritmeester', startDate: '2025-01-27', endDate: '2025-01-31', note: 'Skivakantie', color: '#60a5fa' },
+  { id: '2', personName: 'Julia Groen', startDate: '2025-01-29', endDate: '2025-02-02', note: 'Lang weekend', color: '#f9ff85' },
+  { id: '3', personName: 'Bas den Ridder', startDate: '2025-01-30', endDate: '2025-01-30', note: 'Tandarts', color: '#a78bfa' },
+  { id: '4', personName: 'Hanna Blaauboer', startDate: '2025-02-03', endDate: '2025-02-07', note: 'Voorjaarsvakantie', color: '#34d399' },
+  { id: '5', personName: 'Kay Maes', startDate: '2025-02-10', endDate: '2025-02-14', note: null, color: '#fb923c' },
+  { id: '6', personName: 'Emma van der Vos', startDate: '2025-01-28', endDate: '2025-01-29', note: 'Ziek', color: '#f87171' },
+]
+
 // Demo vakantiedagen data (alsof Hanna dit heeft ingevoerd)
 const VACATION_BALANCE = {
   userName: 'Jochem de Roos', // Huidige gebruiker (demo)
@@ -87,6 +97,38 @@ export default function DashboardHome() {
     }).sort((a, b) => a.daysUntil - b.daysUntil)
 
     return upcomingBirthdays.slice(0, 3) // Return top 3
+  }, [])
+
+  // Calculate who's away this week
+  const awayThisWeek = useMemo(() => {
+    const today = new Date()
+    const startOfWeek = new Date(today)
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1) // Monday
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6) // Sunday
+
+    return DEMO_VACATIONS.filter(v => {
+      const start = new Date(v.startDate)
+      const end = new Date(v.endDate)
+      return start <= endOfWeek && end >= startOfWeek
+    }).map(v => {
+      const start = new Date(v.startDate)
+      const end = new Date(v.endDate)
+      const isToday = start <= today && end >= today
+      return { ...v, isToday }
+    })
+  }, [])
+
+  // Get days of this week for the mini calendar
+  const weekDays = useMemo(() => {
+    const today = new Date()
+    const startOfWeek = new Date(today)
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1) // Monday
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(startOfWeek)
+      date.setDate(startOfWeek.getDate() + i)
+      return date
+    })
   }, [])
 
   useEffect(() => {
@@ -211,78 +253,203 @@ export default function DashboardHome() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Events Column */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
-                <Icons.calendar className="text-workx-lime" size={16} />
-              </div>
-              <h2 className="text-lg font-medium text-white">Aankomende events</h2>
-            </div>
-            <Link href="/dashboard/agenda" className="text-sm text-workx-lime hover:underline flex items-center gap-1">
-              Bekijk agenda
-              <Icons.arrowRight size={14} />
-            </Link>
-          </div>
+        {/* Events & Absence Column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Absence This Week Card */}
+          <div className="card p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="card h-20 animate-pulse" />
-              ))}
-            </div>
-          ) : events.length === 0 ? (
-            <div className="card p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <Icons.calendar className="text-white/20" size={28} />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                    <Icons.sun className="text-yellow-400" size={16} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-white">Afwezig deze week</h2>
+                    <p className="text-xs text-white/40">{awayThisWeek.filter(v => v.isToday).length} vandaag afwezig</p>
+                  </div>
+                </div>
+                <Link href="/dashboard/vakanties" className="text-sm text-workx-lime hover:underline flex items-center gap-1">
+                  Alle vakanties
+                  <Icons.arrowRight size={14} />
+                </Link>
               </div>
-              <p className="text-white/50 mb-2">Geen aankomende events</p>
-              <Link href="/dashboard/agenda" className="text-sm text-workx-lime hover:underline">
-                Event toevoegen
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {events.map((event, index) => (
-                <Link
-                  key={event.id}
-                  href="/dashboard/agenda"
-                  className="card p-4 flex items-center gap-4 group hover:border-white/10 transition-all"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div
-                    className="w-1 h-12 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: event.color }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-white truncate group-hover:text-workx-lime transition-colors">
-                      {event.title}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-white/40">
-                      <span className="flex items-center gap-1">
-                        <Icons.calendar size={12} />
-                        {formatDate(event.startTime)}
-                      </span>
-                      {!event.isAllDay && (
-                        <span className="flex items-center gap-1">
-                          <Icons.clock size={12} />
-                          {formatTime(event.startTime)}
-                        </span>
-                      )}
-                      {event.location && (
-                        <span className="flex items-center gap-1 truncate">
-                          <Icons.mapPin size={12} />
-                          {event.location}
-                        </span>
+
+              {/* Mini week calendar */}
+              <div className="grid grid-cols-7 gap-1 mb-4">
+                {weekDays.map((day, i) => {
+                  const isToday = day.toDateString() === new Date().toDateString()
+                  const isWeekend = day.getDay() === 0 || day.getDay() === 6
+                  const absencesOnDay = DEMO_VACATIONS.filter(v => {
+                    const start = new Date(v.startDate)
+                    const end = new Date(v.endDate)
+                    return start <= day && end >= day
+                  })
+
+                  return (
+                    <div
+                      key={i}
+                      className={`text-center p-2 rounded-lg ${
+                        isToday ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : isWeekend ? 'bg-white/[0.02]' : 'bg-white/5'
+                      }`}
+                    >
+                      <p className={`text-[10px] font-medium uppercase ${isToday ? 'text-workx-lime' : 'text-white/40'}`}>
+                        {day.toLocaleDateString('nl-NL', { weekday: 'short' })}
+                      </p>
+                      <p className={`text-sm font-semibold ${isToday ? 'text-workx-lime' : 'text-white'}`}>
+                        {day.getDate()}
+                      </p>
+                      {absencesOnDay.length > 0 && (
+                        <div className="flex justify-center gap-0.5 mt-1">
+                          {absencesOnDay.slice(0, 3).map((v, j) => (
+                            <div
+                              key={j}
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: v.color }}
+                            />
+                          ))}
+                          {absencesOnDay.length > 3 && (
+                            <span className="text-[8px] text-white/40">+{absencesOnDay.length - 3}</span>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                  <Icons.chevronRight className="text-white/20 group-hover:text-workx-lime transition-colors" size={18} />
-                </Link>
-              ))}
+                  )
+                })}
+              </div>
+
+              {/* List of people away */}
+              {awayThisWeek.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-white/40">Iedereen is aanwezig deze week</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {awayThisWeek.map((vacation, index) => {
+                    const startDate = new Date(vacation.startDate)
+                    const endDate = new Date(vacation.endDate)
+                    const isSingleDay = vacation.startDate === vacation.endDate
+
+                    return (
+                      <div
+                        key={vacation.id}
+                        className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                          vacation.isToday ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-white/5 hover:bg-white/10'
+                        }`}
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm flex-shrink-0"
+                          style={{ backgroundColor: vacation.color + '30', color: vacation.color }}
+                        >
+                          {vacation.personName.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-white truncate">{vacation.personName}</p>
+                            {vacation.isToday && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-500/20 text-yellow-400">
+                                Nu afwezig
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-white/40">
+                              {isSingleDay
+                                ? startDate.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })
+                                : `${startDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}`
+                              }
+                            </p>
+                            {vacation.note && (
+                              <>
+                                <span className="text-white/20">·</span>
+                                <p className="text-xs text-white/40 truncate">{vacation.note}</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Upcoming Events */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.calendar className="text-workx-lime" size={16} />
+                </div>
+                <h2 className="text-lg font-medium text-white">Aankomende events</h2>
+              </div>
+              <Link href="/dashboard/agenda" className="text-sm text-workx-lime hover:underline flex items-center gap-1">
+                Bekijk agenda
+                <Icons.arrowRight size={14} />
+              </Link>
+            </div>
+
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="card h-20 animate-pulse" />
+                ))}
+              </div>
+            ) : events.length === 0 ? (
+              <div className="card p-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <Icons.calendar className="text-white/20" size={28} />
+                </div>
+                <p className="text-white/50 mb-2">Geen aankomende events</p>
+                <Link href="/dashboard/agenda" className="text-sm text-workx-lime hover:underline">
+                  Event toevoegen
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {events.map((event, index) => (
+                  <Link
+                    key={event.id}
+                    href="/dashboard/agenda"
+                    className="card p-4 flex items-center gap-4 group hover:border-white/10 transition-all"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div
+                      className="w-1 h-12 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: event.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-white truncate group-hover:text-workx-lime transition-colors">
+                        {event.title}
+                      </h3>
+                      <div className="flex items-center gap-3 mt-1 text-sm text-white/40">
+                        <span className="flex items-center gap-1">
+                          <Icons.calendar size={12} />
+                          {formatDate(event.startTime)}
+                        </span>
+                        {!event.isAllDay && (
+                          <span className="flex items-center gap-1">
+                            <Icons.clock size={12} />
+                            {formatTime(event.startTime)}
+                          </span>
+                        )}
+                        {event.location && (
+                          <span className="flex items-center gap-1 truncate">
+                            <Icons.mapPin size={12} />
+                            {event.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Icons.chevronRight className="text-white/20 group-hover:text-workx-lime transition-colors" size={18} />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Work Items Column */}
