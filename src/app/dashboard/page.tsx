@@ -601,47 +601,93 @@ export default function DashboardHome() {
           )}
         </div>
 
-        {/* Birthday Card */}
+        {/* Birthday Card - Premium Edition */}
         <Link href="/dashboard/agenda" className="card p-4 relative overflow-hidden group hover:border-pink-500/30 transition-all">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-pink-500/10 transition-colors" />
+          {/* Background effects */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-pink-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-pink-500/15 transition-all duration-500" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 group-hover:bg-purple-500/10 transition-all duration-500" />
+
+          {/* Confetti particles - appear on hover */}
+          <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span className="absolute text-lg animate-bounce" style={{ top: '10%', left: '10%', animationDelay: '0ms', animationDuration: '1s' }}>🎊</span>
+            <span className="absolute text-sm animate-bounce" style={{ top: '20%', right: '15%', animationDelay: '150ms', animationDuration: '1.2s' }}>✨</span>
+            <span className="absolute text-lg animate-bounce" style={{ bottom: '25%', left: '20%', animationDelay: '300ms', animationDuration: '0.9s' }}>🎉</span>
+            <span className="absolute text-sm animate-bounce" style={{ top: '40%', right: '10%', animationDelay: '100ms', animationDuration: '1.1s' }}>🎈</span>
+            <span className="absolute text-xs animate-bounce" style={{ bottom: '15%', right: '25%', animationDelay: '200ms', animationDuration: '1s' }}>⭐</span>
+            <span className="absolute text-sm animate-bounce" style={{ top: '60%', left: '8%', animationDelay: '250ms', animationDuration: '1.3s' }}>🎁</span>
+          </div>
 
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center">
-                  <span className="text-lg">🎂</span>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 to-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <span className="text-xl group-hover:animate-bounce">🎂</span>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">Verjaardagen</p>
                   <p className="text-xs text-white/40">Binnenkort jarig</p>
                 </div>
               </div>
-              <Icons.arrowRight size={16} className="text-white/20 group-hover:text-pink-400 transition-colors" />
+              <Icons.arrowRight size={16} className="text-white/20 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
             </div>
 
-            <div className="space-y-2">
-              {nextBirthday.map((person, i) => (
-                <div
-                  key={person.name}
-                  className={`flex items-center justify-between ${i === 0 ? 'bg-pink-500/10 -mx-2 px-2 py-1.5 rounded-lg' : ''}`}
-                >
-                  <div className="flex items-center gap-2">
-                    {i === 0 && <span className="text-sm">🎉</span>}
-                    <span className={`text-sm ${i === 0 ? 'text-pink-400 font-medium' : 'text-white/60'}`}>
-                      {person.name.split(' ')[0]}
-                    </span>
+            {/* Featured birthday - First person */}
+            {nextBirthday[0] && (
+              <div className="mb-3 p-3 -mx-1 rounded-xl bg-gradient-to-r from-pink-500/15 via-purple-500/10 to-pink-500/5 border border-pink-500/20 group-hover:border-pink-500/40 group-hover:from-pink-500/20 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500/30 to-purple-500/20 flex items-center justify-center text-2xl shadow-lg shadow-pink-500/10">
+                    🎉
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white">{nextBirthday[0].name}</span>
+                      {nextBirthday[0].daysUntil === 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-500 text-white animate-pulse">
+                          VANDAAG!
+                        </span>
+                      )}
+                      {nextBirthday[0].daysUntil === 1 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500 text-white">
+                          MORGEN
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-pink-400">
+                        {nextBirthday[0].date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      </span>
+                    </div>
                   </div>
                   <div className="text-right">
-                    {person.daysUntil === 0 ? (
-                      <span className="text-xs font-medium text-pink-400 bg-pink-500/20 px-2 py-0.5 rounded-full">Vandaag!</span>
-                    ) : person.daysUntil === 1 ? (
-                      <span className="text-xs font-medium text-orange-400">Morgen</span>
-                    ) : (
-                      <span className={`text-xs ${i === 0 ? 'text-pink-400' : 'text-white/40'}`}>
-                        over {person.daysUntil} dagen
-                      </span>
-                    )}
+                    <p className="text-2xl font-bold text-pink-400">{nextBirthday[0].daysUntil}</p>
+                    <p className="text-[10px] text-white/40">{nextBirthday[0].daysUntil === 1 ? 'dag' : 'dagen'}</p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Other upcoming birthdays */}
+            <div className="space-y-2">
+              {nextBirthday.slice(1).map((person) => (
+                <div
+                  key={person.name}
+                  className="flex items-center justify-between py-1.5 px-2 -mx-1 rounded-lg hover:bg-white/5 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-pink-500/10 flex items-center justify-center text-sm">
+                      🎂
+                    </div>
+                    <div>
+                      <span className="text-sm text-white/70">{person.name.split(' ')[0]}</span>
+                      <span className="text-xs text-white/30 ml-2">
+                        {person.date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs text-white/40">
+                    {person.daysUntil}d
+                  </span>
                 </div>
               ))}
             </div>
