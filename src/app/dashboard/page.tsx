@@ -42,12 +42,12 @@ interface WorkItem {
 
 // Demo vakanties deze week (voor overzicht wie er weg is)
 const DEMO_VACATIONS = [
-  { id: '1', personName: 'Marnix Ritmeester', startDate: '2025-01-27', endDate: '2025-01-31', note: 'Skivakantie', color: '#60a5fa' },
-  { id: '2', personName: 'Julia Groen', startDate: '2025-01-29', endDate: '2025-02-02', note: 'Lang weekend', color: '#f9ff85' },
-  { id: '3', personName: 'Bas den Ridder', startDate: '2025-01-30', endDate: '2025-01-30', note: 'Tandarts', color: '#a78bfa' },
-  { id: '4', personName: 'Hanna Blaauboer', startDate: '2025-02-03', endDate: '2025-02-07', note: 'Voorjaarsvakantie', color: '#34d399' },
-  { id: '5', personName: 'Kay Maes', startDate: '2025-02-10', endDate: '2025-02-14', note: null, color: '#fb923c' },
-  { id: '6', personName: 'Emma van der Vos', startDate: '2025-01-28', endDate: '2025-01-29', note: 'Ziek', color: '#f87171' },
+  { id: '1', personName: 'Marnix Ritmeester', startDate: '2026-01-27', endDate: '2026-01-31', note: 'Skivakantie', color: '#60a5fa' },
+  { id: '2', personName: 'Julia Groen', startDate: '2026-01-29', endDate: '2026-02-02', note: 'Lang weekend', color: '#f9ff85' },
+  { id: '3', personName: 'Bas den Ridder', startDate: '2026-01-30', endDate: '2026-01-30', note: 'Tandarts', color: '#a78bfa' },
+  { id: '4', personName: 'Hanna Blaauboer', startDate: '2026-02-03', endDate: '2026-02-07', note: 'Voorjaarsvakantie', color: '#34d399' },
+  { id: '5', personName: 'Kay Maes', startDate: '2026-02-10', endDate: '2026-02-14', note: null, color: '#fb923c' },
+  { id: '6', personName: 'Emma van der Vos', startDate: '2026-01-28', endDate: '2026-01-29', note: 'Ziek', color: '#f87171' },
 ]
 
 // Demo vakantiedagen data (alsof Hanna dit heeft ingevoerd)

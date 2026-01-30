@@ -55,6 +55,7 @@ export default function VakantiesPage() {
   const [note, setNote] = useState('')
   const [selectedColor, setSelectedColor] = useState(COLORS[0].value)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showTeamDropdown, setShowTeamDropdown] = useState(false)
 
   useEffect(() => { fetchVacations() }, [])
 
@@ -65,11 +66,12 @@ export default function VakantiesPage() {
     } catch (error) {
       // Use mock data for now
       setVacations([
-        { id: '1', personName: 'Marnix Ritmeester', startDate: '2025-02-03', endDate: '2025-02-07', note: 'Skivakantie', color: '#60a5fa' },
-        { id: '2', personName: 'Julia Groen', startDate: '2025-02-10', endDate: '2025-02-14', note: 'Voorjaarsvakantie', color: '#f9ff85' },
-        { id: '3', personName: 'Bas den Ridder', startDate: '2025-02-05', endDate: '2025-02-06', note: null, color: '#a78bfa' },
-        { id: '4', personName: 'Hanna Blaauboer', startDate: '2025-02-17', endDate: '2025-02-21', note: 'Familiebezoek', color: '#34d399' },
-        { id: '5', personName: 'Kay Maes', startDate: '2025-02-12', endDate: '2025-02-14', note: null, color: '#fb923c' },
+        { id: '1', personName: 'Marnix Ritmeester', startDate: '2026-01-27', endDate: '2026-01-31', note: 'Skivakantie', color: '#60a5fa' },
+        { id: '2', personName: 'Julia Groen', startDate: '2026-01-29', endDate: '2026-02-02', note: 'Lang weekend', color: '#f9ff85' },
+        { id: '3', personName: 'Bas den Ridder', startDate: '2026-01-30', endDate: '2026-01-30', note: 'Tandarts', color: '#a78bfa' },
+        { id: '4', personName: 'Hanna Blaauboer', startDate: '2026-02-03', endDate: '2026-02-07', note: 'Voorjaarsvakantie', color: '#34d399' },
+        { id: '5', personName: 'Kay Maes', startDate: '2026-02-10', endDate: '2026-02-14', note: null, color: '#fb923c' },
+        { id: '6', personName: 'Emma van der Vos', startDate: '2026-01-28', endDate: '2026-01-29', note: 'Ziek', color: '#f87171' },
       ])
     } finally {
       setIsLoading(false)
@@ -84,6 +86,7 @@ export default function VakantiesPage() {
     setSelectedColor(COLORS[0].value)
     setEditingId(null)
     setShowForm(false)
+    setShowTeamDropdown(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -553,19 +556,75 @@ export default function VakantiesPage() {
               <div>
                 <label className="block text-sm text-white/60 mb-2">Wie gaat er met vakantie?</label>
                 <div className="relative">
-                  <Icons.user className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none z-10" size={16} />
-                  <select
-                    value={personName}
-                    onChange={e => setPersonName(e.target.value)}
-                    className="input-field pl-10 appearance-none cursor-pointer"
-                    required
+                  <button
+                    type="button"
+                    onClick={() => setShowTeamDropdown(!showTeamDropdown)}
+                    className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
                   >
-                    <option value="">Selecteer een teamlid...</option>
-                    {TEAM_MEMBERS.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
-                  <Icons.chevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" size={16} />
+                    {personName ? (
+                      <>
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-workx-lime font-semibold text-sm">
+                          {personName.charAt(0)}
+                        </div>
+                        <span className="flex-1 text-white">{personName}</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                          <Icons.user className="text-white/30" size={16} />
+                        </div>
+                        <span className="flex-1 text-white/40">Selecteer een teamlid...</span>
+                      </>
+                    )}
+                    <Icons.chevronDown
+                      size={18}
+                      className={`text-white/30 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {/* Custom Dropdown */}
+                  {showTeamDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
+                      <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                        <div className="p-2 border-b border-white/5">
+                          <p className="text-[10px] text-white/30 uppercase tracking-wider px-2">Team ({TEAM_MEMBERS.length})</p>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto py-1">
+                          {TEAM_MEMBERS.map((name, index) => {
+                            const isSelected = personName === name
+                            const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                            const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
+                            const colorClass = colors[index % colors.length]
+
+                            return (
+                              <button
+                                key={name}
+                                type="button"
+                                onClick={() => {
+                                  setPersonName(name)
+                                  setShowTeamDropdown(false)
+                                }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
+                                  isSelected
+                                    ? 'bg-workx-lime/10 text-white'
+                                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                                }`}
+                              >
+                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
+                                  {initials}
+                                </div>
+                                <span className="flex-1 text-sm">{name}</span>
+                                {isSelected && (
+                                  <Icons.check size={16} className="text-workx-lime" />
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
