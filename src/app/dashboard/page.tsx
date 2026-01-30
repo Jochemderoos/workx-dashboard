@@ -22,6 +22,19 @@ interface WorkItem {
   clientName: string | null
 }
 
+// Demo vakantiedagen data (alsof Hanna dit heeft ingevoerd)
+const VACATION_BALANCE = {
+  userName: 'Jochem de Roos', // Huidige gebruiker (demo)
+  year: 2025,
+  wettelijkeDagen: 20,        // Wettelijke vakantiedagen
+  bovenwettelijkeDagen: 5,    // Bovenwettelijke dagen
+  overgedragenVorigJaar: 3.5, // Overgedragen van vorig jaar
+  opgenomenDitJaar: 8,        // Al opgenomen dit jaar
+  geplandDitJaar: 5,          // Gepland maar nog niet opgenomen
+  lastUpdatedBy: 'Hanna Blaauboer',
+  lastUpdated: '2025-01-28',
+}
+
 const quickLinks = [
   { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10' },
   { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10' },
@@ -124,6 +137,134 @@ export default function DashboardHome() {
             <p className="text-white/40 mt-1">
               {currentTime.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Vacation Balance Card */}
+      <div className="card p-6 relative overflow-hidden border-workx-lime/20">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-green-500/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+
+        <div className="relative">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-workx-lime/20 to-green-500/10 flex items-center justify-center">
+                <Icons.sun className="text-workx-lime" size={24} />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Mijn vakantiedagen</h2>
+                <p className="text-sm text-white/40">Saldo {VACATION_BALANCE.year}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-white/30">Laatst bijgewerkt door</p>
+              <p className="text-sm text-white/50">{VACATION_BALANCE.lastUpdatedBy}</p>
+              <p className="text-xs text-white/30">{new Date(VACATION_BALANCE.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</p>
+            </div>
+          </div>
+
+          {/* Main balance display */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
+              <p className="text-xs text-white/40 mb-1">Totaal beschikbaar</p>
+              <p className="text-3xl font-bold text-workx-lime">
+                {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar}
+              </p>
+              <p className="text-xs text-white/30 mt-1">dagen dit jaar</p>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
+              <p className="text-xs text-white/40 mb-1">Opgenomen</p>
+              <p className="text-3xl font-bold text-orange-400">
+                {VACATION_BALANCE.opgenomenDitJaar}
+              </p>
+              <p className="text-xs text-white/30 mt-1">dagen gebruikt</p>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
+              <p className="text-xs text-white/40 mb-1">Gepland</p>
+              <p className="text-3xl font-bold text-blue-400">
+                {VACATION_BALANCE.geplandDitJaar}
+              </p>
+              <p className="text-xs text-white/30 mt-1">dagen ingepland</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-workx-lime/10 to-green-500/5 rounded-xl p-4 border border-workx-lime/20">
+              <p className="text-xs text-workx-lime/70 mb-1">Resterend</p>
+              <p className="text-3xl font-bold text-white">
+                {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar - VACATION_BALANCE.opgenomenDitJaar - VACATION_BALANCE.geplandDitJaar}
+              </p>
+              <p className="text-xs text-white/30 mt-1">dagen over</p>
+            </div>
+          </div>
+
+          {/* Detailed breakdown */}
+          <div className="bg-white/[0.02] rounded-xl p-4 border border-white/5">
+            <p className="text-xs text-white/40 mb-3 font-medium">Opbouw saldo</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-workx-lime"></span>
+                  Wettelijke vakantiedagen
+                </span>
+                <span className="text-white font-medium">{VACATION_BALANCE.wettelijkeDagen} dagen</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                  Bovenwettelijke dagen
+                </span>
+                <span className="text-white font-medium">{VACATION_BALANCE.bovenwettelijkeDagen} dagen</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                  Overgedragen van {VACATION_BALANCE.year - 1}
+                </span>
+                <span className="text-white font-medium">{VACATION_BALANCE.overgedragenVorigJaar} dagen</span>
+              </div>
+              <div className="border-t border-white/5 pt-2 mt-2 flex items-center justify-between text-sm">
+                <span className="text-white/80 font-medium">Totaal {VACATION_BALANCE.year}</span>
+                <span className="text-workx-lime font-semibold">
+                  {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar} dagen
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs text-white/40 mb-2">
+              <span>Verbruik dit jaar</span>
+              <span>
+                {Math.round(((VACATION_BALANCE.opgenomenDitJaar + VACATION_BALANCE.geplandDitJaar) / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100)}% gebruikt/gepland
+              </span>
+            </div>
+            <div className="h-3 bg-white/5 rounded-full overflow-hidden flex">
+              <div
+                className="h-full bg-orange-400 transition-all"
+                style={{ width: `${(VACATION_BALANCE.opgenomenDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
+              />
+              <div
+                className="h-full bg-blue-400 transition-all"
+                style={{ width: `${(VACATION_BALANCE.geplandDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
+              />
+            </div>
+            <div className="flex items-center gap-4 mt-2 text-xs">
+              <span className="flex items-center gap-1.5 text-white/40">
+                <span className="w-2 h-2 rounded-full bg-orange-400"></span>
+                Opgenomen
+              </span>
+              <span className="flex items-center gap-1.5 text-white/40">
+                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                Gepland
+              </span>
+              <span className="flex items-center gap-1.5 text-white/40">
+                <span className="w-2 h-2 rounded-full bg-white/10"></span>
+                Beschikbaar
+              </span>
+            </div>
           </div>
         </div>
       </div>
