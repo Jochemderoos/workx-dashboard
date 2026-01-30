@@ -1,8 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
+
+// Team verjaardagen (zelfde als agenda)
+const TEAM_BIRTHDAYS = [
+  { name: 'Marnix Ritmeester', birthDate: '03-12' },
+  { name: 'Maaike de Jong', birthDate: '07-23' },
+  { name: 'Marlieke Schipper', birthDate: '01-08' },
+  { name: 'Kay Maes', birthDate: '05-17' },
+  { name: 'Justine Schellekens', birthDate: '09-04' },
+  { name: 'Juliette Niersman', birthDate: '11-21' },
+  { name: 'Jochem de Roos', birthDate: '04-29' },
+  { name: 'Julia Groen', birthDate: '08-15' },
+  { name: 'Hanna Blaauboer', birthDate: '02-06' },
+  { name: 'Erika van Zadelhof', birthDate: '06-30' },
+  { name: 'Emma van der Vos', birthDate: '10-11' },
+  { name: 'Bas den Ridder', birthDate: '12-03' },
+  { name: 'Barbara Rip', birthDate: '02-19' },
+  { name: 'Lotte van Sint Truiden', birthDate: '07-07' },
+]
 
 interface CalendarEvent {
   id: string
@@ -49,6 +67,27 @@ export default function DashboardHome() {
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [showVacationDetails, setShowVacationDetails] = useState(false)
+
+  // Calculate next birthday
+  const nextBirthday = useMemo(() => {
+    const today = new Date()
+    const currentYear = today.getFullYear()
+
+    const upcomingBirthdays = TEAM_BIRTHDAYS.map(member => {
+      const [month, day] = member.birthDate.split('-').map(Number)
+      let birthdayThisYear = new Date(currentYear, month - 1, day)
+
+      if (birthdayThisYear < today) {
+        birthdayThisYear = new Date(currentYear + 1, month - 1, day)
+      }
+
+      const daysUntil = Math.ceil((birthdayThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      return { ...member, date: birthdayThisYear, daysUntil }
+    }).sort((a, b) => a.daysUntil - b.daysUntil)
+
+    return upcomingBirthdays.slice(0, 3) // Return top 3
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -137,134 +176,6 @@ export default function DashboardHome() {
             <p className="text-white/40 mt-1">
               {currentTime.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Vacation Balance Card */}
-      <div className="card p-6 relative overflow-hidden border-workx-lime/20">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-green-500/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-
-        <div className="relative">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-workx-lime/20 to-green-500/10 flex items-center justify-center">
-                <Icons.sun className="text-workx-lime" size={24} />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">Mijn vakantiedagen</h2>
-                <p className="text-sm text-white/40">Saldo {VACATION_BALANCE.year}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-white/30">Laatst bijgewerkt door</p>
-              <p className="text-sm text-white/50">{VACATION_BALANCE.lastUpdatedBy}</p>
-              <p className="text-xs text-white/30">{new Date(VACATION_BALANCE.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</p>
-            </div>
-          </div>
-
-          {/* Main balance display */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-              <p className="text-xs text-white/40 mb-1">Totaal beschikbaar</p>
-              <p className="text-3xl font-bold text-workx-lime">
-                {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar}
-              </p>
-              <p className="text-xs text-white/30 mt-1">dagen dit jaar</p>
-            </div>
-
-            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-              <p className="text-xs text-white/40 mb-1">Opgenomen</p>
-              <p className="text-3xl font-bold text-orange-400">
-                {VACATION_BALANCE.opgenomenDitJaar}
-              </p>
-              <p className="text-xs text-white/30 mt-1">dagen gebruikt</p>
-            </div>
-
-            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-              <p className="text-xs text-white/40 mb-1">Gepland</p>
-              <p className="text-3xl font-bold text-blue-400">
-                {VACATION_BALANCE.geplandDitJaar}
-              </p>
-              <p className="text-xs text-white/30 mt-1">dagen ingepland</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-workx-lime/10 to-green-500/5 rounded-xl p-4 border border-workx-lime/20">
-              <p className="text-xs text-workx-lime/70 mb-1">Resterend</p>
-              <p className="text-3xl font-bold text-white">
-                {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar - VACATION_BALANCE.opgenomenDitJaar - VACATION_BALANCE.geplandDitJaar}
-              </p>
-              <p className="text-xs text-white/30 mt-1">dagen over</p>
-            </div>
-          </div>
-
-          {/* Detailed breakdown */}
-          <div className="bg-white/[0.02] rounded-xl p-4 border border-white/5">
-            <p className="text-xs text-white/40 mb-3 font-medium">Opbouw saldo</p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/60 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-workx-lime"></span>
-                  Wettelijke vakantiedagen
-                </span>
-                <span className="text-white font-medium">{VACATION_BALANCE.wettelijkeDagen} dagen</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/60 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                  Bovenwettelijke dagen
-                </span>
-                <span className="text-white font-medium">{VACATION_BALANCE.bovenwettelijkeDagen} dagen</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/60 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                  Overgedragen van {VACATION_BALANCE.year - 1}
-                </span>
-                <span className="text-white font-medium">{VACATION_BALANCE.overgedragenVorigJaar} dagen</span>
-              </div>
-              <div className="border-t border-white/5 pt-2 mt-2 flex items-center justify-between text-sm">
-                <span className="text-white/80 font-medium">Totaal {VACATION_BALANCE.year}</span>
-                <span className="text-workx-lime font-semibold">
-                  {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar} dagen
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-xs text-white/40 mb-2">
-              <span>Verbruik dit jaar</span>
-              <span>
-                {Math.round(((VACATION_BALANCE.opgenomenDitJaar + VACATION_BALANCE.geplandDitJaar) / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100)}% gebruikt/gepland
-              </span>
-            </div>
-            <div className="h-3 bg-white/5 rounded-full overflow-hidden flex">
-              <div
-                className="h-full bg-orange-400 transition-all"
-                style={{ width: `${(VACATION_BALANCE.opgenomenDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
-              />
-              <div
-                className="h-full bg-blue-400 transition-all"
-                style={{ width: `${(VACATION_BALANCE.geplandDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
-              />
-            </div>
-            <div className="flex items-center gap-4 mt-2 text-xs">
-              <span className="flex items-center gap-1.5 text-white/40">
-                <span className="w-2 h-2 rounded-full bg-orange-400"></span>
-                Opgenomen
-              </span>
-              <span className="flex items-center gap-1.5 text-white/40">
-                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                Gepland
-              </span>
-              <span className="flex items-center gap-1.5 text-white/40">
-                <span className="w-2 h-2 rounded-full bg-white/10"></span>
-                Beschikbaar
-              </span>
-            </div>
           </div>
         </div>
       </div>
@@ -433,6 +344,143 @@ export default function DashboardHome() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Vacation & Birthday Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Compact Vacation Card */}
+        <div className="card p-4 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+
+          <button
+            onClick={() => setShowVacationDetails(!showVacationDetails)}
+            className="w-full text-left relative"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.sun className="text-workx-lime" size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">Mijn vakantiedagen</p>
+                  <p className="text-xs text-white/40">Saldo {VACATION_BALANCE.year}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-workx-lime">
+                    {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar - VACATION_BALANCE.opgenomenDitJaar - VACATION_BALANCE.geplandDitJaar}
+                  </p>
+                  <p className="text-xs text-white/40">dagen over</p>
+                </div>
+                <Icons.chevronDown
+                  size={18}
+                  className={`text-white/30 transition-transform ${showVacationDetails ? 'rotate-180' : ''}`}
+                />
+              </div>
+            </div>
+
+            {/* Mini progress bar */}
+            <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden flex">
+              <div
+                className="h-full bg-orange-400"
+                style={{ width: `${(VACATION_BALANCE.opgenomenDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
+              />
+              <div
+                className="h-full bg-blue-400"
+                style={{ width: `${(VACATION_BALANCE.geplandDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
+              />
+            </div>
+          </button>
+
+          {/* Expandable details */}
+          {showVacationDetails && (
+            <div className="mt-4 pt-4 border-t border-white/5 space-y-3 fade-in">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-white/5 rounded-lg p-2">
+                  <p className="text-lg font-semibold text-workx-lime">
+                    {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar}
+                  </p>
+                  <p className="text-[10px] text-white/40">Totaal</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-2">
+                  <p className="text-lg font-semibold text-orange-400">{VACATION_BALANCE.opgenomenDitJaar}</p>
+                  <p className="text-[10px] text-white/40">Opgenomen</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-2">
+                  <p className="text-lg font-semibold text-blue-400">{VACATION_BALANCE.geplandDitJaar}</p>
+                  <p className="text-[10px] text-white/40">Gepland</p>
+                </div>
+              </div>
+
+              <div className="text-xs space-y-1.5">
+                <div className="flex justify-between text-white/50">
+                  <span>Wettelijk</span>
+                  <span className="text-white">{VACATION_BALANCE.wettelijkeDagen}d</span>
+                </div>
+                <div className="flex justify-between text-white/50">
+                  <span>Bovenwettelijk</span>
+                  <span className="text-white">{VACATION_BALANCE.bovenwettelijkeDagen}d</span>
+                </div>
+                <div className="flex justify-between text-white/50">
+                  <span>Overgedragen</span>
+                  <span className="text-white">{VACATION_BALANCE.overgedragenVorigJaar}d</span>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-white/30 pt-2 border-t border-white/5">
+                Bijgewerkt door {VACATION_BALANCE.lastUpdatedBy} op {new Date(VACATION_BALANCE.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Birthday Card */}
+        <Link href="/dashboard/agenda" className="card p-4 relative overflow-hidden group hover:border-pink-500/30 transition-all">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-pink-500/10 transition-colors" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center">
+                  <span className="text-lg">🎂</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">Verjaardagen</p>
+                  <p className="text-xs text-white/40">Binnenkort jarig</p>
+                </div>
+              </div>
+              <Icons.arrowRight size={16} className="text-white/20 group-hover:text-pink-400 transition-colors" />
+            </div>
+
+            <div className="space-y-2">
+              {nextBirthday.map((person, i) => (
+                <div
+                  key={person.name}
+                  className={`flex items-center justify-between ${i === 0 ? 'bg-pink-500/10 -mx-2 px-2 py-1.5 rounded-lg' : ''}`}
+                >
+                  <div className="flex items-center gap-2">
+                    {i === 0 && <span className="text-sm">🎉</span>}
+                    <span className={`text-sm ${i === 0 ? 'text-pink-400 font-medium' : 'text-white/60'}`}>
+                      {person.name.split(' ')[0]}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    {person.daysUntil === 0 ? (
+                      <span className="text-xs font-medium text-pink-400 bg-pink-500/20 px-2 py-0.5 rounded-full">Vandaag!</span>
+                    ) : person.daysUntil === 1 ? (
+                      <span className="text-xs font-medium text-orange-400">Morgen</span>
+                    ) : (
+                      <span className={`text-xs ${i === 0 ? 'text-pink-400' : 'text-white/40'}`}>
+                        over {person.daysUntil} dagen
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* Bottom Stats */}
