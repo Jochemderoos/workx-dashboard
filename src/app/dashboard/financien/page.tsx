@@ -5,22 +5,31 @@ import { Icons } from '@/components/ui/Icons'
 import jsPDF from 'jspdf'
 import { drawWorkxLogo } from '@/lib/pdf'
 
-// Financial data from Excel
-const financialData = {
-  werkgeverslasten: {
-    2024: [83498, 93037, 90637, 97496, 141919, 93079, 110122.21, 81458.26, 87341.8, 95277, 93797, 82992.28],
-    2025: [88521, 72934, 68268, 107452, 90244, 154652, 81963.87, 79466.89, 82125, 80670, 103485, 95562],
-    2026: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+// Get dynamic years (current year and 2 previous years)
+const currentYear = new Date().getFullYear()
+const years = [currentYear - 2, currentYear - 1, currentYear] as const
+type YearType = typeof years[number]
+
+// Historical financial data - will be extended as years pass
+const historicalData: Record<number, { werkgeverslasten: number[], omzet: number[], uren: number[] }> = {
+  2024: {
+    werkgeverslasten: [83498, 93037, 90637, 97496, 141919, 93079, 110122.21, 81458.26, 87341.8, 95277, 93797, 82992.28],
+    omzet: [20771.73, 208021.62, 233890, 268590, 282943.32, 258967.33, 267419.35, 218107.23, 226676.53, 294707.11, 287153.81, 535280.4],
+    uren: [904, 843, 1017, 1021, 964, 1003.4, 1061, 747, 804, 972, 916, 883]
   },
-  omzet: {
-    2024: [20771.73, 208021.62, 233890, 268590, 282943.32, 258967.33, 267419.35, 218107.23, 226676.53, 294707.11, 287153.81, 535280.4],
-    2025: [-14020, 267211, 258439, 270619, 267833.5, 287433.03, 300822.95, 258031.08, 242402.91, 309577.51, 342265.3, 602865],
-    2026: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  },
-  uren: {
-    2024: [904, 843, 1017, 1021, 964, 1003.4, 1061, 747, 804, 972, 916, 883],
-    2025: [1000.75, 955, 962, 975, 914, 998, 1020, 716, 1076, 1173, 1013, 1068],
-    2026: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  2025: {
+    werkgeverslasten: [88521, 72934, 68268, 107452, 90244, 154652, 81963.87, 79466.89, 82125, 80670, 103485, 95562],
+    omzet: [-14020, 267211, 258439, 270619, 267833.5, 287433.03, 300822.95, 258031.08, 242402.91, 309577.51, 342265.3, 602865],
+    uren: [1000.75, 955, 962, 975, 914, 998, 1020, 716, 1076, 1173, 1013, 1068]
+  }
+}
+
+// Get data for a year - returns zeros if not available
+const getYearData = (year: number) => {
+  return historicalData[year] || {
+    werkgeverslasten: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    omzet: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    uren: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   }
 }
 
@@ -33,79 +42,94 @@ interface BudgetItem {
   spent: number
 }
 
-const defaultBudgets: BudgetItem[] = [
-  { id: '1', name: 'Marketing', budget: 15000, spent: 8500 },
-  { id: '2', name: 'Uitjes', budget: 10000, spent: 4200 },
-  { id: '3', name: 'Kantoorkosten', budget: 25000, spent: 18750 },
-  { id: '4', name: 'Opleidingen', budget: 20000, spent: 12000 },
-  { id: '5', name: 'IT & Software', budget: 30000, spent: 22500 },
-]
-
 type TabType = 'overzicht' | 'grafieken' | 'budgetten'
 
 export default function FinancienPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overzicht')
-  const [data2026, setData2026] = useState({
-    werkgeverslasten: [...financialData.werkgeverslasten[2026]],
-    omzet: [...financialData.omzet[2026]],
-    uren: [...financialData.uren[2026]]
+  const [currentYearData, setCurrentYearData] = useState({
+    werkgeverslasten: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    omzet: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    uren: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   })
-  const [budgets, setBudgets] = useState<BudgetItem[]>(defaultBudgets)
+  const [budgets, setBudgets] = useState<BudgetItem[]>([])
   const [newBudgetName, setNewBudgetName] = useState('')
   const [newBudgetAmount, setNewBudgetAmount] = useState('')
   const [editingBudget, setEditingBudget] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  // Load saved data from localStorage
+  // Load data from API
   useEffect(() => {
-    const saved2026 = localStorage.getItem('financien_2026')
-    if (saved2026) {
-      setData2026(JSON.parse(saved2026))
-    }
-    const savedBudgets = localStorage.getItem('financien_budgets')
-    if (savedBudgets) {
-      setBudgets(JSON.parse(savedBudgets))
-    }
-  }, [])
+    const loadData = async () => {
+      try {
+        // Load current year data
+        const dataRes = await fetch('/api/financien')
+        if (dataRes.ok) {
+          const data = await dataRes.json()
+          setCurrentYearData(data)
+        }
 
-  // Save 2026 data
-  const save2026Data = () => {
-    localStorage.setItem('financien_2026', JSON.stringify(data2026))
-  }
-
-  // Calculate totals and saldo
-  const calculations = useMemo(() => {
-    const totals = {
-      werkgeverslasten: {
-        2024: financialData.werkgeverslasten[2024].reduce((a, b) => a + b, 0),
-        2025: financialData.werkgeverslasten[2025].reduce((a, b) => a + b, 0),
-        2026: data2026.werkgeverslasten.reduce((a, b) => a + b, 0)
-      },
-      omzet: {
-        2024: financialData.omzet[2024].reduce((a, b) => a + b, 0),
-        2025: financialData.omzet[2025].reduce((a, b) => a + b, 0),
-        2026: data2026.omzet.reduce((a, b) => a + b, 0)
-      },
-      uren: {
-        2024: financialData.uren[2024].reduce((a, b) => a + b, 0),
-        2025: financialData.uren[2025].reduce((a, b) => a + b, 0),
-        2026: data2026.uren.reduce((a, b) => a + b, 0)
+        // Load budgets
+        const budgetRes = await fetch('/api/financien/budgets')
+        if (budgetRes.ok) {
+          const budgetData = await budgetRes.json()
+          setBudgets(budgetData)
+        }
+      } catch (error) {
+        console.error('Error loading financial data:', error)
+      } finally {
+        setLoading(false)
       }
     }
+    loadData()
+  }, [])
 
-    const saldo = {
-      2024: periods.map((_, i) => financialData.omzet[2024][i] - financialData.werkgeverslasten[2024][i]),
-      2025: periods.map((_, i) => financialData.omzet[2025][i] - financialData.werkgeverslasten[2025][i]),
-      2026: periods.map((_, i) => data2026.omzet[i] - data2026.werkgeverslasten[i])
+  // Save current year data to API
+  const saveCurrentYearData = async () => {
+    setSaving(true)
+    try {
+      await fetch('/api/financien', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentYearData)
+      })
+    } catch (error) {
+      console.error('Error saving data:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Get data for each year (using historical data or current year data from API)
+  const getDataForYear = (year: number) => {
+    if (year === currentYear) {
+      return currentYearData
+    }
+    return getYearData(year)
+  }
+
+  // Calculate totals and saldo dynamically based on years
+  const calculations = useMemo(() => {
+    const totals: Record<string, Record<number, number>> = {
+      werkgeverslasten: {},
+      omzet: {},
+      uren: {}
     }
 
-    const saldoTotals = {
-      2024: totals.omzet[2024] - totals.werkgeverslasten[2024],
-      2025: totals.omzet[2025] - totals.werkgeverslasten[2025],
-      2026: totals.omzet[2026] - totals.werkgeverslasten[2026]
-    }
+    const saldo: Record<number, number[]> = {}
+    const saldoTotals: Record<number, number> = {}
+
+    years.forEach(year => {
+      const yearData = getDataForYear(year)
+      totals.werkgeverslasten[year] = yearData.werkgeverslasten.reduce((a, b) => a + b, 0)
+      totals.omzet[year] = yearData.omzet.reduce((a, b) => a + b, 0)
+      totals.uren[year] = yearData.uren.reduce((a, b) => a + b, 0)
+      saldo[year] = periods.map((_, i) => yearData.omzet[i] - yearData.werkgeverslasten[i])
+      saldoTotals[year] = totals.omzet[year] - totals.werkgeverslasten[year]
+    })
 
     return { totals, saldo, saldoTotals }
-  }, [data2026])
+  }, [currentYearData])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(value)
@@ -165,7 +189,7 @@ export default function FinancienPage() {
           {colors.map((color, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className="w-3 h-3 rounded" style={{ backgroundColor: color }} />
-              <span className="text-xs text-white/60">{['2024', '2025', '2026'][i]}</span>
+              <span className="text-xs text-white/60">{years[i]}</span>
             </div>
           ))}
         </div>
@@ -239,7 +263,7 @@ export default function FinancienPage() {
           {colors.map((color, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-              <span className="text-xs text-white/60">{['2024', '2025', '2026'][i]}</span>
+              <span className="text-xs text-white/60">{years[i]}</span>
             </div>
           ))}
         </div>
@@ -291,41 +315,68 @@ export default function FinancienPage() {
     )
   }
 
-  // Add budget
-  const addBudget = () => {
+  // Add budget via API
+  const addBudget = async () => {
     if (!newBudgetName || !newBudgetAmount) return
-    const newBudget: BudgetItem = {
-      id: Date.now().toString(),
-      name: newBudgetName,
-      budget: parseFloat(newBudgetAmount),
-      spent: 0
+    try {
+      const res = await fetch('/api/financien/budgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newBudgetName,
+          budget: parseFloat(newBudgetAmount),
+          spent: 0
+        })
+      })
+      if (res.ok) {
+        const newBudget = await res.json()
+        setBudgets([...budgets, newBudget])
+        setNewBudgetName('')
+        setNewBudgetAmount('')
+      }
+    } catch (error) {
+      console.error('Error adding budget:', error)
     }
-    const updated = [...budgets, newBudget]
-    setBudgets(updated)
-    localStorage.setItem('financien_budgets', JSON.stringify(updated))
-    setNewBudgetName('')
-    setNewBudgetAmount('')
   }
 
-  // Update budget spent
-  const updateBudgetSpent = (id: string, spent: number) => {
-    const updated = budgets.map(b => b.id === id ? { ...b, spent } : b)
-    setBudgets(updated)
-    localStorage.setItem('financien_budgets', JSON.stringify(updated))
+  // Update budget spent via API
+  const updateBudgetSpent = async (id: string, spent: number) => {
+    setBudgets(budgets.map(b => b.id === id ? { ...b, spent } : b))
+    try {
+      await fetch(`/api/financien/budgets/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spent })
+      })
+    } catch (error) {
+      console.error('Error updating budget:', error)
+    }
   }
 
-  // Update budget amount
-  const updateBudgetAmount = (id: string, budget: number) => {
-    const updated = budgets.map(b => b.id === id ? { ...b, budget } : b)
-    setBudgets(updated)
-    localStorage.setItem('financien_budgets', JSON.stringify(updated))
+  // Update budget amount via API
+  const updateBudgetAmount = async (id: string, budget: number) => {
+    setBudgets(budgets.map(b => b.id === id ? { ...b, budget } : b))
+    try {
+      await fetch(`/api/financien/budgets/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budget })
+      })
+    } catch (error) {
+      console.error('Error updating budget:', error)
+    }
   }
 
-  // Delete budget
-  const deleteBudget = (id: string) => {
-    const updated = budgets.filter(b => b.id !== id)
-    setBudgets(updated)
-    localStorage.setItem('financien_budgets', JSON.stringify(updated))
+  // Delete budget via API
+  const deleteBudget = async (id: string) => {
+    setBudgets(budgets.filter(b => b.id !== id))
+    try {
+      await fetch(`/api/financien/budgets/${id}`, {
+        method: 'DELETE'
+      })
+    } catch (error) {
+      console.error('Error deleting budget:', error)
+    }
   }
 
   // PDF Export
@@ -481,11 +532,22 @@ export default function FinancienPage() {
       { align: 'center' }
     )
 
-    doc.save('workx-financieel-overzicht.pdf')
+    // Open PDF in new tab instead of downloading
+    const pdfBlob = doc.output('blob')
+    const pdfUrl = URL.createObjectURL(pdfBlob)
+    window.open(pdfUrl, '_blank')
   }
 
   const totalBudget = budgets.reduce((a, b) => a + b.budget, 0)
   const totalSpent = budgets.reduce((a, b) => a + b.spent, 0)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-workx-lime"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -533,27 +595,27 @@ export default function FinancienPage() {
           <div className="grid grid-cols-4 gap-4">
             {[
               {
-                label: 'Omzet 2025',
-                value: formatCurrency(calculations.totals.omzet[2025]),
-                diff: calculations.totals.omzet[2025] - calculations.totals.omzet[2024],
+                label: `Omzet ${years[1]}`,
+                value: formatCurrency(calculations.totals.omzet[years[1]]),
+                diff: calculations.totals.omzet[years[1]] - calculations.totals.omzet[years[0]],
                 positive: true
               },
               {
-                label: 'Kosten 2025',
-                value: formatCurrency(calculations.totals.werkgeverslasten[2025]),
-                diff: calculations.totals.werkgeverslasten[2025] - calculations.totals.werkgeverslasten[2024],
+                label: `Kosten ${years[1]}`,
+                value: formatCurrency(calculations.totals.werkgeverslasten[years[1]]),
+                diff: calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]],
                 positive: false
               },
               {
-                label: 'Saldo 2025',
-                value: formatCurrency(calculations.saldoTotals[2025]),
-                diff: calculations.saldoTotals[2025] - calculations.saldoTotals[2024],
+                label: `Saldo ${years[1]}`,
+                value: formatCurrency(calculations.saldoTotals[years[1]]),
+                diff: calculations.saldoTotals[years[1]] - calculations.saldoTotals[years[0]],
                 positive: true
               },
               {
-                label: 'Uren 2025',
-                value: formatNumber(calculations.totals.uren[2025]),
-                diff: calculations.totals.uren[2025] - calculations.totals.uren[2024],
+                label: `Uren ${years[1]}`,
+                value: formatNumber(calculations.totals.uren[years[1]]),
+                diff: calculations.totals.uren[years[1]] - calculations.totals.uren[years[0]],
                 positive: true
               }
             ].map((kpi, i) => (
@@ -567,7 +629,7 @@ export default function FinancienPage() {
                 }`}>
                   {kpi.diff > 0 ? <Icons.trendingUp size={14} /> : <Icons.trendingDown size={14} />}
                   <span>{kpi.diff > 0 ? '+' : ''}{i === 3 ? formatNumber(kpi.diff) : formatCurrency(kpi.diff)}</span>
-                  <span className="text-white/30">vs 2024</span>
+                  <span className="text-white/30">vs {years[0]}</span>
                 </div>
               </div>
             ))}
@@ -576,8 +638,8 @@ export default function FinancienPage() {
           {/* Main Chart */}
           <LineChart
             data={[
-              calculations.saldo[2024],
-              calculations.saldo[2025]
+              calculations.saldo[years[0]],
+              calculations.saldo[years[1]]
             ]}
             labels={periods}
             title="Saldo per periode (Omzet - Werkgeverslasten)"
@@ -606,23 +668,23 @@ export default function FinancienPage() {
                   {/* Werkgeverslasten */}
                   <tr className="border-b border-white/5 hover:bg-white/5">
                     <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Werkgeverslasten</td>
-                    <td className="py-3 px-4 text-white/60 text-sm">2024</td>
-                    {financialData.werkgeverslasten[2024].map((v, i) => (
+                    <td className="py-3 px-4 text-white/60 text-sm">{years[0]}</td>
+                    {getDataForYear(years[0]).werkgeverslasten.map((v, i) => (
                       <td key={i} className="text-right py-3 px-4 text-white/80 text-sm">{formatCurrency(v)}</td>
                     ))}
-                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.werkgeverslasten[2024])}</td>
+                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.werkgeverslasten[years[0]])}</td>
                   </tr>
                   <tr className="border-b border-white/5 hover:bg-white/5">
-                    <td className="py-3 px-4 text-white/60 text-sm">2025</td>
-                    {financialData.werkgeverslasten[2025].map((v, i) => (
+                    <td className="py-3 px-4 text-white/60 text-sm">{years[1]}</td>
+                    {getDataForYear(years[1]).werkgeverslasten.map((v, i) => (
                       <td key={i} className="text-right py-3 px-4 text-white/80 text-sm">{formatCurrency(v)}</td>
                     ))}
-                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.werkgeverslasten[2025])}</td>
+                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.werkgeverslasten[years[1]])}</td>
                   </tr>
                   <tr className="border-b border-white/5 bg-white/5">
                     <td className="py-3 px-4 text-workx-lime text-sm">Verschil</td>
-                    {financialData.werkgeverslasten[2025].map((v, i) => {
-                      const diff = v - financialData.werkgeverslasten[2024][i]
+                    {getDataForYear(years[1]).werkgeverslasten.map((v, i) => {
+                      const diff = v - getDataForYear(years[0]).werkgeverslasten[i]
                       return (
                         <td key={i} className={`text-right py-3 px-4 text-sm ${diff < 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {diff > 0 ? '+' : ''}{formatCurrency(diff)}
@@ -630,33 +692,33 @@ export default function FinancienPage() {
                       )
                     })}
                     <td className={`text-right py-3 px-4 font-medium ${
-                      calculations.totals.werkgeverslasten[2025] - calculations.totals.werkgeverslasten[2024] < 0
+                      calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]] < 0
                         ? 'text-green-400' : 'text-red-400'
                     }`}>
-                      {formatCurrency(calculations.totals.werkgeverslasten[2025] - calculations.totals.werkgeverslasten[2024])}
+                      {formatCurrency(calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]])}
                     </td>
                   </tr>
 
                   {/* Omzet */}
                   <tr className="border-b border-white/5 hover:bg-white/5">
                     <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Omzet</td>
-                    <td className="py-3 px-4 text-white/60 text-sm">2024</td>
-                    {financialData.omzet[2024].map((v, i) => (
+                    <td className="py-3 px-4 text-white/60 text-sm">{years[0]}</td>
+                    {getDataForYear(years[0]).omzet.map((v, i) => (
                       <td key={i} className="text-right py-3 px-4 text-white/80 text-sm">{formatCurrency(v)}</td>
                     ))}
-                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.omzet[2024])}</td>
+                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.omzet[years[0]])}</td>
                   </tr>
                   <tr className="border-b border-white/5 hover:bg-white/5">
-                    <td className="py-3 px-4 text-white/60 text-sm">2025</td>
-                    {financialData.omzet[2025].map((v, i) => (
+                    <td className="py-3 px-4 text-white/60 text-sm">{years[1]}</td>
+                    {getDataForYear(years[1]).omzet.map((v, i) => (
                       <td key={i} className="text-right py-3 px-4 text-white/80 text-sm">{formatCurrency(v)}</td>
                     ))}
-                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.omzet[2025])}</td>
+                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.omzet[years[1]])}</td>
                   </tr>
                   <tr className="border-b border-white/5 bg-white/5">
                     <td className="py-3 px-4 text-workx-lime text-sm">Verschil</td>
-                    {financialData.omzet[2025].map((v, i) => {
-                      const diff = v - financialData.omzet[2024][i]
+                    {getDataForYear(years[1]).omzet.map((v, i) => {
+                      const diff = v - getDataForYear(years[0]).omzet[i]
                       return (
                         <td key={i} className={`text-right py-3 px-4 text-sm ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {diff > 0 ? '+' : ''}{formatCurrency(diff)}
@@ -664,36 +726,36 @@ export default function FinancienPage() {
                       )
                     })}
                     <td className={`text-right py-3 px-4 font-medium ${
-                      calculations.totals.omzet[2025] - calculations.totals.omzet[2024] > 0
+                      calculations.totals.omzet[years[1]] - calculations.totals.omzet[years[0]] > 0
                         ? 'text-green-400' : 'text-red-400'
                     }`}>
-                      {formatCurrency(calculations.totals.omzet[2025] - calculations.totals.omzet[2024])}
+                      {formatCurrency(calculations.totals.omzet[years[1]] - calculations.totals.omzet[years[0]])}
                     </td>
                   </tr>
 
                   {/* Saldo */}
                   <tr className="bg-workx-lime/10">
-                    <td className="py-3 px-4 text-workx-lime font-medium">Saldo 2024</td>
+                    <td className="py-3 px-4 text-workx-lime font-medium">Saldo {years[0]}</td>
                     <td></td>
-                    {calculations.saldo[2024].map((v, i) => (
+                    {calculations.saldo[years[0]].map((v, i) => (
                       <td key={i} className={`text-right py-3 px-4 font-medium ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {formatCurrency(v)}
                       </td>
                     ))}
-                    <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[2024] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {formatCurrency(calculations.saldoTotals[2024])}
+                    <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[years[0]] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {formatCurrency(calculations.saldoTotals[years[0]])}
                     </td>
                   </tr>
                   <tr className="bg-workx-lime/20">
-                    <td className="py-3 px-4 text-workx-lime font-medium">Saldo 2025</td>
+                    <td className="py-3 px-4 text-workx-lime font-medium">Saldo {years[1]}</td>
                     <td></td>
-                    {calculations.saldo[2025].map((v, i) => (
+                    {calculations.saldo[years[1]].map((v, i) => (
                       <td key={i} className={`text-right py-3 px-4 font-medium ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {formatCurrency(v)}
                       </td>
                     ))}
-                    <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[2025] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {formatCurrency(calculations.saldoTotals[2025])}
+                    <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[years[1]] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {formatCurrency(calculations.saldoTotals[years[1]])}
                     </td>
                   </tr>
                 </tbody>
@@ -701,16 +763,17 @@ export default function FinancienPage() {
             </div>
           </div>
 
-          {/* 2026 Input Section */}
+          {/* Current Year Input Section */}
           <div className="bg-workx-dark/40 rounded-2xl border border-white/5 overflow-hidden">
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
-              <h3 className="text-white font-medium">2026 Invoer</h3>
+              <h3 className="text-white font-medium">{currentYear} Invoer</h3>
               <button
-                onClick={save2026Data}
-                className="flex items-center gap-2 px-3 py-1.5 bg-workx-lime/20 text-workx-lime rounded-lg text-sm hover:bg-workx-lime/30 transition-colors"
+                onClick={saveCurrentYearData}
+                disabled={saving}
+                className="flex items-center gap-2 px-3 py-1.5 bg-workx-lime/20 text-workx-lime rounded-lg text-sm hover:bg-workx-lime/30 transition-colors disabled:opacity-50"
               >
                 <Icons.save size={14} />
-                Opslaan
+                {saving ? 'Opslaan...' : 'Opslaan'}
               </button>
             </div>
             <div className="p-6 space-y-6">
@@ -723,11 +786,11 @@ export default function FinancienPage() {
                         <label className="text-[10px] text-white/40 block">{p}</label>
                         <input
                           type="number"
-                          value={data2026[category as keyof typeof data2026][i] || ''}
+                          value={currentYearData[category as keyof typeof currentYearData][i] || ''}
                           onChange={(e) => {
-                            const newData = { ...data2026 }
-                            newData[category as keyof typeof data2026][i] = parseFloat(e.target.value) || 0
-                            setData2026(newData)
+                            const newData = { ...currentYearData }
+                            newData[category as keyof typeof currentYearData][i] = parseFloat(e.target.value) || 0
+                            setCurrentYearData(newData)
                           }}
                           className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-workx-lime/50"
                           placeholder="0"
@@ -747,8 +810,8 @@ export default function FinancienPage() {
         <div className="grid grid-cols-2 gap-6">
           <LineChart
             data={[
-              financialData.omzet[2024],
-              financialData.omzet[2025]
+              getDataForYear(years[0]).omzet,
+              getDataForYear(years[1]).omzet
             ]}
             labels={periods}
             title="Omzet Ontwikkeling"
@@ -758,8 +821,8 @@ export default function FinancienPage() {
 
           <LineChart
             data={[
-              financialData.werkgeverslasten[2024],
-              financialData.werkgeverslasten[2025]
+              getDataForYear(years[0]).werkgeverslasten,
+              getDataForYear(years[1]).werkgeverslasten
             ]}
             labels={periods}
             title="Werkgeverslasten Ontwikkeling"
@@ -769,8 +832,8 @@ export default function FinancienPage() {
 
           <LineChart
             data={[
-              financialData.uren[2024],
-              financialData.uren[2025]
+              getDataForYear(years[0]).uren,
+              getDataForYear(years[1]).uren
             ]}
             labels={periods}
             title="Uren Ontwikkeling"
@@ -780,8 +843,8 @@ export default function FinancienPage() {
 
           <LineChart
             data={[
-              calculations.saldo[2024],
-              calculations.saldo[2025]
+              calculations.saldo[years[0]],
+              calculations.saldo[years[1]]
             ]}
             labels={periods}
             title="Saldo Ontwikkeling"
@@ -795,10 +858,10 @@ export default function FinancienPage() {
             <div className="grid grid-cols-4 gap-8">
               {['Omzet', 'Kosten', 'Saldo', 'Uren'].map((label, idx) => {
                 const values = [
-                  [calculations.totals.omzet[2024], calculations.totals.omzet[2025]],
-                  [calculations.totals.werkgeverslasten[2024], calculations.totals.werkgeverslasten[2025]],
-                  [calculations.saldoTotals[2024], calculations.saldoTotals[2025]],
-                  [calculations.totals.uren[2024], calculations.totals.uren[2025]]
+                  [calculations.totals.omzet[years[0]], calculations.totals.omzet[years[1]]],
+                  [calculations.totals.werkgeverslasten[years[0]], calculations.totals.werkgeverslasten[years[1]]],
+                  [calculations.saldoTotals[years[0]], calculations.saldoTotals[years[1]]],
+                  [calculations.totals.uren[years[0]], calculations.totals.uren[years[1]]]
                 ][idx]
                 const max = Math.max(...values)
                 const isUren = idx === 3
@@ -813,7 +876,7 @@ export default function FinancienPage() {
                             className={`w-12 rounded-t-lg transition-all ${i === 0 ? 'bg-indigo-500' : 'bg-workx-lime'}`}
                             style={{ height: `${(v / max) * 100}%`, minHeight: 20 }}
                           />
-                          <span className="text-[10px] text-white/40">{['2024', '2025'][i]}</span>
+                          <span className="text-[10px] text-white/40">{[years[0], years[1]][i]}</span>
                           <span className="text-xs text-white/80">{isUren ? formatNumber(v) : formatCurrency(v)}</span>
                         </div>
                       ))}

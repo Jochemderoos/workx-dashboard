@@ -274,3 +274,25 @@ model CalendarEvent {
 
   createdBy   User     @relation("CreatedEvents", fields: [createdById], references: [id])
 }
+
+// ==================== FINANCIEN ====================
+
+// 2026 data invoer - één record voor het hele kantoor
+model FinancialData2026 {
+  id                 String   @id @default(cuid())
+  werkgeverslasten   String   // JSON array van 12 getallen
+  omzet              String   // JSON array van 12 getallen
+  uren               String   // JSON array van 12 getallen
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// Budgetten - gedeeld voor het hele kantoor
+model Budget {
+  id        String   @id @default(cuid())
+  name      String
+  budget    Float
+  spent     Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
