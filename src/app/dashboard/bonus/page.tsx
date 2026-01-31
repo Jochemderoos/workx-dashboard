@@ -257,7 +257,10 @@ export default function BonusPage() {
       { align: 'center' }
     )
 
-    doc.save(`bonus-${calc.clientName || calc.id.slice(0, 8)}.pdf`)
+    // Open PDF in new tab instead of downloading
+    const pdfBlob = doc.output('blob')
+    const pdfUrl = URL.createObjectURL(pdfBlob)
+    window.open(pdfUrl, '_blank')
   }
 
   // Download PDF with all bonuses that need to be paid
@@ -365,8 +368,11 @@ export default function BonusPage() {
       { align: 'center' }
     )
 
-    doc.save(`te-betalen-bonussen-${new Date().toISOString().split('T')[0]}.pdf`)
-    toast.success('PDF gedownload')
+    // Open PDF in new tab instead of downloading
+    const pdfBlob = doc.output('blob')
+    const pdfUrl = URL.createObjectURL(pdfBlob)
+    window.open(pdfUrl, '_blank')
+    toast.success('PDF geopend')
   }
 
   const formatCurrency = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
@@ -397,16 +403,16 @@ export default function BonusPage() {
           <p className="text-white/40">Bereken en beheer je bonussen op basis van facturaties</p>
         </div>
         <div className="flex items-center gap-3">
-          {bonusesToPay.length > 0 && (
-            <button
-              onClick={() => setShowBonusOverview(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 hover:bg-green-500/20 transition-all"
-            >
-              <Icons.euro size={16} />
-              Te betalen bonus
+          <button
+            onClick={() => setShowBonusOverview(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 hover:bg-green-500/20 transition-all"
+          >
+            <Icons.euro size={16} />
+            Te betalen bonus
+            {bonusesToPay.length > 0 && (
               <span className="ml-1 px-2 py-0.5 bg-green-500/20 rounded-full text-xs">{bonusesToPay.length}</span>
-            </button>
-          )}
+            )}
+          </button>
           <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
             <Icons.plus size={16} />
             Nieuwe berekening
