@@ -204,7 +204,7 @@ export default function FinancienPage() {
     )
   }
 
-  // Line chart component
+  // Line chart component with zero line for saldo charts
   const LineChart = ({ data, labels, title, colors, height = 200 }: {
     data: number[][]
     labels: string[]
@@ -215,15 +215,25 @@ export default function FinancienPage() {
     const allValues = data.flat()
     const maxValue = Math.max(...allValues)
     const minValue = Math.min(...allValues)
-    const range = maxValue - minValue || 1
+
+    // Include zero in the range if we have both positive and negative values
+    const hasNegative = minValue < 0
+    const hasPositive = maxValue > 0
+    const adjustedMin = hasNegative && hasPositive ? Math.min(minValue, 0) : minValue
+    const adjustedMax = hasNegative && hasPositive ? Math.max(maxValue, 0) : maxValue
+    const range = adjustedMax - adjustedMin || 1
 
     const getY = (value: number) => {
-      return height * 0.9 - ((value - minValue) / range) * (height * 0.8)
+      return height * 0.9 - ((value - adjustedMin) / range) * (height * 0.8)
     }
 
     const getX = (index: number) => {
       return (index / (labels.length - 1)) * 95 + 2.5
     }
+
+    // Calculate zero line position
+    const zeroY = getY(0)
+    const showZeroLine = hasNegative && hasPositive
 
     return (
       <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
@@ -234,6 +244,28 @@ export default function FinancienPage() {
             {[0, 25, 50, 75, 100].map(y => (
               <line key={y} x1="0" y1={y * height / 100} x2="100" y2={y * height / 100} stroke="rgba(255,255,255,0.1)" strokeWidth="0.2" />
             ))}
+            {/* Zero line - prominent when data has both positive and negative */}
+            {showZeroLine && (
+              <line
+                x1="0"
+                y1={zeroY}
+                x2="100"
+                y2={zeroY}
+                stroke="rgba(255,255,255,0.4)"
+                strokeWidth="0.3"
+                strokeDasharray="2,2"
+              />
+            )}
+            {/* Negative zone shading */}
+            {showZeroLine && (
+              <rect
+                x="0"
+                y={zeroY}
+                width="100"
+                height={height * 0.9 - zeroY + height * 0.05}
+                fill="rgba(239,68,68,0.1)"
+              />
+            )}
             {/* Lines */}
             {data.map((series, seriesIdx) => {
               const points = series.map((value, i) => `${getX(i)},${getY(value)}`).join(' ')
@@ -260,6 +292,15 @@ export default function FinancienPage() {
               )
             })}
           </svg>
+          {/* Zero label */}
+          {showZeroLine && (
+            <span
+              className="absolute right-0 text-[8px] text-white/40 -translate-y-1/2"
+              style={{ top: `${(zeroY / height) * 100}%` }}
+            >
+              €0
+            </span>
+          )}
         </div>
         <div className="flex justify-between mt-2 px-2">
           {labels.map((label, i) => (

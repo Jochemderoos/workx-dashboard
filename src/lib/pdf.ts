@@ -19,39 +19,26 @@ interface PDFOptions {
   subject?: string
 }
 
-// Draw the authentic Workx logo on a PDF (yellow background, black text - matching dashboard exactly)
-// Dashboard logo specs:
-// - Width: 150px, Height: ~79px (ratio 1.9:1)
-// - Padding: px-5 py-4 = 20px horizontal, 16px vertical
-// - "Workx": 34px font, normal weight, #1e1e1e
-// - "ADVOCATEN": 10px font, 2.5px letter-spacing, 3px margin-top, #1e1e1e
+// Draw the Workx logo on PDF - optimized for visual appearance in print
 export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  // Exact dashboard ratio: 150px / 79px = 1.9
-  const height = width / 1.9
-  const cornerRadius = width * 0.027 // ~4px on 150px
-  const paddingLeft = width * 0.133 // 20px / 150px
+  const height = width * 0.52
+  const cornerRadius = 3
 
-  // Yellow background (dashboard: #f9ff85)
+  // Yellow background (#f9ff85)
   doc.setFillColor(249, 255, 133)
   doc.roundedRect(x, y, width, height, cornerRadius, cornerRadius, 'F')
 
-  // "Workx" text
-  // Dashboard: 34px on 150px = 22.7% of width
-  // Baseline position: 16px top padding + ~27px (80% of 34px for ascender) = 43px
-  // 43 / 79 = 54.4% of height
+  // "Workx" text - large and prominent
   doc.setTextColor(30, 30, 30)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(width * 0.227)
-  doc.text('Workx', x + paddingLeft, y + height * 0.54)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(width * 0.32) // Bigger for better readability
+  doc.text('Workx', x + width * 0.08, y + height * 0.58)
 
-  // "ADVOCATEN" text
-  // Dashboard: 10px on 150px = 6.7% of width, letter-spacing 2.5px
-  // Position: 16 + 34 + 3 + 8 (80% of 10px) = 61px from top
-  // 61 / 79 = 77% of height
-  doc.setFontSize(width * 0.067)
+  // "ADVOCATEN" text - smaller with letter spacing
+  doc.setFontSize(width * 0.095) // Bigger than before
   doc.setFont('helvetica', 'normal')
-  doc.setCharSpace(width * 0.017) // 2.5px / 150px scaled
-  doc.text('ADVOCATEN', x + paddingLeft, y + height * 0.77)
+  doc.setCharSpace(2)
+  doc.text('ADVOCATEN', x + width * 0.08, y + height * 0.85)
   doc.setCharSpace(0)
 }
 
