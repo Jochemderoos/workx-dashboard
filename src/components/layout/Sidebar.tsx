@@ -83,9 +83,9 @@ export default function Sidebar({ user }: SidebarProps) {
   }
 
   return (
-    <aside className="w-72 border-r border-white/5 flex flex-col relative z-20 bg-gradient-to-b from-workx-dark/80 to-workx-dark/40 backdrop-blur-xl">
+    <aside className="w-72 border-r border-white/5 flex flex-col relative z-20 bg-gradient-to-b from-workx-dark/80 to-workx-dark/40 backdrop-blur-xl overflow-y-auto no-scrollbar">
       {/* Logo - Authentic Workx branding */}
-      <div className="p-6 pb-8">
+      <div className="p-6 pb-8 flex-shrink-0">
         <Link href="/dashboard" className="block group">
           <div className="relative">
             <WorkxLogoBox />
@@ -95,7 +95,7 @@ export default function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-6 overflow-y-auto no-scrollbar">
+      <nav className="flex-1 px-4 space-y-6">
         {/* Main */}
         <div>
           <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Menu</p>
@@ -122,7 +122,7 @@ export default function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* Bottom section */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 flex-shrink-0">
         <div className="divider-lime" />
 
         <Link
