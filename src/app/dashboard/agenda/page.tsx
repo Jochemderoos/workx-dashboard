@@ -32,21 +32,27 @@ const categoryConfig = {
   BIRTHDAY: { label: 'Verjaardag', icon: Icons.star, color: '#ec4899' },
 }
 
-// Team verjaardagen
+// Team verjaardagen - format: MM-DD
+// Verjaardagen worden automatisch elk jaar getoond in de agenda
 const TEAM_BIRTHDAYS: TeamMember[] = [
+  // Partners
   { name: 'Marnix Ritmeester', birthDate: '03-12' },
-  { name: 'Maaike de Jong', birthDate: '07-23' },
-  { name: 'Marlieke Schipper', birthDate: '01-08' },
-  { name: 'Kay Maes', birthDate: '05-17' },
-  { name: 'Justine Schellekens', birthDate: '09-04' },
+  { name: 'Jochem de Roos', birthDate: '03-02' },
   { name: 'Juliette Niersman', birthDate: '11-21' },
-  { name: 'Jochem de Roos', birthDate: '04-29' },
-  { name: 'Julia Groen', birthDate: '08-15' },
-  { name: 'Hanna Blaauboer', birthDate: '02-06' },
-  { name: 'Erika van Zadelhof', birthDate: '06-30' },
-  { name: 'Emma van der Vos', birthDate: '10-11' },
   { name: 'Bas den Ridder', birthDate: '12-03' },
+  { name: 'Maaike de Jong', birthDate: '07-23' },
+  // Medewerkers
+  { name: 'Hanna Blaauboer', birthDate: '02-06' },
+  { name: 'Alain Heunen', birthDate: '01-15' },
+  { name: 'Marlieke Schipper', birthDate: '01-08' },
+  { name: 'Justine Schellekens', birthDate: '09-04' },
+  { name: 'Wies van Pesch', birthDate: '04-15' },
+  { name: 'Emma van der Vos', birthDate: '10-11' },
+  { name: 'Kay Maes', birthDate: '05-17' },
+  { name: 'Erika van Zadelhof', birthDate: '06-30' },
   { name: 'Barbara Rip', birthDate: '02-19' },
+  { name: 'Julia Groen', birthDate: '08-15' },
+  { name: 'Heleen Pesser', birthDate: '' }, // Verjaardag onbekend
   { name: 'Lotte van Sint Truiden', birthDate: '07-07' },
 ]
 
@@ -73,19 +79,21 @@ export default function AgendaPage() {
     const today = new Date()
     const currentYear = today.getFullYear()
 
-    const upcomingBirthdays = TEAM_BIRTHDAYS.map(member => {
-      const [month, day] = member.birthDate.split('-').map(Number)
-      let birthdayThisYear = new Date(currentYear, month - 1, day)
+    const upcomingBirthdays = TEAM_BIRTHDAYS
+      .filter(m => m.birthDate) // Filter out members without birthday
+      .map(member => {
+        const [month, day] = member.birthDate.split('-').map(Number)
+        let birthdayThisYear = new Date(currentYear, month - 1, day)
 
-      // If birthday already passed this year, use next year
-      if (birthdayThisYear < today) {
-        birthdayThisYear = new Date(currentYear + 1, month - 1, day)
-      }
+        // If birthday already passed this year, use next year
+        if (birthdayThisYear < today) {
+          birthdayThisYear = new Date(currentYear + 1, month - 1, day)
+        }
 
-      const daysUntil = Math.ceil((birthdayThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        const daysUntil = Math.ceil((birthdayThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-      return { ...member, date: birthdayThisYear, daysUntil }
-    }).sort((a, b) => a.daysUntil - b.daysUntil)
+        return { ...member, date: birthdayThisYear, daysUntil }
+      }).sort((a, b) => a.daysUntil - b.daysUntil)
 
     return upcomingBirthdays[0]
   }, [])
@@ -95,7 +103,7 @@ export default function AgendaPage() {
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const dateStr = `${month}-${day}`
-    return TEAM_BIRTHDAYS.filter(m => m.birthDate === dateStr)
+    return TEAM_BIRTHDAYS.filter(m => m.birthDate && m.birthDate === dateStr)
   }
 
   useEffect(() => { fetchEvents() }, [currentMonth])

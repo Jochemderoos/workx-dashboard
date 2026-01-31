@@ -10,7 +10,7 @@ const prisma = new PrismaClient()
 const TEAM_MEMBERS = [
   // Admins met volledige toegang (eerste 6)
   { name: 'Hanna Blaauboer', email: 'hanna.blaauboer@workxadvocaten.nl', role: 'ADMIN', department: 'Kantoor', birthDate: '02-06' },
-  { name: 'Jochem de Roos', email: 'jochem.deroos@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '04-29' },
+  { name: 'Jochem de Roos', email: 'jochem.deroos@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '03-02' },
   { name: 'Marnix Ritmeester', email: 'marnix.ritmeester@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '03-12' },
   { name: 'Bas den Ridder', email: 'bas.denridder@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '12-03' },
   { name: 'Maaike de Jong', email: 'maaike.dejong@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '07-23' },
@@ -26,7 +26,8 @@ const TEAM_MEMBERS = [
   { name: 'Erika van Zadelhof', email: 'erika.vanzadelhof@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '06-30' },
   { name: 'Barbara Rip', email: 'barbara.rip@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '02-19' },
   { name: 'Julia Groen', email: 'julia.groen@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '08-15' },
-  { name: 'Lotte van Sint Truiden', email: 'officemanagement@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Kantoor', birthDate: '07-07' },
+  { name: 'Heleen Pesser', email: 'heleen.pesser@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '' },
+  { name: 'Lotte van Sint Truiden', email: 'officemanagement@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Kantoor (Officemanagement)', birthDate: '07-07' },
 ]
 
 // Vakantiesaldo 2026 data (uit Excel)
@@ -41,6 +42,7 @@ const VACATION_BALANCES: Record<string, { overgedragen: number; opbouw: number; 
   'erika.vanzadelhof@workxadvocaten.nl': { overgedragen: 6, opbouw: 25, bijgekocht: 5, opgenomen: 12 },
   'barbara.rip@workxadvocaten.nl': { overgedragen: 13.5, opbouw: 25, bijgekocht: 0, opgenomen: 1.5 },
   'julia.groen@workxadvocaten.nl': { overgedragen: 5, opbouw: 25, bijgekocht: 0, opgenomen: 5 },
+  'heleen.pesser@workxadvocaten.nl': { overgedragen: 0, opbouw: 25, bijgekocht: 5, opgenomen: 12 },
   'officemanagement@workxadvocaten.nl': { overgedragen: 0, opbouw: 25, bijgekocht: 0, opgenomen: 0 },
 }
 

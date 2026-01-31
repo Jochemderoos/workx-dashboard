@@ -20,6 +20,7 @@ interface VacationBalance {
   bijgekocht: number             // Extra gekochte dagen
   opgenomenLopendJaar: number    // Dagen opgenomen dit jaar
   note?: string                  // Extra informatie
+  isPartner?: boolean            // Partners hebben geen verlofrechten
   // Berekend: resterend = overgedragen + opbouw + bijgekocht - opgenomen
 }
 
@@ -35,18 +36,25 @@ interface ParentalLeave {
 
 // Vakantiesaldo 2026 data uit Excel (ingevoerd door Hanna)
 const INITIAL_VACATION_BALANCES: VacationBalance[] = [
-  { personName: 'Hanna Blaauboer', overgedragenVorigJaar: 11, opbouwLopendJaar: 22.5, bijgekocht: 0, opgenomenLopendJaar: 7, note: 'Totaal 33,5 dagen' },
-  { personName: 'Justine Schellekens', overgedragenVorigJaar: 5, opbouwLopendJaar: 23, bijgekocht: 0, opgenomenLopendJaar: 10, note: 'Vanaf 25 april met verlof' },
+  // Partners (geen verlofrechten)
+  { personName: 'Marnix Ritmeester', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
+  { personName: 'Jochem de Roos', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
+  { personName: 'Juliette Niersman', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
+  { personName: 'Bas den Ridder', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
+  { personName: 'Maaike de Jong', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
+  // Medewerkers
+  { personName: 'Hanna Blaauboer', overgedragenVorigJaar: 11, opbouwLopendJaar: 22.5, bijgekocht: 0, opgenomenLopendJaar: 7, note: 'Kantoormanager' },
+  { personName: 'Alain Heunen', overgedragenVorigJaar: 0, opbouwLopendJaar: 10, bijgekocht: 0, opgenomenLopendJaar: 10, note: 'Per 1 juni uit dienst' },
   { personName: 'Marlieke Schipper', overgedragenVorigJaar: 6, opbouwLopendJaar: 22, bijgekocht: 0, opgenomenLopendJaar: 17, note: 'Betaald ouderschapsverlof t/m 5 juni' },
-  { personName: 'Wies Spenkelink', overgedragenVorigJaar: 1.5, opbouwLopendJaar: 23, bijgekocht: 4, opgenomenLopendJaar: 9, note: 'Gaat 6 maart met verlof' },
-  { personName: 'Emma van der Vos', overgedragenVorigJaar: 3, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Totaal 28 dagen' },
-  { personName: 'Alain Bakker', overgedragenVorigJaar: 0, opbouwLopendJaar: 10, bijgekocht: 0, opgenomenLopendJaar: 10, note: 'Per 1 juni uit dienst. Rest betaald ouderschapsverlof (8d)' },
-  { personName: 'Heleen Hartog', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 5, opgenomenLopendJaar: 12, note: 'Totaal 30 dagen' },
-  { personName: 'Erika van Zadelhof', overgedragenVorigJaar: 6, opbouwLopendJaar: 25, bijgekocht: 5, opgenomenLopendJaar: 12, note: 'Totaal 36 dagen' },
-  { personName: 'Kay Maes', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Totaal 25 dagen' },
-  { personName: 'Barbara Rip', overgedragenVorigJaar: 13.5, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 1.5, note: 'Totaal 38,5 dagen' },
-  { personName: 'Julia Groen', overgedragenVorigJaar: 5, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 5, note: 'Totaal 30 dagen' },
-  { personName: 'Diyar (werkstudent)', overgedragenVorigJaar: 0, opbouwLopendJaar: 2.5, bijgekocht: 0, opgenomenLopendJaar: 0, note: '3 maanden, 2 dagen/week' },
+  { personName: 'Justine Schellekens', overgedragenVorigJaar: 5, opbouwLopendJaar: 23, bijgekocht: 0, opgenomenLopendJaar: 10, note: 'Vanaf 25 april met verlof' },
+  { personName: 'Wies van Pesch', overgedragenVorigJaar: 1.5, opbouwLopendJaar: 23, bijgekocht: 4, opgenomenLopendJaar: 9, note: 'Gaat 6 maart met verlof' },
+  { personName: 'Emma van der Vos', overgedragenVorigJaar: 3, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: '' },
+  { personName: 'Kay Maes', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: '' },
+  { personName: 'Erika van Zadelhof', overgedragenVorigJaar: 6, opbouwLopendJaar: 25, bijgekocht: 5, opgenomenLopendJaar: 12, note: '' },
+  { personName: 'Barbara Rip', overgedragenVorigJaar: 13.5, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 1.5, note: '' },
+  { personName: 'Julia Groen', overgedragenVorigJaar: 5, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 5, note: '' },
+  { personName: 'Heleen Pesser', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 5, opgenomenLopendJaar: 12, note: '' },
+  { personName: 'Lotte van Sint Truiden', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Kantoor (Officemanagement)' },
 ]
 
 // Ouderschapsverlof data
@@ -61,13 +69,13 @@ const INITIAL_PARENTAL_LEAVE: ParentalLeave[] = [
     note: 'Betaald ouderschapsverlof t/m 5 juni'
   },
   {
-    personName: 'Alain Bakker',
+    personName: 'Alain Heunen',
     betaaldTotaalWeken: 9,
     betaaldOpgenomenWeken: 8,
     onbetaaldTotaalWeken: 0,
     onbetaaldOpgenomenWeken: 0,
-    eindDatum: '2026-01-31',
-    note: 'Rest betaald ouderschapsverlof (8 dagen)'
+    eindDatum: '2026-06-01',
+    note: 'Rest betaald ouderschapsverlof'
   },
 ]
 
@@ -82,24 +90,53 @@ const COLORS = [
   { name: 'Rood', value: '#f87171', bg: 'bg-red-400/20', text: 'text-red-400' },
 ]
 
+// Schoolvakanties Noord-Holland (Regio Noord)
+// Bron: rijksoverheid.nl schoolvakanties
+interface SchoolHoliday {
+  name: string
+  startDate: string
+  endDate: string
+}
+
+const SCHOOL_HOLIDAYS: SchoolHoliday[] = [
+  // 2025
+  { name: 'Voorjaarsvakantie 2025', startDate: '2025-02-22', endDate: '2025-03-02' },
+  { name: 'Meivakantie 2025', startDate: '2025-04-26', endDate: '2025-05-11' },
+  { name: 'Zomervakantie 2025', startDate: '2025-07-19', endDate: '2025-08-31' },
+  { name: 'Herfstvakantie 2025', startDate: '2025-10-18', endDate: '2025-10-26' },
+  { name: 'Kerstvakantie 2025', startDate: '2025-12-20', endDate: '2026-01-04' },
+  // 2026
+  { name: 'Voorjaarsvakantie 2026', startDate: '2026-02-21', endDate: '2026-03-01' },
+  { name: 'Meivakantie 2026', startDate: '2026-04-25', endDate: '2026-05-10' },
+  { name: 'Zomervakantie 2026', startDate: '2026-07-11', endDate: '2026-08-23' },
+  { name: 'Herfstvakantie 2026', startDate: '2026-10-17', endDate: '2026-10-25' },
+  { name: 'Kerstvakantie 2026', startDate: '2026-12-19', endDate: '2027-01-03' },
+  // 2027
+  { name: 'Voorjaarsvakantie 2027', startDate: '2027-02-20', endDate: '2027-02-28' },
+  { name: 'Meivakantie 2027', startDate: '2027-05-01', endDate: '2027-05-09' },
+  { name: 'Zomervakantie 2027', startDate: '2027-07-17', endDate: '2027-08-29' },
+]
+
 const TEAM_MEMBERS = [
+  // Partners
   'Marnix Ritmeester',
-  'Maaike de Jong',
-  'Marlieke Schipper',
-  'Kay Maes',
-  'Justine Schellekens',
-  'Juliette Niersman',
   'Jochem de Roos',
-  'Julia Groen',
-  'Hanna Blaauboer',
-  'Erika van Zadelhof',
-  'Emma van der Vos',
+  'Juliette Niersman',
   'Bas den Ridder',
+  'Maaike de Jong',
+  // Medewerkers
+  'Hanna Blaauboer',
+  'Alain Heunen',
+  'Marlieke Schipper',
+  'Justine Schellekens',
+  'Wies van Pesch',
+  'Emma van der Vos',
+  'Kay Maes',
+  'Erika van Zadelhof',
   'Barbara Rip',
-  'Wies Spenkelink',
-  'Alain Bakker',
-  'Heleen Hartog',
-  'Diyar (werkstudent)',
+  'Julia Groen',
+  'Heleen Pesser',
+  'Lotte van Sint Truiden',
 ]
 
 export default function VakantiesPage() {
@@ -175,15 +212,8 @@ export default function VakantiesPage() {
       const res = await fetch('/api/vacations')
       if (res.ok) setVacations(await res.json())
     } catch (error) {
-      // Use mock data for now
-      setVacations([
-        { id: '1', personName: 'Marnix Ritmeester', startDate: '2026-01-27', endDate: '2026-01-31', note: 'Skivakantie', color: '#60a5fa' },
-        { id: '2', personName: 'Julia Groen', startDate: '2026-01-29', endDate: '2026-02-02', note: 'Lang weekend', color: '#f9ff85' },
-        { id: '3', personName: 'Bas den Ridder', startDate: '2026-01-30', endDate: '2026-01-30', note: 'Tandarts', color: '#a78bfa' },
-        { id: '4', personName: 'Hanna Blaauboer', startDate: '2026-02-03', endDate: '2026-02-07', note: 'Voorjaarsvakantie', color: '#34d399' },
-        { id: '5', personName: 'Kay Maes', startDate: '2026-02-10', endDate: '2026-02-14', note: null, color: '#fb923c' },
-        { id: '6', personName: 'Emma van der Vos', startDate: '2026-01-28', endDate: '2026-01-29', note: 'Ziek', color: '#f87171' },
-      ])
+      // Start met lege lijst - voeg vakanties toe via de interface
+      setVacations([])
     } finally {
       setIsLoading(false)
     }
@@ -282,6 +312,19 @@ export default function VakantiesPage() {
   const isToday = (date: Date) => date.toDateString() === new Date().toDateString()
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
 
+  // Check if a date falls within a school holiday period
+  const getSchoolHoliday = (date: Date): SchoolHoliday | null => {
+    const dateStr = date.toISOString().split('T')[0]
+    for (const holiday of SCHOOL_HOLIDAYS) {
+      if (dateStr >= holiday.startDate && dateStr <= holiday.endDate) {
+        return holiday
+      }
+    }
+    return null
+  }
+
+  const isSchoolHoliday = (date: Date): boolean => getSchoolHoliday(date) !== null
+
   const formatDate = (date: Date) => date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
   const formatDateFull = (dateStr: string) => new Date(dateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
 
@@ -362,7 +405,7 @@ export default function VakantiesPage() {
                 <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center mb-3">
                   <Icons.users className="text-workx-lime" size={18} />
                 </div>
-                <p className="text-3xl font-semibold text-white">{vacationBalances.length}</p>
+                <p className="text-3xl font-semibold text-white">{vacationBalances.filter(b => !b.isPartner).length}</p>
                 <p className="text-sm text-white/40">Medewerkers</p>
               </div>
             </div>
@@ -374,7 +417,7 @@ export default function VakantiesPage() {
                   <Icons.sun className="text-blue-400" size={18} />
                 </div>
                 <p className="text-3xl font-semibold text-white">
-                  {vacationBalances.reduce((sum, b) => sum + calculateResterend(b), 0).toFixed(1)}
+                  {vacationBalances.filter(b => !b.isPartner).reduce((sum, b) => sum + calculateResterend(b), 0).toFixed(1)}
                 </p>
                 <p className="text-sm text-white/40">Totaal resterend (team)</p>
               </div>
@@ -387,7 +430,7 @@ export default function VakantiesPage() {
                   <Icons.calendar className="text-purple-400" size={18} />
                 </div>
                 <p className="text-3xl font-semibold text-white">
-                  {vacationBalances.reduce((sum, b) => sum + b.opgenomenLopendJaar, 0)}
+                  {vacationBalances.filter(b => !b.isPartner).reduce((sum, b) => sum + b.opgenomenLopendJaar, 0)}
                 </p>
                 <p className="text-sm text-white/40">Opgenomen dit jaar (team)</p>
               </div>
@@ -527,7 +570,7 @@ export default function VakantiesPage() {
                       }`}
                     >
                       <div className="col-span-2 flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-sm text-white relative`}>
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${balance.isPartner ? 'from-purple-500/30 to-purple-600/10' : colorClass} flex items-center justify-center font-semibold text-sm text-white relative`}>
                           {initials}
                           {parentalLeave && (
                             <div className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
@@ -538,25 +581,42 @@ export default function VakantiesPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-white">{balance.personName}</p>
-                            {parentalLeave && (
+                            {balance.isPartner && (
+                              <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">Partner</span>
+                            )}
+                            {parentalLeave && !balance.isPartner && (
                               <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">OV</span>
                             )}
                           </div>
                           <p className="text-xs text-white/40">
-                            {balance.note || (balance.personName === 'Hanna Blaauboer' ? 'Admin' : 'Medewerker')}
+                            {balance.isPartner ? 'Geen verlofrechten' : (balance.note || 'Medewerker')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-white/70">{balance.overgedragenVorigJaar}</span>
-                        <span className="text-white/30 text-sm ml-1">d</span>
+                        {balance.isPartner ? (
+                          <span className="text-white/30">-</span>
+                        ) : (
+                          <>
+                            <span className="text-white/70">{balance.overgedragenVorigJaar}</span>
+                            <span className="text-white/30 text-sm ml-1">d</span>
+                          </>
+                        )}
                       </div>
                       <div className="text-right">
-                        <span className="text-white/70">{balance.opbouwLopendJaar}</span>
-                        <span className="text-white/30 text-sm ml-1">d</span>
+                        {balance.isPartner ? (
+                          <span className="text-white/30">-</span>
+                        ) : (
+                          <>
+                            <span className="text-white/70">{balance.opbouwLopendJaar}</span>
+                            <span className="text-white/30 text-sm ml-1">d</span>
+                          </>
+                        )}
                       </div>
                       <div className="text-right">
-                        {(balance.bijgekocht || 0) > 0 ? (
+                        {balance.isPartner ? (
+                          <span className="text-white/30">-</span>
+                        ) : (balance.bijgekocht || 0) > 0 ? (
                           <>
                             <span className="text-green-400">{balance.bijgekocht}</span>
                             <span className="text-white/30 text-sm ml-1">d</span>
@@ -566,23 +626,37 @@ export default function VakantiesPage() {
                         )}
                       </div>
                       <div className="text-right">
-                        <span className="text-white/70">{balance.opgenomenLopendJaar}</span>
-                        <span className="text-white/30 text-sm ml-1">d</span>
+                        {balance.isPartner ? (
+                          <span className="text-white/30">-</span>
+                        ) : (
+                          <>
+                            <span className="text-white/70">{balance.opgenomenLopendJaar}</span>
+                            <span className="text-white/30 text-sm ml-1">d</span>
+                          </>
+                        )}
                       </div>
                       <div className="text-right flex items-center justify-end gap-3">
-                        <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${
-                          isLow
-                            ? 'bg-orange-500/10 text-orange-400'
-                            : 'bg-workx-lime/10 text-workx-lime'
-                        }`}>
-                          {resterend.toFixed(1)} d
-                        </div>
-                        <button
-                          onClick={() => handleEditBalance(balance.personName)}
-                          className="p-2 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          <Icons.edit size={16} />
-                        </button>
+                        {balance.isPartner ? (
+                          <div className="px-3 py-1.5 rounded-lg text-sm bg-white/5 text-white/30">
+                            -
+                          </div>
+                        ) : (
+                          <>
+                            <div className={`px-3 py-1.5 rounded-lg font-semibold text-sm ${
+                              isLow
+                                ? 'bg-orange-500/10 text-orange-400'
+                                : 'bg-workx-lime/10 text-workx-lime'
+                            }`}>
+                              {resterend.toFixed(1)} d
+                            </div>
+                            <button
+                              onClick={() => handleEditBalance(balance.personName)}
+                              className="p-2 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Icons.edit size={16} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )
@@ -734,6 +808,28 @@ export default function VakantiesPage() {
             </div>
           </div>
 
+      {/* School Holiday Notice */}
+      <div className="card p-4 border-red-500/20 bg-gradient-to-r from-red-500/5 to-transparent">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+            <Icons.alertTriangle className="text-red-400" size={18} />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-medium text-white mb-0.5">Schoolvakanties Noord-Holland</h3>
+            <p className="text-xs text-white/50">
+              Periodes gemarkeerd in <span className="text-red-400 font-medium">rood</span> zijn schoolvakanties.
+              Medewerkers met schoolgaande kinderen hebben in deze periodes voorrang bij het plannen van vakantie.
+            </p>
+          </div>
+          <div className="hidden sm:block text-right text-xs text-white/40">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500/50" />
+              <span>Schoolvakantie</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Away This Week - Quick Overview */}
       {awayThisWeek.length > 0 && (
         <div className="card p-5 border-yellow-500/20">
@@ -807,12 +903,12 @@ export default function VakantiesPage() {
           >
             <Icons.chevronLeft size={18} />
           </button>
-          <button
-            onClick={() => setCurrentDate(new Date())}
-            className="px-4 py-2 text-sm text-workx-lime hover:bg-workx-lime/10 rounded-xl transition-colors"
-          >
-            Vandaag
-          </button>
+          <span className="px-4 py-2 text-sm text-white/60 min-w-[140px] text-center">
+            {viewMode === 'week'
+              ? `Week ${Math.ceil((currentDate.getDate() + new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay()) / 7)}`
+              : currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
+            }
+          </span>
           <button
             onClick={() => {
               const newDate = new Date(currentDate)
@@ -830,28 +926,41 @@ export default function VakantiesPage() {
       {/* Week View */}
       {viewMode === 'week' && (
         <div className="card overflow-hidden">
-          <div className="p-5 border-b border-white/5">
+          <div className="p-5 border-b border-white/5 flex items-center justify-between">
             <h2 className="font-semibold text-white">
               Week van {formatDate(getWeekDays(currentDate)[0])} - {formatDate(getWeekDays(currentDate)[6])}
             </h2>
+            {/* School holiday legend */}
+            <div className="flex items-center gap-2 text-xs text-white/50">
+              <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" />
+              <span>Schoolvakantie (voorrang medewerkers met kinderen)</span>
+            </div>
           </div>
           <div className="grid grid-cols-7">
             {getWeekDays(currentDate).map((day, i) => {
               const dayVacations = getVacationsForDate(day)
+              const schoolHoliday = getSchoolHoliday(day)
               return (
                 <div
                   key={i}
-                  className={`min-h-[200px] p-3 border-r border-white/5 last:border-r-0 ${
-                    isToday(day) ? 'bg-workx-lime/5' : isWeekend(day) ? 'bg-white/[0.02]' : ''
+                  className={`min-h-[200px] p-3 border-r border-white/5 last:border-r-0 relative ${
+                    isToday(day) ? 'bg-workx-lime/5' : schoolHoliday ? 'bg-red-500/[0.08]' : isWeekend(day) ? 'bg-white/[0.02]' : ''
                   }`}
                 >
-                  <div className={`text-center mb-3 ${isToday(day) ? 'text-workx-lime' : 'text-white/40'}`}>
+                  {/* School holiday indicator bar */}
+                  {schoolHoliday && (
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500/40 via-red-500/60 to-red-500/40" />
+                  )}
+                  <div className={`text-center mb-3 ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400/80' : 'text-white/40'}`}>
                     <p className="text-xs font-medium uppercase">
                       {day.toLocaleDateString('nl-NL', { weekday: 'short' })}
                     </p>
-                    <p className={`text-2xl font-semibold ${isToday(day) ? 'text-workx-lime' : 'text-white'}`}>
+                    <p className={`text-2xl font-semibold ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400' : 'text-white'}`}>
                       {day.getDate()}
                     </p>
+                    {schoolHoliday && (
+                      <p className="text-[9px] text-red-400/70 mt-0.5 truncate px-1">{schoolHoliday.name.replace(/\s*\d{4}$/, '')}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     {dayVacations.map(v => (
@@ -876,10 +985,15 @@ export default function VakantiesPage() {
       {/* Month View */}
       {viewMode === 'month' && (
         <div className="card overflow-hidden">
-          <div className="p-5 border-b border-white/5">
+          <div className="p-5 border-b border-white/5 flex items-center justify-between">
             <h2 className="font-semibold text-white capitalize">
               {currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
             </h2>
+            {/* School holiday legend */}
+            <div className="flex items-center gap-2 text-xs text-white/50">
+              <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" />
+              <span>Schoolvakantie (voorrang medewerkers met kinderen)</span>
+            </div>
           </div>
           <div className="p-5">
             <div className="grid grid-cols-7 mb-3">
@@ -890,17 +1004,25 @@ export default function VakantiesPage() {
             <div className="grid grid-cols-7 gap-1">
               {getMonthDays(currentDate).map((day, i) => {
                 const dayVacations = getVacationsForDate(day.date)
+                const schoolHoliday = getSchoolHoliday(day.date)
                 return (
                   <div
                     key={i}
-                    className={`min-h-[100px] p-2 rounded-xl transition-colors ${
+                    className={`min-h-[100px] p-2 rounded-xl transition-colors relative ${
                       day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
                     } ${isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''} ${
+                      schoolHoliday && day.isCurrentMonth ? 'bg-red-500/[0.08] ring-1 ring-red-500/20' :
                       isWeekend(day.date) && day.isCurrentMonth ? 'bg-white/[0.02]' : ''
                     }`}
                   >
+                    {/* School holiday indicator dot */}
+                    {schoolHoliday && day.isCurrentMonth && (
+                      <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500/50" title={schoolHoliday.name} />
+                    )}
                     <span className={`text-sm font-medium ${
-                      isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
+                      isToday(day.date) ? 'text-workx-lime' :
+                      schoolHoliday && day.isCurrentMonth ? 'text-red-400' :
+                      day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
                     }`}>
                       {day.date.getDate()}
                     </span>

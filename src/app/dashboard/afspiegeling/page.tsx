@@ -37,6 +37,7 @@ export default function AfspiegelingPage() {
   const [showForm, setShowForm] = useState(false)
   const [newEmployee, setNewEmployee] = useState({ name: '', birthDate: '', startDate: '', functionCategory: '' })
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false)
+  const [showFormCategoryDropdown, setShowFormCategoryDropdown] = useState(false)
 
   const categories = useMemo(() => Array.from(new Set(employees.map(e => e.functionCategory))).sort(), [employees])
   const filtered = useMemo(() => functionFilter ? employees.filter(e => e.functionCategory === functionFilter) : employees, [employees, functionFilter])
@@ -491,21 +492,58 @@ export default function AfspiegelingPage() {
               <div>
                 <label className="block text-sm text-white/60 mb-2">Functiecategorie *</label>
                 <div className="relative">
-                  <Icons.briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                  <Icons.briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 z-10" size={16} />
                   <input
                     type="text"
                     value={newEmployee.functionCategory}
                     onChange={(e) => setNewEmployee({ ...newEmployee, functionCategory: e.target.value })}
+                    onFocus={() => categories.length > 0 && setShowFormCategoryDropdown(true)}
                     placeholder="bijv. Jurist, Secretariaat"
                     className="input-field pl-11"
-                    list="categories"
                   />
+                  {categories.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowFormCategoryDropdown(!showFormCategoryDropdown)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-white transition-colors"
+                    >
+                      <Icons.chevronDown size={16} className={`transition-transform ${showFormCategoryDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+                  )}
+                  {showFormCategoryDropdown && categories.length > 0 && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowFormCategoryDropdown(false)} />
+                      <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in max-h-48 overflow-y-auto">
+                        <div className="py-1">
+                          {categories.map(c => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => {
+                                setNewEmployee({ ...newEmployee, functionCategory: c })
+                                setShowFormCategoryDropdown(false)
+                              }}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm transition-all ${
+                                newEmployee.functionCategory === c
+                                  ? 'bg-workx-lime/10 text-white'
+                                  : 'text-white/70 hover:bg-white/5 hover:text-white'
+                              }`}
+                            >
+                              <div className="w-7 h-7 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                                <Icons.briefcase size={14} className="text-workx-lime" />
+                              </div>
+                              <span className="flex-1">{c}</span>
+                              {newEmployee.functionCategory === c && (
+                                <Icons.check size={16} className="text-workx-lime" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-                {categories.length > 0 && (
-                  <datalist id="categories">
-                    {categories.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                )}
+                <p className="text-xs text-white/30 mt-1.5">Typ een nieuwe categorie of kies uit bestaande</p>
               </div>
 
               <div className="flex gap-3 pt-2">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 
@@ -23,12 +24,22 @@ const roleConfig: Record<string, { label: string; color: string; bg: string }> =
 }
 
 export default function TeamPage() {
+  const { data: session } = useSession()
   const [members, setMembers] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterRole, setFilterRole] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showRoleDropdown, setShowRoleDropdown] = useState(false)
+
+  // Password reset state
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [isResetting, setIsResetting] = useState(false)
+
+  // Check if current user can reset passwords (ADMIN or PARTNER)
+  const canResetPasswords = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
 
   useEffect(() => { fetchMembers() }, [])
 
@@ -41,6 +52,41 @@ export default function TeamPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleResetPassword = async () => {
+    if (!selectedMember || !newPassword) return
+    if (newPassword.length < 6) {
+      toast.error('Wachtwoord moet minimaal 6 tekens bevatten')
+      return
+    }
+
+    setIsResetting(true)
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedMember.id, newPassword }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Kon wachtwoord niet resetten')
+
+      toast.success(`Wachtwoord gereset voor ${selectedMember.name}`)
+      setShowResetModal(false)
+      setSelectedMember(null)
+      setNewPassword('')
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
+  const openResetModal = (member: TeamMember) => {
+    setSelectedMember(member)
+    setNewPassword('')
+    setShowResetModal(true)
   }
 
   const filteredMembers = members.filter(member => {
@@ -287,9 +333,20 @@ export default function TeamPage() {
                       <Icons.calendar size={12} />
                       Sinds {new Date(member.createdAt).toLocaleDateString('nl-NL', { month: 'short', year: 'numeric' })}
                     </span>
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5">
-                      <Icons.briefcase size={12} className="text-white/40" />
-                      <span className="text-xs text-white/60">{member._count.assignedWork} zaken</span>
+                    <div className="flex items-center gap-2">
+                      {canResetPasswords && (
+                        <button
+                          onClick={() => openResetModal(member)}
+                          className="p-1.5 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          title="Wachtwoord resetten"
+                        >
+                          <Icons.lock size={14} />
+                        </button>
+                      )}
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5">
+                        <Icons.briefcase size={12} className="text-white/40" />
+                        <span className="text-xs text-white/60">{member._count.assignedWork} zaken</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -307,6 +364,7 @@ export default function TeamPage() {
                 <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4 hidden md:table-cell">Afdeling</th>
                 <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4">Rol</th>
                 <th className="text-right text-xs font-medium text-white/40 uppercase tracking-wider p-4">Zaken</th>
+                {canResetPasswords && <th className="text-right text-xs font-medium text-white/40 uppercase tracking-wider p-4 w-20">Acties</th>}
               </tr>
             </thead>
             <tbody>
@@ -344,11 +402,119 @@ export default function TeamPage() {
                     <td className="p-4 text-right">
                       <span className="text-sm text-white/60">{member._count.assignedWork}</span>
                     </td>
+                    {canResetPasswords && (
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => openResetModal(member)}
+                          className="p-2 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all"
+                          title="Wachtwoord resetten"
+                        >
+                          <Icons.lock size={14} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {showResetModal && selectedMember && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowResetModal(false)}>
+          <div className="card p-6 w-full max-w-md relative" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.lock className="text-workx-lime" size={18} />
+                </div>
+                <h2 className="font-semibold text-white text-lg">Wachtwoord resetten</h2>
+              </div>
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            {/* Selected user info */}
+            <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center">
+                <span className="text-workx-dark font-semibold text-lg">
+                  {selectedMember.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="font-medium text-white">{selectedMember.name}</p>
+                <p className="text-sm text-white/40">{selectedMember.email}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Nieuw wachtwoord</label>
+                <div className="relative">
+                  <Icons.lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                  <input
+                    type="text"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    className="input-field pl-10"
+                    placeholder="Minimaal 6 tekens..."
+                    autoFocus
+                  />
+                </div>
+                <p className="text-xs text-white/30 mt-1.5">
+                  Het nieuwe wachtwoord is direct actief. Informeer de medewerker over het nieuwe wachtwoord.
+                </p>
+              </div>
+
+              {/* Quick password suggestions */}
+              <div>
+                <p className="text-xs text-white/40 mb-2">Snelle suggesties:</p>
+                <div className="flex flex-wrap gap-2">
+                  {['Workx2024!', 'Welkom123!', 'Reset2024!'].map(pwd => (
+                    <button
+                      key={pwd}
+                      type="button"
+                      onClick={() => setNewPassword(pwd)}
+                      className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg transition-colors"
+                    >
+                      {pwd}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="flex-1 btn-secondary"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={handleResetPassword}
+                disabled={!newPassword || newPassword.length < 6 || isResetting}
+                className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isResetting ? (
+                  <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Icons.check size={16} />
+                    Resetten
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

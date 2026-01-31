@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { Icons, WorkxLogo } from '@/components/ui/Icons'
+import Image from 'next/image'
+import { Icons } from '@/components/ui/Icons'
 
 // Team verjaardagen (zelfde als agenda)
 const TEAM_BIRTHDAYS = [
@@ -12,7 +13,7 @@ const TEAM_BIRTHDAYS = [
   { name: 'Kay Maes', birthDate: '05-17' },
   { name: 'Justine Schellekens', birthDate: '09-04' },
   { name: 'Juliette Niersman', birthDate: '11-21' },
-  { name: 'Jochem de Roos', birthDate: '04-29' },
+  { name: 'Jochem de Roos', birthDate: '03-02' },
   { name: 'Julia Groen', birthDate: '08-15' },
   { name: 'Hanna Blaauboer', birthDate: '02-06' },
   { name: 'Erika van Zadelhof', birthDate: '06-30' },
@@ -64,51 +65,38 @@ const getWeatherInfo = (code: number) => {
   return { icon: '🌤️', desc: 'Onbekend' }
 }
 
-// Demo vakanties deze week (voor overzicht wie er weg is)
-const DEMO_VACATIONS = [
-  { id: '1', personName: 'Marnix Ritmeester', startDate: '2026-01-27', endDate: '2026-01-31', note: 'Skivakantie', color: '#60a5fa' },
-  { id: '2', personName: 'Julia Groen', startDate: '2026-01-29', endDate: '2026-02-02', note: 'Lang weekend', color: '#f9ff85' },
-  { id: '3', personName: 'Bas den Ridder', startDate: '2026-01-30', endDate: '2026-01-30', note: 'Tandarts', color: '#a78bfa' },
-  { id: '4', personName: 'Hanna Blaauboer', startDate: '2026-02-03', endDate: '2026-02-07', note: 'Voorjaarsvakantie', color: '#34d399' },
-  { id: '5', personName: 'Kay Maes', startDate: '2026-02-03', endDate: '2026-02-05', note: null, color: '#fb923c' },
-  { id: '6', personName: 'Emma van der Vos', startDate: '2026-01-28', endDate: '2026-01-30', note: 'Ziek', color: '#f87171' },
-  { id: '7', personName: 'Lotte van Sint Truiden', startDate: '2026-02-03', endDate: '2026-02-04', note: 'Cursus', color: '#22d3ee' },
-  { id: '8', personName: 'Justine Schellekens', startDate: '2026-02-03', endDate: '2026-02-03', note: null, color: '#f472b6' },
-]
+// Vakanties worden geladen uit de database
+const DEMO_VACATIONS: { id: string; personName: string; startDate: string; endDate: string; note: string | null; color: string }[] = []
 
-// Demo vakantiedagen data (alsof Hanna dit heeft ingevoerd)
+// Vakantiedagen en ouderschapsverlof worden geladen uit de database via API
+// Deze waarden worden nu leeg gelaten - data komt van de ingelogde gebruiker
 const VACATION_BALANCE = {
-  userName: 'Jochem de Roos', // Huidige gebruiker (demo)
-  year: 2025,
-  wettelijkeDagen: 20,        // Wettelijke vakantiedagen
-  bovenwettelijkeDagen: 5,    // Bovenwettelijke dagen
-  overgedragenVorigJaar: 3.5, // Overgedragen van vorig jaar
-  opgenomenDitJaar: 8,        // Al opgenomen dit jaar
-  geplandDitJaar: 5,          // Gepland maar nog niet opgenomen
-  lastUpdatedBy: 'Hanna Blaauboer',
-  lastUpdated: '2025-01-28',
+  userName: '',
+  year: new Date().getFullYear(),
+  wettelijkeDagen: 0,
+  bovenwettelijkeDagen: 0,
+  overgedragenVorigJaar: 0,
+  opgenomenDitJaar: 0,
+  geplandDitJaar: 0,
+  lastUpdatedBy: '',
+  lastUpdated: '',
 }
 
-// Demo ouderschapsverlof data (indien door partners/Hanna ingevoerd)
-// null = geen ouderschapsverlof, object = wel ouderschapsverlof
 const PARENTAL_LEAVE = {
-  hasParentalLeave: true,     // Of de gebruiker ouderschapsverlof heeft
-  userName: 'Jochem de Roos',
-  year: 2025,
-  // Betaald ouderschapsverlof (via UWV - 9 weken a 70% salaris)
-  betaaldTotaalWeken: 9,      // Standaard 9 weken betaald (partners)
-  betaaldOpgenomenWeken: 4,   // Hoeveel weken al opgenomen
-  // Onbetaald ouderschapsverlof (aanvullend - tot 26 weken totaal)
-  onbetaaldTotaalWeken: 17,   // 26 - 9 = 17 weken onbetaald
-  onbetaaldOpgenomenWeken: 2, // Hoeveel weken al opgenomen
-  // Inzet planning
-  inzetPerWeek: 8,            // Uren per week dat verlof wordt opgenomen
-  startDatum: '2025-03-01',   // Wanneer gestart met opnemen
-  eindDatum: '2026-03-01',    // Tot wanneer te gebruiken (kind 8 jaar)
-  kindNaam: 'Sophie',
-  kindGeboorteDatum: '2024-06-15',
-  lastUpdatedBy: 'Hanna Blaauboer',
-  lastUpdated: '2025-01-25',
+  hasParentalLeave: false,
+  userName: '',
+  year: new Date().getFullYear(),
+  betaaldTotaalWeken: 0,
+  betaaldOpgenomenWeken: 0,
+  onbetaaldTotaalWeken: 0,
+  onbetaaldOpgenomenWeken: 0,
+  inzetPerWeek: 0,
+  startDatum: '',
+  eindDatum: '',
+  kindNaam: '',
+  kindGeboorteDatum: '',
+  lastUpdatedBy: '',
+  lastUpdated: '',
 }
 
 const quickLinks = [
@@ -369,7 +357,13 @@ export default function DashboardHome() {
           <div className="flex items-center gap-6">
             {/* Workx Logo */}
             <div className="hidden md:block">
-              <WorkxLogo size={64} />
+              <Image
+                src="/workx-logo.png"
+                alt="Workx Advocaten"
+                width={120}
+                height={48}
+                priority
+              />
             </div>
             <div>
               <p className="text-workx-lime text-sm font-medium mb-1">{getGreeting()}</p>

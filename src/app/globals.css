@@ -232,14 +232,24 @@ body {
 /* ==================== INPUTS ==================== */
 
 .input-field {
-  @apply w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 transition-all duration-300;
-  backdrop-filter: blur(5px);
+  @apply w-full bg-workx-gray border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 transition-all duration-300;
 }
 
 .input-field:focus {
   @apply border-workx-lime/50 outline-none;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(50, 50, 50, 1);
   box-shadow: 0 0 0 3px rgba(249, 255, 133, 0.1);
+}
+
+/* Fix autofill styling */
+.input-field:-webkit-autofill,
+.input-field:-webkit-autofill:hover,
+.input-field:-webkit-autofill:focus,
+.input-field:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #323232 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* ==================== NAVIGATION ==================== */
@@ -760,14 +770,221 @@ input[type="checkbox"]:focus {
   box-shadow: 0 0 0 3px rgba(249, 255, 133, 0.2);
 }
 
-/* Custom date input styling */
-input[type="date"]::-webkit-calendar-picker-indicator {
+/* ==================== CUSTOM FORM ELEMENT STYLING ==================== */
+
+/* Date and time input styling */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: dark;
+  background: var(--workx-gray);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: invert(1) opacity(0.5);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) opacity(1);
+  background: rgba(249, 255, 133, 0.2);
+}
+
+/* Number input spinner buttons */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+input[type="number"]:hover::-webkit-inner-spin-button,
+input[type="number"]:hover::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* Select element styling (if any native selects are used) */
+select {
+  appearance: none;
+  background: var(--workx-gray);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 40px 12px 16px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(60, 60, 60, 1);
+}
+
+select:focus {
+  outline: none;
+  border-color: rgba(249, 255, 133, 0.5);
+  box-shadow: 0 0 0 3px rgba(249, 255, 133, 0.1);
+}
+
+select option {
+  background: #2a2a2a;
+  color: white;
+  padding: 12px;
+}
+
+/* Range input styling */
+input[type="range"] {
+  appearance: none;
+  background: transparent;
   cursor: pointer;
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  filter: invert(1) opacity(1);
+input[type="range"]::-webkit-slider-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--workx-lime);
+  border-radius: 50%;
+  margin-top: -6px;
+  box-shadow: 0 2px 6px rgba(249, 255, 133, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(249, 255, 133, 0.5);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--workx-lime);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(249, 255, 133, 0.4);
+}
+
+/* File input styling */
+input[type="file"] {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+input[type="file"]::file-selector-button {
+  background: rgba(249, 255, 133, 0.1);
+  border: 1px solid rgba(249, 255, 133, 0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: var(--workx-lime);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 12px;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: rgba(249, 255, 133, 0.2);
+  border-color: var(--workx-lime);
+}
+
+/* Color input styling */
+input[type="color"] {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 2px;
+  background: transparent;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+/* Radio button styling */
+input[type="radio"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+input[type="radio"]:checked {
+  border-color: var(--workx-lime);
+}
+
+input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background: var(--workx-lime);
+  border-radius: 50%;
+}
+
+input[type="radio"]:focus {
+  box-shadow: 0 0 0 3px rgba(249, 255, 133, 0.2);
+}
+
+/* Textarea styling */
+textarea {
+  color-scheme: dark;
+}
+
+textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 255, 133, 0.3);
 }
 
 /* ==================== PREMIUM ICON HOVER ANIMATIONS ==================== */

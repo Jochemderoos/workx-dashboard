@@ -713,14 +713,14 @@ export default function FinancienPage() {
                 Opslaan
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
               {['werkgeverslasten', 'omzet', 'uren'].map((category) => (
                 <div key={category}>
-                  <p className="text-white/60 text-sm mb-2 capitalize">{category}</p>
-                  <div className="grid grid-cols-12 gap-2">
+                  <p className="text-white/60 text-sm mb-3 capitalize font-medium">{category}</p>
+                  <div className="grid grid-cols-6 gap-3">
                     {periods.map((p, i) => (
-                      <div key={p} className="relative">
-                        <label className="text-[10px] text-white/40 absolute -top-4">{p}</label>
+                      <div key={p} className="space-y-1">
+                        <label className="text-[10px] text-white/40 block">{p}</label>
                         <input
                           type="number"
                           value={data2026[category as keyof typeof data2026][i] || ''}
@@ -729,7 +729,7 @@ export default function FinancienPage() {
                             newData[category as keyof typeof data2026][i] = parseFloat(e.target.value) || 0
                             setData2026(newData)
                           }}
-                          className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-workx-lime/50"
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-workx-lime/50"
                           placeholder="0"
                         />
                       </div>

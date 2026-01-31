@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Icons, WorkxLogoFull } from '@/components/ui/Icons'
+import Image from 'next/image'
+import { Icons } from '@/components/ui/Icons'
 
 interface SidebarProps {
   user: {
@@ -53,7 +54,13 @@ export default function Sidebar({ user }: SidebarProps) {
       <div className="p-6 pb-8">
         <Link href="/dashboard" className="block group">
           <div className="relative">
-            <WorkxLogoFull size={48} />
+            <Image
+              src="/workx-logo.png"
+              alt="Workx Advocaten"
+              width={140}
+              height={56}
+              priority
+            />
             <div className="absolute inset-0 bg-workx-lime/10 blur-2xl rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </Link>

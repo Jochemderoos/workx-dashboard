@@ -18,38 +18,8 @@ interface FeedbackItem {
   response?: string
 }
 
-// Demo data
-const INITIAL_FEEDBACK: FeedbackItem[] = [
-  {
-    id: '1',
-    type: 'IDEA',
-    title: 'Dark mode toggle',
-    description: 'Het zou fijn zijn als er een knop is om tussen light en dark mode te wisselen.',
-    submittedBy: 'Kay Maes',
-    submittedAt: '2026-01-28T10:30:00',
-    status: 'NEW',
-  },
-  {
-    id: '2',
-    type: 'BUG',
-    title: 'Kalender laadt langzaam',
-    description: 'De agenda pagina duurt soms 5+ seconden om te laden. Vooral op maandagochtend.',
-    submittedBy: 'Emma van der Vos',
-    submittedAt: '2026-01-27T14:15:00',
-    status: 'IN_PROGRESS',
-    response: 'We kijken ernaar! Waarschijnlijk een database optimalisatie nodig.',
-  },
-  {
-    id: '3',
-    type: 'IDEA',
-    title: 'Export naar Excel',
-    description: 'Bij de bonus calculator zou het handig zijn om alles naar Excel te kunnen exporteren.',
-    submittedBy: 'Barbara Rip',
-    submittedAt: '2026-01-25T09:00:00',
-    status: 'DONE',
-    response: 'PDF export is toegevoegd! Excel volgt mogelijk later.',
-  },
-]
+// Start met lege feedback lijst - data wordt opgeslagen in localStorage
+const INITIAL_FEEDBACK: FeedbackItem[] = []
 
 export default function FeedbackPage() {
   const [feedback, setFeedback] = useState<FeedbackItem[]>(INITIAL_FEEDBACK)

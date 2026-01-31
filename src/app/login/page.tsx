@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { Icons, WorkxLogo } from '@/components/ui/Icons'
+import Image from 'next/image'
+import { Icons } from '@/components/ui/Icons'
 
 export default function LoginPage() {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [formData, setFormData] = useState({ name: '', email: '', password: '' })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,9 +62,15 @@ export default function LoginPage() {
       <div className="w-full max-w-sm relative z-10 fade-in">
         {/* Logo */}
         <div className="text-center mb-10">
-          <WorkxLogo size={56} className="mx-auto mb-4" />
-          <h1 className="text-2xl font-semibold text-white">Workx</h1>
-          <p className="text-white/40 text-sm mt-1">Advocaten Dashboard</p>
+          <Image
+            src="/workx-logo.png"
+            alt="Workx Advocaten"
+            width={200}
+            height={80}
+            className="mx-auto mb-2"
+            priority
+          />
+          <p className="text-white/40 text-sm">Dashboard</p>
         </div>
 
         {/* Form Card */}
@@ -136,6 +144,16 @@ export default function LoginPage() {
               </>
             )}
           </button>
+
+          {isLogin && (
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="w-full text-center text-sm text-white/40 hover:text-workx-lime transition-colors"
+            >
+              Wachtwoord vergeten?
+            </button>
+          )}
         </form>
 
         {/* Toggle */}
@@ -148,6 +166,58 @@ export default function LoginPage() {
             {isLogin ? 'Registreren' : 'Inloggen'}
           </button>
         </p>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowForgotPassword(false)}>
+          <div className="card p-6 w-full max-w-sm relative" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                <Icons.lock className="text-workx-lime" size={18} />
+              </div>
+              <h2 className="font-semibold text-white text-lg">Wachtwoord vergeten?</h2>
+            </div>
+
+            <p className="text-white/60 text-sm mb-6">
+              Neem contact op met Hanna om je wachtwoord te laten resetten.
+            </p>
+
+            <div className="space-y-3 mb-6">
+              <a
+                href="mailto:hanna.blaauboer@workxadvocaten.nl?subject=Wachtwoord reset aanvraag"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.mail className="text-workx-lime" size={14} />
+                </div>
+                <div>
+                  <p className="text-sm text-white group-hover:text-workx-lime transition-colors">hanna.blaauboer@workxadvocaten.nl</p>
+                  <p className="text-xs text-white/40">Stuur een email</p>
+                </div>
+              </a>
+
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <Icons.phone className="text-purple-400" size={14} />
+                </div>
+                <div>
+                  <p className="text-sm text-white">+31 (0)20 308 03 20</p>
+                  <p className="text-xs text-white/40">Kantoor bellen</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowForgotPassword(false)}
+              className="btn-secondary w-full"
+            >
+              Sluiten
+            </button>
+          </div>
+        </div>
+      )}
 
         {/* Footer */}
         <p className="text-center mt-10 text-xs text-white/20">
