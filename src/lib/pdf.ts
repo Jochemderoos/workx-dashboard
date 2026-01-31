@@ -20,25 +20,31 @@ interface PDFOptions {
 }
 
 // Draw the authentic Workx logo on a PDF (yellow background, black text - matching dashboard exactly)
+// Dashboard logo: 150px wide, ~80px tall, rounded corners
+// "Workx" at 34px, "ADVOCATEN" at 10px with 2.5px letter spacing
 export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  const height = width * 0.5 // Slightly taller ratio like dashboard
-  const cornerRadius = 4
+  // Dashboard ratio is approximately 150:80 = 1.875:1
+  const height = width * 0.53
+  const cornerRadius = 3
+  const padding = width * 0.1 // ~10% padding like dashboard px-5
 
-  // Yellow background (matching dashboard: #f9ff85)
+  // Yellow background (matching dashboard: #f9ff85 = rgb(249, 255, 133))
   doc.setFillColor(249, 255, 133)
   doc.roundedRect(x, y, width, height, cornerRadius, cornerRadius, 'F')
 
-  // "Workx" text in black - matching dashboard font weight and position
+  // "Workx" text - dashboard: 34px on 150px width = 22.7% ratio
+  // Position: after top padding, baseline at about 60% of height
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(width * 0.36)
-  doc.text('Workx', x + width * 0.1, y + height * 0.5)
+  doc.setFontSize(width * 0.23)
+  doc.text('Workx', x + padding, y + height * 0.55)
 
-  // "ADVOCATEN" text in black, smaller with letter spacing
-  doc.setFontSize(width * 0.11)
+  // "ADVOCATEN" text - dashboard: 10px on 150px = 6.7% ratio
+  // Uppercase with 2.5px letter spacing, positioned below Workx
+  doc.setFontSize(width * 0.07)
   doc.setFont('helvetica', 'normal')
-  doc.setCharSpace(2.5)
-  doc.text('ADVOCATEN', x + width * 0.1, y + height * 0.78)
+  doc.setCharSpace(1.8)
+  doc.text('ADVOCATEN', x + padding, y + height * 0.82)
   doc.setCharSpace(0)
 }
 
