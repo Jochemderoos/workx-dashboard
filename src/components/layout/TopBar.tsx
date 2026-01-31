@@ -80,7 +80,7 @@ export default function TopBar({ user }: TopBarProps) {
   ]
 
   return (
-    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-30 backdrop-blur-sm bg-workx-dark/30">
+    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-[100] backdrop-blur-sm bg-workx-dark/30">
       {/* Mobile: Hamburger Menu */}
       <div className="md:hidden">
         <button
@@ -201,12 +201,12 @@ export default function TopBar({ user }: TopBarProps) {
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu Dropdown - using very high z-index to ensure it's above everything */}
       {showMobileMenu && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
-          <div className="fixed left-0 right-0 top-16 z-50 md:hidden fade-in">
-            <div className="bg-workx-dark/98 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+          <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
+          <div className="fixed left-0 right-0 top-16 z-[9999] md:hidden fade-in">
+            <div className="bg-workx-dark border-b border-white/10 shadow-2xl">
               {/* User info */}
               <div className="p-4 border-b border-white/10 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center">
