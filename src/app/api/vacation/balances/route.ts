@@ -31,8 +31,7 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         role: true,
-        vacationBalances: {
-          where: { year: currentYear },
+        vacationBalance: {
           select: {
             id: true,
             overgedragenVorigJaar: true,
@@ -46,9 +45,9 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' }
     })
 
-    // Format response
+    // Format response - filter for current year
     const balances = users.map(user => {
-      const balance = user.vacationBalances[0]
+      const balance = user.vacationBalance?.year === currentYear ? user.vacationBalance : null
       const isPartner = user.role === 'PARTNER'
 
       return {
@@ -95,15 +94,11 @@ export async function PATCH(req: NextRequest) {
     const { userId, overgedragenVorigJaar, opbouwLopendJaar, bijgekocht, opgenomenLopendJaar } = await req.json()
     const currentYear = new Date().getFullYear()
 
-    // Upsert the vacation balance
+    // Upsert the vacation balance using userId (unique per user)
     const balance = await prisma.vacationBalance.upsert({
-      where: {
-        userId_year: {
-          userId,
-          year: currentYear,
-        }
-      },
+      where: { userId },
       update: {
+        year: currentYear,
         overgedragenVorigJaar,
         opbouwLopendJaar,
         bijgekocht,
