@@ -36,12 +36,10 @@ export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 
   doc.setFontSize(width * 0.38)
   doc.text('Workx', centerX, y + height * 0.52, { align: 'center' })
 
-  // "ADVOCATEN" text - centered with letter spacing
-  doc.setFontSize(width * 0.11)
+  // "ADVOCATEN" text - use spaced letters for proper centering
+  doc.setFontSize(width * 0.1)
   doc.setFont('helvetica', 'normal')
-  doc.setCharSpace(2.5)
-  doc.text('ADVOCATEN', centerX, y + height * 0.78, { align: 'center' })
-  doc.setCharSpace(0)
+  doc.text('A D V O C A T E N', centerX, y + height * 0.78, { align: 'center' })
 }
 
 // Create premium PDF header with Workx branding
