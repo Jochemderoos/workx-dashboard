@@ -18,16 +18,8 @@ interface Calculation {
   createdAt: string
 }
 
-// Demo data - works without database
-const DEMO_CALCULATIONS: Calculation[] = [
-  { id: '1', invoiceAmount: 15000, bonusPercentage: 10, invoicePaid: true, bonusPaid: true, bonusAmount: 1500, invoiceNumber: '2025-001', clientName: 'Bakker B.V.', createdAt: '2025-01-15' },
-  { id: '2', invoiceAmount: 8500, bonusPercentage: 10, invoicePaid: true, bonusPaid: false, bonusAmount: 850, invoiceNumber: '2025-002', clientName: 'De Vries Holdings', createdAt: '2025-01-20' },
-  { id: '3', invoiceAmount: 22000, bonusPercentage: 12, invoicePaid: true, bonusPaid: false, bonusAmount: 2640, invoiceNumber: '2025-003', clientName: 'Jansen & Partners', createdAt: '2025-01-25' },
-  { id: '4', invoiceAmount: 5000, bonusPercentage: 10, invoicePaid: false, bonusPaid: false, bonusAmount: 500, invoiceNumber: '2025-004', clientName: 'Tech Solutions', createdAt: '2025-01-28' },
-]
-
 export default function BonusPage() {
-  const [calculations, setCalculations] = useState<Calculation[]>(DEMO_CALCULATIONS)
+  const [calculations, setCalculations] = useState<Calculation[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [showBonusOverview, setShowBonusOverview] = useState(false)

@@ -19,49 +19,27 @@ interface PDFOptions {
   subject?: string
 }
 
-// Draw the authentic Workx logo on a PDF
+// Draw the authentic Workx logo on a PDF (yellow background, black text - like dashboard)
 export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  const height = width * 0.5
+  const height = width * 0.45
   const cornerRadius = 3
 
-  // Main dark gray container
-  doc.setFillColor(51, 51, 51)
+  // Yellow background (matching dashboard: #f9ff85)
+  doc.setFillColor(249, 255, 133)
   doc.roundedRect(x, y, width, height, cornerRadius, cornerRadius, 'F')
 
-  // Yellow accent bar (diagonal at top-left) - using polygon
-  doc.setFillColor(255, 237, 74)
-  const accentPoints = [
-    { x: x, y: y + cornerRadius },
-    { x: x + cornerRadius, y: y },
-    { x: x + width * 0.4, y: y },
-    { x: x + width * 0.22, y: y + height * 0.38 },
-    { x: x, y: y + height * 0.38 },
-  ]
-  // Draw as filled path
-  doc.setFillColor(255, 237, 74)
-  doc.triangle(
-    x, y + cornerRadius,
-    x + width * 0.4, y,
-    x, y + height * 0.38,
-    'F'
-  )
-  doc.triangle(
-    x + width * 0.4, y,
-    x + width * 0.22, y + height * 0.38,
-    x, y + height * 0.38,
-    'F'
-  )
-
-  // "Workx" text
-  doc.setTextColor(255, 255, 255)
+  // "Workx" text in black
+  doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(width * 0.34)
-  doc.text('Workx', x + width * 0.1, y + height * 0.62)
+  doc.setFontSize(width * 0.38)
+  doc.text('Workx', x + width * 0.08, y + height * 0.55)
 
-  // "ADVOCATEN" text
-  doc.setFontSize(width * 0.11)
+  // "ADVOCATEN" text in black, smaller
+  doc.setFontSize(width * 0.12)
   doc.setFont('helvetica', 'normal')
-  doc.text('ADVOCATEN', x + width * 0.1, y + height * 0.85)
+  doc.setCharSpace(2)
+  doc.text('ADVOCATEN', x + width * 0.08, y + height * 0.82)
+  doc.setCharSpace(0)
 }
 
 // Create premium PDF header with Workx branding
