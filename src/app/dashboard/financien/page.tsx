@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import jsPDF from 'jspdf'
+import { drawWorkxLogo } from '@/lib/pdf'
 
 // Financial data from Excel
 const financialData = {
@@ -332,28 +333,34 @@ export default function FinancienPage() {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 
-    // Header with Workx branding
-    doc.setFillColor(45, 45, 45)
-    doc.rect(0, 0, pageWidth, 40, 'F')
+    // Draw authentic Workx logo
+    drawWorkxLogo(doc, 15, 15, 55)
 
-    doc.setFillColor(249, 255, 133)
-    doc.rect(0, 38, pageWidth, 4, 'F')
-
-    doc.setFillColor(249, 255, 133)
-    doc.roundedRect(15, 10, 22, 22, 4, 4, 'F')
+    // Title
+    doc.setTextColor(51, 51, 51)
+    doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(16)
-    doc.setTextColor(30, 30, 30)
-    doc.text('W', 26, 25, { align: 'center' })
+    doc.text('Financieel Overzicht', 80, 28)
 
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(20)
-    doc.text('Workx Advocaten', 45, 20)
-    doc.setFontSize(10)
-    doc.setTextColor(249, 255, 133)
-    doc.text('Financieel Overzicht', 45, 28)
+    // Date
+    doc.setTextColor(100, 100, 100)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    const dateStr = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+    doc.text(dateStr, 80, 36)
 
-    let y = 55
+    // Tagline
+    doc.setTextColor(150, 150, 150)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'italic')
+    doc.text('Gemaakt met de Workx App', 15, 50)
+
+    // Divider
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.3)
+    doc.line(15, 52, pageWidth - 15, 52)
+
+    let y = 62
 
     // Totals section
     doc.setTextColor(50, 50, 50)
@@ -460,15 +467,19 @@ export default function FinancienPage() {
     }
 
     // Footer
-    const date = new Date().toLocaleDateString('nl-NL', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    })
-    doc.setTextColor(150, 150, 150)
-    doc.setFontSize(8)
+    const footerY = doc.internal.pageSize.getHeight() - 15
+    doc.setFillColor(100, 100, 100)
+    doc.rect(0, footerY - 5, pageWidth, 20, 'F')
+
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Gegenereerd op ${date}`, pageWidth / 2, 285, { align: 'center' })
+    doc.text(
+      'Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl',
+      pageWidth / 2,
+      footerY + 2,
+      { align: 'center' }
+    )
 
     doc.save('workx-financieel-overzicht.pdf')
   }

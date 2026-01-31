@@ -563,30 +563,67 @@ export const Icons = {
   ),
 }
 
-// Workx Logo Component - Premium version
-export function WorkxLogo({ className, size = 32 }: IconProps) {
+// Workx Logo Component - Authentic version matching official branding
+// Dark gray rounded rectangle with yellow accent bar at top-left, "Workx" in white, "ADVOCATEN" below
+export function WorkxLogo({ className, size = 32, showText = false }: IconProps & { showText?: boolean }) {
+  const height = showText ? size * 1.2 : size
+  const width = showText ? size * 2.5 : size
+
+  if (showText) {
+    // Full logo with text - for sidebar header
+    return (
+      <svg width={width} height={height} viewBox="0 0 140 65" className={className}>
+        {/* Main dark gray container */}
+        <rect x="0" y="0" width="140" height="65" rx="8" fill="#333333" />
+        {/* Yellow accent bar at top-left corner - diagonal style */}
+        <path d="M0 8 L0 0 L8 0 Q0 0 0 8 L60 0 L40 22 L0 22 Z" fill="#FFED4A" />
+        {/* Workx text */}
+        <text x="12" y="42" fill="#FFFFFF" fontSize="28" fontWeight="500" fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="-0.5">
+          Workx
+        </text>
+        {/* ADVOCATEN text */}
+        <text x="12" y="56" fill="#FFFFFF" fontSize="10" fontWeight="400" fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="2">
+          ADVOCATEN
+        </text>
+      </svg>
+    )
+  }
+
+  // Icon only version
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" className={className}>
-      <defs>
-        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#f9ff85" />
-          <stop offset="100%" stopColor="#e8ed6a" />
-        </linearGradient>
-        <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#f9ff85" floodOpacity="0.3" />
-        </filter>
-      </defs>
-      <rect width="100" height="100" rx="24" fill="url(#logoGradient)" filter="url(#logoShadow)" />
-      <text
-        x="50"
-        y="68"
-        textAnchor="middle"
-        fill="#1e1e1e"
-        fontSize="52"
-        fontWeight="600"
-        fontFamily="PP Neue Montreal, -apple-system, sans-serif"
-      >
+    <svg width={size} height={size} viewBox="0 0 60 60" className={className}>
+      {/* Main dark gray container */}
+      <rect x="0" y="0" width="60" height="60" rx="8" fill="#333333" />
+      {/* Yellow accent bar at top-left */}
+      <path d="M0 8 Q0 0 8 0 L35 0 L20 18 L0 18 Z" fill="#FFED4A" />
+      {/* W letter */}
+      <text x="30" y="44" textAnchor="middle" fill="#FFFFFF" fontSize="28" fontWeight="500" fontFamily="system-ui, -apple-system, sans-serif">
         W
+      </text>
+    </svg>
+  )
+}
+
+// Full Workx Logo for sidebar - separate component for cleaner usage
+export function WorkxLogoFull({ className, size = 42 }: IconProps) {
+  return (
+    <svg width={size * 2.2} height={size * 1.1} viewBox="0 0 140 65" className={className}>
+      {/* Main dark gray container with rounded corners */}
+      <rect x="0" y="0" width="140" height="65" rx="6" fill="#333333" />
+      {/* Yellow accent bar - diagonal stripe at top-left like the real logo */}
+      <clipPath id="logoClip">
+        <rect x="0" y="0" width="140" height="65" rx="6" />
+      </clipPath>
+      <g clipPath="url(#logoClip)">
+        <polygon points="0,0 55,0 30,25 0,25" fill="#FFED4A" />
+      </g>
+      {/* Workx text - clean modern font */}
+      <text x="14" y="42" fill="#FFFFFF" fontSize="30" fontWeight="400" fontFamily="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" style={{ fontStyle: 'italic' }}>
+        Workx
+      </text>
+      {/* ADVOCATEN text - spaced uppercase */}
+      <text x="14" y="56" fill="#FFFFFF" fontSize="9" fontWeight="500" fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="1.5">
+        ADVOCATEN
       </text>
     </svg>
   )

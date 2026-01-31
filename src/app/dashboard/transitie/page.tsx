@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import {
+  drawWorkxLogo,
+  createPDFHeader,
+  createPDFFooter,
+  createSectionTitle,
+  createDataRow,
+  createResultBox,
+  createDisclaimer,
+  formatCurrency as formatPDFCurrency,
+  formatDate as formatPDFDate,
+} from '@/lib/pdf'
 
 // Maximum transitievergoeding 2024/2025
 const MAX_TRANSITIE_2024 = 94000
@@ -307,39 +318,23 @@ export default function TransitiePage() {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 
-    // === HEADER WITH LOGO ===
-    // Dark gray background for logo area
-    doc.setFillColor(51, 51, 51)
-    doc.rect(15, 15, 50, 30, 'F')
+    // Draw authentic Workx logo
+    drawWorkxLogo(doc, 15, 15, 55)
 
-    // Yellow accent
-    doc.setFillColor(255, 237, 74)
-    doc.rect(15, 15, 50, 8, 'F')
-
-    // "Workx" text
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(24)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Workx', 20, 35)
-
-    // "ADVOCATEN" text
-    doc.setFontSize(8)
+    // Letter info on the right
+    let y = 20
+    doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
-    doc.text('ADVOCATEN', 20, 41)
 
-    // === LETTER INFO ===
     doc.setTextColor(100, 100, 100)
-    doc.setFontSize(10)
-    let y = 25
-
     doc.text('Per email aan:', 80, y)
-    doc.setTextColor(60, 60, 60)
+    doc.setTextColor(51, 51, 51)
     doc.text(form.employerName || 'info@werkgever.nl', 115, y)
     y += 6
 
     doc.setTextColor(100, 100, 100)
     doc.text('Datum:', 80, y)
-    doc.setTextColor(60, 60, 60)
+    doc.setTextColor(51, 51, 51)
     doc.text(
       new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }),
       115,
@@ -349,45 +344,42 @@ export default function TransitiePage() {
 
     doc.setTextColor(100, 100, 100)
     doc.text('Betreft:', 80, y)
-    doc.setTextColor(60, 60, 60)
+    doc.setTextColor(51, 51, 51)
     doc.text(`Berekening ${form.employeeName || 'Werknemer'}`, 115, y)
 
-    // === "Gemaakt met de Workx App" ===
-    y = 55
-    doc.setTextColor(120, 120, 120)
-    doc.setFontSize(9)
+    // Tagline
+    doc.setTextColor(150, 150, 150)
+    doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
-    doc.text('Gemaakt met de Workx App', 15, y)
+    doc.text('Gemaakt met de Workx App', 15, 50)
 
-    // Horizontal line
-    doc.setDrawColor(200, 200, 200)
-    doc.line(15, y + 5, pageWidth - 15, y + 5)
+    // Divider
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.3)
+    doc.line(15, 55, pageWidth - 15, 55)
 
-    // === MAIN TITLE ===
-    y = 75
-    doc.setTextColor(60, 60, 60)
-    doc.setFontSize(18)
+    // Title section
+    y = 70
+    doc.setTextColor(100, 100, 100)
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'normal')
     doc.text('BEREKENING VAN DE', 15, y)
-    y += 8
-    doc.setFontSize(22)
+
+    doc.setTextColor(45, 45, 45)
+    doc.setFontSize(20)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(40, 40, 40)
-    doc.text('TRANSITIEVERGOEDING', 15, y)
+    doc.text('TRANSITIEVERGOEDING', 15, y + 10)
 
-    // === DATA TABLE ===
+    // Data section
     y = 100
-    const labelX = 15
-    const valueX = pageWidth - 15
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-
     const addRow = (label: string, value: string, bold = false) => {
-      doc.setTextColor(80, 80, 80)
-      doc.text(label, labelX, y)
-      doc.setTextColor(40, 40, 40)
+      doc.setTextColor(100, 100, 100)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(label, 15, y)
+      doc.setTextColor(45, 45, 45)
       if (bold) doc.setFont('helvetica', 'bold')
-      doc.text(value, valueX, y, { align: 'right' })
+      doc.text(value, pageWidth - 15, y, { align: 'right' })
       if (bold) doc.setFont('helvetica', 'normal')
       y += 8
     }
@@ -408,50 +400,73 @@ export default function TransitiePage() {
     y += 4
 
     addRow('Pensioen of AOW-leeftijd bereikt?', form.isPensionAge ? 'Ja' : 'Nee')
-    y += 8
+    y += 10
 
-    // === RESULT ===
-    doc.setFontSize(12)
+    // Result box
+    doc.setFillColor(255, 237, 74)
+    doc.roundedRect(15, y, pageWidth - 30, 25, 4, 4, 'F')
+    doc.setTextColor(45, 45, 45)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(40, 40, 40)
-    doc.text('Transitievergoeding', labelX, y)
-    doc.setFontSize(14)
-    doc.text(formatCurrency(result.amount), valueX, y, { align: 'right' })
+    doc.setFontSize(11)
+    doc.text('Transitievergoeding', 25, y + 10)
+    doc.setFontSize(16)
+    doc.text(formatCurrency(result.amount), 25, y + 20)
 
-    // Show if max was applied
+    // Max notice if applicable
     if (result.maxApplied) {
-      y += 8
+      y += 30
       doc.setFontSize(8)
       doc.setFont('helvetica', 'italic')
       doc.setTextColor(100, 100, 100)
       doc.text(
-        `(Maximum toegepast: ${formatCurrency(result.maxUsed)})`,
-        valueX,
-        y,
-        { align: 'right' }
+        `(Maximum toegepast: ${formatCurrency(result.maxUsed)} - berekening voor max: ${formatCurrency(result.amountBeforeMax)})`,
+        15,
+        y
       )
+      y += 5
+    } else {
+      y += 35
     }
 
-    // === FOOTER TEXT ===
-    y = 220
+    // Contact text
+    y += 10
     doc.setFontSize(9)
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(100, 100, 100)
-    const footerText =
-      'Heeft u vragen over deze berekening? Aarzel niet om contact op te nemen met één van onze specialisten via onderstaande gegevens.'
-    const splitFooter = doc.splitTextToSize(footerText, pageWidth - 30)
-    doc.text(splitFooter, 15, y)
+    doc.text(
+      'Heeft u vragen over deze berekening? Neem contact op met één van onze specialisten.',
+      15,
+      y
+    )
 
-    // === BOTTOM FOOTER BAR ===
+    // Disclaimer section
+    y += 20
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.2)
+    doc.line(15, y, pageWidth - 15, y)
+    y += 8
+
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(130, 130, 130)
+
+    const disclaimer = `DISCLAIMER: Deze berekening is indicatief en uitsluitend bedoeld als hulpmiddel. Aan deze berekening kunnen geen rechten worden ontleend. Workx Advocaten is niet aansprakelijk voor enige schade die voortvloeit uit het gebruik van deze berekening of beslissingen die op basis hiervan worden genomen. De daadwerkelijke transitievergoeding kan afwijken door CAO-bepalingen, individuele arbeidsvoorwaarden of andere bijzondere omstandigheden. Voor een definitieve berekening en juridisch advies raden wij u aan contact op te nemen met één van onze arbeidsrecht specialisten.
+
+Wettelijke grondslag: Artikel 7:673 BW. Maximum transitievergoeding 2024: €94.000, 2025: €98.000, 2026: €102.000, of het jaarsalaris indien dit hoger is.`
+
+    const disclaimerLines = doc.splitTextToSize(disclaimer, pageWidth - 30)
+    doc.text(disclaimerLines, 15, y)
+
+    // Footer
     const footerY = doc.internal.pageSize.getHeight() - 15
     doc.setFillColor(100, 100, 100)
     doc.rect(0, footerY - 5, pageWidth, 20, 'F')
 
     doc.setTextColor(255, 255, 255)
-    doc.setFontSize(8)
+    doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
     doc.text(
-      'Workx advocaten - Herengracht 448, 1017 CA Amsterdam - +31 (0)20 308 03 20 - info@workxadvocaten.nl',
+      'Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl',
       pageWidth / 2,
       footerY + 2,
       { align: 'center' }

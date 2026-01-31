@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Icons, WorkxLogo } from '@/components/ui/Icons'
+import { Icons, WorkxLogoFull } from '@/components/ui/Icons'
 
 interface SidebarProps {
   user: {
@@ -49,16 +49,12 @@ export default function Sidebar({ user }: SidebarProps) {
 
   return (
     <aside className="w-72 border-r border-white/5 flex flex-col relative z-20 bg-gradient-to-b from-workx-dark/80 to-workx-dark/40 backdrop-blur-xl">
-      {/* Logo with glow */}
+      {/* Logo - Authentic Workx branding */}
       <div className="p-6 pb-8">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
+        <Link href="/dashboard" className="block group">
           <div className="relative">
-            <WorkxLogo size={42} />
-            <div className="absolute inset-0 bg-workx-lime/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <div>
-            <span className="font-semibold text-white text-xl tracking-tight">Workx</span>
-            <span className="block text-xs text-workx-lime font-medium tracking-wider uppercase">Advocaten</span>
+            <WorkxLogoFull size={48} />
+            <div className="absolute inset-0 bg-workx-lime/10 blur-2xl rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </Link>
       </div>
