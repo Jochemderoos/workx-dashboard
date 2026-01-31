@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface WorkItem {
   id: string
@@ -87,7 +88,7 @@ export default function WerkOverzichtPage() {
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<WorkItem['status']>('NEW')
   const [priority, setPriority] = useState<WorkItem['priority']>('MEDIUM')
-  const [dueDate, setDueDate] = useState('')
+  const [dueDate, setDueDate] = useState<Date | null>(null)
   const [estimatedHours, setEstimatedHours] = useState('')
   const [clientName, setClientName] = useState('')
   const [caseNumber, setCaseNumber] = useState('')
@@ -165,7 +166,7 @@ export default function WerkOverzichtPage() {
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setStatus('NEW'); setPriority('MEDIUM')
-    setDueDate(''); setEstimatedHours(''); setClientName(''); setCaseNumber('')
+    setDueDate(null); setEstimatedHours(''); setClientName(''); setCaseNumber('')
     setEditingItem(null); setShowForm(false)
   }
 
@@ -174,7 +175,7 @@ export default function WerkOverzichtPage() {
     setDescription(item.description || '')
     setStatus(item.status)
     setPriority(item.priority)
-    setDueDate(item.dueDate ? item.dueDate.split('T')[0] : '')
+    setDueDate(item.dueDate ? new Date(item.dueDate) : null)
     setEstimatedHours(item.estimatedHours?.toString() || '')
     setClientName(item.clientName || '')
     setCaseNumber(item.caseNumber || '')
@@ -191,7 +192,7 @@ export default function WerkOverzichtPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title, description: description || null, status, priority,
-          dueDate: dueDate || null, estimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
+          dueDate: dueDate ? dueDate.toISOString().split('T')[0] : null, estimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
           clientName: clientName || null, caseNumber: caseNumber || null,
         }),
       })
@@ -952,15 +953,12 @@ export default function WerkOverzichtPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Deadline</label>
-                  <div className="relative">
-                    <Icons.calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="date"
-                      value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
-                      className="input-field pl-10"
-                    />
-                  </div>
+                  <DatePicker
+                    selected={dueDate}
+                    onChange={(date) => setDueDate(date)}
+                    placeholder="Selecteer deadline..."
+                    isClearable
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Geschatte uren</label>

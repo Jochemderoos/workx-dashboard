@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import DatePicker from '@/components/ui/DatePicker'
 import {
   drawWorkxLogo,
   createPDFHeader,
@@ -610,33 +611,21 @@ export default function TransitiePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-white/60 mb-2">Datum in dienst *</label>
-              <div className="relative">
-                <Icons.calendar
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"
-                  size={16}
-                />
-                <input
-                  type="date"
-                  value={form.startDate}
-                  onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                  className="input-field pl-11"
-                />
-              </div>
+              <DatePicker
+                selected={form.startDate ? new Date(form.startDate) : null}
+                onChange={(date) => setForm({ ...form, startDate: date ? date.toISOString().split('T')[0] : '' })}
+                placeholder="Selecteer datum..."
+                maxDate={form.endDate ? new Date(form.endDate) : undefined}
+              />
             </div>
             <div>
               <label className="block text-sm text-white/60 mb-2">Datum uit dienst *</label>
-              <div className="relative">
-                <Icons.calendar
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"
-                  size={16}
-                />
-                <input
-                  type="date"
-                  value={form.endDate}
-                  onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                  className="input-field pl-11"
-                />
-              </div>
+              <DatePicker
+                selected={form.endDate ? new Date(form.endDate) : null}
+                onChange={(date) => setForm({ ...form, endDate: date ? date.toISOString().split('T')[0] : '' })}
+                placeholder="Selecteer datum..."
+                minDate={form.startDate ? new Date(form.startDate) : undefined}
+              />
             </div>
           </div>
 

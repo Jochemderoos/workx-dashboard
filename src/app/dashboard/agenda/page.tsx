@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface CalendarEvent {
   id: string
@@ -43,11 +44,17 @@ export default function AgendaPage() {
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [startDate, setStartDate] = useState('')
+  const [startDate, setStartDate] = useState<Date | null>(null)
   const [startTime, setStartTime] = useState('09:00')
-  const [endDate, setEndDate] = useState('')
+  const [endDate, setEndDate] = useState<Date | null>(null)
   const [endTime, setEndTime] = useState('10:00')
   const [isAllDay, setIsAllDay] = useState(false)
+
+  // Helper to format date for API
+  const formatDateForAPI = (date: Date | null) => {
+    if (!date) return ''
+    return date.toISOString().split('T')[0]
+  }
   const [location, setLocation] = useState('')
   const [category, setCategory] = useState<CalendarEvent['category']>('GENERAL')
 
@@ -110,16 +117,15 @@ export default function AgendaPage() {
   }
 
   const resetForm = () => {
-    setTitle(''); setDescription(''); setStartDate(''); setStartTime('09:00')
-    setEndDate(''); setEndTime('10:00'); setIsAllDay(false); setLocation('')
+    setTitle(''); setDescription(''); setStartDate(null); setStartTime('09:00')
+    setEndDate(null); setEndTime('10:00'); setIsAllDay(false); setLocation('')
     setCategory('GENERAL'); setEditingEvent(null); setShowForm(false)
   }
 
   const handleAddEvent = (date?: Date) => {
     if (date) {
-      const dateStr = date.toISOString().split('T')[0]
-      setStartDate(dateStr)
-      setEndDate(dateStr)
+      setStartDate(date)
+      setEndDate(date)
     }
     setShowForm(true)
   }
@@ -127,9 +133,9 @@ export default function AgendaPage() {
   const handleEdit = (event: CalendarEvent) => {
     setTitle(event.title)
     setDescription(event.description || '')
-    setStartDate(event.startTime.split('T')[0])
+    setStartDate(new Date(event.startTime))
     setStartTime(event.startTime.split('T')[1]?.substring(0, 5) || '09:00')
-    setEndDate(event.endTime.split('T')[0])
+    setEndDate(new Date(event.endTime))
     setEndTime(event.endTime.split('T')[1]?.substring(0, 5) || '10:00')
     setIsAllDay(event.isAllDay)
     setLocation(event.location || '')
@@ -143,8 +149,10 @@ export default function AgendaPage() {
     if (!title || !startDate || !endDate) return toast.error('Vul alle verplichte velden in')
 
     try {
-      const startDateTime = isAllDay ? new Date(startDate + 'T00:00:00') : new Date(startDate + 'T' + startTime)
-      const endDateTime = isAllDay ? new Date(endDate + 'T23:59:59') : new Date(endDate + 'T' + endTime)
+      const startDateStr = formatDateForAPI(startDate)
+      const endDateStr = formatDateForAPI(endDate)
+      const startDateTime = isAllDay ? new Date(startDateStr + 'T00:00:00') : new Date(startDateStr + 'T' + startTime)
+      const endDateTime = isAllDay ? new Date(endDateStr + 'T23:59:59') : new Date(endDateStr + 'T' + endTime)
 
       const res = await fetch(editingEvent ? `/api/calendar/${editingEvent.id}` : '/api/calendar', {
         method: editingEvent ? 'PATCH' : 'POST',
@@ -603,16 +611,11 @@ export default function AgendaPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Startdatum</label>
-                  <div className="relative">
-                    <Icons.calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => { setStartDate(e.target.value); if (!endDate) setEndDate(e.target.value) }}
-                      className="input-field pl-10"
-                      required
-                    />
-                  </div>
+                  <DatePicker
+                    selected={startDate}
+                    onChange={(date) => { setStartDate(date); if (!endDate) setEndDate(date) }}
+                    placeholder="Selecteer startdatum..."
+                  />
                 </div>
                 {!isAllDay && (
                   <div>
@@ -633,17 +636,12 @@ export default function AgendaPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Einddatum</label>
-                  <div className="relative">
-                    <Icons.calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      min={startDate}
-                      className="input-field pl-10"
-                      required
-                    />
-                  </div>
+                  <DatePicker
+                    selected={endDate}
+                    onChange={setEndDate}
+                    placeholder="Selecteer einddatum..."
+                    minDate={startDate || undefined}
+                  />
                 </div>
                 {!isAllDay && (
                   <div>

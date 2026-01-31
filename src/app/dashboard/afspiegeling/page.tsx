@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { jsPDF } from 'jspdf'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface Employee {
   id: string
@@ -471,20 +472,20 @@ export default function AfspiegelingPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Geboortedatum *</label>
-                  <input
-                    type="date"
-                    value={newEmployee.birthDate}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, birthDate: e.target.value })}
-                    className="input-field"
+                  <DatePicker
+                    selected={newEmployee.birthDate ? new Date(newEmployee.birthDate) : null}
+                    onChange={(date) => setNewEmployee({ ...newEmployee, birthDate: date ? date.toISOString().split('T')[0] : '' })}
+                    placeholder="Geboortedatum..."
+                    maxDate={new Date()}
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-white/60 mb-2">In dienst sinds *</label>
-                  <input
-                    type="date"
-                    value={newEmployee.startDate}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, startDate: e.target.value })}
-                    className="input-field"
+                  <DatePicker
+                    selected={newEmployee.startDate ? new Date(newEmployee.startDate) : null}
+                    onChange={(date) => setNewEmployee({ ...newEmployee, startDate: date ? date.toISOString().split('T')[0] : '' })}
+                    placeholder="Startdatum..."
+                    maxDate={new Date()}
                   />
                 </div>
               </div>
