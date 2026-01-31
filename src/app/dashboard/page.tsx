@@ -2,25 +2,57 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 
-// Team verjaardagen (zelfde als agenda)
+// Inline Logo Component - yellow background with black text
+function WorkxLogoSmall() {
+  return (
+    <div className="inline-block rounded-lg overflow-hidden" style={{ background: '#f9ff85' }}>
+      <div className="relative flex flex-col justify-center px-4 py-3" style={{ width: 120 }}>
+        <span
+          className="leading-none"
+          style={{
+            fontSize: '28px',
+            fontWeight: 400,
+            color: '#1e1e1e',
+            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
+          }}
+        >
+          Workx
+        </span>
+        <span
+          className="uppercase"
+          style={{
+            fontSize: '8px',
+            letterSpacing: '2px',
+            marginTop: '2px',
+            fontWeight: 500,
+            color: '#1e1e1e',
+            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
+          }}
+        >
+          ADVOCATEN
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// Team verjaardagen - echte data uit loonstroken
 const TEAM_BIRTHDAYS = [
-  { name: 'Marnix Ritmeester', birthDate: '03-12' },
-  { name: 'Maaike de Jong', birthDate: '07-23' },
-  { name: 'Marlieke Schipper', birthDate: '01-08' },
-  { name: 'Kay Maes', birthDate: '05-17' },
-  { name: 'Justine Schellekens', birthDate: '09-04' },
-  { name: 'Juliette Niersman', birthDate: '11-21' },
-  { name: 'Jochem de Roos', birthDate: '03-02' },
-  { name: 'Julia Groen', birthDate: '08-15' },
-  { name: 'Hanna Blaauboer', birthDate: '02-06' },
-  { name: 'Erika van Zadelhof', birthDate: '06-30' },
-  { name: 'Emma van der Vos', birthDate: '10-11' },
-  { name: 'Bas den Ridder', birthDate: '12-03' },
-  { name: 'Barbara Rip', birthDate: '02-19' },
-  { name: 'Lotte van Sint Truiden', birthDate: '07-07' },
+  { name: 'Hanna Blaauboer', birthDate: '12-23' },        // 23-12-1991
+  { name: 'Justine Schellekens', birthDate: '06-29' },    // 29-6-1994
+  { name: 'Marlieke Schipper', birthDate: '01-10' },      // 10-1-1992
+  { name: 'Wies van Pesch', birthDate: '01-16' },          // 16-1-1991
+  { name: 'Emma van der Vos', birthDate: '09-04' },       // 4-9-1992
+  { name: 'Alain Heunen', birthDate: '04-03' },            // 3-4-1991
+  { name: 'Kay Maes', birthDate: '01-24' },               // 24-1-1999
+  { name: 'Erika van Zadelhof', birthDate: '06-23' },     // 23-6-1995
+  { name: 'Heleen Pesser', birthDate: '07-14' },           // 14-7-1999
+  { name: 'Barbara Rip', birthDate: '04-04' },            // 4-4-1996
+  { name: 'Lotte van Sint Truiden', birthDate: '06-03' }, // 3-6-2002
+  { name: 'Julia Groen', birthDate: '07-15' },            // 15-7-1992
+  { name: 'Jochem de Roos', birthDate: '03-02' },         // Enige echte uit originele lijst
 ]
 
 interface CalendarEvent {
@@ -357,13 +389,7 @@ export default function DashboardHome() {
           <div className="flex items-center gap-6">
             {/* Workx Logo */}
             <div className="hidden md:block">
-              <Image
-                src="/workx-logo.png"
-                alt="Workx Advocaten"
-                width={120}
-                height={48}
-                priority
-              />
+              <WorkxLogoSmall />
             </div>
             <div>
               <p className="text-workx-lime text-sm font-medium mb-1">{getGreeting()}</p>
@@ -410,6 +436,11 @@ export default function DashboardHome() {
               <p className="text-white/40 mt-1">
                 {currentTime.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
+              {/* Workx Pand with bicycle hover animation */}
+              <div className="workx-pand-container h-20 mt-3 ml-auto">
+                <img src="/workx-pand.png" alt="Workx Pand" className="h-full opacity-50 hover:opacity-70 transition-opacity" />
+                <img src="/fiets.png" alt="Fiets" className="fiets" />
+              </div>
             </div>
           </div>
         </div>

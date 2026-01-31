@@ -10,6 +10,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check if current user is admin or partner (can see vacation data)
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true }
+    })
+    const canSeeVacationData = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -29,12 +36,37 @@ export async function GET(req: NextRequest) {
               }
             }
           }
+        },
+        // Always include vacation data in query
+        vacationBalance: {
+          select: {
+            opbouwLopendJaar: true,
+            overgedragenVorigJaar: true,
+            bijgekocht: true,
+            opgenomenLopendJaar: true,
+            note: true,
+          }
+        },
+        parentalLeave: {
+          select: {
+            betaaldTotaalWeken: true,
+            betaaldOpgenomenWeken: true,
+            onbetaaldTotaalWeken: true,
+            onbetaaldOpgenomenWeken: true,
+            eindDatum: true,
+            note: true,
+          }
         }
       },
       orderBy: { name: 'asc' }
     })
 
-    return NextResponse.json(users)
+    // Filter out vacation data if user is not admin/partner
+    const filteredUsers = canSeeVacationData
+      ? users
+      : users.map(u => ({ ...u, vacationBalance: null, parentalLeave: null }))
+
+    return NextResponse.json(filteredUsers)
   } catch (error) {
     console.error('Error fetching team:', error)
     return NextResponse.json(

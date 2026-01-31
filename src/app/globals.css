@@ -233,12 +233,33 @@ body {
 
 .input-field {
   @apply w-full bg-workx-gray border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 transition-all duration-300;
+  position: relative;
+  z-index: 1;
 }
 
 .input-field:focus {
   @apply border-workx-lime/50 outline-none;
   background: rgba(50, 50, 50, 1);
   box-shadow: 0 0 0 3px rgba(249, 255, 133, 0.1);
+}
+
+/* Input wrapper with icon */
+.input-with-icon {
+  position: relative;
+}
+
+.input-with-icon .input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.input-with-icon .input-field {
+  padding-left: 40px;
 }
 
 /* Fix autofill styling */
@@ -1374,6 +1395,582 @@ textarea::-webkit-scrollbar-thumb:hover {
 @media (max-width: 640px) {
   html {
     font-size: 14px;
+  }
+}
+
+/* ==================== ENHANCED MICRO-INTERACTIONS ==================== */
+
+/* Chat icon - message bubble pop */
+.icon-chat-hover:hover svg {
+  animation: chatPop 0.5s ease-in-out;
+}
+
+@keyframes chatPop {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.15) translateY(-2px); }
+  60% { transform: scale(0.95); }
+}
+
+/* Globe icon - rotate world */
+.icon-globe-hover:hover svg {
+  animation: globeRotate 1s ease-in-out;
+}
+
+@keyframes globeRotate {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+/* Shield icon - protection pulse */
+.icon-shield-hover:hover svg {
+  animation: shieldPulse 0.5s ease-in-out;
+  filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.6));
+}
+
+@keyframes shieldPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* Folder icon - open close */
+.icon-folder-hover:hover svg {
+  animation: folderOpen 0.4s ease-in-out;
+}
+
+@keyframes folderOpen {
+  0%, 100% { transform: scale(1) rotateX(0deg); }
+  50% { transform: scale(1.1) rotateX(-15deg); }
+}
+
+/* Copy icon - duplicate effect */
+.icon-copy-hover:hover svg {
+  animation: copyDuplicate 0.4s ease-in-out;
+}
+
+@keyframes copyDuplicate {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(3px, -3px); }
+}
+
+/* Send icon - fly away */
+.icon-send-hover:hover svg {
+  animation: sendFly 0.5s ease-in-out;
+}
+
+@keyframes sendFly {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(5px, -5px) rotate(-5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* Target icon - aim */
+.icon-target-hover:hover svg {
+  animation: targetAim 0.4s ease-in-out;
+}
+
+@keyframes targetAim {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+/* Coffee icon - steam rise */
+.icon-coffee-hover:hover svg {
+  animation: coffeeSteam 0.6s ease-in-out;
+}
+
+@keyframes coffeeSteam {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-2px); }
+  50% { transform: translateY(-4px); }
+  75% { transform: translateY(-2px); }
+}
+
+/* Flag icon - wave */
+.icon-flag-hover:hover svg {
+  animation: flagWave 0.6s ease-in-out;
+  transform-origin: bottom left;
+}
+
+@keyframes flagWave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  75% { transform: rotate(-5deg); }
+}
+
+/* Link icon - connect */
+.icon-link-hover:hover svg {
+  animation: linkConnect 0.4s ease-in-out;
+}
+
+@keyframes linkConnect {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-45deg) scale(1.1); }
+}
+
+/* Image icon - frame */
+.icon-image-hover:hover svg {
+  animation: imageFrame 0.4s ease-in-out;
+}
+
+@keyframes imageFrame {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Help icon - question bounce */
+.icon-help-hover:hover svg {
+  animation: helpBounce 0.5s ease-in-out;
+}
+
+@keyframes helpBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-4px) rotate(-5deg); }
+  50% { transform: translateY(0) rotate(5deg); }
+  75% { transform: translateY(-2px) rotate(-3deg); }
+}
+
+/* Map pin icon - drop */
+.icon-mappin-hover:hover svg {
+  animation: mapPinDrop 0.4s ease-in-out;
+}
+
+@keyframes mapPinDrop {
+  0% { transform: translateY(-8px) scale(0.9); }
+  60% { transform: translateY(2px) scale(1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Paperclip icon - attach */
+.icon-paperclip-hover:hover svg {
+  animation: paperclipAttach 0.4s ease-in-out;
+}
+
+@keyframes paperclipAttach {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(45deg) scale(1.1); }
+}
+
+/* Bookmark icon - save */
+.icon-bookmark-hover:hover svg {
+  animation: bookmarkSave 0.4s ease-in-out;
+}
+
+@keyframes bookmarkSave {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.1); }
+}
+
+/* Smile icon - happy */
+.icon-smile-hover:hover svg {
+  animation: smileHappy 0.5s ease-in-out;
+}
+
+@keyframes smileHappy {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(-5deg); }
+  75% { transform: scale(1.1) rotate(5deg); }
+}
+
+/* ThumbsUp icon - like */
+.icon-thumbsup-hover:hover svg {
+  animation: thumbsUpLike 0.4s ease-in-out;
+}
+
+@keyframes thumbsUpLike {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.2) rotate(-10deg); }
+}
+
+/* Trending icons - arrows */
+.icon-trending-hover:hover svg {
+  animation: trendingArrow 0.5s ease-in-out;
+}
+
+@keyframes trendingArrow {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(3px) translateY(-3px); }
+}
+
+/* Building icon - rise */
+.icon-building-hover:hover svg {
+  animation: buildingRise 0.5s ease-in-out;
+}
+
+@keyframes buildingRise {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.05); }
+}
+
+/* FileText icon - page flip */
+.icon-filetext-hover:hover svg {
+  animation: fileFlip 0.4s ease-in-out;
+}
+
+@keyframes fileFlip {
+  0%, 100% { transform: rotateY(0deg); }
+  50% { transform: rotateY(20deg); }
+}
+
+/* History icon - time travel */
+.icon-history-hover:hover svg {
+  animation: historyTravel 0.6s ease-in-out;
+}
+
+@keyframes historyTravel {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+/* Save icon - disk spin */
+.icon-save-hover:hover svg {
+  animation: saveDisk 0.4s ease-in-out;
+}
+
+@keyframes saveDisk {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15) translateY(-2px); }
+}
+
+/* Alert icons - attention */
+.icon-alert-hover:hover svg {
+  animation: alertAttention 0.4s ease-in-out;
+}
+
+@keyframes alertAttention {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.15); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.1); }
+}
+
+/* Play/Pause icons - media control */
+.icon-play-hover:hover svg {
+  animation: playStart 0.3s ease-in-out;
+}
+
+@keyframes playStart {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.icon-pause-hover:hover svg {
+  animation: pausePress 0.3s ease-in-out;
+}
+
+@keyframes pausePress {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.9); }
+}
+
+/* More options icon - expand */
+.icon-more-hover:hover svg {
+  animation: moreExpand 0.4s ease-in-out;
+}
+
+@keyframes moreExpand {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+/* Chevron icons - slide */
+.icon-chevron-hover:hover svg {
+  animation: chevronSlide 0.3s ease-in-out;
+}
+
+@keyframes chevronSlide {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}
+
+/* Cloud icon - float */
+.icon-cloud-hover:hover svg {
+  animation: cloudFloat 0.6s ease-in-out;
+}
+
+@keyframes cloudFloat {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-3px) translateX(2px); }
+}
+
+/* Weather icons animations */
+.icon-thermometer-hover:hover svg {
+  animation: thermometerRise 0.5s ease-in-out;
+}
+
+@keyframes thermometerRise {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1) translateY(-2px); }
+}
+
+.icon-droplet-hover:hover svg {
+  animation: dropletFall 0.4s ease-in-out;
+}
+
+@keyframes dropletFall {
+  0% { transform: translateY(-5px) scale(0.9); }
+  60% { transform: translateY(2px) scale(1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.icon-wind-hover:hover svg {
+  animation: windBlow 0.5s ease-in-out;
+}
+
+@keyframes windBlow {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
+/* Active nav item pulse */
+.nav-link.active .icon-animated svg {
+  animation: activeIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes activeIconPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ==================== WORKX PAND HOVER ANIMATION WITH BICYCLE ==================== */
+
+.workx-pand-container {
+  position: relative;
+  cursor: pointer;
+  overflow: visible;
+}
+
+/* Bicycle that cycles past on hover */
+.workx-pand-container .fiets {
+  position: absolute;
+  bottom: 0;
+  left: -60px;
+  height: 35px;
+  width: auto;
+  opacity: 0;
+  transition: none;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.workx-pand-container:hover .fiets {
+  animation: fietsenLangs 2s ease-in-out forwards;
+}
+
+@keyframes fietsenLangs {
+  0% {
+    left: -60px;
+    opacity: 0;
+    transform: translateY(0);
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% + 60px);
+    opacity: 0;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== PIGEONS FLY AWAY ANIMATION ==================== */
+
+.pigeons-container {
+  position: relative;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.pigeons-container img {
+  transition: all 0.5s ease;
+}
+
+.pigeons-container:hover img {
+  animation: pigeonsScatter 1s ease-in-out forwards;
+  filter: drop-shadow(0 0 4px rgba(249, 255, 133, 0.4));
+}
+
+@keyframes pigeonsScatter {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 0.4;
+  }
+  20% {
+    transform: translateY(-5px) translateX(0) rotate(-5deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-25px) translateX(10px) rotate(-10deg);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-50px) translateX(30px) rotate(-15deg);
+    opacity: 0;
+  }
+}
+
+/* After pigeons fly away, show "coo coo" text */
+.pigeons-container::after {
+  content: 'koer koer...';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease 0.5s;
+  white-space: nowrap;
+}
+
+.pigeons-container:hover::after {
+  opacity: 1;
+}
+
+/* ==================== MOBILE RESPONSIVE STYLES ==================== */
+
+/* Hide sidebar on mobile */
+@media (max-width: 768px) {
+  aside.w-72 {
+    display: none;
+  }
+
+  /* Full width main content */
+  .flex-1.flex.flex-col {
+    width: 100%;
+  }
+
+  /* Adjust main padding */
+  main.flex-1.overflow-y-auto.p-8 {
+    padding: 1rem;
+  }
+
+  /* Smaller header */
+  header.h-16 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Hide greeting on mobile */
+  header .hidden.lg\\:block {
+    display: none !important;
+  }
+
+  /* Stack quick links 2x2 on mobile */
+  .grid.grid-cols-2.md\\:grid-cols-3.lg\\:grid-cols-6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Stack main content vertically */
+  .grid.grid-cols-1.lg\\:grid-cols-4 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Smaller cards on mobile */
+  .card {
+    border-radius: 12px;
+  }
+
+  /* Hide pigeons background */
+  .pigeon {
+    display: none;
+  }
+
+  /* Hero section mobile adjustments */
+  .rounded-2xl.bg-gradient-to-br {
+    padding: 1.25rem;
+  }
+
+  .rounded-2xl.bg-gradient-to-br h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Hide welcome subtext on mobile */
+  .rounded-2xl.bg-gradient-to-br p[class*="text-white"] {
+    display: none;
+  }
+
+  /* Hide weather on mobile - already handled by Tailwind responsive classes */
+
+  /* 2-week overview grid on mobile */
+  .grid.grid-cols-5 {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.25rem;
+  }
+
+  .grid.grid-cols-5 > div {
+    padding: 0.5rem;
+    min-height: 100px;
+  }
+
+  /* Smaller text in calendar grid */
+  .grid.grid-cols-5 .text-lg {
+    font-size: 0.875rem;
+  }
+
+  /* Bottom stats 2 columns on mobile */
+  .grid.grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid.grid-cols-3 > *:last-child {
+    grid-column: span 2;
+  }
+}
+
+/* Small phone adjustments */
+@media (max-width: 375px) {
+  main.flex-1.overflow-y-auto.p-8 {
+    padding: 0.75rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+
+  /* 2-week calendar even smaller */
+  .grid.grid-cols-5 > div {
+    min-height: 80px;
+  }
+
+  .grid.grid-cols-5 .text-lg {
+    font-size: 0.75rem;
+  }
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Fix for iOS viewport height */
+  body {
+    min-height: -webkit-fill-available;
+  }
+
+  /* Fix for iOS momentum scrolling */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Fix for iOS input zoom prevention */
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+/* Touch-friendly targets */
+@media (pointer: coarse) {
+  .nav-link, button, a {
+    min-height: 44px;
+  }
+
+  /* Larger touch targets for interactive elements */
+  .card-interactive {
+    min-height: 60px;
   }
 }
 

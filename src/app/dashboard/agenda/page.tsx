@@ -33,27 +33,24 @@ const categoryConfig = {
 }
 
 // Team verjaardagen - format: MM-DD
-// Verjaardagen worden automatisch elk jaar getoond in de agenda
+// Echte data uit loonstroken - medewerkers
+// Partners verjaardagen zijn onbekend (niet in loonstroken)
 const TEAM_BIRTHDAYS: TeamMember[] = [
-  // Partners
-  { name: 'Marnix Ritmeester', birthDate: '03-12' },
-  { name: 'Jochem de Roos', birthDate: '03-02' },
-  { name: 'Juliette Niersman', birthDate: '11-21' },
-  { name: 'Bas den Ridder', birthDate: '12-03' },
-  { name: 'Maaike de Jong', birthDate: '07-23' },
-  // Medewerkers
-  { name: 'Hanna Blaauboer', birthDate: '02-06' },
-  { name: 'Alain Heunen', birthDate: '01-15' },
-  { name: 'Marlieke Schipper', birthDate: '01-08' },
-  { name: 'Justine Schellekens', birthDate: '09-04' },
-  { name: 'Wies van Pesch', birthDate: '04-15' },
-  { name: 'Emma van der Vos', birthDate: '10-11' },
-  { name: 'Kay Maes', birthDate: '05-17' },
-  { name: 'Erika van Zadelhof', birthDate: '06-30' },
-  { name: 'Barbara Rip', birthDate: '02-19' },
-  { name: 'Julia Groen', birthDate: '08-15' },
-  { name: 'Heleen Pesser', birthDate: '' }, // Verjaardag onbekend
-  { name: 'Lotte van Sint Truiden', birthDate: '07-07' },
+  // Medewerkers (echte data uit loonstroken)
+  { name: 'Hanna Blaauboer', birthDate: '12-23' },        // 23-12-1991
+  { name: 'Justine Schellekens', birthDate: '06-29' },    // 29-6-1994
+  { name: 'Marlieke Schipper', birthDate: '01-10' },      // 10-1-1992
+  { name: 'Wies van Pesch', birthDate: '01-16' },         // 16-1-1991
+  { name: 'Emma van der Vos', birthDate: '09-04' },       // 4-9-1992
+  { name: 'Alain Heunen', birthDate: '04-03' },           // 3-4-1991
+  { name: 'Kay Maes', birthDate: '01-24' },               // 24-1-1999
+  { name: 'Erika van Zadelhof', birthDate: '06-23' },     // 23-6-1995
+  { name: 'Heleen Pesser', birthDate: '07-14' },          // 14-7-1999
+  { name: 'Barbara Rip', birthDate: '04-04' },            // 4-4-1996
+  { name: 'Lotte van Sint Truiden', birthDate: '06-03' }, // 3-6-2002
+  { name: 'Julia Groen', birthDate: '07-15' },            // 15-7-1992
+  // Partners (verjaardag onbekend - niet in loonstroken)
+  { name: 'Jochem de Roos', birthDate: '03-02' },         // Enige bekende partner verjaardag
 ]
 
 export default function AgendaPage() {

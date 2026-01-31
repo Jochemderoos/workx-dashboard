@@ -4,8 +4,41 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
+
+// Inline Logo Component - yellow background with black text
+function WorkxLogoBox() {
+  return (
+    <div className="inline-block rounded-lg overflow-hidden" style={{ background: '#f9ff85' }}>
+      <div className="relative flex flex-col justify-center px-6 py-5" style={{ width: 180 }}>
+        <span
+          className="leading-none"
+          style={{
+            fontSize: '42px',
+            fontWeight: 400,
+            color: '#1e1e1e',
+            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
+          }}
+        >
+          Workx
+        </span>
+        <span
+          className="uppercase"
+          style={{
+            fontSize: '12px',
+            letterSpacing: '3px',
+            marginTop: '4px',
+            fontWeight: 500,
+            color: '#1e1e1e',
+            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
+          }}
+        >
+          ADVOCATEN
+        </span>
+      </div>
+    </div>
+  )
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -56,36 +89,32 @@ export default function LoginPage() {
         <div className="absolute w-1 h-1 bg-workx-lime/25 rounded-full" style={{ top: '75%', left: '25%', animation: 'float 7s ease-in-out infinite', animationDelay: '-5s' }} />
       </div>
 
-      {/* Grachtenpand */}
-      <div className="grachtenpand" />
+      {/* Workx Pand illustratie */}
+      <div className="fixed bottom-0 right-10 pointer-events-none opacity-30 z-0">
+        <img src="/workx-pand.png" alt="Workx Pand" className="h-[400px] object-contain" />
+      </div>
 
       <div className="w-full max-w-sm relative z-10 fade-in">
         {/* Logo */}
         <div className="text-center mb-10">
-          <Image
-            src="/workx-logo.png"
-            alt="Workx Advocaten"
-            width={200}
-            height={80}
-            className="mx-auto mb-2"
-            priority
-          />
-          <p className="text-white/40 text-sm">Dashboard</p>
+          <WorkxLogoBox />
+          <p className="text-white/40 text-sm mt-3">Dashboard</p>
         </div>
 
         {/* Form Card */}
         <form onSubmit={handleSubmit} className="card p-6 space-y-5 relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
           {!isLogin && (
             <div>
               <label className="block text-sm text-white/60 mb-2">Naam</label>
-              <div className="relative">
-                <Icons.user className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+              <div className="input-with-icon">
+                <Icons.user className="input-icon" size={16} />
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="input-field pl-10"
+                  className="input-field"
                   placeholder="Je naam"
                   required={!isLogin}
                 />
@@ -95,13 +124,13 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm text-white/60 mb-2">Email</label>
-            <div className="relative">
-              <Icons.mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+            <div className="input-with-icon">
+              <Icons.mail className="input-icon" size={16} />
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="input-field pl-10"
+                className="input-field"
                 placeholder="naam@workxadvocaten.nl"
                 required
               />
@@ -110,20 +139,20 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm text-white/60 mb-2">Wachtwoord</label>
-            <div className="relative">
-              <Icons.lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+            <div className="input-with-icon">
+              <Icons.lock className="input-icon" size={16} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="input-field pl-10 pr-10"
+                className="input-field pr-10"
                 placeholder="••••••••"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors z-10"
               >
                 {showPassword ? <Icons.eyeOff size={16} /> : <Icons.eye size={16} />}
               </button>

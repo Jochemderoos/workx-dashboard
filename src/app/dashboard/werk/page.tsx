@@ -29,37 +29,24 @@ interface WorkloadEntry {
   level: WorkloadLevel
 }
 
-// Employees whose workload is tracked (NOT the admins)
+// Employees whose workload is tracked - all medewerkers from payroll
 const TRACKED_EMPLOYEES = [
-  'Marlieke Schipper',
-  'Kay Maes',
+  'Hanna Blaauboer',
   'Justine Schellekens',
-  'Julia Groen',
-  'Erika van Zadelhof',
+  'Marlieke Schipper',
+  'Wies van Pesch',
   'Emma van der Vos',
+  'Alain Heunen',
+  'Kay Maes',
+  'Erika van Zadelhof',
+  'Heleen Pesser',
   'Barbara Rip',
+  'Lotte van Sint Truiden',
+  'Julia Groen',
 ]
 
-// Demo workload data
-const INITIAL_WORKLOAD: WorkloadEntry[] = [
-  { personName: 'Marlieke Schipper', date: '2026-01-30', level: 'yellow' },
-  { personName: 'Kay Maes', date: '2026-01-30', level: 'red' },
-  { personName: 'Julia Groen', date: '2026-01-30', level: 'orange' },
-  { personName: 'Erika van Zadelhof', date: '2026-01-30', level: 'yellow' },
-  { personName: 'Emma van der Vos', date: '2026-01-30', level: 'green' },
-  { personName: 'Barbara Rip', date: '2026-01-30', level: 'orange' },
-  { personName: 'Marlieke Schipper', date: '2026-01-29', level: 'orange' },
-  { personName: 'Kay Maes', date: '2026-01-29', level: 'orange' },
-  { personName: 'Justine Schellekens', date: '2026-01-29', level: 'yellow' },
-  { personName: 'Julia Groen', date: '2026-01-29', level: 'red' },
-  { personName: 'Erika van Zadelhof', date: '2026-01-29', level: 'orange' },
-  { personName: 'Barbara Rip', date: '2026-01-29', level: 'yellow' },
-  { personName: 'Marlieke Schipper', date: '2026-01-28', level: 'red' },
-  { personName: 'Kay Maes', date: '2026-01-28', level: 'yellow' },
-  { personName: 'Justine Schellekens', date: '2026-01-28', level: 'orange' },
-  { personName: 'Julia Groen', date: '2026-01-28', level: 'orange' },
-  { personName: 'Emma van der Vos', date: '2026-01-28', level: 'yellow' },
-]
+// Demo workload data - empty, users fill this in themselves
+const INITIAL_WORKLOAD: WorkloadEntry[] = []
 
 const workloadConfig = {
   green: { label: 'Rustig', color: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/30' },

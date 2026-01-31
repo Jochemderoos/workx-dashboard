@@ -26,22 +26,24 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-workx-dark overflow-hidden">
-      {/* Grachtenpand silhouette at bottom */}
-      <div className="grachtenpand" />
 
-      {/* Animated pigeons - like workxin.nl */}
-      <Pigeon className="pigeon pigeon-1" size={50} />
-      <Pigeon className="pigeon pigeon-2" size={40} />
-      <Pigeon className="pigeon pigeon-3" size={45} />
+      {/* Animated pigeons - like workxin.nl (hidden on mobile) */}
+      <Pigeon className="pigeon pigeon-1 hidden md:block" size={50} />
+      <Pigeon className="pigeon pigeon-2 hidden md:block" size={40} />
+      <Pigeon className="pigeon pigeon-3 hidden md:block" size={45} />
 
-      {/* Ambient glow effects */}
-      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-workx-lime/5 rounded-full blur-[150px] pointer-events-none" />
-      <div className="fixed bottom-0 left-1/4 w-[400px] h-[400px] bg-workx-lime/3 rounded-full blur-[120px] pointer-events-none" />
+      {/* Ambient glow effects (smaller on mobile) */}
+      <div className="fixed top-0 right-0 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-workx-lime/5 rounded-full blur-[100px] md:blur-[150px] pointer-events-none" />
+      <div className="fixed bottom-0 left-1/4 w-[200px] md:w-[400px] h-[200px] md:h-[400px] bg-workx-lime/3 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
 
-      <Sidebar user={user} />
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      {/* Sidebar - hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar user={user} />
+      </div>
+
+      <div className="flex-1 flex flex-col min-w-0 relative w-full">
         <TopBar user={user} />
-        <main className="flex-1 overflow-y-auto p-8 relative z-10">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

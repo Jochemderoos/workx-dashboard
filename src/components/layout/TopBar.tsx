@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 
 interface TopBarProps {
@@ -11,10 +14,22 @@ interface TopBarProps {
   }
 }
 
+const mobileMenuItems = [
+  { href: '/dashboard', icon: Icons.home, label: 'Home' },
+  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda' },
+  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties' },
+  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk' },
+  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus' },
+  { href: '/dashboard/team', icon: Icons.users, label: 'Team' },
+  { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen' },
+]
+
 export default function TopBar({ user }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [greeting, setGreeting] = useState('')
+  const pathname = usePathname()
 
   useEffect(() => {
     const hour = new Date().getHours()
@@ -30,8 +45,18 @@ export default function TopBar({ user }: TopBarProps) {
   ]
 
   return (
-    <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 relative z-20 backdrop-blur-sm bg-workx-dark/30">
-      {/* Left: Greeting */}
+    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-20 backdrop-blur-sm bg-workx-dark/30">
+      {/* Mobile: Hamburger Menu */}
+      <div className="md:hidden">
+        <button
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          className="p-2 text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-all"
+        >
+          {showMobileMenu ? <Icons.x size={24} /> : <Icons.menu size={24} />}
+        </button>
+      </div>
+
+      {/* Left: Greeting (desktop only) */}
       <div className="hidden lg:block">
         <p className="text-white/40 text-sm">{greeting},</p>
         <p className="text-white font-medium">{user.name?.split(' ')[0]}</p>
@@ -130,6 +155,64 @@ export default function TopBar({ user }: TopBarProps) {
           </span>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {showMobileMenu && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setShowMobileMenu(false)} />
+          <div className="absolute left-0 right-0 top-full z-50 md:hidden fade-in">
+            <div className="bg-workx-gray/98 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+              {/* User info */}
+              <div className="p-4 border-b border-white/10 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center">
+                  <span className="text-workx-dark font-semibold">
+                    {user.name?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-white">{user.name}</p>
+                  <p className="text-xs text-white/40">{user.email}</p>
+                </div>
+              </div>
+
+              {/* Navigation items */}
+              <nav className="p-2 max-h-[60vh] overflow-y-auto">
+                {mobileMenuItems.map((item) => {
+                  const Icon = item.icon
+                  const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setShowMobileMenu(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                        isActive
+                          ? 'bg-workx-lime text-workx-dark font-medium'
+                          : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      <Icon size={20} />
+                      <span>{item.label}</span>
+                      {isActive && <div className="ml-auto w-2 h-2 rounded-full bg-current opacity-60" />}
+                    </Link>
+                  )
+                })}
+              </nav>
+
+              {/* Logout button */}
+              <div className="p-4 border-t border-white/10">
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
+                >
+                  <Icons.logout size={18} />
+                  <span>Uitloggen</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </header>
   )
 }

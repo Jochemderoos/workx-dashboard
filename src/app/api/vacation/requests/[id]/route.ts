@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// PATCH - Approve or reject a vacation request (admin only)
+// PATCH - Approve/reject or edit a vacation request
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -14,24 +14,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin or manager
-    const user = await prisma.user.findUnique({
+    // Check if user is admin or partner
+    const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     })
+    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
 
-    if (!user || !['ADMIN', 'PARTNER', 'MANAGER'].includes(user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { status } = await req.json()
-
-    if (!['APPROVED', 'REJECTED'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status' },
-        { status: 400 }
-      )
-    }
+    const body = await req.json()
+    const { status, startDate, endDate, reason } = body
 
     const request = await prisma.vacationRequest.findUnique({
       where: { id: params.id }
@@ -44,30 +35,92 @@ export async function PATCH(
       )
     }
 
-    // Update the request
-    const updatedRequest = await prisma.vacationRequest.update({
-      where: { id: params.id },
-      data: {
-        status,
-        approvedBy: session.user.id,
-      }
-    })
+    // Check permissions
+    const isOwnRequest = request.userId === session.user.id
+    if (!isAdmin && !isOwnRequest) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
-    // If approved, update used vacation balance
-    if (status === 'APPROVED') {
-      const currentYear = new Date().getFullYear()
-      await prisma.vacationBalance.updateMany({
-        where: {
-          userId: request.userId,
-          year: currentYear,
-        },
+    // Employees can only edit their own pending requests
+    if (!isAdmin && request.status !== 'PENDING') {
+      return NextResponse.json(
+        { error: 'Je kunt alleen aanvragen met status "wachtend" bewerken' },
+        { status: 403 }
+      )
+    }
+
+    // Handle status changes (approve/reject) - admin only
+    if (status && ['APPROVED', 'REJECTED'].includes(status)) {
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Alleen beheerders kunnen aanvragen goedkeuren' }, { status: 403 })
+      }
+
+      const wasApproved = request.status === 'APPROVED'
+
+      const updatedRequest = await prisma.vacationRequest.update({
+        where: { id: params.id },
         data: {
-          opgenomenLopendJaar: {
-            increment: request.days
-          }
+          status,
+          approvedBy: session.user.id,
+        },
+        include: {
+          user: { select: { id: true, name: true } }
         }
       })
+
+      // Update vacation balance based on status change
+      const currentYear = new Date().getFullYear()
+      if (status === 'APPROVED' && !wasApproved) {
+        // Newly approved - add days
+        await prisma.vacationBalance.updateMany({
+          where: { userId: request.userId, year: currentYear },
+          data: { opgenomenLopendJaar: { increment: request.days } }
+        })
+      } else if (status === 'REJECTED' && wasApproved) {
+        // Was approved, now rejected - remove days
+        await prisma.vacationBalance.updateMany({
+          where: { userId: request.userId, year: currentYear },
+          data: { opgenomenLopendJaar: { decrement: request.days } }
+        })
+      }
+
+      return NextResponse.json(updatedRequest)
     }
+
+    // Handle date/reason updates
+    const updateData: any = {}
+    if (startDate) updateData.startDate = new Date(startDate)
+    if (endDate) updateData.endDate = new Date(endDate)
+    if (reason !== undefined) updateData.reason = reason
+
+    // Recalculate days if dates changed
+    if (startDate || endDate) {
+      const newStart = startDate ? new Date(startDate) : request.startDate
+      const newEnd = endDate ? new Date(endDate) : request.endDate
+      const newDays = Math.ceil((newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+
+      // If approved, adjust vacation balance
+      if (request.status === 'APPROVED') {
+        const daysDiff = newDays - request.days
+        if (daysDiff !== 0) {
+          const currentYear = new Date().getFullYear()
+          await prisma.vacationBalance.updateMany({
+            where: { userId: request.userId, year: currentYear },
+            data: { opgenomenLopendJaar: { increment: daysDiff } }
+          })
+        }
+      }
+
+      updateData.days = newDays
+    }
+
+    const updatedRequest = await prisma.vacationRequest.update({
+      where: { id: params.id },
+      data: updateData,
+      include: {
+        user: { select: { id: true, name: true } }
+      }
+    })
 
     return NextResponse.json(updatedRequest)
   } catch (error) {
@@ -90,19 +143,57 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const request = await prisma.vacationRequest.findFirst({
-      where: {
-        id: params.id,
-        userId: session.user.id,
-        status: 'PENDING', // Can only delete pending requests
-      }
+    // Check if user is admin or partner
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true }
+    })
+    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+
+    // Find the request
+    const request = await prisma.vacationRequest.findUnique({
+      where: { id: params.id }
     })
 
     if (!request) {
       return NextResponse.json(
-        { error: 'Request not found or cannot be deleted' },
+        { error: 'Request not found' },
         { status: 404 }
       )
+    }
+
+    // Check permissions:
+    // - Admin/Partner can delete anyone's request
+    // - Employee can only delete their own pending requests
+    if (!isAdmin) {
+      if (request.userId !== session.user.id) {
+        return NextResponse.json(
+          { error: 'Je mag alleen je eigen aanvragen verwijderen' },
+          { status: 403 }
+        )
+      }
+      if (request.status !== 'PENDING') {
+        return NextResponse.json(
+          { error: 'Je kunt alleen aanvragen met status "wachtend" verwijderen' },
+          { status: 403 }
+        )
+      }
+    }
+
+    // If deleting an approved request, restore the vacation balance
+    if (request.status === 'APPROVED') {
+      const currentYear = new Date().getFullYear()
+      await prisma.vacationBalance.updateMany({
+        where: {
+          userId: request.userId,
+          year: currentYear,
+        },
+        data: {
+          opgenomenLopendJaar: {
+            decrement: request.days
+          }
+        }
+      })
     }
 
     await prisma.vacationRequest.delete({

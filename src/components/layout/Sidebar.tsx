@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import Image from 'next/image'
+import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 
 interface SidebarProps {
@@ -11,6 +11,40 @@ interface SidebarProps {
     email: string
     role: string
   }
+}
+
+// Inline Logo Component - yellow background with black text
+function WorkxLogoBox() {
+  return (
+    <div className="inline-block rounded-lg overflow-hidden" style={{ background: '#f9ff85' }}>
+      <div className="relative flex flex-col justify-center px-5 py-4" style={{ width: 150 }}>
+        <span
+          className="leading-none"
+          style={{
+            fontSize: '34px',
+            fontWeight: 400,
+            color: '#1e1e1e',
+            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
+          }}
+        >
+          Workx
+        </span>
+        <span
+          className="uppercase"
+          style={{
+            fontSize: '10px',
+            letterSpacing: '2.5px',
+            marginTop: '3px',
+            fontWeight: 500,
+            color: '#1e1e1e',
+            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
+          }}
+        >
+          ADVOCATEN
+        </span>
+      </div>
+    </div>
+  )
 }
 
 const mainMenuItems = [
@@ -54,13 +88,7 @@ export default function Sidebar({ user }: SidebarProps) {
       <div className="p-6 pb-8">
         <Link href="/dashboard" className="block group">
           <div className="relative">
-            <Image
-              src="/workx-logo.png"
-              alt="Workx Advocaten"
-              width={140}
-              height={56}
-              priority
-            />
+            <WorkxLogoBox />
             <div className="absolute inset-0 bg-workx-lime/10 blur-2xl rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </Link>
@@ -120,7 +148,11 @@ export default function Sidebar({ user }: SidebarProps) {
               <p className="text-sm font-medium text-white truncate">{user.name}</p>
               <p className="text-xs text-white/40 truncate">{user.email}</p>
             </div>
-            <button className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors icon-logout-hover">
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors icon-logout-hover"
+              title="Uitloggen"
+            >
               <span className="icon-animated">
                 <Icons.logout size={16} />
               </span>
@@ -132,6 +164,11 @@ export default function Sidebar({ user }: SidebarProps) {
         <div className="flex items-center justify-center gap-2 pt-2">
           <span className="text-[10px] text-white/20">Workx Dashboard</span>
           <span className="badge badge-lime text-[10px] py-0.5 px-2">v2.0</span>
+        </div>
+
+        {/* Pigeons illustration with fly away animation */}
+        <div className="flex justify-center pt-2 pigeons-container">
+          <img src="/pigeons.svg" alt="Pigeons" className="h-12 w-auto" />
         </div>
       </div>
     </aside>
