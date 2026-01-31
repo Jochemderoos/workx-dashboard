@@ -485,10 +485,11 @@ export default function VakantiesPage() {
   }
 
   const isDateInRange = (date: Date, start: string, end: string) => {
-    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    const s = new Date(start)
-    const e = new Date(end)
-    return d >= s && d <= e
+    // Compare date strings only to avoid timezone issues
+    const dStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    const sStr = start.split('T')[0]
+    const eStr = end.split('T')[0]
+    return dStr >= sStr && dStr <= eStr
   }
 
   const getVacationsForDate = (date: Date) =>
