@@ -21,7 +21,7 @@ interface PDFOptions {
 
 // Draw the Workx logo on PDF - centered text, matching dashboard style
 export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  const height = width * 0.55
+  const height = width * 0.5
   const cornerRadius = 4
 
   // Yellow background (#f9ff85)
@@ -33,13 +33,13 @@ export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 
   // "Workx" text - large, bold, centered
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(width * 0.38)
-  doc.text('Workx', centerX, y + height * 0.52, { align: 'center' })
+  doc.setFontSize(width * 0.48)
+  doc.text('Workx', centerX, y + height * 0.55, { align: 'center' })
 
-  // "ADVOCATEN" text - use spaced letters for proper centering
-  doc.setFontSize(width * 0.1)
+  // "ADVOCATEN" text - closer and bigger
+  doc.setFontSize(width * 0.14)
   doc.setFont('helvetica', 'normal')
-  doc.text('A D V O C A T E N', centerX, y + height * 0.78, { align: 'center' })
+  doc.text('A D V O C A T E N', centerX, y + height * 0.82, { align: 'center' })
 }
 
 // Create premium PDF header with Workx branding
