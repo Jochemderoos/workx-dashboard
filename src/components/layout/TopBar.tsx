@@ -17,7 +17,7 @@ interface TopBarProps {
 const mobileMenuItems = [
   { href: '/dashboard', icon: Icons.home, label: 'Dashboard' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda' },
-  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties' },
+  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof' },
   { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financiën' },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus' },

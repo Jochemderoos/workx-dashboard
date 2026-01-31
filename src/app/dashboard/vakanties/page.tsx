@@ -36,6 +36,25 @@ interface TeamMember {
   role: string
 }
 
+interface ParentalLeave {
+  id: string
+  userId: string
+  betaaldTotaalWeken: number
+  betaaldOpgenomenWeken: number
+  onbetaaldTotaalWeken: number
+  onbetaaldOpgenomenWeken: number
+  kindNaam: string | null
+  kindGeboorteDatum: string | null
+  startDatum: string | null
+  eindDatum: string | null
+  inzetPerWeek: number | null
+  note: string | null
+  user?: {
+    id: string
+    name: string
+  }
+}
+
 // Schoolvakanties Noord-Holland (Regio Noord)
 interface SchoolHoliday {
   name: string
@@ -93,6 +112,25 @@ export default function VakantiesPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [pageMode, setPageMode] = useState<'overzicht' | 'beheer'>('overzicht')
 
+  // Parental leave state
+  const [myParentalLeave, setMyParentalLeave] = useState<ParentalLeave | null>(null)
+  const [allParentalLeaves, setAllParentalLeaves] = useState<ParentalLeave[]>([])
+  const [editingParentalLeave, setEditingParentalLeave] = useState<ParentalLeave | null>(null)
+  const [showParentalLeaveForm, setShowParentalLeaveForm] = useState(false)
+  const [parentalLeaveForm, setParentalLeaveForm] = useState({
+    userId: '',
+    betaaldTotaalWeken: 9,
+    betaaldOpgenomenWeken: 0,
+    onbetaaldTotaalWeken: 17,
+    onbetaaldOpgenomenWeken: 0,
+    kindNaam: '',
+    kindGeboorteDatum: '',
+    startDatum: '',
+    eindDatum: '',
+    inzetPerWeek: 0,
+    note: '',
+  })
+
   // Check if current user is admin/partner
   const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
 
@@ -143,6 +181,20 @@ export default function VakantiesPage() {
           const data = await balRes.json()
           setVacationBalances(data)
         }
+
+        // Fetch all parental leaves (admin only)
+        const plRes = await fetch('/api/parental-leave?all=true')
+        if (plRes.ok) {
+          const data = await plRes.json()
+          setAllParentalLeaves(data)
+        }
+      }
+
+      // Fetch own parental leave
+      const myPlRes = await fetch('/api/parental-leave')
+      if (myPlRes.ok) {
+        const data = await myPlRes.json()
+        setMyParentalLeave(data)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -289,6 +341,89 @@ export default function VakantiesPage() {
     return balance.overgedragenVorigJaar + balance.opbouwLopendJaar + (balance.bijgekocht || 0) - balance.opgenomenLopendJaar
   }
 
+  // Parental leave management
+  const resetParentalLeaveForm = () => {
+    setParentalLeaveForm({
+      userId: '',
+      betaaldTotaalWeken: 9,
+      betaaldOpgenomenWeken: 0,
+      onbetaaldTotaalWeken: 17,
+      onbetaaldOpgenomenWeken: 0,
+      kindNaam: '',
+      kindGeboorteDatum: '',
+      startDatum: '',
+      eindDatum: '',
+      inzetPerWeek: 0,
+      note: '',
+    })
+    setEditingParentalLeave(null)
+    setShowParentalLeaveForm(false)
+  }
+
+  const handleEditParentalLeave = (leave: ParentalLeave) => {
+    setParentalLeaveForm({
+      userId: leave.userId,
+      betaaldTotaalWeken: leave.betaaldTotaalWeken,
+      betaaldOpgenomenWeken: leave.betaaldOpgenomenWeken,
+      onbetaaldTotaalWeken: leave.onbetaaldTotaalWeken,
+      onbetaaldOpgenomenWeken: leave.onbetaaldOpgenomenWeken,
+      kindNaam: leave.kindNaam || '',
+      kindGeboorteDatum: leave.kindGeboorteDatum?.split('T')[0] || '',
+      startDatum: leave.startDatum?.split('T')[0] || '',
+      eindDatum: leave.eindDatum?.split('T')[0] || '',
+      inzetPerWeek: leave.inzetPerWeek || 0,
+      note: leave.note || '',
+    })
+    setEditingParentalLeave(leave)
+    setShowParentalLeaveForm(true)
+  }
+
+  const handleSaveParentalLeave = async () => {
+    try {
+      const method = editingParentalLeave ? 'PATCH' : 'POST'
+      const body = editingParentalLeave
+        ? { id: editingParentalLeave.id, ...parentalLeaveForm }
+        : parentalLeaveForm
+
+      const res = await fetch('/api/parental-leave', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Kon verlof niet opslaan')
+      }
+
+      toast.success(editingParentalLeave ? 'Ouderschapsverlof bijgewerkt' : 'Ouderschapsverlof toegevoegd')
+      resetParentalLeaveForm()
+      fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
+  const handleDeleteParentalLeave = async (userId: string) => {
+    if (!confirm('Weet je zeker dat je dit ouderschapsverlof wilt verwijderen?')) return
+
+    try {
+      const res = await fetch(`/api/parental-leave?userId=${userId}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Kon verlof niet verwijderen')
+      }
+
+      toast.success('Ouderschapsverlof verwijderd')
+      fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   // Helper functions
   const getWeekDays = (date: Date) => {
     const start = new Date(date)
@@ -375,10 +510,10 @@ export default function VakantiesPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/10 flex items-center justify-center">
               <Icons.sun className="text-yellow-400" size={20} />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Vakanties</h1>
+            <h1 className="text-2xl font-semibold text-white">Vakanties & Verlof</h1>
           </div>
           <p className="text-white/40">
-            {pageMode === 'overzicht' ? 'Wie is er wanneer met vakantie' : 'Beheer vakantiedagen per medewerker'}
+            {pageMode === 'overzicht' ? 'Overzicht vakanties en ouderschapsverlof' : 'Beheer vakantiedagen en verlof per medewerker'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -680,6 +815,90 @@ export default function VakantiesPage() {
             </div>
           </div>
 
+          {/* Parental Leave Management Section */}
+          <div className="card overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <Icons.heart className="text-purple-400" size={16} />
+                </div>
+                <h2 className="font-medium text-white text-sm sm:text-base">Ouderschapsverlof</h2>
+              </div>
+              <button
+                onClick={() => {
+                  resetParentalLeaveForm()
+                  setShowParentalLeaveForm(true)
+                }}
+                className="btn-primary text-sm flex items-center gap-2"
+              >
+                <Icons.plus size={14} />
+                Toevoegen
+              </button>
+            </div>
+
+            {allParentalLeaves.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
+                  <Icons.heart className="text-purple-400/50" size={28} />
+                </div>
+                <p className="text-white/50 mb-2">Geen ouderschapsverlof geregistreerd</p>
+                <p className="text-sm text-white/30">Klik op 'Toevoegen' om verlof toe te voegen voor een medewerker</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {allParentalLeaves.map((leave) => {
+                  const betaaldResterend = leave.betaaldTotaalWeken - leave.betaaldOpgenomenWeken
+                  const onbetaaldResterend = leave.onbetaaldTotaalWeken - leave.onbetaaldOpgenomenWeken
+
+                  return (
+                    <div key={leave.id} className="p-5 hover:bg-white/[0.02] transition-colors group">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/30 to-purple-600/10 flex items-center justify-center font-semibold text-white">
+                            {leave.user?.name?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-white">{leave.user?.name || 'Onbekend'}</h4>
+                            <div className="flex items-center gap-4 mt-1 text-sm">
+                              <span className="text-green-400">
+                                Betaald: {betaaldResterend}/{leave.betaaldTotaalWeken}w
+                              </span>
+                              <span className="text-purple-400">
+                                Onbetaald: {onbetaaldResterend}/{leave.onbetaaldTotaalWeken}w
+                              </span>
+                              {leave.kindNaam && (
+                                <span className="text-white/40">Kind: {leave.kindNaam}</span>
+                              )}
+                            </div>
+                            {leave.eindDatum && (
+                              <p className="text-xs text-white/30 mt-1">
+                                Te gebruiken tot: {new Date(leave.eindDatum).toLocaleDateString('nl-NL')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleEditParentalLeave(leave)}
+                            className="p-2 text-white/40 hover:text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors"
+                          >
+                            <Icons.edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteParentalLeave(leave.userId)}
+                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                          >
+                            <Icons.trash size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Info card */}
           <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
             <div className="flex items-start gap-4">
@@ -689,8 +908,8 @@ export default function VakantiesPage() {
               <div>
                 <h3 className="font-medium text-white mb-1">Over verlof beheer</h3>
                 <p className="text-sm text-white/50 leading-relaxed">
-                  Hier kun je de vakantiedagen van alle medewerkers beheren. Klik op het bewerk-icoon om het saldo aan te passen.
-                  Wijzigingen worden direct opgeslagen in de database.
+                  Hier kun je de vakantiedagen en ouderschapsverlof van alle medewerkers beheren.
+                  Klik op het bewerk-icoon om gegevens aan te passen. Wijzigingen worden direct opgeslagen.
                 </p>
               </div>
             </div>
@@ -736,6 +955,83 @@ export default function VakantiesPage() {
               </div>
             </div>
           </div>
+
+          {/* My Parental Leave Card - for users with parental leave */}
+          {myParentalLeave && (
+            <div className="card p-5 border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <Icons.heart className="text-purple-400" size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">Mijn Ouderschapsverlof</h3>
+                      {myParentalLeave.kindNaam && (
+                        <p className="text-xs text-purple-400">{myParentalLeave.kindNaam}</p>
+                      )}
+                    </div>
+                  </div>
+                  {myParentalLeave.eindDatum && (
+                    <span className="text-xs text-white/40">
+                      Te gebruiken tot {new Date(myParentalLeave.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Betaald verlof */}
+                  <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-green-400 font-medium">Betaald verlof (70% UWV)</span>
+                      <span className="text-xs text-white/40">
+                        {myParentalLeave.betaaldOpgenomenWeken} / {myParentalLeave.betaaldTotaalWeken} weken
+                      </span>
+                    </div>
+                    <div className="h-2.5 bg-white/10 rounded-full overflow-hidden mb-2">
+                      <div
+                        className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all"
+                        style={{ width: `${(myParentalLeave.betaaldOpgenomenWeken / myParentalLeave.betaaldTotaalWeken) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-lg font-semibold text-green-400">
+                      {myParentalLeave.betaaldTotaalWeken - myParentalLeave.betaaldOpgenomenWeken} weken resterend
+                    </p>
+                  </div>
+
+                  {/* Onbetaald verlof */}
+                  <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-purple-400 font-medium">Onbetaald verlof</span>
+                      <span className="text-xs text-white/40">
+                        {myParentalLeave.onbetaaldOpgenomenWeken} / {myParentalLeave.onbetaaldTotaalWeken} weken
+                      </span>
+                    </div>
+                    <div className="h-2.5 bg-white/10 rounded-full overflow-hidden mb-2">
+                      <div
+                        className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-full transition-all"
+                        style={{ width: `${(myParentalLeave.onbetaaldOpgenomenWeken / myParentalLeave.onbetaaldTotaalWeken) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-lg font-semibold text-purple-400">
+                      {myParentalLeave.onbetaaldTotaalWeken - myParentalLeave.onbetaaldOpgenomenWeken} weken resterend
+                    </p>
+                  </div>
+                </div>
+
+                {myParentalLeave.note && (
+                  <div className="mt-4 p-3 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-sm text-white/60 flex items-center gap-2">
+                      <Icons.info size={14} className="text-purple-400" />
+                      {myParentalLeave.note}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* School Holiday Notice */}
           <div className="card p-4 border-red-500/20 bg-gradient-to-r from-red-500/5 to-transparent">
@@ -1218,6 +1514,192 @@ export default function VakantiesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Parental Leave Form Modal */}
+      {showParentalLeaveForm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={resetParentalLeaveForm}>
+          <div
+            className="bg-workx-gray rounded-2xl p-6 w-full max-w-lg border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Icons.heart className="text-purple-400" size={18} />
+                </div>
+                <h2 className="font-semibold text-white text-lg">
+                  {editingParentalLeave ? 'Ouderschapsverlof bewerken' : 'Ouderschapsverlof toevoegen'}
+                </h2>
+              </div>
+              <button
+                onClick={resetParentalLeaveForm}
+                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {/* Team member selection - only when creating */}
+              {!editingParentalLeave && (
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Medewerker</label>
+                  <select
+                    value={parentalLeaveForm.userId}
+                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, userId: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">Selecteer een medewerker...</option>
+                    {teamMembers
+                      .filter(m => !allParentalLeaves.some(pl => pl.userId === m.id))
+                      .map(member => (
+                        <option key={member.id} value={member.id}>{member.name}</option>
+                      ))
+                    }
+                  </select>
+                </div>
+              )}
+
+              {/* Kind gegevens */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Naam kind</label>
+                  <input
+                    type="text"
+                    value={parentalLeaveForm.kindNaam}
+                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, kindNaam: e.target.value })}
+                    placeholder="Bijv. Emma"
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Geboortedatum kind</label>
+                  <input
+                    type="date"
+                    value={parentalLeaveForm.kindGeboorteDatum}
+                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, kindGeboorteDatum: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              {/* Betaald verlof */}
+              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                <h4 className="text-sm font-medium text-green-400 mb-3">Betaald verlof (70% UWV)</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Totaal weken</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={parentalLeaveForm.betaaldTotaalWeken}
+                      onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldTotaalWeken: parseFloat(e.target.value) || 0 })}
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Opgenomen weken</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={parentalLeaveForm.betaaldOpgenomenWeken}
+                      onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Onbetaald verlof */}
+              <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                <h4 className="text-sm font-medium text-purple-400 mb-3">Onbetaald verlof</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Totaal weken</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={parentalLeaveForm.onbetaaldTotaalWeken}
+                      onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldTotaalWeken: parseFloat(e.target.value) || 0 })}
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Opgenomen weken</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={parentalLeaveForm.onbetaaldOpgenomenWeken}
+                      onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Periode en inzet */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Startdatum</label>
+                  <input
+                    type="date"
+                    value={parentalLeaveForm.startDatum}
+                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, startDatum: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Te gebruiken tot</label>
+                  <input
+                    type="date"
+                    value={parentalLeaveForm.eindDatum}
+                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, eindDatum: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Uren per week</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={parentalLeaveForm.inzetPerWeek}
+                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, inzetPerWeek: parseFloat(e.target.value) || 0 })}
+                    className="input-field"
+                    placeholder="8"
+                  />
+                </div>
+              </div>
+
+              {/* Notitie */}
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Notitie (optioneel)</label>
+                <textarea
+                  value={parentalLeaveForm.note}
+                  onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, note: e.target.value })}
+                  placeholder="Eventuele opmerkingen..."
+                  rows={2}
+                  className="input-field resize-none"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-3">
+                <button type="button" onClick={resetParentalLeaveForm} className="flex-1 btn-secondary">
+                  Annuleren
+                </button>
+                <button
+                  onClick={handleSaveParentalLeave}
+                  disabled={!editingParentalLeave && !parentalLeaveForm.userId}
+                  className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Icons.check size={16} />
+                  {editingParentalLeave ? 'Bijwerken' : 'Toevoegen'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

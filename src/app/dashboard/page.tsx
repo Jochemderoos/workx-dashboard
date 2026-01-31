@@ -135,7 +135,7 @@ const quickLinks = [
   { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10', iconAnim: 'icon-calendar-hover' },
   { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10', iconAnim: 'icon-euro-hover' },
   { href: '/dashboard/transitie', Icon: Icons.calculator, label: 'Transitie', desc: 'Bereken vergoeding', color: 'from-purple-500/20 to-purple-600/10', iconAnim: 'icon-calculator-hover' },
-  { href: '/dashboard/vakanties', Icon: Icons.sun, label: 'Vakanties', desc: 'Wie is er weg', color: 'from-orange-500/20 to-orange-600/10', iconAnim: 'icon-sun-hover' },
+  { href: '/dashboard/vakanties', Icon: Icons.sun, label: 'Verlof', desc: 'Vakanties & verlof', color: 'from-orange-500/20 to-orange-600/10', iconAnim: 'icon-sun-hover' },
   { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10', iconAnim: 'icon-briefcase-hover' },
 ]
 
