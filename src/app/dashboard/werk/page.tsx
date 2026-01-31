@@ -360,14 +360,14 @@ export default function WerkOverzichtPage() {
 
           {/* Workload Overview */}
           <div className="card overflow-hidden">
-            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+            <div className="p-4 sm:p-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
                   <Icons.activity className="text-workx-lime" size={16} />
                 </div>
-                <h2 className="font-medium text-white">Werkdruk laatste 3 werkdagen</h2>
+                <h2 className="font-medium text-white text-sm sm:text-base">Werkdruk laatste 3 werkdagen</h2>
               </div>
-              <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-3 sm:gap-4 text-xs flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-400" />
                   <span className="text-white/50">Rustig</span>
@@ -387,11 +387,14 @@ export default function WerkOverzichtPage() {
               </div>
             </div>
 
-            {/* Table header */}
-            <div className="grid gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider"
-              style={{ gridTemplateColumns: '1fr repeat(3, 120px)' }}
-            >
-              <div>Medewerker</div>
+            {/* Table - scrollable on mobile */}
+            <div className="overflow-x-auto">
+              <div className="min-w-[550px]">
+                {/* Table header */}
+                <div className="grid gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider"
+                  style={{ gridTemplateColumns: '1fr repeat(3, 100px)' }}
+                >
+                  <div>Medewerker</div>
               {last3Workdays.map(day => (
                 <div key={day.toISOString()} className="text-center">
                   {day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -410,7 +413,7 @@ export default function WerkOverzichtPage() {
                   <div
                     key={person}
                     className="grid gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors"
-                    style={{ gridTemplateColumns: '1fr repeat(3, 120px)' }}
+                    style={{ gridTemplateColumns: '1fr repeat(3, 100px)' }}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-sm text-white`}>
@@ -473,6 +476,8 @@ export default function WerkOverzichtPage() {
                   </div>
                 )
               })}
+              </div>
+            </div>
             </div>
           </div>
 

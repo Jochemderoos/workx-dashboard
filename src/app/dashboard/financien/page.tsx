@@ -683,7 +683,7 @@ export default function FinancienPage() {
       {activeTab === 'overzicht' && (
         <div className="space-y-6">
           {/* KPI Cards */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {[
               {
                 label: `Omzet ${years[1]}`,
@@ -852,7 +852,7 @@ export default function FinancienPage() {
               {['werkgeverslasten', 'omzet', 'uren'].map((category) => (
                 <div key={category}>
                   <p className="text-white/60 text-sm mb-3 capitalize font-medium">{category}</p>
-                  <div className="grid grid-cols-6 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
                     {periods.map((p, i) => (
                       <div key={p} className="space-y-1">
                         <label className="text-[10px] text-white/40 block">{p}</label>
@@ -864,7 +864,7 @@ export default function FinancienPage() {
                             newData[category as keyof typeof currentYearData][i] = parseFloat(e.target.value) || 0
                             setCurrentYearData(newData)
                           }}
-                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-workx-lime/50"
+                          className="w-full px-2 sm:px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-workx-lime/50"
                           placeholder="0"
                         />
                       </div>
@@ -879,7 +879,7 @@ export default function FinancienPage() {
 
       {/* Grafieken Tab */}
       {activeTab === 'grafieken' && (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <LineChart
             data={[
               getDataForYear(years[0]).omzet,
@@ -929,9 +929,9 @@ export default function FinancienPage() {
           />
 
           {/* Year comparison - all 3 years */}
-          <div className="col-span-2 bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-            <h3 className="text-white font-medium mb-6">Jaarlijkse Vergelijking</h3>
-            <div className="grid grid-cols-4 gap-8">
+          <div className="md:col-span-2 bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
+            <h3 className="text-white font-medium mb-4 sm:mb-6">Jaarlijkse Vergelijking</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
               {['Omzet', 'Kosten', 'Saldo', 'Uren'].map((label, idx) => {
                 const values = [
                   [calculations.totals.omzet[years[0]], calculations.totals.omzet[years[1]], calculations.totals.omzet[years[2]]],
@@ -970,7 +970,7 @@ export default function FinancienPage() {
       {activeTab === 'budgetten' && (
         <div className="space-y-6">
           {/* Budget Summary */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
               <p className="text-white/40 text-sm">Totaal Budget</p>
               <p className="text-2xl font-semibold text-white mt-1">{formatCurrency(totalBudget)}</p>

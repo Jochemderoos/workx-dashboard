@@ -160,10 +160,10 @@ export default function Sidebar({ user }: SidebarProps) {
           </div>
         </div>
 
-        {/* Version badge */}
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <span className="text-[10px] text-white/20">Workx Dashboard</span>
-          <span className="badge badge-lime text-[10px] py-0.5 px-2">v2.0</span>
+        {/* Version badge - triple click for easter egg! */}
+        <div className="flex items-center justify-center gap-2 pt-2 group cursor-default">
+          <span className="text-[10px] text-white/20 group-hover:text-white/30 transition-colors">Workx Dashboard</span>
+          <span className="badge badge-lime text-[10px] py-0.5 px-2 hover:scale-110 transition-transform cursor-pointer" title="Try triple-clicking me 😉">v2.0</span>
         </div>
 
         {/* Pigeons illustration with fly away animation */}

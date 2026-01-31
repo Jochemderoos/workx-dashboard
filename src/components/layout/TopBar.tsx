@@ -15,20 +15,43 @@ interface TopBarProps {
 }
 
 const mobileMenuItems = [
-  { href: '/dashboard', icon: Icons.home, label: 'Home' },
+  { href: '/dashboard', icon: Icons.home, label: 'Dashboard' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties' },
   { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk' },
+  { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financiën' },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus' },
+  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitie' },
+  { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling' },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team' },
+  { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback' },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen' },
 ]
+
+// Silicon Valley easter egg keywords
+const siliconValleyEasterEggs: Record<string, { emoji: string; message: string }> = {
+  'jian yang': { emoji: '🏠', message: 'ERLICH BACHMAN, THIS IS YOUR MOM!' },
+  'pied piper': { emoji: '🎵', message: 'Making the world a better place!' },
+  'hotdog': { emoji: '🌭', message: 'Hotdog! Not hotdog!' },
+  'hot dog': { emoji: '🌭', message: 'Hotdog! Not hotdog!' },
+  'bachman': { emoji: '🚬', message: 'Aviato.' },
+  'aviato': { emoji: '✈️', message: 'My Aviato?' },
+  'tres comas': { emoji: '🍾', message: 'This guy fucks!' },
+  'gavin': { emoji: '🦅', message: 'Consider the elephant...' },
+  'hooli': { emoji: '😈', message: 'Making the world a better place' },
+  'dinesh': { emoji: '🇵🇰', message: 'GILFOYLE!' },
+  'gilfoyle': { emoji: '😈', message: 'Code is my religion.' },
+  'delete': { emoji: '🗑️', message: 'Delete Facebook.' },
+  'russ': { emoji: '💰', message: 'This guy fucks!' },
+  'middle out': { emoji: '📦', message: 'Optimal tip-to-tip efficiency!' },
+}
 
 export default function TopBar({ user }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [greeting, setGreeting] = useState('')
+  const [easterEggMessage, setEasterEggMessage] = useState<{ emoji: string; message: string } | null>(null)
   const pathname = usePathname()
 
   useEffect(() => {
@@ -38,6 +61,18 @@ export default function TopBar({ user }: TopBarProps) {
     else setGreeting('Goedenavond')
   }, [])
 
+  // Check for easter egg keywords
+  useEffect(() => {
+    const lowerQuery = searchQuery.toLowerCase().trim()
+    for (const [keyword, data] of Object.entries(siliconValleyEasterEggs)) {
+      if (lowerQuery === keyword) {
+        setEasterEggMessage(data)
+        const timer = setTimeout(() => setEasterEggMessage(null), 3000)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [searchQuery])
+
   const notifications = [
     { id: 1, text: 'Lisa is morgen jarig!', time: '5 min', icon: Icons.star, color: 'text-yellow-400' },
     { id: 2, text: 'Vakantie goedgekeurd', time: '1 uur', icon: Icons.check, color: 'text-green-400' },
@@ -45,7 +80,7 @@ export default function TopBar({ user }: TopBarProps) {
   ]
 
   return (
-    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-20 backdrop-blur-sm bg-workx-dark/30">
+    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-30 backdrop-blur-sm bg-workx-dark/30">
       {/* Mobile: Hamburger Menu */}
       <div className="md:hidden">
         <button
@@ -77,6 +112,16 @@ export default function TopBar({ user }: TopBarProps) {
           <kbd className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-white/20 px-1.5 py-0.5 rounded bg-white/10 hidden sm:inline">
             /
           </kbd>
+
+          {/* Easter egg message popup */}
+          {easterEggMessage && (
+            <div className="absolute left-0 right-0 top-full mt-2 z-50 pointer-events-none">
+              <div className="bg-gradient-to-r from-workx-lime/90 to-green-400/90 backdrop-blur-sm text-workx-dark px-4 py-2 rounded-xl shadow-lg text-center animate-bounce">
+                <span className="text-xl mr-2">{easterEggMessage.emoji}</span>
+                <span className="font-medium text-sm">{easterEggMessage.message}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -159,9 +204,9 @@ export default function TopBar({ user }: TopBarProps) {
       {/* Mobile Menu Dropdown */}
       {showMobileMenu && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setShowMobileMenu(false)} />
-          <div className="absolute left-0 right-0 top-full z-50 md:hidden fade-in">
-            <div className="bg-workx-gray/98 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+          <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
+          <div className="fixed left-0 right-0 top-16 z-50 md:hidden fade-in">
+            <div className="bg-workx-dark/98 backdrop-blur-xl border-b border-white/10 shadow-2xl">
               {/* User info */}
               <div className="p-4 border-b border-white/10 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center">

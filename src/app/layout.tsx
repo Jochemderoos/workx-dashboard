@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { Toaster } from 'react-hot-toast'
+import ConsoleEasterEgg from '@/components/ui/ConsoleEasterEgg'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="nl">
       <body className={`${inter.className} bg-workx-dark text-white antialiased`}>
         <Providers>
+          <ConsoleEasterEgg />
           {children}
           <Toaster
             position="top-right"

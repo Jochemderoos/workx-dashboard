@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
 import { Pigeon } from '@/components/ui/Icons'
+import EasterEggs from '@/components/ui/EasterEggs'
 
 export default async function DashboardLayout({
   children,
@@ -49,6 +50,9 @@ export default async function DashboardLayout({
           </div>
         </main>
       </div>
+
+      {/* Silicon Valley Easter Eggs - Konami code: ↑↑↓↓←→←→BA */}
+      <EasterEggs />
     </div>
   )
 }

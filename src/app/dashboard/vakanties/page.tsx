@@ -550,23 +550,26 @@ export default function VakantiesPage() {
 
           {/* Balances Table */}
           <div className="card overflow-hidden">
-            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+            <div className="p-4 sm:p-5 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
                   <Icons.list className="text-workx-lime" size={16} />
                 </div>
-                <h2 className="font-medium text-white">Vakantiesaldo per medewerker</h2>
+                <h2 className="font-medium text-white text-sm sm:text-base">Vakantiesaldo per medewerker</h2>
               </div>
               <span className="badge badge-lime">{new Date().getFullYear()}</span>
             </div>
 
-            {/* Table header */}
-            <div className="grid grid-cols-7 gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider">
-              <div className="col-span-2">Medewerker</div>
-              <div className="text-right">Overgedragen</div>
-              <div className="text-right">Opbouw</div>
-              <div className="text-right">Bijgekocht</div>
-              <div className="text-right">Opgenomen</div>
+            {/* Table - scrollable on mobile */}
+            <div className="overflow-x-auto">
+              <div className="min-w-[700px]">
+                {/* Table header */}
+                <div className="grid grid-cols-7 gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider">
+                  <div className="col-span-2">Medewerker</div>
+                  <div className="text-right">Overgedragen</div>
+                  <div className="text-right">Opbouw</div>
+                  <div className="text-right">Bijgekocht</div>
+                  <div className="text-right">Opgenomen</div>
               <div className="text-right">Resterend</div>
             </div>
 
@@ -672,6 +675,8 @@ export default function VakantiesPage() {
                     </div>
                   )
                 })}
+              </div>
+            </div>
             </div>
           </div>
 
