@@ -227,17 +227,32 @@ model WorkItem {
 // ==================== TRANSITIEVERGOEDING (voor opslag berekeningen) ====================
 
 model TransitieCalculation {
-  id              String   @id @default(cuid())
-  employeeName    String
-  startDate       DateTime
-  endDate         DateTime
-  monthlySalary   Float
-  vacationMoney   Float    @default(0)
-  thirteenthMonth Float    @default(0)
-  otherFixed      Float    @default(0)
-  totalAmount     Float
-  createdAt       DateTime @default(now())
-  calculatedBy    String?
+  id               String   @id @default(cuid())
+  employerName     String?
+  employeeName     String
+  startDate        String   // ISO date string
+  endDate          String   // ISO date string
+  salary           Float
+  vacationMoney    Boolean  @default(true)
+  vacationPercent  Float    @default(8)
+  thirteenthMonth  Boolean  @default(false)
+  bonusType        String   @default("none") // none, fixed, average
+  bonusFixed       Float    @default(0)
+  bonusYear1       Float    @default(0)
+  bonusYear2       Float    @default(0)
+  bonusYear3       Float    @default(0)
+  bonusOther       Float    @default(0)
+  overtime         Float    @default(0)
+  other            Float    @default(0)
+  isPensionAge     Boolean  @default(false)
+  totalSalary      Float
+  yearlySalary     Float
+  amount           Float
+  amountBeforeMax  Float
+  years            Int
+  months           Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 // ==================== FEEDBACK ====================

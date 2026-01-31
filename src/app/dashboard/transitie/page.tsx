@@ -23,7 +23,7 @@ const MAX_TRANSITIE_2026 = 102000
 
 interface SavedCalculation {
   id: string
-  date: string
+  createdAt: string
   employerName: string
   employeeName: string
   startDate: string
@@ -34,7 +34,9 @@ interface SavedCalculation {
   thirteenthMonth: boolean
   bonusType: 'none' | 'fixed' | 'average'
   bonusFixed: number
-  bonusYears: { year1: number; year2: number; year3: number }
+  bonusYear1: number
+  bonusYear2: number
+  bonusYear3: number
   bonusOther: number
   overtime: number
   other: number
@@ -104,12 +106,16 @@ export default function TransitiePage() {
   const [savedCalculations, setSavedCalculations] = useState<SavedCalculation[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  // Load saved calculations from localStorage
+  // Load saved calculations from API
   useEffect(() => {
-    const saved = localStorage.getItem('workx-transitie-calculations')
-    if (saved) {
-      setSavedCalculations(JSON.parse(saved))
-    }
+    fetch('/api/transitie')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setSavedCalculations(data)
+        }
+      })
+      .catch(err => console.error('Error fetching calculations:', err))
   }, [])
 
   // Calculate bonus per month based on type
@@ -201,12 +207,10 @@ export default function TransitiePage() {
     toast.success('Berekend')
   }
 
-  const saveCalculation = () => {
+  const saveCalculation = async () => {
     if (!result) return
 
-    const calculation: SavedCalculation = {
-      id: editingId || Date.now().toString(),
-      date: new Date().toISOString(),
+    const calculationData = {
       employerName: form.employerName,
       employeeName: form.employeeName,
       startDate: form.startDate,
@@ -234,23 +238,38 @@ export default function TransitiePage() {
       isPensionAge: form.isPensionAge,
     }
 
-    let updated: SavedCalculation[]
-    if (editingId) {
-      updated = savedCalculations.map((c) => (c.id === editingId ? calculation : c))
-      setEditingId(null)
-      toast.success('Berekening bijgewerkt')
-    } else {
-      updated = [calculation, ...savedCalculations]
-      toast.success('Berekening opgeslagen')
+    try {
+      if (editingId) {
+        const res = await fetch(`/api/transitie/${editingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(calculationData)
+        })
+        if (!res.ok) throw new Error('Failed to update')
+        const updated = await res.json()
+        setSavedCalculations(prev => prev.map(c => c.id === editingId ? updated : c))
+        setEditingId(null)
+        toast.success('Berekening bijgewerkt')
+      } else {
+        const res = await fetch('/api/transitie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(calculationData)
+        })
+        if (!res.ok) throw new Error('Failed to save')
+        const newCalc = await res.json()
+        setSavedCalculations(prev => [newCalc, ...prev])
+        toast.success('Berekening opgeslagen')
+      }
+    } catch (error) {
+      console.error('Error saving calculation:', error)
+      toast.error('Opslaan mislukt')
     }
-
-    setSavedCalculations(updated)
-    localStorage.setItem('workx-transitie-calculations', JSON.stringify(updated))
   }
 
   const loadCalculation = (calc: SavedCalculation) => {
     setForm({
-      employerName: calc.employerName,
+      employerName: calc.employerName || '',
       employeeName: calc.employeeName,
       startDate: calc.startDate,
       endDate: calc.endDate,
@@ -260,9 +279,9 @@ export default function TransitiePage() {
       thirteenthMonth: calc.thirteenthMonth,
       bonusType: calc.bonusType,
       bonusFixed: calc.bonusFixed.toString(),
-      bonusYear1: calc.bonusYears.year1.toString(),
-      bonusYear2: calc.bonusYears.year2.toString(),
-      bonusYear3: calc.bonusYears.year3.toString(),
+      bonusYear1: calc.bonusYear1.toString(),
+      bonusYear2: calc.bonusYear2.toString(),
+      bonusYear3: calc.bonusYear3.toString(),
       bonusOther: (calc.bonusOther || 0).toString(),
       overtime: calc.overtime.toString(),
       other: calc.other.toString(),
@@ -279,7 +298,7 @@ export default function TransitiePage() {
       bonusPerMonth:
         calc.bonusType === 'fixed'
           ? calc.bonusFixed
-          : (calc.bonusYears.year1 + calc.bonusYears.year2 + calc.bonusYears.year3 + (calc.bonusOther || 0)) / 36,
+          : (calc.bonusYear1 + calc.bonusYear2 + calc.bonusYear3 + (calc.bonusOther || 0)) / 36,
       maxApplied: calc.amount !== (calc.amountBeforeMax || calc.amount),
       maxUsed: Math.max(MAX_TRANSITIE_2026, calc.yearlySalary || calc.totalSalary * 12),
     })
@@ -287,15 +306,21 @@ export default function TransitiePage() {
     toast.success('Berekening geladen')
   }
 
-  const deleteCalculation = (id: string) => {
-    const updated = savedCalculations.filter((c) => c.id !== id)
-    setSavedCalculations(updated)
-    localStorage.setItem('workx-transitie-calculations', JSON.stringify(updated))
-    if (editingId === id) {
-      setEditingId(null)
-      reset()
+  const deleteCalculation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/transitie/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+
+      setSavedCalculations(prev => prev.filter(c => c.id !== id))
+      if (editingId === id) {
+        setEditingId(null)
+        reset()
+      }
+      toast.success('Berekening verwijderd')
+    } catch (error) {
+      console.error('Error deleting calculation:', error)
+      toast.error('Verwijderen mislukt')
     }
-    toast.success('Berekening verwijderd')
   }
 
   const reset = () => {
@@ -317,174 +342,179 @@ export default function TransitiePage() {
 
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 20
+    const contentWidth = pageWidth - margin * 2
 
-    // Draw authentic Workx logo
-    drawWorkxLogo(doc, 15, 15, 55)
+    // === HEADER SECTIE ===
+    drawWorkxLogo(doc, margin, 15, 50)
 
-    // Letter info on the right
-    let y = 20
+    // Header info rechts van logo
+    const infoX = 80
+    const infoValueX = 115
+    let hy = 20
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
-
-    doc.setTextColor(100, 100, 100)
-    doc.text('Per email aan:', 80, y)
-    doc.setTextColor(51, 51, 51)
-    doc.text(form.employerName || 'info@werkgever.nl', 115, y)
-    y += 6
-
-    doc.setTextColor(100, 100, 100)
-    doc.text('Datum:', 80, y)
-    doc.setTextColor(51, 51, 51)
-    doc.text(
-      new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }),
-      115,
-      y
-    )
-    y += 6
-
-    doc.setTextColor(100, 100, 100)
-    doc.text('Betreft:', 80, y)
-    doc.setTextColor(51, 51, 51)
-    doc.text(`Berekening ${form.employeeName || 'Werknemer'}`, 115, y)
+    doc.setTextColor(120, 120, 120)
+    doc.text('Aan:', infoX, hy)
+    doc.setTextColor(40, 40, 40)
+    doc.text(form.employerName || '-', infoValueX, hy)
+    hy += 7
+    doc.setTextColor(120, 120, 120)
+    doc.text('Datum:', infoX, hy)
+    doc.setTextColor(40, 40, 40)
+    doc.text(new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), infoValueX, hy)
+    hy += 7
+    doc.setTextColor(120, 120, 120)
+    doc.text('Betreft:', infoX, hy)
+    doc.setTextColor(40, 40, 40)
+    doc.text(form.employeeName || 'Werknemer', infoValueX, hy)
 
     // Tagline
-    doc.setTextColor(150, 150, 150)
+    doc.setTextColor(160, 160, 160)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
-    doc.text('Gemaakt met de Workx App', 15, 50)
+    doc.text('Gemaakt met de Workx App', margin, 48)
 
-    // Divider
-    doc.setDrawColor(220, 220, 220)
-    doc.setLineWidth(0.3)
-    doc.line(15, 55, pageWidth - 15, 55)
+    // Divider lijn
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.4)
+    doc.line(margin, 53, pageWidth - margin, 53)
 
-    // Title section
-    y = 70
+    // === TITEL SECTIE ===
+    let y = 65
     doc.setTextColor(100, 100, 100)
-    doc.setFontSize(14)
+    doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
-    doc.text('BEREKENING VAN DE', 15, y)
-
-    doc.setTextColor(45, 45, 45)
-    doc.setFontSize(20)
+    doc.text('BEREKENING VAN DE', margin, y)
+    doc.setTextColor(35, 35, 35)
+    doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
-    doc.text('TRANSITIEVERGOEDING', 15, y + 10)
+    doc.text('TRANSITIEVERGOEDING', margin, y + 10)
 
-    // Data section
-    y = 100
-    const addRow = (label: string, value: string, bold = false) => {
-      doc.setTextColor(100, 100, 100)
-      doc.setFontSize(10)
+    // === DIENSTVERBAND SECTIE ===
+    y = 95
+    doc.setFillColor(250, 250, 250)
+    doc.roundedRect(margin, y - 5, contentWidth, 22, 3, 3, 'F')
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    const col1 = margin + 8
+    const col2 = margin + 65
+    const col3 = margin + 125
+
+    doc.setTextColor(100, 100, 100)
+    doc.text('Datum in dienst', col1, y + 3)
+    doc.setTextColor(35, 35, 35)
+    doc.setFont('helvetica', 'bold')
+    doc.text(formatDate(form.startDate), col1, y + 11)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100)
+    doc.text('Datum uit dienst', col2, y + 3)
+    doc.setTextColor(35, 35, 35)
+    doc.setFont('helvetica', 'bold')
+    doc.text(formatDate(form.endDate), col2, y + 11)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100)
+    doc.text('Dienstverband', col3, y + 3)
+    doc.setTextColor(35, 35, 35)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`${result.years} jaar en ${result.months} maanden`, col3, y + 11)
+
+    // === SALARIS COMPONENTEN ===
+    y = 130
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(60, 60, 60)
+    doc.text('Salariscomponenten', margin, y)
+
+    y += 10
+    const labelX = margin
+    const valueX = pageWidth - margin
+
+    const addDataRow = (label: string, value: string, highlight = false) => {
+      if (highlight) {
+        doc.setFillColor(245, 245, 245)
+        doc.rect(margin, y - 4, contentWidth, 8, 'F')
+      }
+      doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
-      doc.text(label, 15, y)
-      doc.setTextColor(45, 45, 45)
-      if (bold) doc.setFont('helvetica', 'bold')
-      doc.text(value, pageWidth - 15, y, { align: 'right' })
-      if (bold) doc.setFont('helvetica', 'normal')
+      doc.setTextColor(100, 100, 100)
+      doc.text(label, labelX, y)
+      doc.setTextColor(35, 35, 35)
+      doc.setFont('helvetica', highlight ? 'bold' : 'normal')
+      doc.text(value, valueX, y, { align: 'right' })
+      y += 9
+    }
+
+    addDataRow('Bruto maandsalaris', formatCurrency(parseFloat(form.salary)))
+    addDataRow('Vakantiegeld', form.vacationMoney ? `Ja (${form.vacationPercent}%)` : 'Nee')
+    addDataRow('13e maand', form.thirteenthMonth ? 'Ja (8,3%)' : 'Nee')
+    addDataRow('Overwerk per maand', form.overtime ? formatCurrency(parseFloat(form.overtime)) : '—')
+    addDataRow('Bonus per maand', result.bonusPerMonth > 0 ? formatCurrency(result.bonusPerMonth) : '—')
+    addDataRow('Overige emolumenten', form.other ? formatCurrency(parseFloat(form.other)) : '—')
+    y += 2
+    addDataRow('Totaal bruto maandsalaris', formatCurrency(result.totalSalary), true)
+    y += 2
+    addDataRow('Pensioen-/AOW-leeftijd bereikt', form.isPensionAge ? 'Ja' : 'Nee')
+
+    // === RESULTAAT BOX ===
+    y += 12
+    const boxHeight = 28
+    doc.setFillColor(249, 255, 133) // Workx geel
+    doc.roundedRect(margin, y, contentWidth, boxHeight, 4, 4, 'F')
+
+    doc.setTextColor(35, 35, 35)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('Transitievergoeding', margin + 12, y + 12)
+
+    doc.setFontSize(18)
+    doc.text(formatCurrency(result.amount), pageWidth - margin - 12, y + 18, { align: 'right' })
+
+    y += boxHeight + 6
+    if (result.maxApplied) {
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(120, 120, 120)
+      doc.text(`Wettelijk maximum toegepast: ${formatCurrency(result.maxUsed)} (berekend bedrag: ${formatCurrency(result.amountBeforeMax)})`, margin, y)
       y += 8
     }
 
-    addRow('Datum in dienst', formatDate(form.startDate))
-    addRow('Datum uit dienst', formatDate(form.endDate))
-    y += 4
-
-    addRow('Bruto salaris p/m', formatCurrency(parseFloat(form.salary)))
-    addRow('Vakantie € (8%)', form.vacationMoney ? 'Ja' : 'Nee')
-    addRow('13e maand (8.3%)', form.thirteenthMonth ? 'Ja' : 'Nee')
-    addRow('Overwerk p/m', form.overtime ? formatCurrency(parseFloat(form.overtime)) : '€ -')
-    addRow('Bonus p/m', result.bonusPerMonth > 0 ? formatCurrency(result.bonusPerMonth) : '€ -')
-    addRow('Overige p/m', form.other ? formatCurrency(parseFloat(form.other)) : '€ -')
-    y += 4
-
-    addRow('Salaris (bruto)', formatCurrency(result.totalSalary), true)
-    y += 4
-
-    addRow('Pensioen of AOW-leeftijd bereikt?', form.isPensionAge ? 'Ja' : 'Nee')
-    y += 10
-
-    // Result box
-    doc.setFillColor(255, 237, 74)
-    doc.roundedRect(15, y, pageWidth - 30, 25, 4, 4, 'F')
-    doc.setTextColor(45, 45, 45)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
-    doc.text('Transitievergoeding', 25, y + 10)
-    doc.setFontSize(16)
-    doc.text(formatCurrency(result.amount), 25, y + 20)
-
-    // Max notice if applicable
-    if (result.maxApplied) {
-      y += 30
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'italic')
-      doc.setTextColor(100, 100, 100)
-      doc.text(
-        `(Maximum toegepast: ${formatCurrency(result.maxUsed)} - berekening voor max: ${formatCurrency(result.amountBeforeMax)})`,
-        15,
-        y
-      )
-      y += 5
-    } else {
-      y += 35
-    }
-
-    // Contact text
-    y += 10
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'italic')
-    doc.setTextColor(100, 100, 100)
-    doc.text(
-      'Heeft u vragen over deze berekening? Neem contact op met één van onze specialisten.',
-      15,
-      y
-    )
-
-    // Disclaimer section
-    y += 20
-    doc.setDrawColor(220, 220, 220)
-    doc.setLineWidth(0.2)
-    doc.line(15, y, pageWidth - 15, y)
-    y += 8
+    // === DISCLAIMER ===
+    y += 12
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.3)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 6
 
     doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(130, 130, 130)
+    const disclaimer = `Disclaimer: Deze berekening is indicatief. Aan deze berekening kunnen geen rechten worden ontleend. De daadwerkelijke transitievergoeding kan afwijken door CAO-bepalingen of bijzondere omstandigheden. Wettelijke grondslag: Art. 7:673 BW. Maximum 2024: €94.000 | 2025: €98.000 | 2026: €102.000, of jaarsalaris indien hoger.`
+    const disclaimerLines = doc.splitTextToSize(disclaimer, contentWidth)
+    doc.text(disclaimerLines, margin, y)
 
-    const disclaimer = `DISCLAIMER: Deze berekening is indicatief en uitsluitend bedoeld als hulpmiddel. Aan deze berekening kunnen geen rechten worden ontleend. Workx Advocaten is niet aansprakelijk voor enige schade die voortvloeit uit het gebruik van deze berekening of beslissingen die op basis hiervan worden genomen. De daadwerkelijke transitievergoeding kan afwijken door CAO-bepalingen, individuele arbeidsvoorwaarden of andere bijzondere omstandigheden. Voor een definitieve berekening en juridisch advies raden wij u aan contact op te nemen met één van onze arbeidsrecht specialisten.
+    // === CONTACT ===
+    y += disclaimerLines.length * 3.5 + 8
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(100, 100, 100)
+    doc.text('Vragen? Neem contact op met één van onze arbeidsrecht specialisten.', margin, y)
 
-Wettelijke grondslag: Artikel 7:673 BW. Maximum transitievergoeding 2024: €94.000, 2025: €98.000, 2026: €102.000, of het jaarsalaris indien dit hoger is.`
-
-    const disclaimerLines = doc.splitTextToSize(disclaimer, pageWidth - 30)
-    const disclaimerHeight = disclaimerLines.length * 3.5 // Approximate line height
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const footerY = pageHeight - 15
-
-    // Check if disclaimer would overlap with footer, if so add new page
-    if (y + disclaimerHeight > footerY - 10) {
-      doc.addPage()
-      y = 20
-    }
-
-    doc.text(disclaimerLines, 15, y)
-
-    // Footer on last page
-    doc.setFillColor(100, 100, 100)
-    doc.rect(0, footerY - 5, pageWidth, 20, 'F')
-
+    // === FOOTER ===
+    const footerY = pageHeight - 12
+    doc.setFillColor(80, 80, 80)
+    doc.rect(0, footerY, pageWidth, 12, 'F')
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
-    doc.text(
-      'Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl',
-      pageWidth / 2,
-      footerY + 2,
-      { align: 'center' }
-    )
+    doc.text('Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl', pageWidth / 2, footerY + 7, { align: 'center' })
 
-    // Open PDF in new tab instead of downloading
     const pdfBlob = doc.output('blob')
-    const pdfUrl = URL.createObjectURL(pdfBlob)
-    window.open(pdfUrl, '_blank')
+    window.open(URL.createObjectURL(pdfBlob), '_blank')
   }
 
   // Get calculations for current employee (filter by name if provided)
@@ -1083,7 +1113,7 @@ Wettelijke grondslag: Artikel 7:673 BW. Maximum transitievergoeding 2024: €94.
                         {formatCurrency(calc.amount)}
                       </span>
                       <span className="text-xs text-white/40">
-                        {new Date(calc.date).toLocaleDateString('nl-NL')}
+                        {new Date(calc.createdAt).toLocaleDateString('nl-NL')}
                       </span>
                     </div>
                     <p className="text-xs text-white/50 mb-2">
@@ -1140,7 +1170,7 @@ Wettelijke grondslag: Artikel 7:673 BW. Maximum transitievergoeding 2024: €94.
                     }`}
                   >
                     <td className="py-3 px-2 text-white/60">
-                      {new Date(calc.date).toLocaleDateString('nl-NL')}
+                      {new Date(calc.createdAt).toLocaleDateString('nl-NL')}
                     </td>
                     <td className="py-3 px-2 text-white">{calc.employerName || '-'}</td>
                     <td className="py-3 px-2 text-white">{calc.employeeName || '-'}</td>
