@@ -455,10 +455,19 @@ export default function TransitiePage() {
 Wettelijke grondslag: Artikel 7:673 BW. Maximum transitievergoeding 2024: €94.000, 2025: €98.000, 2026: €102.000, of het jaarsalaris indien dit hoger is.`
 
     const disclaimerLines = doc.splitTextToSize(disclaimer, pageWidth - 30)
+    const disclaimerHeight = disclaimerLines.length * 3.5 // Approximate line height
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const footerY = pageHeight - 15
+
+    // Check if disclaimer would overlap with footer, if so add new page
+    if (y + disclaimerHeight > footerY - 10) {
+      doc.addPage()
+      y = 20
+    }
+
     doc.text(disclaimerLines, 15, y)
 
-    // Footer
-    const footerY = doc.internal.pageSize.getHeight() - 15
+    // Footer on last page
     doc.setFillColor(100, 100, 100)
     doc.rect(0, footerY - 5, pageWidth, 20, 'F')
 
@@ -472,11 +481,10 @@ Wettelijke grondslag: Artikel 7:673 BW. Maximum transitievergoeding 2024: €94.
       { align: 'center' }
     )
 
-    // Save
-    const filename = form.employeeName
-      ? `Transitievergoeding_${form.employeeName.replace(/\s+/g, '-')}.pdf`
-      : 'Transitievergoeding_berekening.pdf'
-    doc.save(filename)
+    // Open PDF in new tab instead of downloading
+    const pdfBlob = doc.output('blob')
+    const pdfUrl = URL.createObjectURL(pdfBlob)
+    window.open(pdfUrl, '_blank')
   }
 
   // Get calculations for current employee (filter by name if provided)

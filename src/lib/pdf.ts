@@ -19,26 +19,26 @@ interface PDFOptions {
   subject?: string
 }
 
-// Draw the authentic Workx logo on a PDF (yellow background, black text - like dashboard)
+// Draw the authentic Workx logo on a PDF (yellow background, black text - matching dashboard exactly)
 export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  const height = width * 0.45
-  const cornerRadius = 3
+  const height = width * 0.5 // Slightly taller ratio like dashboard
+  const cornerRadius = 4
 
   // Yellow background (matching dashboard: #f9ff85)
   doc.setFillColor(249, 255, 133)
   doc.roundedRect(x, y, width, height, cornerRadius, cornerRadius, 'F')
 
-  // "Workx" text in black
+  // "Workx" text in black - matching dashboard font weight and position
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(width * 0.38)
-  doc.text('Workx', x + width * 0.08, y + height * 0.55)
+  doc.setFontSize(width * 0.36)
+  doc.text('Workx', x + width * 0.1, y + height * 0.5)
 
-  // "ADVOCATEN" text in black, smaller
-  doc.setFontSize(width * 0.12)
+  // "ADVOCATEN" text in black, smaller with letter spacing
+  doc.setFontSize(width * 0.11)
   doc.setFont('helvetica', 'normal')
-  doc.setCharSpace(2)
-  doc.text('ADVOCATEN', x + width * 0.08, y + height * 0.82)
+  doc.setCharSpace(2.5)
+  doc.text('ADVOCATEN', x + width * 0.1, y + height * 0.78)
   doc.setCharSpace(0)
 }
 
