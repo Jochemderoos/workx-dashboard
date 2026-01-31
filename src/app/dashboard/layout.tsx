@@ -1,38 +1,27 @@
 import { getServerSession } from 'next-auth'
+import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
 import { Pigeon } from '@/components/ui/Icons'
-
-// Demo user voor als er geen echte sessie is
-const demoUser = {
-  id: 'demo',
-  name: 'Demo Gebruiker',
-  email: 'demo@workxadvocaten.nl',
-  role: 'EMPLOYEE'
-}
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Probeer echte sessie te krijgen, anders gebruik demo
-  let user = demoUser
+  const session = await getServerSession(authOptions)
 
-  try {
-    const session = await getServerSession(authOptions)
-    if (session?.user) {
-      user = {
-        id: session.user.id || 'unknown',
-        name: session.user.name || 'Gebruiker',
-        email: session.user.email || '',
-        role: (session.user as any).role || 'EMPLOYEE'
-      }
-    }
-  } catch (e) {
-    // Bij fout, gebruik demo user
-    console.log('Using demo user (no session)')
+  // Redirect to login if not authenticated
+  if (!session?.user) {
+    redirect('/login')
+  }
+
+  const user = {
+    id: session.user.id || 'unknown',
+    name: session.user.name || 'Gebruiker',
+    email: session.user.email || '',
+    role: (session.user as any).role || 'EMPLOYEE'
   }
 
   return (

@@ -649,14 +649,21 @@ export default function TransitiePage() {
 
           {/* Bonus sectie */}
           <div className="space-y-3">
-            <label className="block text-sm text-white/60">Bonus</label>
+            <div className="flex items-center gap-2">
+              <label className="block text-sm text-white/60">Bonus</label>
+              {form.bonusType !== 'none' && (
+                <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+                  Actief
+                </span>
+              )}
+            </div>
             <div className="space-y-2">
               {/* Bonus type selection */}
               <div className="flex gap-2">
                 {[
                   { value: 'none', label: 'Geen bonus' },
                   { value: 'fixed', label: 'Vast bedrag p/m' },
-                  { value: 'average', label: 'Gemiddelde bonus' },
+                  { value: 'average', label: 'Bereken gemiddelde' },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -693,129 +700,151 @@ export default function TransitiePage() {
                 </div>
               )}
 
-              {/* Average bonus - 3 year inputs */}
+              {/* Average bonus calculator tool */}
               {form.bonusType === 'average' && (
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4">
-                  <div>
-                    <p className="text-sm text-white/60 mb-3">
-                      Bonus over drie kalenderjaren voorafgaand aan einddatum
-                    </p>
-                    <div className="grid grid-cols-3 gap-3">
-                      {form.endDate && (
-                        <>
-                          <div>
-                            <label className="block text-xs text-white/40 mb-1">
-                              {new Date(form.endDate).getFullYear() - 3}
-                            </label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
-                                €
-                              </span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={form.bonusYear1}
-                                onChange={(e) => setForm({ ...form, bonusYear1: e.target.value })}
-                                className="input-field pl-8 text-sm"
-                                placeholder="0"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs text-white/40 mb-1">
-                              {new Date(form.endDate).getFullYear() - 2}
-                            </label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
-                                €
-                              </span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={form.bonusYear2}
-                                onChange={(e) => setForm({ ...form, bonusYear2: e.target.value })}
-                                className="input-field pl-8 text-sm"
-                                placeholder="0"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs text-white/40 mb-1">
-                              {new Date(form.endDate).getFullYear() - 1}
-                            </label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
-                                €
-                              </span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={form.bonusYear3}
-                                onChange={(e) => setForm({ ...form, bonusYear3: e.target.value })}
-                                className="input-field pl-8 text-sm"
-                                placeholder="0"
-                              />
-                            </div>
-                          </div>
-                        </>
-                      )}
-                      {!form.endDate && (
-                        <p className="col-span-3 text-xs text-white/40">
-                          Vul eerst de einddatum in om de jaren te zien
-                        </p>
-                      )}
-                    </div>
+                <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icons.calculator className="text-purple-400" size={16} />
+                    <span className="text-sm font-medium text-white">Bonus Calculator</span>
                   </div>
 
-                  {/* Overig veld onder bonus */}
-                  <div>
-                    <label className="block text-xs text-white/40 mb-1">
-                      Overig (totaal over 3 jaar)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
-                        €
-                      </span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={form.bonusOther}
-                        onChange={(e) => setForm({ ...form, bonusOther: e.target.value })}
-                        className="input-field pl-8 text-sm"
-                        placeholder="0"
-                      />
+                  {!form.endDate ? (
+                    <div className="text-center py-4">
+                      <Icons.calendar className="text-white/20 mx-auto mb-2" size={24} />
+                      <p className="text-sm text-white/40">
+                        Vul eerst de <span className="text-purple-400">einddatum</span> in om de bonus te berekenen
+                      </p>
                     </div>
-                    <p className="text-xs text-white/30 mt-1">
-                      Bijv. commissies, tantièmes, structurele overwerkvergoeding
-                    </p>
-                  </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-white/50">
+                        Vul de ontvangen bonussen in over de 3 kalenderjaren voorafgaand aan de einddatum ({formatDate(form.endDate)})
+                      </p>
 
-                  {form.bonusType === 'average' &&
-                    (form.bonusYear1 || form.bonusYear2 || form.bonusYear3 || form.bonusOther) && (
-                      <div className="pt-2 border-t border-white/10">
-                        <p className="text-xs text-white/40">
-                          Gemiddelde bonus per maand:{' '}
-                          <span className="text-purple-400 font-medium">
-                            {formatCurrency(calculateBonusPerMonth())}
-                          </span>
-                          {form.startDate && form.endDate && (
-                            <span className="text-white/30">
-                              {' '}
-                              (totaal ÷{' '}
-                              {Math.min(
-                                36,
-                                Math.floor(
-                                  (new Date(form.endDate).getTime() -
-                                    new Date(form.startDate).getTime()) /
-                                    (1000 * 60 * 60 * 24 * 30.44)
-                                )
-                              )}{' '}
-                              maanden)
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="block text-xs font-medium text-purple-400">
+                            {new Date(form.endDate).getFullYear() - 3}
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
+                              €
                             </span>
-                          )}
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={form.bonusYear1}
+                              onChange={(e) => setForm({ ...form, bonusYear1: e.target.value })}
+                              className="input-field pl-8 text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-xs font-medium text-purple-400">
+                            {new Date(form.endDate).getFullYear() - 2}
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
+                              €
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={form.bonusYear2}
+                              onChange={(e) => setForm({ ...form, bonusYear2: e.target.value })}
+                              className="input-field pl-8 text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-xs font-medium text-purple-400">
+                            {new Date(form.endDate).getFullYear() - 1}
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
+                              €
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={form.bonusYear3}
+                              onChange={(e) => setForm({ ...form, bonusYear3: e.target.value })}
+                              className="input-field pl-8 text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Overig veld */}
+                      <div>
+                        <label className="block text-xs text-white/40 mb-1">
+                          Overige variabele looncomponenten (totaal over 3 jaar)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
+                            €
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={form.bonusOther}
+                            onChange={(e) => setForm({ ...form, bonusOther: e.target.value })}
+                            className="input-field pl-8 text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                        <p className="text-xs text-white/30 mt-1">
+                          Bijv. commissies, tantièmes, structurele overwerkvergoeding
                         </p>
                       </div>
-                    )}
+
+                      {/* Resultaat */}
+                      {(form.bonusYear1 || form.bonusYear2 || form.bonusYear3 || form.bonusOther) && (
+                        <div className="pt-3 border-t border-purple-500/20">
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-purple-500/10">
+                            <div>
+                              <p className="text-xs text-white/50">Berekend resultaat</p>
+                              <p className="text-sm text-white/70">
+                                Totaal: {formatCurrency(
+                                  (parseFloat(form.bonusYear1) || 0) +
+                                  (parseFloat(form.bonusYear2) || 0) +
+                                  (parseFloat(form.bonusYear3) || 0) +
+                                  (parseFloat(form.bonusOther) || 0)
+                                )} ÷ {Math.min(
+                                  36,
+                                  Math.max(1, Math.floor(
+                                    (new Date(form.endDate).getTime() -
+                                      new Date(form.startDate || form.endDate).getTime()) /
+                                      (1000 * 60 * 60 * 24 * 30.44)
+                                  ))
+                                )} maanden
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-purple-400">Bonus per maand</p>
+                              <p className="text-xl font-semibold text-purple-400">
+                                {formatCurrency(calculateBonusPerMonth())}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-white/30 mt-2 text-center">
+                            Dit bedrag wordt automatisch meegenomen in de transitievergoeding
+                          </p>
+                        </div>
+                      )}
+
+                      {!form.bonusYear1 && !form.bonusYear2 && !form.bonusYear3 && !form.bonusOther && (
+                        <div className="text-center py-2">
+                          <p className="text-xs text-white/30">
+                            Vul de bonussen in om de gemiddelde bonus per maand te berekenen
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
