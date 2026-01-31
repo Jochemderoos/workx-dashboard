@@ -7,27 +7,28 @@ const prisma = new PrismaClient()
 // Rollen: PARTNER (directie), ADMIN (Hanna - kantoormanager), EMPLOYEE (medewerkers)
 // Partners + Admin kunnen vakantiesaldo beheren
 
+// Echte verjaardagen uit loonstroken (format: MM-DD)
 const TEAM_MEMBERS = [
-  // Admins met volledige toegang (eerste 6)
-  { name: 'Hanna Blaauboer', email: 'hanna.blaauboer@workxadvocaten.nl', role: 'ADMIN', department: 'Kantoor', birthDate: '02-06' },
+  // Partners + Admin met volledige toegang
+  { name: 'Hanna Blaauboer', email: 'hanna.blaauboer@workxadvocaten.nl', role: 'ADMIN', department: 'Kantoor', birthDate: '12-23' }, // 23-12-1991
   { name: 'Jochem de Roos', email: 'jochem.deroos@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '03-02' },
-  { name: 'Marnix Ritmeester', email: 'marnix.ritmeester@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '03-12' },
-  { name: 'Bas den Ridder', email: 'bas.denridder@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '12-03' },
-  { name: 'Maaike de Jong', email: 'maaike.dejong@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '07-23' },
-  { name: 'Juliette Niersman', email: 'juliette.niersman@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '11-21' },
+  { name: 'Marnix Ritmeester', email: 'marnix.ritmeester@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: null }, // onbekend
+  { name: 'Bas den Ridder', email: 'bas.denridder@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: null }, // onbekend
+  { name: 'Maaike de Jong', email: 'maaike.dejong@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: null }, // onbekend
+  { name: 'Juliette Niersman', email: 'juliette.niersman@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: null }, // onbekend
 
-  // Employees (alleen eigen dashboard)
-  { name: 'Alain Heunen', email: 'alain.heunen@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '01-15' },
-  { name: 'Marlieke Schipper', email: 'marlieke.schipper@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '01-08' },
-  { name: 'Justine Schellekens', email: 'justine.schellekens@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '09-04' },
-  { name: 'Wies van Pesch', email: 'wies.vanpesch@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '04-15' },
-  { name: 'Emma van der Vos', email: 'emma.vandervos@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '10-11' },
-  { name: 'Kay Maes', email: 'kay.maes@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '05-17' },
-  { name: 'Erika van Zadelhof', email: 'erika.vanzadelhof@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '06-30' },
-  { name: 'Barbara Rip', email: 'barbara.rip@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '02-19' },
-  { name: 'Julia Groen', email: 'julia.groen@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '08-15' },
-  { name: 'Heleen Pesser', email: 'heleen.pesser@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '' },
-  { name: 'Lotte van Sint Truiden', email: 'officemanagement@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Kantoor (Officemanagement)', birthDate: '07-07' },
+  // Medewerkers (echte data uit loonstroken)
+  { name: 'Alain Heunen', email: 'alain.heunen@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '04-03' }, // 3-4-1991
+  { name: 'Marlieke Schipper', email: 'marlieke.schipper@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '01-10' }, // 10-1-1992
+  { name: 'Justine Schellekens', email: 'justine.schellekens@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '06-29' }, // 29-6-1994
+  { name: 'Wies van Pesch', email: 'wies.vanpesch@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '01-16' }, // 16-1-1991
+  { name: 'Emma van der Vos', email: 'emma.vandervos@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '09-04' }, // 4-9-1992
+  { name: 'Kay Maes', email: 'kay.maes@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '01-24' }, // 24-1-1999
+  { name: 'Erika van Zadelhof', email: 'erika.vanzadelhof@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '06-23' }, // 23-6-1995
+  { name: 'Barbara Rip', email: 'barbara.rip@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '04-04' }, // 4-4-1996
+  { name: 'Julia Groen', email: 'julia.groen@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '07-15' }, // 15-7-1992
+  { name: 'Heleen Pesser', email: 'heleen.pesser@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '07-14' }, // 14-7-1999
+  { name: 'Lotte van Sint Truiden', email: 'officemanagement@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Kantoor (Officemanagement)', birthDate: '06-03' }, // 3-6-2002
 ]
 
 // Vakantiesaldo 2026 data (uit Excel)
@@ -63,6 +64,7 @@ async function main() {
         name: member.name,
         role: member.role,
         department: member.department,
+        birthDate: member.birthDate,
       },
       create: {
         email: member.email,
@@ -70,6 +72,7 @@ async function main() {
         password: defaultPassword,
         role: member.role,
         department: member.department,
+        birthDate: member.birthDate,
       }
     })
 

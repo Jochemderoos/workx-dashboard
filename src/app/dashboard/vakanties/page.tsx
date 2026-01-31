@@ -1,97 +1,42 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 
-interface Vacation {
+interface VacationRequest {
   id: string
-  personName: string
+  userId: string
   startDate: string
   endDate: string
-  note: string | null
-  color: string
+  days: number
+  reason: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  user: {
+    id: string
+    name: string
+  }
 }
 
 interface VacationBalance {
+  userId: string
   personName: string
-  overgedragenVorigJaar: number  // Dagen overgedragen van vorige jaren
-  opbouwLopendJaar: number       // Dagen die dit jaar worden opgebouwd (wettelijk + bovenwettelijk)
-  bijgekocht: number             // Extra gekochte dagen
-  opgenomenLopendJaar: number    // Dagen opgenomen dit jaar
-  note?: string                  // Extra informatie
-  isPartner?: boolean            // Partners hebben geen verlofrechten
-  // Berekend: resterend = overgedragen + opbouw + bijgekocht - opgenomen
+  overgedragenVorigJaar: number
+  opbouwLopendJaar: number
+  bijgekocht: number
+  opgenomenLopendJaar: number
+  note?: string
+  isPartner?: boolean
 }
 
-interface ParentalLeave {
-  personName: string
-  betaaldTotaalWeken: number     // Totaal betaald verlof (via UWV 70%)
-  betaaldOpgenomenWeken: number  // Opgenomen betaald verlof
-  onbetaaldTotaalWeken: number   // Totaal onbetaald verlof
-  onbetaaldOpgenomenWeken: number // Opgenomen onbetaald verlof
-  eindDatum: string              // Tot wanneer te gebruiken
-  note?: string                  // Extra informatie
+interface TeamMember {
+  id: string
+  name: string
+  role: string
 }
-
-// Vakantiesaldo 2026 data uit Excel (ingevoerd door Hanna)
-const INITIAL_VACATION_BALANCES: VacationBalance[] = [
-  // Partners (geen verlofrechten)
-  { personName: 'Marnix Ritmeester', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
-  { personName: 'Jochem de Roos', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
-  { personName: 'Juliette Niersman', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
-  { personName: 'Bas den Ridder', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
-  { personName: 'Maaike de Jong', overgedragenVorigJaar: 0, opbouwLopendJaar: 0, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Partner', isPartner: true },
-  // Medewerkers
-  { personName: 'Hanna Blaauboer', overgedragenVorigJaar: 11, opbouwLopendJaar: 22.5, bijgekocht: 0, opgenomenLopendJaar: 7, note: 'Kantoormanager' },
-  { personName: 'Alain Heunen', overgedragenVorigJaar: 0, opbouwLopendJaar: 10, bijgekocht: 0, opgenomenLopendJaar: 10, note: 'Per 1 juni uit dienst' },
-  { personName: 'Marlieke Schipper', overgedragenVorigJaar: 6, opbouwLopendJaar: 22, bijgekocht: 0, opgenomenLopendJaar: 17, note: 'Betaald ouderschapsverlof t/m 5 juni' },
-  { personName: 'Justine Schellekens', overgedragenVorigJaar: 5, opbouwLopendJaar: 23, bijgekocht: 0, opgenomenLopendJaar: 10, note: 'Vanaf 25 april met verlof' },
-  { personName: 'Wies van Pesch', overgedragenVorigJaar: 1.5, opbouwLopendJaar: 23, bijgekocht: 4, opgenomenLopendJaar: 9, note: 'Gaat 6 maart met verlof' },
-  { personName: 'Emma van der Vos', overgedragenVorigJaar: 3, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: '' },
-  { personName: 'Kay Maes', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: '' },
-  { personName: 'Erika van Zadelhof', overgedragenVorigJaar: 6, opbouwLopendJaar: 25, bijgekocht: 5, opgenomenLopendJaar: 12, note: '' },
-  { personName: 'Barbara Rip', overgedragenVorigJaar: 13.5, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 1.5, note: '' },
-  { personName: 'Julia Groen', overgedragenVorigJaar: 5, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 5, note: '' },
-  { personName: 'Heleen Pesser', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 5, opgenomenLopendJaar: 12, note: '' },
-  { personName: 'Lotte van Sint Truiden', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Kantoor (Officemanagement)' },
-]
-
-// Ouderschapsverlof data
-const INITIAL_PARENTAL_LEAVE: ParentalLeave[] = [
-  {
-    personName: 'Marlieke Schipper',
-    betaaldTotaalWeken: 9,
-    betaaldOpgenomenWeken: 9,
-    onbetaaldTotaalWeken: 17,
-    onbetaaldOpgenomenWeken: 0,
-    eindDatum: '2026-06-05',
-    note: 'Betaald ouderschapsverlof t/m 5 juni'
-  },
-  {
-    personName: 'Alain Heunen',
-    betaaldTotaalWeken: 9,
-    betaaldOpgenomenWeken: 8,
-    onbetaaldTotaalWeken: 0,
-    onbetaaldOpgenomenWeken: 0,
-    eindDatum: '2026-06-01',
-    note: 'Rest betaald ouderschapsverlof'
-  },
-]
-
-const COLORS = [
-  { name: 'Lime', value: '#f9ff85', bg: 'bg-workx-lime/20', text: 'text-workx-lime' },
-  { name: 'Blauw', value: '#60a5fa', bg: 'bg-blue-400/20', text: 'text-blue-400' },
-  { name: 'Paars', value: '#a78bfa', bg: 'bg-purple-400/20', text: 'text-purple-400' },
-  { name: 'Roze', value: '#f472b6', bg: 'bg-pink-400/20', text: 'text-pink-400' },
-  { name: 'Oranje', value: '#fb923c', bg: 'bg-orange-400/20', text: 'text-orange-400' },
-  { name: 'Groen', value: '#34d399', bg: 'bg-emerald-400/20', text: 'text-emerald-400' },
-  { name: 'Cyan', value: '#22d3ee', bg: 'bg-cyan-400/20', text: 'text-cyan-400' },
-  { name: 'Rood', value: '#f87171', bg: 'bg-red-400/20', text: 'text-red-400' },
-]
 
 // Schoolvakanties Noord-Holland (Regio Noord)
-// Bron: rijksoverheid.nl schoolvakanties
 interface SchoolHoliday {
   name: string
   startDate: string
@@ -117,161 +62,237 @@ const SCHOOL_HOLIDAYS: SchoolHoliday[] = [
   { name: 'Zomervakantie 2027', startDate: '2027-07-17', endDate: '2027-08-29' },
 ]
 
-const TEAM_MEMBERS = [
-  // Partners
-  'Marnix Ritmeester',
-  'Jochem de Roos',
-  'Juliette Niersman',
-  'Bas den Ridder',
-  'Maaike de Jong',
-  // Medewerkers
-  'Hanna Blaauboer',
-  'Alain Heunen',
-  'Marlieke Schipper',
-  'Justine Schellekens',
-  'Wies van Pesch',
-  'Emma van der Vos',
-  'Kay Maes',
-  'Erika van Zadelhof',
-  'Barbara Rip',
-  'Julia Groen',
-  'Heleen Pesser',
-  'Lotte van Sint Truiden',
+const COLORS = [
+  { name: 'Lime', value: '#f9ff85' },
+  { name: 'Blauw', value: '#60a5fa' },
+  { name: 'Paars', value: '#a78bfa' },
+  { name: 'Roze', value: '#f472b6' },
+  { name: 'Oranje', value: '#fb923c' },
+  { name: 'Groen', value: '#34d399' },
+  { name: 'Cyan', value: '#22d3ee' },
+  { name: 'Rood', value: '#f87171' },
 ]
 
+// Assign a consistent color based on user name
+function getColorForUser(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return COLORS[Math.abs(hash) % COLORS.length].value
+}
+
 export default function VakantiesPage() {
-  const [vacations, setVacations] = useState<Vacation[]>([])
+  const { data: session } = useSession()
+  const [vacations, setVacations] = useState<VacationRequest[]>([])
+  const [vacationBalances, setVacationBalances] = useState<VacationBalance[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [viewMode, setViewMode] = useState<'week' | 'month' | 'timeline'>('week')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [pageMode, setPageMode] = useState<'overzicht' | 'beheer'>('overzicht')
 
-  // Vacation balances state (Hanna's admin)
-  const [vacationBalances, setVacationBalances] = useState<VacationBalance[]>(INITIAL_VACATION_BALANCES)
+  // Check if current user is admin/partner
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
+
+  // Balance editing state
   const [editingBalance, setEditingBalance] = useState<string | null>(null)
+  const [selectedBalanceUserId, setSelectedBalanceUserId] = useState('')
   const [balanceForm, setBalanceForm] = useState({
     overgedragenVorigJaar: 0,
     opbouwLopendJaar: 25,
     bijgekocht: 0,
     opgenomenLopendJaar: 0,
   })
-  const [showBalanceDropdown, setShowBalanceDropdown] = useState(false)
-  const [selectedBalancePerson, setSelectedBalancePerson] = useState('')
 
-  // Form state
-  const [personName, setPersonName] = useState('')
+  // Vacation form state
+  const [selectedUserId, setSelectedUserId] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [note, setNote] = useState('')
-  const [selectedColor, setSelectedColor] = useState(COLORS[0].value)
+  const [reason, setReason] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
 
-  // Balance management functions
-  const handleEditBalance = (personName: string) => {
-    const balance = vacationBalances.find(b => b.personName === personName)
-    if (balance) {
-      setSelectedBalancePerson(personName)
-      setBalanceForm({
-        overgedragenVorigJaar: balance.overgedragenVorigJaar,
-        opbouwLopendJaar: balance.opbouwLopendJaar,
-        bijgekocht: balance.bijgekocht || 0,
-        opgenomenLopendJaar: balance.opgenomenLopendJaar,
-      })
-      setEditingBalance(personName)
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    setIsLoading(true)
+    try {
+      // Fetch vacations - all approved for everyone, or user's own if not admin
+      const vacRes = await fetch('/api/vacation/requests?all=true')
+      if (vacRes.ok) {
+        const data = await vacRes.json()
+        setVacations(data)
+      }
+
+      // Fetch team members
+      const teamRes = await fetch('/api/team')
+      if (teamRes.ok) {
+        const data = await teamRes.json()
+        setTeamMembers(data)
+      }
+
+      // Fetch balances (admin only)
+      if (isAdmin) {
+        const balRes = await fetch('/api/vacation/balances')
+        if (balRes.ok) {
+          const data = await balRes.json()
+          setVacationBalances(data)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      toast.error('Kon gegevens niet laden')
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleSaveBalance = () => {
-    if (!selectedBalancePerson) return
+  // Refetch when isAdmin changes (session loaded)
+  useEffect(() => {
+    if (session && isAdmin) {
+      fetch('/api/vacation/balances')
+        .then(res => res.ok ? res.json() : [])
+        .then(data => setVacationBalances(data))
+        .catch(() => {})
+    }
+  }, [session, isAdmin])
 
-    setVacationBalances(prev => prev.map(b =>
-      b.personName === selectedBalancePerson
-        ? { ...b, ...balanceForm }
-        : b
-    ))
-    toast.success(`Saldo bijgewerkt voor ${selectedBalancePerson.split(' ')[0]}`)
-    setEditingBalance(null)
-    setSelectedBalancePerson('')
+  const resetForm = () => {
+    setSelectedUserId('')
+    setStartDate('')
+    setEndDate('')
+    setReason('')
+    setEditingId(null)
+    setShowForm(false)
+    setShowTeamDropdown(false)
+  }
+
+  // Create or update vacation
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const targetUserId = selectedUserId || session?.user?.id
+    if (!targetUserId || !startDate || !endDate) {
+      toast.error('Vul alle velden in')
+      return
+    }
+
+    try {
+      if (editingId) {
+        // Update existing vacation
+        const res = await fetch(`/api/vacation/requests/${editingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ startDate, endDate, reason }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Kon vakantie niet bijwerken')
+        }
+        toast.success('Vakantie bijgewerkt')
+      } else {
+        // Create new vacation
+        const res = await fetch('/api/vacation/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startDate,
+            endDate,
+            reason,
+            userId: targetUserId,
+          }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Kon vakantie niet aanmaken')
+        }
+        toast.success('Vakantie toegevoegd')
+      }
+
+      resetForm()
+      fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
+  // Delete vacation
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/vacation/requests/${id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Kon vakantie niet verwijderen')
+      }
+      toast.success('Vakantie verwijderd')
+      fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
+  // Edit vacation
+  const handleEdit = (vacation: VacationRequest) => {
+    setSelectedUserId(vacation.userId)
+    setStartDate(vacation.startDate.split('T')[0])
+    setEndDate(vacation.endDate.split('T')[0])
+    setReason(vacation.reason || '')
+    setEditingId(vacation.id)
+    setShowForm(true)
+  }
+
+  // Balance management
+  const handleEditBalance = (balance: VacationBalance) => {
+    setSelectedBalanceUserId(balance.userId)
+    setBalanceForm({
+      overgedragenVorigJaar: balance.overgedragenVorigJaar,
+      opbouwLopendJaar: balance.opbouwLopendJaar,
+      bijgekocht: balance.bijgekocht || 0,
+      opgenomenLopendJaar: balance.opgenomenLopendJaar,
+    })
+    setEditingBalance(balance.personName)
+  }
+
+  const handleSaveBalance = async () => {
+    if (!selectedBalanceUserId) return
+
+    try {
+      const res = await fetch('/api/vacation/balances', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedBalanceUserId,
+          ...balanceForm,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Kon saldo niet bijwerken')
+      }
+      toast.success('Saldo bijgewerkt')
+      setEditingBalance(null)
+      setSelectedBalanceUserId('')
+      fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
   }
 
   const calculateResterend = (balance: VacationBalance) => {
     return balance.overgedragenVorigJaar + balance.opbouwLopendJaar + (balance.bijgekocht || 0) - balance.opgenomenLopendJaar
   }
 
-  // Check if employee has parental leave
-  const getParentalLeave = (personName: string) => {
-    return INITIAL_PARENTAL_LEAVE.find(p => p.personName === personName)
-  }
-
-  useEffect(() => { fetchVacations() }, [])
-
-  const fetchVacations = async () => {
-    try {
-      const res = await fetch('/api/vacations')
-      if (res.ok) setVacations(await res.json())
-    } catch (error) {
-      // Start met lege lijst - voeg vakanties toe via de interface
-      setVacations([])
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const resetForm = () => {
-    setPersonName('')
-    setStartDate('')
-    setEndDate('')
-    setNote('')
-    setSelectedColor(COLORS[0].value)
-    setEditingId(null)
-    setShowForm(false)
-    setShowTeamDropdown(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!personName || !startDate || !endDate) return toast.error('Vul naam en datums in')
-
-    const newVacation: Vacation = {
-      id: editingId || Date.now().toString(),
-      personName,
-      startDate,
-      endDate,
-      note: note || null,
-      color: selectedColor,
-    }
-
-    if (editingId) {
-      setVacations(vacations.map(v => v.id === editingId ? newVacation : v))
-      toast.success('Vakantie bijgewerkt')
-    } else {
-      setVacations([...vacations, newVacation])
-      toast.success('Vakantie toegevoegd')
-    }
-    resetForm()
-  }
-
-  const handleEdit = (vacation: Vacation) => {
-    setPersonName(vacation.personName)
-    setStartDate(vacation.startDate)
-    setEndDate(vacation.endDate)
-    setNote(vacation.note || '')
-    setSelectedColor(vacation.color)
-    setEditingId(vacation.id)
-    setShowForm(true)
-  }
-
-  const handleDelete = (id: string) => {
-    setVacations(vacations.filter(v => v.id !== id))
-    toast.success('Vakantie verwijderd')
-  }
-
   // Helper functions
   const getWeekDays = (date: Date) => {
     const start = new Date(date)
-    start.setDate(start.getDate() - start.getDay() + 1) // Monday
+    start.setDate(start.getDate() - start.getDay() + 1)
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start)
       d.setDate(d.getDate() + i)
@@ -307,12 +328,11 @@ export default function VakantiesPage() {
   }
 
   const getVacationsForDate = (date: Date) =>
-    vacations.filter(v => isDateInRange(date, v.startDate, v.endDate))
+    vacations.filter(v => v.status === 'APPROVED' && isDateInRange(date, v.startDate, v.endDate))
 
   const isToday = (date: Date) => date.toDateString() === new Date().toDateString()
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
 
-  // Check if a date falls within a school holiday period
   const getSchoolHoliday = (date: Date): SchoolHoliday | null => {
     const dateStr = date.toISOString().split('T')[0]
     for (const holiday of SCHOOL_HOLIDAYS) {
@@ -323,18 +343,16 @@ export default function VakantiesPage() {
     return null
   }
 
-  const isSchoolHoliday = (date: Date): boolean => getSchoolHoliday(date) !== null
-
   const formatDate = (date: Date) => date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
   const formatDateFull = (dateStr: string) => new Date(dateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
 
   // Get unique people for timeline
-  const uniquePeople = Array.from(new Set(vacations.map(v => v.personName)))
+  const uniquePeople = Array.from(new Set(vacations.map(v => v.user.name)))
 
   // Get current week's vacations for summary
   const thisWeek = getWeekDays(new Date())
   const awayThisWeek = vacations.filter(v =>
-    thisWeek.some(d => isDateInRange(d, v.startDate, v.endDate))
+    v.status === 'APPROVED' && thisWeek.some(d => isDateInRange(d, v.startDate, v.endDate))
   )
 
   if (isLoading) {
@@ -364,7 +382,7 @@ export default function VakantiesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Mode Toggle */}
+          {/* Mode Toggle - only show Beheer for admin */}
           <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
             <button
               onClick={() => setPageMode('overzicht')}
@@ -375,15 +393,17 @@ export default function VakantiesPage() {
               <Icons.calendar size={16} />
               Overzicht
             </button>
-            <button
-              onClick={() => setPageMode('beheer')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pageMode === 'beheer' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icons.settings size={16} />
-              Beheer
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setPageMode('beheer')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pageMode === 'beheer' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icons.settings size={16} />
+                Beheer
+              </button>
+            )}
           </div>
           {pageMode === 'overzicht' && (
             <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
@@ -394,8 +414,8 @@ export default function VakantiesPage() {
         </div>
       </div>
 
-      {/* BEHEER MODE - Admin interface for Hanna */}
-      {pageMode === 'beheer' && (
+      {/* BEHEER MODE - Admin interface */}
+      {pageMode === 'beheer' && isAdmin && (
         <div className="space-y-6">
           {/* Stats cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -447,13 +467,13 @@ export default function VakantiesPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-white">Saldo bewerken</h3>
-                    <p className="text-sm text-white/40">{selectedBalancePerson}</p>
+                    <p className="text-sm text-white/40">{editingBalance}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => {
                     setEditingBalance(null)
-                    setSelectedBalancePerson('')
+                    setSelectedBalanceUserId('')
                   }}
                   className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                 >
@@ -514,7 +534,7 @@ export default function VakantiesPage() {
                 <button
                   onClick={() => {
                     setEditingBalance(null)
-                    setSelectedBalancePerson('')
+                    setSelectedBalanceUserId('')
                   }}
                   className="btn-secondary"
                 >
@@ -560,32 +580,23 @@ export default function VakantiesPage() {
                   const initials = balance.personName.split(' ').map(n => n[0]).join('').slice(0, 2)
                   const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
                   const colorClass = colors[index % colors.length]
-                  const parentalLeave = getParentalLeave(balance.personName)
 
                   return (
                     <div
-                      key={balance.personName}
+                      key={balance.userId}
                       className={`grid grid-cols-7 gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors group ${
                         editingBalance === balance.personName ? 'bg-workx-lime/5' : ''
                       }`}
                     >
                       <div className="col-span-2 flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${balance.isPartner ? 'from-purple-500/30 to-purple-600/10' : colorClass} flex items-center justify-center font-semibold text-sm text-white relative`}>
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${balance.isPartner ? 'from-purple-500/30 to-purple-600/10' : colorClass} flex items-center justify-center font-semibold text-sm text-white`}>
                           {initials}
-                          {parentalLeave && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
-                              <span className="text-[8px] text-white">OV</span>
-                            </div>
-                          )}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-white">{balance.personName}</p>
                             {balance.isPartner && (
                               <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">Partner</span>
-                            )}
-                            {parentalLeave && !balance.isPartner && (
-                              <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">OV</span>
                             )}
                           </div>
                           <p className="text-xs text-white/40">
@@ -650,7 +661,7 @@ export default function VakantiesPage() {
                               {resterend.toFixed(1)} d
                             </div>
                             <button
-                              onClick={() => handleEditBalance(balance.personName)}
+                              onClick={() => handleEditBalance(balance)}
                               className="p-2 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                             >
                               <Icons.edit size={16} />
@@ -664,93 +675,6 @@ export default function VakantiesPage() {
             </div>
           </div>
 
-          {/* Parental Leave Section */}
-          {INITIAL_PARENTAL_LEAVE.length > 0 && (
-            <div className="card overflow-hidden border-purple-500/20">
-              <div className="p-5 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-purple-500/5 to-transparent">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                    <Icons.heart className="text-purple-400" size={16} />
-                  </div>
-                  <div>
-                    <h2 className="font-medium text-white">Ouderschapsverlof</h2>
-                    <p className="text-xs text-white/40">Overzicht betaald en onbetaald verlof</p>
-                  </div>
-                </div>
-                <span className="badge bg-purple-500/20 text-purple-400">{INITIAL_PARENTAL_LEAVE.length} medewerkers</span>
-              </div>
-
-              <div className="divide-y divide-white/5">
-                {INITIAL_PARENTAL_LEAVE.map((leave, index) => {
-                  const initials = leave.personName.split(' ').map(n => n[0]).join('').slice(0, 2)
-                  const betaaldRest = leave.betaaldTotaalWeken - leave.betaaldOpgenomenWeken
-                  const onbetaaldRest = leave.onbetaaldTotaalWeken - leave.onbetaaldOpgenomenWeken
-
-                  return (
-                    <div key={leave.personName} className="p-5">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/30 to-purple-600/10 flex items-center justify-center font-semibold text-white">
-                          {initials}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <p className="font-medium text-white">{leave.personName}</p>
-                              <p className="text-xs text-white/40">{leave.note}</p>
-                            </div>
-                            <p className="text-xs text-white/40">
-                              Tot {new Date(leave.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </p>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            {/* Betaald verlof */}
-                            <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
-                                <span className="text-xs text-white/60">
-                                  {leave.betaaldOpgenomenWeken}/{leave.betaaldTotaalWeken} wkn
-                                </span>
-                              </div>
-                              <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-2">
-                                <div
-                                  className="h-full bg-green-400 rounded-full"
-                                  style={{ width: `${(leave.betaaldOpgenomenWeken / leave.betaaldTotaalWeken) * 100}%` }}
-                                />
-                              </div>
-                              <p className="text-sm font-medium text-green-400">
-                                {betaaldRest} weken resterend
-                              </p>
-                            </div>
-
-                            {/* Onbetaald verlof */}
-                            <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
-                                <span className="text-xs text-white/60">
-                                  {leave.onbetaaldOpgenomenWeken}/{leave.onbetaaldTotaalWeken} wkn
-                                </span>
-                              </div>
-                              <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-2">
-                                <div
-                                  className="h-full bg-purple-400 rounded-full"
-                                  style={{ width: leave.onbetaaldTotaalWeken > 0 ? `${(leave.onbetaaldOpgenomenWeken / leave.onbetaaldTotaalWeken) * 100}%` : '0%' }}
-                                />
-                              </div>
-                              <p className="text-sm font-medium text-purple-400">
-                                {onbetaaldRest} weken resterend
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Info card */}
           <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
             <div className="flex items-start gap-4">
@@ -760,8 +684,8 @@ export default function VakantiesPage() {
               <div>
                 <h3 className="font-medium text-white mb-1">Over verlof beheer</h3>
                 <p className="text-sm text-white/50 leading-relaxed">
-                  Hier kun je de vakantiedagen en ouderschapsverlof van alle medewerkers beheren. Klik op het bewerk-icoon om het saldo aan te passen.
-                  Medewerkers met ouderschapsverlof (OV) worden gemarkeerd met een paarse indicator.
+                  Hier kun je de vakantiedagen van alle medewerkers beheren. Klik op het bewerk-icoon om het saldo aan te passen.
+                  Wijzigingen worden direct opgeslagen in de database.
                 </p>
               </div>
             </div>
@@ -791,8 +715,8 @@ export default function VakantiesPage() {
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
                   <Icons.calendar className="text-blue-400" size={18} />
                 </div>
-                <p className="text-3xl font-semibold text-white">{vacations.length}</p>
-                <p className="text-sm text-white/40">Geplande vakanties</p>
+                <p className="text-3xl font-semibold text-white">{vacations.filter(v => v.status === 'APPROVED').length}</p>
+                <p className="text-sm text-white/40">Goedgekeurde vakanties</p>
               </div>
             </div>
 
@@ -808,332 +732,333 @@ export default function VakantiesPage() {
             </div>
           </div>
 
-      {/* School Holiday Notice */}
-      <div className="card p-4 border-red-500/20 bg-gradient-to-r from-red-500/5 to-transparent">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
-            <Icons.alertTriangle className="text-red-400" size={18} />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-medium text-white mb-0.5">Schoolvakanties Noord-Holland</h3>
-            <p className="text-xs text-white/50">
-              Periodes gemarkeerd in <span className="text-red-400 font-medium">rood</span> zijn schoolvakanties.
-              Medewerkers met schoolgaande kinderen hebben in deze periodes voorrang bij het plannen van vakantie.
-            </p>
-          </div>
-          <div className="hidden sm:block text-right text-xs text-white/40">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500/50" />
-              <span>Schoolvakantie</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Away This Week - Quick Overview */}
-      {awayThisWeek.length > 0 && (
-        <div className="card p-5 border-yellow-500/20">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-              <Icons.alertTriangle className="text-yellow-400" size={16} />
-            </div>
-            <h2 className="font-medium text-white">Afwezig deze week</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {awayThisWeek.map(v => (
-              <div
-                key={v.id}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
-                style={{ backgroundColor: v.color + '20', color: v.color }}
-              >
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: v.color + '30' }}>
-                  {v.personName.charAt(0)}
-                </div>
-                <span className="font-medium text-white">{v.personName}</span>
-                <span className="text-white/40 text-xs">
-                  {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
-                </span>
+          {/* School Holiday Notice */}
+          <div className="card p-4 border-red-500/20 bg-gradient-to-r from-red-500/5 to-transparent">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <Icons.alertTriangle className="text-red-400" size={18} />
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* View Toggle & Navigation */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
-          <button
-            onClick={() => setViewMode('week')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              viewMode === 'week' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Icons.calendar size={16} />
-            Week
-          </button>
-          <button
-            onClick={() => setViewMode('month')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              viewMode === 'month' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Icons.grid size={16} />
-            Maand
-          </button>
-          <button
-            onClick={() => setViewMode('timeline')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              viewMode === 'timeline' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Icons.list size={16} />
-            Timeline
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              const newDate = new Date(currentDate)
-              if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7)
-              else newDate.setMonth(newDate.getMonth() - 1)
-              setCurrentDate(newDate)
-            }}
-            className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
-          >
-            <Icons.chevronLeft size={18} />
-          </button>
-          <span className="px-4 py-2 text-sm text-white/60 min-w-[140px] text-center">
-            {viewMode === 'week'
-              ? `Week ${Math.ceil((currentDate.getDate() + new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay()) / 7)}`
-              : currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
-            }
-          </span>
-          <button
-            onClick={() => {
-              const newDate = new Date(currentDate)
-              if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7)
-              else newDate.setMonth(newDate.getMonth() + 1)
-              setCurrentDate(newDate)
-            }}
-            className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
-          >
-            <Icons.chevronRight size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* Week View */}
-      {viewMode === 'week' && (
-        <div className="card overflow-hidden">
-          <div className="p-5 border-b border-white/5 flex items-center justify-between">
-            <h2 className="font-semibold text-white">
-              Week van {formatDate(getWeekDays(currentDate)[0])} - {formatDate(getWeekDays(currentDate)[6])}
-            </h2>
-            {/* School holiday legend */}
-            <div className="flex items-center gap-2 text-xs text-white/50">
-              <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" />
-              <span>Schoolvakantie (voorrang medewerkers met kinderen)</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-7">
-            {getWeekDays(currentDate).map((day, i) => {
-              const dayVacations = getVacationsForDate(day)
-              const schoolHoliday = getSchoolHoliday(day)
-              return (
-                <div
-                  key={i}
-                  className={`min-h-[200px] p-3 border-r border-white/5 last:border-r-0 relative ${
-                    isToday(day) ? 'bg-workx-lime/5' : schoolHoliday ? 'bg-red-500/[0.08]' : isWeekend(day) ? 'bg-white/[0.02]' : ''
-                  }`}
-                >
-                  {/* School holiday indicator bar */}
-                  {schoolHoliday && (
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500/40 via-red-500/60 to-red-500/40" />
-                  )}
-                  <div className={`text-center mb-3 ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400/80' : 'text-white/40'}`}>
-                    <p className="text-xs font-medium uppercase">
-                      {day.toLocaleDateString('nl-NL', { weekday: 'short' })}
-                    </p>
-                    <p className={`text-2xl font-semibold ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400' : 'text-white'}`}>
-                      {day.getDate()}
-                    </p>
-                    {schoolHoliday && (
-                      <p className="text-[9px] text-red-400/70 mt-0.5 truncate px-1">{schoolHoliday.name.replace(/\s*\d{4}$/, '')}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {dayVacations.map(v => (
-                      <button
-                        key={v.id}
-                        onClick={() => handleEdit(v)}
-                        className="w-full p-2 rounded-lg text-left transition-all hover:scale-105"
-                        style={{ backgroundColor: v.color + '20' }}
-                      >
-                        <p className="text-xs font-medium text-white truncate">{v.personName}</p>
-                        {v.note && <p className="text-[10px] text-white/40 truncate">{v.note}</p>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Month View */}
-      {viewMode === 'month' && (
-        <div className="card overflow-hidden">
-          <div className="p-5 border-b border-white/5 flex items-center justify-between">
-            <h2 className="font-semibold text-white capitalize">
-              {currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
-            </h2>
-            {/* School holiday legend */}
-            <div className="flex items-center gap-2 text-xs text-white/50">
-              <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" />
-              <span>Schoolvakantie (voorrang medewerkers met kinderen)</span>
-            </div>
-          </div>
-          <div className="p-5">
-            <div className="grid grid-cols-7 mb-3">
-              {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map(day => (
-                <div key={day} className="text-center text-xs text-white/40 py-2 font-medium">{day}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {getMonthDays(currentDate).map((day, i) => {
-                const dayVacations = getVacationsForDate(day.date)
-                const schoolHoliday = getSchoolHoliday(day.date)
-                return (
-                  <div
-                    key={i}
-                    className={`min-h-[100px] p-2 rounded-xl transition-colors relative ${
-                      day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
-                    } ${isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''} ${
-                      schoolHoliday && day.isCurrentMonth ? 'bg-red-500/[0.08] ring-1 ring-red-500/20' :
-                      isWeekend(day.date) && day.isCurrentMonth ? 'bg-white/[0.02]' : ''
-                    }`}
-                  >
-                    {/* School holiday indicator dot */}
-                    {schoolHoliday && day.isCurrentMonth && (
-                      <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500/50" title={schoolHoliday.name} />
-                    )}
-                    <span className={`text-sm font-medium ${
-                      isToday(day.date) ? 'text-workx-lime' :
-                      schoolHoliday && day.isCurrentMonth ? 'text-red-400' :
-                      day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
-                    }`}>
-                      {day.date.getDate()}
-                    </span>
-                    <div className="mt-1 space-y-0.5">
-                      {dayVacations.slice(0, 3).map(v => (
-                        <div
-                          key={v.id}
-                          className="text-[10px] px-1.5 py-0.5 rounded truncate font-medium"
-                          style={{ backgroundColor: v.color + '20', color: v.color }}
-                        >
-                          {v.personName.split(' ')[0]}
-                        </div>
-                      ))}
-                      {dayVacations.length > 3 && (
-                        <span className="text-[10px] text-white/40">+{dayVacations.length - 3}</span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Timeline View */}
-      {viewMode === 'timeline' && (
-        <div className="card overflow-hidden">
-          <div className="p-5 border-b border-white/5">
-            <h2 className="font-semibold text-white">Overzicht per persoon</h2>
-          </div>
-          <div className="divide-y divide-white/5">
-            {vacations.length === 0 ? (
-              <div className="p-16 text-center">
-                <div className="w-20 h-20 rounded-2xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
-                  <Icons.sun className="text-yellow-400/50" size={32} />
-                </div>
-                <h3 className="text-lg font-medium text-white mb-2">Geen vakanties gepland</h3>
-                <p className="text-white/40 mb-4">Voeg een vakantie toe om te beginnen</p>
-                <button onClick={() => setShowForm(true)} className="btn-primary inline-flex items-center gap-2">
-                  <Icons.plus size={16} />
-                  Vakantie toevoegen
-                </button>
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-white mb-0.5">Schoolvakanties Noord-Holland</h3>
+                <p className="text-xs text-white/50">
+                  Periodes gemarkeerd in <span className="text-red-400 font-medium">rood</span> zijn schoolvakanties.
+                </p>
               </div>
-            ) : (
-              vacations
-                .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-                .map((v, i) => {
-                  const start = new Date(v.startDate)
-                  const end = new Date(v.endDate)
-                  const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-                  const isPast = end < new Date()
-                  const isActive = start <= new Date() && end >= new Date()
+            </div>
+          </div>
 
+          {/* Away This Week */}
+          {awayThisWeek.length > 0 && (
+            <div className="card p-5 border-yellow-500/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                  <Icons.alertTriangle className="text-yellow-400" size={16} />
+                </div>
+                <h2 className="font-medium text-white">Afwezig deze week</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {awayThisWeek.map(v => {
+                  const color = getColorForUser(v.user.name)
                   return (
                     <div
                       key={v.id}
-                      className={`p-5 flex items-center gap-5 hover:bg-white/[0.02] transition-colors group ${isPast ? 'opacity-50' : ''}`}
-                      style={{ animationDelay: `${i * 50}ms` }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
+                      style={{ backgroundColor: color + '20' }}
                     >
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-lg flex-shrink-0"
-                        style={{ backgroundColor: v.color + '20', color: v.color }}
-                      >
-                        {v.personName.charAt(0)}
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: color + '30', color }}>
+                        {v.user.name.charAt(0)}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-medium text-white">{v.personName}</h3>
-                          {isActive && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-400">
-                              Nu afwezig
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-white/40">
-                          <span className="flex items-center gap-1.5">
-                            <Icons.calendar size={12} />
-                            {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
-                          </span>
-                          <span className="text-white/20">•</span>
-                          <span>{days} {days === 1 ? 'dag' : 'dagen'}</span>
-                          {v.note && (
-                            <>
-                              <span className="text-white/20">•</span>
-                              <span>{v.note}</span>
-                            </>
-                          )}
-                        </div>
+                      <span className="font-medium text-white">{v.user.name}</span>
+                      <span className="text-white/40 text-xs">
+                        {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* View Toggle & Navigation */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
+              <button
+                onClick={() => setViewMode('week')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  viewMode === 'week' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icons.calendar size={16} />
+                Week
+              </button>
+              <button
+                onClick={() => setViewMode('month')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  viewMode === 'month' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icons.grid size={16} />
+                Maand
+              </button>
+              <button
+                onClick={() => setViewMode('timeline')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  viewMode === 'timeline' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icons.list size={16} />
+                Timeline
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const newDate = new Date(currentDate)
+                  if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7)
+                  else newDate.setMonth(newDate.getMonth() - 1)
+                  setCurrentDate(newDate)
+                }}
+                className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+              >
+                <Icons.chevronLeft size={18} />
+              </button>
+              <span className="px-4 py-2 text-sm text-white/60 min-w-[140px] text-center">
+                {viewMode === 'week'
+                  ? `Week ${Math.ceil((currentDate.getDate() + new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay()) / 7)}`
+                  : currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
+                }
+              </span>
+              <button
+                onClick={() => {
+                  const newDate = new Date(currentDate)
+                  if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7)
+                  else newDate.setMonth(newDate.getMonth() + 1)
+                  setCurrentDate(newDate)
+                }}
+                className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+              >
+                <Icons.chevronRight size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Week View */}
+          {viewMode === 'week' && (
+            <div className="card overflow-hidden">
+              <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                <h2 className="font-semibold text-white">
+                  Week van {formatDate(getWeekDays(currentDate)[0])} - {formatDate(getWeekDays(currentDate)[6])}
+                </h2>
+                <div className="flex items-center gap-2 text-xs text-white/50">
+                  <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" />
+                  <span>Schoolvakantie</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-7">
+                {getWeekDays(currentDate).map((day, i) => {
+                  const dayVacations = getVacationsForDate(day)
+                  const schoolHoliday = getSchoolHoliday(day)
+                  return (
+                    <div
+                      key={i}
+                      className={`min-h-[200px] p-3 border-r border-white/5 last:border-r-0 relative ${
+                        isToday(day) ? 'bg-workx-lime/5' : schoolHoliday ? 'bg-red-500/[0.08]' : isWeekend(day) ? 'bg-white/[0.02]' : ''
+                      }`}
+                    >
+                      {schoolHoliday && (
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500/40 via-red-500/60 to-red-500/40" />
+                      )}
+                      <div className={`text-center mb-3 ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400/80' : 'text-white/40'}`}>
+                        <p className="text-xs font-medium uppercase">
+                          {day.toLocaleDateString('nl-NL', { weekday: 'short' })}
+                        </p>
+                        <p className={`text-2xl font-semibold ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400' : 'text-white'}`}>
+                          {day.getDate()}
+                        </p>
+                        {schoolHoliday && (
+                          <p className="text-[9px] text-red-400/70 mt-0.5 truncate px-1">{schoolHoliday.name.replace(/\s*\d{4}$/, '')}</p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleEdit(v)}
-                          className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                        >
-                          <Icons.edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(v.id)}
-                          className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                        >
-                          <Icons.trash size={16} />
-                        </button>
+                      <div className="space-y-2">
+                        {dayVacations.map(v => {
+                          const color = getColorForUser(v.user.name)
+                          return (
+                            <button
+                              key={v.id}
+                              onClick={() => handleEdit(v)}
+                              className="w-full p-2 rounded-lg text-left transition-all hover:scale-105"
+                              style={{ backgroundColor: color + '20' }}
+                            >
+                              <p className="text-xs font-medium text-white truncate">{v.user.name}</p>
+                              {v.reason && <p className="text-[10px] text-white/40 truncate">{v.reason}</p>}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   )
-                })
-            )}
-          </div>
-        </div>
-      )}
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Month View */}
+          {viewMode === 'month' && (
+            <div className="card overflow-hidden">
+              <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                <h2 className="font-semibold text-white capitalize">
+                  {currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
+                </h2>
+                <div className="flex items-center gap-2 text-xs text-white/50">
+                  <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" />
+                  <span>Schoolvakantie</span>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-7 mb-3">
+                  {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map(day => (
+                    <div key={day} className="text-center text-xs text-white/40 py-2 font-medium">{day}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {getMonthDays(currentDate).map((day, i) => {
+                    const dayVacations = getVacationsForDate(day.date)
+                    const schoolHoliday = getSchoolHoliday(day.date)
+                    return (
+                      <div
+                        key={i}
+                        className={`min-h-[100px] p-2 rounded-xl transition-colors relative ${
+                          day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
+                        } ${isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''} ${
+                          schoolHoliday && day.isCurrentMonth ? 'bg-red-500/[0.08] ring-1 ring-red-500/20' :
+                          isWeekend(day.date) && day.isCurrentMonth ? 'bg-white/[0.02]' : ''
+                        }`}
+                      >
+                        {schoolHoliday && day.isCurrentMonth && (
+                          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500/50" title={schoolHoliday.name} />
+                        )}
+                        <span className={`text-sm font-medium ${
+                          isToday(day.date) ? 'text-workx-lime' :
+                          schoolHoliday && day.isCurrentMonth ? 'text-red-400' :
+                          day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
+                        }`}>
+                          {day.date.getDate()}
+                        </span>
+                        <div className="mt-1 space-y-0.5">
+                          {dayVacations.slice(0, 3).map(v => {
+                            const color = getColorForUser(v.user.name)
+                            return (
+                              <div
+                                key={v.id}
+                                className="text-[10px] px-1.5 py-0.5 rounded truncate font-medium"
+                                style={{ backgroundColor: color + '20', color }}
+                              >
+                                {v.user.name.split(' ')[0]}
+                              </div>
+                            )
+                          })}
+                          {dayVacations.length > 3 && (
+                            <span className="text-[10px] text-white/40">+{dayVacations.length - 3}</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Timeline View */}
+          {viewMode === 'timeline' && (
+            <div className="card overflow-hidden">
+              <div className="p-5 border-b border-white/5">
+                <h2 className="font-semibold text-white">Overzicht per persoon</h2>
+              </div>
+              <div className="divide-y divide-white/5">
+                {vacations.filter(v => v.status === 'APPROVED').length === 0 ? (
+                  <div className="p-16 text-center">
+                    <div className="w-20 h-20 rounded-2xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+                      <Icons.sun className="text-yellow-400/50" size={32} />
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-2">Geen vakanties gepland</h3>
+                    <p className="text-white/40 mb-4">Voeg een vakantie toe om te beginnen</p>
+                    <button onClick={() => setShowForm(true)} className="btn-primary inline-flex items-center gap-2">
+                      <Icons.plus size={16} />
+                      Vakantie toevoegen
+                    </button>
+                  </div>
+                ) : (
+                  vacations
+                    .filter(v => v.status === 'APPROVED')
+                    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                    .map((v, i) => {
+                      const start = new Date(v.startDate)
+                      const end = new Date(v.endDate)
+                      const isPast = end < new Date()
+                      const isActive = start <= new Date() && end >= new Date()
+                      const color = getColorForUser(v.user.name)
+                      const canEdit = isAdmin || v.userId === session?.user?.id
+
+                      return (
+                        <div
+                          key={v.id}
+                          className={`p-5 flex items-center gap-5 hover:bg-white/[0.02] transition-colors group ${isPast ? 'opacity-50' : ''}`}
+                        >
+                          <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-lg flex-shrink-0"
+                            style={{ backgroundColor: color + '20', color }}
+                          >
+                            {v.user.name.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3">
+                              <h3 className="font-medium text-white">{v.user.name}</h3>
+                              {isActive && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-400">
+                                  Nu afwezig
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-sm text-white/40">
+                              <span className="flex items-center gap-1.5">
+                                <Icons.calendar size={12} />
+                                {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
+                              </span>
+                              <span className="text-white/20">•</span>
+                              <span>{v.days} {v.days === 1 ? 'dag' : 'dagen'}</span>
+                              {v.reason && (
+                                <>
+                                  <span className="text-white/20">•</span>
+                                  <span>{v.reason}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          {canEdit && (
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleEdit(v)}
+                                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                              >
+                                <Icons.edit size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(v.id)}
+                                className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                              >
+                                <Icons.trash size={16} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -1162,80 +1087,77 @@ export default function VakantiesPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm text-white/60 mb-2">Wie gaat er met vakantie?</label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-                    className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
-                  >
-                    {personName ? (
+              {/* Team member selection - only for admins */}
+              {isAdmin && (
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Wie gaat er met vakantie?</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowTeamDropdown(!showTeamDropdown)}
+                      className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
+                    >
+                      {selectedUserId ? (
+                        <>
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-workx-lime font-semibold text-sm">
+                            {teamMembers.find(m => m.id === selectedUserId)?.name?.charAt(0) || '?'}
+                          </div>
+                          <span className="flex-1 text-white">{teamMembers.find(m => m.id === selectedUserId)?.name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                            <Icons.user className="text-white/30" size={16} />
+                          </div>
+                          <span className="flex-1 text-white/40">Selecteer een teamlid...</span>
+                        </>
+                      )}
+                      <Icons.chevronDown
+                        size={18}
+                        className={`text-white/30 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    {showTeamDropdown && (
                       <>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-workx-lime font-semibold text-sm">
-                          {personName.charAt(0)}
+                        <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
+                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                          <div className="max-h-64 overflow-y-auto py-1">
+                            {teamMembers.map((member, index) => {
+                              const isSelected = selectedUserId === member.id
+                              const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                              const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
+                              const colorClass = colors[index % colors.length]
+
+                              return (
+                                <button
+                                  key={member.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUserId(member.id)
+                                    setShowTeamDropdown(false)
+                                  }}
+                                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
+                                    isSelected
+                                      ? 'bg-workx-lime/10 text-white'
+                                      : 'text-white/70 hover:bg-white/5 hover:text-white'
+                                  }`}
+                                >
+                                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
+                                    {initials}
+                                  </div>
+                                  <span className="flex-1 text-sm">{member.name}</span>
+                                  {isSelected && <Icons.check size={16} className="text-workx-lime" />}
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                        <span className="flex-1 text-white">{personName}</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                          <Icons.user className="text-white/30" size={16} />
-                        </div>
-                        <span className="flex-1 text-white/40">Selecteer een teamlid...</span>
                       </>
                     )}
-                    <Icons.chevronDown
-                      size={18}
-                      className={`text-white/30 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
-                    />
-                  </button>
-
-                  {/* Custom Dropdown */}
-                  {showTeamDropdown && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
-                      <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
-                        <div className="p-2 border-b border-white/5">
-                          <p className="text-[10px] text-white/30 uppercase tracking-wider px-2">Team ({TEAM_MEMBERS.length})</p>
-                        </div>
-                        <div className="max-h-64 overflow-y-auto py-1">
-                          {TEAM_MEMBERS.map((name, index) => {
-                            const isSelected = personName === name
-                            const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2)
-                            const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
-                            const colorClass = colors[index % colors.length]
-
-                            return (
-                              <button
-                                key={name}
-                                type="button"
-                                onClick={() => {
-                                  setPersonName(name)
-                                  setShowTeamDropdown(false)
-                                }}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
-                                  isSelected
-                                    ? 'bg-workx-lime/10 text-white'
-                                    : 'text-white/70 hover:bg-white/5 hover:text-white'
-                                }`}
-                              >
-                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
-                                  {initials}
-                                </div>
-                                <span className="flex-1 text-sm">{name}</span>
-                                {isSelected && (
-                                  <Icons.check size={16} className="text-workx-lime" />
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1268,37 +1190,16 @@ export default function VakantiesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">Notitie (optioneel)</label>
+                <label className="block text-sm text-white/60 mb-2">Reden (optioneel)</label>
                 <div className="relative">
                   <Icons.edit className="absolute left-3 top-3 text-white/30" size={16} />
                   <input
                     type="text"
-                    value={note}
-                    onChange={e => setNote(e.target.value)}
+                    value={reason}
+                    onChange={e => setReason(e.target.value)}
                     placeholder="Bijv. skivakantie, familiebezoek..."
                     className="input-field pl-10"
                   />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/60 mb-2">Kleur</label>
-                <div className="flex flex-wrap gap-2">
-                  {COLORS.map(color => (
-                    <button
-                      key={color.value}
-                      type="button"
-                      onClick={() => setSelectedColor(color.value)}
-                      className={`w-10 h-10 rounded-xl transition-all ${
-                        selectedColor === color.value ? 'ring-2 ring-white scale-110' : 'hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: color.value + '40' }}
-                    >
-                      {selectedColor === color.value && (
-                        <Icons.check size={16} className="mx-auto" style={{ color: color.value }} />
-                      )}
-                    </button>
-                  ))}
                 </div>
               </div>
 

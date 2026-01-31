@@ -19,7 +19,7 @@ interface CalendarEvent {
 
 interface TeamMember {
   name: string
-  birthDate: string // format: MM-DD
+  birthDate: string | null // format: MM-DD
 }
 
 const categoryConfig = {
@@ -32,29 +32,9 @@ const categoryConfig = {
   BIRTHDAY: { label: 'Verjaardag', icon: Icons.star, color: '#ec4899' },
 }
 
-// Team verjaardagen - format: MM-DD
-// Echte data uit loonstroken - medewerkers
-// Partners verjaardagen zijn onbekend (niet in loonstroken)
-const TEAM_BIRTHDAYS: TeamMember[] = [
-  // Medewerkers (echte data uit loonstroken)
-  { name: 'Hanna Blaauboer', birthDate: '12-23' },        // 23-12-1991
-  { name: 'Justine Schellekens', birthDate: '06-29' },    // 29-6-1994
-  { name: 'Marlieke Schipper', birthDate: '01-10' },      // 10-1-1992
-  { name: 'Wies van Pesch', birthDate: '01-16' },         // 16-1-1991
-  { name: 'Emma van der Vos', birthDate: '09-04' },       // 4-9-1992
-  { name: 'Alain Heunen', birthDate: '04-03' },           // 3-4-1991
-  { name: 'Kay Maes', birthDate: '01-24' },               // 24-1-1999
-  { name: 'Erika van Zadelhof', birthDate: '06-23' },     // 23-6-1995
-  { name: 'Heleen Pesser', birthDate: '07-14' },          // 14-7-1999
-  { name: 'Barbara Rip', birthDate: '04-04' },            // 4-4-1996
-  { name: 'Lotte van Sint Truiden', birthDate: '06-03' }, // 3-6-2002
-  { name: 'Julia Groen', birthDate: '07-15' },            // 15-7-1992
-  // Partners (verjaardag onbekend - niet in loonstroken)
-  { name: 'Jochem de Roos', birthDate: '03-02' },         // Enige bekende partner verjaardag
-]
-
 export default function AgendaPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [teamBirthdays, setTeamBirthdays] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [showForm, setShowForm] = useState(false)
@@ -71,15 +51,25 @@ export default function AgendaPage() {
   const [location, setLocation] = useState('')
   const [category, setCategory] = useState<CalendarEvent['category']>('GENERAL')
 
+  // Fetch birthdays from database
+  useEffect(() => {
+    fetch('/api/birthdays')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setTeamBirthdays(data))
+      .catch(() => setTeamBirthdays([]))
+  }, [])
+
   // Calculate next birthday
   const nextBirthday = useMemo(() => {
+    if (teamBirthdays.length === 0) return null
+
     const today = new Date()
     const currentYear = today.getFullYear()
 
-    const upcomingBirthdays = TEAM_BIRTHDAYS
+    const upcomingBirthdays = teamBirthdays
       .filter(m => m.birthDate) // Filter out members without birthday
       .map(member => {
-        const [month, day] = member.birthDate.split('-').map(Number)
+        const [month, day] = member.birthDate!.split('-').map(Number)
         let birthdayThisYear = new Date(currentYear, month - 1, day)
 
         // If birthday already passed this year, use next year
@@ -92,15 +82,15 @@ export default function AgendaPage() {
         return { ...member, date: birthdayThisYear, daysUntil }
       }).sort((a, b) => a.daysUntil - b.daysUntil)
 
-    return upcomingBirthdays[0]
-  }, [])
+    return upcomingBirthdays[0] || null
+  }, [teamBirthdays])
 
   // Get birthdays for a specific date
   const getBirthdaysForDate = (date: Date) => {
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const dateStr = `${month}-${day}`
-    return TEAM_BIRTHDAYS.filter(m => m.birthDate && m.birthDate === dateStr)
+    return teamBirthdays.filter(m => m.birthDate && m.birthDate === dateStr)
   }
 
   useEffect(() => { fetchEvents() }, [currentMonth])
