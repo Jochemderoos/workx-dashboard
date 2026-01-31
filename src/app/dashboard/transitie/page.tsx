@@ -484,11 +484,11 @@ export default function TransitiePage() {
     }
 
     // === DISCLAIMER ===
-    y += 12
+    y += 8
     doc.setDrawColor(200, 200, 200)
     doc.setLineWidth(0.3)
     doc.line(margin, y, pageWidth - margin, y)
-    y += 6
+    y += 5
 
     doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
@@ -498,14 +498,14 @@ export default function TransitiePage() {
     doc.text(disclaimerLines, margin, y)
 
     // === CONTACT ===
-    y += disclaimerLines.length * 3.5 + 8
+    y += disclaimerLines.length * 3.5 + 6
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(100, 100, 100)
     doc.text('Vragen? Neem contact op met één van onze arbeidsrecht specialisten.', margin, y)
 
     // === FOOTER ===
-    const footerY = pageHeight - 12
+    const footerY = pageHeight - 14
     doc.setFillColor(80, 80, 80)
     doc.rect(0, footerY, pageWidth, 12, 'F')
     doc.setTextColor(255, 255, 255)
