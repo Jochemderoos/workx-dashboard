@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import TimePicker from '@/components/ui/TimePicker'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface CalendarEvent {
   id: string
@@ -58,6 +59,10 @@ export default function AgendaPage() {
   }
   const [location, setLocation] = useState('')
   const [category, setCategory] = useState<CalendarEvent['category']>('GENERAL')
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null)
 
   // Fetch birthdays from database
   useEffect(() => {
@@ -173,15 +178,23 @@ export default function AgendaPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Event verwijderen?')) return
+  const handleDeleteClick = (id: string) => {
+    setEventToDelete(id)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!eventToDelete) return
     try {
-      await fetch(`/api/calendar/${id}`, { method: 'DELETE' })
+      await fetch(`/api/calendar/${eventToDelete}`, { method: 'DELETE' })
       toast.success('Event verwijderd')
       fetchEvents()
       setSelectedDate(null)
     } catch (error) {
       toast.error('Kon event niet verwijderen')
+    } finally {
+      setShowDeleteConfirm(false)
+      setEventToDelete(null)
     }
   }
 
@@ -484,7 +497,7 @@ export default function AgendaPage() {
                               </div>
                             </div>
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(event.id) }}
+                              onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
                               className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                             >
                               <Icons.trash size={14} />
@@ -684,7 +697,7 @@ export default function AgendaPage() {
                 {editingEvent && (
                   <button
                     type="button"
-                    onClick={() => handleDelete(editingEvent.id)}
+                    onClick={() => handleDeleteClick(editingEvent.id)}
                     className="px-4 py-2.5 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors"
                   >
                     <Icons.trash size={16} />
@@ -699,6 +712,17 @@ export default function AgendaPage() {
           </div>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => { setShowDeleteConfirm(false); setEventToDelete(null) }}
+        onConfirm={handleDeleteConfirm}
+        title="Event verwijderen"
+        message="Weet je zeker dat je dit event wilt verwijderen?"
+        confirmText="Verwijderen"
+        type="danger"
+      />
     </div>
   )
 }
