@@ -1743,7 +1743,7 @@ textarea::-webkit-scrollbar-thumb:hover {
 /* Bicycle that cycles past on hover */
 .workx-pand-container .fiets {
   position: absolute;
-  bottom: 0;
+  bottom: 5px;
   left: -60px;
   height: 35px;
   width: auto;

@@ -37,7 +37,7 @@ export default async function DashboardLayout({
       <div className="fixed bottom-0 left-1/4 w-[200px] md:w-[400px] h-[200px] md:h-[400px] bg-workx-lime/3 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
 
       {/* Sidebar - hidden on mobile */}
-      <div className="hidden md:block">
+      <div className="hidden md:flex h-full">
         <Sidebar user={user} />
       </div>
 

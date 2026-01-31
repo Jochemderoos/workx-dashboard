@@ -83,7 +83,7 @@ export default function Sidebar({ user }: SidebarProps) {
   }
 
   return (
-    <aside className="w-72 border-r border-white/5 flex flex-col relative z-20 bg-gradient-to-b from-workx-dark/80 to-workx-dark/40 backdrop-blur-xl overflow-y-auto no-scrollbar">
+    <aside className="w-72 h-full max-h-screen border-r border-white/5 flex flex-col relative z-20 bg-gradient-to-b from-workx-dark/80 to-workx-dark/40 backdrop-blur-xl overflow-y-auto">
       {/* Logo - Authentic Workx branding */}
       <div className="p-6 pb-8 flex-shrink-0">
         <Link href="/dashboard" className="block group">
