@@ -5,6 +5,87 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 
+// Team member photo mapping from workxadvocaten.nl
+const teamPhotos: Record<string, string> = {
+  'Marnix Ritmeester': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Marnix-3.jpg',
+  'Jochem de Roos': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Jochem-2.jpg',
+  'Maaike de Jong': 'https://www.workxadvocaten.nl/wp-content/uploads/2015/06/Maaike-2021-255x245.jpg',
+  'Bas den Ridder': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Bas.jpg',
+  'Juliette Niersman': 'https://www.workxadvocaten.nl/wp-content/uploads/2021/09/Juliette-Klein.jpg',
+  'Justine Schellekens': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/02/Justine-2025.jpg',
+  'Marlieke Schipper': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Marlieke-255x245.jpg',
+  'Wies van Pesch': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/11/Wiesklein.jpg',
+  'Emma van der Vos': 'https://www.workxadvocaten.nl/wp-content/uploads/2023/06/Emma.jpg',
+  'Alain Heunen': 'https://www.workxadvocaten.nl/wp-content/uploads/2023/10/Alain-2023.jpg',
+  'Kay Maes': 'https://www.workxadvocaten.nl/wp-content/uploads/2023/11/Kay-2023.jpg',
+  'Julia Groen': 'https://www.workxadvocaten.nl/wp-content/uploads/2025/06/Julia-2025.jpg',
+  'Erika van Zadelhof': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/01/Erika-2025.jpg',
+  'Barbara Rip': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/10/Barbara.jpg',
+  'Heleen Pesser': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/10/Heleen.jpg',
+  'Hanna Blaauboer': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Hanna.jpg',
+}
+
+// Helper function to find photo URL by matching name
+function getPhotoUrl(name: string): string | null {
+  // Direct match
+  if (teamPhotos[name]) return teamPhotos[name]
+
+  // Try matching by first name
+  const firstName = name.split(' ')[0]
+  for (const [fullName, url] of Object.entries(teamPhotos)) {
+    if (fullName.startsWith(firstName)) return url
+  }
+
+  return null
+}
+
+// Team Avatar Component
+function TeamAvatar({
+  name,
+  size = 'medium',
+  className = ''
+}: {
+  name: string
+  size?: 'small' | 'medium' | 'large'
+  className?: string
+}) {
+  const photoUrl = getPhotoUrl(name)
+  const [imageError, setImageError] = useState(false)
+
+  const sizeClasses = {
+    small: 'w-9 h-9 rounded-lg text-sm',
+    medium: 'w-14 h-14 rounded-xl text-xl',
+    large: 'w-12 h-12 rounded-xl text-lg',
+  }
+
+  const containerSizes = {
+    small: 'team-photo-small',
+    medium: 'team-photo-medium',
+    large: 'team-photo-large',
+  }
+
+  if (photoUrl && !imageError) {
+    return (
+      <div className={`team-photo-container team-photo-glow ${containerSizes[size]} flex-shrink-0 ${className}`}>
+        <img
+          src={photoUrl}
+          alt={name}
+          className="team-photo"
+          onError={() => setImageError(true)}
+          loading="lazy"
+        />
+      </div>
+    )
+  }
+
+  // Fallback to letter avatar
+  return (
+    <div className={`team-avatar-fallback ${sizeClasses[size]} flex-shrink-0 shadow-lg shadow-workx-lime/20 ${className}`}>
+      <span>{name.charAt(0).toUpperCase()}</span>
+    </div>
+  )
+}
+
 interface VacationBalance {
   opbouwLopendJaar: number
   overgedragenVorigJaar: number
@@ -309,11 +390,7 @@ export default function TeamPage() {
                 <div className="relative">
                   {/* Avatar & Name */}
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center flex-shrink-0 shadow-lg shadow-workx-lime/20">
-                      <span className="text-workx-dark font-semibold text-xl">
-                        {member.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                    <TeamAvatar name={member.name} size="medium" />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-white text-lg truncate">{member.name}</h3>
                       <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${config.bg} ${config.color} mt-1`}>
@@ -432,11 +509,7 @@ export default function TeamPage() {
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center flex-shrink-0">
-                          <span className="text-workx-dark font-semibold text-sm">
-                            {member.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        <TeamAvatar name={member.name} size="small" />
                         <span className="font-medium text-white">{member.name}</span>
                       </div>
                     </td>
@@ -498,11 +571,7 @@ export default function TeamPage() {
 
             {/* User info */}
             <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center">
-                <span className="text-workx-dark font-semibold text-lg">
-                  {vacationMember.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              <TeamAvatar name={vacationMember.name} size="large" />
               <div>
                 <p className="font-medium text-white">{vacationMember.name}</p>
                 <p className="text-sm text-white/40">{vacationMember.email}</p>
@@ -662,11 +731,7 @@ export default function TeamPage() {
 
             {/* Selected user info */}
             <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center">
-                <span className="text-workx-dark font-semibold text-lg">
-                  {selectedMember.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              <TeamAvatar name={selectedMember.name} size="large" />
               <div>
                 <p className="font-medium text-white">{selectedMember.name}</p>
                 <p className="text-sm text-white/40">{selectedMember.email}</p>
