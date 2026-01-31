@@ -1143,12 +1143,57 @@ export default function TransitiePage() {
 
       {/* All saved calculations */}
       {savedCalculations.length > 0 && (
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6">
           <h2 className="font-medium text-white flex items-center gap-2 mb-4">
             <Icons.history size={16} className="text-white/40" />
             Alle opgeslagen berekeningen
           </h2>
-          <div className="overflow-x-auto">
+
+          {/* Mobile: Cards */}
+          <div className="sm:hidden space-y-3">
+            {savedCalculations.map((calc) => (
+              <div
+                key={calc.id}
+                className={`p-4 rounded-xl border transition-colors ${
+                  editingId === calc.id
+                    ? 'bg-purple-500/10 border-purple-500/30'
+                    : 'bg-white/5 border-white/10'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-white font-medium">{calc.employeeName || '-'}</p>
+                    <p className="text-xs text-white/50">{calc.employerName || '-'}</p>
+                  </div>
+                  <span className="text-lg font-semibold text-purple-400">
+                    {formatCurrency(calc.amount)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-white/50 mb-3">
+                  <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}</span>
+                  <span>{calc.years}j {calc.months}m</span>
+                  <span>{formatCurrency(calc.totalSalary)}/m</span>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => loadCalculation(calc)}
+                    className="flex-1 py-2 px-3 rounded-lg bg-purple-500/20 text-purple-400 text-sm font-medium"
+                  >
+                    Laden
+                  </button>
+                  <button
+                    onClick={() => deleteCalculation(calc.id)}
+                    className="py-2 px-3 rounded-lg bg-red-500/10 text-red-400 text-sm"
+                  >
+                    <Icons.trash size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
