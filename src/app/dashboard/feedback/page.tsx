@@ -13,60 +13,73 @@ interface FeedbackItem {
   title: string
   description: string
   submittedBy: string
-  submittedAt: string
+  createdAt: string
   status: FeedbackStatus
   response?: string
 }
 
-// Start met lege feedback lijst - data wordt opgeslagen in localStorage
-const INITIAL_FEEDBACK: FeedbackItem[] = []
-
 export default function FeedbackPage() {
-  const [feedback, setFeedback] = useState<FeedbackItem[]>(INITIAL_FEEDBACK)
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [filter, setFilter] = useState<'ALL' | 'IDEA' | 'BUG'>('ALL')
   const [form, setForm] = useState({
     type: 'IDEA' as FeedbackType,
     title: '',
     description: '',
-    submittedBy: '',
   })
 
-  // Load from localStorage
+  // Fetch feedback from API
   useEffect(() => {
-    const saved = localStorage.getItem('dashboard_feedback')
-    if (saved) {
-      setFeedback(JSON.parse(saved))
-    }
+    fetchFeedback()
   }, [])
 
-  // Save to localStorage
-  const saveFeedback = (items: FeedbackItem[]) => {
-    localStorage.setItem('dashboard_feedback', JSON.stringify(items))
-    setFeedback(items)
+  const fetchFeedback = async () => {
+    try {
+      const res = await fetch('/api/feedback')
+      if (res.ok) {
+        const data = await res.json()
+        setFeedback(data)
+      }
+    } catch (error) {
+      console.error('Error fetching feedback:', error)
+      toast.error('Kon feedback niet laden')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.title || !form.description || !form.submittedBy) {
+    if (!form.title || !form.description) {
       toast.error('Vul alle velden in')
       return
     }
 
-    const newItem: FeedbackItem = {
-      id: Date.now().toString(),
-      type: form.type,
-      title: form.title,
-      description: form.description,
-      submittedBy: form.submittedBy,
-      submittedAt: new Date().toISOString(),
-      status: 'NEW',
-    }
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: form.type,
+          title: form.title,
+          description: form.description,
+        })
+      })
 
-    saveFeedback([newItem, ...feedback])
-    toast.success(form.type === 'IDEA' ? 'Idee ingediend!' : 'Probleem gemeld!')
-    setForm({ type: 'IDEA', title: '', description: '', submittedBy: '' })
-    setShowForm(false)
+      if (res.ok) {
+        const newItem = await res.json()
+        setFeedback([newItem, ...feedback])
+        toast.success(form.type === 'IDEA' ? 'Idee ingediend!' : 'Probleem gemeld!')
+        setForm({ type: 'IDEA', title: '', description: '' })
+        setShowForm(false)
+      } else {
+        toast.error('Kon feedback niet opslaan')
+      }
+    } catch (error) {
+      console.error('Error creating feedback:', error)
+      toast.error('Er ging iets mis')
+    }
   }
 
   const filteredFeedback = feedback.filter(f => filter === 'ALL' || f.type === filter)
@@ -102,6 +115,14 @@ export default function FeedbackPage() {
   const ideasCount = feedback.filter(f => f.type === 'IDEA').length
   const bugsCount = feedback.filter(f => f.type === 'BUG').length
   const newCount = feedback.filter(f => f.status === 'NEW').length
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -227,7 +248,7 @@ export default function FeedbackPage() {
                         {getStatusBadge(item.status)}
                       </div>
                       <p className="text-xs text-white/40 mt-1">
-                        Door {item.submittedBy} op {new Date(item.submittedAt).toLocaleDateString('nl-NL', {
+                        Door {item.submittedBy} op {new Date(item.createdAt).toLocaleDateString('nl-NL', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
@@ -366,18 +387,6 @@ export default function FeedbackPage() {
                     ? 'Beschrijf je idee. Waarom zou dit handig zijn?'
                     : 'Beschrijf wat er mis gaat. Wanneer gebeurt dit? Welke stappen heb je genomen?'
                   }
-                />
-              </div>
-
-              {/* Name */}
-              <div>
-                <label className="block text-sm text-white/60 mb-2">Je naam *</label>
-                <input
-                  type="text"
-                  value={form.submittedBy}
-                  onChange={(e) => setForm({ ...form, submittedBy: e.target.value })}
-                  className="input-field"
-                  placeholder="Bijv. Kay Maes"
                 />
               </div>
 

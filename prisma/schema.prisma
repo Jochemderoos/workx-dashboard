@@ -44,6 +44,9 @@ model User {
   // Calendar events
   createdEvents     CalendarEvent[]   @relation("CreatedEvents")
 
+  // Feedback
+  feedback          Feedback[]
+
   // Sessions for NextAuth
   sessions          Session[]
   accounts          Account[]
@@ -235,6 +238,22 @@ model TransitieCalculation {
   totalAmount     Float
   createdAt       DateTime @default(now())
   calculatedBy    String?
+}
+
+// ==================== FEEDBACK ====================
+
+model Feedback {
+  id          String   @id @default(cuid())
+  type        String   @default("IDEA") // IDEA, BUG
+  title       String
+  description String
+  status      String   @default("NEW") // NEW, IN_PROGRESS, DONE, WONT_FIX
+  response    String?
+  submittedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submittedBy User @relation(fields: [submittedById], references: [id], onDelete: Cascade)
 }
 
 // ==================== GEDEELDE AGENDA ====================
