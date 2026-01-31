@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import TimePicker from '@/components/ui/TimePicker'
 
 interface CalendarEvent {
   id: string
@@ -620,15 +621,11 @@ export default function AgendaPage() {
                 {!isAllDay && (
                   <div>
                     <label className="block text-sm text-white/60 mb-2">Starttijd</label>
-                    <div className="relative">
-                      <Icons.clock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                      <input
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="input-field pl-10"
-                      />
-                    </div>
+                    <TimePicker
+                      value={startTime}
+                      onChange={setStartTime}
+                      placeholder="Selecteer starttijd..."
+                    />
                   </div>
                 )}
               </div>
@@ -646,15 +643,11 @@ export default function AgendaPage() {
                 {!isAllDay && (
                   <div>
                     <label className="block text-sm text-white/60 mb-2">Eindtijd</label>
-                    <div className="relative">
-                      <Icons.clock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                      <input
-                        type="time"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        className="input-field pl-10"
-                      />
-                    </div>
+                    <TimePicker
+                      value={endTime}
+                      onChange={setEndTime}
+                      placeholder="Selecteer eindtijd..."
+                    />
                   </div>
                 )}
               </div>

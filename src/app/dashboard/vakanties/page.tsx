@@ -164,6 +164,7 @@ export default function VakantiesPage() {
   const [reason, setReason] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
+  const [showParentalMemberDropdown, setShowParentalMemberDropdown] = useState(false)
 
   // Fetch data on mount
   useEffect(() => {
@@ -1566,19 +1567,73 @@ export default function VakantiesPage() {
               {!editingParentalLeave && (
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Medewerker</label>
-                  <select
-                    value={parentalLeaveForm.userId}
-                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, userId: e.target.value })}
-                    className="input-field"
-                  >
-                    <option value="">Selecteer een medewerker...</option>
-                    {teamMembers
-                      .filter(m => !allParentalLeaves.some(pl => pl.userId === m.id))
-                      .map(member => (
-                        <option key={member.id} value={member.id}>{member.name}</option>
-                      ))
-                    }
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowParentalMemberDropdown(!showParentalMemberDropdown)}
+                      className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
+                    >
+                      {parentalLeaveForm.userId ? (
+                        <>
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500/20 to-pink-600/5 flex items-center justify-center text-pink-400 font-semibold text-sm">
+                            {teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name?.charAt(0) || '?'}
+                          </div>
+                          <span className="flex-1 text-white">{teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                            <Icons.user className="text-white/30" size={16} />
+                          </div>
+                          <span className="flex-1 text-white/40">Selecteer een medewerker...</span>
+                        </>
+                      )}
+                      <Icons.chevronDown
+                        size={18}
+                        className={`text-white/30 transition-transform ${showParentalMemberDropdown ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    {showParentalMemberDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowParentalMemberDropdown(false)} />
+                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                          <div className="max-h-64 overflow-y-auto py-1 workx-scrollbar">
+                            {teamMembers
+                              .filter(m => !allParentalLeaves.some(pl => pl.userId === m.id))
+                              .map((member, index) => {
+                                const isSelected = parentalLeaveForm.userId === member.id
+                                const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                                const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
+                                const colorClass = colors[index % colors.length]
+
+                                return (
+                                  <button
+                                    key={member.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setParentalLeaveForm({ ...parentalLeaveForm, userId: member.id })
+                                      setShowParentalMemberDropdown(false)
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
+                                      isSelected
+                                        ? 'bg-workx-lime/10 text-white'
+                                        : 'text-white/70 hover:bg-white/5 hover:text-white'
+                                    }`}
+                                  >
+                                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
+                                      {initials}
+                                    </div>
+                                    <span className="flex-1 text-sm">{member.name}</span>
+                                    {isSelected && <Icons.check size={16} className="text-workx-lime" />}
+                                  </button>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
