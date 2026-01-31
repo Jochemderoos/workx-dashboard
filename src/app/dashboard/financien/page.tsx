@@ -57,6 +57,7 @@ export default function FinancienPage() {
   const [editingBudget, setEditingBudget] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   // Load data from API
   useEffect(() => {
@@ -87,12 +88,18 @@ export default function FinancienPage() {
   // Save current year data to API
   const saveCurrentYearData = async () => {
     setSaving(true)
+    setSaveSuccess(false)
     try {
-      await fetch('/api/financien', {
+      const res = await fetch('/api/financien', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(currentYearData)
       })
+      if (res.ok) {
+        setSaveSuccess(true)
+        // Hide success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000)
+      }
     } catch (error) {
       console.error('Error saving data:', error)
     } finally {
@@ -635,15 +642,16 @@ export default function FinancienPage() {
             ))}
           </div>
 
-          {/* Main Chart */}
+          {/* Main Chart - all 3 years */}
           <LineChart
             data={[
               calculations.saldo[years[0]],
-              calculations.saldo[years[1]]
+              calculations.saldo[years[1]],
+              calculations.saldo[years[2]]
             ]}
             labels={periods}
             title="Saldo per periode (Omzet - Werkgeverslasten)"
-            colors={['#6366f1', '#f9ff85']}
+            colors={['#6366f1', '#a855f7', '#f9ff85']}
             height={250}
           />
 
@@ -665,99 +673,71 @@ export default function FinancienPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Werkgeverslasten */}
-                  <tr className="border-b border-white/5 hover:bg-white/5">
-                    <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Werkgeverslasten</td>
-                    <td className="py-3 px-4 text-white/60 text-sm">{years[0]}</td>
-                    {getDataForYear(years[0]).werkgeverslasten.map((v, i) => (
-                      <td key={i} className="text-right py-3 px-4 text-white/80 text-sm">{formatCurrency(v)}</td>
-                    ))}
-                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.werkgeverslasten[years[0]])}</td>
-                  </tr>
-                  <tr className="border-b border-white/5 hover:bg-white/5">
-                    <td className="py-3 px-4 text-white/60 text-sm">{years[1]}</td>
-                    {getDataForYear(years[1]).werkgeverslasten.map((v, i) => (
-                      <td key={i} className="text-right py-3 px-4 text-white/80 text-sm">{formatCurrency(v)}</td>
-                    ))}
-                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.werkgeverslasten[years[1]])}</td>
-                  </tr>
-                  <tr className="border-b border-white/5 bg-white/5">
-                    <td className="py-3 px-4 text-workx-lime text-sm">Verschil</td>
-                    {getDataForYear(years[1]).werkgeverslasten.map((v, i) => {
-                      const diff = v - getDataForYear(years[0]).werkgeverslasten[i]
-                      return (
-                        <td key={i} className={`text-right py-3 px-4 text-sm ${diff < 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {diff > 0 ? '+' : ''}{formatCurrency(diff)}
+                  {/* Werkgeverslasten - all 3 years */}
+                  {years.map((year, yearIdx) => (
+                    <tr key={`wl-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
+                      {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Werkgeverslasten</td>}
+                      <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
+                      {getDataForYear(year).werkgeverslasten.map((v, i) => (
+                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-white/80'}`}>
+                          {formatCurrency(v)}
                         </td>
-                      )
-                    })}
-                    <td className={`text-right py-3 px-4 font-medium ${
-                      calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]] < 0
-                        ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {formatCurrency(calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]])}
-                    </td>
-                  </tr>
+                      ))}
+                      <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
+                        {formatCurrency(calculations.totals.werkgeverslasten[year])}
+                      </td>
+                    </tr>
+                  ))}
 
-                  {/* Omzet */}
-                  <tr className="border-b border-white/5 hover:bg-white/5">
-                    <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Omzet</td>
-                    <td className="py-3 px-4 text-white/60 text-sm">{years[0]}</td>
-                    {getDataForYear(years[0]).omzet.map((v, i) => (
-                      <td key={i} className="text-right py-3 px-4 text-white/80 text-sm">{formatCurrency(v)}</td>
-                    ))}
-                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.omzet[years[0]])}</td>
-                  </tr>
-                  <tr className="border-b border-white/5 hover:bg-white/5">
-                    <td className="py-3 px-4 text-white/60 text-sm">{years[1]}</td>
-                    {getDataForYear(years[1]).omzet.map((v, i) => (
-                      <td key={i} className="text-right py-3 px-4 text-white/80 text-sm">{formatCurrency(v)}</td>
-                    ))}
-                    <td className="text-right py-3 px-4 text-white font-medium">{formatCurrency(calculations.totals.omzet[years[1]])}</td>
-                  </tr>
-                  <tr className="border-b border-white/5 bg-white/5">
-                    <td className="py-3 px-4 text-workx-lime text-sm">Verschil</td>
-                    {getDataForYear(years[1]).omzet.map((v, i) => {
-                      const diff = v - getDataForYear(years[0]).omzet[i]
-                      return (
-                        <td key={i} className={`text-right py-3 px-4 text-sm ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {diff > 0 ? '+' : ''}{formatCurrency(diff)}
+                  {/* Omzet - all 3 years */}
+                  {years.map((year, yearIdx) => (
+                    <tr key={`omzet-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
+                      {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Omzet</td>}
+                      <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
+                      {getDataForYear(year).omzet.map((v, i) => (
+                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-white/80'}`}>
+                          {formatCurrency(v)}
                         </td>
-                      )
-                    })}
-                    <td className={`text-right py-3 px-4 font-medium ${
-                      calculations.totals.omzet[years[1]] - calculations.totals.omzet[years[0]] > 0
-                        ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {formatCurrency(calculations.totals.omzet[years[1]] - calculations.totals.omzet[years[0]])}
-                    </td>
-                  </tr>
+                      ))}
+                      <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
+                        {formatCurrency(calculations.totals.omzet[year])}
+                      </td>
+                    </tr>
+                  ))}
 
-                  {/* Saldo */}
-                  <tr className="bg-workx-lime/10">
-                    <td className="py-3 px-4 text-workx-lime font-medium">Saldo {years[0]}</td>
-                    <td></td>
-                    {calculations.saldo[years[0]].map((v, i) => (
-                      <td key={i} className={`text-right py-3 px-4 font-medium ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {formatCurrency(v)}
+                  {/* Uren - all 3 years */}
+                  {years.map((year, yearIdx) => (
+                    <tr key={`uren-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
+                      {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Uren</td>}
+                      <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
+                      {getDataForYear(year).uren.map((v, i) => (
+                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-white/80'}`}>
+                          {formatNumber(v)}
+                        </td>
+                      ))}
+                      <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
+                        {formatNumber(calculations.totals.uren[year])}
                       </td>
-                    ))}
-                    <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[years[0]] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {formatCurrency(calculations.saldoTotals[years[0]])}
-                    </td>
-                  </tr>
-                  <tr className="bg-workx-lime/20">
-                    <td className="py-3 px-4 text-workx-lime font-medium">Saldo {years[1]}</td>
-                    <td></td>
-                    {calculations.saldo[years[1]].map((v, i) => (
-                      <td key={i} className={`text-right py-3 px-4 font-medium ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {formatCurrency(v)}
+                    </tr>
+                  ))}
+
+                  {/* Saldo - all 3 years */}
+                  {years.map((year, yearIdx) => (
+                    <tr key={`saldo-${year}`} className={`${yearIdx === 0 ? 'bg-indigo-500/10' : yearIdx === 1 ? 'bg-indigo-500/20' : 'bg-workx-lime/20'}`}>
+                      <td className={`py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-indigo-400'}`}>
+                        Saldo {year}
                       </td>
-                    ))}
-                    <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[years[1]] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {formatCurrency(calculations.saldoTotals[years[1]])}
-                    </td>
-                  </tr>
+                      <td></td>
+                      {calculations.saldo[year].map((v, i) => (
+                        <td key={i} className={`text-right py-3 px-4 font-medium ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {formatCurrency(v)}
+                        </td>
+                      ))}
+                      <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[year] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {formatCurrency(calculations.saldoTotals[year])}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -767,14 +747,22 @@ export default function FinancienPage() {
           <div className="bg-workx-dark/40 rounded-2xl border border-white/5 overflow-hidden">
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
               <h3 className="text-white font-medium">{currentYear} Invoer</h3>
-              <button
-                onClick={saveCurrentYearData}
-                disabled={saving}
-                className="flex items-center gap-2 px-3 py-1.5 bg-workx-lime/20 text-workx-lime rounded-lg text-sm hover:bg-workx-lime/30 transition-colors disabled:opacity-50"
-              >
-                <Icons.save size={14} />
-                {saving ? 'Opslaan...' : 'Opslaan'}
-              </button>
+              <div className="flex items-center gap-3">
+                {saveSuccess && (
+                  <span className="text-green-400 text-sm flex items-center gap-1">
+                    <Icons.check size={14} />
+                    Opgeslagen!
+                  </span>
+                )}
+                <button
+                  onClick={saveCurrentYearData}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-workx-lime/20 text-workx-lime rounded-lg text-sm hover:bg-workx-lime/30 transition-colors disabled:opacity-50"
+                >
+                  <Icons.save size={14} />
+                  {saving ? 'Opslaan...' : 'Opslaan'}
+                </button>
+              </div>
             </div>
             <div className="p-6 space-y-6">
               {['werkgeverslasten', 'omzet', 'uren'].map((category) => (
@@ -811,73 +799,78 @@ export default function FinancienPage() {
           <LineChart
             data={[
               getDataForYear(years[0]).omzet,
-              getDataForYear(years[1]).omzet
+              getDataForYear(years[1]).omzet,
+              getDataForYear(years[2]).omzet
             ]}
             labels={periods}
             title="Omzet Ontwikkeling"
-            colors={['#6366f1', '#f9ff85']}
+            colors={['#6366f1', '#a855f7', '#f9ff85']}
             height={200}
           />
 
           <LineChart
             data={[
               getDataForYear(years[0]).werkgeverslasten,
-              getDataForYear(years[1]).werkgeverslasten
+              getDataForYear(years[1]).werkgeverslasten,
+              getDataForYear(years[2]).werkgeverslasten
             ]}
             labels={periods}
             title="Werkgeverslasten Ontwikkeling"
-            colors={['#6366f1', '#f9ff85']}
+            colors={['#6366f1', '#a855f7', '#f9ff85']}
             height={200}
           />
 
           <LineChart
             data={[
               getDataForYear(years[0]).uren,
-              getDataForYear(years[1]).uren
+              getDataForYear(years[1]).uren,
+              getDataForYear(years[2]).uren
             ]}
             labels={periods}
             title="Uren Ontwikkeling"
-            colors={['#6366f1', '#f9ff85']}
+            colors={['#6366f1', '#a855f7', '#f9ff85']}
             height={200}
           />
 
           <LineChart
             data={[
               calculations.saldo[years[0]],
-              calculations.saldo[years[1]]
+              calculations.saldo[years[1]],
+              calculations.saldo[years[2]]
             ]}
             labels={periods}
             title="Saldo Ontwikkeling"
-            colors={['#6366f1', '#f9ff85']}
+            colors={['#6366f1', '#a855f7', '#f9ff85']}
             height={200}
           />
 
-          {/* Year comparison */}
+          {/* Year comparison - all 3 years */}
           <div className="col-span-2 bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
             <h3 className="text-white font-medium mb-6">Jaarlijkse Vergelijking</h3>
             <div className="grid grid-cols-4 gap-8">
               {['Omzet', 'Kosten', 'Saldo', 'Uren'].map((label, idx) => {
                 const values = [
-                  [calculations.totals.omzet[years[0]], calculations.totals.omzet[years[1]]],
-                  [calculations.totals.werkgeverslasten[years[0]], calculations.totals.werkgeverslasten[years[1]]],
-                  [calculations.saldoTotals[years[0]], calculations.saldoTotals[years[1]]],
-                  [calculations.totals.uren[years[0]], calculations.totals.uren[years[1]]]
+                  [calculations.totals.omzet[years[0]], calculations.totals.omzet[years[1]], calculations.totals.omzet[years[2]]],
+                  [calculations.totals.werkgeverslasten[years[0]], calculations.totals.werkgeverslasten[years[1]], calculations.totals.werkgeverslasten[years[2]]],
+                  [calculations.saldoTotals[years[0]], calculations.saldoTotals[years[1]], calculations.saldoTotals[years[2]]],
+                  [calculations.totals.uren[years[0]], calculations.totals.uren[years[1]], calculations.totals.uren[years[2]]]
                 ][idx]
-                const max = Math.max(...values)
+                const max = Math.max(...values.map(Math.abs)) || 1
                 const isUren = idx === 3
+                const barColors = ['bg-indigo-500', 'bg-purple-500', 'bg-workx-lime']
 
                 return (
                   <div key={label}>
                     <p className="text-white/60 text-sm mb-4 text-center">{label}</p>
-                    <div className="flex items-end justify-center gap-4 h-32">
+                    <div className="flex items-end justify-center gap-3 h-32">
                       {values.map((v, i) => (
                         <div key={i} className="flex flex-col items-center gap-2">
                           <div
-                            className={`w-12 rounded-t-lg transition-all ${i === 0 ? 'bg-indigo-500' : 'bg-workx-lime'}`}
-                            style={{ height: `${(v / max) * 100}%`, minHeight: 20 }}
+                            className={`w-10 rounded-t-lg transition-all ${barColors[i]}`}
+                            style={{ height: `${(Math.abs(v) / max) * 100}%`, minHeight: 20 }}
                           />
-                          <span className="text-[10px] text-white/40">{[years[0], years[1]][i]}</span>
-                          <span className="text-xs text-white/80">{isUren ? formatNumber(v) : formatCurrency(v)}</span>
+                          <span className="text-[10px] text-white/40">{years[i]}</span>
+                          <span className="text-[10px] text-white/80">{isUren ? formatNumber(v) : formatCurrency(v)}</span>
                         </div>
                       ))}
                     </div>
