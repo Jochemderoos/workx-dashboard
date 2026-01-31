@@ -20,31 +20,38 @@ interface PDFOptions {
 }
 
 // Draw the authentic Workx logo on a PDF (yellow background, black text - matching dashboard exactly)
-// Dashboard logo: 150px wide, ~80px tall, rounded corners
-// "Workx" at 34px, "ADVOCATEN" at 10px with 2.5px letter spacing
+// Dashboard logo specs:
+// - Width: 150px, Height: ~79px (ratio 1.9:1)
+// - Padding: px-5 py-4 = 20px horizontal, 16px vertical
+// - "Workx": 34px font, normal weight, #1e1e1e
+// - "ADVOCATEN": 10px font, 2.5px letter-spacing, 3px margin-top, #1e1e1e
 export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  // Dashboard ratio is approximately 150:80 = 1.875:1
-  const height = width * 0.53
-  const cornerRadius = 3
-  const padding = width * 0.1 // ~10% padding like dashboard px-5
+  // Exact dashboard ratio: 150px / 79px = 1.9
+  const height = width / 1.9
+  const cornerRadius = width * 0.027 // ~4px on 150px
+  const paddingLeft = width * 0.133 // 20px / 150px
 
-  // Yellow background (matching dashboard: #f9ff85 = rgb(249, 255, 133))
+  // Yellow background (dashboard: #f9ff85)
   doc.setFillColor(249, 255, 133)
   doc.roundedRect(x, y, width, height, cornerRadius, cornerRadius, 'F')
 
-  // "Workx" text - dashboard: 34px on 150px width = 22.7% ratio
-  // Position: after top padding, baseline at about 60% of height
+  // "Workx" text
+  // Dashboard: 34px on 150px = 22.7% of width
+  // Baseline position: 16px top padding + ~27px (80% of 34px for ascender) = 43px
+  // 43 / 79 = 54.4% of height
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(width * 0.23)
-  doc.text('Workx', x + padding, y + height * 0.55)
+  doc.setFontSize(width * 0.227)
+  doc.text('Workx', x + paddingLeft, y + height * 0.54)
 
-  // "ADVOCATEN" text - dashboard: 10px on 150px = 6.7% ratio
-  // Uppercase with 2.5px letter spacing, positioned below Workx
-  doc.setFontSize(width * 0.07)
+  // "ADVOCATEN" text
+  // Dashboard: 10px on 150px = 6.7% of width, letter-spacing 2.5px
+  // Position: 16 + 34 + 3 + 8 (80% of 10px) = 61px from top
+  // 61 / 79 = 77% of height
+  doc.setFontSize(width * 0.067)
   doc.setFont('helvetica', 'normal')
-  doc.setCharSpace(1.8)
-  doc.text('ADVOCATEN', x + padding, y + height * 0.82)
+  doc.setCharSpace(width * 0.017) // 2.5px / 150px scaled
+  doc.text('ADVOCATEN', x + paddingLeft, y + height * 0.77)
   doc.setCharSpace(0)
 }
 
