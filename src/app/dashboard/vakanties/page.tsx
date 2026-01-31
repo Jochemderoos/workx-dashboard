@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface VacationRequest {
   id: string
@@ -117,16 +118,28 @@ export default function VakantiesPage() {
   const [allParentalLeaves, setAllParentalLeaves] = useState<ParentalLeave[]>([])
   const [editingParentalLeave, setEditingParentalLeave] = useState<ParentalLeave | null>(null)
   const [showParentalLeaveForm, setShowParentalLeaveForm] = useState(false)
-  const [parentalLeaveForm, setParentalLeaveForm] = useState({
+  const [parentalLeaveForm, setParentalLeaveForm] = useState<{
+    userId: string
+    betaaldTotaalWeken: number
+    betaaldOpgenomenWeken: number
+    onbetaaldTotaalWeken: number
+    onbetaaldOpgenomenWeken: number
+    kindNaam: string
+    kindGeboorteDatum: Date | null
+    startDatum: Date | null
+    eindDatum: Date | null
+    inzetPerWeek: number
+    note: string
+  }>({
     userId: '',
     betaaldTotaalWeken: 9,
     betaaldOpgenomenWeken: 0,
     onbetaaldTotaalWeken: 17,
     onbetaaldOpgenomenWeken: 0,
     kindNaam: '',
-    kindGeboorteDatum: '',
-    startDatum: '',
-    eindDatum: '',
+    kindGeboorteDatum: null,
+    startDatum: null,
+    eindDatum: null,
     inzetPerWeek: 0,
     note: '',
   })
@@ -146,8 +159,8 @@ export default function VakantiesPage() {
 
   // Vacation form state
   const [selectedUserId, setSelectedUserId] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
   const [reason, setReason] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
@@ -216,12 +229,18 @@ export default function VakantiesPage() {
 
   const resetForm = () => {
     setSelectedUserId('')
-    setStartDate('')
-    setEndDate('')
+    setStartDate(null)
+    setEndDate(null)
     setReason('')
     setEditingId(null)
     setShowForm(false)
     setShowTeamDropdown(false)
+  }
+
+  // Helper to format date for API
+  const formatDateForAPI = (date: Date | null) => {
+    if (!date) return ''
+    return date.toISOString().split('T')[0]
   }
 
   // Create or update vacation
@@ -234,13 +253,16 @@ export default function VakantiesPage() {
       return
     }
 
+    const startDateStr = formatDateForAPI(startDate)
+    const endDateStr = formatDateForAPI(endDate)
+
     try {
       if (editingId) {
         // Update existing vacation
         const res = await fetch(`/api/vacation/requests/${editingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startDate, endDate, reason }),
+          body: JSON.stringify({ startDate: startDateStr, endDate: endDateStr, reason }),
         })
         if (!res.ok) {
           const data = await res.json()
@@ -253,8 +275,8 @@ export default function VakantiesPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            startDate,
-            endDate,
+            startDate: startDateStr,
+            endDate: endDateStr,
             reason,
             userId: targetUserId,
           }),
@@ -293,8 +315,8 @@ export default function VakantiesPage() {
   // Edit vacation
   const handleEdit = (vacation: VacationRequest) => {
     setSelectedUserId(vacation.userId)
-    setStartDate(vacation.startDate.split('T')[0])
-    setEndDate(vacation.endDate.split('T')[0])
+    setStartDate(new Date(vacation.startDate))
+    setEndDate(new Date(vacation.endDate))
     setReason(vacation.reason || '')
     setEditingId(vacation.id)
     setShowForm(true)
@@ -350,9 +372,9 @@ export default function VakantiesPage() {
       onbetaaldTotaalWeken: 17,
       onbetaaldOpgenomenWeken: 0,
       kindNaam: '',
-      kindGeboorteDatum: '',
-      startDatum: '',
-      eindDatum: '',
+      kindGeboorteDatum: null,
+      startDatum: null,
+      eindDatum: null,
       inzetPerWeek: 0,
       note: '',
     })
@@ -368,9 +390,9 @@ export default function VakantiesPage() {
       onbetaaldTotaalWeken: leave.onbetaaldTotaalWeken,
       onbetaaldOpgenomenWeken: leave.onbetaaldOpgenomenWeken,
       kindNaam: leave.kindNaam || '',
-      kindGeboorteDatum: leave.kindGeboorteDatum?.split('T')[0] || '',
-      startDatum: leave.startDatum?.split('T')[0] || '',
-      eindDatum: leave.eindDatum?.split('T')[0] || '',
+      kindGeboorteDatum: leave.kindGeboorteDatum ? new Date(leave.kindGeboorteDatum) : null,
+      startDatum: leave.startDatum ? new Date(leave.startDatum) : null,
+      eindDatum: leave.eindDatum ? new Date(leave.eindDatum) : null,
       inzetPerWeek: leave.inzetPerWeek || 0,
       note: leave.note || '',
     })
@@ -381,9 +403,15 @@ export default function VakantiesPage() {
   const handleSaveParentalLeave = async () => {
     try {
       const method = editingParentalLeave ? 'PATCH' : 'POST'
+      const formData = {
+        ...parentalLeaveForm,
+        kindGeboorteDatum: formatDateForAPI(parentalLeaveForm.kindGeboorteDatum),
+        startDatum: formatDateForAPI(parentalLeaveForm.startDatum),
+        eindDatum: formatDateForAPI(parentalLeaveForm.eindDatum),
+      }
       const body = editingParentalLeave
-        ? { id: editingParentalLeave.id, ...parentalLeaveForm }
-        : parentalLeaveForm
+        ? { id: editingParentalLeave.id, ...formData }
+        : formData
 
       const res = await fetch('/api/parental-leave', {
         method,
@@ -1463,30 +1491,21 @@ export default function VakantiesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Van</label>
-                  <div className="relative">
-                    <Icons.calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={e => setStartDate(e.target.value)}
-                      className="input-field pl-10"
-                      required
-                    />
-                  </div>
+                  <DatePicker
+                    selected={startDate}
+                    onChange={setStartDate}
+                    placeholder="Selecteer startdatum..."
+                    maxDate={endDate || undefined}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Tot en met</label>
-                  <div className="relative">
-                    <Icons.calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={e => setEndDate(e.target.value)}
-                      min={startDate}
-                      className="input-field pl-10"
-                      required
-                    />
-                  </div>
+                  <DatePicker
+                    selected={endDate}
+                    onChange={setEndDate}
+                    placeholder="Selecteer einddatum..."
+                    minDate={startDate || undefined}
+                  />
                 </div>
               </div>
 
@@ -1577,11 +1596,11 @@ export default function VakantiesPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Geboortedatum kind</label>
-                  <input
-                    type="date"
-                    value={parentalLeaveForm.kindGeboorteDatum}
-                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, kindGeboorteDatum: e.target.value })}
-                    className="input-field"
+                  <DatePicker
+                    selected={parentalLeaveForm.kindGeboorteDatum}
+                    onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, kindGeboorteDatum: date })}
+                    placeholder="Selecteer datum..."
+                    maxDate={new Date()}
                   />
                 </div>
               </div>
@@ -1641,23 +1660,22 @@ export default function VakantiesPage() {
               </div>
 
               {/* Periode en inzet */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Startdatum</label>
-                  <input
-                    type="date"
-                    value={parentalLeaveForm.startDatum}
-                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, startDatum: e.target.value })}
-                    className="input-field"
+                  <DatePicker
+                    selected={parentalLeaveForm.startDatum}
+                    onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, startDatum: date })}
+                    placeholder="Selecteer datum..."
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Te gebruiken tot</label>
-                  <input
-                    type="date"
-                    value={parentalLeaveForm.eindDatum}
-                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, eindDatum: e.target.value })}
-                    className="input-field"
+                  <DatePicker
+                    selected={parentalLeaveForm.eindDatum}
+                    onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, eindDatum: date })}
+                    placeholder="Selecteer datum..."
+                    minDate={parentalLeaveForm.startDatum || undefined}
                   />
                 </div>
                 <div>

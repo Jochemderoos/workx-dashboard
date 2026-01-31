@@ -42,6 +42,8 @@ export default function RootLayout({
               },
             }}
           />
+          {/* Portal for date picker popups */}
+          <div id="datepicker-portal" />
         </Providers>
       </body>
     </html>
