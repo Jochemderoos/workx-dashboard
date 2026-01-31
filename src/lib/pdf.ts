@@ -19,26 +19,28 @@ interface PDFOptions {
   subject?: string
 }
 
-// Draw the Workx logo on PDF - optimized for visual appearance in print
+// Draw the Workx logo on PDF - centered text, matching dashboard style
 export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  const height = width * 0.52
-  const cornerRadius = 3
+  const height = width * 0.55
+  const cornerRadius = 4
 
   // Yellow background (#f9ff85)
   doc.setFillColor(249, 255, 133)
   doc.roundedRect(x, y, width, height, cornerRadius, cornerRadius, 'F')
 
-  // "Workx" text - large and prominent
+  const centerX = x + width / 2
+
+  // "Workx" text - large, bold, centered
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(width * 0.32) // Bigger for better readability
-  doc.text('Workx', x + width * 0.08, y + height * 0.58)
+  doc.setFontSize(width * 0.38)
+  doc.text('Workx', centerX, y + height * 0.52, { align: 'center' })
 
-  // "ADVOCATEN" text - smaller with letter spacing
-  doc.setFontSize(width * 0.095) // Bigger than before
+  // "ADVOCATEN" text - centered with letter spacing
+  doc.setFontSize(width * 0.11)
   doc.setFont('helvetica', 'normal')
-  doc.setCharSpace(2)
-  doc.text('ADVOCATEN', x + width * 0.08, y + height * 0.85)
+  doc.setCharSpace(2.5)
+  doc.text('ADVOCATEN', centerX, y + height * 0.78, { align: 'center' })
   doc.setCharSpace(0)
 }
 
