@@ -20,7 +20,7 @@ interface Calculation {
 
 export default function BonusPage() {
   const [calculations, setCalculations] = useState<Calculation[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showBonusOverview, setShowBonusOverview] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -28,54 +28,104 @@ export default function BonusPage() {
 
   const calculatedBonus = form.invoiceAmount ? parseFloat(form.invoiceAmount) * (parseFloat(form.bonusPercentage) / 100) : 0
 
+  // Fetch calculations from API on mount
+  useEffect(() => {
+    fetchCalculations()
+  }, [])
+
+  const fetchCalculations = async () => {
+    try {
+      const res = await fetch('/api/bonus')
+      if (res.ok) {
+        const data = await res.json()
+        setCalculations(data)
+      }
+    } catch (error) {
+      console.error('Error fetching calculations:', error)
+      toast.error('Kon berekeningen niet laden')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const resetForm = () => {
     setForm({ invoiceAmount: '', bonusPercentage: '20', invoicePaid: false, bonusPaid: false, invoiceNumber: '', clientName: '' })
     setEditingId(null)
     setShowForm(false)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.invoiceAmount) return toast.error('Vul het factuurbedrag in')
 
     const invoiceAmount = parseFloat(form.invoiceAmount)
     const bonusPercentage = parseFloat(form.bonusPercentage)
-    const bonusAmount = invoiceAmount * (bonusPercentage / 100)
 
-    if (editingId) {
-      setCalculations(calculations.map(c => c.id === editingId ? {
-        ...c,
-        invoiceAmount,
-        bonusPercentage,
-        bonusAmount,
-        invoicePaid: form.invoicePaid,
-        bonusPaid: form.bonusPaid,
-        invoiceNumber: form.invoiceNumber || null,
-        clientName: form.clientName || null,
-      } : c))
-      toast.success('Bijgewerkt')
-    } else {
-      const newCalc: Calculation = {
-        id: Date.now().toString(),
-        invoiceAmount,
-        bonusPercentage,
-        bonusAmount,
-        invoicePaid: form.invoicePaid,
-        bonusPaid: form.bonusPaid,
-        invoiceNumber: form.invoiceNumber || null,
-        clientName: form.clientName || null,
-        createdAt: new Date().toISOString(),
+    try {
+      if (editingId) {
+        // Update existing calculation
+        const res = await fetch(`/api/bonus/${editingId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            invoiceAmount,
+            bonusPercentage,
+            invoicePaid: form.invoicePaid,
+            bonusPaid: form.bonusPaid,
+            invoiceNumber: form.invoiceNumber || null,
+            clientName: form.clientName || null,
+          })
+        })
+        if (res.ok) {
+          const updated = await res.json()
+          setCalculations(calculations.map(c => c.id === editingId ? updated : c))
+          toast.success('Bijgewerkt')
+        } else {
+          toast.error('Bijwerken mislukt')
+        }
+      } else {
+        // Create new calculation
+        const res = await fetch('/api/bonus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            invoiceAmount,
+            bonusPercentage,
+            invoicePaid: form.invoicePaid,
+            bonusPaid: form.bonusPaid,
+            invoiceNumber: form.invoiceNumber || null,
+            clientName: form.clientName || null,
+          })
+        })
+        if (res.ok) {
+          const newCalc = await res.json()
+          setCalculations([newCalc, ...calculations])
+          toast.success('Opgeslagen')
+        } else {
+          toast.error('Opslaan mislukt')
+        }
       }
-      setCalculations([newCalc, ...calculations])
-      toast.success('Opgeslagen')
+      resetForm()
+    } catch (error) {
+      console.error('Error saving calculation:', error)
+      toast.error('Er ging iets mis')
     }
-    resetForm()
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Verwijderen?')) return
-    setCalculations(calculations.filter(c => c.id !== id))
-    toast.success('Verwijderd')
+    try {
+      const res = await fetch(`/api/bonus/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setCalculations(calculations.filter(c => c.id !== id))
+        toast.success('Verwijderd')
+      } else {
+        toast.error('Verwijderen mislukt')
+      }
+    } catch (error) {
+      console.error('Error deleting calculation:', error)
+      toast.error('Er ging iets mis')
+    }
   }
 
   const handleEdit = (calc: Calculation) => {

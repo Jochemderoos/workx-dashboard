@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { DEV_USER } from '@/lib/dev-auth'
 
-// GET - Fetch all bonus calculations
+// GET - Fetch all bonus calculations for the current user
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const calculations = await prisma.bonusCalculation.findMany({
-      where: { userId: DEV_USER.id },
+      where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' }
     })
     return NextResponse.json(calculations)
@@ -19,6 +25,11 @@ export async function GET(req: NextRequest) {
 // POST - Create a new bonus calculation
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { invoiceAmount, bonusPercentage, invoicePaid, bonusPaid, invoiceNumber, clientName, description } = await req.json()
 
     if (!invoiceAmount || !bonusPercentage) {
@@ -28,7 +39,7 @@ export async function POST(req: NextRequest) {
     const bonusAmount = invoiceAmount * (bonusPercentage / 100)
     const calculation = await prisma.bonusCalculation.create({
       data: {
-        userId: DEV_USER.id,
+        userId: session.user.id,
         invoiceAmount,
         bonusPercentage,
         bonusAmount,
