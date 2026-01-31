@@ -24,12 +24,12 @@ export default function BonusPage() {
   const [showForm, setShowForm] = useState(false)
   const [showBonusOverview, setShowBonusOverview] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ invoiceAmount: '', bonusPercentage: '10', invoicePaid: false, bonusPaid: false, invoiceNumber: '', clientName: '' })
+  const [form, setForm] = useState({ invoiceAmount: '', bonusPercentage: '20', invoicePaid: false, bonusPaid: false, invoiceNumber: '', clientName: '' })
 
   const calculatedBonus = form.invoiceAmount ? parseFloat(form.invoiceAmount) * (parseFloat(form.bonusPercentage) / 100) : 0
 
   const resetForm = () => {
-    setForm({ invoiceAmount: '', bonusPercentage: '10', invoicePaid: false, bonusPaid: false, invoiceNumber: '', clientName: '' })
+    setForm({ invoiceAmount: '', bonusPercentage: '20', invoicePaid: false, bonusPaid: false, invoiceNumber: '', clientName: '' })
     setEditingId(null)
     setShowForm(false)
   }

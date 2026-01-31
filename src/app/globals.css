@@ -818,17 +818,16 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   background: rgba(249, 255, 133, 0.2);
 }
 
-/* Number input spinner buttons */
+/* Number input spinner buttons - hidden for clean look */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
-  opacity: 0.5;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-input[type="number"]:hover::-webkit-inner-spin-button,
-input[type="number"]:hover::-webkit-outer-spin-button {
-  opacity: 1;
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* Select element styling (if any native selects are used) */
