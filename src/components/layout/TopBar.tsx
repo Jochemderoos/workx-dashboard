@@ -58,17 +58,21 @@ export default function TopBar({ user }: TopBarProps) {
       {/* Right side */}
       <div className="flex items-center gap-3">
         {/* Quick actions */}
-        <button className="p-2.5 text-white/40 hover:text-workx-lime rounded-xl hover:bg-white/5 transition-all">
-          <Icons.zap size={18} />
+        <button className="p-2.5 text-white/40 hover:text-workx-lime rounded-xl hover:bg-white/5 transition-all icon-zap-hover">
+          <span className="icon-animated">
+            <Icons.zap size={18} />
+          </span>
         </button>
 
         {/* Notifications */}
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2.5 text-white/40 hover:text-white rounded-xl hover:bg-white/5 transition-all"
+            className="relative p-2.5 text-white/40 hover:text-white rounded-xl hover:bg-white/5 transition-all icon-bell-hover"
           >
-            <Icons.bell size={18} />
+            <span className="icon-animated">
+              <Icons.bell size={18} />
+            </span>
             {notifications.length > 0 && (
               <span className="notification-dot absolute top-1.5 right-1.5" />
             )}
@@ -113,9 +117,11 @@ export default function TopBar({ user }: TopBarProps) {
         </div>
 
         {/* Date pill */}
-        <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-          <Icons.calendar size={14} className="text-workx-lime" />
-          <span className="text-sm text-white/60">
+        <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-workx-lime/30 hover:bg-white/10 transition-all cursor-default group icon-calendar-hover">
+          <span className="icon-animated">
+            <Icons.calendar size={14} className="text-workx-lime" />
+          </span>
+          <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
             {new Date().toLocaleDateString('nl-NL', {
               weekday: 'short',
               day: 'numeric',

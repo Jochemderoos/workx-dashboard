@@ -20,7 +20,7 @@ export async function PATCH(
       select: { role: true }
     })
 
-    if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
+    if (!user || !['ADMIN', 'PARTNER', 'MANAGER'].includes(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -53,16 +53,16 @@ export async function PATCH(
       }
     })
 
-    // If approved, update used vacation days
+    // If approved, update used vacation balance
     if (status === 'APPROVED') {
       const currentYear = new Date().getFullYear()
-      await prisma.vacationDays.updateMany({
+      await prisma.vacationBalance.updateMany({
         where: {
           userId: request.userId,
           year: currentYear,
         },
         data: {
-          usedDays: {
+          opgenomenLopendJaar: {
             increment: request.days
           }
         }

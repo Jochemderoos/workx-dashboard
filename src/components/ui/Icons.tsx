@@ -509,6 +509,58 @@ export const Icons = {
       <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
     </svg>
   ),
+
+  history: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 3v5h5" />
+      <path d="M3.05 13A9 9 0 106 5.3L3 8" />
+      <path d="M12 7v5l4 2" />
+    </svg>
+  ),
+
+  save: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+      <path d="M17 21v-8H7v8M7 3v5h8" />
+    </svg>
+  ),
+
+  cloud: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
+    </svg>
+  ),
+
+  cloudRain: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M16 13v8M8 13v8M12 15v8M20 16.58A5 5 0 0018 7h-1.26A8 8 0 104 15.25" />
+    </svg>
+  ),
+
+  cloudSnow: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M20 17.58A5 5 0 0018 8h-1.26A8 8 0 104 16.25" />
+      <path d="M8 16h.01M8 20h.01M12 18h.01M12 22h.01M16 16h.01M16 20h.01" />
+    </svg>
+  ),
+
+  thermometer: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z" />
+    </svg>
+  ),
+
+  wind: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M9.59 4.59A2 2 0 1111 8H2m10.59 11.41A2 2 0 1014 16H2m15.73-8.27A2.5 2.5 0 1119.5 12H2" />
+    </svg>
+  ),
+
+  droplet: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z" />
+    </svg>
+  ),
 }
 
 // Workx Logo Component - Premium version

@@ -13,29 +13,34 @@ interface SidebarProps {
 }
 
 const mainMenuItems = [
-  { href: '/dashboard', icon: Icons.home, label: 'Dashboard' },
-  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda' },
-  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties' },
+  { href: '/dashboard', icon: Icons.home, label: 'Dashboard', iconAnim: 'icon-home-hover' },
+  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', iconAnim: 'icon-calendar-hover' },
+  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties', iconAnim: 'icon-sun-hover' },
+  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover' },
+  { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover' },
 ]
 
 const toolsMenuItems = [
-  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus' },
-  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitie' },
-  { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling' },
+  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover' },
+  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover' },
+  { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', iconAnim: 'icon-layers-hover' },
 ]
 
 const manageMenuItems = [
-  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk' },
+  { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover' },
+  { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover' },
 ]
 
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
 
-  const NavLink = ({ href, icon: Icon, label }: { href: string; icon: typeof Icons.home; label: string }) => {
+  const NavLink = ({ href, icon: Icon, label, iconAnim }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string }) => {
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
     return (
-      <Link href={href} className={`nav-link ${isActive ? 'active' : ''}`}>
-        <Icon size={18} />
+      <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''}`}>
+        <span className="icon-animated">
+          <Icon size={18} />
+        </span>
         <span>{label}</span>
         {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
       </Link>
@@ -91,9 +96,11 @@ export default function Sidebar({ user }: SidebarProps) {
 
         <Link
           href="/dashboard/settings"
-          className={`nav-link ${pathname === '/dashboard/settings' ? 'active' : ''}`}
+          className={`nav-link icon-settings-hover ${pathname === '/dashboard/settings' ? 'active' : ''}`}
         >
-          <Icons.settings size={18} />
+          <span className="icon-animated">
+            <Icons.settings size={18} />
+          </span>
           <span>Instellingen</span>
         </Link>
 
@@ -110,8 +117,10 @@ export default function Sidebar({ user }: SidebarProps) {
               <p className="text-sm font-medium text-white truncate">{user.name}</p>
               <p className="text-xs text-white/40 truncate">{user.email}</p>
             </div>
-            <button className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors">
-              <Icons.logout size={16} />
+            <button className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors icon-logout-hover">
+              <span className="icon-animated">
+                <Icons.logout size={16} />
+              </span>
             </button>
           </div>
         </div>

@@ -12,30 +12,37 @@ export async function GET(req: NextRequest) {
 
     const currentYear = new Date().getFullYear()
 
-    // Get or create vacation days for user
-    let vacationDays = await prisma.vacationDays.findFirst({
+    // Get or create vacation balance for user
+    let vacationBalance = await prisma.vacationBalance.findFirst({
       where: {
         userId: session.user.id,
         year: currentYear,
       }
     })
 
-    if (!vacationDays) {
-      vacationDays = await prisma.vacationDays.create({
+    if (!vacationBalance) {
+      vacationBalance = await prisma.vacationBalance.create({
         data: {
           userId: session.user.id,
           year: currentYear,
-          totalDays: 25,
-          usedDays: 0,
+          overgedragenVorigJaar: 0,
+          opbouwLopendJaar: 25,
+          opgenomenLopendJaar: 0,
         }
       })
     }
 
-    return NextResponse.json(vacationDays)
+    // Return in a format compatible with existing code
+    return NextResponse.json({
+      ...vacationBalance,
+      totalDays: vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar,
+      usedDays: vacationBalance.opgenomenLopendJaar,
+      remainingDays: vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar - vacationBalance.opgenomenLopendJaar,
+    })
   } catch (error) {
-    console.error('Error fetching vacation days:', error)
+    console.error('Error fetching vacation balance:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch vacation days' },
+      { error: 'Failed to fetch vacation balance' },
       { status: 500 }
     )
   }
@@ -48,29 +55,36 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Only admins can update vacation days
-    if ((session.user as any).role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Only admins and partners can update vacation balance
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true }
+    })
+
+    if (!currentUser || !['ADMIN', 'PARTNER'].includes(currentUser.role)) {
+      return NextResponse.json({ error: 'Forbidden - alleen Partners en Admin kunnen saldo aanpassen' }, { status: 403 })
     }
 
-    const { userId, totalDays, usedDays, year } = await req.json()
+    const { userId, overgedragenVorigJaar, opbouwLopendJaar, opgenomenLopendJaar, year } = await req.json()
 
-    const vacationDays = await prisma.vacationDays.updateMany({
+    const vacationBalance = await prisma.vacationBalance.updateMany({
       where: {
         userId,
         year: year || new Date().getFullYear(),
       },
       data: {
-        ...(totalDays !== undefined && { totalDays }),
-        ...(usedDays !== undefined && { usedDays }),
+        ...(overgedragenVorigJaar !== undefined && { overgedragenVorigJaar }),
+        ...(opbouwLopendJaar !== undefined && { opbouwLopendJaar }),
+        ...(opgenomenLopendJaar !== undefined && { opgenomenLopendJaar }),
+        updatedById: session.user.id,
       }
     })
 
-    return NextResponse.json(vacationDays)
+    return NextResponse.json(vacationBalance)
   } catch (error) {
-    console.error('Error updating vacation days:', error)
+    console.error('Error updating vacation balance:', error)
     return NextResponse.json(
-      { error: 'Failed to update vacation days' },
+      { error: 'Failed to update vacation balance' },
       { status: 500 }
     )
   }

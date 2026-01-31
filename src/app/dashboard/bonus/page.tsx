@@ -100,29 +100,105 @@ export default function BonusPage() {
 
   const downloadPDF = (calc: Calculation) => {
     const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+
+    // Header with Workx branding - dark gray with yellow accent
+    doc.setFillColor(45, 45, 45)
+    doc.rect(0, 0, pageWidth, 40, 'F')
+
+    // Yellow accent line
     doc.setFillColor(249, 255, 133)
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F')
+    doc.rect(0, 38, pageWidth, 4, 'F')
+
+    // Workx logo box
+    doc.setFillColor(249, 255, 133)
+    doc.roundedRect(15, 10, 22, 22, 4, 4, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
     doc.setTextColor(30, 30, 30)
+    doc.text('W', 26, 25, { align: 'center' })
+
+    // Company name
+    doc.setTextColor(255, 255, 255)
     doc.setFontSize(20)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Workx Advocaten', 20, 22)
+    doc.text('Workx Advocaten', 45, 20)
     doc.setFontSize(10)
-    doc.text('Bonus Berekening', 20, 30)
-    doc.setTextColor(60, 60, 60)
-    let y = 50
+    doc.setTextColor(249, 255, 133)
+    doc.text('Bonus Berekening', 45, 28)
+
+    let y = 55
+
+    // Client and invoice info
+    doc.setTextColor(50, 50, 50)
+    doc.setFont('helvetica', 'normal')
     doc.setFontSize(11)
-    if (calc.clientName) { doc.text(`Klant: ${calc.clientName}`, 20, y); y += 10 }
-    if (calc.invoiceNumber) { doc.text(`Factuurnummer: ${calc.invoiceNumber}`, 20, y); y += 10 }
-    doc.text(`Factuurbedrag: ${formatCurrency(calc.invoiceAmount)}`, 20, y)
-    doc.text(`Percentage: ${calc.bonusPercentage}%`, 20, y + 10)
-    doc.text(`Factuur status: ${calc.invoicePaid ? 'Betaald' : 'Nog niet betaald'}`, 20, y + 20)
-    doc.text(`Bonus status: ${calc.bonusPaid ? 'Uitbetaald' : 'Nog uit te betalen'}`, 20, y + 30)
-    doc.setFontSize(14)
+
+    if (calc.clientName) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Klant', 20, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(calc.clientName, 80, y)
+      y += 10
+    }
+    if (calc.invoiceNumber) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Factuurnummer', 20, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(calc.invoiceNumber, 80, y)
+      y += 10
+    }
+
+    y += 5
+    doc.setDrawColor(230, 230, 230)
+    doc.line(20, y, pageWidth - 20, y)
+    y += 15
+
+    // Calculation details
     doc.setFont('helvetica', 'bold')
-    doc.text(`Bonus: ${formatCurrency(calc.bonusAmount)}`, 20, y + 45)
-    doc.setFontSize(8)
+    doc.text('Factuurbedrag', 20, y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(formatCurrency(calc.invoiceAmount), 80, y)
+    y += 10
+
+    doc.setFont('helvetica', 'bold')
+    doc.text('Percentage', 20, y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`${calc.bonusPercentage}%`, 80, y)
+    y += 15
+
+    // Status
+    doc.setFont('helvetica', 'bold')
+    doc.text('Factuur status', 20, y)
+    doc.setTextColor(calc.invoicePaid ? 0 : 200, calc.invoicePaid ? 150 : 100, calc.invoicePaid ? 0 : 0)
+    doc.setFont('helvetica', 'normal')
+    doc.text(calc.invoicePaid ? 'Betaald' : 'Nog niet betaald', 80, y)
+    y += 10
+
+    doc.setTextColor(50, 50, 50)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Bonus status', 20, y)
+    doc.setTextColor(calc.bonusPaid ? 0 : 200, calc.bonusPaid ? 150 : 100, calc.bonusPaid ? 0 : 0)
+    doc.setFont('helvetica', 'normal')
+    doc.text(calc.bonusPaid ? 'Uitbetaald' : 'Nog uit te betalen', 80, y)
+    y += 20
+
+    // Bonus result box
+    doc.setFillColor(249, 255, 133)
+    doc.roundedRect(20, y, pageWidth - 40, 25, 4, 4, 'F')
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.text('Bonus', 30, y + 10)
+    doc.setFontSize(18)
+    doc.text(formatCurrency(calc.bonusAmount), 30, y + 20)
+
+    // Footer
     doc.setTextColor(150, 150, 150)
-    doc.text(`Gegenereerd op ${new Date().toLocaleDateString('nl-NL')}`, 20, 280)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    const date = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+    doc.text(`Gegenereerd op ${date}`, pageWidth / 2, 285, { align: 'center' })
+
     doc.save(`bonus-${calc.clientName || calc.id.slice(0, 8)}.pdf`)
   }
 
@@ -135,34 +211,50 @@ export default function BonusPage() {
     }
 
     const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
 
-    // Header
+    // Header with Workx branding - dark gray with yellow accent
+    doc.setFillColor(45, 45, 45)
+    doc.rect(0, 0, pageWidth, 40, 'F')
+
+    // Yellow accent line
     doc.setFillColor(249, 255, 133)
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 40, 'F')
-    doc.setTextColor(30, 30, 30)
-    doc.setFontSize(22)
+    doc.rect(0, 38, pageWidth, 4, 'F')
+
+    // Workx logo box
+    doc.setFillColor(249, 255, 133)
+    doc.roundedRect(15, 10, 22, 22, 4, 4, 'F')
     doc.setFont('helvetica', 'bold')
-    doc.text('Workx Advocaten', 20, 22)
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Overzicht te betalen bonussen', 20, 32)
+    doc.setFontSize(16)
+    doc.setTextColor(30, 30, 30)
+    doc.text('W', 26, 25, { align: 'center' })
+
+    // Company name
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(20)
+    doc.text('Workx Advocaten', 45, 20)
+    doc.setFontSize(10)
+    doc.setTextColor(249, 255, 133)
+    doc.text('Overzicht te betalen bonussen', 45, 28)
 
     // Date
     doc.setTextColor(100, 100, 100)
     doc.setFontSize(10)
-    doc.text(`Datum: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`, 20, 50)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Datum: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`, 20, 55)
 
     // Table header
-    let y = 65
-    doc.setFillColor(240, 240, 240)
-    doc.rect(20, y - 5, 170, 10, 'F')
+    let y = 70
+    doc.setFillColor(245, 245, 245)
+    doc.rect(15, y - 5, pageWidth - 30, 10, 'F')
     doc.setTextColor(60, 60, 60)
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
-    doc.text('Klant', 25, y)
-    doc.text('Factuurnr.', 75, y)
-    doc.text('Factuurbedrag', 110, y)
-    doc.text('Bonus', 155, y)
+    doc.text('Klant', 20, y)
+    doc.text('Factuurnr.', 70, y)
+    doc.text('Factuurbedrag', 105, y)
+    doc.text('Percentage', 145, y)
+    doc.text('Bonus', 175, y)
 
     // Table rows
     y += 12
@@ -174,31 +266,38 @@ export default function BonusPage() {
         doc.addPage()
         y = 30
       }
-      doc.text(calc.clientName || '-', 25, y)
-      doc.text(calc.invoiceNumber || '-', 75, y)
-      doc.text(formatCurrency(calc.invoiceAmount), 110, y)
-      doc.text(formatCurrency(calc.bonusAmount), 155, y)
+      // Alternate row background
+      if (index % 2 === 0) {
+        doc.setFillColor(250, 250, 250)
+        doc.rect(15, y - 4, pageWidth - 30, 8, 'F')
+      }
+      doc.text(calc.clientName || '-', 20, y)
+      doc.text(calc.invoiceNumber || '-', 70, y)
+      doc.text(formatCurrency(calc.invoiceAmount), 105, y)
+      doc.text(`${calc.bonusPercentage}%`, 145, y)
+      doc.text(formatCurrency(calc.bonusAmount), 175, y)
       y += 8
     })
 
-    // Total
-    y += 5
-    doc.setDrawColor(200, 200, 200)
-    doc.line(20, y, 190, y)
+    // Total box
     y += 10
+    const totalBonus = bonusesToPay.reduce((sum, c) => sum + c.bonusAmount, 0)
+    doc.setFillColor(249, 255, 133)
+    doc.roundedRect(15, y, pageWidth - 30, 20, 4, 4, 'F')
+    doc.setTextColor(30, 30, 30)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
-    const totalBonus = bonusesToPay.reduce((sum, c) => sum + c.bonusAmount, 0)
-    doc.text('Totaal te betalen:', 110, y)
-    doc.setTextColor(0, 128, 0)
-    doc.text(formatCurrency(totalBonus), 155, y)
+    doc.text('Totaal te betalen:', 25, y + 13)
+    doc.setFontSize(14)
+    doc.text(formatCurrency(totalBonus), pageWidth - 25, y + 13, { align: 'right' })
 
     // Footer
     doc.setTextColor(150, 150, 150)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
-    doc.text(`Gegenereerd op ${new Date().toLocaleDateString('nl-NL')} om ${new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`, 20, 285)
-    doc.text(`${bonusesToPay.length} bonussen`, 170, 285)
+    const date = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+    const time = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+    doc.text(`Gegenereerd op ${date} om ${time}`, pageWidth / 2, 285, { align: 'center' })
 
     doc.save(`te-betalen-bonussen-${new Date().toISOString().split('T')[0]}.pdf`)
     toast.success('PDF gedownload')

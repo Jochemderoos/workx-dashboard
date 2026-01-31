@@ -77,18 +77,21 @@ export async function POST(req: NextRequest) {
 
     // Check available days
     const currentYear = new Date().getFullYear()
-    const vacationDays = await prisma.vacationDays.findFirst({
+    const vacationBalance = await prisma.vacationBalance.findFirst({
       where: {
         userId: session.user.id,
         year: currentYear,
       }
     })
 
-    if (vacationDays && days > (vacationDays.totalDays - vacationDays.usedDays)) {
-      return NextResponse.json(
-        { error: 'Niet genoeg vakantiedagen beschikbaar' },
-        { status: 400 }
-      )
+    if (vacationBalance) {
+      const available = vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar - vacationBalance.opgenomenLopendJaar
+      if (days > available) {
+        return NextResponse.json(
+          { error: 'Niet genoeg vakantiedagen beschikbaar' },
+          { status: 400 }
+        )
+      }
     }
 
     const request = await prisma.vacationRequest.create({

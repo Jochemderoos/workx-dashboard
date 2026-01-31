@@ -50,14 +50,15 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Create default vacation days for the user
+    // Create default vacation balance for the user (only for employees)
     const currentYear = new Date().getFullYear()
-    await prisma.vacationDays.create({
+    await prisma.vacationBalance.create({
       data: {
         userId: user.id,
         year: currentYear,
-        totalDays: 25,
-        usedDays: 0,
+        overgedragenVorigJaar: 0,
+        opbouwLopendJaar: 25,
+        opgenomenLopendJaar: 0,
       }
     })
 

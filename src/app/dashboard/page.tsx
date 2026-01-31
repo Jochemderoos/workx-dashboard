@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { Icons } from '@/components/ui/Icons'
+import { Icons, WorkxLogo } from '@/components/ui/Icons'
 
 // Team verjaardagen (zelfde als agenda)
 const TEAM_BIRTHDAYS = [
@@ -40,6 +40,30 @@ interface WorkItem {
   clientName: string | null
 }
 
+interface WeatherData {
+  temperature: number
+  weatherCode: number
+  windSpeed: number
+  humidity: number
+  location: string
+  isLoading: boolean
+}
+
+// Weather code mapping to icon and description
+const getWeatherInfo = (code: number) => {
+  // WMO Weather codes: https://www.nodc.noaa.gov/archive/arc0021/0002199/1.1/data/0-data/HTML/WMO-CODE/WMO4677.HTM
+  if (code === 0) return { icon: '☀️', desc: 'Helder' }
+  if (code <= 3) return { icon: '⛅', desc: 'Deels bewolkt' }
+  if (code <= 49) return { icon: '🌫️', desc: 'Mistig' }
+  if (code <= 59) return { icon: '🌧️', desc: 'Motregen' }
+  if (code <= 69) return { icon: '🌧️', desc: 'Regen' }
+  if (code <= 79) return { icon: '🌨️', desc: 'Sneeuw' }
+  if (code <= 84) return { icon: '🌧️', desc: 'Buien' }
+  if (code <= 94) return { icon: '🌨️', desc: 'Sneeuwbuien' }
+  if (code <= 99) return { icon: '⛈️', desc: 'Onweer' }
+  return { icon: '🌤️', desc: 'Onbekend' }
+}
+
 // Demo vakanties deze week (voor overzicht wie er weg is)
 const DEMO_VACATIONS = [
   { id: '1', personName: 'Marnix Ritmeester', startDate: '2026-01-27', endDate: '2026-01-31', note: 'Skivakantie', color: '#60a5fa' },
@@ -65,12 +89,34 @@ const VACATION_BALANCE = {
   lastUpdated: '2025-01-28',
 }
 
+// Demo ouderschapsverlof data (indien door partners/Hanna ingevoerd)
+// null = geen ouderschapsverlof, object = wel ouderschapsverlof
+const PARENTAL_LEAVE = {
+  hasParentalLeave: true,     // Of de gebruiker ouderschapsverlof heeft
+  userName: 'Jochem de Roos',
+  year: 2025,
+  // Betaald ouderschapsverlof (via UWV - 9 weken a 70% salaris)
+  betaaldTotaalWeken: 9,      // Standaard 9 weken betaald (partners)
+  betaaldOpgenomenWeken: 4,   // Hoeveel weken al opgenomen
+  // Onbetaald ouderschapsverlof (aanvullend - tot 26 weken totaal)
+  onbetaaldTotaalWeken: 17,   // 26 - 9 = 17 weken onbetaald
+  onbetaaldOpgenomenWeken: 2, // Hoeveel weken al opgenomen
+  // Inzet planning
+  inzetPerWeek: 8,            // Uren per week dat verlof wordt opgenomen
+  startDatum: '2025-03-01',   // Wanneer gestart met opnemen
+  eindDatum: '2026-03-01',    // Tot wanneer te gebruiken (kind 8 jaar)
+  kindNaam: 'Sophie',
+  kindGeboorteDatum: '2024-06-15',
+  lastUpdatedBy: 'Hanna Blaauboer',
+  lastUpdated: '2025-01-25',
+}
+
 const quickLinks = [
-  { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10' },
-  { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10' },
-  { href: '/dashboard/transitie', Icon: Icons.calculator, label: 'Transitie', desc: 'Vergoeding', color: 'from-purple-500/20 to-purple-600/10' },
-  { href: '/dashboard/vakanties', Icon: Icons.sun, label: 'Vakanties', desc: 'Wie is er weg', color: 'from-orange-500/20 to-orange-600/10' },
-  { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10' },
+  { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10', iconAnim: 'icon-calendar-hover' },
+  { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10', iconAnim: 'icon-euro-hover' },
+  { href: '/dashboard/transitie', Icon: Icons.calculator, label: 'Transitievergoeding', desc: 'Bereken vergoeding', color: 'from-purple-500/20 to-purple-600/10', iconAnim: 'icon-calculator-hover' },
+  { href: '/dashboard/vakanties', Icon: Icons.sun, label: 'Vakanties', desc: 'Wie is er weg', color: 'from-orange-500/20 to-orange-600/10', iconAnim: 'icon-sun-hover' },
+  { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10', iconAnim: 'icon-briefcase-hover' },
 ]
 
 export default function DashboardHome() {
@@ -79,6 +125,14 @@ export default function DashboardHome() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showVacationDetails, setShowVacationDetails] = useState(false)
+  const [weather, setWeather] = useState<WeatherData>({
+    temperature: 0,
+    weatherCode: 0,
+    windSpeed: 0,
+    humidity: 0,
+    location: 'Amsterdam',
+    isLoading: true,
+  })
 
   // Calculate next birthday
   const nextBirthday = useMemo(() => {
@@ -94,11 +148,17 @@ export default function DashboardHome() {
       }
 
       const daysUntil = Math.ceil((birthdayThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-      return { ...member, date: birthdayThisYear, daysUntil }
+      const isToday = birthdayThisYear.toDateString() === today.toDateString()
+      return { ...member, date: birthdayThisYear, daysUntil, isToday }
     }).sort((a, b) => a.daysUntil - b.daysUntil)
 
     return upcomingBirthdays.slice(0, 3) // Return top 3
   }, [])
+
+  // Check if someone has birthday TODAY
+  const birthdayToday = useMemo(() => {
+    return nextBirthday.find(b => b.daysUntil === 0)
+  }, [nextBirthday])
 
   // Calculate who's away this week
   const awayThisWeek = useMemo(() => {
@@ -154,6 +214,50 @@ export default function DashboardHome() {
       return start <= checkDate && end >= checkDate
     })
   }
+
+  // Fetch weather data
+  useEffect(() => {
+    const fetchWeather = async (lat: number, lon: number, locationName: string) => {
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&timezone=Europe%2FAmsterdam`
+        )
+        if (res.ok) {
+          const data = await res.json()
+          setWeather({
+            temperature: Math.round(data.current.temperature_2m),
+            weatherCode: data.current.weather_code,
+            windSpeed: Math.round(data.current.wind_speed_10m),
+            humidity: data.current.relative_humidity_2m,
+            location: locationName,
+            isLoading: false,
+          })
+        }
+      } catch (e) {
+        console.error('Weather fetch error:', e)
+        setWeather(prev => ({ ...prev, isLoading: false }))
+      }
+    }
+
+    // Try to get user location, fallback to Amsterdam
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // Got user location - reverse geocode for city name would require another API
+          // For simplicity, just use "Uw locatie"
+          fetchWeather(position.coords.latitude, position.coords.longitude, 'Uw locatie')
+        },
+        () => {
+          // Geolocation denied or failed - use Amsterdam
+          fetchWeather(52.3676, 4.9041, 'Amsterdam')
+        },
+        { timeout: 5000 }
+      )
+    } else {
+      // No geolocation support - use Amsterdam
+      fetchWeather(52.3676, 4.9041, 'Amsterdam')
+    }
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -219,29 +323,100 @@ export default function DashboardHome() {
     ON_HOLD: 'On hold',
   }
 
+  const weatherInfo = getWeatherInfo(weather.weatherCode)
+
   return (
     <div className="space-y-8 fade-in">
-      {/* Hero Header */}
+      {/* BIRTHDAY CELEBRATION - Full screen confetti when someone has birthday TODAY */}
+      {birthdayToday && (
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden birthday-celebration">
+          {/* Massive confetti burst */}
+          {[...Array(50)].map((_, i) => (
+            <span
+              key={i}
+              className="birthday-confetti"
+              style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 3}s`,
+                animationDuration: `${3 + Math.random() * 2}s`,
+                fontSize: `${1 + Math.random() * 2}rem`,
+              }}
+            >
+              {['🎉', '🎊', '🥳', '🎈', '🎁', '⭐', '✨', '🎀', '🎂', '💫'][Math.floor(Math.random() * 10)]}
+            </span>
+          ))}
+          <style jsx>{`
+            .birthday-confetti {
+              position: absolute;
+              top: -50px;
+              animation: birthdayFall linear infinite;
+            }
+            @keyframes birthdayFall {
+              0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+              50% { opacity: 1; }
+              100% { transform: translateY(110vh) rotate(1080deg) scale(0.5); opacity: 0; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Hero Header with Logo */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-8">
         <div className="absolute top-0 right-0 w-96 h-96 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-workx-lime/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
         <div className="relative flex items-center justify-between">
-          <div>
-            <p className="text-workx-lime text-sm font-medium mb-1">{getGreeting()}</p>
-            <h1 className="text-3xl font-semibold text-white mb-2">Welkom bij Workx</h1>
-            <p className="text-white/50 max-w-md">
-              Beheer je zaken, bereken bonussen en houd je team op de hoogte. Alles in één dashboard.
-            </p>
+          <div className="flex items-center gap-6">
+            {/* Workx Logo */}
+            <div className="hidden md:block">
+              <WorkxLogo size={64} />
+            </div>
+            <div>
+              <p className="text-workx-lime text-sm font-medium mb-1">{getGreeting()}</p>
+              <h1 className="text-3xl font-semibold text-white mb-2">Welkom bij Workx</h1>
+              <p className="text-white/50 max-w-md">
+                Beheer je zaken, bereken bonussen en houd je team op de hoogte. Alles in één dashboard.
+              </p>
+            </div>
           </div>
 
-          <div className="hidden lg:block text-right">
-            <div className="text-5xl font-light text-white tabular-nums">
-              {currentTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+          <div className="hidden lg:flex items-start gap-8">
+            {/* Weather Widget */}
+            <div className="text-center bg-white/5 rounded-xl p-4 min-w-[120px]">
+              {weather.isLoading ? (
+                <div className="animate-pulse">
+                  <div className="w-12 h-12 bg-white/10 rounded-full mx-auto mb-2" />
+                  <div className="h-4 bg-white/10 rounded w-16 mx-auto" />
+                </div>
+              ) : (
+                <>
+                  <div className="text-4xl mb-1">{weatherInfo.icon}</div>
+                  <p className="text-2xl font-semibold text-white">{weather.temperature}°</p>
+                  <p className="text-xs text-white/40">{weatherInfo.desc}</p>
+                  <div className="flex items-center justify-center gap-2 mt-2 text-[10px] text-white/30">
+                    <span className="flex items-center gap-0.5">
+                      <Icons.wind size={10} />
+                      {weather.windSpeed} km/h
+                    </span>
+                    <span className="flex items-center gap-0.5">
+                      <Icons.droplet size={10} />
+                      {weather.humidity}%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-white/20 mt-1">{weather.location}</p>
+                </>
+              )}
             </div>
-            <p className="text-white/40 mt-1">
-              {currentTime.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
+
+            {/* Time */}
+            <div className="text-right">
+              <div className="text-5xl font-light text-white tabular-nums">
+                {currentTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <p className="text-white/40 mt-1">
+                {currentTime.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -253,15 +428,15 @@ export default function DashboardHome() {
           <span className="text-xs text-white/30">{quickLinks.length} tools</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {quickLinks.map(({ href, Icon, label, desc, color }) => (
+          {quickLinks.map(({ href, Icon, label, desc, color, iconAnim }) => (
             <Link
               key={href}
               href={href}
-              className="group relative overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] p-4 hover:border-workx-lime/30 hover:bg-white/[0.05] transition-all duration-300"
+              className={`group relative overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] p-4 hover:border-workx-lime/30 hover:bg-white/[0.05] transition-all duration-300 ${iconAnim}`}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-100 transition-opacity`} />
               <div className="relative">
-                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-white/60 group-hover:text-workx-lime group-hover:bg-workx-lime/10 transition-all mb-3">
+                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-white/60 group-hover:text-workx-lime group-hover:bg-workx-lime/10 transition-all mb-3 icon-animated">
                   <Icon size={20} />
                 </div>
                 <h3 className="font-medium text-white text-sm mb-0.5">{label}</h3>
@@ -604,7 +779,9 @@ export default function DashboardHome() {
                   <Icons.sun className="text-workx-lime" size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">Mijn vakantiedagen</p>
+                  <p className="text-sm font-medium text-white">
+                    {PARENTAL_LEAVE.hasParentalLeave ? 'Mijn Vakantiedagen en Ouderschapsverlof' : 'Mijn vakantiedagen'}
+                  </p>
                   <p className="text-xs text-white/40">Saldo {VACATION_BALANCE.year}</p>
                 </div>
               </div>
@@ -613,7 +790,7 @@ export default function DashboardHome() {
                   <p className="text-2xl font-bold text-workx-lime">
                     {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar - VACATION_BALANCE.opgenomenDitJaar - VACATION_BALANCE.geplandDitJaar}
                   </p>
-                  <p className="text-xs text-white/40">dagen over</p>
+                  <p className="text-xs text-white/40">vakantiedagen over</p>
                 </div>
                 <Icons.chevronDown
                   size={18}
@@ -637,38 +814,106 @@ export default function DashboardHome() {
 
           {/* Expandable details */}
           {showVacationDetails && (
-            <div className="mt-4 pt-4 border-t border-white/5 space-y-3 fade-in">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-white/5 rounded-lg p-2">
-                  <p className="text-lg font-semibold text-workx-lime">
-                    {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar}
-                  </p>
-                  <p className="text-[10px] text-white/40">Totaal</p>
+            <div className="mt-4 pt-4 border-t border-white/5 space-y-4 fade-in">
+              {/* Vakantiedagen */}
+              <div>
+                <p className="text-xs text-white/50 mb-2 font-medium uppercase tracking-wider">Vakantiedagen</p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-white/5 rounded-lg p-2">
+                    <p className="text-lg font-semibold text-workx-lime">
+                      {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar}
+                    </p>
+                    <p className="text-[10px] text-white/40">Totaal</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-2">
+                    <p className="text-lg font-semibold text-orange-400">{VACATION_BALANCE.opgenomenDitJaar}</p>
+                    <p className="text-[10px] text-white/40">Opgenomen</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-2">
+                    <p className="text-lg font-semibold text-blue-400">{VACATION_BALANCE.geplandDitJaar}</p>
+                    <p className="text-[10px] text-white/40">Gepland</p>
+                  </div>
                 </div>
-                <div className="bg-white/5 rounded-lg p-2">
-                  <p className="text-lg font-semibold text-orange-400">{VACATION_BALANCE.opgenomenDitJaar}</p>
-                  <p className="text-[10px] text-white/40">Opgenomen</p>
-                </div>
-                <div className="bg-white/5 rounded-lg p-2">
-                  <p className="text-lg font-semibold text-blue-400">{VACATION_BALANCE.geplandDitJaar}</p>
-                  <p className="text-[10px] text-white/40">Gepland</p>
+
+                <div className="text-xs space-y-1.5 mt-3">
+                  <div className="flex justify-between text-white/50">
+                    <span>Wettelijk</span>
+                    <span className="text-white">{VACATION_BALANCE.wettelijkeDagen}d</span>
+                  </div>
+                  <div className="flex justify-between text-white/50">
+                    <span>Bovenwettelijk</span>
+                    <span className="text-white">{VACATION_BALANCE.bovenwettelijkeDagen}d</span>
+                  </div>
+                  <div className="flex justify-between text-white/50">
+                    <span>Overgedragen</span>
+                    <span className="text-white">{VACATION_BALANCE.overgedragenVorigJaar}d</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="text-xs space-y-1.5">
-                <div className="flex justify-between text-white/50">
-                  <span>Wettelijk</span>
-                  <span className="text-white">{VACATION_BALANCE.wettelijkeDagen}d</span>
+              {/* Ouderschapsverlof */}
+              {PARENTAL_LEAVE.hasParentalLeave && (
+                <div className="pt-3 border-t border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-white/50 font-medium uppercase tracking-wider">Ouderschapsverlof</p>
+                    <span className="text-[10px] text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+                      {PARENTAL_LEAVE.kindNaam}
+                    </span>
+                  </div>
+
+                  {/* Betaald verlof */}
+                  <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 mb-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
+                      <span className="text-xs text-white/40">
+                        {PARENTAL_LEAVE.betaaldOpgenomenWeken} / {PARENTAL_LEAVE.betaaldTotaalWeken} weken
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-400 rounded-full"
+                        style={{ width: `${(PARENTAL_LEAVE.betaaldOpgenomenWeken / PARENTAL_LEAVE.betaaldTotaalWeken) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-green-400 mt-1 font-medium">
+                      {PARENTAL_LEAVE.betaaldTotaalWeken - PARENTAL_LEAVE.betaaldOpgenomenWeken} weken resterend
+                    </p>
+                  </div>
+
+                  {/* Onbetaald verlof */}
+                  <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
+                      <span className="text-xs text-white/40">
+                        {PARENTAL_LEAVE.onbetaaldOpgenomenWeken} / {PARENTAL_LEAVE.onbetaaldTotaalWeken} weken
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-purple-400 rounded-full"
+                        style={{ width: `${(PARENTAL_LEAVE.onbetaaldOpgenomenWeken / PARENTAL_LEAVE.onbetaaldTotaalWeken) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-purple-400 mt-1 font-medium">
+                      {PARENTAL_LEAVE.onbetaaldTotaalWeken - PARENTAL_LEAVE.onbetaaldOpgenomenWeken} weken resterend
+                    </p>
+                  </div>
+
+                  {/* Inzet planning */}
+                  <div className="mt-3 text-xs space-y-1">
+                    <div className="flex justify-between text-white/50">
+                      <span>Inzet per week</span>
+                      <span className="text-white">{PARENTAL_LEAVE.inzetPerWeek} uur</span>
+                    </div>
+                    <div className="flex justify-between text-white/50">
+                      <span>Te gebruiken tot</span>
+                      <span className="text-white">
+                        {new Date(PARENTAL_LEAVE.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between text-white/50">
-                  <span>Bovenwettelijk</span>
-                  <span className="text-white">{VACATION_BALANCE.bovenwettelijkeDagen}d</span>
-                </div>
-                <div className="flex justify-between text-white/50">
-                  <span>Overgedragen</span>
-                  <span className="text-white">{VACATION_BALANCE.overgedragenVorigJaar}d</span>
-                </div>
-              </div>
+              )}
 
               <p className="text-[10px] text-white/30 pt-2 border-t border-white/5">
                 Bijgewerkt door {VACATION_BALANCE.lastUpdatedBy} op {new Date(VACATION_BALANCE.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
@@ -677,32 +922,37 @@ export default function DashboardHome() {
           )}
         </div>
 
-        {/* Birthday Card - Premium Edition */}
-        <Link href="/dashboard/agenda" className="card p-4 relative overflow-hidden group hover:border-pink-500/30 transition-all">
-          {/* Background effects */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-pink-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-pink-500/15 transition-all duration-500" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 group-hover:bg-purple-500/10 transition-all duration-500" />
-
-          {/* Confetti particles - appear on hover */}
-          <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <span className="absolute text-lg animate-bounce" style={{ top: '10%', left: '10%', animationDelay: '0ms', animationDuration: '1s' }}>🎊</span>
-            <span className="absolute text-sm animate-bounce" style={{ top: '20%', right: '15%', animationDelay: '150ms', animationDuration: '1.2s' }}>✨</span>
-            <span className="absolute text-lg animate-bounce" style={{ bottom: '25%', left: '20%', animationDelay: '300ms', animationDuration: '0.9s' }}>🎉</span>
-            <span className="absolute text-sm animate-bounce" style={{ top: '40%', right: '10%', animationDelay: '100ms', animationDuration: '1.1s' }}>🎈</span>
-            <span className="absolute text-xs animate-bounce" style={{ bottom: '15%', right: '25%', animationDelay: '200ms', animationDuration: '1s' }}>⭐</span>
-            <span className="absolute text-sm animate-bounce" style={{ top: '60%', left: '8%', animationDelay: '250ms', animationDuration: '1.3s' }}>🎁</span>
-          </div>
+        {/* Birthday Card - GROOTS on birthday, normal otherwise */}
+        <Link
+          href="/dashboard/agenda"
+          className={`card p-4 relative overflow-hidden group transition-all ${
+            birthdayToday
+              ? 'ring-4 ring-pink-500/50 bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-yellow-500/20 animate-pulse'
+              : 'hover:border-pink-500/30'
+          }`}
+        >
+          {/* Glowing orbs */}
+          <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all duration-700 ${
+            birthdayToday ? 'bg-pink-500/30 scale-150' : 'bg-pink-500/5 group-hover:bg-pink-500/20 group-hover:scale-150'
+          }`} />
+          <div className={`absolute bottom-0 left-0 w-32 h-32 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 transition-all duration-700 ${
+            birthdayToday ? 'bg-purple-500/30 scale-125' : 'bg-purple-500/5 group-hover:bg-purple-500/15 group-hover:scale-125'
+          }`} />
 
           <div className="relative">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 to-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="text-xl group-hover:animate-bounce">🎂</span>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform ${
+                  birthdayToday ? 'bg-gradient-to-br from-pink-500/40 to-purple-500/30 scale-125 animate-bounce' : 'bg-gradient-to-br from-pink-500/20 to-purple-500/10 group-hover:scale-110'
+                }`}>
+                  <span className={`${birthdayToday ? 'text-3xl' : 'text-xl group-hover:animate-bounce'}`}>🎂</span>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">Verjaardagen</p>
-                  <p className="text-xs text-white/40">Binnenkort jarig</p>
+                  <p className="text-xs text-white/40">
+                    {birthdayToday ? '🎉 VANDAAG JARIG!' : 'Binnenkort jarig'}
+                  </p>
                 </div>
               </div>
               <Icons.arrowRight size={16} className="text-white/20 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
@@ -710,17 +960,23 @@ export default function DashboardHome() {
 
             {/* Featured birthday - First person */}
             {nextBirthday[0] && (
-              <div className="mb-3 p-3 -mx-1 rounded-xl bg-gradient-to-r from-pink-500/15 via-purple-500/10 to-pink-500/5 border border-pink-500/20 group-hover:border-pink-500/40 group-hover:from-pink-500/20 transition-all">
+              <div className={`mb-3 p-3 -mx-1 rounded-xl border transition-all ${
+                birthdayToday
+                  ? 'bg-gradient-to-r from-pink-500/30 via-purple-500/20 to-yellow-500/20 border-pink-500/50'
+                  : 'bg-gradient-to-r from-pink-500/15 via-purple-500/10 to-pink-500/5 border-pink-500/20 group-hover:border-pink-500/40 group-hover:from-pink-500/20'
+              }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500/30 to-purple-500/20 flex items-center justify-center text-2xl shadow-lg shadow-pink-500/10">
+                  <div className={`rounded-xl flex items-center justify-center shadow-lg ${
+                    birthdayToday ? 'w-16 h-16 text-4xl shadow-pink-500/30 animate-bounce' : 'w-12 h-12 text-2xl shadow-pink-500/10'
+                  } bg-gradient-to-br from-pink-500/30 to-purple-500/20`}>
                     🎉
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">{nextBirthday[0].name}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`font-semibold text-white ${birthdayToday ? 'text-lg' : ''}`}>{nextBirthday[0].name}</span>
                       {nextBirthday[0].daysUntil === 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-500 text-white animate-pulse">
-                          VANDAAG!
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-pink-500 text-white animate-pulse shadow-lg shadow-pink-500/50">
+                          🥳 VANDAAG JARIG!
                         </span>
                       )}
                       {nextBirthday[0].daysUntil === 1 && (
@@ -735,10 +991,12 @@ export default function DashboardHome() {
                       </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-pink-400">{nextBirthday[0].daysUntil}</p>
-                    <p className="text-[10px] text-white/40">{nextBirthday[0].daysUntil === 1 ? 'dag' : 'dagen'}</p>
-                  </div>
+                  {!birthdayToday && (
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-pink-400">{nextBirthday[0].daysUntil}</p>
+                      <p className="text-[10px] text-white/40">{nextBirthday[0].daysUntil === 1 ? 'dag' : 'dagen'}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -772,25 +1030,25 @@ export default function DashboardHome() {
       </div>
 
       {/* Bottom Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {[
-          { icon: Icons.briefcase, label: 'Open zaken', value: workItems.length.toString(), color: 'text-blue-400', bg: 'bg-blue-500/10' },
-          { icon: Icons.calendar, label: 'Events deze week', value: events.length.toString(), color: 'text-purple-400', bg: 'bg-purple-500/10' },
-          { icon: Icons.clock, label: 'Vandaag', value: new Date().toLocaleDateString('nl-NL', { weekday: 'short' }), color: 'text-orange-400', bg: 'bg-orange-500/10' },
-          { icon: Icons.zap, label: 'Productiviteit', value: '94%', color: 'text-workx-lime', bg: 'bg-workx-lime/10' },
+          { icon: Icons.briefcase, label: 'Open zaken', value: workItems.length.toString(), color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover' },
+          { icon: Icons.calendar, label: 'Events deze week', value: events.length.toString(), color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover' },
+          { icon: Icons.clock, label: 'Vandaag', value: new Date().toLocaleDateString('nl-NL', { weekday: 'short' }), color: 'text-orange-400', bg: 'bg-orange-500/10', iconAnim: 'icon-clock-hover' },
         ].map((stat, index) => (
           <div
             key={stat.label}
-            className="card p-5 group hover:border-white/10 transition-all"
+            className={`card p-5 group hover:border-white/10 transition-all relative overflow-hidden ${stat.iconAnim}`}
             style={{ animationDelay: `${index * 50}ms` }}
           >
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative flex items-center gap-3 mb-3">
+              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center group-hover:scale-110 transition-transform icon-animated`}>
                 <stat.icon className={stat.color} size={18} />
               </div>
             </div>
-            <p className="text-2xl font-semibold text-white mb-1">{stat.value}</p>
-            <p className="text-sm text-white/40">{stat.label}</p>
+            <p className="relative text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">{stat.value}</p>
+            <p className="relative text-sm text-white/40">{stat.label}</p>
           </div>
         ))}
       </div>

@@ -52,7 +52,8 @@ export async function PATCH(
     const {
       invoiceAmount,
       bonusPercentage,
-      isPaid,
+      invoicePaid,
+      bonusPaid,
       invoiceNumber,
       clientName,
       description
@@ -81,7 +82,8 @@ export async function PATCH(
         invoiceAmount,
         bonusPercentage,
         bonusAmount,
-        isPaid,
+        invoicePaid,
+        bonusPaid,
         invoiceNumber,
         clientName,
         description,

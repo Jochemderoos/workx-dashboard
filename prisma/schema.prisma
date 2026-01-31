@@ -3,19 +3,23 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Rollen: EMPLOYEE (medewerker), PARTNER (Marnix, Jochem, Juliette, Bas), ADMIN (Hanna - kantoormanager)
+// PARTNER en ADMIN kunnen vakantiesaldo beheren
 
 model User {
   id             String    @id @default(cuid())
   email          String    @unique
   name           String
   password       String
-  role           String    @default("EMPLOYEE")
+  role           String    @default("EMPLOYEE") // EMPLOYEE, PARTNER, ADMIN
   avatarUrl      String?
   department     String?
   phoneNumber    String?
+  startDate      DateTime? // Datum in dienst (voor transitievergoeding etc)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -27,8 +31,9 @@ model User {
   bonusCalculations BonusCalculation[]
 
   // Vacation
-  vacationDays      VacationDays?
+  vacationBalance   VacationBalance?
   vacationRequests  VacationRequest[]
+  parentalLeave     ParentalLeave?
 
   // Work items
   assignedWork      WorkItem[]        @relation("AssignedWork")
@@ -127,8 +132,9 @@ model BonusCalculation {
   userId          String
   invoiceAmount   Float    // Bedrag excl. BTW
   bonusPercentage Float    // Bonuspercentage
-  isPaid          Boolean  @default(false)
   bonusAmount     Float    // Berekend bonusbedrag
+  invoicePaid     Boolean  @default(false) // Factuur betaald door klant
+  bonusPaid       Boolean  @default(false) // Bonus uitbetaald aan medewerker
   description     String?
   invoiceNumber   String?
   clientName      String?
@@ -140,14 +146,38 @@ model BonusCalculation {
 
 // ==================== VACATION ====================
 
-model VacationDays {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  totalDays       Float    @default(25) // Totaal vakantiedagen per jaar
-  usedDays        Float    @default(0)  // Opgenomen dagen
-  year            Int
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model VacationBalance {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  year                  Int
+  overgedragenVorigJaar Float    @default(0)  // Overgedragen van vorig jaar
+  opbouwLopendJaar      Float    @default(25) // Opbouw dit jaar (standaard 25)
+  bijgekocht            Float    @default(0)  // Extra gekochte dagen
+  opgenomenLopendJaar   Float    @default(0)  // Opgenomen dit jaar
+  note                  String?              // Extra informatie
+  updatedById           String?              // Wie heeft dit laatst aangepast (Hanna/Partner)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Ouderschapsverlof tracking
+model ParentalLeave {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  betaaldTotaalWeken      Float    @default(9)  // Standaard 9 weken betaald (UWV 70%)
+  betaaldOpgenomenWeken   Float    @default(0)
+  onbetaaldTotaalWeken    Float    @default(17) // 26 - 9 = 17 weken onbetaald
+  onbetaaldOpgenomenWeken Float    @default(0)
+  kindNaam                String?
+  kindGeboorteDatum       DateTime?
+  startDatum              DateTime?
+  eindDatum               DateTime?            // Tot wanneer te gebruiken
+  inzetPerWeek            Float?               // Uren per week opname
+  note                    String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

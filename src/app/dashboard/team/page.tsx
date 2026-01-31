@@ -16,9 +16,10 @@ interface TeamMember {
 }
 
 const roleConfig: Record<string, { label: string; color: string; bg: string }> = {
-  ADMIN: { label: 'Administrator', color: 'text-workx-lime', bg: 'bg-workx-lime/10' },
+  PARTNER: { label: 'Partner', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  ADMIN: { label: 'Kantoor', color: 'text-workx-lime', bg: 'bg-workx-lime/10' },
   MANAGER: { label: 'Manager', color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  EMPLOYEE: { label: 'Medewerker', color: 'text-white/60', bg: 'bg-white/5' },
+  EMPLOYEE: { label: 'Medewerker', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
 }
 
 export default function TeamPage() {
@@ -52,8 +53,8 @@ export default function TeamPage() {
 
   const stats = {
     total: members.length,
-    admins: members.filter(m => m.role === 'ADMIN').length,
-    managers: members.filter(m => m.role === 'MANAGER').length,
+    partners: members.filter(m => m.role === 'PARTNER').length,
+    employees: members.filter(m => m.role === 'EMPLOYEE').length,
     totalWork: members.reduce((sum, m) => sum + m._count.assignedWork, 0),
   }
 
@@ -97,24 +98,24 @@ export default function TeamPage() {
         </div>
 
         <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center mb-3">
-              <Icons.shield className="text-workx-lime" size={18} />
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
+              <Icons.award className="text-purple-400" size={18} />
             </div>
-            <p className="text-2xl font-semibold text-white">{stats.admins}</p>
-            <p className="text-sm text-white/40">Administrators</p>
+            <p className="text-2xl font-semibold text-white">{stats.partners}</p>
+            <p className="text-sm text-white/40">Partners</p>
           </div>
         </div>
 
         <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
-              <Icons.award className="text-blue-400" size={18} />
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-3">
+              <Icons.user className="text-cyan-400" size={18} />
             </div>
-            <p className="text-2xl font-semibold text-white">{stats.managers}</p>
-            <p className="text-sm text-white/40">Managers</p>
+            <p className="text-2xl font-semibold text-white">{stats.employees}</p>
+            <p className="text-sm text-white/40">Medewerkers</p>
           </div>
         </div>
 

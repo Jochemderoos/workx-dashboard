@@ -51,9 +51,9 @@ export default function SettingsPage() {
   }
 
   const tabs = [
-    { id: 'profile' as const, label: 'Profiel', icon: Icons.user },
-    { id: 'security' as const, label: 'Beveiliging', icon: Icons.shield },
-    { id: 'notifications' as const, label: 'Notificaties', icon: Icons.bell },
+    { id: 'profile' as const, label: 'Profiel', icon: Icons.user, iconAnim: 'icon-users-hover' },
+    { id: 'security' as const, label: 'Beveiliging', icon: Icons.shield, iconAnim: 'icon-zap-hover' },
+    { id: 'notifications' as const, label: 'Notificaties', icon: Icons.bell, iconAnim: 'icon-bell-hover' },
   ]
 
   return (

@@ -41,11 +41,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-workx-dark flex items-center justify-center p-6">
+    <div className="min-h-screen bg-workx-dark flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Ambient glow effects - animated */}
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-workx-lime/5 rounded-full blur-[150px] pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
+      <div className="fixed bottom-0 left-1/4 w-[400px] h-[400px] bg-workx-lime/3 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+      <div className="fixed top-1/3 left-0 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDuration: '5s', animationDelay: '2s' }} />
+
+      {/* Subtle floating particles */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute w-2 h-2 bg-workx-lime/20 rounded-full" style={{ top: '20%', left: '15%', animation: 'float 8s ease-in-out infinite' }} />
+        <div className="absolute w-1.5 h-1.5 bg-workx-lime/15 rounded-full" style={{ top: '60%', left: '80%', animation: 'float 10s ease-in-out infinite', animationDelay: '-3s' }} />
+        <div className="absolute w-1 h-1 bg-workx-lime/25 rounded-full" style={{ top: '75%', left: '25%', animation: 'float 7s ease-in-out infinite', animationDelay: '-5s' }} />
+      </div>
+
       {/* Grachtenpand */}
       <div className="grachtenpand" />
 
-      <div className="w-full max-w-sm relative z-10">
+      <div className="w-full max-w-sm relative z-10 fade-in">
         {/* Logo */}
         <div className="text-center mb-10">
           <WorkxLogo size={56} className="mx-auto mb-4" />
@@ -53,8 +65,9 @@ export default function LoginPage() {
           <p className="text-white/40 text-sm mt-1">Advocaten Dashboard</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form Card */}
+        <form onSubmit={handleSubmit} className="card p-6 space-y-5 relative">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
           {!isLogin && (
             <div>
               <label className="block text-sm text-white/60 mb-2">Naam</label>
@@ -102,9 +115,9 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
               >
-                {showPassword ? <Icons.x size={16} /> : <Icons.check size={16} />}
+                {showPassword ? <Icons.eyeOff size={16} /> : <Icons.eye size={16} />}
               </button>
             </div>
           </div>

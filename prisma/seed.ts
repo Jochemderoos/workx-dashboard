@@ -3,188 +3,226 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+// Team Workx Advocaten
+// Rollen: PARTNER (directie), ADMIN (Hanna - kantoormanager), EMPLOYEE (medewerkers)
+// Partners + Admin kunnen vakantiesaldo beheren
+
+const TEAM_MEMBERS = [
+  // Admins met volledige toegang (eerste 6)
+  { name: 'Hanna Blaauboer', email: 'hanna.blaauboer@workxadvocaten.nl', role: 'ADMIN', department: 'Kantoor', birthDate: '02-06' },
+  { name: 'Jochem de Roos', email: 'jochem.deroos@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '04-29' },
+  { name: 'Marnix Ritmeester', email: 'marnix.ritmeester@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '03-12' },
+  { name: 'Bas den Ridder', email: 'bas.denridder@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '12-03' },
+  { name: 'Maaike de Jong', email: 'maaike.dejong@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '07-23' },
+  { name: 'Juliette Niersman', email: 'juliette.niersman@workxadvocaten.nl', role: 'PARTNER', department: 'Partner', birthDate: '11-21' },
+
+  // Employees (alleen eigen dashboard)
+  { name: 'Alain Heunen', email: 'alain.heunen@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '01-15' },
+  { name: 'Marlieke Schipper', email: 'marlieke.schipper@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '01-08' },
+  { name: 'Justine Schellekens', email: 'justine.schellekens@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '09-04' },
+  { name: 'Wies van Pesch', email: 'wies.vanpesch@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '04-15' },
+  { name: 'Emma van der Vos', email: 'emma.vandervos@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '10-11' },
+  { name: 'Kay Maes', email: 'kay.maes@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '05-17' },
+  { name: 'Erika van Zadelhof', email: 'erika.vanzadelhof@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '06-30' },
+  { name: 'Barbara Rip', email: 'barbara.rip@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '02-19' },
+  { name: 'Julia Groen', email: 'julia.groen@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '08-15' },
+  { name: 'Lotte van Sint Truiden', email: 'officemanagement@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Kantoor', birthDate: '07-07' },
+]
+
+// Vakantiesaldo 2026 data (uit Excel)
+const VACATION_BALANCES: Record<string, { overgedragen: number; opbouw: number; bijgekocht: number; opgenomen: number }> = {
+  'hanna.blaauboer@workxadvocaten.nl': { overgedragen: 11, opbouw: 22.5, bijgekocht: 0, opgenomen: 7 },
+  'justine.schellekens@workxadvocaten.nl': { overgedragen: 5, opbouw: 23, bijgekocht: 0, opgenomen: 10 },
+  'marlieke.schipper@workxadvocaten.nl': { overgedragen: 6, opbouw: 22, bijgekocht: 0, opgenomen: 17 },
+  'wies.vanpesch@workxadvocaten.nl': { overgedragen: 1.5, opbouw: 23, bijgekocht: 4, opgenomen: 9 },
+  'emma.vandervos@workxadvocaten.nl': { overgedragen: 3, opbouw: 25, bijgekocht: 0, opgenomen: 0 },
+  'alain.heunen@workxadvocaten.nl': { overgedragen: 0, opbouw: 10, bijgekocht: 0, opgenomen: 10 },
+  'kay.maes@workxadvocaten.nl': { overgedragen: 0, opbouw: 25, bijgekocht: 0, opgenomen: 0 },
+  'erika.vanzadelhof@workxadvocaten.nl': { overgedragen: 6, opbouw: 25, bijgekocht: 5, opgenomen: 12 },
+  'barbara.rip@workxadvocaten.nl': { overgedragen: 13.5, opbouw: 25, bijgekocht: 0, opgenomen: 1.5 },
+  'julia.groen@workxadvocaten.nl': { overgedragen: 5, opbouw: 25, bijgekocht: 0, opgenomen: 5 },
+  'officemanagement@workxadvocaten.nl': { overgedragen: 0, opbouw: 25, bijgekocht: 0, opgenomen: 0 },
+}
+
 async function main() {
-  console.log('Seeding database...')
+  console.log('🌱 Seeding Workx database...\n')
 
-  // Create default channels
-  const generalChannel = await prisma.chatChannel.upsert({
-    where: { id: 'general' },
-    update: {},
-    create: {
-      id: 'general',
-      name: 'algemeen',
-      description: 'Algemene discussies en aankondigingen',
-      isPrivate: false,
-    }
-  })
-
-  const arbeidsrechtChannel = await prisma.chatChannel.upsert({
-    where: { id: 'arbeidsrecht' },
-    update: {},
-    create: {
-      id: 'arbeidsrecht',
-      name: 'arbeidsrecht',
-      description: 'Discussies over arbeidsrechtzaken',
-      isPrivate: false,
-    }
-  })
-
-  const randomChannel = await prisma.chatChannel.upsert({
-    where: { id: 'random' },
-    update: {},
-    create: {
-      id: 'random',
-      name: 'random',
-      description: 'Off-topic en gezelligheid',
-      isPrivate: false,
-    }
-  })
-
-  console.log('Created channels:', { generalChannel, arbeidsrechtChannel, randomChannel })
-
-  // Create demo admin user
-  const hashedPassword = await bcrypt.hash('workx2024', 12)
-
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@workxadvocaten.nl' },
-    update: {},
-    create: {
-      email: 'admin@workxadvocaten.nl',
-      name: 'Admin Workx',
-      password: hashedPassword,
-      role: 'ADMIN',
-      department: 'Management',
-    }
-  })
-
-  console.log('Created admin user:', adminUser.email)
-
-  // Create vacation days for admin
+  // Standaard wachtwoord voor alle gebruikers (moet na eerste login gewijzigd worden)
+  const defaultPassword = await bcrypt.hash('Workx2024!', 12)
   const currentYear = new Date().getFullYear()
-  await prisma.vacationDays.upsert({
-    where: {
-      id: `${adminUser.id}-${currentYear}`,
-    },
-    update: {},
-    create: {
-      userId: adminUser.id,
-      year: currentYear,
-      totalDays: 25,
-      usedDays: 0,
-    }
-  })
 
-  // Add admin to general channel
-  await prisma.channelMember.upsert({
-    where: {
-      userId_channelId: {
-        userId: adminUser.id,
-        channelId: 'general',
+  // Create all team members
+  console.log('👥 Creating team members...')
+
+  for (const member of TEAM_MEMBERS) {
+    const user = await prisma.user.upsert({
+      where: { email: member.email },
+      update: {
+        name: member.name,
+        role: member.role,
+        department: member.department,
+      },
+      create: {
+        email: member.email,
+        name: member.name,
+        password: defaultPassword,
+        role: member.role,
+        department: member.department,
       }
-    },
-    update: {},
-    create: {
-      userId: adminUser.id,
-      channelId: 'general',
+    })
+
+    console.log(`  ✓ ${member.name} (${member.role})`)
+
+    // Create vacation balance for employees and admin (not for partners)
+    const vacationData = VACATION_BALANCES[member.email]
+    if (vacationData) {
+      await prisma.vacationBalance.upsert({
+        where: { userId: user.id },
+        update: {
+          year: currentYear,
+          overgedragenVorigJaar: vacationData.overgedragen,
+          opbouwLopendJaar: vacationData.opbouw,
+          bijgekocht: vacationData.bijgekocht || 0,
+          opgenomenLopendJaar: vacationData.opgenomen,
+        },
+        create: {
+          userId: user.id,
+          year: currentYear,
+          overgedragenVorigJaar: vacationData.overgedragen,
+          opbouwLopendJaar: vacationData.opbouw,
+          bijgekocht: vacationData.bijgekocht || 0,
+          opgenomenLopendJaar: vacationData.opgenomen,
+        }
+      })
     }
-  })
+  }
 
-  // Create a welcome message
-  await prisma.chatMessage.create({
-    data: {
-      content: 'Welkom bij het Workx Dashboard! Dit is het #algemeen kanaal voor teamcommunicatie.',
-      senderId: adminUser.id,
-      channelId: 'general',
+  // Create chat channels
+  console.log('\n💬 Creating chat channels...')
+
+  const channels = [
+    { id: 'general', name: 'algemeen', description: 'Algemene discussies en aankondigingen' },
+    { id: 'arbeidsrecht', name: 'arbeidsrecht', description: 'Discussies over arbeidsrechtzaken' },
+    { id: 'random', name: 'random', description: 'Off-topic en gezelligheid' },
+  ]
+
+  for (const channel of channels) {
+    await prisma.chatChannel.upsert({
+      where: { id: channel.id },
+      update: {},
+      create: {
+        id: channel.id,
+        name: channel.name,
+        description: channel.description,
+        isPrivate: false,
+      }
+    })
+    console.log(`  ✓ #${channel.name}`)
+  }
+
+  // Get Hanna for creating demo content
+  const hanna = await prisma.user.findUnique({ where: { email: 'hanna@workxadvocaten.nl' } })
+
+  if (hanna) {
+    // Add all users to general channel
+    console.log('\n📝 Adding users to channels...')
+    const allUsers = await prisma.user.findMany()
+
+    for (const user of allUsers) {
+      await prisma.channelMember.upsert({
+        where: {
+          userId_channelId: {
+            userId: user.id,
+            channelId: 'general',
+          }
+        },
+        update: {},
+        create: {
+          userId: user.id,
+          channelId: 'general',
+        }
+      })
     }
-  })
+    console.log(`  ✓ ${allUsers.length} users added to #algemeen`)
 
-  // Create sample calendar events
-  const now = new Date()
+    // Create sample calendar events
+    console.log('\n📅 Creating calendar events...')
+    const now = new Date()
 
-  // Event 1: Team meeting in 2 days
-  const meeting1Date = new Date(now)
-  meeting1Date.setDate(meeting1Date.getDate() + 2)
-  meeting1Date.setHours(10, 0, 0, 0)
+    // Team meeting
+    const meeting = new Date(now)
+    meeting.setDate(meeting.getDate() + 2)
+    meeting.setHours(10, 0, 0, 0)
 
-  await prisma.calendarEvent.create({
-    data: {
-      title: 'Wekelijks teamoverleg',
-      description: 'Bespreken van lopende zaken en updates',
-      startTime: meeting1Date,
-      endTime: new Date(meeting1Date.getTime() + 60 * 60 * 1000), // 1 hour
-      isAllDay: false,
-      location: 'Vergaderruimte 1',
-      color: '#60a5fa', // blue for meetings
-      category: 'MEETING',
-      createdById: adminUser.id,
-    }
-  })
+    await prisma.calendarEvent.upsert({
+      where: { id: 'weekly-meeting' },
+      update: {},
+      create: {
+        id: 'weekly-meeting',
+        title: 'Wekelijks teamoverleg',
+        description: 'Bespreken van lopende zaken en updates',
+        startTime: meeting,
+        endTime: new Date(meeting.getTime() + 60 * 60 * 1000),
+        isAllDay: false,
+        location: 'Vergaderruimte 1',
+        color: '#60a5fa',
+        category: 'MEETING',
+        createdById: hanna.id,
+      }
+    })
+    console.log('  ✓ Wekelijks teamoverleg')
 
-  // Event 2: Deadline in 5 days
-  const deadline = new Date(now)
-  deadline.setDate(deadline.getDate() + 5)
-  deadline.setHours(17, 0, 0, 0)
+    // Friday drinks
+    const friday = new Date(now)
+    const daysUntilFriday = (5 - friday.getDay() + 7) % 7 || 7
+    friday.setDate(friday.getDate() + daysUntilFriday)
+    friday.setHours(17, 0, 0, 0)
 
-  await prisma.calendarEvent.create({
-    data: {
-      title: 'Deadline jaarrapport',
-      description: 'Inleveren jaarlijkse rapportage bij de orde',
-      startTime: deadline,
-      endTime: deadline,
-      isAllDay: false,
-      location: null,
-      color: '#f87171', // red for deadlines
-      category: 'DEADLINE',
-      createdById: adminUser.id,
-    }
-  })
+    await prisma.calendarEvent.upsert({
+      where: { id: 'friday-drinks' },
+      update: {},
+      create: {
+        id: 'friday-drinks',
+        title: 'Vrijdagmiddagborrel',
+        description: 'Gezellig afsluiten van de week!',
+        startTime: friday,
+        endTime: new Date(friday.getTime() + 2 * 60 * 60 * 1000),
+        isAllDay: false,
+        location: 'Kantoor - pantry',
+        color: '#34d399',
+        category: 'SOCIAL',
+        createdById: hanna.id,
+      }
+    })
+    console.log('  ✓ Vrijdagmiddagborrel')
+  }
 
-  // Event 3: Training next week
-  const training = new Date(now)
-  training.setDate(training.getDate() + 7)
-  training.setHours(9, 0, 0, 0)
-
-  await prisma.calendarEvent.create({
-    data: {
-      title: 'Cursus nieuwe wetgeving',
-      description: 'Update over recente wijzigingen in arbeidsrecht',
-      startTime: training,
-      endTime: new Date(training.getTime() + 4 * 60 * 60 * 1000), // 4 hours
-      isAllDay: false,
-      location: 'Externe locatie',
-      color: '#a78bfa', // purple for training
-      category: 'TRAINING',
-      createdById: adminUser.id,
-    }
-  })
-
-  // Event 4: Friday drinks
-  const friday = new Date(now)
-  const daysUntilFriday = (5 - friday.getDay() + 7) % 7 || 7
-  friday.setDate(friday.getDate() + daysUntilFriday)
-  friday.setHours(17, 0, 0, 0)
-
-  await prisma.calendarEvent.create({
-    data: {
-      title: 'Vrijdagmiddagborrel',
-      description: 'Gezellig afsluiten van de week!',
-      startTime: friday,
-      endTime: new Date(friday.getTime() + 2 * 60 * 60 * 1000), // 2 hours
-      isAllDay: false,
-      location: 'Kantoor - pantry',
-      color: '#34d399', // green for social
-      category: 'SOCIAL',
-      createdById: adminUser.id,
-    }
-  })
-
-  console.log('Created sample calendar events')
-  console.log('Database seeded successfully!')
+  console.log('\n✅ Database seeded successfully!')
+  console.log('\n📧 Login credentials:')
+  console.log('   Password: Workx2024!')
+  console.log('\n   VOLLEDIGE TOEGANG (6 accounts):')
+  console.log('   - hanna.blaauboer@workxadvocaten.nl (Admin)')
+  console.log('   - jochem.deroos@workxadvocaten.nl (Partner)')
+  console.log('   - marnix.ritmeester@workxadvocaten.nl (Partner)')
+  console.log('   - bas.denridder@workxadvocaten.nl (Partner)')
+  console.log('   - maaike.dejong@workxadvocaten.nl (Partner)')
+  console.log('   - juliette.niersman@workxadvocaten.nl (Partner)')
+  console.log('\n   EIGEN DASHBOARD (10 accounts):')
+  console.log('   - alain.heunen@workxadvocaten.nl')
+  console.log('   - marlieke.schipper@workxadvocaten.nl')
+  console.log('   - justine.schellekens@workxadvocaten.nl')
+  console.log('   - wies.vanpesch@workxadvocaten.nl')
+  console.log('   - emma.vandervos@workxadvocaten.nl')
+  console.log('   - kay.maes@workxadvocaten.nl')
+  console.log('   - erika.vanzadelhof@workxadvocaten.nl')
+  console.log('   - barbara.rip@workxadvocaten.nl')
+  console.log('   - julia.groen@workxadvocaten.nl')
+  console.log('   - officemanagement@workxadvocaten.nl (Lotte)')
 }
 
 main()
   .catch((e) => {
-    console.error(e)
+    console.error('❌ Seed failed:', e)
     process.exit(1)
   })
   .finally(async () => {

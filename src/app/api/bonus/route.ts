@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 // POST - Create a new bonus calculation
 export async function POST(req: NextRequest) {
   try {
-    const { invoiceAmount, bonusPercentage, isPaid, invoiceNumber, clientName, description } = await req.json()
+    const { invoiceAmount, bonusPercentage, invoicePaid, bonusPaid, invoiceNumber, clientName, description } = await req.json()
 
     if (!invoiceAmount || !bonusPercentage) {
       return NextResponse.json({ error: 'Invoice amount and bonus percentage are required' }, { status: 400 })
@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
         invoiceAmount,
         bonusPercentage,
         bonusAmount,
-        isPaid: isPaid || false,
+        invoicePaid: invoicePaid || false,
+        bonusPaid: bonusPaid || false,
         invoiceNumber,
         clientName,
         description,

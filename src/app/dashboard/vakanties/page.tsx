@@ -17,22 +17,58 @@ interface VacationBalance {
   personName: string
   overgedragenVorigJaar: number  // Dagen overgedragen van vorige jaren
   opbouwLopendJaar: number       // Dagen die dit jaar worden opgebouwd (wettelijk + bovenwettelijk)
+  bijgekocht: number             // Extra gekochte dagen
   opgenomenLopendJaar: number    // Dagen opgenomen dit jaar
-  // Berekend: resterend = overgedragen + opbouw - opgenomen
+  note?: string                  // Extra informatie
+  // Berekend: resterend = overgedragen + opbouw + bijgekocht - opgenomen
 }
 
-// Demo vakantiesaldo data (Hanna heeft dit ingevoerd)
-// Alleen medewerkers, niet de partners/directie (Marnix, Jochem, Maaike, Juliette, Bas)
+interface ParentalLeave {
+  personName: string
+  betaaldTotaalWeken: number     // Totaal betaald verlof (via UWV 70%)
+  betaaldOpgenomenWeken: number  // Opgenomen betaald verlof
+  onbetaaldTotaalWeken: number   // Totaal onbetaald verlof
+  onbetaaldOpgenomenWeken: number // Opgenomen onbetaald verlof
+  eindDatum: string              // Tot wanneer te gebruiken
+  note?: string                  // Extra informatie
+}
+
+// Vakantiesaldo 2026 data uit Excel (ingevoerd door Hanna)
 const INITIAL_VACATION_BALANCES: VacationBalance[] = [
-  { personName: 'Marlieke Schipper', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, opgenomenLopendJaar: 8 },
-  { personName: 'Kay Maes', overgedragenVorigJaar: 8, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
-  { personName: 'Justine Schellekens', overgedragenVorigJaar: 3, opbouwLopendJaar: 25, opgenomenLopendJaar: 1 },
-  { personName: 'Julia Groen', overgedragenVorigJaar: 4, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
-  { personName: 'Hanna Blaauboer', overgedragenVorigJaar: 2, opbouwLopendJaar: 25, opgenomenLopendJaar: 5 },
-  { personName: 'Erika van Zadelhof', overgedragenVorigJaar: 6, opbouwLopendJaar: 25, opgenomenLopendJaar: 12 },
-  { personName: 'Emma van der Vos', overgedragenVorigJaar: 1, opbouwLopendJaar: 25, opgenomenLopendJaar: 2 },
-  { personName: 'Barbara Rip', overgedragenVorigJaar: 7, opbouwLopendJaar: 25, opgenomenLopendJaar: 7 },
-  { personName: 'Lotte van Sint Truiden', overgedragenVorigJaar: 4, opbouwLopendJaar: 25, opgenomenLopendJaar: 1 },
+  { personName: 'Hanna Blaauboer', overgedragenVorigJaar: 11, opbouwLopendJaar: 22.5, bijgekocht: 0, opgenomenLopendJaar: 7, note: 'Totaal 33,5 dagen' },
+  { personName: 'Justine Schellekens', overgedragenVorigJaar: 5, opbouwLopendJaar: 23, bijgekocht: 0, opgenomenLopendJaar: 10, note: 'Vanaf 25 april met verlof' },
+  { personName: 'Marlieke Schipper', overgedragenVorigJaar: 6, opbouwLopendJaar: 22, bijgekocht: 0, opgenomenLopendJaar: 17, note: 'Betaald ouderschapsverlof t/m 5 juni' },
+  { personName: 'Wies Spenkelink', overgedragenVorigJaar: 1.5, opbouwLopendJaar: 23, bijgekocht: 4, opgenomenLopendJaar: 9, note: 'Gaat 6 maart met verlof' },
+  { personName: 'Emma van der Vos', overgedragenVorigJaar: 3, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Totaal 28 dagen' },
+  { personName: 'Alain Bakker', overgedragenVorigJaar: 0, opbouwLopendJaar: 10, bijgekocht: 0, opgenomenLopendJaar: 10, note: 'Per 1 juni uit dienst. Rest betaald ouderschapsverlof (8d)' },
+  { personName: 'Heleen Hartog', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 5, opgenomenLopendJaar: 12, note: 'Totaal 30 dagen' },
+  { personName: 'Erika van Zadelhof', overgedragenVorigJaar: 6, opbouwLopendJaar: 25, bijgekocht: 5, opgenomenLopendJaar: 12, note: 'Totaal 36 dagen' },
+  { personName: 'Kay Maes', overgedragenVorigJaar: 0, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 0, note: 'Totaal 25 dagen' },
+  { personName: 'Barbara Rip', overgedragenVorigJaar: 13.5, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 1.5, note: 'Totaal 38,5 dagen' },
+  { personName: 'Julia Groen', overgedragenVorigJaar: 5, opbouwLopendJaar: 25, bijgekocht: 0, opgenomenLopendJaar: 5, note: 'Totaal 30 dagen' },
+  { personName: 'Diyar (werkstudent)', overgedragenVorigJaar: 0, opbouwLopendJaar: 2.5, bijgekocht: 0, opgenomenLopendJaar: 0, note: '3 maanden, 2 dagen/week' },
+]
+
+// Ouderschapsverlof data
+const INITIAL_PARENTAL_LEAVE: ParentalLeave[] = [
+  {
+    personName: 'Marlieke Schipper',
+    betaaldTotaalWeken: 9,
+    betaaldOpgenomenWeken: 9,
+    onbetaaldTotaalWeken: 17,
+    onbetaaldOpgenomenWeken: 0,
+    eindDatum: '2026-06-05',
+    note: 'Betaald ouderschapsverlof t/m 5 juni'
+  },
+  {
+    personName: 'Alain Bakker',
+    betaaldTotaalWeken: 9,
+    betaaldOpgenomenWeken: 8,
+    onbetaaldTotaalWeken: 0,
+    onbetaaldOpgenomenWeken: 0,
+    eindDatum: '2026-01-31',
+    note: 'Rest betaald ouderschapsverlof (8 dagen)'
+  },
 ]
 
 const COLORS = [
@@ -60,7 +96,10 @@ const TEAM_MEMBERS = [
   'Emma van der Vos',
   'Bas den Ridder',
   'Barbara Rip',
-  'Lotte van Sint Truiden',
+  'Wies Spenkelink',
+  'Alain Bakker',
+  'Heleen Hartog',
+  'Diyar (werkstudent)',
 ]
 
 export default function VakantiesPage() {
@@ -77,6 +116,7 @@ export default function VakantiesPage() {
   const [balanceForm, setBalanceForm] = useState({
     overgedragenVorigJaar: 0,
     opbouwLopendJaar: 25,
+    bijgekocht: 0,
     opgenomenLopendJaar: 0,
   })
   const [showBalanceDropdown, setShowBalanceDropdown] = useState(false)
@@ -99,6 +139,7 @@ export default function VakantiesPage() {
       setBalanceForm({
         overgedragenVorigJaar: balance.overgedragenVorigJaar,
         opbouwLopendJaar: balance.opbouwLopendJaar,
+        bijgekocht: balance.bijgekocht || 0,
         opgenomenLopendJaar: balance.opgenomenLopendJaar,
       })
       setEditingBalance(personName)
@@ -119,7 +160,12 @@ export default function VakantiesPage() {
   }
 
   const calculateResterend = (balance: VacationBalance) => {
-    return balance.overgedragenVorigJaar + balance.opbouwLopendJaar - balance.opgenomenLopendJaar
+    return balance.overgedragenVorigJaar + balance.opbouwLopendJaar + (balance.bijgekocht || 0) - balance.opgenomenLopendJaar
+  }
+
+  // Check if employee has parental leave
+  const getParentalLeave = (personName: string) => {
+    return INITIAL_PARENTAL_LEAVE.find(p => p.personName === personName)
   }
 
   useEffect(() => { fetchVacations() }, [])
@@ -372,9 +418,9 @@ export default function VakantiesPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Overgedragen van vorige jaren</label>
+                  <label className="block text-sm text-white/60 mb-2">Overgedragen</label>
                   <input
                     type="number"
                     step="0.5"
@@ -384,7 +430,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Opbouw lopend jaar</label>
+                  <label className="block text-sm text-white/60 mb-2">Opbouw</label>
                   <input
                     type="number"
                     step="0.5"
@@ -394,7 +440,17 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Opgenomen dit jaar</label>
+                  <label className="block text-sm text-white/60 mb-2">Bijgekocht</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={balanceForm.bijgekocht}
+                    onChange={e => setBalanceForm({ ...balanceForm, bijgekocht: parseFloat(e.target.value) || 0 })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Opgenomen</label>
                   <input
                     type="number"
                     step="0.5"
@@ -404,9 +460,9 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Resterend saldo</label>
+                  <label className="block text-sm text-white/60 mb-2">Resterend</label>
                   <div className="px-4 py-3 bg-workx-lime/10 border border-workx-lime/20 rounded-xl text-workx-lime font-semibold">
-                    {(balanceForm.overgedragenVorigJaar + balanceForm.opbouwLopendJaar - balanceForm.opgenomenLopendJaar).toFixed(1)} dagen
+                    {(balanceForm.overgedragenVorigJaar + balanceForm.opbouwLopendJaar + balanceForm.bijgekocht - balanceForm.opgenomenLopendJaar).toFixed(1)} d
                   </div>
                 </div>
               </div>
@@ -442,10 +498,11 @@ export default function VakantiesPage() {
             </div>
 
             {/* Table header */}
-            <div className="grid grid-cols-6 gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider">
+            <div className="grid grid-cols-7 gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider">
               <div className="col-span-2">Medewerker</div>
               <div className="text-right">Overgedragen</div>
               <div className="text-right">Opbouw</div>
+              <div className="text-right">Bijgekocht</div>
               <div className="text-right">Opgenomen</div>
               <div className="text-right">Resterend</div>
             </div>
@@ -460,22 +517,33 @@ export default function VakantiesPage() {
                   const initials = balance.personName.split(' ').map(n => n[0]).join('').slice(0, 2)
                   const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
                   const colorClass = colors[index % colors.length]
+                  const parentalLeave = getParentalLeave(balance.personName)
 
                   return (
                     <div
                       key={balance.personName}
-                      className={`grid grid-cols-6 gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors group ${
+                      className={`grid grid-cols-7 gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors group ${
                         editingBalance === balance.personName ? 'bg-workx-lime/5' : ''
                       }`}
                     >
                       <div className="col-span-2 flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-sm text-white`}>
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-sm text-white relative`}>
                           {initials}
+                          {parentalLeave && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
+                              <span className="text-[8px] text-white">OV</span>
+                            </div>
+                          )}
                         </div>
                         <div>
-                          <p className="font-medium text-white">{balance.personName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-white">{balance.personName}</p>
+                            {parentalLeave && (
+                              <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">OV</span>
+                            )}
+                          </div>
                           <p className="text-xs text-white/40">
-                            {balance.personName === 'Hanna Blaauboer' ? 'Admin' : 'Medewerker'}
+                            {balance.note || (balance.personName === 'Hanna Blaauboer' ? 'Admin' : 'Medewerker')}
                           </p>
                         </div>
                       </div>
@@ -486,6 +554,16 @@ export default function VakantiesPage() {
                       <div className="text-right">
                         <span className="text-white/70">{balance.opbouwLopendJaar}</span>
                         <span className="text-white/30 text-sm ml-1">d</span>
+                      </div>
+                      <div className="text-right">
+                        {(balance.bijgekocht || 0) > 0 ? (
+                          <>
+                            <span className="text-green-400">{balance.bijgekocht}</span>
+                            <span className="text-white/30 text-sm ml-1">d</span>
+                          </>
+                        ) : (
+                          <span className="text-white/30">-</span>
+                        )}
                       </div>
                       <div className="text-right">
                         <span className="text-white/70">{balance.opgenomenLopendJaar}</span>
@@ -512,6 +590,93 @@ export default function VakantiesPage() {
             </div>
           </div>
 
+          {/* Parental Leave Section */}
+          {INITIAL_PARENTAL_LEAVE.length > 0 && (
+            <div className="card overflow-hidden border-purple-500/20">
+              <div className="p-5 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-purple-500/5 to-transparent">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                    <Icons.heart className="text-purple-400" size={16} />
+                  </div>
+                  <div>
+                    <h2 className="font-medium text-white">Ouderschapsverlof</h2>
+                    <p className="text-xs text-white/40">Overzicht betaald en onbetaald verlof</p>
+                  </div>
+                </div>
+                <span className="badge bg-purple-500/20 text-purple-400">{INITIAL_PARENTAL_LEAVE.length} medewerkers</span>
+              </div>
+
+              <div className="divide-y divide-white/5">
+                {INITIAL_PARENTAL_LEAVE.map((leave, index) => {
+                  const initials = leave.personName.split(' ').map(n => n[0]).join('').slice(0, 2)
+                  const betaaldRest = leave.betaaldTotaalWeken - leave.betaaldOpgenomenWeken
+                  const onbetaaldRest = leave.onbetaaldTotaalWeken - leave.onbetaaldOpgenomenWeken
+
+                  return (
+                    <div key={leave.personName} className="p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/30 to-purple-600/10 flex items-center justify-center font-semibold text-white">
+                          {initials}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <p className="font-medium text-white">{leave.personName}</p>
+                              <p className="text-xs text-white/40">{leave.note}</p>
+                            </div>
+                            <p className="text-xs text-white/40">
+                              Tot {new Date(leave.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Betaald verlof */}
+                            <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
+                                <span className="text-xs text-white/60">
+                                  {leave.betaaldOpgenomenWeken}/{leave.betaaldTotaalWeken} wkn
+                                </span>
+                              </div>
+                              <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-2">
+                                <div
+                                  className="h-full bg-green-400 rounded-full"
+                                  style={{ width: `${(leave.betaaldOpgenomenWeken / leave.betaaldTotaalWeken) * 100}%` }}
+                                />
+                              </div>
+                              <p className="text-sm font-medium text-green-400">
+                                {betaaldRest} weken resterend
+                              </p>
+                            </div>
+
+                            {/* Onbetaald verlof */}
+                            <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
+                                <span className="text-xs text-white/60">
+                                  {leave.onbetaaldOpgenomenWeken}/{leave.onbetaaldTotaalWeken} wkn
+                                </span>
+                              </div>
+                              <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-2">
+                                <div
+                                  className="h-full bg-purple-400 rounded-full"
+                                  style={{ width: leave.onbetaaldTotaalWeken > 0 ? `${(leave.onbetaaldOpgenomenWeken / leave.onbetaaldTotaalWeken) * 100}%` : '0%' }}
+                                />
+                              </div>
+                              <p className="text-sm font-medium text-purple-400">
+                                {onbetaaldRest} weken resterend
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Info card */}
           <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
             <div className="flex items-start gap-4">
@@ -519,10 +684,10 @@ export default function VakantiesPage() {
                 <Icons.info className="text-blue-400" size={18} />
               </div>
               <div>
-                <h3 className="font-medium text-white mb-1">Over vakantiedagen beheer</h3>
+                <h3 className="font-medium text-white mb-1">Over verlof beheer</h3>
                 <p className="text-sm text-white/50 leading-relaxed">
-                  Hier kun je de vakantiedagen van alle medewerkers beheren. Klik op het bewerk-icoon om het saldo aan te passen.
-                  Wijzigingen worden direct zichtbaar in het persoonlijke dashboard van de medewerker.
+                  Hier kun je de vakantiedagen en ouderschapsverlof van alle medewerkers beheren. Klik op het bewerk-icoon om het saldo aan te passen.
+                  Medewerkers met ouderschapsverlof (OV) worden gemarkeerd met een paarse indicator.
                 </p>
               </div>
             </div>
