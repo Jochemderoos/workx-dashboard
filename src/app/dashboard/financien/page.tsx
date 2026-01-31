@@ -205,6 +205,7 @@ export default function FinancienPage() {
   }
 
   // Line chart component with zero line for saldo charts
+  // Only shows data points that have actual values (not zero) for current year
   const LineChart = ({ data, labels, title, colors, height = 200 }: {
     data: number[][]
     labels: string[]
@@ -266,8 +267,50 @@ export default function FinancienPage() {
                 fill="rgba(239,68,68,0.1)"
               />
             )}
-            {/* Lines */}
+            {/* Lines - for current year (last series), only draw line segments between non-zero points */}
             {data.map((series, seriesIdx) => {
+              const isCurrentYear = seriesIdx === data.length - 1
+
+              // For current year, filter to only show non-zero segments
+              if (isCurrentYear) {
+                // Find indices with actual data (non-zero values)
+                const nonZeroIndices = series.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0)
+
+                // If no data or all zeros, don't draw
+                if (nonZeroIndices.length === 0) return null
+
+                // Draw only points with data (no connecting lines for sparse data)
+                return (
+                  <g key={seriesIdx}>
+                    {series.map((value, i) => {
+                      // Only draw points with actual data
+                      if (value === 0) return null
+                      return (
+                        <g key={i}>
+                          <circle
+                            cx={getX(i)}
+                            cy={getY(value)}
+                            r="2"
+                            fill={colors[seriesIdx]}
+                          />
+                          {/* Draw vertical line from zero to show the value */}
+                          <line
+                            x1={getX(i)}
+                            y1={zeroY}
+                            x2={getX(i)}
+                            y2={getY(value)}
+                            stroke={colors[seriesIdx]}
+                            strokeWidth="1.5"
+                            opacity="0.8"
+                          />
+                        </g>
+                      )
+                    })}
+                  </g>
+                )
+              }
+
+              // For historical years, draw full line as before
               const points = series.map((value, i) => `${getX(i)},${getY(value)}`).join(' ')
               return (
                 <g key={seriesIdx}>
