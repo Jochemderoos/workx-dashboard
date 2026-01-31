@@ -1,14 +1,150 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import { useSession } from 'next-auth/react'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+
+interface User {
+  id: string
+  email: string
+  name: string
+  role: string
+  department: string | null
+  isActive: boolean
+  createdAt: string
+}
 
 export default function SettingsPage() {
+  const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [profile, setProfile] = useState({ name: 'Admin Workx', phone: '', department: '' })
   const [password, setPassword] = useState({ current: '', new: '', confirm: '' })
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'admin'>('profile')
+
+  // Admin state
+  const [users, setUsers] = useState<User[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [newUser, setNewUser] = useState({ email: '', name: '', password: '', role: 'EMPLOYEE', department: '' })
+  const [newPassword, setNewPassword] = useState('')
+  const [createLoading, setCreateLoading] = useState(false)
+
+  // Check if current user is admin/partner
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
+
+  // Fetch users when admin tab is active
+  useEffect(() => {
+    if (activeTab === 'admin' && isAdmin) {
+      fetchUsers()
+    }
+  }, [activeTab, isAdmin])
+
+  const fetchUsers = async () => {
+    setUsersLoading(true)
+    try {
+      const res = await fetch('/api/admin/users')
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data)
+      }
+    } catch (e) {
+      toast.error('Kon gebruikers niet laden')
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  const createUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newUser.email || !newUser.name || !newUser.password) {
+      return toast.error('Vul alle verplichte velden in')
+    }
+    if (newUser.password.length < 6) {
+      return toast.error('Wachtwoord moet minimaal 6 tekens zijn')
+    }
+
+    setCreateLoading(true)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      toast.success(`Account aangemaakt voor ${newUser.name}`)
+      setShowCreateModal(false)
+      setNewUser({ email: '', name: '', password: '', role: 'EMPLOYEE', department: '' })
+      fetchUsers()
+    } catch (e: any) {
+      toast.error(e.message || 'Kon account niet aanmaken')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
+  const resetPassword = async () => {
+    if (!selectedUser || !newPassword) return
+    if (newPassword.length < 6) {
+      return toast.error('Wachtwoord moet minimaal 6 tekens zijn')
+    }
+
+    setCreateLoading(true)
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedUser.id, newPassword })
+      })
+      if (!res.ok) throw new Error()
+
+      toast.success(`Wachtwoord gereset voor ${selectedUser.name}`)
+      setShowResetModal(false)
+      setSelectedUser(null)
+      setNewPassword('')
+    } catch (e) {
+      toast.error('Kon wachtwoord niet resetten')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
+  const toggleUserActive = async (user: User) => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, isActive: !user.isActive })
+      })
+      if (!res.ok) throw new Error()
+
+      toast.success(user.isActive ? `${user.name} gedeactiveerd` : `${user.name} geactiveerd`)
+      fetchUsers()
+    } catch (e) {
+      toast.error('Kon status niet wijzigen')
+    }
+  }
+
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'badge badge-lime'
+      case 'PARTNER': return 'badge bg-purple-500/20 text-purple-300'
+      default: return 'badge bg-white/10 text-white/60'
+    }
+  }
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'Admin'
+      case 'PARTNER': return 'Partner'
+      default: return 'Medewerker'
+    }
+  }
 
   const updateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,6 +190,7 @@ export default function SettingsPage() {
     { id: 'profile' as const, label: 'Profiel', icon: Icons.user, iconAnim: 'icon-users-hover' },
     { id: 'security' as const, label: 'Beveiliging', icon: Icons.shield, iconAnim: 'icon-zap-hover' },
     { id: 'notifications' as const, label: 'Notificaties', icon: Icons.bell, iconAnim: 'icon-bell-hover' },
+    ...(isAdmin ? [{ id: 'admin' as const, label: 'Beheer', icon: Icons.users, iconAnim: 'icon-users-hover' }] : []),
   ]
 
   return (
@@ -320,6 +457,264 @@ export default function SettingsPage() {
               <Icons.check size={16} />
               Voorkeuren opslaan
             </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'admin' && isAdmin && (
+        <div className="space-y-6">
+          {/* Header with Add button */}
+          <div className="card p-6">
+            <div className="flex items-center justify-between pb-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <Icons.users className="text-white/40" size={18} />
+                <h2 className="font-medium text-white">Gebruikersbeheer</h2>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Icons.plus size={16} />
+                Nieuw account
+              </button>
+            </div>
+
+            {/* Users list */}
+            {usersLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <span className="w-6 h-6 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {users.map((user) => (
+                  <div
+                    key={user.id}
+                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                      user.isActive
+                        ? 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                        : 'bg-red-500/5 border-red-500/20 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-semibold ${
+                        user.isActive
+                          ? 'bg-gradient-to-br from-workx-lime to-workx-lime/80 text-workx-dark'
+                          : 'bg-white/10 text-white/40'
+                      }`}>
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-white">{user.name}</h4>
+                          <span className={getRoleBadge(user.role)}>{getRoleLabel(user.role)}</span>
+                          {!user.isActive && (
+                            <span className="badge bg-red-500/20 text-red-300">Inactief</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-white/40">{user.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => { setSelectedUser(user); setShowResetModal(true) }}
+                        className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                        title="Wachtwoord resetten"
+                      >
+                        <Icons.lock size={16} />
+                      </button>
+                      <button
+                        onClick={() => toggleUserActive(user)}
+                        className={`p-2 rounded-lg transition-all ${
+                          user.isActive
+                            ? 'text-white/40 hover:text-red-400 hover:bg-red-500/10'
+                            : 'text-green-400 hover:bg-green-500/10'
+                        }`}
+                        title={user.isActive ? 'Deactiveren' : 'Activeren'}
+                      >
+                        {user.isActive ? <Icons.userMinus size={16} /> : <Icons.userPlus size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 fade-in" onClick={() => setShowCreateModal(false)}>
+          <div className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+            <div className="relative">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.userPlus className="text-workx-lime" size={24} />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-white text-lg">Nieuw account aanmaken</h2>
+                  <p className="text-sm text-white/50">Voeg een nieuwe medewerker toe</p>
+                </div>
+              </div>
+
+              <form onSubmit={createUser} className="space-y-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Naam *</label>
+                  <div className="relative">
+                    <Icons.user className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <input
+                      type="text"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                      className="input-field pl-11"
+                      placeholder="Volledige naam"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Email *</label>
+                  <div className="relative">
+                    <Icons.mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <input
+                      type="email"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                      className="input-field pl-11"
+                      placeholder="naam@workxadvocaten.nl"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Wachtwoord *</label>
+                  <div className="relative">
+                    <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <input
+                      type="password"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                      className="input-field pl-11"
+                      placeholder="Minimaal 6 tekens"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-white/60 mb-2">Rol</label>
+                    <select
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                      className="input-field"
+                    >
+                      <option value="EMPLOYEE">Medewerker</option>
+                      <option value="PARTNER">Partner</option>
+                      <option value="ADMIN">Admin</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/60 mb-2">Afdeling</label>
+                    <input
+                      type="text"
+                      value={newUser.department}
+                      onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
+                      className="input-field"
+                      placeholder="Optioneel"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1 btn-secondary"
+                  >
+                    Annuleren
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={createLoading}
+                    className="flex-1 btn-primary disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {createLoading ? (
+                      <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Icons.check size={16} />
+                        Aanmaken
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {showResetModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 fade-in" onClick={() => { setShowResetModal(false); setSelectedUser(null); setNewPassword('') }}>
+          <div className="bg-workx-gray rounded-2xl p-6 w-full max-w-sm border border-white/10 shadow-2xl relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+            <div className="relative">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                  <Icons.lock className="text-orange-400" size={24} />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-white text-lg">Wachtwoord resetten</h2>
+                  <p className="text-sm text-white/50">{selectedUser.name}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Nieuw wachtwoord</label>
+                  <div className="relative">
+                    <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="input-field pl-11"
+                      placeholder="Minimaal 6 tekens"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => { setShowResetModal(false); setSelectedUser(null); setNewPassword('') }}
+                    className="flex-1 btn-secondary"
+                  >
+                    Annuleren
+                  </button>
+                  <button
+                    onClick={resetPassword}
+                    disabled={createLoading || newPassword.length < 6}
+                    className="flex-1 px-4 py-2.5 rounded-xl font-medium bg-orange-500 hover:bg-orange-600 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {createLoading ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Icons.check size={16} />
+                        Resetten
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
