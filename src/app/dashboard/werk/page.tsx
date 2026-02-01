@@ -69,6 +69,9 @@ export default function WerkOverzichtPage() {
   const [workloadEntries, setWorkloadEntries] = useState<WorkloadEntry[]>([])
   const [editingWorkload, setEditingWorkload] = useState<{ person: string; date: string } | null>(null)
   const [canEditWorkload, setCanEditWorkload] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [uploadDate, setUploadDate] = useState<Date | null>(new Date())
+  const [isUploading, setIsUploading] = useState(false)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -185,6 +188,40 @@ export default function WerkOverzichtPage() {
       }
     } catch (error) {
       console.error('Kon werkdruk niet laden')
+    }
+  }
+
+  // Upload RTF bestand en verwerk uren naar werkdruk
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !uploadDate) return
+
+    setIsUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('date', uploadDate.toISOString().split('T')[0])
+
+    try {
+      const res = await fetch('/api/workload/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload mislukt')
+      }
+
+      toast.success(`${data.processed} medewerkers verwerkt`)
+      setShowUploadModal(false)
+      fetchWorkload() // Herlaad de werkdruk data
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Upload mislukt')
+    } finally {
+      setIsUploading(false)
+      // Reset file input
+      e.target.value = ''
     }
   }
 
@@ -337,6 +374,19 @@ export default function WerkOverzichtPage() {
       {/* WERKDRUK MODE */}
       {pageMode === 'werkdruk' && (
         <div className="space-y-6">
+          {/* Upload Button */}
+          {canEditWorkload && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Icons.upload size={16} />
+                Uren uploaden
+              </button>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="card p-5 relative overflow-hidden group">
@@ -1066,6 +1116,95 @@ export default function WerkOverzichtPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Werkdruk Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowUploadModal(false)}>
+          <div
+            className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.upload className="text-workx-lime" size={18} />
+                </div>
+                <h2 className="font-semibold text-white text-lg">Uren uploaden</h2>
+              </div>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Datum voor werkdruk</label>
+                <DatePicker
+                  selected={uploadDate}
+                  onChange={setUploadDate}
+                  placeholder="Selecteer datum..."
+                />
+              </div>
+
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-start gap-3">
+                  <Icons.info className="text-blue-400 mt-0.5" size={16} />
+                  <div className="text-sm text-white/70">
+                    <p className="font-medium text-blue-400 mb-1">Uren naar werkdruk</p>
+                    <ul className="space-y-1 text-xs text-white/50">
+                      <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-400" /> ≤3 uur = Rustig</li>
+                      <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-400" /> ≤4 uur = Normaal</li>
+                      <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-400" /> ≤5 uur = Druk</li>
+                      <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-400" /> &gt;5 uur = Heel druk</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Urenoverzicht bestand (.docx / .rtf)</label>
+                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                  isUploading
+                    ? 'border-workx-lime/50 bg-workx-lime/5'
+                    : 'border-white/20 hover:border-workx-lime/50 hover:bg-white/5'
+                }`}>
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    {isUploading ? (
+                      <>
+                        <div className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin mb-2" />
+                        <p className="text-sm text-workx-lime">Verwerken...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Icons.upload className="text-white/40 mb-2" size={24} />
+                        <p className="text-sm text-white/60">Klik om bestand te selecteren</p>
+                        <p className="text-xs text-white/30 mt-1">of sleep het hierheen</p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".docx,.rtf,.doc"
+                    onChange={handleFileUpload}
+                    disabled={isUploading || !uploadDate}
+                  />
+                </label>
+              </div>
+
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="w-full btn-secondary"
+              >
+                Annuleren
+              </button>
+            </div>
           </div>
         </div>
       )}
