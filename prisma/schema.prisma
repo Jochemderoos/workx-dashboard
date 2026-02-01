@@ -47,6 +47,9 @@ model User {
   // Feedback
   feedback          Feedback[]
 
+  // Lustrum packlist
+  lustrumPacklist   LustrumPacklist?
+
   // Sessions for NextAuth
   sessions          Session[]
   accounts          Account[]
@@ -340,4 +343,55 @@ model MonthlyHours {
   updatedAt      DateTime @updatedAt
 
   @@unique([employeeName, year, month])
+}
+
+// ==================== LUSTRUM 2026 ====================
+
+// Vluchtgegevens voor de Mallorca trip
+model LustrumFlight {
+  id               String   @id @default(cuid())
+  // Heenvlucht
+  outboundDate          String
+  outboundDepartureTime String?
+  outboundArrivalTime   String?
+  outboundFlightNumber  String?
+  outboundDepartureAirport String @default("AMS")
+  outboundArrivalAirport   String @default("PMI")
+  // Terugvlucht
+  returnDate            String
+  returnDepartureTime   String?
+  returnArrivalTime     String?
+  returnFlightNumber    String?
+  returnDepartureAirport String @default("PMI")
+  returnArrivalAirport   String @default("AMS")
+  // Meta
+  updatedById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Programma items voor de Mallorca trip
+model LustrumProgram {
+  id          String   @id @default(cuid())
+  date        String   // YYYY-MM-DD
+  time        String?  // HH:MM
+  title       String
+  description String?
+  responsible String   @default("[]") // JSON array van namen
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Inpaklijst per gebruiker
+model LustrumPacklist {
+  id          String   @id @default(cuid())
+  userId      String
+  checkedItems String  @default("[]") // JSON array van item IDs
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
 }

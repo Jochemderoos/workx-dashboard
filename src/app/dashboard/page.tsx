@@ -330,6 +330,8 @@ export default function DashboardHome() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showVacationDetails, setShowVacationDetails] = useState(false)
+  const [showCountdownPopup, setShowCountdownPopup] = useState(false)
+  const [countdownDays, setCountdownDays] = useState(0)
   const [weather, setWeather] = useState<WeatherData>({
     temperature: 0,
     weatherCode: 0,
@@ -508,6 +510,28 @@ export default function DashboardHome() {
     return () => clearInterval(timer)
   }, [])
 
+  // Check for countdown milestones (200, 150, 100, 50, and every day from 10 onwards)
+  useEffect(() => {
+    const countdown = getCountdown()
+    const days = countdown.days
+    setCountdownDays(days)
+
+    const milestones = [200, 150, 100, 50]
+    const isMilestone = milestones.includes(days) || (days <= 10 && days >= 0)
+
+    if (isMilestone) {
+      // Check localStorage to not show same milestone twice per day
+      const today = new Date().toISOString().split('T')[0]
+      const storageKey = `lustrum-milestone-${days}-${today}`
+      const alreadyShown = localStorage.getItem(storageKey)
+
+      if (!alreadyShown) {
+        setShowCountdownPopup(true)
+        localStorage.setItem(storageKey, 'true')
+      }
+    }
+  }, [])
+
   useEffect(() => {
     Promise.all([fetchEvents(), fetchWork(), fetchVacations(), fetchCalendarAbsences(), fetchFeedback(), fetchCurrentUser()]).finally(() => setIsLoading(false))
   }, [])
@@ -671,6 +695,73 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-8 fade-in">
+      {/* LUSTRUM COUNTDOWN MILESTONE POPUP */}
+      {showCountdownPopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          {/* Confetti background */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(60)].map((_, i) => (
+              <span
+                key={i}
+                className="absolute animate-bounce"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${1 + Math.random() * 2}s`,
+                  fontSize: `${1 + Math.random() * 1.5}rem`,
+                }}
+              >
+                {['🎉', '✨', '🌴', '☀️', '🎊', '🏝️', '🍹', '⭐', '🥳', '🎈'][Math.floor(Math.random() * 10)]}
+              </span>
+            ))}
+          </div>
+
+          {/* Popup Content */}
+          <div className="relative max-w-lg w-full bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-yellow-500/20 border-2 border-orange-500/40 rounded-3xl p-8 shadow-2xl text-center transform animate-pulse">
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-6xl">
+              {countdownDays <= 10 ? '🚨' : '🎉'}
+            </div>
+
+            <div className="mt-4 mb-6">
+              <p className="text-orange-400 text-lg font-medium mb-2">
+                {countdownDays <= 10 ? 'Bijna zover!' : 'Lustrum Countdown'}
+              </p>
+              <div className="text-7xl font-bold text-white mb-2">
+                {countdownDays}
+              </div>
+              <p className="text-2xl text-white/80">
+                {countdownDays === 1 ? 'dag' : 'dagen'} tot Mallorca!
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-2 mb-6">
+              {['🌴', '☀️', '🏝️', '✈️', '🍷'].map((emoji, i) => (
+                <span
+                  key={i}
+                  className="text-3xl animate-bounce"
+                  style={{ animationDelay: `${i * 0.1}s` }}
+                >
+                  {emoji}
+                </span>
+              ))}
+            </div>
+
+            <p className="text-white/60 mb-6">
+              30 september - 4 oktober 2026<br />
+              <span className="text-orange-400">Can Fressa, Mallorca</span>
+            </p>
+
+            <button
+              onClick={() => setShowCountdownPopup(false)}
+              className="px-8 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium transition-colors"
+            >
+              {countdownDays <= 10 ? 'Ik ben er klaar voor! 🎉' : 'Sluit af'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* BIRTHDAY CELEBRATION - Full screen confetti when someone has birthday TODAY */}
       {birthdayToday && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden birthday-celebration">

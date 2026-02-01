@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
 import {
@@ -40,6 +40,43 @@ interface WeatherForecast {
   weatherCode: number
 }
 
+// Flight info interface
+interface FlightInfo {
+  outbound: {
+    date: string
+    departureTime: string
+    arrivalTime: string
+    flightNumber: string
+    departureAirport: string
+    arrivalAirport: string
+  }
+  return: {
+    date: string
+    departureTime: string
+    arrivalTime: string
+    flightNumber: string
+    departureAirport: string
+    arrivalAirport: string
+  }
+}
+
+// Program item interface
+interface ProgramItem {
+  id: string
+  date: string
+  time: string
+  title: string
+  description: string
+  responsible: string[]
+}
+
+// Team member type
+interface TeamMember {
+  id: string
+  name: string
+  role: string
+}
+
 // Distances from Can Fressa (Alaró) in minutes by car
 const DISTANCES_FROM_CAN_FRESSA: Record<string, { minutes: number; km: number }> = {
   'palma': { minutes: 25, km: 28 },
@@ -62,6 +99,58 @@ export default function LustrumPage() {
   const [activeCategory, setActiveCategory] = useState<HotspotCategory | 'all'>('all')
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+
+  // Flight info state
+  const [flightInfo, setFlightInfo] = useState<FlightInfo | null>(null)
+  const [showFlightModal, setShowFlightModal] = useState(false)
+  const [flightForm, setFlightForm] = useState<FlightInfo>({
+    outbound: { date: '2026-09-30', departureTime: '', arrivalTime: '', flightNumber: '', departureAirport: 'AMS', arrivalAirport: 'PMI' },
+    return: { date: '2026-10-04', departureTime: '', arrivalTime: '', flightNumber: '', departureAirport: 'PMI', arrivalAirport: 'AMS' }
+  })
+  const [isSavingFlight, setIsSavingFlight] = useState(false)
+
+  // Program state
+  const [programItems, setProgramItems] = useState<ProgramItem[]>([])
+  const [showProgramModal, setShowProgramModal] = useState(false)
+  const [programForm, setProgramForm] = useState<Omit<ProgramItem, 'id'>>({
+    date: '2026-09-30', time: '', title: '', description: '', responsible: []
+  })
+  const [isSavingProgram, setIsSavingProgram] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [userCanEdit, setUserCanEdit] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [isSavingPacklist, setIsSavingPacklist] = useState(false)
+
+  // Music state
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Initialize audio on mount
+  useEffect(() => {
+    // Chill Ibiza/Spanish vibe music - royalty free lofi spanish guitar
+    audioRef.current = new Audio('https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3')
+    audioRef.current.loop = true
+    audioRef.current.volume = 0.4
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  // Toggle music
+  const toggleMusic = () => {
+    if (!audioRef.current) return
+
+    if (isMusicPlaying) {
+      audioRef.current.pause()
+    } else {
+      audioRef.current.play().catch(console.error)
+    }
+    setIsMusicPlaying(!isMusicPlaying)
+  }
 
   // Daily fact based on day of year
   const dailyFact = useMemo(() => getDailyFact(), [])
@@ -112,26 +201,192 @@ export default function LustrumPage() {
     fetchWeather()
   }, [])
 
-  // Load checked items from localStorage
+  // Load checked items from API
   useEffect(() => {
-    const saved = localStorage.getItem('lustrum-packlist')
-    if (saved) {
-      setCheckedItems(new Set(JSON.parse(saved)))
+    const fetchPacklist = async () => {
+      try {
+        const res = await fetch('/api/lustrum/packlist')
+        if (res.ok) {
+          const data = await res.json()
+          setCheckedItems(new Set(data.checkedItems || []))
+        }
+      } catch (error) {
+        console.error('Error loading packlist:', error)
+      }
     }
+    fetchPacklist()
   }, [])
 
-  // Save checked items to localStorage
-  const togglePacklistItem = (id: string) => {
-    setCheckedItems((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
+  // Load team members from API
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        const res = await fetch('/api/team')
+        if (res.ok) {
+          const data = await res.json()
+          // Filter alleen actieve medewerkers en sorteer: Partners eerst, dan Admin, dan medewerkers
+          const sortedMembers = data
+            .filter((m: TeamMember) => m.name)
+            .sort((a: TeamMember, b: TeamMember) => {
+              const roleOrder: Record<string, number> = { PARTNER: 0, ADMIN: 1, EMPLOYEE: 2 }
+              const orderA = roleOrder[a.role] ?? 3
+              const orderB = roleOrder[b.role] ?? 3
+              if (orderA !== orderB) return orderA - orderB
+              return a.name.localeCompare(b.name)
+            })
+          setTeamMembers(sortedMembers)
+        }
+      } catch (error) {
+        console.error('Error loading team members:', error)
       }
-      localStorage.setItem('lustrum-packlist', JSON.stringify(Array.from(next)))
-      return next
-    })
+    }
+    fetchTeamMembers()
+  }, [])
+
+  // Load flight info and program from API
+  useEffect(() => {
+    const fetchLustrumData = async () => {
+      try {
+        const res = await fetch('/api/lustrum')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.flight) {
+            setFlightInfo(data.flight)
+            setFlightForm(data.flight)
+          }
+          if (data.program) {
+            setProgramItems(data.program)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading lustrum data:', error)
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+    fetchLustrumData()
+  }, [])
+
+  // Check if user can edit (PARTNER or ADMIN)
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const res = await fetch('/api/user/profile')
+        if (res.ok) {
+          const data = await res.json()
+          setUserCanEdit(data.role === 'PARTNER' || data.role === 'ADMIN')
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error)
+      }
+    }
+    checkUserRole()
+  }, [])
+
+  // Save flight info via API
+  const saveFlightInfo = async () => {
+    setIsSavingFlight(true)
+    try {
+      const res = await fetch('/api/lustrum/flight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(flightForm),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setFlightInfo(data)
+        setShowFlightModal(false)
+      } else {
+        const error = await res.json()
+        alert(error.error || 'Fout bij opslaan')
+      }
+    } catch (error) {
+      console.error('Error saving flight info:', error)
+      alert('Fout bij opslaan')
+    } finally {
+      setIsSavingFlight(false)
+    }
+  }
+
+  // Save program item via API
+  const saveProgramItem = async () => {
+    setIsSavingProgram(true)
+    try {
+      const res = await fetch('/api/lustrum/program', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(programForm),
+      })
+      if (res.ok) {
+        const newItem = await res.json()
+        const updated = [...programItems, newItem].sort((a, b) => {
+          const dateCompare = a.date.localeCompare(b.date)
+          if (dateCompare !== 0) return dateCompare
+          return (a.time || '').localeCompare(b.time || '')
+        })
+        setProgramItems(updated)
+        setProgramForm({ date: '2026-09-30', time: '', title: '', description: '', responsible: [] })
+        setShowProgramModal(false)
+      } else {
+        const error = await res.json()
+        alert(error.error || 'Fout bij opslaan')
+      }
+    } catch (error) {
+      console.error('Error saving program item:', error)
+      alert('Fout bij opslaan')
+    } finally {
+      setIsSavingProgram(false)
+    }
+  }
+
+  // Delete program item via API
+  const deleteProgramItem = async (id: string) => {
+    try {
+      const res = await fetch(`/api/lustrum/program/${id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setProgramItems(programItems.filter(item => item.id !== id))
+      } else {
+        const error = await res.json()
+        alert(error.error || 'Fout bij verwijderen')
+      }
+    } catch (error) {
+      console.error('Error deleting program item:', error)
+      alert('Fout bij verwijderen')
+    }
+  }
+
+  // Toggle responsible person
+  const toggleResponsible = (name: string) => {
+    setProgramForm(prev => ({
+      ...prev,
+      responsible: prev.responsible.includes(name)
+        ? prev.responsible.filter(n => n !== name)
+        : [...prev.responsible, name]
+    }))
+  }
+
+  // Save checked items to API
+  const togglePacklistItem = async (id: string) => {
+    const next = new Set(checkedItems)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    setCheckedItems(next)
+
+    // Save to API (debounced, fire and forget)
+    try {
+      await fetch('/api/lustrum/packlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkedItems: Array.from(next) }),
+      })
+    } catch (error) {
+      console.error('Error saving packlist:', error)
+    }
   }
 
   // Filter hotspots
@@ -201,15 +456,30 @@ export default function LustrumPage() {
                 We vieren ons 15-jarig jubileum met een onvergetelijke trip naar Mallorca!
                 Samen genieten van zon, zee, lekker eten en natuurlijk elkaar.
               </p>
-              <a
-                href={LUSTRUM_CONFIG.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400 hover:bg-orange-500/30 transition-colors group/link"
-              >
-                <Icons.externalLink size={16} className="group-hover/link:rotate-12 transition-transform" />
-                Bekijk Can Fressa
-              </a>
+              <div className="flex items-center gap-3 flex-wrap">
+                <a
+                  href={LUSTRUM_CONFIG.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400 hover:bg-orange-500/30 transition-colors group/link"
+                >
+                  <Icons.externalLink size={16} className="group-hover/link:rotate-12 transition-transform" />
+                  Bekijk Can Fressa
+                </a>
+                <button
+                  onClick={toggleMusic}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
+                    isMusicPlaying
+                      ? 'bg-pink-500/30 border-pink-500/50 text-pink-300'
+                      : 'bg-pink-500/20 border-pink-500/30 text-pink-400 hover:bg-pink-500/30'
+                  }`}
+                >
+                  <span className={`text-lg ${isMusicPlaying ? 'animate-pulse' : ''}`}>
+                    {isMusicPlaying ? '🎵' : '🎶'}
+                  </span>
+                  {isMusicPlaying ? 'Muziek uit' : 'Mallorca vibes'}
+                </button>
+              </div>
             </div>
 
             {/* Countdown */}
@@ -771,42 +1041,495 @@ export default function LustrumPage() {
 
       {/* Flight Info + Program Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Flight Info Placeholder */}
+        {/* Flight Info */}
         <div className="card p-5 group/flight">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center group-hover/flight:scale-110 group-hover/flight:bg-sky-500/20 transition-all duration-300">
-              <span className="text-lg group-hover/flight:translate-x-1 group-hover/flight:-translate-y-1 transition-transform">✈️</span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center group-hover/flight:scale-110 group-hover/flight:bg-sky-500/20 transition-all duration-300">
+                <span className="text-lg group-hover/flight:translate-x-1 group-hover/flight:-translate-y-1 transition-transform">✈️</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-medium text-white">Vlieggegevens</h2>
+                <p className="text-xs text-white/40">Vluchtinformatie en tijden</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-medium text-white">Vlieggegevens</h2>
-              <p className="text-xs text-white/40">Vluchtinformatie en tijden</p>
+            {userCanEdit && (
+              <button
+                onClick={() => {
+                  if (flightInfo) setFlightForm(flightInfo)
+                  setShowFlightModal(true)
+                }}
+                className="px-3 py-1.5 rounded-lg bg-sky-500/20 text-sky-400 text-xs font-medium hover:bg-sky-500/30 transition-colors flex items-center gap-1.5"
+              >
+                <Icons.edit size={12} />
+                {flightInfo ? 'Wijzigen' : 'Toevoegen'}
+              </button>
+            )}
+          </div>
+
+          {flightInfo ? (
+            <div className="space-y-4">
+              {/* Outbound flight */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-sky-500/10 to-blue-500/10 border border-sky-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">🛫</span>
+                  <span className="text-sky-400 font-medium text-sm">Heenvlucht</span>
+                  <span className="text-white/40 text-xs ml-auto">{new Date(flightInfo.outbound.date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-white">{flightInfo.outbound.departureTime || '--:--'}</p>
+                    <p className="text-xs text-white/50">{flightInfo.outbound.departureAirport}</p>
+                  </div>
+                  <div className="flex-1 mx-4 flex items-center">
+                    <div className="flex-1 h-px bg-gradient-to-r from-sky-500/50 to-transparent" />
+                    <span className="px-2 text-xs text-sky-400 font-medium">{flightInfo.outbound.flightNumber || '---'}</span>
+                    <div className="flex-1 h-px bg-gradient-to-l from-sky-500/50 to-transparent" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-white">{flightInfo.outbound.arrivalTime || '--:--'}</p>
+                    <p className="text-xs text-white/50">{flightInfo.outbound.arrivalAirport}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Return flight */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">🛬</span>
+                  <span className="text-orange-400 font-medium text-sm">Terugvlucht</span>
+                  <span className="text-white/40 text-xs ml-auto">{new Date(flightInfo.return.date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-white">{flightInfo.return.departureTime || '--:--'}</p>
+                    <p className="text-xs text-white/50">{flightInfo.return.departureAirport}</p>
+                  </div>
+                  <div className="flex-1 mx-4 flex items-center">
+                    <div className="flex-1 h-px bg-gradient-to-r from-orange-500/50 to-transparent" />
+                    <span className="px-2 text-xs text-orange-400 font-medium">{flightInfo.return.flightNumber || '---'}</span>
+                    <div className="flex-1 h-px bg-gradient-to-l from-orange-500/50 to-transparent" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-white">{flightInfo.return.arrivalTime || '--:--'}</p>
+                    <p className="text-xs text-white/50">{flightInfo.return.arrivalAirport}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
-            <span className="text-4xl mb-3 opacity-30">✈️</span>
-            <p className="text-white/40 text-sm">Vluchtgegevens worden later toegevoegd</p>
-            <p className="text-white/25 text-xs mt-1">Check regelmatig voor updates!</p>
-          </div>
+          ) : (
+            <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+              <span className="text-4xl mb-3 opacity-30">✈️</span>
+              <p className="text-white/40 text-sm">Nog geen vluchtgegevens</p>
+              <p className="text-white/25 text-xs mt-1">Klik op 'Toevoegen' om vluchten in te voeren</p>
+            </div>
+          )}
         </div>
 
-        {/* Day Program Placeholder */}
+        {/* Day Program */}
         <div className="card p-5 group/program">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center group-hover/program:scale-110 group-hover/program:bg-violet-500/20 transition-all duration-300">
-              <span className="text-lg group-hover/program:rotate-12 transition-transform">📅</span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center group-hover/program:scale-110 group-hover/program:bg-violet-500/20 transition-all duration-300">
+                <span className="text-lg group-hover/program:rotate-12 transition-transform">📅</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-medium text-white">Dagprogramma</h2>
+                <p className="text-xs text-white/40">30 sept - 4 okt 2026</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-medium text-white">Dagprogramma</h2>
-              <p className="text-xs text-white/40">30 sept - 4 okt 2026</p>
+            {userCanEdit && (
+              <button
+                onClick={() => setShowProgramModal(true)}
+                className="px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-400 text-xs font-medium hover:bg-violet-500/30 transition-colors flex items-center gap-1.5"
+              >
+                <Icons.plus size={12} />
+                Toevoegen
+              </button>
+            )}
+          </div>
+
+          {programItems.length > 0 ? (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              {/* Group items by date */}
+              {(() => {
+                const groupedByDate: Record<string, typeof programItems> = {}
+                const tripDays = [
+                  { date: '2026-09-30', label: 'Woensdag 30 september', subtitle: 'Aankomstdag' },
+                  { date: '2026-10-01', label: 'Donderdag 1 oktober', subtitle: 'Dag 2' },
+                  { date: '2026-10-02', label: 'Vrijdag 2 oktober', subtitle: 'Dag 3' },
+                  { date: '2026-10-03', label: 'Zaterdag 3 oktober', subtitle: 'Dag 4' },
+                  { date: '2026-10-04', label: 'Zondag 4 oktober', subtitle: 'Vertrekdag' },
+                ]
+
+                // Initialize all days
+                tripDays.forEach(day => { groupedByDate[day.date] = [] })
+
+                // Group items
+                programItems.forEach(item => {
+                  if (!groupedByDate[item.date]) groupedByDate[item.date] = []
+                  groupedByDate[item.date].push(item)
+                })
+
+                // Only show days that have items
+                const daysWithItems = tripDays.filter(day => groupedByDate[day.date].length > 0)
+
+                return daysWithItems.map((day, dayIndex) => (
+                  <div key={day.date} className="space-y-2">
+                    {/* Day Header */}
+                    <div className={`flex items-center gap-3 ${dayIndex > 0 ? 'pt-2 border-t border-white/5' : ''}`}>
+                      <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg">
+                          {day.date === '2026-09-30' ? '🛬' : day.date === '2026-10-04' ? '🛫' : '☀️'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-white">{day.label}</p>
+                        <p className="text-[10px] text-violet-400">{day.subtitle}</p>
+                      </div>
+                    </div>
+
+                    {/* Items for this day */}
+                    <div className="ml-[52px] space-y-2">
+                      {groupedByDate[day.date].map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-violet-500/30 transition-colors group/item"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                {item.time && (
+                                  <span className="text-xs text-violet-400 font-medium bg-violet-500/10 px-2 py-0.5 rounded">
+                                    {item.time}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-white font-medium">{item.title}</p>
+                              {item.description && (
+                                <p className="text-xs text-white/50 mt-1">{item.description}</p>
+                              )}
+                              {item.responsible.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {item.responsible.map((name) => (
+                                    <span
+                                      key={name}
+                                      className="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 text-[10px] font-medium"
+                                    >
+                                      {name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {userCanEdit && (
+                              <button
+                                onClick={() => deleteProgramItem(item.id)}
+                                className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover/item:opacity-100"
+                              >
+                                <Icons.x size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              })()}
             </div>
-          </div>
-          <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
-            <span className="text-4xl mb-3 opacity-30">📅</span>
-            <p className="text-white/40 text-sm">Het programma wordt later bekendgemaakt</p>
-            <p className="text-white/25 text-xs mt-1">Houd deze pagina in de gaten!</p>
-          </div>
+          ) : (
+            <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+              <span className="text-4xl mb-3 opacity-30">📅</span>
+              <p className="text-white/40 text-sm">Nog geen programma</p>
+              <p className="text-white/25 text-xs mt-1">Klik op 'Toevoegen' om activiteiten toe te voegen</p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Flight Modal */}
+      {showFlightModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm overflow-y-auto">
+          <div className="min-h-full flex items-center justify-center p-4">
+            <div className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl">
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">✈️</span>
+                  <h3 className="text-xl font-semibold text-white">Vlieggegevens</h3>
+                </div>
+                <button
+                  onClick={() => setShowFlightModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                >
+                  <Icons.x size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Outbound */}
+              <div>
+                <h4 className="text-sm font-medium text-sky-400 mb-3 flex items-center gap-2">
+                  <span>🛫</span> Heenvlucht
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-white/50 block mb-1">Datum</label>
+                    <input
+                      type="date"
+                      value={flightForm.outbound.date}
+                      onChange={(e) => setFlightForm(prev => ({ ...prev, outbound: { ...prev.outbound, date: e.target.value } }))}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-sky-500/50 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/50 block mb-1">Vluchtnummer</label>
+                    <input
+                      type="text"
+                      value={flightForm.outbound.flightNumber}
+                      onChange={(e) => setFlightForm(prev => ({ ...prev, outbound: { ...prev.outbound, flightNumber: e.target.value } }))}
+                      placeholder="KL1234"
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-sky-500/50 focus:outline-none placeholder:text-white/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/50 block mb-1">Vertrek</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="time"
+                        value={flightForm.outbound.departureTime}
+                        onChange={(e) => setFlightForm(prev => ({ ...prev, outbound: { ...prev.outbound, departureTime: e.target.value } }))}
+                        className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-sky-500/50 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={flightForm.outbound.departureAirport}
+                        onChange={(e) => setFlightForm(prev => ({ ...prev, outbound: { ...prev.outbound, departureAirport: e.target.value } }))}
+                        className="w-16 px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm text-center focus:border-sky-500/50 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/50 block mb-1">Aankomst</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="time"
+                        value={flightForm.outbound.arrivalTime}
+                        onChange={(e) => setFlightForm(prev => ({ ...prev, outbound: { ...prev.outbound, arrivalTime: e.target.value } }))}
+                        className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-sky-500/50 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={flightForm.outbound.arrivalAirport}
+                        onChange={(e) => setFlightForm(prev => ({ ...prev, outbound: { ...prev.outbound, arrivalAirport: e.target.value } }))}
+                        className="w-16 px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm text-center focus:border-sky-500/50 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Return */}
+              <div>
+                <h4 className="text-sm font-medium text-orange-400 mb-3 flex items-center gap-2">
+                  <span>🛬</span> Terugvlucht
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-white/50 block mb-1">Datum</label>
+                    <input
+                      type="date"
+                      value={flightForm.return.date}
+                      onChange={(e) => setFlightForm(prev => ({ ...prev, return: { ...prev.return, date: e.target.value } }))}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-orange-500/50 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/50 block mb-1">Vluchtnummer</label>
+                    <input
+                      type="text"
+                      value={flightForm.return.flightNumber}
+                      onChange={(e) => setFlightForm(prev => ({ ...prev, return: { ...prev.return, flightNumber: e.target.value } }))}
+                      placeholder="KL1235"
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-orange-500/50 focus:outline-none placeholder:text-white/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/50 block mb-1">Vertrek</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="time"
+                        value={flightForm.return.departureTime}
+                        onChange={(e) => setFlightForm(prev => ({ ...prev, return: { ...prev.return, departureTime: e.target.value } }))}
+                        className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-orange-500/50 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={flightForm.return.departureAirport}
+                        onChange={(e) => setFlightForm(prev => ({ ...prev, return: { ...prev.return, departureAirport: e.target.value } }))}
+                        className="w-16 px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm text-center focus:border-orange-500/50 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/50 block mb-1">Aankomst</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="time"
+                        value={flightForm.return.arrivalTime}
+                        onChange={(e) => setFlightForm(prev => ({ ...prev, return: { ...prev.return, arrivalTime: e.target.value } }))}
+                        className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-orange-500/50 focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={flightForm.return.arrivalAirport}
+                        onChange={(e) => setFlightForm(prev => ({ ...prev, return: { ...prev.return, arrivalAirport: e.target.value } }))}
+                        className="w-16 px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm text-center focus:border-orange-500/50 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/10 flex justify-end gap-3">
+              <button
+                onClick={() => setShowFlightModal(false)}
+                className="px-4 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={saveFlightInfo}
+                disabled={isSavingFlight}
+                className="px-6 py-2 rounded-lg bg-gradient-to-r from-sky-500 to-blue-500 text-white font-medium hover:from-sky-600 hover:to-blue-600 transition-colors disabled:opacity-50"
+              >
+                {isSavingFlight ? 'Opslaan...' : 'Opslaan'}
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      )}
+
+      {/* Program Modal */}
+      {showProgramModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm overflow-y-auto">
+          <div className="min-h-full flex items-center justify-center p-4">
+            <div className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl">
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📅</span>
+                  <h3 className="text-xl font-semibold text-white">Programma toevoegen</h3>
+                </div>
+                <button
+                  onClick={() => setShowProgramModal(false)}
+                  className="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                >
+                  <Icons.x size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-white/50 block mb-1">Datum</label>
+                  <select
+                    value={programForm.date}
+                    onChange={(e) => setProgramForm(prev => ({ ...prev, date: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-violet-500/50 focus:outline-none"
+                  >
+                    <option value="2026-09-30">Wo 30 sept - Aankomst</option>
+                    <option value="2026-10-01">Do 1 okt</option>
+                    <option value="2026-10-02">Vr 2 okt</option>
+                    <option value="2026-10-03">Za 3 okt</option>
+                    <option value="2026-10-04">Zo 4 okt - Vertrek</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-white/50 block mb-1">Tijd (optioneel)</label>
+                  <input
+                    type="time"
+                    value={programForm.time}
+                    onChange={(e) => setProgramForm(prev => ({ ...prev, time: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-violet-500/50 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 block mb-1">Activiteit</label>
+                <input
+                  type="text"
+                  value={programForm.title}
+                  onChange={(e) => setProgramForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Bijv. Gezamenlijk diner, Stranddag, Wijnproeverij..."
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-violet-500/50 focus:outline-none placeholder:text-white/20"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 block mb-1">Beschrijving (optioneel)</label>
+                <textarea
+                  value={programForm.description}
+                  onChange={(e) => setProgramForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Extra details..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-violet-500/50 focus:outline-none placeholder:text-white/20 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 block mb-2">Verantwoordelijk (optioneel)</label>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                  {teamMembers.map((member) => (
+                    <button
+                      key={member.id}
+                      onClick={() => toggleResponsible(member.name)}
+                      className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+                        programForm.responsible.includes(member.name)
+                          ? 'bg-violet-500/30 text-violet-300 border border-violet-500/50'
+                          : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      {member.name}
+                      {member.role === 'PARTNER' && <span className="ml-1 text-[10px] text-orange-400">●</span>}
+                      {member.role === 'ADMIN' && <span className="ml-1 text-[10px] text-sky-400">●</span>}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-white/30 mt-2">
+                  <span className="text-orange-400">●</span> Partner <span className="text-sky-400 ml-2">●</span> Admin
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/10 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setProgramForm({ date: '2026-09-30', time: '', title: '', description: '', responsible: [] })
+                  setShowProgramModal(false)
+                }}
+                className="px-4 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={saveProgramItem}
+                disabled={!programForm.title.trim() || isSavingProgram}
+                className="px-6 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium hover:from-violet-600 hover:to-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingProgram ? 'Toevoegen...' : 'Toevoegen'}
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+      )}
 
       {/* Hotspots Section */}
       <div>
@@ -933,9 +1656,17 @@ export default function LustrumPage() {
             </div>
           </div>
           <button
-            onClick={() => {
+            onClick={async () => {
               setCheckedItems(new Set())
-              localStorage.removeItem('lustrum-packlist')
+              try {
+                await fetch('/api/lustrum/packlist', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ checkedItems: [] }),
+                })
+              } catch (error) {
+                console.error('Error resetting packlist:', error)
+              }
             }}
             className="text-xs text-white/40 hover:text-white/60 transition-colors"
           >
