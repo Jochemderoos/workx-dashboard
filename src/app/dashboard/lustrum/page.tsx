@@ -390,133 +390,6 @@ export default function LustrumPage() {
         </div>
       </div>
 
-      {/* Flight Info + Program Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Flight Info Placeholder */}
-        <div className="card p-5 group/flight">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center group-hover/flight:scale-110 group-hover/flight:bg-sky-500/20 transition-all duration-300">
-              <span className="text-lg group-hover/flight:translate-x-1 group-hover/flight:-translate-y-1 transition-transform">✈️</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-medium text-white">Vlieggegevens</h2>
-              <p className="text-xs text-white/40">Vluchtinformatie en tijden</p>
-            </div>
-          </div>
-          <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
-            <span className="text-4xl mb-3 opacity-30">✈️</span>
-            <p className="text-white/40 text-sm">Vluchtgegevens worden later toegevoegd</p>
-            <p className="text-white/25 text-xs mt-1">Check regelmatig voor updates!</p>
-          </div>
-        </div>
-
-        {/* Day Program Placeholder */}
-        <div className="card p-5 group/program">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center group-hover/program:scale-110 group-hover/program:bg-violet-500/20 transition-all duration-300">
-              <span className="text-lg group-hover/program:rotate-12 transition-transform">📅</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-medium text-white">Dagprogramma</h2>
-              <p className="text-xs text-white/40">30 sept - 4 okt 2026</p>
-            </div>
-          </div>
-          <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
-            <span className="text-4xl mb-3 opacity-30">📅</span>
-            <p className="text-white/40 text-sm">Het programma wordt later bekendgemaakt</p>
-            <p className="text-white/25 text-xs mt-1">Houd deze pagina in de gaten!</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Hotspots Section */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3 group/hotspots">
-            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center group-hover/hotspots:scale-110 group-hover/hotspots:bg-orange-500/20 transition-all duration-300">
-              <Icons.mapPin className="text-orange-400" size={16} />
-            </div>
-            <h2 className="text-lg font-medium text-white">Te doen in de buurt</h2>
-          </div>
-        </div>
-
-        {/* Category filters */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setActiveCategory('all')}
-            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-              activeCategory === 'all'
-                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-            }`}
-          >
-            Alles ({HOTSPOTS.length})
-          </button>
-          {(Object.keys(CATEGORY_LABELS) as HotspotCategory[]).map((cat) => {
-            const count = getHotspotsByCategory(cat).length
-            const icons: Record<HotspotCategory, string> = {
-              restaurant: '🍽️',
-              strand: '🏖️',
-              bezienswaardigheid: '🏛️',
-              activiteit: '🚴',
-            }
-            return (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                  activeCategory === cat
-                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                    : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                }`}
-              >
-                <span className="hover:scale-125 transition-transform">{icons[cat]}</span>
-                {CATEGORY_LABELS[cat]} ({count})
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Hotspots grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredHotspots.map((hotspot) => {
-            const icons: Record<HotspotCategory, string> = {
-              restaurant: '🍽️',
-              strand: '🏖️',
-              bezienswaardigheid: '🏛️',
-              activiteit: '🚴',
-            }
-            return (
-              <div
-                key={hotspot.id}
-                className="card p-4 hover:border-orange-500/30 transition-colors group"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0 text-xl group-hover:scale-110 transition-transform">
-                    {icons[hotspot.category]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-medium truncate">{hotspot.name}</h3>
-                    <p className="text-xs text-orange-400 mb-2">{hotspot.location}</p>
-                    <p className="text-sm text-white/60 line-clamp-2">{hotspot.description}</p>
-                    {hotspot.tip && (
-                      <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
-                        <span>💡</span> {hotspot.tip}
-                      </p>
-                    )}
-                    {hotspot.priceRange && (
-                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-white/5 text-xs text-white/40">
-                        {hotspot.priceRange}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
       {/* Map Section */}
       <div className="card p-5 group/map">
         <div className="flex items-center justify-between mb-4">
@@ -893,6 +766,133 @@ export default function LustrumPage() {
             <Icons.externalLink size={14} />
             Open in Google Maps
           </a>
+        </div>
+      </div>
+
+      {/* Flight Info + Program Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Flight Info Placeholder */}
+        <div className="card p-5 group/flight">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center group-hover/flight:scale-110 group-hover/flight:bg-sky-500/20 transition-all duration-300">
+              <span className="text-lg group-hover/flight:translate-x-1 group-hover/flight:-translate-y-1 transition-transform">✈️</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-white">Vlieggegevens</h2>
+              <p className="text-xs text-white/40">Vluchtinformatie en tijden</p>
+            </div>
+          </div>
+          <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+            <span className="text-4xl mb-3 opacity-30">✈️</span>
+            <p className="text-white/40 text-sm">Vluchtgegevens worden later toegevoegd</p>
+            <p className="text-white/25 text-xs mt-1">Check regelmatig voor updates!</p>
+          </div>
+        </div>
+
+        {/* Day Program Placeholder */}
+        <div className="card p-5 group/program">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center group-hover/program:scale-110 group-hover/program:bg-violet-500/20 transition-all duration-300">
+              <span className="text-lg group-hover/program:rotate-12 transition-transform">📅</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-white">Dagprogramma</h2>
+              <p className="text-xs text-white/40">30 sept - 4 okt 2026</p>
+            </div>
+          </div>
+          <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+            <span className="text-4xl mb-3 opacity-30">📅</span>
+            <p className="text-white/40 text-sm">Het programma wordt later bekendgemaakt</p>
+            <p className="text-white/25 text-xs mt-1">Houd deze pagina in de gaten!</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Hotspots Section */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3 group/hotspots">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center group-hover/hotspots:scale-110 group-hover/hotspots:bg-orange-500/20 transition-all duration-300">
+              <Icons.mapPin className="text-orange-400" size={16} />
+            </div>
+            <h2 className="text-lg font-medium text-white">Te doen in de buurt</h2>
+          </div>
+        </div>
+
+        {/* Category filters */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setActiveCategory('all')}
+            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+              activeCategory === 'all'
+                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+            }`}
+          >
+            Alles ({HOTSPOTS.length})
+          </button>
+          {(Object.keys(CATEGORY_LABELS) as HotspotCategory[]).map((cat) => {
+            const count = getHotspotsByCategory(cat).length
+            const icons: Record<HotspotCategory, string> = {
+              restaurant: '🍽️',
+              strand: '🏖️',
+              bezienswaardigheid: '🏛️',
+              activiteit: '🚴',
+            }
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                  activeCategory === cat
+                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                    : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <span className="hover:scale-125 transition-transform">{icons[cat]}</span>
+                {CATEGORY_LABELS[cat]} ({count})
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Hotspots grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredHotspots.map((hotspot) => {
+            const icons: Record<HotspotCategory, string> = {
+              restaurant: '🍽️',
+              strand: '🏖️',
+              bezienswaardigheid: '🏛️',
+              activiteit: '🚴',
+            }
+            return (
+              <div
+                key={hotspot.id}
+                className="card p-4 hover:border-orange-500/30 transition-colors group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0 text-xl group-hover:scale-110 transition-transform">
+                    {icons[hotspot.category]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-medium truncate">{hotspot.name}</h3>
+                    <p className="text-xs text-orange-400 mb-2">{hotspot.location}</p>
+                    <p className="text-sm text-white/60 line-clamp-2">{hotspot.description}</p>
+                    {hotspot.tip && (
+                      <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                        <span>💡</span> {hotspot.tip}
+                      </p>
+                    )}
+                    {hotspot.priceRange && (
+                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-white/5 text-xs text-white/40">
+                        {hotspot.priceRange}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
