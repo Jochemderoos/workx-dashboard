@@ -2,49 +2,36 @@
   <!-- Dark background -->
   <rect width="512" height="512" rx="80" fill="#1e1e1e"/>
 
-  <!-- Logo container centered -->
-  <g transform="translate(106, 140)">
-    <!-- Gray logo background with rounded corners -->
-    <rect width="300" height="135" rx="12" fill="#3d3d3d"/>
+  <!-- Yellow logo box centered -->
+  <g transform="translate(106, 130)">
+    <rect width="300" height="160" rx="16" fill="#f9ff85"/>
 
-    <!-- Yellow diagonal accent bar -->
-    <defs>
-      <clipPath id="logoClip512">
-        <rect width="300" height="135" rx="12"/>
-      </clipPath>
-    </defs>
-    <g clip-path="url(#logoClip512)">
-      <polygon points="0,0 112,0 60,57 0,57" fill="#f9ff85"/>
-    </g>
-
-    <!-- Workx text -->
+    <!-- Workx text - dark on yellow -->
     <text
-      x="30"
-      y="81"
-      fill="#ffffff"
+      x="35"
+      y="95"
+      fill="#1e1e1e"
       font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-      font-size="57"
+      font-size="72"
       font-weight="400"
-      font-style="italic"
-      letter-spacing="-1.5"
     >Workx</text>
 
     <!-- ADVOCATEN text -->
     <text
-      x="30"
-      y="111"
-      fill="#ffffff"
+      x="35"
+      y="130"
+      fill="#1e1e1e"
       font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-      font-size="20"
+      font-size="22"
       font-weight="500"
-      letter-spacing="3.8"
+      letter-spacing="5"
     >ADVOCATEN</text>
   </g>
 
   <!-- DASHBOARD text below logo -->
   <text
     x="256"
-    y="340"
+    y="370"
     fill="#f9ff85"
     font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     font-size="42"
