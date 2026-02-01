@@ -325,3 +325,19 @@ model Workload {
 
   @@unique([personName, date])
 }
+
+// ==================== MAANDELIJKSE UREN ====================
+
+// Urenoverzicht per medewerker per maand - voor PARTNER en ADMIN
+model MonthlyHours {
+  id             String   @id @default(cuid())
+  employeeName   String   // Naam van de medewerker
+  year           Int      // Jaar (2025, 2026, etc.)
+  month          Int      // Maand (1-12)
+  billableHours  Float    @default(0) // Factureerbare uren
+  workedHours    Float    @default(0) // Bestede uren
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([employeeName, year, month])
+}

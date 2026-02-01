@@ -31,6 +31,21 @@ interface WorkloadEntry {
   level: WorkloadLevel
 }
 
+// Monthly hours types
+interface MonthlyHoursEntry {
+  id: string
+  employeeName: string
+  year: number
+  month: number
+  billableHours: number
+  workedHours: number
+}
+
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'
+]
+
 // Team photos en advocaten lijst komen nu uit @/lib/team-photos
 // Workload data wordt uit API geladen
 
@@ -63,7 +78,23 @@ export default function WerkOverzichtPage() {
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
-  const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk'>('zaken')
+  const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk' | 'urenoverzicht'>('zaken')
+
+  // Monthly hours state
+  const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
+  const [showHoursUploadModal, setShowHoursUploadModal] = useState(false)
+  const [isUploadingHours, setIsUploadingHours] = useState(false)
+
+  // Dynamic year selection - show current year and previous year
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear()
+    return [currentYear - 1, currentYear] as const
+  }, [])
+
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    const currentYear = new Date().getFullYear()
+    return currentYear - 1 // Default to previous year (volledig data)
+  })
 
   // Workload state
   const [workloadEntries, setWorkloadEntries] = useState<WorkloadEntry[]>([])
@@ -164,6 +195,13 @@ export default function WerkOverzichtPage() {
     checkEditPermission()
   }, [])
 
+  // Fetch monthly hours when year changes or when switching to urenoverzicht
+  useEffect(() => {
+    if (pageMode === 'urenoverzicht' && canEditWorkload) {
+      fetchMonthlyHours()
+    }
+  }, [pageMode, selectedYear, canEditWorkload])
+
   const fetchData = async () => {
     try {
       const res = await fetch('/api/work')
@@ -236,6 +274,95 @@ export default function WerkOverzichtPage() {
       console.error('Kon gebruiker niet laden')
     }
   }
+
+  const fetchMonthlyHours = async () => {
+    try {
+      const res = await fetch(`/api/monthly-hours?year=${selectedYear}`)
+      if (res.ok) {
+        const data = await res.json()
+        setMonthlyHours(data)
+      }
+    } catch (error) {
+      console.error('Kon urenoverzicht niet laden')
+    }
+  }
+
+  const handleHoursUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingHours(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('year', selectedYear.toString())
+
+    try {
+      const res = await fetch('/api/monthly-hours/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload mislukt')
+      }
+
+      toast.success(`${data.monthlyRecords} maandrecords verwerkt`)
+      setShowHoursUploadModal(false)
+      fetchMonthlyHours()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Upload mislukt')
+    } finally {
+      setIsUploadingHours(false)
+      e.target.value = ''
+    }
+  }
+
+  // Prepare monthly hours data for display
+  const monthlyHoursData = useMemo(() => {
+    const employees = Array.from(new Set(monthlyHours.map(h => h.employeeName))).sort()
+    const data: Record<string, Record<number, { billable: number; worked: number }>> = {}
+
+    for (const emp of employees) {
+      data[emp] = {}
+      for (let m = 1; m <= 12; m++) {
+        const entry = monthlyHours.find(h => h.employeeName === emp && h.month === m)
+        data[emp][m] = entry
+          ? { billable: entry.billableHours, worked: entry.workedHours }
+          : { billable: 0, worked: 0 }
+      }
+    }
+
+    // Calculate totals per employee
+    const totals: Record<string, { billable: number; worked: number }> = {}
+    for (const emp of employees) {
+      totals[emp] = { billable: 0, worked: 0 }
+      for (let m = 1; m <= 12; m++) {
+        totals[emp].billable += data[emp][m].billable
+        totals[emp].worked += data[emp][m].worked
+      }
+    }
+
+    // Calculate monthly totals
+    const monthlyTotals: Record<number, { billable: number; worked: number }> = {}
+    for (let m = 1; m <= 12; m++) {
+      monthlyTotals[m] = { billable: 0, worked: 0 }
+      for (const emp of employees) {
+        monthlyTotals[m].billable += data[emp][m].billable
+        monthlyTotals[m].worked += data[emp][m].worked
+      }
+    }
+
+    // Grand total
+    const grandTotal = { billable: 0, worked: 0 }
+    for (const emp of employees) {
+      grandTotal.billable += totals[emp].billable
+      grandTotal.worked += totals[emp].worked
+    }
+
+    return { employees, data, totals, monthlyTotals, grandTotal }
+  }, [monthlyHours])
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setStatus('NEW'); setPriority('MEDIUM')
@@ -361,6 +488,17 @@ export default function WerkOverzichtPage() {
               <Icons.activity size={16} />
               Werkdruk
             </button>
+            {canEditWorkload && (
+              <button
+                onClick={() => setPageMode('urenoverzicht')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pageMode === 'urenoverzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icons.clock size={16} />
+                Urenoverzicht
+              </button>
+            )}
           </div>
           {pageMode === 'zaken' && (
             <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
@@ -584,6 +722,221 @@ export default function WerkOverzichtPage() {
                 <p className="text-sm text-white/50 leading-relaxed">
                   Klik op een cel om de werkdruk van een medewerker voor die dag in te vullen.
                   Dit overzicht helpt om snel te zien wie er veel aan het hoofd heeft en wie ruimte heeft om bij te springen.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* URENOVERZICHT MODE */}
+      {pageMode === 'urenoverzicht' && canEditWorkload && (
+        <div className="space-y-6">
+          {/* Year Toggle and Upload Button */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
+              {availableYears.map(year => (
+                <button
+                  key={year}
+                  onClick={() => setSelectedYear(year)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    selectedYear === year ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+            {selectedYear === new Date().getFullYear() && (
+              <button
+                onClick={() => setShowHoursUploadModal(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Icons.upload size={16} />
+                Uren uploaden
+              </button>
+            )}
+          </div>
+
+          {/* Stats Cards - alleen factureerbaar */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
+                  <Icons.users className="text-blue-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-white">{monthlyHoursData.employees.length}</p>
+                <p className="text-sm text-white/40">Medewerkers</p>
+              </div>
+            </div>
+
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center mb-3">
+                  <Icons.clock className="text-workx-lime" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-workx-lime">{monthlyHoursData.grandTotal.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <p className="text-sm text-white/40">Totaal factureerbaar</p>
+              </div>
+            </div>
+
+            <div className="card p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-500/10 transition-colors" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-3">
+                  <Icons.trendingUp className="text-green-400" size={18} />
+                </div>
+                <p className="text-2xl font-semibold text-green-400">
+                  {monthlyHoursData.employees.length > 0
+                    ? (monthlyHoursData.grandTotal.billable / monthlyHoursData.employees.length).toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+                    : 0}
+                </p>
+                <p className="text-sm text-white/40">Gem. per medewerker</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly Hours Table */}
+          <div className="card overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-white/5 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                <Icons.clock className="text-workx-lime" size={16} />
+              </div>
+              <h2 className="font-medium text-white">Urenoverzicht {selectedYear}</h2>
+              <span className="ml-auto text-xs text-white/30 bg-white/5 px-3 py-1 rounded-full">
+                {monthlyHoursData.employees.length} medewerkers
+              </span>
+            </div>
+
+            {monthlyHoursData.employees.length === 0 ? (
+              <div className="p-16 text-center">
+                <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <Icons.clock className="text-white/20" size={32} />
+                </div>
+                <h3 className="text-lg font-medium text-white mb-2">Nog geen uren data</h3>
+                <p className="text-white/40 mb-4">Upload een urenoverzicht bestand om te beginnen</p>
+                {selectedYear === new Date().getFullYear() && (
+                  <button
+                    onClick={() => setShowHoursUploadModal(true)}
+                    className="btn-primary inline-flex items-center gap-2"
+                  >
+                    <Icons.upload size={16} />
+                    Uren uploaden
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-white/[0.02] border-b border-white/5">
+                      <th className="text-left py-3 px-4 font-medium text-white/60 sticky left-0 bg-workx-gray z-10 min-w-[200px]">
+                        Medewerker
+                      </th>
+                      {MONTH_NAMES.map((month, idx) => (
+                        <th key={idx} className="text-center py-3 px-3 font-medium text-white/60 min-w-[70px]">
+                          {month}
+                        </th>
+                      ))}
+                      <th className="text-center py-3 px-4 font-semibold text-workx-lime bg-workx-lime/5 min-w-[90px]">
+                        Totaal
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {monthlyHoursData.employees.map((emp) => {
+                      const photoUrl = TEAM_PHOTOS[emp]
+                      const total = monthlyHoursData.totals[emp]
+
+                      return (
+                        <tr key={emp} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-3 px-4 sticky left-0 bg-workx-gray z-10">
+                            <div className="flex items-center gap-3">
+                              {photoUrl ? (
+                                <img
+                                  src={photoUrl}
+                                  alt={emp}
+                                  className="w-9 h-9 rounded-xl object-cover ring-2 ring-white/10"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+                                  <Icons.user className="text-white/40" size={16} />
+                                </div>
+                              )}
+                              <span className="font-medium text-white">{emp}</span>
+                            </div>
+                          </td>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => {
+                            const hours = monthlyHoursData.data[emp][month]
+                            const hasData = hours.billable > 0
+
+                            return (
+                              <td key={month} className="py-3 px-3 text-center">
+                                {hasData ? (
+                                  <span className="text-white font-medium">
+                                    {hours.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                                  </span>
+                                ) : (
+                                  <span className="text-white/20">-</span>
+                                )}
+                              </td>
+                            )
+                          })}
+                          <td className="py-3 px-4 text-center bg-workx-lime/5">
+                            <span className="text-workx-lime font-bold">
+                              {total.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-workx-lime/10 border-t-2 border-workx-lime/30">
+                      <td className="py-4 px-4 font-bold text-white sticky left-0 bg-workx-gray z-10">
+                        Totaal
+                      </td>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => {
+                        const totals = monthlyHoursData.monthlyTotals[month]
+                        const hasData = totals.billable > 0
+
+                        return (
+                          <td key={month} className="py-4 px-3 text-center">
+                            {hasData ? (
+                              <span className="text-white font-bold">
+                                {totals.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </span>
+                            ) : (
+                              <span className="text-white/20">-</span>
+                            )}
+                          </td>
+                        )
+                      })}
+                      <td className="py-4 px-4 text-center bg-workx-lime/20">
+                        <span className="text-workx-lime font-bold text-lg">
+                          {monthlyHoursData.grandTotal.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Info card */}
+          <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <Icons.info className="text-blue-400" size={18} />
+              </div>
+              <div>
+                <h3 className="font-medium text-white mb-1">Factureerbare uren per maand</h3>
+                <p className="text-sm text-white/50 leading-relaxed">
+                  Overzicht van de factureerbare uren per medewerker, opgebouwd uit de BaseNet urenregistratie.
+                  {selectedYear === new Date().getFullYear() && ' Upload maandelijks een nieuw RTF-bestand om de gegevens bij te werken.'}
                 </p>
               </div>
             </div>
@@ -1116,6 +1469,84 @@ export default function WerkOverzichtPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Urenoverzicht Modal */}
+      {showHoursUploadModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowHoursUploadModal(false)}>
+          <div
+            className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.upload className="text-workx-lime" size={18} />
+                </div>
+                <h2 className="font-semibold text-white text-lg">Uren uploaden {selectedYear}</h2>
+              </div>
+              <button
+                onClick={() => setShowHoursUploadModal(false)}
+                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-start gap-3">
+                  <Icons.info className="text-blue-400 mt-0.5" size={16} />
+                  <div className="text-sm text-white/70">
+                    <p className="font-medium text-blue-400 mb-1">BaseNet export</p>
+                    <p className="text-xs text-white/50">
+                      Upload het urenoverzicht bestand van BaseNet (.xlsx of .rtf).
+                      De uren worden automatisch per maand per medewerker samengevoegd.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-2">BaseNet RTF bestand</label>
+                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                  isUploadingHours
+                    ? 'border-workx-lime/50 bg-workx-lime/5'
+                    : 'border-white/20 hover:border-workx-lime/50 hover:bg-white/5'
+                }`}>
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    {isUploadingHours ? (
+                      <>
+                        <div className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin mb-2" />
+                        <p className="text-sm text-workx-lime">Verwerken...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Icons.upload className="text-white/40 mb-2" size={24} />
+                        <p className="text-sm text-white/60">Klik om bestand te selecteren</p>
+                        <p className="text-xs text-white/30 mt-1">RTF bestand van BaseNet</p>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".rtf"
+                    onChange={handleHoursUpload}
+                    disabled={isUploadingHours}
+                  />
+                </label>
+              </div>
+
+              <button
+                onClick={() => setShowHoursUploadModal(false)}
+                className="w-full btn-secondary"
+              >
+                Annuleren
+              </button>
+            </div>
           </div>
         </div>
       )}
