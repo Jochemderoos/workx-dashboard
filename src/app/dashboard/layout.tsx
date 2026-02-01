@@ -28,10 +28,9 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen bg-workx-dark overflow-hidden">
 
-      {/* Elegant line-art birds - like workxadvocaten.nl (hidden on mobile) */}
-      <Pigeon className="pigeon pigeon-1 hidden md:block" size={70} variant={1} />
-      <Pigeon className="pigeon pigeon-2 hidden md:block" size={55} variant={2} />
-      <Pigeon className="pigeon pigeon-3 hidden md:block" size={60} variant={1} />
+      {/* Elegant line-art doves - like workxadvocaten.nl (hidden on mobile) */}
+      <Pigeon className="pigeon pigeon-1 hidden md:block" size={70} />
+      <Pigeon className="pigeon pigeon-2 hidden md:block" size={55} mirrored />
 
       {/* Ambient glow effects (smaller on mobile) */}
       <div className="fixed top-0 right-0 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-workx-lime/5 rounded-full blur-[100px] md:blur-[150px] pointer-events-none" />

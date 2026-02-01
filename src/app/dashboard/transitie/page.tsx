@@ -572,7 +572,7 @@ export default function TransitiePage() {
           </h2>
 
           {/* Werkgever / Werknemer */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-white/60 mb-2">Werkgever</label>
               <div className="relative">
@@ -608,7 +608,7 @@ export default function TransitiePage() {
           </div>
 
           {/* Datums */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-white/60 mb-2">Datum in dienst *</label>
               <DatePicker
@@ -893,7 +893,7 @@ export default function TransitiePage() {
           </div>
 
           {/* Overwerk & Overige */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-white/60 mb-2">Overwerk p/m</label>
               <div className="relative">

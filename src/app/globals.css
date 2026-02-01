@@ -149,40 +149,32 @@ body {
   background-size: auto 100%;
 }
 
-/* ==================== ELEGANT LINE-ART BIRDS (workxadvocaten.nl style) ==================== */
+/* ==================== FLOATING DOVES (workxadvocaten.nl style) ==================== */
 
 .pigeon {
   position: fixed;
   pointer-events: none;
   z-index: 1;
-  color: rgba(255, 255, 255, 0.12);
-  animation: float 12s ease-in-out infinite;
+  animation: float 15s ease-in-out infinite;
 }
 
 .pigeon-1 {
-  top: 12%;
-  right: 6%;
+  top: 10%;
+  right: 4%;
   animation-delay: 0s;
 }
 
 .pigeon-2 {
-  top: 28%;
-  right: 18%;
-  animation-delay: -4s;
-}
-
-.pigeon-3 {
-  top: 18%;
-  left: 4%;
-  animation-delay: -8s;
-  transform: scaleX(-1);
+  top: 20%;
+  left: 2%;
+  animation-delay: -6s;
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0) translateX(0); }
-  25% { transform: translateY(-12px) translateX(6px); }
-  50% { transform: translateY(-6px) translateX(-4px); }
-  75% { transform: translateY(-18px) translateX(2px); }
+  25% { transform: translateY(-10px) translateX(5px); }
+  50% { transform: translateY(-5px) translateX(-3px); }
+  75% { transform: translateY(-15px) translateX(2px); }
 }
 
 /* ==================== BUTTONS ==================== */

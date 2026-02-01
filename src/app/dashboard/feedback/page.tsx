@@ -315,7 +315,7 @@ export default function FeedbackPage() {
               {/* Type selector */}
               <div>
                 <label className="block text-sm text-white/60 mb-3">Wat wil je delen?</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, type: 'IDEA' })}

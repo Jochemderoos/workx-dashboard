@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { DEV_USER } from '@/lib/dev-auth'
 
 // GET - Fetch messages for a channel
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
     const channelId = searchParams.get('channelId')
     const limit = parseInt(searchParams.get('limit') || '50')
@@ -31,6 +37,11 @@ export async function GET(req: NextRequest) {
 // POST - Send a new message
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { content, channelId } = await req.json()
     if (!content || !channelId) {
       return NextResponse.json({ error: 'Content and channel ID are required' }, { status: 400 })
@@ -38,13 +49,13 @@ export async function POST(req: NextRequest) {
 
     // Add user as member if not already
     await prisma.channelMember.upsert({
-      where: { userId_channelId: { userId: DEV_USER.id, channelId } },
-      create: { userId: DEV_USER.id, channelId },
+      where: { userId_channelId: { userId: session.user.id, channelId } },
+      create: { userId: session.user.id, channelId },
       update: {}
     })
 
     const message = await prisma.chatMessage.create({
-      data: { content, senderId: DEV_USER.id, channelId },
+      data: { content, senderId: session.user.id, channelId },
       include: { sender: { select: { id: true, name: true, avatarUrl: true } } }
     })
     return NextResponse.json(message, { status: 201 })

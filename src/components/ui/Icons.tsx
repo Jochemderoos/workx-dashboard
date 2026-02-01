@@ -651,79 +651,21 @@ export function WorkxLogoFull({ className, size = 42 }: IconProps) {
   )
 }
 
-// Elegant Bird SVG - Line art style like workxadvocaten.nl
-// Variant 1: Wings up, diving pose
-export function Pigeon({ className, size = 60, variant = 1 }: IconProps & { variant?: 1 | 2 }) {
-  if (variant === 2) {
-    // Variant 2: Wings spread wide, horizontal flight
-    return (
-      <svg width={size * 1.6} height={size} viewBox="0 0 160 100" className={className}>
-        <path
-          d="M5 55
-             C8 52, 12 48, 18 44
-             C28 36, 42 28, 58 26
-             C68 25, 78 27, 85 32
-             L88 30
-             C92 26, 98 22, 105 20
-             C115 17, 128 18, 140 24
-             C148 28, 154 34, 158 42
-             C154 38, 148 35, 140 34
-             C130 33, 118 36, 110 42
-             C104 46, 100 52, 98 58
-             L95 56
-             C90 52, 84 50, 78 50
-             C70 50, 62 54, 56 60
-             C50 66, 46 74, 44 82
-             C42 78, 38 74, 32 72
-             C24 70, 14 72, 8 78
-             C10 72, 14 66, 20 62
-             C14 64, 8 68, 4 74
-             C6 66, 10 60, 16 56
-             C12 56, 8 58, 5 62
-             Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    )
-  }
-
-  // Variant 1: Wings up, elegant diving pose (default)
+// Flying Dove - Using actual image
+export function Pigeon({ className, size = 60, mirrored = false }: IconProps & { mirrored?: boolean }) {
   return (
-    <svg width={size * 0.85} height={size} viewBox="0 0 85 100" className={className}>
-      <path
-        d="M45 8
-           C52 6, 60 8, 66 14
-           C74 22, 78 34, 76 46
-           C78 42, 82 38, 84 32
-           C82 42, 78 52, 72 58
-           C66 64, 58 68, 50 70
-           C54 72, 56 76, 56 82
-           C56 88, 52 94, 46 98
-           C48 92, 48 86, 46 80
-           C44 74, 40 70, 34 68
-           C28 66, 22 68, 18 72
-           C14 76, 12 82, 14 88
-           C10 84, 8 78, 10 72
-           C12 66, 18 62, 26 62
-           C20 58, 16 52, 16 46
-           C16 38, 22 30, 30 26
-           C24 28, 18 32, 14 38
-           C10 44, 8 52, 10 60
-           C6 54, 4 46, 6 38
-           C8 28, 16 20, 28 16
-           C36 13, 42 12, 45 8
-           Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <img
+      src="/bird.webp"
+      alt=""
+      width={size * 1.4}
+      height={size}
+      className={className}
+      style={{
+        ...(mirrored ? { transform: 'scaleX(-1)' } : {}),
+        filter: 'invert(1) brightness(2)',
+        opacity: 0.12,
+      }}
+    />
   )
 }
 

@@ -3,7 +3,16 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// PATCH update budget
+// Helper function to check admin/partner role
+async function checkFinancialAccess(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true }
+  })
+  return user?.role === 'ADMIN' || user?.role === 'PARTNER'
+}
+
+// PATCH update budget - alleen voor ADMIN/PARTNER
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -11,6 +20,10 @@ export async function PATCH(
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!await checkFinancialAccess(session.user.id)) {
+    return NextResponse.json({ error: 'Geen toegang tot financiele gegevens' }, { status: 403 })
   }
 
   try {
@@ -34,7 +47,7 @@ export async function PATCH(
   }
 }
 
-// DELETE budget
+// DELETE budget - alleen voor ADMIN/PARTNER
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -42,6 +55,10 @@ export async function DELETE(
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!await checkFinancialAccess(session.user.id)) {
+    return NextResponse.json({ error: 'Geen toegang tot financiele gegevens' }, { status: 403 })
   }
 
   try {

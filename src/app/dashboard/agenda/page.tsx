@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
@@ -16,8 +17,10 @@ interface CalendarEvent {
   isAllDay: boolean
   location: string | null
   color: string
-  category: 'GENERAL' | 'MEETING' | 'DEADLINE' | 'TRAINING' | 'SOCIAL' | 'HOLIDAY' | 'BIRTHDAY'
+  category: 'GENERAL' | 'MEETING' | 'DEADLINE' | 'TRAINING' | 'SOCIAL' | 'HOLIDAY' | 'BIRTHDAY' | 'VACATION' | 'ABSENCE'
   createdBy: { id: string; name: string }
+  isVacation?: boolean // Flag for vacation events from API
+  vacationId?: string  // Original vacation request ID
 }
 
 interface TeamMember {
@@ -33,6 +36,8 @@ const categoryConfig = {
   SOCIAL: { label: 'Sociaal', icon: Icons.coffee, color: '#34d399' },
   HOLIDAY: { label: 'Feestdag', icon: Icons.star, color: '#fbbf24' },
   BIRTHDAY: { label: 'Verjaardag', icon: Icons.star, color: '#ec4899' },
+  VACATION: { label: 'Vakantie', icon: Icons.sun, color: '#22c55e' },
+  ABSENCE: { label: 'Afwezig', icon: Icons.userMinus, color: '#f97316' },
 }
 
 export default function AgendaPage() {
@@ -59,6 +64,7 @@ export default function AgendaPage() {
   }
   const [location, setLocation] = useState('')
   const [category, setCategory] = useState<CalendarEvent['category']>('GENERAL')
+  const [recurring, setRecurring] = useState<'none' | 'month' | 'year'>('none')
 
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -112,7 +118,8 @@ export default function AgendaPage() {
     try {
       const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
       const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
-      const res = await fetch(`/api/calendar?startDate=${startOfMonth.toISOString()}&endDate=${endOfMonth.toISOString()}`)
+      // Include vacations in the calendar view
+      const res = await fetch(`/api/calendar?startDate=${startOfMonth.toISOString()}&endDate=${endOfMonth.toISOString()}&includeVacations=true`)
       if (res.ok) setEvents(await res.json())
     } catch (error) {
       // Demo mode - use empty array
@@ -125,7 +132,7 @@ export default function AgendaPage() {
   const resetForm = () => {
     setTitle(''); setDescription(''); setStartDate(null); setStartTime('09:00')
     setEndDate(null); setEndTime('10:00'); setIsAllDay(false); setLocation('')
-    setCategory('GENERAL'); setEditingEvent(null); setShowForm(false)
+    setCategory('GENERAL'); setRecurring('none'); setEditingEvent(null); setShowForm(false)
   }
 
   const handleAddEvent = (date?: Date) => {
@@ -137,6 +144,11 @@ export default function AgendaPage() {
   }
 
   const handleEdit = (event: CalendarEvent) => {
+    // Vacation events can't be edited from agenda - redirect to vakanties page
+    if (event.isVacation) {
+      window.location.href = '/dashboard/vakanties'
+      return
+    }
     setTitle(event.title)
     setDescription(event.description || '')
     setStartDate(new Date(event.startTime))
@@ -155,22 +167,63 @@ export default function AgendaPage() {
     if (!title || !startDate || !endDate) return toast.error('Vul alle verplichte velden in')
 
     try {
-      const startDateStr = formatDateForAPI(startDate)
-      const endDateStr = formatDateForAPI(endDate)
-      const startDateTime = isAllDay ? new Date(startDateStr + 'T00:00:00') : new Date(startDateStr + 'T' + startTime)
-      const endDateTime = isAllDay ? new Date(endDateStr + 'T23:59:59') : new Date(endDateStr + 'T' + endTime)
+      // Calculate all dates for recurring events
+      const datesToCreate: Date[] = []
 
-      const res = await fetch(editingEvent ? `/api/calendar/${editingEvent.id}` : '/api/calendar', {
-        method: editingEvent ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title, description: description || null, startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(), isAllDay, location: location || null,
-          color: categoryConfig[category].color, category,
-        }),
-      })
-      if (!res.ok) throw new Error()
-      toast.success(editingEvent ? 'Event bijgewerkt' : 'Event aangemaakt')
+      if (recurring !== 'none' && category === 'ABSENCE') {
+        // Get all occurrences of this weekday for month/year
+        const dayOfWeek = startDate.getDay()
+        const startYear = startDate.getFullYear()
+        const startMonth = startDate.getMonth()
+
+        let endPeriod: Date
+        if (recurring === 'month') {
+          // End of current month
+          endPeriod = new Date(startYear, startMonth + 1, 0)
+        } else {
+          // End of year
+          endPeriod = new Date(startYear, 11, 31)
+        }
+
+        // Find all matching weekdays from startDate to endPeriod
+        const current = new Date(startDate)
+        while (current <= endPeriod) {
+          datesToCreate.push(new Date(current))
+          current.setDate(current.getDate() + 7) // Next week same day
+        }
+      } else {
+        datesToCreate.push(startDate)
+      }
+
+      // Create events for all dates
+      let successCount = 0
+      for (const date of datesToCreate) {
+        const dateStr = formatDateForAPI(date)
+        const startDateTime = isAllDay ? new Date(dateStr + 'T00:00:00') : new Date(dateStr + 'T' + startTime)
+        const endDateTime = isAllDay ? new Date(dateStr + 'T23:59:59') : new Date(dateStr + 'T' + endTime)
+
+        const res = await fetch(editingEvent ? `/api/calendar/${editingEvent.id}` : '/api/calendar', {
+          method: editingEvent ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title, description: description || null, startTime: startDateTime.toISOString(),
+            endTime: endDateTime.toISOString(), isAllDay, location: location || null,
+            color: categoryConfig[category].color, category,
+          }),
+        })
+        if (res.ok) successCount++
+
+        // Only create one event when editing
+        if (editingEvent) break
+      }
+
+      if (successCount === 0) throw new Error()
+
+      if (datesToCreate.length > 1) {
+        toast.success(`${successCount} afwezigheden aangemaakt`)
+      } else {
+        toast.success(editingEvent ? 'Event bijgewerkt' : 'Event aangemaakt')
+      }
       resetForm()
       fetchEvents()
     } catch (error) {
@@ -407,6 +460,7 @@ export default function AgendaPage() {
           <div className="px-5 pb-5 flex flex-wrap gap-4 border-t border-white/5 pt-4">
             {Object.entries(categoryConfig).map(([key, config]) => {
               const IconComponent = config.icon
+              const isVacation = key === 'VACATION'
               return (
                 <div key={key} className="flex items-center gap-2 text-xs text-white/50">
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: config.color + '30' }}>
@@ -414,6 +468,7 @@ export default function AgendaPage() {
                   </div>
                   <IconComponent size={12} style={{ color: config.color }} />
                   <span>{config.label}</span>
+                  {isVacation && <span className="text-[10px] text-green-400/60">(uit verlof)</span>}
                 </div>
               )
             })}
@@ -474,11 +529,14 @@ export default function AgendaPage() {
                   <>
                     {getEventsForDate(selectedDate).map((event, index) => {
                       const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
+                      const isVacation = event.isVacation || event.category === 'VACATION'
                       return (
                         <div
                           key={event.id}
                           onClick={() => handleEdit(event)}
-                          className="p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border border-white/5 hover:border-white/10"
+                          className={`p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border hover:border-white/10 ${
+                            isVacation ? 'border-green-500/20' : 'border-white/5'
+                          }`}
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
                           <div className="flex items-start justify-between">
@@ -493,15 +551,17 @@ export default function AgendaPage() {
                                 <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
                                   {event.title}
                                 </span>
-                                <p className="text-xs text-white/30 mt-0.5">{categoryConfig[event.category].label}</p>
+                                <p className="text-xs text-white/30 mt-0.5">{categoryConfig[event.category]?.label || 'Vakantie'}</p>
                               </div>
                             </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
-                              className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                            >
-                              <Icons.trash size={14} />
-                            </button>
+                            {!isVacation && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
+                                className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                              >
+                                <Icons.trash size={14} />
+                              </button>
+                            )}
                           </div>
                           <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-3">
                             {!event.isAllDay ? (
@@ -519,6 +579,12 @@ export default function AgendaPage() {
                               <p className="text-xs text-white/50 flex items-center gap-1.5">
                                 <Icons.mapPin size={12} />
                                 {event.location}
+                              </p>
+                            )}
+                            {isVacation && (
+                              <p className="text-xs text-green-400 flex items-center gap-1.5">
+                                <Icons.arrowRight size={12} />
+                                Bekijk in vakanties
                               </p>
                             )}
                           </div>
@@ -588,7 +654,9 @@ export default function AgendaPage() {
               <div>
                 <label className="block text-sm text-white/60 mb-2">Categorie</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(categoryConfig).map(([key, config]) => {
+                  {Object.entries(categoryConfig)
+                    .filter(([key]) => key !== 'VACATION') // VACATION is only for imported vacation events
+                    .map(([key, config]) => {
                     const IconComponent = config.icon
                     return (
                       <button
@@ -622,7 +690,42 @@ export default function AgendaPage() {
                 </div>
               </label>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Recurring option - only for ABSENCE category */}
+              {category === 'ABSENCE' && (
+                <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                  <label className="block text-sm text-orange-400 font-medium mb-3">
+                    <Icons.refresh size={14} className="inline mr-2" />
+                    Herhalen (parttime dag)
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'none', label: 'Eenmalig' },
+                      { value: 'month', label: 'Hele maand' },
+                      { value: 'year', label: 'Heel jaar' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setRecurring(option.value as 'none' | 'month' | 'year')}
+                        className={`px-3 py-2 rounded-lg text-sm transition-all ${
+                          recurring === option.value
+                            ? 'bg-orange-500 text-white font-medium'
+                            : 'bg-white/5 text-white/60 hover:bg-white/10'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {recurring !== 'none' && startDate && (
+                    <p className="text-xs text-orange-400/70 mt-3">
+                      Elke {startDate.toLocaleDateString('nl-NL', { weekday: 'long' })} t/m {recurring === 'month' ? 'einde maand' : 'einde jaar'}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Startdatum</label>
                   <DatePicker
@@ -643,7 +746,7 @@ export default function AgendaPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Einddatum</label>
                   <DatePicker

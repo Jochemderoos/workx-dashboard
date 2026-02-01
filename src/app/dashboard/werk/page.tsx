@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import { TEAM_PHOTOS, ADVOCATEN } from '@/lib/team-photos'
 
 interface WorkItem {
   id: string
@@ -30,24 +31,8 @@ interface WorkloadEntry {
   level: WorkloadLevel
 }
 
-// Employees whose workload is tracked - all medewerkers from payroll
-const TRACKED_EMPLOYEES = [
-  'Hanna Blaauboer',
-  'Justine Schellekens',
-  'Marlieke Schipper',
-  'Wies van Pesch',
-  'Emma van der Vos',
-  'Alain Heunen',
-  'Kay Maes',
-  'Erika van Zadelhof',
-  'Heleen Pesser',
-  'Barbara Rip',
-  'Lotte van Sint Truiden',
-  'Julia Groen',
-]
-
-// Demo workload data - empty, users fill this in themselves
-const INITIAL_WORKLOAD: WorkloadEntry[] = []
+// Team photos en advocaten lijst komen nu uit @/lib/team-photos
+// Workload data wordt uit API geladen
 
 const workloadConfig = {
   green: { label: 'Rustig', color: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/30' },
@@ -81,8 +66,9 @@ export default function WerkOverzichtPage() {
   const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk'>('zaken')
 
   // Workload state
-  const [workloadEntries, setWorkloadEntries] = useState<WorkloadEntry[]>(INITIAL_WORKLOAD)
+  const [workloadEntries, setWorkloadEntries] = useState<WorkloadEntry[]>([])
   const [editingWorkload, setEditingWorkload] = useState<{ person: string; date: string } | null>(null)
+  const [canEditWorkload, setCanEditWorkload] = useState(false)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -124,17 +110,35 @@ export default function WerkOverzichtPage() {
     return entry?.level || null
   }
 
-  // Set workload for a person on a date
-  const setWorkload = (person: string, date: Date, level: WorkloadLevel) => {
+  // Set workload for a person on a date - saves to API
+  const saveWorkload = async (person: string, date: Date, level: WorkloadLevel) => {
     const dateStr = date.toISOString().split('T')[0]
-    setWorkloadEntries(prev => {
-      const filtered = prev.filter(e => !(e.personName === person && e.date === dateStr))
-      if (level) {
-        return [...filtered, { personName: person, date: dateStr, level }]
+
+    try {
+      const res = await fetch('/api/workload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personName: person, date: dateStr, level })
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        toast.error(error.error || 'Kon werkdruk niet opslaan')
+        return
       }
-      return filtered
-    })
-    toast.success(`Werkdruk bijgewerkt voor ${person.split(' ')[0]}`)
+
+      // Update local state
+      setWorkloadEntries(prev => {
+        const filtered = prev.filter(e => !(e.personName === person && e.date === dateStr))
+        if (level) {
+          return [...filtered, { personName: person, date: dateStr, level }]
+        }
+        return filtered
+      })
+      toast.success(`Werkdruk bijgewerkt voor ${person.split(' ')[0]}`)
+    } catch (error) {
+      toast.error('Kon werkdruk niet opslaan')
+    }
     setEditingWorkload(null)
   }
 
@@ -147,11 +151,15 @@ export default function WerkOverzichtPage() {
       yellow: todayEntries.filter(e => e.level === 'yellow').length,
       orange: todayEntries.filter(e => e.level === 'orange').length,
       red: todayEntries.filter(e => e.level === 'red').length,
-      notFilled: TRACKED_EMPLOYEES.length - todayEntries.length,
+      notFilled: ADVOCATEN.length - todayEntries.length,
     }
   }, [workloadEntries])
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    fetchData()
+    fetchWorkload()
+    checkEditPermission()
+  }, [])
 
   const fetchData = async () => {
     try {
@@ -161,6 +169,34 @@ export default function WerkOverzichtPage() {
       toast.error('Kon gegevens niet laden')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchWorkload = async () => {
+    try {
+      const res = await fetch('/api/workload')
+      if (res.ok) {
+        const data = await res.json()
+        setWorkloadEntries(data.map((e: { personName: string; date: string; level: string }) => ({
+          personName: e.personName,
+          date: e.date,
+          level: e.level as WorkloadLevel
+        })))
+      }
+    } catch (error) {
+      console.error('Kon werkdruk niet laden')
+    }
+  }
+
+  const checkEditPermission = async () => {
+    try {
+      const res = await fetch('/api/user/profile')
+      if (res.ok) {
+        const user = await res.json()
+        setCanEditWorkload(user.role === 'PARTNER' || user.role === 'ADMIN')
+      }
+    } catch (error) {
+      console.error('Kon gebruiker niet laden')
     }
   }
 
@@ -405,10 +441,8 @@ export default function WerkOverzichtPage() {
 
             {/* Table body */}
             <div className="divide-y divide-white/5">
-              {TRACKED_EMPLOYEES.map((person, index) => {
-                const initials = person.split(' ').map(n => n[0]).join('').slice(0, 2)
-                const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10', 'from-red-500/30 to-red-600/10', 'from-indigo-500/30 to-indigo-600/10']
-                const colorClass = colors[index % colors.length]
+              {ADVOCATEN.map((person) => {
+                const photoUrl = TEAM_PHOTOS[person]
 
                 return (
                   <div
@@ -417,9 +451,11 @@ export default function WerkOverzichtPage() {
                     style={{ gridTemplateColumns: '1fr repeat(3, 100px)' }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-sm text-white`}>
-                        {initials}
-                      </div>
+                      <img
+                        src={photoUrl}
+                        alt={person}
+                        className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10"
+                      />
                       <div>
                         <p className="font-medium text-white">{person}</p>
                       </div>
@@ -432,12 +468,12 @@ export default function WerkOverzichtPage() {
 
                       return (
                         <div key={dateStr} className="flex justify-center">
-                          {isEditing ? (
+                          {isEditing && canEditWorkload ? (
                             <div className="flex items-center gap-1 bg-workx-dark/80 border border-white/10 rounded-xl p-2">
                               {(['green', 'yellow', 'orange', 'red'] as const).map(l => (
                                 <button
                                   key={l}
-                                  onClick={() => setWorkload(person, day, l)}
+                                  onClick={() => saveWorkload(person, day, l)}
                                   className={`w-8 h-8 rounded-lg ${workloadConfig[l].bg} ${workloadConfig[l].border} border-2 hover:scale-110 transition-transform flex items-center justify-center`}
                                 >
                                   {level === l && <Icons.check size={14} className={workloadConfig[l].text} />}
@@ -452,11 +488,16 @@ export default function WerkOverzichtPage() {
                             </div>
                           ) : (
                             <button
-                              onClick={() => setEditingWorkload({ person, date: dateStr })}
-                              className={`w-full h-12 rounded-xl flex items-center justify-center transition-all hover:scale-105 ${
+                              onClick={() => canEditWorkload && setEditingWorkload({ person, date: dateStr })}
+                              disabled={!canEditWorkload}
+                              className={`w-full h-12 rounded-xl flex items-center justify-center transition-all ${
+                                canEditWorkload ? 'hover:scale-105 cursor-pointer' : 'cursor-default'
+                              } ${
                                 level
                                   ? `${workloadConfig[level].bg} ${workloadConfig[level].border} border`
-                                  : 'bg-white/5 border border-dashed border-white/10 hover:border-white/20'
+                                  : canEditWorkload
+                                    ? 'bg-white/5 border border-dashed border-white/10 hover:border-white/20'
+                                    : 'bg-white/5 border border-white/5'
                               } ${isToday ? 'ring-2 ring-workx-lime/30 ring-offset-2 ring-offset-workx-dark' : ''}`}
                             >
                               {level ? (
@@ -467,7 +508,7 @@ export default function WerkOverzichtPage() {
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-xs text-white/30">Invullen</span>
+                                <span className="text-xs text-white/30">{canEditWorkload ? 'Invullen' : '-'}</span>
                               )}
                             </button>
                           )}
@@ -873,7 +914,7 @@ export default function WerkOverzichtPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Status</label>
                   <div className="relative">
@@ -950,7 +991,7 @@ export default function WerkOverzichtPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Deadline</label>
                   <DatePicker
@@ -977,7 +1018,7 @@ export default function WerkOverzichtPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Klant</label>
                   <div className="relative">

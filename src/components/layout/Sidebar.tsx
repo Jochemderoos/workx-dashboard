@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
+import { getPhotoUrl } from '@/lib/team-photos'
 
 interface SidebarProps {
   user: {
@@ -139,11 +140,19 @@ export default function Sidebar({ user }: SidebarProps) {
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 p-4">
           <div className="absolute top-0 right-0 w-20 h-20 bg-workx-lime/10 rounded-full blur-2xl" />
           <div className="flex items-center gap-3 relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center shadow-lg shadow-workx-lime/20">
-              <span className="text-workx-dark font-semibold">
-                {user.name?.charAt(0).toUpperCase()}
-              </span>
-            </div>
+            {getPhotoUrl(user.name) ? (
+              <img
+                src={getPhotoUrl(user.name)!}
+                alt={user.name}
+                className="w-10 h-10 rounded-xl object-cover ring-2 ring-workx-lime/30 shadow-lg shadow-workx-lime/20"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center shadow-lg shadow-workx-lime/20">
+                <span className="text-workx-dark font-semibold">
+                  {user.name?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user.name}</p>
               <p className="text-xs text-white/40 truncate">{user.email}</p>

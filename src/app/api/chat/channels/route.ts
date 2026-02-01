@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { DEV_USER } from '@/lib/dev-auth'
 
 // GET - Fetch all channels
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const channels = await prisma.chatChannel.findMany({
       where: {
         OR: [
           { isPrivate: false },
-          { members: { some: { userId: DEV_USER.id } } }
+          { members: { some: { userId: session.user.id } } }
         ]
       },
       include: {
@@ -27,6 +33,11 @@ export async function GET(req: NextRequest) {
 // POST - Create a new channel
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { name, description, isPrivate } = await req.json()
     if (!name) {
       return NextResponse.json({ error: 'Channel name is required' }, { status: 400 })
@@ -44,7 +55,7 @@ export async function POST(req: NextRequest) {
         name: name.toLowerCase(),
         description,
         isPrivate: isPrivate || false,
-        members: { create: { userId: DEV_USER.id } }
+        members: { create: { userId: session.user.id } }
       },
       include: { _count: { select: { messages: true, members: true } } }
     })

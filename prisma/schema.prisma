@@ -311,3 +311,17 @@ model Budget {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// ==================== WERKDRUK ====================
+
+// Werkdruk tracking - alleen in te vullen door Partners en Admin
+model Workload {
+  id         String   @id @default(cuid())
+  personName String   // Naam van de medewerker
+  date       String   // YYYY-MM-DD format
+  level      String   // green, yellow, orange, red
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([personName, date])
+}

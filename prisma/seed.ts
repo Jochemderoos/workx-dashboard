@@ -28,7 +28,7 @@ const TEAM_MEMBERS = [
   { name: 'Barbara Rip', email: 'barbara.rip@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '04-04' }, // 4-4-1996
   { name: 'Julia Groen', email: 'julia.groen@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '07-15' }, // 15-7-1992
   { name: 'Heleen Pesser', email: 'heleen.pesser@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Arbeidsrecht', birthDate: '07-14' }, // 14-7-1999
-  { name: 'Lotte van Sint Truiden', email: 'officemanagement@workxadvocaten.nl', role: 'EMPLOYEE', department: 'Kantoor (Officemanagement)', birthDate: '06-03' }, // 3-6-2002
+  { name: 'Lotte van Sint Truiden', email: 'officemanagement@workxadvocaten.nl', role: 'ADMIN', department: 'Kantoor (Officemanagement)', birthDate: '06-03' }, // 3-6-2002
 ]
 
 // Vakantiesaldo 2026 data (uit Excel)

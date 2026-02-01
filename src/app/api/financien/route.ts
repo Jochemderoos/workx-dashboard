@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// GET 2026 financial data
+// GET 2026 financial data - toegankelijk voor alle ingelogde gebruikers
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -34,11 +34,21 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PUT update 2026 financial data
+// PUT update 2026 financial data - alleen voor ADMIN/PARTNER
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Check role - alleen ADMIN en PARTNER mogen financiele data wijzigen
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true }
+  })
+
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'PARTNER')) {
+    return NextResponse.json({ error: 'Geen toegang om financiele gegevens te wijzigen' }, { status: 403 })
   }
 
   try {

@@ -1490,7 +1490,7 @@ export default function VakantiesPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Van</label>
                   <DatePicker
@@ -1639,7 +1639,7 @@ export default function VakantiesPage() {
               )}
 
               {/* Kind gegevens */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-white/60 mb-2">Naam kind</label>
                   <input
@@ -1664,7 +1664,7 @@ export default function VakantiesPage() {
               {/* Betaald verlof */}
               <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
                 <h4 className="text-sm font-medium text-green-400 mb-3">Betaald verlof (70% UWV)</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-white/50 mb-1">Totaal weken</label>
                     <input
@@ -1691,7 +1691,7 @@ export default function VakantiesPage() {
               {/* Onbetaald verlof */}
               <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
                 <h4 className="text-sm font-medium text-purple-400 mb-3">Onbetaald verlof</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-white/50 mb-1">Totaal weken</label>
                     <input

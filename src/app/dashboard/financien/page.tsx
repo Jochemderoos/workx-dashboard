@@ -735,7 +735,7 @@ export default function FinancienPage() {
             ]}
             labels={periods}
             title="Saldo per periode (Omzet - Werkgeverslasten)"
-            colors={['#6366f1', '#a855f7', '#f9ff85']}
+            colors={['#f97316', '#06b6d4', '#f9ff85']}
             height={250}
           />
 
@@ -807,8 +807,8 @@ export default function FinancienPage() {
 
                   {/* Saldo - all 3 years */}
                   {years.map((year, yearIdx) => (
-                    <tr key={`saldo-${year}`} className={`${yearIdx === 0 ? 'bg-indigo-500/10' : yearIdx === 1 ? 'bg-indigo-500/20' : 'bg-workx-lime/20'}`}>
-                      <td className={`py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-indigo-400'}`}>
+                    <tr key={`saldo-${year}`} className={`${yearIdx === 0 ? 'bg-orange-500/10' : yearIdx === 1 ? 'bg-cyan-500/10' : 'bg-workx-lime/20'}`}>
+                      <td className={`py-3 px-4 font-medium ${yearIdx === 0 ? 'text-orange-400' : yearIdx === 1 ? 'text-cyan-400' : 'text-workx-lime'}`}>
                         Saldo {year}
                       </td>
                       <td></td>
@@ -888,7 +888,7 @@ export default function FinancienPage() {
             ]}
             labels={periods}
             title="Omzet Ontwikkeling"
-            colors={['#6366f1', '#a855f7', '#f9ff85']}
+            colors={['#f97316', '#06b6d4', '#f9ff85']}
             height={200}
           />
 
@@ -900,7 +900,7 @@ export default function FinancienPage() {
             ]}
             labels={periods}
             title="Werkgeverslasten Ontwikkeling"
-            colors={['#6366f1', '#a855f7', '#f9ff85']}
+            colors={['#f97316', '#06b6d4', '#f9ff85']}
             height={200}
           />
 
@@ -912,7 +912,7 @@ export default function FinancienPage() {
             ]}
             labels={periods}
             title="Uren Ontwikkeling"
-            colors={['#6366f1', '#a855f7', '#f9ff85']}
+            colors={['#f97316', '#06b6d4', '#f9ff85']}
             height={200}
           />
 
@@ -924,7 +924,7 @@ export default function FinancienPage() {
             ]}
             labels={periods}
             title="Saldo Ontwikkeling"
-            colors={['#6366f1', '#a855f7', '#f9ff85']}
+            colors={['#f97316', '#06b6d4', '#f9ff85']}
             height={200}
           />
 
@@ -941,7 +941,7 @@ export default function FinancienPage() {
                 ][idx]
                 const max = Math.max(...values.map(Math.abs)) || 1
                 const isUren = idx === 3
-                const barColors = ['bg-indigo-500', 'bg-purple-500', 'bg-workx-lime']
+                const barColors = ['bg-orange-500', 'bg-cyan-500', 'bg-workx-lime']
 
                 return (
                   <div key={label}>
@@ -1018,7 +1018,7 @@ export default function FinancienPage() {
           </div>
 
           {/* Budget Cards */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {budgets.map(budget => {
               const remaining = budget.budget - budget.spent
               const percentage = (budget.spent / budget.budget) * 100

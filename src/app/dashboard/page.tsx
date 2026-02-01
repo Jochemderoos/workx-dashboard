@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
+import { TEAM_PHOTOS, ADVOCATEN, getPhotoUrl } from '@/lib/team-photos'
 
 // Inline Logo Component - yellow background with black text
 function WorkxLogoSmall() {
@@ -55,6 +56,8 @@ const TEAM_BIRTHDAYS = [
   { name: 'Jochem de Roos', birthDate: '03-02' },         // Enige echte uit originele lijst
 ]
 
+// Team photos en advocaten lijst komen nu uit @/lib/team-photos
+
 interface CalendarEvent {
   id: string
   title: string
@@ -97,8 +100,42 @@ const getWeatherInfo = (code: number) => {
   return { icon: '🌤️', desc: 'Onbekend' }
 }
 
-// Vakanties worden geladen uit de database
-const DEMO_VACATIONS: { id: string; personName: string; startDate: string; endDate: string; note: string | null; color: string }[] = []
+// Vacation interface for fetched data
+interface VacationData {
+  id: string
+  personName: string
+  startDate: string
+  endDate: string
+  note: string | null
+  color: string
+}
+
+// Calendar absence interface
+interface CalendarAbsence {
+  id: string
+  personName: string
+  startDate: string
+  endDate: string
+  note: string | null
+  color: string
+  isCalendarEvent: boolean
+}
+
+// Feedback interface
+interface FeedbackItem {
+  id: string
+  type: 'BUG' | 'IDEA' | 'QUESTION' | 'OTHER'
+  title: string
+  description: string
+  submittedBy: string
+  createdAt: string
+}
+
+// Current user interface
+interface CurrentUser {
+  name: string
+  role: string
+}
 
 // Vakantiedagen en ouderschapsverlof worden geladen uit de database via API
 // Deze waarden worden nu leeg gelaten - data komt van de ingelogde gebruiker
@@ -142,6 +179,10 @@ const quickLinks = [
 export default function DashboardHome() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
+  const [vacations, setVacations] = useState<VacationData[]>([])
+  const [calendarAbsences, setCalendarAbsences] = useState<CalendarAbsence[]>([])
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([])
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showVacationDetails, setShowVacationDetails] = useState(false)
@@ -180,7 +221,7 @@ export default function DashboardHome() {
     return nextBirthday.find(b => b.daysUntil === 0)
   }, [nextBirthday])
 
-  // Calculate who's away this week
+  // Calculate who's away this week (vacations + calendar absences)
   const awayThisWeek = useMemo(() => {
     const today = new Date()
     const startOfWeek = new Date(today)
@@ -188,7 +229,7 @@ export default function DashboardHome() {
     const endOfWeek = new Date(startOfWeek)
     endOfWeek.setDate(startOfWeek.getDate() + 6) // Sunday
 
-    return DEMO_VACATIONS.filter(v => {
+    const vacationAway = vacations.filter(v => {
       const start = new Date(v.startDate)
       const end = new Date(v.endDate)
       return start <= endOfWeek && end >= startOfWeek
@@ -198,7 +239,27 @@ export default function DashboardHome() {
       const isToday = start <= today && end >= today
       return { ...v, isToday }
     })
-  }, [])
+
+    const calendarAway = calendarAbsences.filter(a => {
+      const start = new Date(a.startDate)
+      const end = new Date(a.endDate)
+      return start <= endOfWeek && end >= startOfWeek
+    }).map(a => {
+      const start = new Date(a.startDate)
+      const end = new Date(a.endDate)
+      const isToday = start <= today && end >= today
+      return { ...a, isToday }
+    })
+
+    // Combine and deduplicate
+    const combined = [...vacationAway, ...calendarAway]
+    const seen = new Set<string>()
+    return combined.filter(a => {
+      if (seen.has(a.personName)) return false
+      seen.add(a.personName)
+      return true
+    })
+  }, [vacations, calendarAbsences])
 
   // Get 2 weeks of workdays (Monday-Friday only)
   const twoWeeksWorkdays = useMemo(() => {
@@ -225,13 +286,32 @@ export default function DashboardHome() {
     return days
   }, [])
 
-  // Helper to get absences for a specific date
+  // Helper to get absences for a specific date (combines vacations + calendar absences)
   const getAbsencesForDate = (date: Date) => {
-    return DEMO_VACATIONS.filter(v => {
-      const start = new Date(v.startDate)
-      const end = new Date(v.endDate)
-      const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-      return start <= checkDate && end >= checkDate
+    // Normalize date to YYYY-MM-DD string for comparison
+    const checkDateStr = date.toISOString().split('T')[0]
+
+    // Get vacation absences
+    const vacationAbsences = vacations.filter(v => {
+      const startStr = new Date(v.startDate).toISOString().split('T')[0]
+      const endStr = new Date(v.endDate).toISOString().split('T')[0]
+      return startStr <= checkDateStr && endStr >= checkDateStr
+    })
+
+    // Get calendar absences (part-time days, etc.)
+    const calAbsences = calendarAbsences.filter(a => {
+      const startStr = new Date(a.startDate).toISOString().split('T')[0]
+      const endStr = new Date(a.endDate).toISOString().split('T')[0]
+      return startStr <= checkDateStr && endStr >= checkDateStr
+    })
+
+    // Combine and deduplicate by person name
+    const combined = [...vacationAbsences, ...calAbsences]
+    const seen = new Set<string>()
+    return combined.filter(a => {
+      if (seen.has(a.personName)) return false
+      seen.add(a.personName)
+      return true
     })
   }
 
@@ -285,7 +365,7 @@ export default function DashboardHome() {
   }, [])
 
   useEffect(() => {
-    Promise.all([fetchEvents(), fetchWork()]).finally(() => setIsLoading(false))
+    Promise.all([fetchEvents(), fetchWork(), fetchVacations(), fetchCalendarAbsences(), fetchFeedback(), fetchCurrentUser()]).finally(() => setIsLoading(false))
   }, [])
 
   const fetchEvents = async () => {
@@ -306,6 +386,95 @@ export default function DashboardHome() {
       }
     } catch (e) {
       console.error(e)
+    }
+  }
+
+  const fetchVacations = async () => {
+    try {
+      const res = await fetch('/api/vacation/requests?all=true')
+      if (res.ok) {
+        const data = await res.json()
+        // Transform API data to VacationData format
+        const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#ef4444', '#6366f1']
+        const transformed: VacationData[] = data.map((v: any, i: number) => ({
+          id: v.id,
+          personName: v.user?.name || 'Onbekend',
+          startDate: v.startDate,
+          endDate: v.endDate,
+          note: v.reason || null,
+          color: colors[i % colors.length],
+        }))
+        setVacations(transformed)
+      }
+    } catch (e) {
+      console.error('Error fetching vacations:', e)
+    }
+  }
+
+  // Fetch calendar events with ABSENCE category (part-time days, etc.)
+  const fetchCalendarAbsences = async () => {
+    try {
+      // Get 2 weeks range
+      const today = new Date()
+      const startOfWeek = new Date(today)
+      startOfWeek.setDate(today.getDate() - today.getDay() + 1) // Monday
+      const endOfNextWeek = new Date(startOfWeek)
+      endOfNextWeek.setDate(startOfWeek.getDate() + 13) // Sunday next week
+
+      const res = await fetch(`/api/calendar?startDate=${startOfWeek.toISOString()}&endDate=${endOfNextWeek.toISOString()}`)
+      if (res.ok) {
+        const data = await res.json()
+        // Filter only ABSENCE category events and transform
+        const absenceEvents = data
+          .filter((e: any) => e.category === 'ABSENCE')
+          .map((e: any) => ({
+            id: e.id,
+            personName: e.createdBy?.name || e.title.replace('Afwezig: ', ''),
+            startDate: e.startTime,
+            endDate: e.endTime,
+            note: e.description || e.title,
+            color: '#f97316', // Orange for absences
+            isCalendarEvent: true,
+          }))
+        setCalendarAbsences(absenceEvents)
+      }
+    } catch (e) {
+      console.error('Error fetching calendar absences:', e)
+    }
+  }
+
+  const fetchFeedback = async () => {
+    try {
+      const res = await fetch('/api/feedback')
+      if (res.ok) {
+        const data = await res.json()
+        setFeedbackItems(data)
+      }
+    } catch (e) {
+      console.error('Error fetching feedback:', e)
+    }
+  }
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/user/profile')
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentUser({ name: data.name, role: data.role })
+      }
+    } catch (e) {
+      console.error('Error fetching user:', e)
+    }
+  }
+
+  const deleteFeedback = async (id: string) => {
+    try {
+      const res = await fetch(`/api/feedback/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setFeedbackItems(prev => prev.filter(f => f.id !== id))
+      }
+    } catch (e) {
+      console.error('Error deleting feedback:', e)
     }
   }
 
@@ -344,6 +513,17 @@ export default function DashboardHome() {
   }
 
   const weatherInfo = getWeatherInfo(weather.weatherCode)
+
+  // Check if current user is admin/partner (Jochem)
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+
+  // Feedback type config
+  const feedbackTypeConfig: Record<string, { icon: any; color: string; bg: string }> = {
+    BUG: { icon: Icons.alertTriangle, color: 'text-red-400', bg: 'bg-red-500/10' },
+    IDEA: { icon: Icons.zap, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+    QUESTION: { icon: Icons.help, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    OTHER: { icon: Icons.chat, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  }
 
   return (
     <div className="space-y-8 fade-in">
@@ -788,164 +968,226 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Vacation & Birthday Cards */}
+      {/* Feedback (Admin) or Vacation & Birthday Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Compact Vacation Card */}
-        <div className="card p-4 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+        {/* Admin: Feedback Widget / Others: Vacation Card */}
+        {isAdmin ? (
+          /* Feedback Widget for Admin */
+          <div className="card p-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
 
-          <button
-            onClick={() => setShowVacationDetails(!showVacationDetails)}
-            className="w-full text-left relative"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                  <Icons.sun className="text-workx-lime" size={18} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    {PARENTAL_LEAVE.hasParentalLeave ? 'Mijn Vakantiedagen en Ouderschapsverlof' : 'Mijn vakantiedagen'}
-                  </p>
-                  <p className="text-xs text-white/40">Saldo {VACATION_BALANCE.year}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-workx-lime">
-                    {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar - VACATION_BALANCE.opgenomenDitJaar - VACATION_BALANCE.geplandDitJaar}
-                  </p>
-                  <p className="text-xs text-white/40">vakantiedagen over</p>
-                </div>
-                <Icons.chevronDown
-                  size={18}
-                  className={`text-white/30 transition-transform ${showVacationDetails ? 'rotate-180' : ''}`}
-                />
-              </div>
-            </div>
-
-            {/* Mini progress bar */}
-            <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden flex">
-              <div
-                className="h-full bg-orange-400"
-                style={{ width: `${(VACATION_BALANCE.opgenomenDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
-              />
-              <div
-                className="h-full bg-blue-400"
-                style={{ width: `${(VACATION_BALANCE.geplandDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
-              />
-            </div>
-          </button>
-
-          {/* Expandable details */}
-          {showVacationDetails && (
-            <div className="mt-4 pt-4 border-t border-white/5 space-y-4 fade-in">
-              {/* Vakantiedagen */}
-              <div>
-                <p className="text-xs text-white/50 mb-2 font-medium uppercase tracking-wider">Vakantiedagen</p>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-white/5 rounded-lg p-2">
-                    <p className="text-lg font-semibold text-workx-lime">
-                      {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar}
-                    </p>
-                    <p className="text-[10px] text-white/40">Totaal</p>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <Icons.chat className="text-purple-400" size={18} />
                   </div>
-                  <div className="bg-white/5 rounded-lg p-2">
-                    <p className="text-lg font-semibold text-orange-400">{VACATION_BALANCE.opgenomenDitJaar}</p>
-                    <p className="text-[10px] text-white/40">Opgenomen</p>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-2">
-                    <p className="text-lg font-semibold text-blue-400">{VACATION_BALANCE.geplandDitJaar}</p>
-                    <p className="text-[10px] text-white/40">Gepland</p>
+                  <div>
+                    <p className="text-sm font-medium text-white">Feedback</p>
+                    <p className="text-xs text-white/40">{feedbackItems.length} items</p>
                   </div>
                 </div>
-
-                <div className="text-xs space-y-1.5 mt-3">
-                  <div className="flex justify-between text-white/50">
-                    <span>Wettelijk</span>
-                    <span className="text-white">{VACATION_BALANCE.wettelijkeDagen}d</span>
-                  </div>
-                  <div className="flex justify-between text-white/50">
-                    <span>Bovenwettelijk</span>
-                    <span className="text-white">{VACATION_BALANCE.bovenwettelijkeDagen}d</span>
-                  </div>
-                  <div className="flex justify-between text-white/50">
-                    <span>Overgedragen</span>
-                    <span className="text-white">{VACATION_BALANCE.overgedragenVorigJaar}d</span>
-                  </div>
-                </div>
+                <Link href="/dashboard/feedback" className="text-xs text-purple-400 hover:underline">
+                  Alles bekijken
+                </Link>
               </div>
 
-              {/* Ouderschapsverlof */}
-              {PARENTAL_LEAVE.hasParentalLeave && (
-                <div className="pt-3 border-t border-white/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-white/50 font-medium uppercase tracking-wider">Ouderschapsverlof</p>
-                    <span className="text-[10px] text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
-                      {PARENTAL_LEAVE.kindNaam}
-                    </span>
-                  </div>
-
-                  {/* Betaald verlof */}
-                  <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 mb-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
-                      <span className="text-xs text-white/40">
-                        {PARENTAL_LEAVE.betaaldOpgenomenWeken} / {PARENTAL_LEAVE.betaaldTotaalWeken} weken
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+              {feedbackItems.length === 0 ? (
+                <div className="text-center py-6">
+                  <Icons.check className="text-green-400 mx-auto mb-2" size={24} />
+                  <p className="text-sm text-white/50">Geen feedback</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  {feedbackItems.slice(0, 5).map((item) => {
+                    const config = feedbackTypeConfig[item.type] || feedbackTypeConfig.OTHER
+                    const TypeIcon = config.icon
+                    return (
                       <div
-                        className="h-full bg-green-400 rounded-full"
-                        style={{ width: `${(PARENTAL_LEAVE.betaaldOpgenomenWeken / PARENTAL_LEAVE.betaaldTotaalWeken) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-green-400 mt-1 font-medium">
-                      {PARENTAL_LEAVE.betaaldTotaalWeken - PARENTAL_LEAVE.betaaldOpgenomenWeken} weken resterend
-                    </p>
-                  </div>
-
-                  {/* Onbetaald verlof */}
-                  <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
-                      <span className="text-xs text-white/40">
-                        {PARENTAL_LEAVE.onbetaaldOpgenomenWeken} / {PARENTAL_LEAVE.onbetaaldTotaalWeken} weken
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-purple-400 rounded-full"
-                        style={{ width: `${(PARENTAL_LEAVE.onbetaaldOpgenomenWeken / PARENTAL_LEAVE.onbetaaldTotaalWeken) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-purple-400 mt-1 font-medium">
-                      {PARENTAL_LEAVE.onbetaaldTotaalWeken - PARENTAL_LEAVE.onbetaaldOpgenomenWeken} weken resterend
-                    </p>
-                  </div>
-
-                  {/* Inzet planning */}
-                  <div className="mt-3 text-xs space-y-1">
-                    <div className="flex justify-between text-white/50">
-                      <span>Inzet per week</span>
-                      <span className="text-white">{PARENTAL_LEAVE.inzetPerWeek} uur</span>
-                    </div>
-                    <div className="flex justify-between text-white/50">
-                      <span>Te gebruiken tot</span>
-                      <span className="text-white">
-                        {new Date(PARENTAL_LEAVE.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </span>
-                    </div>
-                  </div>
+                        key={item.id}
+                        className="flex items-start gap-3 p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] transition-colors group"
+                      >
+                        <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                          <TypeIcon className={config.color} size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{item.title}</p>
+                          <p className="text-xs text-white/40">
+                            {item.submittedBy} · {new Date(item.createdAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => deleteFeedback(item.id)}
+                          className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                          title="Verwijderen"
+                        >
+                          <Icons.x size={14} />
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
-
-              <p className="text-[10px] text-white/30 pt-2 border-t border-white/5">
-                Bijgewerkt door {VACATION_BALANCE.lastUpdatedBy} op {new Date(VACATION_BALANCE.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
-              </p>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* Vacation Card for Employees */
+          <div className="card p-4 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+
+            <button
+              onClick={() => setShowVacationDetails(!showVacationDetails)}
+              className="w-full text-left relative"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                    <Icons.sun className="text-workx-lime" size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      {PARENTAL_LEAVE.hasParentalLeave ? 'Mijn Vakantiedagen en Ouderschapsverlof' : 'Mijn vakantiedagen'}
+                    </p>
+                    <p className="text-xs text-white/40">Saldo {VACATION_BALANCE.year}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-workx-lime">
+                      {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar - VACATION_BALANCE.opgenomenDitJaar - VACATION_BALANCE.geplandDitJaar}
+                    </p>
+                    <p className="text-xs text-white/40">vakantiedagen over</p>
+                  </div>
+                  <Icons.chevronDown
+                    size={18}
+                    className={`text-white/30 transition-transform ${showVacationDetails ? 'rotate-180' : ''}`}
+                  />
+                </div>
+              </div>
+
+              {/* Mini progress bar */}
+              <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden flex">
+                <div
+                  className="h-full bg-orange-400"
+                  style={{ width: `${(VACATION_BALANCE.opgenomenDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
+                />
+                <div
+                  className="h-full bg-blue-400"
+                  style={{ width: `${(VACATION_BALANCE.geplandDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
+                />
+              </div>
+            </button>
+
+            {/* Expandable details */}
+            {showVacationDetails && (
+              <div className="mt-4 pt-4 border-t border-white/5 space-y-4 fade-in">
+                {/* Vakantiedagen */}
+                <div>
+                  <p className="text-xs text-white/50 mb-2 font-medium uppercase tracking-wider">Vakantiedagen</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-white/5 rounded-lg p-2">
+                      <p className="text-lg font-semibold text-workx-lime">
+                        {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar}
+                      </p>
+                      <p className="text-[10px] text-white/40">Totaal</p>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2">
+                      <p className="text-lg font-semibold text-orange-400">{VACATION_BALANCE.opgenomenDitJaar}</p>
+                      <p className="text-[10px] text-white/40">Opgenomen</p>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2">
+                      <p className="text-lg font-semibold text-blue-400">{VACATION_BALANCE.geplandDitJaar}</p>
+                      <p className="text-[10px] text-white/40">Gepland</p>
+                    </div>
+                  </div>
+
+                  <div className="text-xs space-y-1.5 mt-3">
+                    <div className="flex justify-between text-white/50">
+                      <span>Wettelijk</span>
+                      <span className="text-white">{VACATION_BALANCE.wettelijkeDagen}d</span>
+                    </div>
+                    <div className="flex justify-between text-white/50">
+                      <span>Bovenwettelijk</span>
+                      <span className="text-white">{VACATION_BALANCE.bovenwettelijkeDagen}d</span>
+                    </div>
+                    <div className="flex justify-between text-white/50">
+                      <span>Overgedragen</span>
+                      <span className="text-white">{VACATION_BALANCE.overgedragenVorigJaar}d</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ouderschapsverlof */}
+                {PARENTAL_LEAVE.hasParentalLeave && (
+                  <div className="pt-3 border-t border-white/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs text-white/50 font-medium uppercase tracking-wider">Ouderschapsverlof</p>
+                      <span className="text-[10px] text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+                        {PARENTAL_LEAVE.kindNaam}
+                      </span>
+                    </div>
+
+                    {/* Betaald verlof */}
+                    <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 mb-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
+                        <span className="text-xs text-white/40">
+                          {PARENTAL_LEAVE.betaaldOpgenomenWeken} / {PARENTAL_LEAVE.betaaldTotaalWeken} weken
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-400 rounded-full"
+                          style={{ width: `${(PARENTAL_LEAVE.betaaldOpgenomenWeken / PARENTAL_LEAVE.betaaldTotaalWeken) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-green-400 mt-1 font-medium">
+                        {PARENTAL_LEAVE.betaaldTotaalWeken - PARENTAL_LEAVE.betaaldOpgenomenWeken} weken resterend
+                      </p>
+                    </div>
+
+                    {/* Onbetaald verlof */}
+                    <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
+                        <span className="text-xs text-white/40">
+                          {PARENTAL_LEAVE.onbetaaldOpgenomenWeken} / {PARENTAL_LEAVE.onbetaaldTotaalWeken} weken
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-400 rounded-full"
+                          style={{ width: `${(PARENTAL_LEAVE.onbetaaldOpgenomenWeken / PARENTAL_LEAVE.onbetaaldTotaalWeken) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-purple-400 mt-1 font-medium">
+                        {PARENTAL_LEAVE.onbetaaldTotaalWeken - PARENTAL_LEAVE.onbetaaldOpgenomenWeken} weken resterend
+                      </p>
+                    </div>
+
+                    {/* Inzet planning */}
+                    <div className="mt-3 text-xs space-y-1">
+                      <div className="flex justify-between text-white/50">
+                        <span>Inzet per week</span>
+                        <span className="text-white">{PARENTAL_LEAVE.inzetPerWeek} uur</span>
+                      </div>
+                      <div className="flex justify-between text-white/50">
+                        <span>Te gebruiken tot</span>
+                        <span className="text-white">
+                          {new Date(PARENTAL_LEAVE.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-[10px] text-white/30 pt-2 border-t border-white/5">
+                  Bijgewerkt door {VACATION_BALANCE.lastUpdatedBy} op {new Date(VACATION_BALANCE.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Birthday Card - GROOTS on birthday, normal otherwise */}
         <Link
@@ -1054,8 +1296,39 @@ export default function DashboardHome() {
         </Link>
       </div>
 
-      {/* Bottom Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      {/* Bottom section with Team and Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Team Photos - Left side */}
+        <div className="card p-5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                <Icons.users className="text-workx-lime" size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">Team</p>
+                <p className="text-xs text-white/40">{ADVOCATEN.length} advocaten</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {ADVOCATEN.map((name) => {
+                const photoUrl = TEAM_PHOTOS[name]
+                return (
+                  <div key={name} className="relative group/avatar" title={name}>
+                    <img
+                      src={photoUrl}
+                      alt={name}
+                      className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 hover:ring-workx-lime/50 transition-all hover:scale-110"
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats - Right side */}
         {[
           { icon: Icons.briefcase, label: 'Open zaken', value: workItems.length.toString(), color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover' },
           { icon: Icons.calendar, label: 'Events deze week', value: events.length.toString(), color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover' },

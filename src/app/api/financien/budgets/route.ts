@@ -3,7 +3,16 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// GET all budgets
+// Helper function to check admin/partner role
+async function checkEditAccess(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true }
+  })
+  return user?.role === 'ADMIN' || user?.role === 'PARTNER'
+}
+
+// GET all budgets - toegankelijk voor alle ingelogde gebruikers
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -22,11 +31,15 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST create new budget
+// POST create new budget - alleen voor ADMIN/PARTNER
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!await checkEditAccess(session.user.id)) {
+    return NextResponse.json({ error: 'Geen toegang om budgetten aan te maken' }, { status: 403 })
   }
 
   try {
