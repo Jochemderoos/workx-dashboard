@@ -11,6 +11,7 @@ import {
   PACKLIST,
   MAP_MARKERS,
   getDailyFact,
+  getDailySpanish,
   getCountdown,
   getHotspotsByCategory,
   CATEGORY_LABELS,
@@ -64,6 +65,9 @@ export default function LustrumPage() {
 
   // Daily fact based on day of year
   const dailyFact = useMemo(() => getDailyFact(), [])
+
+  // Daily Spanish lesson
+  const dailySpanish = useMemo(() => getDailySpanish(), [])
 
   // Update countdown every second
   useEffect(() => {
@@ -344,15 +348,105 @@ export default function LustrumPage() {
         </div>
       </div>
 
-      {/* Daily Fact */}
-      <div className="card p-5 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border-amber-500/20">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl">💡</span>
+      {/* Daily Fact + Spanish Lesson Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Daily Fact */}
+        <div className="card p-5 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border-amber-500/20">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl">💡</span>
+            </div>
+            <div>
+              <p className="text-amber-400 text-sm font-medium mb-1">Weetje van de dag</p>
+              <p className="text-white">{dailyFact}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Spanish Lesson */}
+        <div className="card p-5 bg-gradient-to-r from-red-500/10 via-yellow-500/5 to-red-500/10 border-red-500/20">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl">🇪🇸</span>
+            </div>
+            <div className="flex-1">
+              <p className="text-red-400 text-sm font-medium mb-2">¿Hablas español?</p>
+              <div className="space-y-2">
+                <div>
+                  <span className="text-white font-semibold">{dailySpanish.word}</span>
+                  <span className="text-white/50 mx-2">—</span>
+                  <span className="text-white/70">{dailySpanish.wordTranslation}</span>
+                  {dailySpanish.pronunciation && (
+                    <span className="text-white/40 text-xs ml-2">({dailySpanish.pronunciation})</span>
+                  )}
+                </div>
+                <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                  <p className="text-yellow-400 italic">"{dailySpanish.phrase}"</p>
+                  <p className="text-white/60 text-sm mt-1">{dailySpanish.phraseTranslation}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Video Section */}
+      <div className="card p-5 overflow-hidden">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center">
+            <span className="text-lg">🎬</span>
           </div>
           <div>
-            <p className="text-amber-400 text-sm font-medium mb-1">Weetje van de dag</p>
-            <p className="text-white">{dailyFact}</p>
+            <h2 className="text-lg font-medium text-white">Een voorproefje van Mallorca</h2>
+            <p className="text-xs text-white/40">Sfeerimpressie van het eiland</p>
+          </div>
+        </div>
+        <div className="aspect-video rounded-xl overflow-hidden">
+          <iframe
+            src="https://www.youtube.com/embed/dzUpfYFFRVY?autoplay=0&mute=1&loop=1&controls=1&modestbranding=1&rel=0"
+            title="Mallorca Video"
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
+
+      {/* Flight Info + Program Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Flight Info Placeholder */}
+        <div className="card p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center">
+              <span className="text-lg">✈️</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-white">Vlieggegevens</h2>
+              <p className="text-xs text-white/40">Vluchtinformatie en tijden</p>
+            </div>
+          </div>
+          <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+            <span className="text-4xl mb-3 opacity-30">✈️</span>
+            <p className="text-white/40 text-sm">Vluchtgegevens worden later toegevoegd</p>
+            <p className="text-white/25 text-xs mt-1">Check regelmatig voor updates!</p>
+          </div>
+        </div>
+
+        {/* Day Program Placeholder */}
+        <div className="card p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+              <span className="text-lg">📅</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-white">Dagprogramma</h2>
+              <p className="text-xs text-white/40">30 sept - 4 okt 2026</p>
+            </div>
+          </div>
+          <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+            <span className="text-4xl mb-3 opacity-30">📅</span>
+            <p className="text-white/40 text-sm">Het programma wordt later bekendgemaakt</p>
+            <p className="text-white/25 text-xs mt-1">Houd deze pagina in de gaten!</p>
           </div>
         </div>
       </div>

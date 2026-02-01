@@ -404,6 +404,55 @@ export const PACKLIST: PacklistItem[] = [
   { id: 'o8', item: 'Kleine rugzak voor dagtrips', category: 'overig' },
 ]
 
+// Spaanse woorden en zinnen voor elke dag
+export interface SpanishLesson {
+  word: string
+  wordTranslation: string
+  phrase: string
+  phraseTranslation: string
+  pronunciation?: string
+}
+
+export const SPANISH_LESSONS: SpanishLesson[] = [
+  { word: 'Hola', wordTranslation: 'Hallo', phrase: '¡Hola! ¿Qué tal?', phraseTranslation: 'Hallo! Hoe gaat het?', pronunciation: 'O-la, ke tal' },
+  { word: 'Gracias', wordTranslation: 'Bedankt', phrase: 'Muchas gracias por todo', phraseTranslation: 'Heel erg bedankt voor alles', pronunciation: 'GRA-sias' },
+  { word: 'Por favor', wordTranslation: 'Alsjeblieft', phrase: 'Una cerveza, por favor', phraseTranslation: 'Een biertje, alsjeblieft', pronunciation: 'por fa-VOR' },
+  { word: 'La cuenta', wordTranslation: 'De rekening', phrase: '¿Nos trae la cuenta, por favor?', phraseTranslation: 'Kunt u de rekening brengen?', pronunciation: 'la KWEN-ta' },
+  { word: 'Delicioso', wordTranslation: 'Heerlijk', phrase: '¡Está muy delicioso!', phraseTranslation: 'Het is erg lekker!', pronunciation: 'de-li-SIO-so' },
+  { word: 'El vino', wordTranslation: 'De wijn', phrase: '¿Tienen vino de la casa?', phraseTranslation: 'Hebben jullie huiswijn?', pronunciation: 'el VI-no' },
+  { word: 'La playa', wordTranslation: 'Het strand', phrase: '¿Cómo llego a la playa?', phraseTranslation: 'Hoe kom ik bij het strand?', pronunciation: 'la PLA-ya' },
+  { word: 'El sol', wordTranslation: 'De zon', phrase: '¡Hace mucho sol hoy!', phraseTranslation: 'Het is erg zonnig vandaag!', pronunciation: 'el sol' },
+  { word: 'Agua', wordTranslation: 'Water', phrase: 'Agua con gas, por favor', phraseTranslation: 'Bruisend water, alsjeblieft', pronunciation: 'A-gwa' },
+  { word: 'Bueno', wordTranslation: 'Goed', phrase: '¡Muy bueno!', phraseTranslation: 'Heel goed!', pronunciation: 'BWE-no' },
+  { word: 'Perdón', wordTranslation: 'Sorry/Pardon', phrase: 'Perdón, ¿dónde está el baño?', phraseTranslation: 'Pardon, waar is het toilet?', pronunciation: 'per-DON' },
+  { word: 'Mañana', wordTranslation: 'Morgen', phrase: 'Hasta mañana', phraseTranslation: 'Tot morgen', pronunciation: 'ma-NYA-na' },
+  { word: 'La mesa', wordTranslation: 'De tafel', phrase: '¿Tienen una mesa para ocho?', phraseTranslation: 'Hebben jullie een tafel voor acht?', pronunciation: 'la ME-sa' },
+  { word: 'Reservar', wordTranslation: 'Reserveren', phrase: 'Quisiera reservar una mesa', phraseTranslation: 'Ik wil graag een tafel reserveren', pronunciation: 're-ser-VAR' },
+  { word: 'El menú', wordTranslation: 'Het menu', phrase: '¿Puedo ver el menú?', phraseTranslation: 'Mag ik het menu zien?', pronunciation: 'el me-NU' },
+  { word: 'Rico', wordTranslation: 'Lekker', phrase: '¡Qué rico está esto!', phraseTranslation: 'Wat is dit lekker!', pronunciation: 'RI-ko' },
+  { word: 'Salud', wordTranslation: 'Proost/Gezondheid', phrase: '¡Salud! ¡Por nosotros!', phraseTranslation: 'Proost! Op ons!', pronunciation: 'sa-LUD' },
+  { word: 'El café', wordTranslation: 'De koffie', phrase: 'Un café con leche, por favor', phraseTranslation: 'Een koffie verkeerd, alsjeblieft', pronunciation: 'el ka-FE' },
+  { word: 'Cerca', wordTranslation: 'Dichtbij', phrase: '¿Hay un supermercado cerca?', phraseTranslation: 'Is er een supermarkt in de buurt?', pronunciation: 'SER-ka' },
+  { word: 'Bonito', wordTranslation: 'Mooi', phrase: '¡Qué pueblo tan bonito!', phraseTranslation: 'Wat een mooi dorp!', pronunciation: 'bo-NI-to' },
+  { word: 'El mar', wordTranslation: 'De zee', phrase: 'Me encanta el mar', phraseTranslation: 'Ik hou van de zee', pronunciation: 'el mar' },
+  { word: 'Calor', wordTranslation: 'Warmte/Heet', phrase: '¡Hace mucho calor!', phraseTranslation: 'Het is erg warm!', pronunciation: 'ka-LOR' },
+  { word: 'Frío', wordTranslation: 'Koud', phrase: '¿Tienen algo frío para beber?', phraseTranslation: 'Hebben jullie iets kouds te drinken?', pronunciation: 'FRI-o' },
+  { word: 'Abierto', wordTranslation: 'Open', phrase: '¿Está abierto?', phraseTranslation: 'Is het open?', pronunciation: 'a-BIER-to' },
+  { word: 'Cerrado', wordTranslation: 'Gesloten', phrase: 'Lo siento, está cerrado', phraseTranslation: 'Sorry, het is gesloten', pronunciation: 'se-RRA-do' },
+  { word: 'Izquierda', wordTranslation: 'Links', phrase: 'Gira a la izquierda', phraseTranslation: 'Sla linksaf', pronunciation: 'is-KIER-da' },
+  { word: 'Derecha', wordTranslation: 'Rechts', phrase: 'La segunda a la derecha', phraseTranslation: 'De tweede rechts', pronunciation: 'de-RE-cha' },
+  { word: 'Perfecto', wordTranslation: 'Perfect', phrase: '¡Perfecto, muchas gracias!', phraseTranslation: 'Perfect, heel erg bedankt!', pronunciation: 'per-FEK-to' },
+  { word: 'Tapas', wordTranslation: 'Hapjes', phrase: '¿Qué tapas me recomienda?', phraseTranslation: 'Welke tapas raadt u aan?', pronunciation: 'TA-pas' },
+  { word: 'Ensaimada', wordTranslation: 'Mallorcaans gebak', phrase: 'Una ensaimada para llevar', phraseTranslation: 'Een ensaimada om mee te nemen', pronunciation: 'en-sai-MA-da' },
+]
+
+export function getDailySpanish(): SpanishLesson {
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24)
+  )
+  return SPANISH_LESSONS[dayOfYear % SPANISH_LESSONS.length]
+}
+
 // Helper functies
 export function getDailyFact(): string {
   const dayOfYear = Math.floor(
