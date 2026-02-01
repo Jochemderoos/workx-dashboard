@@ -390,28 +390,6 @@ export default function LustrumPage() {
         </div>
       </div>
 
-      {/* Video Section */}
-      <div className="card p-5 overflow-hidden group/video">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center group-hover/video:scale-110 group-hover/video:bg-pink-500/20 transition-all duration-300">
-            <span className="text-lg">🎬</span>
-          </div>
-          <div>
-            <h2 className="text-lg font-medium text-white">Een voorproefje van Mallorca</h2>
-            <p className="text-xs text-white/40">Sfeerimpressie van het eiland</p>
-          </div>
-        </div>
-        <div className="aspect-video rounded-xl overflow-hidden">
-          <iframe
-            src="https://www.youtube.com/embed/dzUpfYFFRVY?autoplay=0&mute=1&loop=1&controls=1&modestbranding=1&rel=0"
-            title="Mallorca Video"
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-      </div>
-
       {/* Flight Info + Program Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Flight Info Placeholder */}
@@ -915,6 +893,28 @@ export default function LustrumPage() {
             <Icons.externalLink size={14} />
             Open in Google Maps
           </a>
+        </div>
+      </div>
+
+      {/* Video Section */}
+      <div className="card p-5 overflow-hidden group/video">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center group-hover/video:scale-110 group-hover/video:bg-pink-500/20 transition-all duration-300">
+            <span className="text-lg">🎬</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-medium text-white">Een voorproefje van Mallorca</h2>
+            <p className="text-xs text-white/40">Sfeerimpressie van het eiland</p>
+          </div>
+        </div>
+        <div className="aspect-video rounded-xl overflow-hidden">
+          <iframe
+            src="https://www.youtube.com/embed/dzUpfYFFRVY?autoplay=1&mute=1&loop=1&playlist=dzUpfYFFRVY&controls=1&modestbranding=1&rel=0"
+            title="Mallorca Video"
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
       </div>
 
