@@ -605,6 +605,22 @@ export const Icons = {
       <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
     </svg>
   ),
+
+  party: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M5.8 11.3L2 22l10.7-3.8M15 5.8L12 2M22 12l-3.8-6.2M12 15l-1.4-1.4M19 8l-3-3" />
+      <circle cx="18" cy="5" r="1" fill="currentColor" />
+      <circle cx="5" cy="18" r="1" fill="currentColor" />
+      <path d="M8.5 8.5l7 7M9 3l1 2M21 15l-2 1M3 9l2 1" />
+    </svg>
+  ),
+
+  palmTree: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M13 8c0-2.76-2.46-5-5.5-5-1.41 0-2.71.53-3.7 1.4M13 8c0-2.76 2.46-5 5.5-5 1.41 0 2.71.53 3.7 1.4M13 8c0 1.24-.46 2.38-1.22 3.25M13 8v14M17 22H9" />
+      <path d="M3 4.4C3 6.57 5.46 8.3 8.5 8.3c1.18 0 2.28-.3 3.21-.8M21 4.4c0 2.17-2.46 3.9-5.5 3.9-1.18 0-2.28-.3-3.21-.8" />
+    </svg>
+  ),
 }
 
 // Workx Logo Component - Authentic version matching official branding

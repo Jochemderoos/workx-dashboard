@@ -1,0 +1,15 @@
+<svg width="800" height="450" viewBox="0 0 800 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="450" fill="url(#gradient)"/>
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="800" y2="450" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c2d12"/>
+      <stop offset="1" stop-color="#92400e"/>
+    </linearGradient>
+  </defs>
+  <text x="400" y="200" text-anchor="middle" fill="rgba(255,255,255,0.3)" font-size="48" font-family="system-ui">
+    Can Fressa
+  </text>
+  <text x="400" y="260" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="24" font-family="system-ui">
+    Mallorca
+  </text>
+</svg>

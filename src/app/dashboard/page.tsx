@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
 import { TEAM_PHOTOS, ADVOCATEN, getPhotoUrl } from '@/lib/team-photos'
+import { LUSTRUM_CONFIG, MALLORCA_FACTS, getCountdown } from '@/lib/lustrum-data'
 
 // Inline Logo Component - yellow background with black text
 function WorkxLogoSmall() {
@@ -175,6 +176,156 @@ const quickLinks = [
   { href: '/dashboard/vakanties', Icon: Icons.sun, label: 'Verlof', desc: 'Vakanties & verlof', color: 'from-orange-500/20 to-orange-600/10', iconAnim: 'icon-sun-hover' },
   { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10', iconAnim: 'icon-briefcase-hover' },
 ]
+
+// Lustrum Teaser Widget with rotating content
+function LustrumTeaserWidget() {
+  const [countdown, setCountdown] = useState(getCountdown())
+  const [teaserIndex, setTeaserIndex] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(getCountdown())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Rotate teaser content every 8 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTeaserIndex((prev) => (prev + 1) % 4)
+    }, 8000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Get daily fact
+  const dailyFact = useMemo(() => {
+    const dayOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24)
+    )
+    return MALLORCA_FACTS[dayOfYear % MALLORCA_FACTS.length]
+  }, [])
+
+  const teasers = [
+    // Countdown
+    {
+      content: (
+        <div className="flex items-center gap-4">
+          <div className="flex gap-2">
+            {[
+              { value: countdown.days, label: 'd' },
+              { value: countdown.hours, label: 'u' },
+              { value: countdown.minutes, label: 'm' },
+            ].map((item) => (
+              <div key={item.label} className="text-center">
+                <span className="text-2xl font-bold text-orange-400 tabular-nums">
+                  {String(item.value).padStart(2, '0')}
+                </span>
+                <span className="text-xs text-white/40">{item.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-white">tot Mallorca!</p>
+            <p className="text-xs text-white/40">30 sep - 4 okt 2025</p>
+          </div>
+        </div>
+      ),
+    },
+    // Daily fact
+    {
+      content: (
+        <div>
+          <p className="text-xs text-amber-400 mb-1">💡 Weetje van de dag</p>
+          <p className="text-sm text-white/80 line-clamp-2">{dailyFact}</p>
+        </div>
+      ),
+    },
+    // Weather teaser
+    {
+      content: (
+        <div className="flex items-center gap-4">
+          <span className="text-4xl">☀️</span>
+          <div>
+            <p className="text-sm text-white">Perfect weer in oktober</p>
+            <p className="text-xs text-white/40">Gemiddeld 22°C in Mallorca</p>
+          </div>
+        </div>
+      ),
+    },
+    // Location teaser
+    {
+      content: (
+        <div className="flex items-center gap-4">
+          <span className="text-4xl">🏠</span>
+          <div>
+            <p className="text-sm text-white">Can Fressa, Artà</p>
+            <p className="text-xs text-white/40">Prachtige finca in noordoost Mallorca</p>
+          </div>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20 flex items-center justify-center">
+            <span className="text-lg">🌴</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-medium text-white">Lustrum 15 Jaar</h2>
+          </div>
+        </div>
+        <Link href="/dashboard/lustrum" className="text-sm text-orange-400 hover:underline flex items-center gap-1">
+          Bekijk alles
+          <Icons.arrowRight size={14} />
+        </Link>
+      </div>
+
+      <Link
+        href="/dashboard/lustrum"
+        className="card p-4 block group hover:border-orange-500/30 transition-all relative overflow-hidden"
+      >
+        {/* Background decoration */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute -bottom-4 -left-4 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">
+          🎉
+        </div>
+
+        <div className="relative">
+          {/* Badge */}
+          <div className="absolute top-0 right-0">
+            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white">
+              15 jaar!
+            </span>
+          </div>
+
+          {/* Rotating content */}
+          <div className="min-h-[60px] flex items-center">
+            {teasers[teaserIndex].content}
+          </div>
+
+          {/* Dots indicator */}
+          <div className="flex gap-1.5 mt-3">
+            {teasers.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => {
+                  e.preventDefault()
+                  setTeaserIndex(i)
+                }}
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  i === teaserIndex ? 'bg-orange-400 w-4' : 'bg-white/20'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </Link>
+    </div>
+  )
+}
 
 export default function DashboardHome() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -907,65 +1058,8 @@ export default function DashboardHome() {
           </div>
         </div>
 
-        {/* Work Items Column */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                <Icons.briefcase className="text-orange-400" size={16} />
-              </div>
-              <h2 className="text-lg font-medium text-white">Open taken</h2>
-            </div>
-            <Link href="/dashboard/werk" className="text-sm text-workx-lime hover:underline flex items-center gap-1">
-              Alles
-              <Icons.arrowRight size={14} />
-            </Link>
-          </div>
-
-          {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="card h-16 animate-pulse" />
-              ))}
-            </div>
-          ) : workItems.length === 0 ? (
-            <div className="card p-8 text-center">
-              <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-3">
-                <Icons.check className="text-green-400" size={20} />
-              </div>
-              <p className="text-white/50 text-sm">Geen open taken</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {workItems.map((item, index) => (
-                <Link
-                  key={item.id}
-                  href="/dashboard/werk"
-                  className="card p-3 group hover:border-white/10 transition-all block"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${priorityColors[item.priority]}`} />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-white truncate group-hover:text-workx-lime transition-colors">
-                        {item.title}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[11px] text-white/40">{statusLabels[item.status] || item.status}</span>
-                        {item.clientName && (
-                          <>
-                            <span className="text-white/20">·</span>
-                            <span className="text-[11px] text-white/40 truncate">{item.clientName}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Lustrum Teaser Widget */}
+        <LustrumTeaserWidget />
       </div>
 
       {/* Feedback (Admin) or Vacation & Birthday Cards */}

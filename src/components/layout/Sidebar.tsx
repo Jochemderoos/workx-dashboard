@@ -50,6 +50,7 @@ function WorkxLogoBox() {
 
 const mainMenuItems = [
   { href: '/dashboard', icon: Icons.home, label: 'Dashboard', iconAnim: 'icon-home-hover' },
+  { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', iconAnim: 'icon-party-hover', badge: '15 jaar!' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', iconAnim: 'icon-calendar-hover' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover' },
   { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover' },
@@ -70,15 +71,21 @@ const manageMenuItems = [
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
 
-  const NavLink = ({ href, icon: Icon, label, iconAnim }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string }) => {
+  const NavLink = ({ href, icon: Icon, label, iconAnim, badge }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string }) => {
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+    const isLustrum = href === '/dashboard/lustrum'
     return (
-      <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''}`}>
+      <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link' : ''}`}>
         <span className="icon-animated">
           <Icon size={18} />
         </span>
         <span>{label}</span>
-        {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
+        {badge && (
+          <span className="ml-auto px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white animate-pulse">
+            {badge}
+          </span>
+        )}
+        {!badge && isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
       </Link>
     )
   }
