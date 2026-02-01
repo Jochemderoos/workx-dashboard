@@ -31,6 +31,20 @@ interface TeamMember {
 // Vergaderruimte op kantoor
 const MEETING_ROOM = { id: 'vergaderruimte', name: 'Vergaderruimte', capacity: 8, icon: '🏢' }
 
+// Helper to check if event is a room booking
+const isRoomBooking = (event: CalendarEvent) => {
+  return event.location?.toLowerCase().includes('vergaderruimte') ||
+         event.location?.toLowerCase().includes(MEETING_ROOM.id)
+}
+
+// Format room booking display
+const formatRoomBookingTitle = (event: CalendarEvent, short = false) => {
+  if (!isRoomBooking(event)) return event.title
+  const creatorName = event.createdBy?.name || 'Onbekend'
+  if (short) return `🏢 ${creatorName}`
+  return `Vergaderruimte - ${creatorName}`
+}
+
 const categoryConfig = {
   GENERAL: { label: 'Algemeen', icon: Icons.calendar, color: '#f9ff85' },
   MEETING: { label: 'Vergadering', icon: Icons.users, color: '#60a5fa' },
@@ -503,7 +517,7 @@ export default function AgendaPage() {
                             style={{ backgroundColor: event.color + '20', color: event.color }}
                           >
                             <IconComponent size={10} />
-                            <span className="truncate">{event.title}</span>
+                            <span className="truncate">{isRoomBooking(event) ? formatRoomBookingTitle(event, true) : event.title}</span>
                           </div>
                         )
                       })}
@@ -610,9 +624,11 @@ export default function AgendaPage() {
                               </div>
                               <div>
                                 <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
-                                  {event.title}
+                                  {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
                                 </span>
-                                <p className="text-xs text-white/30 mt-0.5">{categoryConfig[event.category]?.label || 'Vakantie'}</p>
+                                <p className="text-xs text-white/30 mt-0.5">
+                                  {isRoomBooking(event) ? 'Vergaderruimte gereserveerd' : (categoryConfig[event.category]?.label || 'Vakantie')}
+                                </p>
                               </div>
                             </div>
                             {!isVacation && (
