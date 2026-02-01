@@ -16,6 +16,8 @@ interface TopBarProps {
 
 const mobileMenuItems = [
   { href: '/dashboard', icon: Icons.home, label: 'Dashboard' },
+  { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', badge: '15 jaar!' },
+  { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof' },
   { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk' },
@@ -225,6 +227,7 @@ export default function TopBar({ user }: TopBarProps) {
                 {mobileMenuItems.map((item) => {
                   const Icon = item.icon
                   const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                  const badge = 'badge' in item ? item.badge : null
                   return (
                     <Link
                       key={item.href}
@@ -237,8 +240,13 @@ export default function TopBar({ user }: TopBarProps) {
                       }`}
                     >
                       <Icon size={20} />
-                      <span>{item.label}</span>
-                      {isActive && <div className="ml-auto w-2 h-2 rounded-full bg-current opacity-60" />}
+                      <span className="flex-1">{item.label}</span>
+                      {badge && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white">
+                          {badge}
+                        </span>
+                      )}
+                      {!badge && isActive && <div className="ml-auto w-2 h-2 rounded-full bg-current opacity-60" />}
                     </Link>
                   )
                 })}

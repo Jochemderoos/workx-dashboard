@@ -534,46 +534,46 @@ export default function VakantiesPage() {
   return (
     <div className="space-y-8 fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/10 flex items-center justify-center">
               <Icons.sun className="text-yellow-400" size={20} />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Vakanties & Verlof</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-white">Vakanties & Verlof</h1>
           </div>
-          <p className="text-white/40">
+          <p className="text-white/40 text-sm sm:text-base">
             {pageMode === 'overzicht' ? 'Overzicht vakanties en ouderschapsverlof' : 'Beheer vakantiedagen en verlof per medewerker'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Mode Toggle - only show Beheer for admin */}
           <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
             <button
               onClick={() => setPageMode('overzicht')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                 pageMode === 'overzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Icons.calendar size={16} />
-              Overzicht
+              <Icons.calendar size={14} />
+              <span className="hidden xs:inline">Overzicht</span>
             </button>
             {isAdmin && (
               <button
                 onClick={() => setPageMode('beheer')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   pageMode === 'beheer' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icons.settings size={16} />
-                Beheer
+                <Icons.settings size={14} />
+                <span className="hidden xs:inline">Beheer</span>
               </button>
             )}
           </div>
           {pageMode === 'overzicht' && (
-            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
-              <Icons.plus size={16} />
-              Vakantie toevoegen
+            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-3 sm:px-4">
+              <Icons.plus size={14} />
+              <span className="hidden sm:inline">Vakantie</span> toevoegen
             </button>
           )}
         </div>
@@ -1111,38 +1111,38 @@ export default function VakantiesPage() {
           )}
 
           {/* View Toggle & Navigation */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex gap-1 p-1 bg-white/5 rounded-xl w-full sm:w-auto">
               <button
                 onClick={() => setViewMode('week')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   viewMode === 'week' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icons.calendar size={16} />
+                <Icons.calendar size={14} />
                 Week
               </button>
               <button
                 onClick={() => setViewMode('month')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   viewMode === 'month' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icons.grid size={16} />
+                <Icons.grid size={14} />
                 Maand
               </button>
               <button
                 onClick={() => setViewMode('timeline')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   viewMode === 'timeline' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icons.list size={16} />
-                Timeline
+                <Icons.list size={14} />
+                Lijst
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => {
                   const newDate = new Date(currentDate)
@@ -1150,11 +1150,11 @@ export default function VakantiesPage() {
                   else newDate.setMonth(newDate.getMonth() - 1)
                   setCurrentDate(newDate)
                 }}
-                className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                className="p-2 sm:p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
               >
                 <Icons.chevronLeft size={18} />
               </button>
-              <span className="px-4 py-2 text-sm text-white/60 min-w-[140px] text-center">
+              <span className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-white/60 min-w-[100px] sm:min-w-[140px] text-center">
                 {viewMode === 'week'
                   ? `Week ${Math.ceil((currentDate.getDate() + new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay()) / 7)}`
                   : currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
@@ -1167,7 +1167,7 @@ export default function VakantiesPage() {
                   else newDate.setMonth(newDate.getMonth() + 1)
                   setCurrentDate(newDate)
                 }}
-                className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                className="p-2 sm:p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
               >
                 <Icons.chevronRight size={18} />
               </button>
@@ -1177,8 +1177,8 @@ export default function VakantiesPage() {
           {/* Week View */}
           {viewMode === 'week' && (
             <div className="card overflow-hidden">
-              <div className="p-5 border-b border-white/5 flex items-center justify-between">
-                <h2 className="font-semibold text-white">
+              <div className="p-4 sm:p-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h2 className="font-semibold text-white text-sm sm:text-base">
                   Week van {formatDate(getWeekDays(currentDate)[0])} - {formatDate(getWeekDays(currentDate)[6])}
                 </h2>
                 <div className="flex items-center gap-2 text-xs text-white/50">
@@ -1186,7 +1186,8 @@ export default function VakantiesPage() {
                   <span>Schoolvakantie</span>
                 </div>
               </div>
-              <div className="grid grid-cols-7">
+              <div className="overflow-x-auto">
+                <div className="grid grid-cols-7 min-w-[600px]">
                 {getWeekDays(currentDate).map((day, i) => {
                   const dayVacations = getVacationsForDate(day)
                   const schoolHoliday = getSchoolHoliday(day)
@@ -1230,6 +1231,7 @@ export default function VakantiesPage() {
                     </div>
                   )
                 })}
+                </div>
               </div>
             </div>
           )}

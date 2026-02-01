@@ -208,48 +208,48 @@ export default function TeamPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card p-5 relative overflow-hidden group">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="card p-4 sm:p-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-3">
-              <Icons.users className="text-cyan-400" size={18} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-2 sm:mb-3">
+              <Icons.users className="text-cyan-400" size={16} />
             </div>
-            <p className="text-2xl font-semibold text-white">{stats.total}</p>
-            <p className="text-sm text-white/40">Teamleden</p>
+            <p className="text-xl sm:text-2xl font-semibold text-white">{stats.total}</p>
+            <p className="text-xs sm:text-sm text-white/40">Teamleden</p>
           </div>
         </div>
 
-        <div className="card p-5 relative overflow-hidden group">
+        <div className="card p-4 sm:p-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
-              <Icons.award className="text-purple-400" size={18} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-2 sm:mb-3">
+              <Icons.award className="text-purple-400" size={16} />
             </div>
-            <p className="text-2xl font-semibold text-white">{stats.partners}</p>
-            <p className="text-sm text-white/40">Partners</p>
+            <p className="text-xl sm:text-2xl font-semibold text-white">{stats.partners}</p>
+            <p className="text-xs sm:text-sm text-white/40">Partners</p>
           </div>
         </div>
 
-        <div className="card p-5 relative overflow-hidden group">
+        <div className="card p-4 sm:p-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-3">
-              <Icons.user className="text-cyan-400" size={18} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-2 sm:mb-3">
+              <Icons.user className="text-cyan-400" size={16} />
             </div>
-            <p className="text-2xl font-semibold text-white">{stats.employees}</p>
-            <p className="text-sm text-white/40">Medewerkers</p>
+            <p className="text-xl sm:text-2xl font-semibold text-white">{stats.employees}</p>
+            <p className="text-xs sm:text-sm text-white/40">Medewerkers</p>
           </div>
         </div>
 
-        <div className="card p-5 relative overflow-hidden group">
+        <div className="card p-4 sm:p-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center mb-3">
-              <Icons.briefcase className="text-orange-400" size={18} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-orange-500/10 flex items-center justify-center mb-2 sm:mb-3">
+              <Icons.briefcase className="text-orange-400" size={16} />
             </div>
-            <p className="text-2xl font-semibold text-white">{stats.totalWork}</p>
-            <p className="text-sm text-white/40">Actieve zaken</p>
+            <p className="text-xl sm:text-2xl font-semibold text-white">{stats.totalWork}</p>
+            <p className="text-xs sm:text-sm text-white/40">Actieve zaken</p>
           </div>
         </div>
       </div>

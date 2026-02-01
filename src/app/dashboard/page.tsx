@@ -138,6 +138,16 @@ interface CurrentUser {
   role: string
 }
 
+// Office attendance interface
+interface OfficeAttendanceData {
+  date: string
+  attendees: { id: string; userId: string; name: string; avatarUrl: string | null }[]
+  totalWorkplaces: number
+  occupiedWorkplaces: number
+  availableWorkplaces: number
+  isCurrentUserAttending: boolean
+}
+
 // Vakantiedagen en ouderschapsverlof worden geladen uit de database via API
 // Deze waarden worden nu leeg gelaten - data komt van de ingelogde gebruiker
 const VACATION_BALANCE = {
@@ -172,10 +182,150 @@ const PARENTAL_LEAVE = {
 const quickLinks = [
   { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10', iconAnim: 'icon-calendar-hover' },
   { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10', iconAnim: 'icon-euro-hover' },
-  { href: '/dashboard/transitie', Icon: Icons.calculator, label: 'Transitie', desc: 'Bereken vergoeding', color: 'from-purple-500/20 to-purple-600/10', iconAnim: 'icon-calculator-hover' },
-  { href: '/dashboard/vakanties', Icon: Icons.sun, label: 'Verlof', desc: 'Vakanties & verlof', color: 'from-orange-500/20 to-orange-600/10', iconAnim: 'icon-sun-hover' },
   { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10', iconAnim: 'icon-briefcase-hover' },
+  { href: '/dashboard/lustrum', Icon: Icons.star, label: 'Lustrum', desc: '15 jaar Workx!', color: 'from-orange-500/20 to-amber-600/10', iconAnim: 'icon-star-hover' },
 ]
+
+// Appjeplekje Widget - Compact office attendance widget
+function AppjeplekjeWidget({
+  data,
+  isToggling,
+  onToggle,
+}: {
+  data: OfficeAttendanceData | null
+  isToggling: boolean
+  onToggle: () => void
+}) {
+  if (!data) {
+    return (
+      <Link
+        href="/dashboard/appjeplekje"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/20 border-2 border-cyan-500/30 p-4 block"
+      >
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+            <span className="text-xl">🏢</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Appjeplekje</p>
+            <p className="text-[11px] text-cyan-300/70">Laden...</p>
+          </div>
+        </div>
+        <div className="h-3 bg-white/10 rounded-full animate-pulse"></div>
+      </Link>
+    )
+  }
+
+  const occupancyPercentage = (data.occupiedWorkplaces / data.totalWorkplaces) * 100
+  const getProgressColor = () => {
+    if (occupancyPercentage < 50) return 'bg-green-500'
+    if (occupancyPercentage < 80) return 'bg-yellow-500'
+    return 'bg-red-500'
+  }
+
+  const getProgressBgColor = () => {
+    if (occupancyPercentage < 50) return 'bg-green-500/20'
+    if (occupancyPercentage < 80) return 'bg-yellow-500/20'
+    return 'bg-red-500/20'
+  }
+
+  return (
+    <Link
+      href="/dashboard/appjeplekje"
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/20 border-2 border-cyan-500/30 hover:border-cyan-400/50 p-4 group transition-all block shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20"
+    >
+      {/* Decorative glow */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-400/30 transition-colors" />
+      <div className="absolute -bottom-4 -left-4 text-5xl opacity-10 group-hover:opacity-20 transition-opacity">🏢</div>
+
+      <div className="relative">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="text-xl">🏢</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Appjeplekje</p>
+              <p className="text-[11px] text-cyan-300/70 font-medium">📅 Vandaag op kantoor</p>
+            </div>
+          </div>
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onToggle()
+            }}
+            disabled={isToggling || (data.availableWorkplaces === 0 && !data.isCurrentUserAttending)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg ${
+              data.isCurrentUserAttending
+                ? 'bg-green-500/30 text-green-300 border border-green-400/40 shadow-green-500/20 hover:bg-green-500/40'
+                : data.availableWorkplaces === 0
+                ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                : 'bg-cyan-500 text-white hover:bg-cyan-400 shadow-cyan-500/30 hover:shadow-cyan-400/40 hover:scale-105'
+            }`}
+          >
+            {isToggling ? (
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+            ) : data.isCurrentUserAttending ? (
+              <span className="flex items-center gap-1.5"><Icons.check size={14} /> Aangemeld</span>
+            ) : data.availableWorkplaces === 0 ? (
+              'Vol'
+            ) : (
+              <span className="flex items-center gap-1.5"><Icons.plus size={14} /> Aanmelden</span>
+            )}
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mb-3">
+          <div className={`h-3 ${getProgressBgColor()} rounded-full overflow-hidden`}>
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${getProgressColor()}`}
+              style={{ width: `${occupancyPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-white/60 font-medium">
+            {data.occupiedWorkplaces}/{data.totalWorkplaces} plekken bezet
+            {data.availableWorkplaces > 0 && (
+              <span className="text-cyan-300/70 ml-1">
+                · {data.availableWorkplaces} vrij
+              </span>
+            )}
+          </span>
+          {data.attendees.length > 0 && (
+            <div className="flex -space-x-2">
+              {data.attendees.slice(0, 5).map((a) => {
+                const photoUrl = getPhotoUrl(a.name)
+                return (
+                  <div
+                    key={a.id}
+                    className="w-7 h-7 rounded-full bg-white/10 border-2 border-cyan-900 flex items-center justify-center text-[10px] text-white/60 overflow-hidden"
+                    title={a.name}
+                  >
+                    {photoUrl ? (
+                      <img src={photoUrl} alt={a.name} className="w-full h-full object-cover" />
+                    ) : (
+                      a.name.charAt(0)
+                    )}
+                  </div>
+                )
+              })}
+              {data.attendees.length > 5 && (
+                <div className="w-7 h-7 rounded-full bg-cyan-500/30 border-2 border-cyan-900 flex items-center justify-center text-[10px] text-cyan-300 font-bold">
+                  +{data.attendees.length - 5}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 // Lustrum Teaser Widget with rotating content
 function LustrumTeaserWidget() {
@@ -332,6 +482,8 @@ export default function DashboardHome() {
   const [showVacationDetails, setShowVacationDetails] = useState(false)
   const [showCountdownPopup, setShowCountdownPopup] = useState(false)
   const [countdownDays, setCountdownDays] = useState(0)
+  const [officeAttendance, setOfficeAttendance] = useState<OfficeAttendanceData | null>(null)
+  const [isTogglingAttendance, setIsTogglingAttendance] = useState(false)
   const [weather, setWeather] = useState<WeatherData>({
     temperature: 0,
     weatherCode: 0,
@@ -533,7 +685,7 @@ export default function DashboardHome() {
   }, [])
 
   useEffect(() => {
-    Promise.all([fetchEvents(), fetchWork(), fetchVacations(), fetchCalendarAbsences(), fetchFeedback(), fetchCurrentUser()]).finally(() => setIsLoading(false))
+    Promise.all([fetchEvents(), fetchWork(), fetchVacations(), fetchCalendarAbsences(), fetchFeedback(), fetchCurrentUser(), fetchOfficeAttendance()]).finally(() => setIsLoading(false))
   }, [])
 
   const fetchEvents = async () => {
@@ -632,6 +784,79 @@ export default function DashboardHome() {
       }
     } catch (e) {
       console.error('Error fetching user:', e)
+    }
+  }
+
+  const fetchOfficeAttendance = async () => {
+    try {
+      // Use local date to avoid timezone issues
+      const now = new Date()
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const res = await fetch(`/api/office-attendance?date=${today}`)
+      if (res.ok) {
+        const data = await res.json()
+        setOfficeAttendance(data)
+      } else {
+        console.error('Error fetching office attendance:', res.status, res.statusText)
+        // Set default data so widget still renders
+        setOfficeAttendance({
+          date: today,
+          attendees: [],
+          totalWorkplaces: 11,
+          occupiedWorkplaces: 0,
+          availableWorkplaces: 11,
+          isCurrentUserAttending: false,
+        })
+      }
+    } catch (e) {
+      console.error('Error fetching office attendance:', e)
+      // Set default data so widget still renders
+      const now = new Date()
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      setOfficeAttendance({
+        date: today,
+        attendees: [],
+        totalWorkplaces: 11,
+        occupiedWorkplaces: 0,
+        availableWorkplaces: 11,
+        isCurrentUserAttending: false,
+      })
+    }
+  }
+
+  const toggleOfficeAttendance = async () => {
+    if (!officeAttendance || isTogglingAttendance) return
+    setIsTogglingAttendance(true)
+
+    try {
+      // Use local date to avoid timezone issues
+      const now = new Date()
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      let res: Response
+
+      if (officeAttendance.isCurrentUserAttending) {
+        res = await fetch(`/api/office-attendance?date=${today}`, { method: 'DELETE' })
+      } else {
+        res = await fetch('/api/office-attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: today }),
+        })
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error('API Error:', errorData)
+        alert(errorData.error || 'Er ging iets mis')
+        return
+      }
+
+      await fetchOfficeAttendance()
+    } catch (e) {
+      console.error('Error toggling attendance:', e)
+      alert('Er ging iets mis met de verbinding')
+    } finally {
+      setIsTogglingAttendance(false)
     }
   }
 
@@ -796,23 +1021,32 @@ export default function DashboardHome() {
       )}
 
       {/* Hero Header with Logo */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-8">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-4 sm:p-6 lg:p-8">
         <div className="absolute top-0 right-0 w-96 h-96 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-workx-lime/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-6">
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 sm:gap-6">
             {/* Workx Logo */}
             <div className="hidden md:block">
               <WorkxLogoSmall />
             </div>
             <div>
-              <p className="text-workx-lime text-sm font-medium mb-1">{getGreeting()}</p>
-              <h1 className="text-3xl font-semibold text-white mb-2">Welkom bij Workx</h1>
-              <p className="text-white/50 max-w-md">
+              <p className="text-workx-lime text-xs sm:text-sm font-medium mb-1">{getGreeting()}</p>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Welkom bij Workx</h1>
+              <p className="text-white/50 max-w-md hidden sm:block">
                 Beheer je zaken, bereken bonussen en houd je team op de hoogte. Alles in één dashboard.
               </p>
             </div>
+          </div>
+
+          {/* Mobile Appjeplekje Widget - Only visible on mobile */}
+          <div className="lg:hidden">
+            <AppjeplekjeWidget
+              data={officeAttendance}
+              isToggling={isTogglingAttendance}
+              onToggle={toggleOfficeAttendance}
+            />
           </div>
 
           <div className="hidden lg:flex items-start gap-8">
@@ -861,13 +1095,15 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Quick Links Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-white">Snelle toegang</h2>
-          <span className="text-xs text-white/30">{quickLinks.length} tools</span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* Quick Links Grid + Appjeplekje (Desktop) */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Quick Links - Takes 3 columns on desktop */}
+        <div className="lg:col-span-3">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-white">Snelle toegang</h2>
+            <span className="text-xs text-white/30">{quickLinks.length} tools</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickLinks.map(({ href, Icon, label, desc, color, iconAnim }) => (
             <Link
               key={href}
@@ -887,6 +1123,19 @@ export default function DashboardHome() {
               </div>
             </Link>
           ))}
+          </div>
+        </div>
+
+        {/* Desktop Appjeplekje Widget - Only visible on desktop */}
+        <div className="hidden lg:block">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-white">Kantoor</h2>
+          </div>
+          <AppjeplekjeWidget
+            data={officeAttendance}
+            isToggling={isTogglingAttendance}
+            onToggle={toggleOfficeAttendance}
+          />
         </div>
       </div>
 
@@ -895,12 +1144,12 @@ export default function DashboardHome() {
         {/* Events & Absence Column */}
         <div className="lg:col-span-3 space-y-6">
           {/* Absence Overview - 2 Weeks */}
-          <div className="card p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          <div className="card p-3 sm:p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
             <div className="relative">
-              {/* Header */}
+              {/* Header - stays fixed */}
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/10 flex items-center justify-center">
@@ -918,23 +1167,23 @@ export default function DashboardHome() {
               </div>
 
               {/* 2-Week Grid */}
-              <div className="space-y-4">
-                {/* Week labels */}
-                <div className="grid grid-cols-5 gap-2">
-                  {['Ma', 'Di', 'Wo', 'Do', 'Vr'].map(day => (
-                    <div key={day} className="text-center text-[10px] font-medium text-white/30 uppercase tracking-wider">
-                      {day}
-                    </div>
-                  ))}
-                </div>
+              <div className="space-y-2 sm:space-y-4">
+                  {/* Week labels */}
+                  <div className="grid grid-cols-5 gap-0.5 sm:gap-2">
+                    {['Ma', 'Di', 'Wo', 'Do', 'Vr'].map(day => (
+                      <div key={day} className="text-center text-[8px] sm:text-[10px] font-medium text-white/30 uppercase">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
 
-                {/* Current Week */}
-                <div>
-                  <p className="text-xs font-medium text-white/50 mb-2 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-workx-lime"></span>
-                    Deze week
-                  </p>
-                  <div className="grid grid-cols-5 gap-2">
+                  {/* Current Week */}
+                  <div>
+                    <p className="text-[10px] sm:text-xs font-medium text-white/50 mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-workx-lime"></span>
+                      Deze week
+                    </p>
+                    <div className="grid grid-cols-5 gap-0.5 sm:gap-2">
                     {twoWeeksWorkdays.slice(0, 5).map((dayInfo, i) => {
                       const isToday = dayInfo.date.toDateString() === new Date().toDateString()
                       const absences = getAbsencesForDate(dayInfo.date)
@@ -943,48 +1192,45 @@ export default function DashboardHome() {
                       return (
                         <div
                           key={i}
-                          className={`rounded-xl p-3 min-h-[140px] transition-all ${
+                          className={`rounded-md sm:rounded-xl p-1 sm:p-3 min-h-[70px] sm:min-h-[140px] transition-all ${
                             isToday
-                              ? 'bg-workx-lime/10 ring-2 ring-workx-lime/40'
+                              ? 'bg-workx-lime/10 ring-1 sm:ring-2 ring-workx-lime/40'
                               : isPast
                               ? 'bg-white/[0.02] opacity-50'
                               : 'bg-white/5 hover:bg-white/10'
                           }`}
                         >
-                          <div className={`text-center mb-2 pb-2 border-b ${isToday ? 'border-workx-lime/20' : 'border-white/5'}`}>
-                            <p className={`text-lg font-bold ${isToday ? 'text-workx-lime' : 'text-white'}`}>
+                          <div className={`text-center mb-0.5 pb-0.5 sm:mb-2 sm:pb-2 border-b ${isToday ? 'border-workx-lime/20' : 'border-white/5'}`}>
+                            <p className={`text-xs sm:text-lg font-bold ${isToday ? 'text-workx-lime' : 'text-white'}`}>
                               {dayInfo.date.getDate()}
-                            </p>
-                            <p className={`text-[10px] ${isToday ? 'text-workx-lime/70' : 'text-white/30'}`}>
-                              {dayInfo.date.toLocaleDateString('nl-NL', { month: 'short' })}
                             </p>
                           </div>
 
                           {absences.length === 0 ? (
-                            <div className="flex items-center justify-center h-16">
-                              <Icons.check size={18} className="text-green-500/40" />
+                            <div className="flex items-center justify-center h-6 sm:h-16">
+                              <Icons.check size={12} className="text-green-500/40 sm:w-[18px] sm:h-[18px]" />
                             </div>
                           ) : (
-                            <div className="space-y-1.5">
-                              {absences.slice(0, 5).map((v, j) => (
+                            <div className="space-y-0.5 sm:space-y-1">
+                              {absences.slice(0, 3).map((v, j) => (
                                 <div
                                   key={j}
-                                  className="flex items-center gap-1.5 group/person"
+                                  className="flex items-center justify-center sm:justify-start gap-1 sm:gap-1.5"
                                   title={v.personName}
                                 >
                                   <div
-                                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                                    className="w-3.5 h-3.5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-[7px] sm:text-[10px] font-bold flex-shrink-0"
                                     style={{ backgroundColor: v.color + '30', color: v.color }}
                                   >
                                     {v.personName.charAt(0)}
                                   </div>
-                                  <span className="text-xs text-white/70 truncate">
+                                  <span className="text-[9px] sm:text-xs text-white/70 truncate hidden sm:inline">
                                     {v.personName.split(' ')[0]}
                                   </span>
                                 </div>
                               ))}
-                              {absences.length > 5 && (
-                                <p className="text-[10px] text-white/40 pl-7">+{absences.length - 5} meer</p>
+                              {absences.length > 3 && (
+                                <p className="text-[7px] sm:text-[10px] text-white/40 text-center">+{absences.length - 3}</p>
                               )}
                             </div>
                           )}
@@ -996,53 +1242,50 @@ export default function DashboardHome() {
 
                 {/* Next Week */}
                 <div>
-                  <p className="text-xs font-medium text-white/50 mb-2 flex items-center gap-2">
+                  <p className="text-[10px] sm:text-xs font-medium text-white/50 mb-2 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-blue-400"></span>
                     Volgende week
                   </p>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-5 gap-0.5 sm:gap-2">
                     {twoWeeksWorkdays.slice(5, 10).map((dayInfo, i) => {
                       const absences = getAbsencesForDate(dayInfo.date)
 
                       return (
                         <div
                           key={i}
-                          className="rounded-xl p-3 min-h-[140px] bg-white/[0.03] hover:bg-white/5 transition-all"
+                          className="rounded-md sm:rounded-xl p-1 sm:p-3 min-h-[70px] sm:min-h-[140px] bg-white/[0.03] hover:bg-white/5 transition-all"
                         >
-                          <div className="text-center mb-2 pb-2 border-b border-white/5">
-                            <p className="text-lg font-bold text-white/80">
+                          <div className="text-center mb-0.5 pb-0.5 sm:mb-2 sm:pb-2 border-b border-white/5">
+                            <p className="text-xs sm:text-lg font-bold text-white/80">
                               {dayInfo.date.getDate()}
-                            </p>
-                            <p className="text-[10px] text-white/30">
-                              {dayInfo.date.toLocaleDateString('nl-NL', { month: 'short' })}
                             </p>
                           </div>
 
                           {absences.length === 0 ? (
-                            <div className="flex items-center justify-center h-16">
-                              <Icons.check size={18} className="text-green-500/30" />
+                            <div className="flex items-center justify-center h-6 sm:h-16">
+                              <Icons.check size={12} className="text-green-500/30 sm:w-[18px] sm:h-[18px]" />
                             </div>
                           ) : (
-                            <div className="space-y-1.5">
-                              {absences.slice(0, 5).map((v, j) => (
+                            <div className="space-y-0.5 sm:space-y-1">
+                              {absences.slice(0, 3).map((v, j) => (
                                 <div
                                   key={j}
-                                  className="flex items-center gap-1.5"
+                                  className="flex items-center justify-center sm:justify-start gap-1 sm:gap-1.5"
                                   title={v.personName}
                                 >
                                   <div
-                                    className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                                    className="w-3.5 h-3.5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-[7px] sm:text-[10px] font-bold flex-shrink-0"
                                     style={{ backgroundColor: v.color + '30', color: v.color }}
                                   >
                                     {v.personName.charAt(0)}
                                   </div>
-                                  <span className="text-xs text-white/60 truncate">
+                                  <span className="text-[9px] sm:text-xs text-white/60 truncate hidden sm:inline">
                                     {v.personName.split(' ')[0]}
                                   </span>
                                 </div>
                               ))}
-                              {absences.length > 5 && (
-                                <p className="text-[10px] text-white/40 pl-7">+{absences.length - 5} meer</p>
+                              {absences.length > 3 && (
+                                <p className="text-[7px] sm:text-[10px] text-white/40 text-center">+{absences.length - 3}</p>
                               )}
                             </div>
                           )}

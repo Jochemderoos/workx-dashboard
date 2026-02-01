@@ -1,17 +1,33 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { Toaster } from 'react-hot-toast'
 import ConsoleEasterEgg from '@/components/ui/ConsoleEasterEgg'
+import PWARegister from '@/components/PWARegister'
 
 const inter = Inter({ subsets: ['latin'] })
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#1e1e1e',
+}
 
 export const metadata: Metadata = {
   title: 'Workx Dashboard',
   description: 'Intern dashboard voor Workx Advocaten',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Workx',
+  },
   icons: {
     icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
 }
 
@@ -24,6 +40,7 @@ export default function RootLayout({
     <html lang="nl">
       <body className={`${inter.className} bg-workx-dark text-white antialiased`}>
         <Providers>
+          <PWARegister />
           <ConsoleEasterEgg />
           {children}
           <Toaster

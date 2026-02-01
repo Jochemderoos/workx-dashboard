@@ -421,32 +421,32 @@ export default function BonusPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card p-6 relative overflow-hidden group">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="card p-4 sm:p-6 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                <Icons.chart className="text-workx-lime" size={22} />
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                <Icons.chart className="text-workx-lime" size={18} />
               </div>
-              <span className="text-xs text-white/30">{calculations.length} totaal</span>
+              <span className="text-[10px] sm:text-xs text-white/30">{calculations.length} totaal</span>
             </div>
-            <p className="text-sm text-white/50 mb-1">Totale bonus</p>
-            <p className="text-3xl font-semibold text-white">{formatCurrency(total)}</p>
+            <p className="text-xs sm:text-sm text-white/50 mb-1">Totale bonus</p>
+            <p className="text-2xl sm:text-3xl font-semibold text-white">{formatCurrency(total)}</p>
           </div>
         </div>
 
-        <div className="card p-6 relative overflow-hidden group">
+        <div className="card p-4 sm:p-6 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-500/10 transition-colors" />
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
-                <Icons.check className="text-green-400" size={22} />
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                <Icons.check className="text-green-400" size={18} />
               </div>
-              <span className="badge badge-lime">{paidPercentage.toFixed(0)}%</span>
+              <span className="badge badge-lime text-[10px] sm:text-xs">{paidPercentage.toFixed(0)}%</span>
             </div>
-            <p className="text-sm text-white/50 mb-1">Bonus uitbetaald</p>
-            <p className="text-3xl font-semibold text-green-400">{formatCurrency(bonusPaidAmount)}</p>
+            <p className="text-xs sm:text-sm text-white/50 mb-1">Bonus uitbetaald</p>
+            <p className="text-2xl sm:text-3xl font-semibold text-green-400">{formatCurrency(bonusPaidAmount)}</p>
           </div>
         </div>
 
