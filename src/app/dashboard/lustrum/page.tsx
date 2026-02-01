@@ -550,15 +550,15 @@ export default function LustrumPage() {
           </div>
 
           {/* Dots indicator */}
-          <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-1 sm:gap-2">
+          <div className="absolute bottom-1.5 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-0.5 sm:gap-2">
             {CAN_FRESSA_PHOTOS.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentPhotoIndex(i)}
-                className={`h-1.5 sm:h-2 rounded-full transition-all ${
+                className={`h-1 sm:h-2 rounded-full transition-all ${
                   i === currentPhotoIndex
-                    ? 'bg-orange-400 w-3 sm:w-6'
-                    : 'bg-white/30 hover:bg-white/50 w-1.5 sm:w-2'
+                    ? 'bg-orange-400 w-2 sm:w-6'
+                    : 'bg-white/30 hover:bg-white/50 w-1 sm:w-2'
                 }`}
               />
             ))}
