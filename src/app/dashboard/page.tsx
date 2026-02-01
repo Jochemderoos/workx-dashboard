@@ -226,7 +226,7 @@ function LustrumTeaserWidget() {
           </div>
           <div className="flex-1">
             <p className="text-sm text-white">tot Mallorca!</p>
-            <p className="text-xs text-white/40">30 sep - 4 okt 2025</p>
+            <p className="text-xs text-white/40">30 sep - 4 okt 2026</p>
           </div>
         </div>
       ),
@@ -258,8 +258,8 @@ function LustrumTeaserWidget() {
         <div className="flex items-center gap-4">
           <span className="text-4xl">🏠</span>
           <div>
-            <p className="text-sm text-white">Can Fressa, Artà</p>
-            <p className="text-xs text-white/40">Prachtige finca in noordoost Mallorca</p>
+            <p className="text-sm text-white">Can Fressa, Alaró</p>
+            <p className="text-xs text-white/40">Finca bij de Serra de Tramuntana</p>
           </div>
         </div>
       ),
@@ -294,13 +294,6 @@ function LustrumTeaserWidget() {
         </div>
 
         <div className="relative">
-          {/* Badge */}
-          <div className="absolute top-0 right-0">
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white">
-              15 jaar!
-            </span>
-          </div>
-
           {/* Rotating content */}
           <div className="min-h-[60px] flex items-center">
             {teasers[teaserIndex].content}

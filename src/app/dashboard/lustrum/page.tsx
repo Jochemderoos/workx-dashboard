@@ -46,7 +46,6 @@ export default function LustrumPage() {
   const [isWeatherLoading, setIsWeatherLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<HotspotCategory | 'all'>('all')
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
-  const [showMap, setShowMap] = useState(false)
 
   // Daily fact based on day of year
   const dailyFact = useMemo(() => getDailyFact(), [])
@@ -147,24 +146,24 @@ export default function LustrumPage() {
   return (
     <div className="space-y-8 fade-in">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-yellow-500/20 border border-orange-500/20 p-8">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-yellow-500/20 border border-orange-500/20 p-8 group/hero">
         <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
-        {/* Confetti decoration */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Confetti decoration - only visible on hover */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover/hero:opacity-100 transition-opacity duration-500">
           {[...Array(20)].map((_, i) => (
             <span
               key={i}
-              className="absolute text-2xl animate-pulse"
+              className="absolute text-2xl animate-bounce"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-                opacity: 0.3,
+                left: `${5 + (i * 4.5)}%`,
+                top: `${10 + (i % 5) * 18}%`,
+                animationDelay: `${(i % 5) * 0.15}s`,
+                animationDuration: `${0.8 + (i % 3) * 0.3}s`,
               }}
             >
-              {['🎉', '✨', '🌴', '☀️', '🎊', '🏝️'][Math.floor(Math.random() * 6)]}
+              {['🎉', '✨', '🌴', '☀️', '🎊', '🏝️'][i % 6]}
             </span>
           ))}
         </div>
@@ -175,7 +174,7 @@ export default function LustrumPage() {
               <div className="flex items-center gap-3 mb-3">
                 <span className="text-5xl">🎉</span>
                 <div>
-                  <p className="text-orange-400 text-sm font-medium">30 september - 4 oktober 2025</p>
+                  <p className="text-orange-400 text-sm font-medium">30 september - 4 oktober 2026</p>
                   <h1 className="text-4xl font-bold text-white">Workx Lustrum - 15 Jaar!</h1>
                 </div>
               </div>
@@ -285,7 +284,7 @@ export default function LustrumPage() {
             </div>
             <div>
               <h3 className="text-white font-medium">Weer in Mallorca</h3>
-              <p className="text-xs text-white/40">Artà, komende week</p>
+              <p className="text-xs text-white/40">Alaró, komende week</p>
             </div>
           </div>
 
@@ -443,88 +442,194 @@ export default function LustrumPage() {
               <p className="text-xs text-white/40">Can Fressa en omgeving</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowMap(!showMap)}
-            className="px-4 py-2 rounded-lg bg-green-500/10 text-green-400 text-sm hover:bg-green-500/20 transition-colors"
-          >
-            {showMap ? 'Verberg kaart' : 'Toon kaart'}
-          </button>
         </div>
 
-        {/* Design map placeholder */}
-        <div className="relative aspect-[16/7] bg-gradient-to-br from-blue-900/30 to-cyan-900/20 rounded-xl overflow-hidden border border-white/5">
-          {/* Sea */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-800/20 to-cyan-700/10" />
+        {/* Beautiful static Mallorca map */}
+        <div className="relative aspect-[16/9] rounded-xl overflow-hidden border border-white/10">
+          <svg viewBox="0 0 800 450" className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 50%, #164e63 100%)' }}>
+            {/* Sea pattern */}
+            <defs>
+              <linearGradient id="seaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#1e40af" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#0891b2" stopOpacity="0.2" />
+              </linearGradient>
+              <linearGradient id="landGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#d97706" stopOpacity="0.4" />
+                <stop offset="50%" stopColor="#b45309" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#92400e" stopOpacity="0.25" />
+              </linearGradient>
+              <linearGradient id="mountainGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+                <stop offset="0%" stopColor="#78350f" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#451a03" stopOpacity="0.6" />
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
 
-          {/* Land */}
-          <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-amber-900/30 to-amber-800/10 rounded-t-[100px]" />
+            {/* Sea */}
+            <rect width="800" height="450" fill="url(#seaGradient)" />
 
-          {/* Map markers */}
-          {MAP_MARKERS.map((marker, i) => {
-            const colors = {
-              home: 'bg-orange-500 ring-orange-500/30',
-              town: 'bg-white/60 ring-white/20',
-              beach: 'bg-cyan-400 ring-cyan-400/30',
-            }
-            const icons = {
-              home: '🏠',
-              town: '🏘️',
-              beach: '🏖️',
-            }
-            // Rough positioning based on coordinates
-            const left = 20 + (i * 12)
-            const top = 30 + (i % 3) * 15
-            return (
-              <div
-                key={marker.id}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
-                style={{ left: `${left}%`, top: `${top}%` }}
-              >
-                <div className={`w-8 h-8 rounded-full ${colors[marker.type]} ring-4 flex items-center justify-center shadow-lg group-hover:scale-125 transition-transform`}>
-                  <span className="text-sm">{icons[marker.type]}</span>
-                </div>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-black/80 rounded text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
-                  {marker.name}
-                </div>
-              </div>
-            )
-          })}
+            {/* Mallorca island shape - simplified but recognizable */}
+            <path
+              d="M 150 280
+                 Q 120 250 130 200
+                 Q 140 150 200 120
+                 Q 280 80 380 90
+                 Q 480 70 550 100
+                 Q 620 130 680 180
+                 Q 720 220 700 280
+                 Q 680 340 620 370
+                 Q 540 400 440 390
+                 Q 340 400 260 380
+                 Q 180 360 150 320
+                 Q 130 300 150 280 Z"
+              fill="url(#landGradient)"
+              stroke="rgba(251, 191, 36, 0.3)"
+              strokeWidth="2"
+            />
 
-          {/* Legend */}
-          <div className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg p-3 text-xs space-y-1">
+            {/* Serra de Tramuntana mountains - northwest */}
+            <path
+              d="M 150 280
+                 Q 140 240 160 200
+                 Q 180 160 220 140
+                 Q 280 110 340 100
+                 Q 360 120 340 150
+                 Q 300 180 260 200
+                 Q 200 240 180 280
+                 Q 160 300 150 280 Z"
+              fill="url(#mountainGradient)"
+              opacity="0.8"
+            />
+
+            {/* Mountain peaks indication */}
+            <text x="220" y="175" fill="rgba(255,255,255,0.3)" fontSize="10" fontStyle="italic">Serra de Tramuntana</text>
+
+            {/* Location: Palma - Southwest */}
+            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '220px 340px' }}>
+              <circle cx="220" cy="340" r="8" fill="rgba(255,255,255,0.8)" />
+              <circle cx="220" cy="340" r="12" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+              <text x="220" y="365" textAnchor="middle" fill="white" fontSize="13" fontWeight="500">Palma</text>
+              <text x="220" y="378" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="9">Hoofdstad</text>
+            </g>
+
+            {/* Location: Valldemossa */}
+            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '250px 195px' }}>
+              <circle cx="250" cy="195" r="6" fill="rgba(255,255,255,0.7)" />
+              <text x="250" y="183" textAnchor="middle" fill="white" fontSize="11">Valldemossa</text>
+            </g>
+
+            {/* Location: Deià */}
+            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '290px 155px' }}>
+              <circle cx="290" cy="155" r="5" fill="rgba(255,255,255,0.7)" />
+              <text x="290" y="143" textAnchor="middle" fill="white" fontSize="11">Deià</text>
+            </g>
+
+            {/* Location: Sóller */}
+            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '320px 175px' }}>
+              <circle cx="320" cy="175" r="6" fill="rgba(255,255,255,0.7)" />
+              <text x="320" y="163" textAnchor="middle" fill="white" fontSize="11">Sóller</text>
+            </g>
+
+            {/* Location: Inca */}
+            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '400px 220px' }}>
+              <circle cx="400" cy="220" r="5" fill="rgba(255,255,255,0.6)" />
+              <text x="400" y="208" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">Inca</text>
+            </g>
+
+            {/* Location: ALARÓ / CAN FRESSA - The star! */}
+            <g className="cursor-pointer" filter="url(#glow)">
+              {/* Pulsing ring */}
+              <circle cx="350" cy="235" r="20" fill="none" stroke="rgba(249, 115, 22, 0.4)" strokeWidth="2">
+                <animate attributeName="r" values="20;28;20" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite" />
+              </circle>
+              {/* Main marker */}
+              <circle cx="350" cy="235" r="12" fill="#f97316" stroke="white" strokeWidth="3" />
+              <text x="350" y="239" textAnchor="middle" fill="white" fontSize="10">🏠</text>
+              {/* Label */}
+              <rect x="295" y="250" width="110" height="32" rx="6" fill="rgba(249, 115, 22, 0.9)" />
+              <text x="350" y="266" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">Can Fressa</text>
+              <text x="350" y="278" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="9">Alaró</text>
+            </g>
+
+            {/* Location: Alcúdia - North */}
+            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '500px 120px' }}>
+              <circle cx="500" cy="120" r="5" fill="rgba(34, 211, 238, 0.8)" />
+              <text x="500" y="108" textAnchor="middle" fill="rgba(34, 211, 238, 1)" fontSize="10">Alcúdia</text>
+            </g>
+
+            {/* Location: Pollença */}
+            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '440px 110px' }}>
+              <circle cx="440" cy="110" r="5" fill="rgba(255,255,255,0.6)" />
+              <text x="440" y="98" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">Pollença</text>
+            </g>
+
+            {/* Location: Manacor - East */}
+            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '560px 280px' }}>
+              <circle cx="560" cy="280" r="5" fill="rgba(255,255,255,0.6)" />
+              <text x="560" y="268" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">Manacor</text>
+            </g>
+
+            {/* Beach indicators */}
+            <text x="580" y="150" fill="rgba(34, 211, 238, 0.6)" fontSize="9">🏖️ stranden</text>
+            <text x="650" cy="320" fill="rgba(34, 211, 238, 0.6)" fontSize="9">🏖️</text>
+
+            {/* Compass */}
+            <g transform="translate(720, 60)">
+              <circle cx="0" cy="0" r="25" fill="rgba(0,0,0,0.3)" stroke="rgba(255,255,255,0.2)" />
+              <text x="0" y="-8" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">N</text>
+              <path d="M 0 -18 L 4 -5 L 0 -10 L -4 -5 Z" fill="white" />
+              <text x="0" y="18" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="8">Z</text>
+            </g>
+
+            {/* Distance indicator from Can Fressa */}
+            <g transform="translate(60, 400)">
+              <rect x="0" y="0" width="180" height="40" rx="8" fill="rgba(0,0,0,0.4)" />
+              <text x="15" y="18" fill="rgba(255,255,255,0.6)" fontSize="10">Vanaf Can Fressa:</text>
+              <text x="15" y="32" fill="white" fontSize="10">Palma 25 min • Sóller 20 min</text>
+            </g>
+          </svg>
+
+          {/* Legend overlay */}
+          <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3 text-xs space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-orange-500" />
-              <span className="text-white/60">Can Fressa</span>
+              <span className="w-3 h-3 rounded-full bg-orange-500 ring-2 ring-white/50" />
+              <span className="text-white">Can Fressa (ons huis!)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-white/60" />
-              <span className="text-white/60">Dorp</span>
+              <span className="w-3 h-3 rounded-full bg-white/70" />
+              <span className="text-white/70">Stadjes</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-cyan-400" />
-              <span className="text-white/60">Strand</span>
+              <span className="text-white/70">Strand</span>
             </div>
           </div>
         </div>
 
-        {showMap && (
-          <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-            <p className="text-sm text-white/60">
-              📍 <strong className="text-white">Can Fressa</strong> ligt in het noordoosten van Mallorca,
-              nabij het authentieke dorp Artà. Op korte afstand vind je prachtige stranden zoals Cala Mesquida
-              en Cala Agulla, en het kasteel van Capdepera.
-            </p>
-            <a
-              href={`https://www.google.com/maps?q=${LUSTRUM_CONFIG.coordinates.lat},${LUSTRUM_CONFIG.coordinates.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-blue-500/20 text-blue-400 text-sm hover:bg-blue-500/30 transition-colors"
-            >
-              <Icons.externalLink size={14} />
-              Open in Google Maps
-            </a>
-          </div>
-        )}
+        {/* Info section below map */}
+        <div className="mt-4 p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+          <p className="text-sm text-white/70">
+            📍 <strong className="text-white">Can Fressa</strong> ligt in het dorpje Alaró, centraal op Mallorca
+            aan de voet van de Serra de Tramuntana. Perfect gelegen om het hele eiland te ontdekken!
+            Palma is 25 minuten rijden, het pittoreske Sóller 20 minuten.
+          </p>
+          <a
+            href={`https://www.google.com/maps?q=${LUSTRUM_CONFIG.coordinates.lat},${LUSTRUM_CONFIG.coordinates.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-orange-500/20 text-orange-400 text-sm hover:bg-orange-500/30 transition-colors"
+          >
+            <Icons.externalLink size={14} />
+            Open in Google Maps
+          </a>
+        </div>
       </div>
 
       {/* Packlist Section */}

@@ -75,13 +75,13 @@ export default function Sidebar({ user }: SidebarProps) {
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
     const isLustrum = href === '/dashboard/lustrum'
     return (
-      <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link' : ''}`}>
+      <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link group/lustrum' : ''}`}>
         <span className="icon-animated">
           <Icon size={18} />
         </span>
-        <span>{label}</span>
+        <span className="flex-1">{label}</span>
         {badge && (
-          <span className="ml-auto px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white animate-pulse">
+          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white flex-shrink-0">
             {badge}
           </span>
         )}

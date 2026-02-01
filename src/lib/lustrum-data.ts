@@ -3,66 +3,66 @@
 
 export const LUSTRUM_CONFIG = {
   tripName: 'Workx Lustrum - 15 Jaar!',
-  location: 'Can Fressa, Mallorca',
+  location: 'Can Fressa, Alaró',
   website: 'https://canfressa.es',
-  startDate: new Date('2025-09-30'),
-  endDate: new Date('2025-10-04'),
+  startDate: new Date('2026-09-30'),
+  endDate: new Date('2026-10-04'),
   coordinates: {
-    lat: 39.6953,
-    lng: 3.4534,
+    lat: 39.7069,
+    lng: 2.7897,
   },
-  nearbyTown: 'Artà',
+  nearbyTown: 'Alaró',
 }
 
 // Foto's van Can Fressa en omgeving
 export const CAN_FRESSA_PHOTOS = [
   {
     id: 1,
-    url: '/lustrum/can-fressa-pool.jpg',
-    alt: 'Can Fressa Zwembad',
-    caption: 'Het zwembad van Can Fressa met uitzicht op de bergen',
+    url: '/lustrum/can-fressa-terrace.jpg',
+    alt: 'Can Fressa Terras',
+    caption: 'Ontbijten op het sfeervolle terras met groene luiken',
   },
   {
     id: 2,
-    url: '/lustrum/can-fressa-terrace.jpg',
-    alt: 'Can Fressa Terras',
-    caption: 'Relaxen op het ruime terras van de finca',
+    url: '/lustrum/can-fressa-pool.jpg',
+    alt: 'Can Fressa Zwembad',
+    caption: 'Het zwembad met authentieke Mallorcaanse architectuur',
   },
   {
     id: 3,
-    url: '/lustrum/can-fressa-garden.jpg',
-    alt: 'Can Fressa Tuin',
-    caption: 'De prachtige mediterrane tuin rondom de villa',
+    url: '/lustrum/can-fressa-gevel.jpg',
+    alt: 'Can Fressa Gevel',
+    caption: 'De prachtige stenen gevel met zwembad',
   },
   {
     id: 4,
+    url: '/lustrum/can-fressa-interieur.jpg',
+    alt: 'Can Fressa Interieur',
+    caption: 'Stijlvol interieur met houten balken en authentieke details',
+  },
+  {
+    id: 5,
+    url: '/lustrum/can-fressa-wijnkelder.jpg',
+    alt: 'Can Fressa Wijnkelder',
+    caption: 'De gezellige wijnkelder vol lokale wijnen',
+  },
+  {
+    id: 6,
+    url: '/lustrum/can-fressa-ontbijt.jpg',
+    alt: 'Can Fressa Ontbijt',
+    caption: 'Ontbijt bij het zwembad met vers fruit en ensaïmada',
+  },
+  {
+    id: 7,
     url: '/lustrum/cala-mesquida.jpg',
     alt: 'Cala Mesquida',
     caption: 'Het prachtige strand van Cala Mesquida',
   },
   {
-    id: 5,
+    id: 8,
     url: '/lustrum/mallorca-coast.jpg',
     alt: 'Mallorca Kustlijn',
     caption: 'De spectaculaire kustlijn van noordoost Mallorca',
-  },
-  {
-    id: 6,
-    url: '/lustrum/mediterranean-sunset.jpg',
-    alt: 'Mediterrane Zonsondergang',
-    caption: 'Magische zonsondergangen boven de Middellandse Zee',
-  },
-  {
-    id: 7,
-    url: '/lustrum/mallorca-mountains.jpg',
-    alt: 'Serra de Tramuntana',
-    caption: 'De bergen van Mallorca op de achtergrond',
-  },
-  {
-    id: 8,
-    url: '/lustrum/turquoise-bay.jpg',
-    alt: 'Turquoise Baai',
-    caption: 'Kristalhelder water in de verborgen baaien',
   },
 ]
 
@@ -418,10 +418,10 @@ export const CATEGORY_ICONS: Record<HotspotCategory, string> = {
 
 // Map markers voor belangrijke locaties
 export const MAP_MARKERS = [
-  { id: 'canfressa', name: 'Can Fressa', lat: 39.6953, lng: 3.4534, type: 'home' as const },
-  { id: 'arta', name: 'Artà', lat: 39.6961, lng: 3.3525, type: 'town' as const },
-  { id: 'capdepera', name: 'Capdepera', lat: 39.7028, lng: 3.4331, type: 'town' as const },
-  { id: 'calaratjada', name: 'Cala Ratjada', lat: 39.7106, lng: 3.4642, type: 'beach' as const },
-  { id: 'calamillor', name: 'Cala Millor', lat: 39.6000, lng: 3.3833, type: 'beach' as const },
-  { id: 'calamescuida', name: 'Cala Mesquida', lat: 39.7447, lng: 3.4347, type: 'beach' as const },
+  { id: 'canfressa', name: 'Can Fressa', lat: 39.7069, lng: 2.7897, type: 'home' as const },
+  { id: 'alaro', name: 'Alaró', lat: 39.7069, lng: 2.7897, type: 'town' as const },
+  { id: 'palma', name: 'Palma', lat: 39.5696, lng: 2.6502, type: 'town' as const },
+  { id: 'soller', name: 'Sóller', lat: 39.7676, lng: 2.7156, type: 'town' as const },
+  { id: 'valldemossa', name: 'Valldemossa', lat: 39.7108, lng: 2.6228, type: 'town' as const },
+  { id: 'deia', name: 'Deià', lat: 39.7489, lng: 2.6489, type: 'town' as const },
 ]
