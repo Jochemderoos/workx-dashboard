@@ -191,7 +191,7 @@ export default function LustrumPage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <span className="text-5xl">🎉</span>
+                <span className="text-5xl hover:scale-125 hover:rotate-12 transition-transform cursor-default">🎉</span>
                 <div>
                   <p className="text-orange-400 text-sm font-medium">30 september - 4 oktober 2026</p>
                   <h1 className="text-4xl font-bold text-white">Workx Lustrum - 15 Jaar!</h1>
@@ -205,9 +205,9 @@ export default function LustrumPage() {
                 href={LUSTRUM_CONFIG.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400 hover:bg-orange-500/30 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-400 hover:bg-orange-500/30 transition-colors group/link"
               >
-                <Icons.externalLink size={16} />
+                <Icons.externalLink size={16} className="group-hover/link:rotate-12 transition-transform" />
                 Bekijk Can Fressa
               </a>
             </div>
@@ -224,7 +224,7 @@ export default function LustrumPage() {
                 ].map((item) => (
                   <div
                     key={item.label}
-                    className="w-20 h-24 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center"
+                    className="w-20 h-24 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center hover:scale-105 hover:bg-white/10 hover:border-orange-500/30 transition-all duration-300 cursor-default"
                   >
                     <span className="text-3xl font-bold text-orange-400 tabular-nums">
                       {String(item.value).padStart(2, '0')}
@@ -296,9 +296,9 @@ export default function LustrumPage() {
         </div>
 
         {/* Weather Widget */}
-        <div className="card p-5">
+        <div className="card p-5 group/weather">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover/weather:scale-110 group-hover/weather:bg-blue-500/20 transition-all duration-300">
               <span className="text-xl">🌡️</span>
             </div>
             <div>
@@ -324,7 +324,7 @@ export default function LustrumPage() {
                     className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{info.icon}</span>
+                      <span className="text-2xl hover:scale-125 transition-transform cursor-default">{info.icon}</span>
                       <div>
                         <p className="text-sm text-white">
                           {date.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -351,10 +351,10 @@ export default function LustrumPage() {
       {/* Daily Fact + Spanish Lesson Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Daily Fact */}
-        <div className="card p-5 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border-amber-500/20">
+        <div className="card p-5 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border-amber-500/20 group">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">💡</span>
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:bg-amber-500/30 transition-all duration-300">
+              <span className="text-2xl group-hover:animate-bounce">💡</span>
             </div>
             <div>
               <p className="text-amber-400 text-sm font-medium mb-1">Weetje van de dag</p>
@@ -364,10 +364,10 @@ export default function LustrumPage() {
         </div>
 
         {/* Spanish Lesson */}
-        <div className="card p-5 bg-gradient-to-r from-red-500/10 via-yellow-500/5 to-red-500/10 border-red-500/20">
+        <div className="card p-5 bg-gradient-to-r from-red-500/10 via-yellow-500/5 to-red-500/10 border-red-500/20 group">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">🇪🇸</span>
+            <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:bg-red-500/30 transition-all duration-300">
+              <span className="text-2xl group-hover:animate-pulse">🇪🇸</span>
             </div>
             <div className="flex-1">
               <p className="text-red-400 text-sm font-medium mb-2">¿Hablas español?</p>
@@ -391,9 +391,9 @@ export default function LustrumPage() {
       </div>
 
       {/* Video Section */}
-      <div className="card p-5 overflow-hidden">
+      <div className="card p-5 overflow-hidden group/video">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center group-hover/video:scale-110 group-hover/video:bg-pink-500/20 transition-all duration-300">
             <span className="text-lg">🎬</span>
           </div>
           <div>
@@ -415,10 +415,10 @@ export default function LustrumPage() {
       {/* Flight Info + Program Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Flight Info Placeholder */}
-        <div className="card p-5">
+        <div className="card p-5 group/flight">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center">
-              <span className="text-lg">✈️</span>
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center group-hover/flight:scale-110 group-hover/flight:bg-sky-500/20 transition-all duration-300">
+              <span className="text-lg group-hover/flight:translate-x-1 group-hover/flight:-translate-y-1 transition-transform">✈️</span>
             </div>
             <div>
               <h2 className="text-lg font-medium text-white">Vlieggegevens</h2>
@@ -433,10 +433,10 @@ export default function LustrumPage() {
         </div>
 
         {/* Day Program Placeholder */}
-        <div className="card p-5">
+        <div className="card p-5 group/program">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-              <span className="text-lg">📅</span>
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center group-hover/program:scale-110 group-hover/program:bg-violet-500/20 transition-all duration-300">
+              <span className="text-lg group-hover/program:rotate-12 transition-transform">📅</span>
             </div>
             <div>
               <h2 className="text-lg font-medium text-white">Dagprogramma</h2>
@@ -454,8 +454,8 @@ export default function LustrumPage() {
       {/* Hotspots Section */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
+          <div className="flex items-center gap-3 group/hotspots">
+            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center group-hover/hotspots:scale-110 group-hover/hotspots:bg-orange-500/20 transition-all duration-300">
               <Icons.mapPin className="text-orange-400" size={16} />
             </div>
             <h2 className="text-lg font-medium text-white">Te doen in de buurt</h2>
@@ -492,7 +492,7 @@ export default function LustrumPage() {
                     : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
                 }`}
               >
-                <span>{icons[cat]}</span>
+                <span className="hover:scale-125 transition-transform">{icons[cat]}</span>
                 {CATEGORY_LABELS[cat]} ({count})
               </button>
             )
@@ -540,11 +540,11 @@ export default function LustrumPage() {
       </div>
 
       {/* Map Section */}
-      <div className="card p-5">
+      <div className="card p-5 group/map">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <Icons.mapPin className="text-green-400" size={16} />
+            <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center group-hover/map:scale-110 group-hover/map:bg-green-500/20 transition-all duration-300">
+              <Icons.mapPin className="text-green-400 group-hover/map:animate-bounce" size={16} />
             </div>
             <div>
               <h2 className="text-lg font-medium text-white">Locatie</h2>
@@ -919,10 +919,10 @@ export default function LustrumPage() {
       </div>
 
       {/* Packlist Section */}
-      <div className="card p-5">
+      <div className="card p-5 group/packlist">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover/packlist:scale-110 group-hover/packlist:bg-purple-500/20 transition-all duration-300">
               <Icons.check className="text-purple-400" size={16} />
             </div>
             <div>
@@ -963,8 +963,8 @@ export default function LustrumPage() {
             const checkedInCategory = items.filter((i) => checkedItems.has(i.id)).length
             return (
               <div key={category}>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">{icons[category]}</span>
+                <div className="flex items-center gap-2 mb-3 group/cat">
+                  <span className="text-lg group-hover/cat:scale-125 transition-transform cursor-default">{icons[category]}</span>
                   <h3 className="text-sm font-medium text-white">{categoryLabels[category]}</h3>
                   <span className="text-xs text-white/30">
                     {checkedInCategory}/{items.length}
@@ -1013,9 +1013,11 @@ export default function LustrumPage() {
       </div>
 
       {/* Footer */}
-      <div className="text-center py-8">
-        <p className="text-white/30 text-sm">
-          🌴 Tot op Mallorca! 🎉
+      <div className="text-center py-8 group/footer">
+        <p className="text-white/30 text-sm flex items-center justify-center gap-2">
+          <span className="group-hover/footer:animate-bounce inline-block">🌴</span>
+          <span>Tot op Mallorca!</span>
+          <span className="group-hover/footer:animate-bounce inline-block" style={{ animationDelay: '0.1s' }}>🎉</span>
         </p>
       </div>
     </div>
