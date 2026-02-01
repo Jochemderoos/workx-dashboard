@@ -450,7 +450,7 @@ function LustrumTeaserWidget() {
           </div>
 
           {/* Dots indicator */}
-          <div className="flex gap-1.5 mt-3">
+          <div className="flex gap-1 sm:gap-1.5 mt-2 sm:mt-3">
             {teasers.map((_, i) => (
               <button
                 key={i}
@@ -458,8 +458,8 @@ function LustrumTeaserWidget() {
                   e.preventDefault()
                   setTeaserIndex(i)
                 }}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  i === teaserIndex ? 'bg-orange-400 w-4' : 'bg-white/20'
+                className={`h-1 sm:h-1.5 rounded-full transition-all ${
+                  i === teaserIndex ? 'bg-orange-400 w-2.5 sm:w-4' : 'bg-white/20 w-1 sm:w-1.5'
                 }`}
               />
             ))}
