@@ -438,8 +438,8 @@ function LustrumTeaserWidget() {
         className="card p-4 block group hover:border-orange-500/30 transition-all relative overflow-hidden"
       >
         {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute -bottom-4 -left-4 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">
+        <div className="absolute top-0 right-0 w-16 sm:w-32 h-16 sm:h-32 bg-orange-500/10 rounded-full blur-2xl sm:blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute -bottom-4 -left-4 text-4xl sm:text-6xl opacity-10 group-hover:opacity-20 transition-opacity">
           🎉
         </div>
 

@@ -420,9 +420,9 @@ export default function LustrumPage() {
   return (
     <div className="space-y-8 fade-in">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-yellow-500/20 border border-orange-500/20 p-8 group/hero">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-yellow-500/20 border border-orange-500/20 p-4 sm:p-8 group/hero">
+        <div className="absolute top-0 right-0 w-48 sm:w-96 h-48 sm:h-96 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-32 sm:w-64 h-32 sm:h-64 bg-yellow-500/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
         {/* Confetti decoration - only visible on hover */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover/hero:opacity-100 transition-opacity duration-500">
@@ -445,11 +445,11 @@ export default function LustrumPage() {
         <div className="relative">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-5xl hover:scale-125 hover:rotate-12 transition-transform cursor-default">🎉</span>
+              <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                <span className="text-3xl sm:text-5xl hover:scale-125 hover:rotate-12 transition-transform cursor-default">🎉</span>
                 <div>
-                  <p className="text-orange-400 text-sm font-medium">30 september - 4 oktober 2026</p>
-                  <h1 className="text-4xl font-bold text-white">Workx Lustrum - 15 Jaar!</h1>
+                  <p className="text-orange-400 text-xs sm:text-sm font-medium">30 september - 4 oktober 2026</p>
+                  <h1 className="text-2xl sm:text-4xl font-bold text-white">Workx Lustrum - 15 Jaar!</h1>
                 </div>
               </div>
               <p className="text-white/60 max-w-lg mb-4">
@@ -485,7 +485,7 @@ export default function LustrumPage() {
             {/* Countdown */}
             <div className="flex-shrink-0">
               <p className="text-center text-white/40 text-sm mb-3">Nog te gaan</p>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5 sm:gap-3">
                 {[
                   { value: countdown.days, label: 'dagen' },
                   { value: countdown.hours, label: 'uur' },
@@ -494,12 +494,12 @@ export default function LustrumPage() {
                 ].map((item) => (
                   <div
                     key={item.label}
-                    className="w-20 h-24 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center hover:scale-105 hover:bg-white/10 hover:border-orange-500/30 transition-all duration-300 cursor-default"
+                    className="w-14 h-16 sm:w-20 sm:h-24 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center hover:scale-105 hover:bg-white/10 hover:border-orange-500/30 transition-all duration-300 cursor-default"
                   >
-                    <span className="text-3xl font-bold text-orange-400 tabular-nums">
+                    <span className="text-xl sm:text-3xl font-bold text-orange-400 tabular-nums">
                       {String(item.value).padStart(2, '0')}
                     </span>
-                    <span className="text-[10px] text-white/40 uppercase tracking-wider">
+                    <span className="text-[8px] sm:text-[10px] text-white/40 uppercase tracking-wider">
                       {item.label}
                     </span>
                   </div>
@@ -513,8 +513,8 @@ export default function LustrumPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Photo Carousel */}
         <div className="lg:col-span-2 card p-0 overflow-hidden relative group">
-          <div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5">
-            <p className="text-white text-sm font-medium">📸 Hier gaan we naartoe</p>
+          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 bg-black/50 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1 sm:px-3 sm:py-1.5">
+            <p className="text-white text-xs sm:text-sm font-medium">📸 Hier gaan we naartoe</p>
           </div>
 
           {/* Navigation arrows */}
