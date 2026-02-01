@@ -1,55 +1,55 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
   <!-- Dark background -->
-  <rect width="512" height="512" rx="80" fill="#1e1e1e"/>
+  <rect width="180" height="180" fill="#1e1e1e"/>
 
   <!-- Logo container centered -->
-  <g transform="translate(106, 140)">
+  <g transform="translate(25, 40)">
     <!-- Gray logo background with rounded corners -->
-    <rect width="300" height="135" rx="12" fill="#3d3d3d"/>
+    <rect width="130" height="58" rx="6" fill="#3d3d3d"/>
 
     <!-- Yellow diagonal accent bar -->
     <defs>
-      <clipPath id="logoClip512">
-        <rect width="300" height="135" rx="12"/>
+      <clipPath id="logoClipApple">
+        <rect width="130" height="58" rx="6"/>
       </clipPath>
     </defs>
-    <g clip-path="url(#logoClip512)">
-      <polygon points="0,0 112,0 60,57 0,57" fill="#f9ff85"/>
+    <g clip-path="url(#logoClipApple)">
+      <polygon points="0,0 48,0 26,24 0,24" fill="#f9ff85"/>
     </g>
 
     <!-- Workx text -->
     <text
-      x="30"
-      y="81"
+      x="13"
+      y="35"
       fill="#ffffff"
       font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-      font-size="57"
+      font-size="25"
       font-weight="400"
       font-style="italic"
-      letter-spacing="-1.5"
+      letter-spacing="-0.7"
     >Workx</text>
 
     <!-- ADVOCATEN text -->
     <text
-      x="30"
-      y="111"
+      x="13"
+      y="48"
       fill="#ffffff"
       font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-      font-size="20"
+      font-size="8.5"
       font-weight="500"
-      letter-spacing="3.8"
+      letter-spacing="1.6"
     >ADVOCATEN</text>
   </g>
 
   <!-- DASHBOARD text below logo -->
   <text
-    x="256"
-    y="340"
+    x="90"
+    y="128"
     fill="#f9ff85"
     font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    font-size="42"
+    font-size="15"
     font-weight="600"
-    letter-spacing="6"
+    letter-spacing="2"
     text-anchor="middle"
   >DASHBOARD</text>
 </svg>
