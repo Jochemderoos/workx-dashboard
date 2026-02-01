@@ -28,6 +28,14 @@ interface TeamMember {
   birthDate: string | null // format: MM-DD
 }
 
+// Vergaderruimtes op kantoor
+const MEETING_ROOMS = [
+  { id: 'grote-vergaderruimte', name: 'Grote vergaderruimte', capacity: 10, icon: '🏢' },
+  { id: 'kleine-vergaderruimte', name: 'Kleine vergaderruimte', capacity: 4, icon: '🚪' },
+  { id: 'belruimte', name: 'Belruimte', capacity: 2, icon: '📞' },
+  { id: 'online', name: 'Online (Teams/Zoom)', capacity: 99, icon: '💻' },
+]
+
 const categoryConfig = {
   GENERAL: { label: 'Algemeen', icon: Icons.calendar, color: '#f9ff85' },
   MEETING: { label: 'Vergadering', icon: Icons.users, color: '#60a5fa' },
@@ -106,6 +114,35 @@ export default function AgendaPage() {
 
     return upcomingBirthdays[0] || null
   }, [teamBirthdays])
+
+  // Check which rooms are occupied at selected time
+  const roomAvailability = useMemo(() => {
+    if (!startDate || isAllDay) return MEETING_ROOMS.map(room => ({ ...room, available: true, conflictEvent: null as string | null }))
+
+    const checkStart = new Date(formatDateForAPI(startDate) + 'T' + startTime)
+    const checkEnd = new Date(formatDateForAPI(endDate || startDate) + 'T' + endTime)
+
+    return MEETING_ROOMS.map(room => {
+      // Find conflicting events for this room
+      const conflict = events.find(event => {
+        if (editingEvent && event.id === editingEvent.id) return false // Ignore self when editing
+        if (!event.location?.toLowerCase().includes(room.name.toLowerCase()) &&
+            !event.location?.toLowerCase().includes(room.id)) return false
+
+        const eventStart = new Date(event.startTime)
+        const eventEnd = new Date(event.endTime)
+
+        // Check overlap
+        return checkStart < eventEnd && checkEnd > eventStart
+      })
+
+      return {
+        ...room,
+        available: !conflict,
+        conflictEvent: conflict?.title || null
+      }
+    })
+  }, [events, startDate, startTime, endDate, endTime, isAllDay, editingEvent])
 
   // Get birthdays for a specific date
   const getBirthdaysForDate = (date: Date) => {
@@ -775,17 +812,68 @@ export default function AgendaPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">Locatie</label>
-                <div className="relative">
-                  <Icons.mapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Vergaderruimte, kantoor, online..."
-                    className="input-field pl-10"
-                  />
-                </div>
+                <label className="block text-sm text-white/60 mb-2">
+                  {category === 'MEETING' ? 'Vergaderruimte' : 'Locatie'}
+                </label>
+
+                {/* Room picker for meetings */}
+                {category === 'MEETING' ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      {roomAvailability.map((room) => (
+                        <button
+                          key={room.id}
+                          type="button"
+                          onClick={() => room.available && setLocation(room.name)}
+                          disabled={!room.available}
+                          className={`p-3 rounded-xl border text-left transition-all ${
+                            location === room.name
+                              ? 'border-blue-500 bg-blue-500/20 text-white'
+                              : room.available
+                              ? 'border-white/10 bg-white/5 text-white/80 hover:border-white/20 hover:bg-white/10'
+                              : 'border-red-500/30 bg-red-500/10 text-white/40 cursor-not-allowed'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{room.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium truncate ${!room.available ? 'line-through' : ''}`}>
+                                {room.name}
+                              </p>
+                              <p className="text-xs text-white/40">
+                                {room.available ? (
+                                  <>max {room.capacity} pers.</>
+                                ) : (
+                                  <span className="text-red-400">Bezet: {room.conflictEvent}</span>
+                                )}
+                              </p>
+                            </div>
+                            {location === room.name && (
+                              <Icons.check size={16} className="text-blue-400" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    {!startDate && (
+                      <p className="text-xs text-amber-400/80 flex items-center gap-1">
+                        <Icons.info size={12} />
+                        Selecteer eerst een datum om beschikbaarheid te zien
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Icons.mapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Kantoor, rechtbank, extern..."
+                      className="input-field pl-10"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
