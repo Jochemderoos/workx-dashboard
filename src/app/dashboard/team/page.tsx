@@ -53,23 +53,6 @@ function TeamAvatar({
   )
 }
 
-interface VacationBalance {
-  opbouwLopendJaar: number
-  overgedragenVorigJaar: number
-  bijgekocht: number
-  opgenomenLopendJaar: number
-  note: string | null
-}
-
-interface ParentalLeave {
-  betaaldTotaalWeken: number
-  betaaldOpgenomenWeken: number
-  onbetaaldTotaalWeken: number
-  onbetaaldOpgenomenWeken: number
-  eindDatum: string | null
-  note: string | null
-}
-
 interface TeamMember {
   id: string
   name: string
@@ -77,17 +60,16 @@ interface TeamMember {
   role: string
   department: string | null
   phoneNumber: string | null
+  startDate: string | null
   createdAt: string
   _count: { assignedWork: number }
-  vacationBalance?: VacationBalance | null
-  parentalLeave?: ParentalLeave | null
 }
 
 const roleConfig: Record<string, { label: string; color: string; bg: string }> = {
   PARTNER: { label: 'Partner', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-  ADMIN: { label: 'Kantoor', color: 'text-workx-lime', bg: 'bg-workx-lime/10' },
+  ADMIN: { label: 'Staff', color: 'text-workx-lime', bg: 'bg-workx-lime/10' },
   MANAGER: { label: 'Manager', color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  EMPLOYEE: { label: 'Medewerker', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+  EMPLOYEE: { label: 'Advocaat', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
 }
 
 export default function TeamPage() {
@@ -105,18 +87,8 @@ export default function TeamPage() {
   const [newPassword, setNewPassword] = useState('')
   const [isResetting, setIsResetting] = useState(false)
 
-  // Vacation modal state
-  const [showVacationModal, setShowVacationModal] = useState(false)
-  const [vacationMember, setVacationMember] = useState<TeamMember | null>(null)
-
   // Check if current user can reset passwords (ADMIN or PARTNER)
   const canResetPasswords = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
-  const canSeeVacation = canResetPasswords
-
-  const openVacationModal = (member: TeamMember) => {
-    setVacationMember(member)
-    setShowVacationModal(true)
-  }
 
   useEffect(() => { fetchMembers() }, [])
 
@@ -366,87 +338,13 @@ export default function TeamPage() {
                     </div>
                   </div>
 
-                  {/* Contact Info */}
-                  <div className="space-y-2.5">
-                    <a
-                      href={`mailto:${member.email}`}
-                      className="flex items-center gap-3 text-sm text-white/50 hover:text-workx-lime transition-colors group/link"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover/link:bg-workx-lime/10 transition-colors">
-                        <Icons.mail size={14} className="group-hover/link:text-workx-lime" />
-                      </div>
-                      <span className="truncate">{member.email}</span>
-                    </a>
-
-                    {member.phoneNumber && (
-                      <a
-                        href={`tel:${member.phoneNumber}`}
-                        className="flex items-center gap-3 text-sm text-white/50 hover:text-workx-lime transition-colors group/link"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover/link:bg-workx-lime/10 transition-colors">
-                          <Icons.phone size={14} className="group-hover/link:text-workx-lime" />
-                        </div>
-                        <span>{member.phoneNumber}</span>
-                      </a>
-                    )}
-
-                    {member.department && (
-                      <div className="flex items-center gap-3 text-sm text-white/50">
-                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                          <Icons.briefcase size={14} />
-                        </div>
-                        <span>{member.department}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Vacation summary for admins/partners */}
-                  {canSeeVacation && member.vacationBalance && (
-                    <button
-                      onClick={() => openVacationModal(member)}
-                      className="w-full mt-4 p-3 rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 hover:border-green-500/40 transition-all text-left group/vac"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Icons.sun size={14} className="text-green-400" />
-                          <span className="text-xs text-white/60">Vakantiedagen</span>
-                        </div>
-                        <Icons.chevronRight size={14} className="text-white/30 group-hover/vac:text-green-400 transition-colors" />
-                      </div>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-lg font-semibold text-green-400">
-                          {(member.vacationBalance.opbouwLopendJaar + member.vacationBalance.overgedragenVorigJaar + member.vacationBalance.bijgekocht - member.vacationBalance.opgenomenLopendJaar).toFixed(1)}
-                        </span>
-                        <span className="text-xs text-white/40">dagen over</span>
-                        {member.parentalLeave && (
-                          <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
-                        )}
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Footer */}
-                  <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-xs text-white/30 flex items-center gap-1.5">
+                  {/* Datum in dienst - alleen voor niet-partners */}
+                  {member.role !== 'PARTNER' && member.startDate && (
+                    <div className="text-xs text-white/40 flex items-center gap-1.5">
                       <Icons.calendar size={12} />
-                      Sinds {new Date(member.createdAt).toLocaleDateString('nl-NL', { month: 'short', year: 'numeric' })}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {canResetPasswords && (
-                        <button
-                          onClick={() => openResetModal(member)}
-                          className="p-1.5 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                          title="Wachtwoord resetten"
-                        >
-                          <Icons.lock size={14} />
-                        </button>
-                      )}
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5">
-                        <Icons.briefcase size={12} className="text-white/40" />
-                        <span className="text-xs text-white/60">{member._count.assignedWork} zaken</span>
-                      </div>
+                      In dienst sinds {new Date(member.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )
@@ -458,10 +356,8 @@ export default function TeamPage() {
             <thead>
               <tr className="border-b border-white/5">
                 <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4">Naam</th>
-                <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4 hidden sm:table-cell">Email</th>
-                <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4 hidden md:table-cell">Afdeling</th>
-                <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4">Rol</th>
-                <th className="text-right text-xs font-medium text-white/40 uppercase tracking-wider p-4">Zaken</th>
+                <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4">Functie</th>
+                <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4 hidden md:table-cell">In dienst</th>
                 {canResetPasswords && <th className="text-right text-xs font-medium text-white/40 uppercase tracking-wider p-4 w-20">Acties</th>}
               </tr>
             </thead>
@@ -480,21 +376,17 @@ export default function TeamPage() {
                         <span className="font-medium text-white">{member.name}</span>
                       </div>
                     </td>
-                    <td className="p-4 hidden sm:table-cell">
-                      <a href={`mailto:${member.email}`} className="text-sm text-white/50 hover:text-workx-lime transition-colors">
-                        {member.email}
-                      </a>
-                    </td>
-                    <td className="p-4 hidden md:table-cell">
-                      <span className="text-sm text-white/50">{member.department || '-'}</span>
-                    </td>
                     <td className="p-4">
                       <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
                         {config.label}
                       </span>
                     </td>
-                    <td className="p-4 text-right">
-                      <span className="text-sm text-white/60">{member._count.assignedWork}</span>
+                    <td className="p-4 hidden md:table-cell">
+                      <span className="text-sm text-white/50">
+                        {member.role === 'PARTNER' ? '-' : (member.startDate
+                          ? new Date(member.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '-')}
+                      </span>
                     </td>
                     {canResetPasswords && (
                       <td className="p-4 text-right">
@@ -512,166 +404,6 @@ export default function TeamPage() {
               })}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* Vacation Details Modal */}
-      {showVacationModal && vacationMember && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowVacationModal(false)}>
-          <div className="card p-6 w-full max-w-md relative" onClick={e => e.stopPropagation()}>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <Icons.sun className="text-green-400" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">Verlof overzicht</h2>
-              </div>
-              <button
-                onClick={() => setShowVacationModal(false)}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              >
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            {/* User info */}
-            <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
-              <TeamAvatar name={vacationMember.name} size="large" />
-              <div>
-                <p className="font-medium text-white">{vacationMember.name}</p>
-                <p className="text-sm text-white/40">{vacationMember.email}</p>
-              </div>
-            </div>
-
-            {/* Vacation Balance */}
-            {vacationMember.vacationBalance && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Vakantiedagen 2026</h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-white/5">
-                    <p className="text-xs text-white/40">Opbouw dit jaar</p>
-                    <p className="text-xl font-semibold text-white">{vacationMember.vacationBalance.opbouwLopendJaar}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/5">
-                    <p className="text-xs text-white/40">Overgedragen</p>
-                    <p className="text-xl font-semibold text-blue-400">{vacationMember.vacationBalance.overgedragenVorigJaar}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/5">
-                    <p className="text-xs text-white/40">Bijgekocht</p>
-                    <p className="text-xl font-semibold text-purple-400">{vacationMember.vacationBalance.bijgekocht}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/5">
-                    <p className="text-xs text-white/40">Opgenomen</p>
-                    <p className="text-xl font-semibold text-orange-400">{vacationMember.vacationBalance.opgenomenLopendJaar}</p>
-                  </div>
-                </div>
-
-                {/* Total and remaining */}
-                <div className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-green-500/5 border border-green-500/20">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-white/40">Totaal beschikbaar</p>
-                      <p className="text-sm text-white/60">
-                        {vacationMember.vacationBalance.opbouwLopendJaar} + {vacationMember.vacationBalance.overgedragenVorigJaar} + {vacationMember.vacationBalance.bijgekocht} = {(vacationMember.vacationBalance.opbouwLopendJaar + vacationMember.vacationBalance.overgedragenVorigJaar + vacationMember.vacationBalance.bijgekocht).toFixed(1)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-white/40">Resterend</p>
-                      <p className="text-2xl font-bold text-green-400">
-                        {(vacationMember.vacationBalance.opbouwLopendJaar + vacationMember.vacationBalance.overgedragenVorigJaar + vacationMember.vacationBalance.bijgekocht - vacationMember.vacationBalance.opgenomenLopendJaar).toFixed(1)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {vacationMember.vacationBalance.note && (
-                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                    <p className="text-xs text-blue-400 flex items-center gap-2">
-                      <Icons.info size={12} />
-                      {vacationMember.vacationBalance.note}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Parental Leave */}
-            {vacationMember.parentalLeave && (
-              <div className="mt-6 pt-6 border-t border-white/10 space-y-4">
-                <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider flex items-center gap-2">
-                  <Icons.heart size={14} className="text-purple-400" />
-                  Ouderschapsverlof
-                </h3>
-
-                <div className="space-y-3">
-                  {/* Betaald verlof */}
-                  <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
-                      <span className="text-xs text-white/40">
-                        {vacationMember.parentalLeave.betaaldOpgenomenWeken} / {vacationMember.parentalLeave.betaaldTotaalWeken} weken
-                      </span>
-                    </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-400 rounded-full"
-                        style={{ width: `${(vacationMember.parentalLeave.betaaldOpgenomenWeken / vacationMember.parentalLeave.betaaldTotaalWeken) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-green-400 mt-1">
-                      {vacationMember.parentalLeave.betaaldTotaalWeken - vacationMember.parentalLeave.betaaldOpgenomenWeken} weken resterend
-                    </p>
-                  </div>
-
-                  {/* Onbetaald verlof */}
-                  {vacationMember.parentalLeave.onbetaaldTotaalWeken > 0 && (
-                    <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
-                        <span className="text-xs text-white/40">
-                          {vacationMember.parentalLeave.onbetaaldOpgenomenWeken} / {vacationMember.parentalLeave.onbetaaldTotaalWeken} weken
-                        </span>
-                      </div>
-                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-purple-400 rounded-full"
-                          style={{ width: `${(vacationMember.parentalLeave.onbetaaldOpgenomenWeken / vacationMember.parentalLeave.onbetaaldTotaalWeken) * 100}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-purple-400 mt-1">
-                        {vacationMember.parentalLeave.onbetaaldTotaalWeken - vacationMember.parentalLeave.onbetaaldOpgenomenWeken} weken resterend
-                      </p>
-                    </div>
-                  )}
-
-                  {vacationMember.parentalLeave.eindDatum && (
-                    <p className="text-xs text-white/40">
-                      Te gebruiken tot: {new Date(vacationMember.parentalLeave.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
-                  )}
-
-                  {vacationMember.parentalLeave.note && (
-                    <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                      <p className="text-xs text-purple-400 flex items-center gap-2">
-                        <Icons.info size={12} />
-                        {vacationMember.parentalLeave.note}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={() => setShowVacationModal(false)}
-              className="w-full btn-secondary mt-6"
-            >
-              Sluiten
-            </button>
-          </div>
         </div>
       )}
 

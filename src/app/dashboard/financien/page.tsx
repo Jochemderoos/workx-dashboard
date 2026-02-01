@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import jsPDF from 'jspdf'
 import { drawWorkxLogo } from '@/lib/pdf'
+import { getPhotoUrl } from '@/lib/team-photos'
 
 // Get dynamic years (current year and 2 previous years)
 const currentYear = new Date().getFullYear()
@@ -42,9 +44,58 @@ interface BudgetItem {
   spent: number
 }
 
-type TabType = 'overzicht' | 'grafieken' | 'budgetten'
+interface SalaryScale {
+  id: string
+  experienceYear: number
+  label: string
+  salary: number
+  hourlyRateBase: number
+  hourlyRateMin: number | null
+  hourlyRateMax: number | null
+}
+
+interface VacationBalance {
+  opbouwLopendJaar: number
+  overgedragenVorigJaar: number
+  bijgekocht: number
+  opgenomenLopendJaar: number
+  note: string | null
+}
+
+interface ParentalLeave {
+  betaaldTotaalWeken: number
+  betaaldOpgenomenWeken: number
+  onbetaaldTotaalWeken: number
+  onbetaaldOpgenomenWeken: number
+  eindDatum: string | null
+  note: string | null
+}
+
+interface EmployeeData {
+  id: string
+  name: string
+  email: string
+  role: string
+  startDate: string | null
+  department: string | null
+  compensation: {
+    experienceYear: number | null
+    hourlyRate: number
+    salary: number | null
+    isHourlyWage: boolean
+    notes: string | null
+  } | null
+  bonusPaid: number
+  bonusPending: number
+  bonusTotal: number
+  vacationBalance: VacationBalance | null
+  parentalLeave: ParentalLeave | null
+}
+
+type TabType = 'overzicht' | 'grafieken' | 'budgetten' | 'salarishuis' | 'arbeidsvoorwaarden'
 
 export default function FinancienPage() {
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState<TabType>('overzicht')
   const [currentYearData, setCurrentYearData] = useState({
     werkgeverslasten: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -58,6 +109,14 @@ export default function FinancienPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [salaryScales, setSalaryScales] = useState<SalaryScale[]>([])
+  const [employees, setEmployees] = useState<EmployeeData[]>([])
+  const [editingEmployee, setEditingEmployee] = useState<string | null>(null)
+  const [editingSalaryScale, setEditingSalaryScale] = useState<string | null>(null)
+  const [isEditingSalarishuis, setIsEditingSalarishuis] = useState(false)
+
+  // Check if user is PARTNER or ADMIN
+  const isManager = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
 
   // Load data from API
   useEffect(() => {
@@ -76,6 +135,20 @@ export default function FinancienPage() {
           const budgetData = await budgetRes.json()
           setBudgets(budgetData)
         }
+
+        // Load salary scales
+        const scaleRes = await fetch('/api/financien/salary-scales')
+        if (scaleRes.ok) {
+          const scaleData = await scaleRes.json()
+          setSalaryScales(scaleData)
+        }
+
+        // Load employee compensation (voor iedereen - API filtert op basis van rol)
+        const empRes = await fetch('/api/financien/employee-compensation')
+        if (empRes.ok) {
+          const empData = await empRes.json()
+          setEmployees(empData)
+        }
       } catch (error) {
         console.error('Error loading financial data:', error)
       } finally {
@@ -83,7 +156,7 @@ export default function FinancienPage() {
       }
     }
     loadData()
-  }, [])
+  }, [isManager])
 
   // Save current year data to API
   const saveCurrentYearData = async () => {
@@ -756,11 +829,13 @@ export default function FinancienPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {[
           { id: 'overzicht' as TabType, label: 'Overzicht', icon: Icons.chart },
           { id: 'grafieken' as TabType, label: 'Grafieken', icon: Icons.activity },
           { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
+          { id: 'salarishuis' as TabType, label: 'Salarishuis', icon: Icons.euro },
+          { id: 'arbeidsvoorwaarden' as TabType, label: 'Arbeidsvoorwaarden', icon: Icons.users },
         ].map(tab => (
           <button
             key={tab.id}
@@ -1237,6 +1312,608 @@ export default function FinancienPage() {
                   )
                 })}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Salarishuis Tab - Visible to everyone */}
+      {activeTab === 'salarishuis' && (
+        <div className="space-y-6">
+          {/* Header with buttons for managers */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white/60 text-sm">
+                Het salarishuis van Workx Advocaten - Tarieven per ervaringsjaar
+              </p>
+              <p className="text-white/40 text-xs mt-1">
+                Alle medewerkers gaan per 1 maart elk jaar automatisch een stap omhoog
+              </p>
+            </div>
+            {isManager && (
+              <div className="flex gap-2">
+                {salaryScales.length === 0 ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/financien/salary-scales/seed', { method: 'POST' })
+                        if (res.ok) {
+                          const scaleRes = await fetch('/api/financien/salary-scales')
+                          if (scaleRes.ok) {
+                            setSalaryScales(await scaleRes.json())
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error seeding salary scales:', error)
+                      }
+                    }}
+                    className="px-4 py-2 bg-workx-lime text-workx-dark rounded-xl font-medium hover:bg-workx-lime/90 transition-colors text-sm"
+                  >
+                    Salarisschaal Laden
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (isEditingSalarishuis) {
+                        // Als we klaar klikken, sluit ook alle open edit velden
+                        setEditingSalaryScale(null)
+                      }
+                      setIsEditingSalarishuis(!isEditingSalarishuis)
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors text-sm ${
+                      isEditingSalarishuis
+                        ? 'bg-workx-lime text-workx-dark'
+                        : 'bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                  >
+                    <Icons.edit size={16} />
+                    {isEditingSalarishuis ? 'Klaar' : 'Bewerken'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Salary Scale Table */}
+          {salaryScales.length > 0 ? (
+            <div className="bg-workx-dark/40 rounded-2xl border border-white/5 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-workx-dark/60">
+                      <th className="text-left py-4 px-6 text-workx-lime font-medium">Ervaringsjaar</th>
+                      <th className="text-right py-4 px-6 text-workx-lime font-medium">Bruto Salaris</th>
+                      <th className="text-right py-4 px-6 text-workx-lime font-medium">Uurtarief</th>
+                      <th className="text-right py-4 px-6 text-workx-lime font-medium">Range</th>
+                      {isEditingSalarishuis && <th className="w-10"></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salaryScales.map((scale, idx) => {
+                      const isEditing = editingSalaryScale === scale.id
+
+                      return (
+                        <tr
+                          key={scale.id}
+                          className={`border-b border-white/5 hover:bg-white/5 transition-colors ${idx % 2 === 0 ? 'bg-white/[0.02]' : ''} ${isEditing ? 'bg-workx-lime/5' : ''}`}
+                        >
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center">
+                                <span className="text-workx-lime font-bold text-sm">{scale.experienceYear}</span>
+                              </div>
+                              <span className="text-white font-medium">{scale.label}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                id={`salary-${scale.id}`}
+                                defaultValue={scale.salary}
+                                className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-24 text-right focus:border-workx-lime/50 focus:outline-none"
+                              />
+                            ) : (
+                              <>
+                                <span className="text-white font-semibold text-lg">{formatCurrency(scale.salary)}</span>
+                                <span className="text-white/40 text-sm ml-1">/maand</span>
+                              </>
+                            )}
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                id={`hourlyRate-${scale.id}`}
+                                defaultValue={scale.hourlyRateBase}
+                                className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-20 text-right focus:border-workx-lime/50 focus:outline-none"
+                              />
+                            ) : (
+                              <span className="text-workx-lime font-semibold text-lg">€{scale.hourlyRateBase}</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            {isEditing ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <input
+                                  type="number"
+                                  id={`rateMin-${scale.id}`}
+                                  defaultValue={scale.hourlyRateMin || ''}
+                                  placeholder="min"
+                                  className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-16 text-right focus:border-workx-lime/50 focus:outline-none"
+                                />
+                                <span className="text-white/40">-</span>
+                                <input
+                                  type="number"
+                                  id={`rateMax-${scale.id}`}
+                                  defaultValue={scale.hourlyRateMax || ''}
+                                  placeholder="max"
+                                  className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-16 text-right focus:border-workx-lime/50 focus:outline-none"
+                                />
+                              </div>
+                            ) : (
+                              scale.hourlyRateMin && scale.hourlyRateMax ? (
+                                <span className="text-white/60">
+                                  €{scale.hourlyRateMin} - €{scale.hourlyRateMax}
+                                </span>
+                              ) : (
+                                <span className="text-white/30">-</span>
+                              )
+                            )}
+                          </td>
+                          {isEditingSalarishuis && (
+                            <td className="py-4 px-2">
+                              {isEditing ? (
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={async () => {
+                                      const salaryInput = document.getElementById(`salary-${scale.id}`) as HTMLInputElement
+                                      const hourlyRateInput = document.getElementById(`hourlyRate-${scale.id}`) as HTMLInputElement
+                                      const rateMinInput = document.getElementById(`rateMin-${scale.id}`) as HTMLInputElement
+                                      const rateMaxInput = document.getElementById(`rateMax-${scale.id}`) as HTMLInputElement
+
+                                      try {
+                                        await fetch('/api/financien/salary-scales', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            ...scale,
+                                            salary: parseFloat(salaryInput.value) || scale.salary,
+                                            hourlyRateBase: parseFloat(hourlyRateInput.value) || scale.hourlyRateBase,
+                                            hourlyRateMin: parseFloat(rateMinInput.value) || null,
+                                            hourlyRateMax: parseFloat(rateMaxInput.value) || null
+                                          })
+                                        })
+                                        const scaleRes = await fetch('/api/financien/salary-scales')
+                                        if (scaleRes.ok) setSalaryScales(await scaleRes.json())
+                                        setEditingSalaryScale(null)
+                                      } catch (error) {
+                                        console.error('Error updating scale:', error)
+                                      }
+                                    }}
+                                    className="p-2 rounded-lg bg-workx-lime text-workx-dark hover:bg-workx-lime/80 transition-colors"
+                                    title="Opslaan"
+                                  >
+                                    <Icons.check size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingSalaryScale(null)}
+                                    className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                                    title="Annuleren"
+                                  >
+                                    <Icons.x size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setEditingSalaryScale(scale.id)}
+                                  className="p-2 rounded-lg text-white/40 hover:text-workx-lime hover:bg-white/10 transition-colors"
+                                  title="Bewerken"
+                                >
+                                  <Icons.edit size={14} />
+                                </button>
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-workx-dark/40 rounded-2xl p-12 border border-white/5 text-center">
+              <Icons.euro size={48} className="text-white/20 mx-auto mb-4" />
+              <p className="text-white/60">Nog geen salarisschaal geladen</p>
+              {isManager && (
+                <p className="text-white/40 text-sm mt-2">Klik op "Salarisschaal Laden" om te beginnen</p>
+              )}
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* Arbeidsvoorwaarden Tab - Voor iedereen (medewerkers zien alleen eigen plaatje) */}
+      {activeTab === 'arbeidsvoorwaarden' && (
+        <div className="space-y-6">
+          <div>
+            <p className="text-white/60 text-sm">
+              {isManager
+                ? 'Overzicht van alle medewerkers met hun arbeidsvoorwaarden en bonussen'
+                : 'Jouw arbeidsvoorwaarden en bonussen'
+              }
+            </p>
+            <p className="text-white/40 text-xs mt-1">
+              Salarissen zijn gekoppeld aan het salarishuis per 1 maart 2026
+            </p>
+          </div>
+
+          {/* Employee Cards - Football card style */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {employees.map(employee => {
+              const photoUrl = getPhotoUrl(employee.name)
+              const yearsOfService = employee.startDate
+                ? Math.floor((new Date().getTime() - new Date(employee.startDate).getTime()) / (1000 * 60 * 60 * 24 * 365))
+                : null
+              const salaryScale = employee.compensation?.experienceYear !== null && employee.compensation?.experienceYear !== undefined
+                ? salaryScales.find(s => s.experienceYear === employee.compensation?.experienceYear)
+                : null
+
+              // Check if this is support staff (Hanna, Lotte) - no experience year
+              const isSupportStaff = employee.compensation?.experienceYear === null || employee.compensation?.experienceYear === undefined
+              const isHourlyWage = employee.compensation?.isHourlyWage || false
+              const firstName = employee.name.split(' ')[0].toLowerCase()
+              const isHannaOrLotte = firstName === 'hanna' || firstName === 'lotte'
+
+              return (
+                <div
+                  key={employee.id}
+                  className="relative group"
+                >
+                  {/* Card Background with gradient border */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-workx-lime/30 via-workx-lime/10 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  <div className="relative bg-gradient-to-br from-workx-dark/80 to-workx-dark/40 rounded-2xl border border-white/10 overflow-hidden backdrop-blur-sm">
+                    {/* Top accent bar - different color for support staff */}
+                    <div className={`h-1 bg-gradient-to-r ${isHannaOrLotte ? 'from-cyan-400 via-cyan-400/50' : 'from-workx-lime via-workx-lime/50'} to-transparent`} />
+
+                    {/* Photo and Name Section */}
+                    <div className="p-6 pb-4">
+                      <div className="flex items-start gap-4">
+                        {/* Photo */}
+                        <div className="relative flex-shrink-0">
+                          <div className={`w-20 h-20 rounded-xl overflow-hidden ring-2 ${isHannaOrLotte ? 'ring-cyan-400/30 shadow-cyan-400/20' : 'ring-workx-lime/30 shadow-workx-lime/20'} shadow-lg`}>
+                            {photoUrl ? (
+                              <img
+                                src={photoUrl}
+                                alt={employee.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className={`w-full h-full bg-gradient-to-br ${isHannaOrLotte ? 'from-cyan-400 to-cyan-400/60' : 'from-workx-lime to-workx-lime/60'} flex items-center justify-center`}>
+                                <span className="text-workx-dark text-2xl font-bold">
+                                  {employee.name.charAt(0)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Experience badge - only for lawyers with experience year */}
+                          {!isHannaOrLotte && employee.compensation?.experienceYear !== null && employee.compensation?.experienceYear !== undefined && (
+                            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-workx-lime flex items-center justify-center shadow-lg">
+                              <span className="text-workx-dark text-xs font-bold">{employee.compensation.experienceYear}</span>
+                            </div>
+                          )}
+                          {/* Support staff badge */}
+                          {isHannaOrLotte && (
+                            <div className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-lg bg-cyan-400 flex items-center justify-center shadow-lg">
+                              <span className="text-workx-dark text-[10px] font-bold">STAFF</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Name and Role */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-white font-semibold text-lg truncate">{employee.name}</h3>
+                          <p className="text-white/40 text-sm">{employee.role === 'ADMIN' ? 'Kantoormanager' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role}</p>
+                          {yearsOfService !== null && (
+                            <p className={`${isHannaOrLotte ? 'text-cyan-400/60' : 'text-workx-lime/60'} text-xs mt-1`}>
+                              {yearsOfService} jaar bij Workx
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats Section */}
+                    <div className="px-6 py-4 border-t border-white/5 bg-black/20">
+                      {isHannaOrLotte ? (
+                        /* Support Staff: Salary/Hourly wage only */
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">
+                              {isHourlyWage ? 'Uurloon' : 'Salaris'}
+                            </p>
+                            <p className="text-cyan-400 font-semibold">
+                              {employee.compensation?.salary
+                                ? isHourlyWage
+                                  ? `€${employee.compensation.salary}/uur`
+                                  : formatCurrency(employee.compensation.salary)
+                                : '-'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Type</p>
+                            <p className="text-white font-medium">
+                              {isHourlyWage ? 'Uurloner' : 'Vast contract'}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Lawyers: Experience year, salary, hourly rate */
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Experience Year */}
+                            <div>
+                              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Ervaringsjaar</p>
+                              <p className="text-white font-medium">
+                                {salaryScale?.label || (employee.compensation?.experienceYear !== null ? `${employee.compensation?.experienceYear}e jaars` : '-')}
+                              </p>
+                            </div>
+
+                            {/* Hourly Rate */}
+                            <div>
+                              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Uurtarief</p>
+                              <p className="text-workx-lime font-semibold">
+                                {employee.compensation ? `€${employee.compensation.hourlyRate}` : '-'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Salary from Salarishuis */}
+                          <div>
+                            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Bruto Salaris (per 1-3-2026)</p>
+                            <p className="text-white font-semibold text-lg">
+                              {employee.compensation?.salary ? formatCurrency(employee.compensation.salary) : (salaryScale ? formatCurrency(salaryScale.salary) : '-')}
+                              <span className="text-white/40 text-sm font-normal ml-1">/maand</span>
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bonus Section - only for lawyers */}
+                    {!isHannaOrLotte && (
+                      <div className="px-6 py-4 border-t border-white/5">
+                        <p className="text-white/40 text-xs uppercase tracking-wider mb-3">Bonus {currentYear}</p>
+                        <div className="flex items-center gap-4">
+                          {/* Paid Bonus */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 rounded-full bg-green-500" />
+                              <span className="text-white/60 text-xs">Betaald</span>
+                            </div>
+                            <p className="text-green-400 font-semibold">{formatCurrency(employee.bonusPaid)}</p>
+                          </div>
+
+                          {/* Pending Bonus */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                              <span className="text-white/60 text-xs">In afwachting</span>
+                            </div>
+                            <p className="text-orange-400 font-semibold">{formatCurrency(employee.bonusPending)}</p>
+                          </div>
+                        </div>
+
+                        {/* Total Bonus Bar */}
+                        {employee.bonusTotal > 0 && (
+                          <div className="mt-3">
+                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-green-500 to-green-400"
+                                style={{
+                                  width: `${(employee.bonusPaid / employee.bonusTotal) * 100}%`
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Vacation Section */}
+                    {employee.vacationBalance && (
+                      <div className="px-6 py-4 border-t border-white/5">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-white/40 text-xs uppercase tracking-wider flex items-center gap-2">
+                            <Icons.sun size={12} className="text-green-400" />
+                            Vakantiedagen {currentYear}
+                          </p>
+                          {employee.parentalLeave && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4">
+                          {/* Remaining Days */}
+                          <div className="flex-1">
+                            <p className="text-2xl font-bold text-green-400">
+                              {(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht - employee.vacationBalance.opgenomenLopendJaar).toFixed(1)}
+                            </p>
+                            <p className="text-white/40 text-xs">dagen over</p>
+                          </div>
+
+                          {/* Details */}
+                          <div className="flex-1 text-right space-y-1">
+                            <p className="text-xs text-white/50">
+                              <span className="text-white/30">Totaal:</span> {(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht).toFixed(1)}
+                            </p>
+                            <p className="text-xs text-white/50">
+                              <span className="text-white/30">Opgenomen:</span> {employee.vacationBalance.opgenomenLopendJaar.toFixed(1)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Parental Leave indicator */}
+                        {employee.parentalLeave && (
+                          <div className="mt-3 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-purple-400">Betaald O.V.</span>
+                              <span className="text-white/60">
+                                {employee.parentalLeave.betaaldOpgenomenWeken}/{employee.parentalLeave.betaaldTotaalWeken} wk
+                              </span>
+                            </div>
+                            {employee.parentalLeave.onbetaaldTotaalWeken > 0 && (
+                              <div className="flex items-center justify-between text-xs mt-1">
+                                <span className="text-purple-400/70">Onbetaald O.V.</span>
+                                <span className="text-white/60">
+                                  {employee.parentalLeave.onbetaaldOpgenomenWeken}/{employee.parentalLeave.onbetaaldTotaalWeken} wk
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Edit Button (for managers) */}
+                    {isManager && (
+                      <div className="px-6 py-3 border-t border-white/5 bg-black/10">
+                        <button
+                          onClick={() => setEditingEmployee(editingEmployee === employee.id ? null : employee.id)}
+                          className={`w-full flex items-center justify-center gap-2 text-white/40 ${isHannaOrLotte ? 'hover:text-cyan-400' : 'hover:text-workx-lime'} transition-colors text-sm`}
+                        >
+                          <Icons.edit size={14} />
+                          <span>Bewerken</span>
+                        </button>
+
+                        {/* Edit Form */}
+                        {editingEmployee === employee.id && (
+                          <div className="mt-4 space-y-3">
+                            {isHannaOrLotte ? (
+                              /* Support staff edit form - manual salary/hourly wage */
+                              <>
+                                <div>
+                                  <label className="text-white/40 text-xs block mb-1">Type beloning</label>
+                                  <select
+                                    defaultValue={isHourlyWage ? 'hourly' : 'salary'}
+                                    onChange={async (e) => {
+                                      const newIsHourlyWage = e.target.value === 'hourly'
+                                      try {
+                                        await fetch('/api/financien/employee-compensation', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            userId: employee.id,
+                                            experienceYear: null,
+                                            hourlyRate: employee.compensation?.hourlyRate || 0,
+                                            salary: employee.compensation?.salary || null,
+                                            isHourlyWage: newIsHourlyWage
+                                          })
+                                        })
+                                        const empRes = await fetch('/api/financien/employee-compensation')
+                                        if (empRes.ok) setEmployees(await empRes.json())
+                                      } catch (error) {
+                                        console.error('Error updating compensation:', error)
+                                      }
+                                    }}
+                                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-400/50"
+                                  >
+                                    <option value="salary" className="bg-workx-dark">Vast salaris</option>
+                                    <option value="hourly" className="bg-workx-dark">Uurloon</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-white/40 text-xs block mb-1">
+                                    {isHourlyWage ? 'Uurloon (€)' : 'Bruto salaris (€)'}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    defaultValue={employee.compensation?.salary || ''}
+                                    placeholder={isHourlyWage ? 'bijv. 25' : 'bijv. 3500'}
+                                    onBlur={async (e) => {
+                                      const value = parseFloat(e.target.value)
+                                      if (!isNaN(value)) {
+                                        try {
+                                          await fetch('/api/financien/employee-compensation', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              userId: employee.id,
+                                              experienceYear: null,
+                                              hourlyRate: isHourlyWage ? value : 0,
+                                              salary: value,
+                                              isHourlyWage: isHourlyWage
+                                            })
+                                          })
+                                          const empRes = await fetch('/api/financien/employee-compensation')
+                                          if (empRes.ok) setEmployees(await empRes.json())
+                                        } catch (error) {
+                                          console.error('Error updating compensation:', error)
+                                        }
+                                      }
+                                    }}
+                                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-400/50"
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              /* Lawyer edit form - experience year selection */
+                              <div>
+                                <label className="text-white/40 text-xs block mb-1">Ervaringsjaar</label>
+                                <select
+                                  defaultValue={employee.compensation?.experienceYear ?? 0}
+                                  onChange={async (e) => {
+                                    const scale = salaryScales.find(s => s.experienceYear === parseInt(e.target.value))
+                                    if (scale) {
+                                      try {
+                                        await fetch('/api/financien/employee-compensation', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            userId: employee.id,
+                                            experienceYear: scale.experienceYear,
+                                            hourlyRate: scale.hourlyRateBase,
+                                            salary: scale.salary
+                                          })
+                                        })
+                                        const empRes = await fetch('/api/financien/employee-compensation')
+                                        if (empRes.ok) setEmployees(await empRes.json())
+                                      } catch (error) {
+                                        console.error('Error updating compensation:', error)
+                                      }
+                                    }
+                                  }}
+                                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-workx-lime/50"
+                                >
+                                  {salaryScales.map(scale => (
+                                    <option key={scale.id} value={scale.experienceYear} className="bg-workx-dark">
+                                      {scale.label} - €{scale.salary}/mnd - €{scale.hourlyRateBase}/uur
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {employees.length === 0 && (
+            <div className="bg-workx-dark/40 rounded-2xl p-12 border border-white/5 text-center">
+              <Icons.users size={48} className="text-white/20 mx-auto mb-4" />
+              <p className="text-white/60">
+                {isManager
+                  ? 'Nog geen medewerkers met arbeidsvoorwaarden'
+                  : 'Je arbeidsvoorwaarden zijn nog niet ingesteld. Neem contact op met HR.'
+                }
+              </p>
             </div>
           )}
         </div>
