@@ -1250,9 +1250,15 @@ export default function LustrumPage() {
 
       {/* Flight Modal */}
       {showFlightModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowFlightModal(false)}
+        >
+          <div
+            className="absolute left-1/2 w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl"
+            style={{ top: '28%', transform: 'translateX(-50%)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1410,15 +1416,20 @@ export default function LustrumPage() {
               </button>
             </div>
           </div>
-          </div>
         </div>
       )}
 
       {/* Program Modal */}
       {showProgramModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm overflow-y-auto">
-          <div className="min-h-full flex items-center justify-center p-4">
-            <div className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowProgramModal(false)}
+        >
+          <div
+            className="absolute left-1/2 w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl"
+            style={{ top: '28%', transform: 'translateX(-50%)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1526,7 +1537,6 @@ export default function LustrumPage() {
                 {isSavingProgram ? 'Toevoegen...' : 'Toevoegen'}
               </button>
             </div>
-          </div>
           </div>
         </div>
       )}

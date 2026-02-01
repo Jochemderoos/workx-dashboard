@@ -16,15 +16,14 @@ function parseRTFContent(buffer: Buffer): ParsedEntry[] {
   const entries: ParsedEntry[] = []
 
   // Extract all field results from RTF
-  // Pattern: {{\fldrslt {... value}
   const fieldResults: string[] = []
-  const fieldPattern = /\{\{\\fldrslt\s+\{[^}]*\s+([^{}]+)\}/g
+  const fldrsltPattern = /\{\{\\fldrslt\s*\{([^}]+)\}/g
   let match
 
-  while ((match = fieldPattern.exec(content)) !== null) {
+  while ((match = fldrsltPattern.exec(content)) !== null) {
     let value = match[1]
-      .replace(/\\[a-z0-9]+/gi, '')
-      .replace(/[{}]/g, '')
+      .replace(/\\[a-z]+\d*\s*/gi, ' ')
+      .replace(/\s+/g, ' ')
       .trim()
     if (value && value.length > 0) {
       fieldResults.push(value)
@@ -72,14 +71,18 @@ function parseRTFContent(buffer: Buffer): ParsedEntry[] {
               // Handle compound last names like "van der Vos", "de Roos"
               let lastName = nextVal
               // Check for prefixes
-              if (['van', 'de', 'den', 'der'].includes(nextVal.toLowerCase())) {
+              if (['van', 'de', 'den'].includes(nextVal.toLowerCase())) {
                 const thirdVal = fieldResults[j + 2]
-                if (thirdVal && /^[a-zA-Z]/.test(thirdVal)) {
-                  lastName = nextVal + ' ' + thirdVal
-                  // Check for "van der"
-                  const fourthVal = fieldResults[j + 3]
-                  if (thirdVal.toLowerCase() === 'der' && fourthVal && /^[a-zA-Z]/.test(fourthVal)) {
-                    lastName = nextVal + ' ' + thirdVal + ' ' + fourthVal
+                if (thirdVal && /^[a-zA-Z]/.test(thirdVal) && !thirdVal.match(/^\d/)) {
+                  // Check if third is "der" (for "van der Vos")
+                  if (thirdVal.toLowerCase() === 'der') {
+                    const fourthVal = fieldResults[j + 3]
+                    if (fourthVal && /^[A-Z]/.test(fourthVal)) {
+                      lastName = nextVal + ' ' + thirdVal + ' ' + fourthVal
+                    }
+                  } else if (/^[A-Z]/.test(thirdVal)) {
+                    // Regular "van Pesch", "de Roos", "den Ridder"
+                    lastName = nextVal + ' ' + thirdVal
                   }
                 }
               }

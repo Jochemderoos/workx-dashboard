@@ -57,10 +57,13 @@ export default function AgendaPage() {
   const [endTime, setEndTime] = useState('10:00')
   const [isAllDay, setIsAllDay] = useState(false)
 
-  // Helper to format date for API
+  // Helper to format date for API (using local timezone, not UTC)
   const formatDateForAPI = (date: Date | null) => {
     if (!date) return ''
-    return date.toISOString().split('T')[0]
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
   const [location, setLocation] = useState('')
   const [category, setCategory] = useState<CalendarEvent['category']>('GENERAL')
@@ -198,9 +201,12 @@ export default function AgendaPage() {
       // Create events for all dates
       let successCount = 0
       for (const date of datesToCreate) {
-        const dateStr = formatDateForAPI(date)
-        const startDateTime = isAllDay ? new Date(dateStr + 'T00:00:00') : new Date(dateStr + 'T' + startTime)
-        const endDateTime = isAllDay ? new Date(dateStr + 'T23:59:59') : new Date(dateStr + 'T' + endTime)
+        const startDateStr = formatDateForAPI(date)
+        // For multi-day events (or when editing), use actual endDate; for recurring single-day events, use same date
+        const endDateStr = (editingEvent || datesToCreate.length === 1) ? formatDateForAPI(endDate) : startDateStr
+
+        const startDateTime = isAllDay ? new Date(startDateStr + 'T00:00:00') : new Date(startDateStr + 'T' + startTime)
+        const endDateTime = isAllDay ? new Date(endDateStr + 'T23:59:59') : new Date(endDateStr + 'T' + endTime)
 
         const res = await fetch(editingEvent ? `/api/calendar/${editingEvent.id}` : '/api/calendar', {
           method: editingEvent ? 'PATCH' : 'POST',

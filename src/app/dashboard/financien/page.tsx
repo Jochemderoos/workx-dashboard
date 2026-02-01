@@ -271,7 +271,7 @@ export default function FinancienPage() {
             {data.map((series, seriesIdx) => {
               const isCurrentYear = seriesIdx === data.length - 1
 
-              // For current year, filter to only show non-zero segments
+              // For current year, show points for all data (including connecting lines for consecutive non-zero)
               if (isCurrentYear) {
                 // Find indices with actual data (non-zero values)
                 const nonZeroIndices = series.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0)
@@ -279,29 +279,51 @@ export default function FinancienPage() {
                 // If no data or all zeros, don't draw
                 if (nonZeroIndices.length === 0) return null
 
-                // Draw only points with data (no connecting lines for sparse data)
+                // Build line segments between consecutive non-zero points
+                const lineSegments: string[] = []
+                for (let j = 0; j < nonZeroIndices.length - 1; j++) {
+                  if (nonZeroIndices[j + 1] - nonZeroIndices[j] === 1) {
+                    // Consecutive points - draw line
+                    lineSegments.push(`${getX(nonZeroIndices[j])},${getY(series[nonZeroIndices[j]])}`)
+                  }
+                }
+                if (lineSegments.length > 0 && nonZeroIndices.length > 1) {
+                  const lastIdx = nonZeroIndices[nonZeroIndices.length - 1]
+                  lineSegments.push(`${getX(lastIdx)},${getY(series[lastIdx])}`)
+                }
+
                 return (
                   <g key={seriesIdx}>
+                    {/* Draw line connecting consecutive non-zero points */}
+                    {lineSegments.length > 1 && (
+                      <polyline
+                        points={lineSegments.join(' ')}
+                        fill="none"
+                        stroke={colors[seriesIdx]}
+                        strokeWidth="1"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+                    {/* Draw larger, more visible points for current year */}
                     {series.map((value, i) => {
-                      // Only draw points with actual data
                       if (value === 0) return null
                       return (
                         <g key={i}>
+                          {/* Outer glow */}
                           <circle
                             cx={getX(i)}
                             cy={getY(value)}
-                            r="2"
+                            r="4"
                             fill={colors[seriesIdx]}
+                            opacity="0.3"
                           />
-                          {/* Draw vertical line from zero to show the value */}
-                          <line
-                            x1={getX(i)}
-                            y1={zeroY}
-                            x2={getX(i)}
-                            y2={getY(value)}
-                            stroke={colors[seriesIdx]}
-                            strokeWidth="1.5"
-                            opacity="0.8"
+                          {/* Inner point */}
+                          <circle
+                            cx={getX(i)}
+                            cy={getY(value)}
+                            r="2.5"
+                            fill={colors[seriesIdx]}
                           />
                         </g>
                       )
@@ -475,6 +497,12 @@ export default function FinancienPage() {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 
+    // Column positions - adjusted for better spacing
+    const col1 = 20    // Label
+    const col2 = 95    // 2024
+    const col3 = 135   // 2025
+    const col4 = 175   // Verschil
+
     // Draw authentic Workx logo
     drawWorkxLogo(doc, 15, 15, 55)
 
@@ -514,82 +542,151 @@ export default function FinancienPage() {
     // Table header
     doc.setFillColor(245, 245, 245)
     doc.rect(15, y, pageWidth - 30, 10, 'F')
-    doc.setFontSize(10)
+    doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
-    doc.text('Categorie', 20, y + 7)
-    doc.text('2024', 80, y + 7, { align: 'right' })
-    doc.text('2025', 120, y + 7, { align: 'right' })
-    doc.text('Verschil', 160, y + 7, { align: 'right' })
+    doc.text('Categorie', col1, y + 7)
+    doc.text(String(years[0]), col2, y + 7, { align: 'right' })
+    doc.text(String(years[1]), col3, y + 7, { align: 'right' })
+    doc.text('Verschil', col4, y + 7, { align: 'right' })
     y += 15
 
     doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
 
     // Werkgeverslasten
-    doc.text('Werkgeverslasten', 20, y)
-    doc.text(formatCurrency(calculations.totals.werkgeverslasten[2024]), 80, y, { align: 'right' })
-    doc.text(formatCurrency(calculations.totals.werkgeverslasten[2025]), 120, y, { align: 'right' })
-    const wlDiff = calculations.totals.werkgeverslasten[2025] - calculations.totals.werkgeverslasten[2024]
+    doc.text('Werkgeverslasten', col1, y)
+    doc.text(formatCurrency(calculations.totals.werkgeverslasten[years[0]]), col2, y, { align: 'right' })
+    doc.text(formatCurrency(calculations.totals.werkgeverslasten[years[1]]), col3, y, { align: 'right' })
+    const wlDiff = calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]]
     doc.setTextColor(wlDiff < 0 ? 0 : 200, wlDiff < 0 ? 150 : 50, 50)
-    doc.text(formatCurrency(wlDiff), 160, y, { align: 'right' })
+    doc.text(formatCurrency(wlDiff), col4, y, { align: 'right' })
     doc.setTextColor(50, 50, 50)
     y += 8
 
     // Omzet
-    doc.text('Omzet', 20, y)
-    doc.text(formatCurrency(calculations.totals.omzet[2024]), 80, y, { align: 'right' })
-    doc.text(formatCurrency(calculations.totals.omzet[2025]), 120, y, { align: 'right' })
-    const omzetDiff = calculations.totals.omzet[2025] - calculations.totals.omzet[2024]
+    doc.text('Omzet', col1, y)
+    doc.text(formatCurrency(calculations.totals.omzet[years[0]]), col2, y, { align: 'right' })
+    doc.text(formatCurrency(calculations.totals.omzet[years[1]]), col3, y, { align: 'right' })
+    const omzetDiff = calculations.totals.omzet[years[1]] - calculations.totals.omzet[years[0]]
     doc.setTextColor(omzetDiff > 0 ? 0 : 200, omzetDiff > 0 ? 150 : 50, 50)
-    doc.text(formatCurrency(omzetDiff), 160, y, { align: 'right' })
+    doc.text(formatCurrency(omzetDiff), col4, y, { align: 'right' })
     doc.setTextColor(50, 50, 50)
     y += 8
 
     // Uren
-    doc.text('Uren', 20, y)
-    doc.text(formatNumber(calculations.totals.uren[2024]), 80, y, { align: 'right' })
-    doc.text(formatNumber(calculations.totals.uren[2025]), 120, y, { align: 'right' })
-    const urenDiff = calculations.totals.uren[2025] - calculations.totals.uren[2024]
+    doc.text('Uren', col1, y)
+    doc.text(formatNumber(calculations.totals.uren[years[0]]), col2, y, { align: 'right' })
+    doc.text(formatNumber(calculations.totals.uren[years[1]]), col3, y, { align: 'right' })
+    const urenDiff = calculations.totals.uren[years[1]] - calculations.totals.uren[years[0]]
     doc.setTextColor(urenDiff > 0 ? 0 : 200, urenDiff > 0 ? 150 : 50, 50)
-    doc.text(formatNumber(urenDiff), 160, y, { align: 'right' })
+    doc.text(formatNumber(urenDiff), col4, y, { align: 'right' })
     doc.setTextColor(50, 50, 50)
     y += 12
 
-    // Saldo
+    // Saldo row with yellow background
     doc.setFont('helvetica', 'bold')
     doc.setFillColor(249, 255, 133)
     doc.rect(15, y - 5, pageWidth - 30, 12, 'F')
     doc.setTextColor(30, 30, 30)
-    doc.text('Saldo (Omzet - Kosten)', 20, y + 3)
-    doc.text(formatCurrency(calculations.saldoTotals[2024]), 80, y + 3, { align: 'right' })
-    doc.text(formatCurrency(calculations.saldoTotals[2025]), 120, y + 3, { align: 'right' })
-    const saldoDiff = calculations.saldoTotals[2025] - calculations.saldoTotals[2024]
-    doc.text(formatCurrency(saldoDiff), 160, y + 3, { align: 'right' })
+    doc.text('Saldo', col1, y + 3)
+    doc.text(formatCurrency(calculations.saldoTotals[years[0]]), col2, y + 3, { align: 'right' })
+    doc.text(formatCurrency(calculations.saldoTotals[years[1]]), col3, y + 3, { align: 'right' })
+    const saldoDiff = calculations.saldoTotals[years[1]] - calculations.saldoTotals[years[0]]
+    doc.text(formatCurrency(saldoDiff), col4, y + 3, { align: 'right' })
     y += 25
+
+    // ===================== GRAPHS SECTION =====================
+    doc.setTextColor(50, 50, 50)
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Grafieken', 15, y)
+    y += 12
+
+    // Helper function to draw a mini bar chart
+    const drawBarChart = (title: string, data: number[][], startY: number, chartWidth: number, chartHeight: number, startX: number) => {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(50, 50, 50)
+      doc.text(title, startX, startY)
+
+      const barY = startY + 5
+      const maxValue = Math.max(...data.flat().map(Math.abs)) || 1
+      const barWidth = chartWidth / (12 * 2 + 11) // 12 groups of 2 bars with gaps
+      const groupWidth = barWidth * 2 + 2
+
+      // Draw bars for each month
+      for (let month = 0; month < 12; month++) {
+        const x = startX + month * groupWidth
+
+        // Year 0 bar (orange)
+        const h0 = (Math.abs(data[0][month]) / maxValue) * chartHeight
+        doc.setFillColor(249, 115, 22)
+        doc.rect(x, barY + chartHeight - h0, barWidth, h0, 'F')
+
+        // Year 1 bar (cyan)
+        const h1 = (Math.abs(data[1][month]) / maxValue) * chartHeight
+        doc.setFillColor(6, 182, 212)
+        doc.rect(x + barWidth + 1, barY + chartHeight - h1, barWidth, h1, 'F')
+      }
+
+      // Legend
+      const legendY = barY + chartHeight + 5
+      doc.setFontSize(7)
+      doc.setFillColor(249, 115, 22)
+      doc.rect(startX, legendY, 4, 4, 'F')
+      doc.setTextColor(100, 100, 100)
+      doc.text(String(years[0]), startX + 6, legendY + 3)
+
+      doc.setFillColor(6, 182, 212)
+      doc.rect(startX + 25, legendY, 4, 4, 'F')
+      doc.text(String(years[1]), startX + 31, legendY + 3)
+
+      return legendY + 10
+    }
+
+    // Draw 4 mini charts (2x2 grid)
+    const chartWidth = 80
+    const chartHeight = 25
+    const leftX = 20
+    const rightX = 110
+
+    // Row 1: Omzet and Werkgeverslasten
+    drawBarChart('Omzet', [getDataForYear(years[0]).omzet, getDataForYear(years[1]).omzet], y, chartWidth, chartHeight, leftX)
+    const afterRow1 = drawBarChart('Werkgeverslasten', [getDataForYear(years[0]).werkgeverslasten, getDataForYear(years[1]).werkgeverslasten], y, chartWidth, chartHeight, rightX)
+    y = afterRow1 + 5
+
+    // Row 2: Saldo and Uren
+    drawBarChart('Saldo', [calculations.saldo[years[0]], calculations.saldo[years[1]]], y, chartWidth, chartHeight, leftX)
+    const afterRow2 = drawBarChart('Uren', [getDataForYear(years[0]).uren, getDataForYear(years[1]).uren], y, chartWidth, chartHeight, rightX)
+    y = afterRow2 + 10
 
     // Budgets section
     if (budgets.length > 0) {
       doc.setTextColor(50, 50, 50)
       doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
       doc.text('Budgetten', 15, y)
       y += 10
 
       doc.setFillColor(245, 245, 245)
       doc.rect(15, y, pageWidth - 30, 10, 'F')
-      doc.setFontSize(10)
-      doc.text('Categorie', 20, y + 7)
-      doc.text('Budget', 80, y + 7, { align: 'right' })
-      doc.text('Besteed', 120, y + 7, { align: 'right' })
-      doc.text('Resterend', 160, y + 7, { align: 'right' })
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Categorie', col1, y + 7)
+      doc.text('Budget', col2, y + 7, { align: 'right' })
+      doc.text('Besteed', col3, y + 7, { align: 'right' })
+      doc.text('Resterend', col4, y + 7, { align: 'right' })
       y += 15
 
       doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
       budgets.forEach(budget => {
         const remaining = budget.budget - budget.spent
-        doc.text(budget.name, 20, y)
-        doc.text(formatCurrency(budget.budget), 80, y, { align: 'right' })
-        doc.text(formatCurrency(budget.spent), 120, y, { align: 'right' })
+        doc.text(budget.name, col1, y)
+        doc.text(formatCurrency(budget.budget), col2, y, { align: 'right' })
+        doc.text(formatCurrency(budget.spent), col3, y, { align: 'right' })
         doc.setTextColor(remaining >= 0 ? 0 : 200, remaining >= 0 ? 150 : 50, 50)
-        doc.text(formatCurrency(remaining), 160, y, { align: 'right' })
+        doc.text(formatCurrency(remaining), col4, y, { align: 'right' })
         doc.setTextColor(50, 50, 50)
         y += 8
       })
@@ -601,11 +698,12 @@ export default function FinancienPage() {
 
       y += 4
       doc.setFont('helvetica', 'bold')
-      doc.text('Totaal', 20, y)
-      doc.text(formatCurrency(totalBudget), 80, y, { align: 'right' })
-      doc.text(formatCurrency(totalSpent), 120, y, { align: 'right' })
+      doc.setFontSize(9)
+      doc.text('Totaal', col1, y)
+      doc.text(formatCurrency(totalBudget), col2, y, { align: 'right' })
+      doc.text(formatCurrency(totalSpent), col3, y, { align: 'right' })
       doc.setTextColor(totalRemaining >= 0 ? 0 : 200, totalRemaining >= 0 ? 150 : 50, 50)
-      doc.text(formatCurrency(totalRemaining), 160, y, { align: 'right' })
+      doc.text(formatCurrency(totalRemaining), col4, y, { align: 'right' })
     }
 
     // Footer
@@ -692,7 +790,7 @@ export default function FinancienPage() {
                 positive: true
               },
               {
-                label: `Kosten ${years[1]}`,
+                label: `Werkgeverslasten ${years[1]}`,
                 value: formatCurrency(calculations.totals.werkgeverslasten[years[1]]),
                 diff: calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]],
                 positive: false
@@ -932,7 +1030,7 @@ export default function FinancienPage() {
           <div className="md:col-span-2 bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
             <h3 className="text-white font-medium mb-4 sm:mb-6">Jaarlijkse Vergelijking</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
-              {['Omzet', 'Kosten', 'Saldo', 'Uren'].map((label, idx) => {
+              {['Omzet', 'Werkgeverslasten', 'Saldo', 'Uren'].map((label, idx) => {
                 const values = [
                   [calculations.totals.omzet[years[0]], calculations.totals.omzet[years[1]], calculations.totals.omzet[years[2]]],
                   [calculations.totals.werkgeverslasten[years[0]], calculations.totals.werkgeverslasten[years[1]], calculations.totals.werkgeverslasten[years[2]]],

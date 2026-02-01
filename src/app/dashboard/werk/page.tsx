@@ -798,6 +798,91 @@ export default function WerkOverzichtPage() {
             </div>
           </div>
 
+          {/* Cumulative Hours Chart */}
+          {monthlyHoursData.employees.length > 0 && (
+            <div className="card p-5">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.activity className="text-workx-lime" size={16} />
+                </div>
+                <h2 className="font-medium text-white">Cumulatieve ontwikkeling {selectedYear}</h2>
+              </div>
+              <div className="h-64 relative">
+                <svg width="100%" height="100%" viewBox="0 0 800 250" preserveAspectRatio="xMidYMid meet">
+                  {/* Grid lines */}
+                  {[0, 1, 2, 3, 4].map(i => (
+                    <line key={i} x1="60" y1={50 + i * 45} x2="780" y2={50 + i * 45} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                  ))}
+                  {/* Month labels */}
+                  {MONTH_NAMES.map((month, idx) => (
+                    <text key={idx} x={80 + idx * 60} y="240" fill="rgba(255,255,255,0.4)" fontSize="11" textAnchor="middle">{month}</text>
+                  ))}
+                  {/* Lines for each employee */}
+                  {monthlyHoursData.employees.slice(0, 10).map((emp, empIdx) => {
+                    const colors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6']
+                    const color = colors[empIdx % colors.length]
+
+                    // Calculate cumulative hours
+                    let cumulative = 0
+                    const points: string[] = []
+                    const maxCumulative = Math.max(...monthlyHoursData.employees.map(e => {
+                      let sum = 0
+                      for (let m = 1; m <= 12; m++) sum += monthlyHoursData.data[e][m]?.billable || 0
+                      return sum
+                    })) || 1
+
+                    for (let m = 1; m <= 12; m++) {
+                      cumulative += monthlyHoursData.data[emp][m]?.billable || 0
+                      if (cumulative > 0) {
+                        const x = 80 + (m - 1) * 60
+                        const y = 230 - (cumulative / maxCumulative) * 180
+                        points.push(`${x},${y}`)
+                      }
+                    }
+
+                    if (points.length < 2) return null
+
+                    return (
+                      <g key={emp}>
+                        <polyline
+                          points={points.join(' ')}
+                          fill="none"
+                          stroke={color}
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          opacity="0.8"
+                        />
+                        {/* End point with name */}
+                        {points.length > 0 && (
+                          <circle
+                            cx={parseFloat(points[points.length - 1].split(',')[0])}
+                            cy={parseFloat(points[points.length - 1].split(',')[1])}
+                            r="4"
+                            fill={color}
+                          />
+                        )}
+                      </g>
+                    )
+                  })}
+                </svg>
+              </div>
+              {/* Legend */}
+              <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-white/5">
+                {monthlyHoursData.employees.slice(0, 10).map((emp, empIdx) => {
+                  const colors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6']
+                  const color = colors[empIdx % colors.length]
+                  return (
+                    <div key={emp} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                      <span className="text-xs text-white/60">{emp.split(' ')[0]}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Monthly Hours Table */}
           <div className="card overflow-hidden">
             <div className="p-4 sm:p-5 border-b border-white/5 flex items-center gap-3">

@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '@/lib/auth'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
-import { Pigeon } from '@/components/ui/Icons'
 import EasterEggs from '@/components/ui/EasterEggs'
+import Image from 'next/image'
 
 export default async function DashboardLayout({
   children,
@@ -28,9 +28,27 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen bg-workx-dark overflow-hidden">
 
-      {/* Elegant line-art doves - like workxadvocaten.nl (hidden on mobile) */}
-      <Pigeon className="pigeon pigeon-1 hidden md:block" size={70} />
-      <Pigeon className="pigeon pigeon-2 hidden md:block" size={55} mirrored />
+      {/* Floating doves from workxin.nl (hidden on mobile) */}
+      <div className="pigeon pigeon-1 hidden md:block">
+        <Image
+          src="/pigeons.svg"
+          alt=""
+          width={180}
+          height={140}
+          className="opacity-[0.07] hover:opacity-[0.12] transition-opacity duration-700"
+          priority={false}
+        />
+      </div>
+      <div className="pigeon pigeon-2 hidden md:block" style={{ transform: 'scaleX(-1)' }}>
+        <Image
+          src="/pigeons.svg"
+          alt=""
+          width={140}
+          height={110}
+          className="opacity-[0.05] hover:opacity-[0.1] transition-opacity duration-700"
+          priority={false}
+        />
+      </div>
 
       {/* Ambient glow effects (smaller on mobile) */}
       <div className="fixed top-0 right-0 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-workx-lime/5 rounded-full blur-[100px] md:blur-[150px] pointer-events-none" />
