@@ -40,10 +40,13 @@ const isRoomBooking = (event: CalendarEvent) => {
 // Format room booking display
 const formatRoomBookingTitle = (event: CalendarEvent, short = false) => {
   if (!isRoomBooking(event)) return event.title
-  const creatorName = event.createdBy?.name || 'Onbekend'
-  if (short) return `🏢 ${creatorName}`
-  return `Vergaderruimte - ${creatorName}`
+  const creatorName = event.createdBy?.name?.split(' ')[0] || 'Onbekend' // Only first name
+  if (short) return `🔔 VR: ${creatorName}`
+  return `🔔 Vergaderruimte gereserveerd - ${creatorName}`
 }
+
+// View type for agenda
+type AgendaView = 'month' | 'week' | 'day'
 
 const categoryConfig = {
   GENERAL: { label: 'Algemeen', icon: Icons.calendar, color: '#f9ff85' },
@@ -62,9 +65,10 @@ export default function AgendaPage() {
   const [teamBirthdays, setTeamBirthdays] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [currentView, setCurrentView] = useState<AgendaView>('month')
   const [showForm, setShowForm] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -430,106 +434,260 @@ export default function AgendaPage() {
         <div className="lg:col-span-3 card overflow-hidden relative">
           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
-          {/* Month navigation */}
+          {/* Navigation and view toggle */}
           <div className="p-5 flex items-center justify-between border-b border-white/5 relative">
-            <button
-              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-              className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
-            >
-              <Icons.chevronLeft size={18} />
-            </button>
-            <div className="text-center">
-              <h2 className="font-semibold text-white capitalize text-lg">
-                {currentMonth.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
-              </h2>
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setCurrentMonth(new Date())}
-                className="text-xs text-workx-lime hover:underline mt-0.5"
+                onClick={() => {
+                  if (currentView === 'month') setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
+                  else if (currentView === 'week') setSelectedDate(new Date((selectedDate || new Date()).getTime() - 7 * 24 * 60 * 60 * 1000))
+                  else setSelectedDate(new Date((selectedDate || new Date()).getTime() - 24 * 60 * 60 * 1000))
+                }}
+                className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
               >
-                Naar vandaag
+                <Icons.chevronLeft size={18} />
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedDate(new Date())
+                  setCurrentMonth(new Date())
+                }}
+                className="px-3 py-1.5 text-xs text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-colors"
+              >
+                Vandaag
+              </button>
+              <button
+                onClick={() => {
+                  if (currentView === 'month') setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
+                  else if (currentView === 'week') setSelectedDate(new Date((selectedDate || new Date()).getTime() + 7 * 24 * 60 * 60 * 1000))
+                  else setSelectedDate(new Date((selectedDate || new Date()).getTime() + 24 * 60 * 60 * 1000))
+                }}
+                className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+              >
+                <Icons.chevronRight size={18} />
               </button>
             </div>
-            <button
-              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-              className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
-            >
-              <Icons.chevronRight size={18} />
-            </button>
-          </div>
 
-          {/* Calendar grid */}
-          <div className="p-5">
-            <div className="grid grid-cols-7 mb-3">
-              {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map((day) => (
-                <div key={day} className="text-center text-xs text-white/40 py-2 font-medium">{day}</div>
+            <h2 className="font-semibold text-white capitalize text-lg">
+              {currentView === 'day' && selectedDate?.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              {currentView === 'week' && `Week ${Math.ceil(((selectedDate || new Date()).getDate()) / 7)} - ${(selectedDate || new Date()).toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}`}
+              {currentView === 'month' && currentMonth.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
+            </h2>
+
+            {/* View toggle */}
+            <div className="flex items-center bg-white/5 rounded-xl p-1">
+              {[
+                { id: 'day' as AgendaView, label: 'Dag' },
+                { id: 'week' as AgendaView, label: 'Week' },
+                { id: 'month' as AgendaView, label: 'Maand' },
+              ].map((view) => (
+                <button
+                  key={view.id}
+                  onClick={() => setCurrentView(view.id)}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+                    currentView === view.id
+                      ? 'bg-workx-lime text-black font-medium'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  {view.label}
+                </button>
               ))}
             </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {getDaysInMonth(currentMonth).map((day, index) => {
-                const dayEvents = getEventsForDate(day.date)
-                const dayBirthdays = getBirthdaysForDate(day.date)
-                const isSelected = selectedDate?.toDateString() === day.date.toDateString()
-                const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6
-                const hasBirthday = dayBirthdays.length > 0
-
-                return (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedDate(day.date)}
-                    className={`relative p-2 min-h-[90px] rounded-xl text-left transition-all ${
-                      day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
-                    } ${isSelected ? 'bg-white/5 ring-1 ring-workx-lime/50 shadow-lg shadow-workx-lime/5' : ''} ${
-                      isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''
-                    } ${isWeekend && day.isCurrentMonth && !isSelected && !isToday(day.date) ? 'bg-white/[0.02]' : ''} ${
-                      hasBirthday && day.isCurrentMonth ? 'ring-1 ring-pink-500/30' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-medium ${
-                        isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
-                      }`}>
-                        {day.date.getDate()}
-                      </span>
-                      {hasBirthday && day.isCurrentMonth && (
-                        <span className="text-sm">🎂</span>
-                      )}
-                    </div>
-
-                    <div className="mt-1.5 space-y-1">
-                      {/* Show birthdays first */}
-                      {dayBirthdays.map((person, i) => (
-                        <div
-                          key={`bday-${i}`}
-                          className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate font-medium bg-pink-500/20 text-pink-400"
-                        >
-                          <span>🎂</span>
-                          <span className="truncate">{person.name.split(' ')[0]}</span>
-                        </div>
-                      ))}
-                      {/* Then show events */}
-                      {dayEvents.slice(0, dayBirthdays.length > 0 ? 1 : 2).map((event) => {
-                        const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
-                        return (
-                          <div
-                            key={event.id}
-                            className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate font-medium"
-                            style={{ backgroundColor: event.color + '20', color: event.color }}
-                          >
-                            <IconComponent size={10} />
-                            <span className="truncate">{isRoomBooking(event) ? formatRoomBookingTitle(event, true) : event.title}</span>
-                          </div>
-                        )
-                      })}
-                      {(dayEvents.length + dayBirthdays.length) > 2 && (
-                        <span className="text-[10px] text-white/40 pl-1 font-medium">+{dayEvents.length + dayBirthdays.length - 2} meer</span>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
           </div>
+
+          {/* DAY VIEW */}
+          {currentView === 'day' && selectedDate && (
+            <div className="p-5">
+              <div className="space-y-2">
+                {/* Time slots */}
+                {Array.from({ length: 12 }, (_, i) => i + 8).map((hour) => {
+                  const hourEvents = getEventsForDate(selectedDate).filter(event => {
+                    if (event.isAllDay) return hour === 8
+                    const eventHour = new Date(event.startTime).getHours()
+                    return eventHour === hour
+                  })
+                  return (
+                    <div key={hour} className="flex gap-4 min-h-[60px]">
+                      <div className="w-16 text-right text-sm text-white/40 pt-1">
+                        {hour}:00
+                      </div>
+                      <div className="flex-1 border-t border-white/5 pt-2 space-y-1">
+                        {hourEvents.map((event) => {
+                          const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
+                          return (
+                            <div
+                              key={event.id}
+                              onClick={() => handleEdit(event)}
+                              className="p-3 rounded-xl cursor-pointer hover:opacity-80 transition-opacity"
+                              style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <IconComponent size={14} style={{ color: event.color }} />
+                                <span className="font-medium text-white">
+                                  {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
+                                </span>
+                              </div>
+                              {!event.isAllDay && (
+                                <p className="text-xs text-white/50 mt-1">
+                                  {formatTime(event.startTime)} - {formatTime(event.endTime)}
+                                  {event.location && ` · ${event.location}`}
+                                </p>
+                              )}
+                              {event.isAllDay && (
+                                <p className="text-xs text-white/50 mt-1">Hele dag</p>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* WEEK VIEW */}
+          {currentView === 'week' && selectedDate && (
+            <div className="p-5">
+              {/* Week header */}
+              <div className="grid grid-cols-8 mb-3">
+                <div className="text-xs text-white/40 py-2"></div>
+                {Array.from({ length: 7 }, (_, i) => {
+                  const day = new Date(selectedDate)
+                  const dayOfWeek = day.getDay()
+                  const diff = i - ((dayOfWeek + 6) % 7) // Adjust to start from Monday
+                  day.setDate(day.getDate() + diff)
+                  return (
+                    <div key={i} className={`text-center py-2 ${isToday(day) ? 'text-workx-lime' : 'text-white/60'}`}>
+                      <div className="text-xs font-medium">{['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'][i]}</div>
+                      <div className={`text-lg font-semibold ${isToday(day) ? 'bg-workx-lime text-black w-8 h-8 rounded-full flex items-center justify-center mx-auto' : ''}`}>
+                        {day.getDate()}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Time grid */}
+              <div className="space-y-0">
+                {Array.from({ length: 10 }, (_, i) => i + 8).map((hour) => (
+                  <div key={hour} className="grid grid-cols-8 min-h-[50px] border-t border-white/5">
+                    <div className="text-xs text-white/40 pr-2 text-right pt-1">{hour}:00</div>
+                    {Array.from({ length: 7 }, (_, dayIndex) => {
+                      const day = new Date(selectedDate)
+                      const dayOfWeek = day.getDay()
+                      const diff = dayIndex - ((dayOfWeek + 6) % 7)
+                      day.setDate(day.getDate() + diff)
+
+                      const hourEvents = getEventsForDate(day).filter(event => {
+                        if (event.isAllDay) return hour === 8
+                        const eventHour = new Date(event.startTime).getHours()
+                        return eventHour === hour
+                      })
+
+                      return (
+                        <div key={dayIndex} className="border-l border-white/5 px-1 py-1">
+                          {hourEvents.map((event) => (
+                            <div
+                              key={event.id}
+                              onClick={() => handleEdit(event)}
+                              className="text-[10px] p-1.5 rounded cursor-pointer hover:opacity-80 transition-opacity mb-1"
+                              style={{ backgroundColor: event.color + '30', color: event.color }}
+                            >
+                              <span className="font-medium truncate block">
+                                {isRoomBooking(event) ? `🔔 ${event.createdBy?.name?.split(' ')[0]}` : event.title}
+                              </span>
+                              {!event.isAllDay && (
+                                <span className="text-white/50">{formatTime(event.startTime)}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* MONTH VIEW (original calendar grid) */}
+          {currentView === 'month' && (
+            <div className="p-5">
+              <div className="grid grid-cols-7 mb-3">
+                {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map((day) => (
+                  <div key={day} className="text-center text-xs text-white/40 py-2 font-medium">{day}</div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1">
+                {getDaysInMonth(currentMonth).map((day, index) => {
+                  const dayEvents = getEventsForDate(day.date)
+                  const dayBirthdays = getBirthdaysForDate(day.date)
+                  const isSelected = selectedDate?.toDateString() === day.date.toDateString()
+                  const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6
+                  const hasBirthday = dayBirthdays.length > 0
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedDate(day.date)}
+                      className={`relative p-2 min-h-[90px] rounded-xl text-left transition-all ${
+                        day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
+                      } ${isSelected ? 'bg-white/5 ring-1 ring-workx-lime/50 shadow-lg shadow-workx-lime/5' : ''} ${
+                        isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''
+                      } ${isWeekend && day.isCurrentMonth && !isSelected && !isToday(day.date) ? 'bg-white/[0.02]' : ''} ${
+                        hasBirthday && day.isCurrentMonth ? 'ring-1 ring-pink-500/30' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm font-medium ${
+                          isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
+                        }`}>
+                          {day.date.getDate()}
+                        </span>
+                        {hasBirthday && day.isCurrentMonth && (
+                          <span className="text-sm">🎂</span>
+                        )}
+                      </div>
+
+                      <div className="mt-1.5 space-y-1">
+                        {/* Show birthdays first */}
+                        {dayBirthdays.map((person, i) => (
+                          <div
+                            key={`bday-${i}`}
+                            className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate font-medium bg-pink-500/20 text-pink-400"
+                          >
+                            <span>🎂</span>
+                            <span className="truncate">{person.name.split(' ')[0]}</span>
+                          </div>
+                        ))}
+                        {/* Then show events */}
+                        {dayEvents.slice(0, dayBirthdays.length > 0 ? 1 : 2).map((event) => {
+                          const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
+                          return (
+                            <div
+                              key={event.id}
+                              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate font-medium"
+                              style={{ backgroundColor: event.color + '20', color: event.color }}
+                            >
+                              <IconComponent size={10} />
+                              <span className="truncate">{isRoomBooking(event) ? formatRoomBookingTitle(event, true) : event.title}</span>
+                            </div>
+                          )
+                        })}
+                        {(dayEvents.length + dayBirthdays.length) > 2 && (
+                          <span className="text-[10px] text-white/40 pl-1 font-medium">+{dayEvents.length + dayBirthdays.length - 2} meer</span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Category legend */}
           <div className="px-5 pb-5 flex flex-wrap gap-4 border-t border-white/5 pt-4">
