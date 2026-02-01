@@ -39,6 +39,20 @@ interface WeatherForecast {
   weatherCode: number
 }
 
+// Distances from Can Fressa (Alaró) in minutes by car
+const DISTANCES_FROM_CAN_FRESSA: Record<string, { minutes: number; km: number }> = {
+  'palma': { minutes: 25, km: 28 },
+  'soller': { minutes: 20, km: 18 },
+  'valldemossa': { minutes: 25, km: 22 },
+  'deia': { minutes: 30, km: 25 },
+  'inca': { minutes: 10, km: 8 },
+  'alcudia': { minutes: 35, km: 38 },
+  'pollenca': { minutes: 35, km: 35 },
+  'manacor': { minutes: 40, km: 45 },
+  'santanyi': { minutes: 55, km: 58 },
+  'portocolom': { minutes: 50, km: 52 },
+}
+
 export default function LustrumPage() {
   const [countdown, setCountdown] = useState(getCountdown())
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
@@ -46,6 +60,7 @@ export default function LustrumPage() {
   const [isWeatherLoading, setIsWeatherLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<HotspotCategory | 'all'>('all')
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
 
   // Daily fact based on day of year
   const dailyFact = useMemo(() => getDailyFact(), [])
@@ -439,31 +454,37 @@ export default function LustrumPage() {
             </div>
             <div>
               <h2 className="text-lg font-medium text-white">Locatie</h2>
-              <p className="text-xs text-white/40">Can Fressa en omgeving</p>
+              <p className="text-xs text-white/40">Klik op een plaats om de afstand te zien</p>
             </div>
           </div>
         </div>
 
-        {/* Beautiful static Mallorca map */}
-        <div className="relative aspect-[16/9] rounded-xl overflow-hidden border border-white/10">
-          <svg viewBox="0 0 800 450" className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 50%, #164e63 100%)' }}>
-            {/* Sea pattern */}
+        {/* Realistic Mallorca map */}
+        <div className="relative aspect-[16/10] rounded-xl overflow-hidden border border-white/10">
+          <svg viewBox="0 0 800 500" className="w-full h-full" style={{ background: 'linear-gradient(180deg, #0c4a6e 0%, #164e63 50%, #155e75 100%)' }}>
             <defs>
               <linearGradient id="seaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#1e40af" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#0891b2" stopOpacity="0.2" />
+                <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.1" />
               </linearGradient>
               <linearGradient id="landGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#d97706" stopOpacity="0.4" />
-                <stop offset="50%" stopColor="#b45309" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#92400e" stopOpacity="0.25" />
+                <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.5" />
+                <stop offset="50%" stopColor="#d97706" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#b45309" stopOpacity="0.35" />
               </linearGradient>
               <linearGradient id="mountainGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#78350f" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#451a03" stopOpacity="0.6" />
+                <stop offset="0%" stopColor="#92400e" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#78350f" stopOpacity="0.5" />
               </linearGradient>
               <filter id="glow">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+              <filter id="softGlow">
+                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
                 <feMerge>
                   <feMergeNode in="coloredBlur"/>
                   <feMergeNode in="SourceGraphic"/>
@@ -471,144 +492,316 @@ export default function LustrumPage() {
               </filter>
             </defs>
 
-            {/* Sea */}
-            <rect width="800" height="450" fill="url(#seaGradient)" />
+            {/* Sea background */}
+            <rect width="800" height="500" fill="url(#seaGradient)" />
 
-            {/* Mallorca island shape - simplified but recognizable */}
+            {/* Wave pattern */}
+            {[0, 1, 2].map((i) => (
+              <path
+                key={i}
+                d={`M 0 ${400 + i * 25} Q 200 ${390 + i * 25} 400 ${400 + i * 25} T 800 ${400 + i * 25}`}
+                fill="none"
+                stroke="rgba(34, 211, 238, 0.1)"
+                strokeWidth="1"
+              />
+            ))}
+
+            {/* MALLORCA - Realistic island shape */}
             <path
-              d="M 150 280
-                 Q 120 250 130 200
-                 Q 140 150 200 120
-                 Q 280 80 380 90
-                 Q 480 70 550 100
-                 Q 620 130 680 180
-                 Q 720 220 700 280
-                 Q 680 340 620 370
-                 Q 540 400 440 390
-                 Q 340 400 260 380
-                 Q 180 360 150 320
-                 Q 130 300 150 280 Z"
+              d="M 95 290
+                 C 85 260 90 230 105 200
+                 C 115 175 135 155 160 140
+                 C 185 125 215 115 245 105
+                 L 260 100 L 280 95
+                 C 320 88 360 85 400 85
+                 C 440 83 470 80 500 82
+                 L 530 85
+                 C 545 87 560 92 575 100
+                 L 590 108
+                 C 620 125 645 145 665 170
+                 L 678 188
+                 C 690 210 698 235 700 260
+                 L 702 280 L 700 300
+                 C 695 330 680 355 660 375
+                 L 640 393
+                 C 610 415 575 428 540 435
+                 L 510 440 L 480 443
+                 C 440 445 400 445 360 442
+                 L 320 438 L 285 432
+                 C 250 425 220 415 195 400
+                 L 170 382
+                 C 145 362 125 338 115 312
+                 L 105 290
+                 C 98 275 95 290 95 290 Z"
               fill="url(#landGradient)"
-              stroke="rgba(251, 191, 36, 0.3)"
+              stroke="rgba(251, 191, 36, 0.4)"
               strokeWidth="2"
             />
 
-            {/* Serra de Tramuntana mountains - northwest */}
+            {/* Cap de Formentor peninsula - Northeast tip */}
             <path
-              d="M 150 280
-                 Q 140 240 160 200
-                 Q 180 160 220 140
-                 Q 280 110 340 100
-                 Q 360 120 340 150
-                 Q 300 180 260 200
-                 Q 200 240 180 280
-                 Q 160 300 150 280 Z"
-              fill="url(#mountainGradient)"
-              opacity="0.8"
+              d="M 575 100
+                 C 595 90 620 85 645 90
+                 C 665 95 680 105 688 118
+                 C 695 130 690 145 678 155
+                 C 665 165 645 168 625 165
+                 C 608 162 595 155 590 145
+                 L 575 100 Z"
+              fill="url(#landGradient)"
+              stroke="rgba(251, 191, 36, 0.3)"
+              strokeWidth="1"
             />
 
-            {/* Mountain peaks indication */}
-            <text x="220" y="175" fill="rgba(255,255,255,0.3)" fontSize="10" fontStyle="italic">Serra de Tramuntana</text>
+            {/* Serra de Tramuntana mountains - Northwest coast */}
+            <path
+              d="M 95 290
+                 C 90 260 100 230 115 200
+                 C 130 170 155 145 185 125
+                 C 215 108 250 100 285 95
+                 C 310 92 335 90 355 92
+                 L 340 120
+                 C 310 130 280 145 255 165
+                 C 225 190 200 220 180 255
+                 C 165 280 155 300 150 315
+                 C 135 310 115 300 100 290
+                 L 95 290 Z"
+              fill="url(#mountainGradient)"
+              opacity="0.9"
+            />
 
-            {/* Location: Palma - Southwest */}
-            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '220px 340px' }}>
-              <circle cx="220" cy="340" r="8" fill="rgba(255,255,255,0.8)" />
-              <circle cx="220" cy="340" r="12" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
-              <text x="220" y="365" textAnchor="middle" fill="white" fontSize="13" fontWeight="500">Palma</text>
-              <text x="220" y="378" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="9">Hoofdstad</text>
+            {/* Mountain label */}
+            <text x="180" y="180" fill="rgba(255,255,255,0.25)" fontSize="9" fontStyle="italic" transform="rotate(-35, 180, 180)">Serra de Tramuntana</text>
+
+            {/* Bays: Pollença and Alcúdia */}
+            <ellipse cx="485" cy="95" rx="35" ry="12" fill="rgba(6, 182, 212, 0.2)" />
+            <ellipse cx="560" cy="105" rx="25" ry="10" fill="rgba(6, 182, 212, 0.2)" />
+
+            {/* Bay: Palma */}
+            <ellipse cx="220" cy="400" rx="55" ry="20" fill="rgba(6, 182, 212, 0.2)" />
+
+            {/* === CLICKABLE LOCATIONS === */}
+
+            {/* Palma - Capital, Southwest */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '200px 370px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'palma' ? null : 'palma')}
+            >
+              <circle cx="200" cy="370" r={selectedLocation === 'palma' ? 12 : 9} fill="white" stroke={selectedLocation === 'palma' ? '#f97316' : 'rgba(255,255,255,0.5)'} strokeWidth={selectedLocation === 'palma' ? 3 : 2} />
+              <text x="200" y="395" textAnchor="middle" fill="white" fontSize="14" fontWeight="600">Palma</text>
+              <text x="200" y="408" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="9">Hoofdstad</text>
             </g>
 
-            {/* Location: Valldemossa */}
-            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '250px 195px' }}>
-              <circle cx="250" cy="195" r="6" fill="rgba(255,255,255,0.7)" />
-              <text x="250" y="183" textAnchor="middle" fill="white" fontSize="11">Valldemossa</text>
+            {/* Valldemossa */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '185px 255px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'valldemossa' ? null : 'valldemossa')}
+            >
+              <circle cx="185" cy="255" r={selectedLocation === 'valldemossa' ? 8 : 6} fill="white" opacity={selectedLocation === 'valldemossa' ? 1 : 0.85} stroke={selectedLocation === 'valldemossa' ? '#f97316' : 'transparent'} strokeWidth="2" />
+              <text x="160" y="245" textAnchor="middle" fill="white" fontSize="10">Valldemossa</text>
             </g>
 
-            {/* Location: Deià */}
-            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '290px 155px' }}>
-              <circle cx="290" cy="155" r="5" fill="rgba(255,255,255,0.7)" />
-              <text x="290" y="143" textAnchor="middle" fill="white" fontSize="11">Deià</text>
+            {/* Deià */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '215px 210px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'deia' ? null : 'deia')}
+            >
+              <circle cx="215" cy="210" r={selectedLocation === 'deia' ? 7 : 5} fill="white" opacity={selectedLocation === 'deia' ? 1 : 0.85} stroke={selectedLocation === 'deia' ? '#f97316' : 'transparent'} strokeWidth="2" />
+              <text x="215" y="198" textAnchor="middle" fill="white" fontSize="10">Deià</text>
             </g>
 
-            {/* Location: Sóller */}
-            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '320px 175px' }}>
-              <circle cx="320" cy="175" r="6" fill="rgba(255,255,255,0.7)" />
-              <text x="320" y="163" textAnchor="middle" fill="white" fontSize="11">Sóller</text>
+            {/* Sóller */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '265px 195px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'soller' ? null : 'soller')}
+            >
+              <circle cx="265" cy="195" r={selectedLocation === 'soller' ? 8 : 6} fill="white" opacity={selectedLocation === 'soller' ? 1 : 0.85} stroke={selectedLocation === 'soller' ? '#f97316' : 'transparent'} strokeWidth="2" />
+              <text x="265" y="183" textAnchor="middle" fill="white" fontSize="11">Sóller</text>
             </g>
 
-            {/* Location: Inca */}
-            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '400px 220px' }}>
-              <circle cx="400" cy="220" r="5" fill="rgba(255,255,255,0.6)" />
-              <text x="400" y="208" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">Inca</text>
+            {/* Pollença */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '455px 125px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'pollenca' ? null : 'pollenca')}
+            >
+              <circle cx="455" cy="125" r={selectedLocation === 'pollenca' ? 7 : 5} fill="white" opacity={selectedLocation === 'pollenca' ? 1 : 0.8} stroke={selectedLocation === 'pollenca' ? '#f97316' : 'transparent'} strokeWidth="2" />
+              <text x="455" y="113" textAnchor="middle" fill="white" fontSize="10">Pollença</text>
             </g>
 
-            {/* Location: ALARÓ / CAN FRESSA - The star! */}
-            <g className="cursor-pointer" filter="url(#glow)">
-              {/* Pulsing ring */}
-              <circle cx="350" cy="235" r="20" fill="none" stroke="rgba(249, 115, 22, 0.4)" strokeWidth="2">
-                <animate attributeName="r" values="20;28;20" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite" />
+            {/* Alcúdia */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '520px 130px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'alcudia' ? null : 'alcudia')}
+            >
+              <circle cx="520" cy="130" r={selectedLocation === 'alcudia' ? 7 : 5} fill="#22d3ee" opacity={selectedLocation === 'alcudia' ? 1 : 0.9} stroke={selectedLocation === 'alcudia' ? '#f97316' : 'rgba(255,255,255,0.5)'} strokeWidth="2" />
+              <text x="520" y="118" textAnchor="middle" fill="#22d3ee" fontSize="10">Alcúdia</text>
+            </g>
+
+            {/* Inca */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '420px 235px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'inca' ? null : 'inca')}
+            >
+              <circle cx="420" cy="235" r={selectedLocation === 'inca' ? 7 : 5} fill="white" opacity={selectedLocation === 'inca' ? 1 : 0.7} stroke={selectedLocation === 'inca' ? '#f97316' : 'transparent'} strokeWidth="2" />
+              <text x="420" y="223" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">Inca</text>
+            </g>
+
+            {/* Manacor */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '545px 305px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'manacor' ? null : 'manacor')}
+            >
+              <circle cx="545" cy="305" r={selectedLocation === 'manacor' ? 7 : 5} fill="white" opacity={selectedLocation === 'manacor' ? 1 : 0.7} stroke={selectedLocation === 'manacor' ? '#f97316' : 'transparent'} strokeWidth="2" />
+              <text x="545" y="293" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">Manacor</text>
+            </g>
+
+            {/* Santanyí */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '520px 400px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'santanyi' ? null : 'santanyi')}
+            >
+              <circle cx="520" cy="400" r={selectedLocation === 'santanyi' ? 7 : 5} fill="#22d3ee" opacity={selectedLocation === 'santanyi' ? 1 : 0.8} stroke={selectedLocation === 'santanyi' ? '#f97316' : 'transparent'} strokeWidth="2" />
+              <text x="520" y="418" textAnchor="middle" fill="rgba(34, 211, 238, 0.9)" fontSize="10">Santanyí</text>
+            </g>
+
+            {/* Porto Colom */}
+            <g
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              style={{ transformOrigin: '620px 355px' }}
+              onClick={() => setSelectedLocation(selectedLocation === 'portocolom' ? null : 'portocolom')}
+            >
+              <circle cx="620" cy="355" r={selectedLocation === 'portocolom' ? 6 : 4} fill="#22d3ee" opacity={selectedLocation === 'portocolom' ? 1 : 0.7} stroke={selectedLocation === 'portocolom' ? '#f97316' : 'transparent'} strokeWidth="2" />
+              <text x="655" y="360" textAnchor="middle" fill="rgba(34, 211, 238, 0.8)" fontSize="9">Porto Colom</text>
+            </g>
+
+            {/* === CAN FRESSA - ALARÓ - Our home! === */}
+            <g filter="url(#glow)">
+              {/* Connection line to selected location */}
+              {selectedLocation && DISTANCES_FROM_CAN_FRESSA[selectedLocation] && (
+                <line
+                  x1="340"
+                  y1="270"
+                  x2={
+                    selectedLocation === 'palma' ? 200 :
+                    selectedLocation === 'soller' ? 265 :
+                    selectedLocation === 'valldemossa' ? 185 :
+                    selectedLocation === 'deia' ? 215 :
+                    selectedLocation === 'inca' ? 420 :
+                    selectedLocation === 'alcudia' ? 520 :
+                    selectedLocation === 'pollenca' ? 455 :
+                    selectedLocation === 'manacor' ? 545 :
+                    selectedLocation === 'santanyi' ? 520 :
+                    selectedLocation === 'portocolom' ? 620 : 340
+                  }
+                  y2={
+                    selectedLocation === 'palma' ? 370 :
+                    selectedLocation === 'soller' ? 195 :
+                    selectedLocation === 'valldemossa' ? 255 :
+                    selectedLocation === 'deia' ? 210 :
+                    selectedLocation === 'inca' ? 235 :
+                    selectedLocation === 'alcudia' ? 130 :
+                    selectedLocation === 'pollenca' ? 125 :
+                    selectedLocation === 'manacor' ? 305 :
+                    selectedLocation === 'santanyi' ? 400 :
+                    selectedLocation === 'portocolom' ? 355 : 270
+                  }
+                  stroke="#f97316"
+                  strokeWidth="2"
+                  strokeDasharray="6 4"
+                  opacity="0.7"
+                />
+              )}
+              {/* Pulsing rings */}
+              <circle cx="340" cy="270" r="22" fill="none" stroke="rgba(249, 115, 22, 0.5)" strokeWidth="2">
+                <animate attributeName="r" values="22;32;22" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.5;0.15;0.5" dur="2s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="340" cy="270" r="16" fill="none" stroke="rgba(249, 115, 22, 0.4)" strokeWidth="2">
+                <animate attributeName="r" values="16;24;16" dur="2s" repeatCount="indefinite" begin="0.3s" />
+                <animate attributeName="opacity" values="0.4;0.1;0.4" dur="2s" repeatCount="indefinite" begin="0.3s" />
               </circle>
               {/* Main marker */}
-              <circle cx="350" cy="235" r="12" fill="#f97316" stroke="white" strokeWidth="3" />
-              <text x="350" y="239" textAnchor="middle" fill="white" fontSize="10">🏠</text>
+              <circle cx="340" cy="270" r="14" fill="#f97316" stroke="white" strokeWidth="3" />
+              <text x="340" y="275" textAnchor="middle" fill="white" fontSize="12">🏠</text>
               {/* Label */}
-              <rect x="295" y="250" width="110" height="32" rx="6" fill="rgba(249, 115, 22, 0.9)" />
-              <text x="350" y="266" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">Can Fressa</text>
-              <text x="350" y="278" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="9">Alaró</text>
+              <rect x="280" y="290" width="120" height="36" rx="8" fill="rgba(249, 115, 22, 0.95)" />
+              <text x="340" y="308" textAnchor="middle" fill="white" fontSize="13" fontWeight="bold">Can Fressa</text>
+              <text x="340" y="321" textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize="10">Alaró</text>
             </g>
 
-            {/* Location: Alcúdia - North */}
-            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '500px 120px' }}>
-              <circle cx="500" cy="120" r="5" fill="rgba(34, 211, 238, 0.8)" />
-              <text x="500" y="108" textAnchor="middle" fill="rgba(34, 211, 238, 1)" fontSize="10">Alcúdia</text>
+            {/* Compass Rose */}
+            <g transform="translate(735, 55)">
+              <circle cx="0" cy="0" r="28" fill="rgba(0,0,0,0.4)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+              <text x="0" y="-10" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">N</text>
+              <polygon points="0,-20 4,-8 0,-12 -4,-8" fill="white" />
+              <text x="0" y="18" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9">Z</text>
+              <text x="-15" y="4" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9">W</text>
+              <text x="15" y="4" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9">O</text>
             </g>
 
-            {/* Location: Pollença */}
-            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '440px 110px' }}>
-              <circle cx="440" cy="110" r="5" fill="rgba(255,255,255,0.6)" />
-              <text x="440" y="98" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">Pollença</text>
-            </g>
-
-            {/* Location: Manacor - East */}
-            <g className="cursor-pointer hover:scale-110 transition-transform" style={{ transformOrigin: '560px 280px' }}>
-              <circle cx="560" cy="280" r="5" fill="rgba(255,255,255,0.6)" />
-              <text x="560" y="268" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="10">Manacor</text>
-            </g>
-
-            {/* Beach indicators */}
-            <text x="580" y="150" fill="rgba(34, 211, 238, 0.6)" fontSize="9">🏖️ stranden</text>
-            <text x="650" cy="320" fill="rgba(34, 211, 238, 0.6)" fontSize="9">🏖️</text>
-
-            {/* Compass */}
-            <g transform="translate(720, 60)">
-              <circle cx="0" cy="0" r="25" fill="rgba(0,0,0,0.3)" stroke="rgba(255,255,255,0.2)" />
-              <text x="0" y="-8" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">N</text>
-              <path d="M 0 -18 L 4 -5 L 0 -10 L -4 -5 Z" fill="white" />
-              <text x="0" y="18" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="8">Z</text>
-            </g>
-
-            {/* Distance indicator from Can Fressa */}
-            <g transform="translate(60, 400)">
-              <rect x="0" y="0" width="180" height="40" rx="8" fill="rgba(0,0,0,0.4)" />
-              <text x="15" y="18" fill="rgba(255,255,255,0.6)" fontSize="10">Vanaf Can Fressa:</text>
-              <text x="15" y="32" fill="white" fontSize="10">Palma 25 min • Sóller 20 min</text>
+            {/* Scale bar */}
+            <g transform="translate(50, 465)">
+              <line x1="0" y1="0" x2="80" y2="0" stroke="white" strokeWidth="2" />
+              <line x1="0" y1="-5" x2="0" y2="5" stroke="white" strokeWidth="2" />
+              <line x1="80" y1="-5" x2="80" y2="5" stroke="white" strokeWidth="2" />
+              <text x="40" y="15" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="9">~20 km</text>
             </g>
           </svg>
 
+          {/* Distance popup when location selected */}
+          {selectedLocation && DISTANCES_FROM_CAN_FRESSA[selectedLocation] && (
+            <div className="absolute top-4 left-4 bg-orange-500/95 backdrop-blur-sm rounded-xl p-4 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <span className="text-xl">🚗</span>
+                </div>
+                <div>
+                  <p className="text-white/80 text-xs">Vanaf Can Fressa naar</p>
+                  <p className="text-white font-bold capitalize">{selectedLocation === 'portocolom' ? 'Porto Colom' : selectedLocation.charAt(0).toUpperCase() + selectedLocation.slice(1)}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white">{DISTANCES_FROM_CAN_FRESSA[selectedLocation].minutes}</p>
+                  <p className="text-xs text-white/70">minuten</p>
+                </div>
+                <div className="w-px bg-white/20" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white">{DISTANCES_FROM_CAN_FRESSA[selectedLocation].km}</p>
+                  <p className="text-xs text-white/70">km</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedLocation(null)}
+                className="mt-3 w-full py-1.5 rounded-lg bg-white/20 text-white/90 text-xs hover:bg-white/30 transition-colors"
+              >
+                Sluiten
+              </button>
+            </div>
+          )}
+
           {/* Legend overlay */}
           <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3 text-xs space-y-1.5">
+            <p className="text-white/50 text-[10px] mb-2">Klik op een plaats</p>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-orange-500 ring-2 ring-white/50" />
-              <span className="text-white">Can Fressa (ons huis!)</span>
+              <span className="text-white">Can Fressa</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-white/70" />
+              <span className="w-3 h-3 rounded-full bg-white/80" />
               <span className="text-white/70">Stadjes</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-cyan-400" />
-              <span className="text-white/70">Strand</span>
+              <span className="text-white/70">Kust/strand</span>
             </div>
           </div>
         </div>
@@ -618,7 +811,6 @@ export default function LustrumPage() {
           <p className="text-sm text-white/70">
             📍 <strong className="text-white">Can Fressa</strong> ligt in het dorpje Alaró, centraal op Mallorca
             aan de voet van de Serra de Tramuntana. Perfect gelegen om het hele eiland te ontdekken!
-            Palma is 25 minuten rijden, het pittoreske Sóller 20 minuten.
           </p>
           <a
             href={`https://www.google.com/maps?q=${LUSTRUM_CONFIG.coordinates.lat},${LUSTRUM_CONFIG.coordinates.lng}`}

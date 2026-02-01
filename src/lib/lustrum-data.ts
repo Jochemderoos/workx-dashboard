@@ -64,6 +64,42 @@ export const CAN_FRESSA_PHOTOS = [
     alt: 'Mallorca Kustlijn',
     caption: 'De spectaculaire kustlijn van noordoost Mallorca',
   },
+  {
+    id: 9,
+    url: '/lustrum/alcudia.jpg',
+    alt: 'Port d\'Alcúdia',
+    caption: 'De gezellige jachthaven van Port d\'Alcúdia',
+  },
+  {
+    id: 10,
+    url: '/lustrum/deia-terrace.jpg',
+    alt: 'Deià Bergterras',
+    caption: 'Spectaculair uitzicht vanaf een terras in Deià',
+  },
+  {
+    id: 11,
+    url: '/lustrum/flower-street.jpg',
+    alt: 'Bloemenstraatje',
+    caption: 'Een pittoresk bloemenstraatje in een Mallorquins dorp',
+  },
+  {
+    id: 12,
+    url: '/lustrum/port-de-soller.jpg',
+    alt: 'Port de Sóller',
+    caption: 'De prachtige baai van Port de Sóller',
+  },
+  {
+    id: 13,
+    url: '/lustrum/cala-figuera.jpg',
+    alt: 'Cala Figuera',
+    caption: 'Het schilderachtige vissershaventje Cala Figuera',
+  },
+  {
+    id: 14,
+    url: '/lustrum/port-andratx.jpg',
+    alt: 'Port d\'Andratx',
+    caption: 'Zonsondergang in de chique haven van Port d\'Andratx',
+  },
 ]
 
 // Extra foto's voor hotspots
