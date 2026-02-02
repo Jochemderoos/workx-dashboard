@@ -21,17 +21,15 @@ export async function GET() {
 
     const isManager = ['PARTNER', 'ADMIN'].includes(currentUser.role)
 
-    // Voor managers: alle medewerkers (geen partners, geen Lotte)
-    // Voor anderen: alleen hun eigen data
+    // Iedereen ziet alle medewerkers (voor voetbalplaatjes)
+    // Maar gevoelige info (salaris, bonus, verlof) alleen voor managers of eigen profiel
     const users = await prisma.user.findMany({
-      where: isManager ? {
+      where: {
         isActive: true,
         role: { not: 'PARTNER' }, // Filter partners eruit
         NOT: {
           name: { contains: 'Lotte' } // Filter Lotte eruit
         }
-      } : {
-        id: currentUser.id // Alleen eigen data
       },
       include: {
         compensation: true,
@@ -53,6 +51,9 @@ export async function GET() {
 
     // Bereken bonus totalen per medewerker
     const employeeData = users.map(user => {
+      const isOwnProfile = user.id === currentUser.id
+      const canSeeSensitiveInfo = isManager || isOwnProfile
+
       const bonusPaid = user.bonusCalculations
         .filter(b => b.bonusPaid)
         .reduce((sum, b) => sum + b.bonusAmount, 0)
@@ -68,7 +69,8 @@ export async function GET() {
         salary = scale?.salary || null
       }
 
-      return {
+      // Basisinfo voor iedereen (voetbalplaatjes)
+      const baseData = {
         id: user.id,
         name: user.name,
         email: user.email,
@@ -76,15 +78,22 @@ export async function GET() {
         startDate: user.startDate,
         department: user.department,
         compensation: user.compensation ? {
-          ...user.compensation,
-          salary: salary // Gebruik dynamisch salaris
+          experienceYear: user.compensation.experienceYear,
+          hourlyRate: user.compensation.hourlyRate,
+          isHourlyWage: user.compensation.isHourlyWage,
+          // Salaris alleen voor eigen profiel of managers
+          salary: canSeeSensitiveInfo ? salary : null,
+          notes: canSeeSensitiveInfo ? user.compensation.notes : null
         } : null,
-        bonusPaid,
-        bonusPending,
-        bonusTotal: bonusPaid + bonusPending,
-        vacationBalance: user.vacationBalance,
-        parentalLeaves: user.parentalLeaves
+        // Gevoelige info alleen voor eigen profiel of managers
+        bonusPaid: canSeeSensitiveInfo ? bonusPaid : 0,
+        bonusPending: canSeeSensitiveInfo ? bonusPending : 0,
+        bonusTotal: canSeeSensitiveInfo ? bonusPaid + bonusPending : 0,
+        vacationBalance: canSeeSensitiveInfo ? user.vacationBalance : null,
+        parentalLeaves: canSeeSensitiveInfo ? user.parentalLeaves : []
       }
+
+      return baseData
     })
 
     return NextResponse.json(employeeData)
