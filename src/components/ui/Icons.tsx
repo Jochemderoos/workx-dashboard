@@ -638,6 +638,23 @@ export const Icons = {
       <path d="M3 4.4C3 6.57 5.46 8.3 8.5 8.3c1.18 0 2.28-.3 3.21-.8M21 4.4c0 2.17-2.46 3.9-5.5 3.9-1.18 0-2.28-.3-3.21-.8" />
     </svg>
   ),
+
+  // Stacked books icon for HR Documents / The Way it Workx
+  books: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {/* Bottom book - largest, slightly tilted */}
+      <path d="M4 19h14a1 1 0 001-1v-2a1 1 0 00-1-1H4a1 1 0 00-1 1v2a1 1 0 001 1z" />
+      <path d="M3.5 16l0.5-0.5" />
+      {/* Middle book */}
+      <path d="M5 15h12a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+      <path d="M4.5 12l0.5-0.5" />
+      {/* Top book - smallest */}
+      <path d="M6 11h10a1 1 0 001-1V8a1 1 0 00-1-1H6a1 1 0 00-1 1v2a1 1 0 001 1z" />
+      <path d="M5.5 8l0.5-0.5" />
+      {/* Book spines detail */}
+      <path d="M7 7v4M9 7v4M7 11v4M9 11v4M6 15v4M8 15v4" />
+    </svg>
+  ),
 }
 
 // Workx Logo Component - Authentic version matching official branding
