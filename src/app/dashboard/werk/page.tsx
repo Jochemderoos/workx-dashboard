@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
@@ -73,8 +74,10 @@ const priorityConfig = {
 }
 
 export default function WerkOverzichtPage() {
+  const router = useRouter()
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null) // null = checking
   const [showForm, setShowForm] = useState(false)
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -302,10 +305,15 @@ export default function WerkOverzichtPage() {
       const res = await fetch('/api/user/profile')
       if (res.ok) {
         const user = await res.json()
-        setCanEditWorkload(user.role === 'PARTNER' || user.role === 'ADMIN')
+        const isManager = user.role === 'PARTNER' || user.role === 'ADMIN'
+        setCanEditWorkload(isManager)
+        setHasAccess(isManager)
+      } else {
+        setHasAccess(false)
       }
     } catch (error) {
       console.error('Kon gebruiker niet laden')
+      setHasAccess(false)
     }
   }
 
@@ -475,12 +483,35 @@ export default function WerkOverzichtPage() {
     completed: workItems.filter(i => i.status === 'COMPLETED').length,
   }
 
-  if (isLoading) {
+  if (isLoading || hasAccess === null) {
     return (
       <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
         <div className="text-center">
           <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
           <p className="text-gray-400">Werk laden...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Alleen Partners en Hanna hebben toegang
+  if (!hasAccess) {
+    return (
+      <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
+        <div className="card p-8 text-center max-w-md">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <Icons.x className="text-red-400" size={32} />
+          </div>
+          <h2 className="text-xl font-semibold text-white mb-2">Geen toegang</h2>
+          <p className="text-gray-400 mb-6">
+            Deze pagina is alleen beschikbaar voor Partners en Head of Office.
+          </p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="btn-primary"
+          >
+            Terug naar Dashboard
+          </button>
         </div>
       </div>
     )

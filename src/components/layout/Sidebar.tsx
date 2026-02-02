@@ -72,6 +72,14 @@ const manageMenuItems = [
 
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
+  const isManager = user.role === 'PARTNER' || user.role === 'ADMIN'
+
+  // Filter menu items based on role
+  const filteredMainMenuItems = mainMenuItems.filter(item => {
+    // Werk pagina alleen voor managers
+    if (item.href === '/dashboard/werk') return isManager
+    return true
+  })
 
   const NavLink = ({ href, icon: Icon, label, iconAnim, badge }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string }) => {
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
@@ -110,7 +118,7 @@ export default function Sidebar({ user }: SidebarProps) {
         <div>
           <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Menu</p>
           <div className="space-y-1">
-            {mainMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
+            {filteredMainMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
 
