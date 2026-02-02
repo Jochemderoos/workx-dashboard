@@ -970,42 +970,6 @@ export default function VakantiesPage() {
       {/* OVERZICHT MODE - Regular vacation calendar view */}
       {pageMode === 'overzicht' && (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="card p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-3">
-                  <Icons.sun className="text-yellow-400" size={18} />
-                </div>
-                <p className="text-3xl font-semibold text-white">{awayThisWeek.length}</p>
-                <p className="text-sm text-gray-400">Afwezig deze week</p>
-              </div>
-            </div>
-
-            <div className="card p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
-                  <Icons.calendar className="text-blue-400" size={18} />
-                </div>
-                <p className="text-3xl font-semibold text-white">{vacations.filter(v => v.status === 'APPROVED').length}</p>
-                <p className="text-sm text-gray-400">Goedgekeurde vakanties</p>
-              </div>
-            </div>
-
-            <div className="card p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
-                  <Icons.users className="text-purple-400" size={18} />
-                </div>
-                <p className="text-3xl font-semibold text-white">{uniquePeople.length}</p>
-                <p className="text-sm text-gray-400">Teamleden met vakantie</p>
-              </div>
-            </div>
-          </div>
-
           {/* My Vacation Days Card - for non-partners */}
           {myVacationBalance && (
             <div className="card p-5 border-green-500/20 bg-gradient-to-br from-green-500/10 to-transparent relative overflow-hidden">
