@@ -17,7 +17,7 @@ interface CalendarEvent {
   isAllDay: boolean
   location: string | null
   color: string
-  category: 'GENERAL' | 'MEETING' | 'DEADLINE' | 'TRAINING' | 'SOCIAL' | 'HOLIDAY' | 'BIRTHDAY' | 'VACATION' | 'ABSENCE'
+  category: 'GENERAL' | 'MEETING' | 'DEADLINE' | 'TRAINING' | 'SOCIAL' | 'HOLIDAY' | 'VACATION' | 'ABSENCE'
   createdBy: { id: string; name: string }
   isVacation?: boolean // Flag for vacation events from API
   vacationId?: string  // Original vacation request ID
@@ -55,7 +55,6 @@ const categoryConfig = {
   TRAINING: { label: 'Training', icon: Icons.award, color: '#a78bfa' },
   SOCIAL: { label: 'Sociaal', icon: Icons.coffee, color: '#34d399' },
   HOLIDAY: { label: 'Feestdag', icon: Icons.star, color: '#fbbf24' },
-  BIRTHDAY: { label: 'Verjaardag', icon: Icons.star, color: '#ec4899' },
   VACATION: { label: 'Vakantie', icon: Icons.sun, color: '#22c55e' },
   ABSENCE: { label: 'Afwezig', icon: Icons.userMinus, color: '#f97316' },
 }
