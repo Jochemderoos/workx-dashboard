@@ -479,3 +479,22 @@ model OfficeAttendance {
 
   @@unique([userId, date])
 }
+
+// ==================== HR DOCUMENTEN ====================
+
+// HR Document hoofdstukken - voor The Way it Workx etc.
+model HRDocumentChapter {
+  id           String   @id @default(cuid())
+  documentId   String   // 'the-way-it-workx' etc.
+  chapterId    String   // 'welkom', 'start', etc.
+  title        String
+  icon         String   // Emoji
+  content      String   @db.Text // HTML content
+  sortOrder    Int      @default(0)
+  updatedById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([documentId, chapterId])
+  @@index([documentId])
+}

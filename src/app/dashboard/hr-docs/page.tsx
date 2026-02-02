@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 
 // Document types
@@ -365,34 +366,6 @@ const THE_WAY_IT_WORKX: Document = {
         </ul>
       `,
     },
-    {
-      id: 'bijlagen',
-      title: 'Bijlagen',
-      icon: '📎',
-      content: `
-        <h3>A. Bonusregeling</h3>
-        <p class="text-white/70 mb-6">Gebruik het standaard Excel-bestand voor het bijhouden van de omzet op je eigen klanten. Voor een toelichting en voorbeelden van de bonusregeling kun je de presentatie "Toelichting Bonusregeling" raadplegen. Beide documenten zijn opgeslagen onder het project The Way it Workx.</p>
-
-        <h3>B. Checklist inschakelen derden</h3>
-        <p class="text-white/70 mb-6">Raadpleeg bij het inschakelen van andere partijen deze checklist. Het document genaamd "Checklist inschakelen derden" is opgeslagen in Basenet onder het project: Workx kantoorzaken interne documenten en project The Way it Workx. Hier zijn ook voorbeeld e-mails te vinden die je kunt gebruiken.</p>
-
-        <h3>C. Nieuwe werknemerszaken</h3>
-        <p class="text-white/70 mb-6">Zie hiervoor ons standaardwerkwijze, zoals opgeslagen in Basenet onder het project Workx kantoorzaken interne document en project The Way it Workx.</p>
-
-        <h3>D. WWFT</h3>
-        <p class="text-white/70 mb-6">Bij het registreren van een nieuwe klant is het belangrijk om aan de Know Your Client verplichtingen te voldoen en de benodigde informatie op te slaan in het dossier. De standaard e-mails en formulieren zijn terug te vinden in Basenet in het project: Workx kantoorzaken – algemene voorwaarden en engagement letters en in project The Way it Workx.</p>
-
-        <h3>E. Doorverwijzen</h3>
-        <p class="text-white/70 mb-6">Voor vragen die buiten ons rechtsgebied liggen, of bij conflicterende belangen, kun je doorverwijzen naar een bevriend kantoor. Deze zijn vermeld in het document "Lijst bevriende kantoren" en is opgeslagen in Basenet onder het project Workx kantoorzaken - interne documenten en in project The Way it Workx.</p>
-
-        <h3>F. Workx en haar klanten</h3>
-        <p class="text-white/70 mb-6">Voor de verhouding van Workx tot haar klanten is een apart handboek en klachtenregeling opgeslagen in het project The Way it Workx.</p>
-
-        <div class="mt-8 p-6 bg-workx-lime/10 border border-workx-lime/20 rounded-xl text-center">
-          <p class="text-2xl font-bold text-workx-lime">JUST THE WAY IT WORKX</p>
-        </div>
-      `,
-    },
   ],
 }
 
@@ -439,29 +412,56 @@ export default function HRDocsPage() {
   const [showMobileToc, setShowMobileToc] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const mobileNavRef = useRef<HTMLDivElement>(null)
+  const isManualScrolling = useRef(false)
 
   // Edit state
   const [editingChapter, setEditingChapter] = useState<Chapter | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editContent, setEditContent] = useState('')
   const [editIcon, setEditIcon] = useState('')
-  const [localChapters, setLocalChapters] = useState<Record<string, Chapter>>({})
+  const [savedChapters, setSavedChapters] = useState<Record<string, Chapter>>({})
+  const [isSaving, setIsSaving] = useState(false)
 
   // Check if user can edit (Partner or Admin/Head of Office)
   const canEdit = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
 
-  // Get current document with local edits applied
+  // Fetch saved chapters from API
+  useEffect(() => {
+    const fetchSavedChapters = async () => {
+      try {
+        const res = await fetch(`/api/hr-docs?documentId=${activeDoc}`)
+        if (res.ok) {
+          const chapters = await res.json()
+          const chaptersMap: Record<string, Chapter> = {}
+          chapters.forEach((ch: any) => {
+            chaptersMap[ch.chapterId] = {
+              id: ch.chapterId,
+              title: ch.title,
+              icon: ch.icon,
+              content: ch.content,
+            }
+          })
+          setSavedChapters(chaptersMap)
+        }
+      } catch (error) {
+        console.error('Error fetching saved chapters:', error)
+      }
+    }
+    fetchSavedChapters()
+  }, [activeDoc])
+
+  // Get current document with saved edits applied
   const currentDoc = useMemo(() => {
     const doc = DOCUMENTS.find(d => d.id === activeDoc) || DOCUMENTS[0]
-    // Apply local edits to chapters
+    // Apply saved edits to chapters
     const chaptersWithEdits = doc.chapters.map(chapter => {
-      if (localChapters[chapter.id]) {
-        return localChapters[chapter.id]
+      if (savedChapters[chapter.id]) {
+        return savedChapters[chapter.id]
       }
       return chapter
     })
     return { ...doc, chapters: chaptersWithEdits }
-  }, [activeDoc, localChapters])
+  }, [activeDoc, savedChapters])
 
   // Open edit modal
   const openEditModal = (chapter: Chapter) => {
@@ -471,23 +471,46 @@ export default function HRDocsPage() {
     setEditIcon(chapter.icon)
   }
 
-  // Save chapter edits
-  const saveChapterEdit = () => {
+  // Save chapter edits to API
+  const saveChapterEdit = async () => {
     if (!editingChapter) return
 
-    const updatedChapter: Chapter = {
-      ...editingChapter,
-      title: editTitle,
-      content: editContent,
-      icon: editIcon,
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/hr-docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId: activeDoc,
+          chapterId: editingChapter.id,
+          title: editTitle,
+          icon: editIcon,
+          content: editContent,
+        }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Kon niet opslaan')
+      }
+
+      // Update local state
+      setSavedChapters(prev => ({
+        ...prev,
+        [editingChapter.id]: {
+          id: editingChapter.id,
+          title: editTitle,
+          icon: editIcon,
+          content: editContent,
+        }
+      }))
+
+      toast.success('Hoofdstuk opgeslagen')
+      setEditingChapter(null)
+    } catch (error) {
+      toast.error('Kon hoofdstuk niet opslaan')
+    } finally {
+      setIsSaving(false)
     }
-
-    setLocalChapters(prev => ({
-      ...prev,
-      [editingChapter.id]: updatedChapter
-    }))
-
-    setEditingChapter(null)
   }
 
   // Cancel edit
@@ -509,6 +532,9 @@ export default function HRDocsPage() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
+        // Don't update if user is manually scrolling via click
+        if (isManualScrolling.current) return
+
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const chapterId = entry.target.id.replace('chapter-', '')
@@ -516,7 +542,7 @@ export default function HRDocsPage() {
           }
         })
       },
-      { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+      { rootMargin: '-10% 0px -80% 0px', threshold: 0 }
     )
 
     currentDoc.chapters.forEach((chapter) => {
@@ -554,12 +580,30 @@ export default function HRDocsPage() {
 
   // Scroll to chapter
   const scrollToChapter = (chapterId: string) => {
+    // Prevent IntersectionObserver from overriding while scrolling
+    isManualScrolling.current = true
     setActiveChapter(chapterId)
     setShowMobileToc(false)
-    const element = document.getElementById(`chapter-${chapterId}`)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
+
+    // Small delay to ensure state updates first
+    setTimeout(() => {
+      const element = document.getElementById(`chapter-${chapterId}`)
+      if (element) {
+        const headerOffset = 100 // Account for fixed headers
+        const elementPosition = element.getBoundingClientRect().top
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        })
+      }
+
+      // Re-enable observer after scroll completes
+      setTimeout(() => {
+        isManualScrolling.current = false
+      }, 1000)
+    }, 50)
   }
 
   // Highlight search matches in content
@@ -570,7 +614,7 @@ export default function HRDocsPage() {
   }
 
   return (
-    <div className="min-h-screen fade-in">
+    <div className="fade-in pb-8">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
@@ -650,10 +694,10 @@ export default function HRDocsPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex gap-6">
+      <div className="flex gap-6 relative">
         {/* Sidebar - Table of Contents */}
-        <aside className="hidden lg:block w-72 flex-shrink-0">
-          <div className="card p-4 sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
+        <aside className="hidden lg:block w-72 flex-shrink-0 self-start sticky top-4">
+          <div className="card p-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
             {/* Search */}
             <div className="relative mb-4">
               <Icons.search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
@@ -923,23 +967,26 @@ export default function HRDocsPage() {
             <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
               <button
                 onClick={cancelEdit}
+                disabled={isSaving}
                 className="flex-1 btn-secondary"
               >
                 Annuleren
               </button>
               <button
                 onClick={saveChapterEdit}
-                className="flex-1 btn-primary flex items-center justify-center gap-2"
+                disabled={isSaving}
+                className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <Icons.check size={16} />
-                Opslaan
+                {isSaving ? (
+                  <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Icons.check size={16} />
+                    Opslaan
+                  </>
+                )}
               </button>
             </div>
-
-            {/* Note about persistence */}
-            <p className="text-xs text-white/30 text-center mt-4">
-              Let op: wijzigingen worden lokaal opgeslagen en verdwijnen na het verversen van de pagina.
-            </p>
           </div>
         </div>
       )}
