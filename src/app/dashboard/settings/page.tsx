@@ -176,7 +176,7 @@ export default function SettingsPage() {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'ADMIN': return 'Admin'
+      case 'ADMIN': return 'Head of Office'
       case 'PARTNER': return 'Partner'
       default: return 'Medewerker'
     }
@@ -261,7 +261,7 @@ export default function SettingsPage() {
             <p className="text-gray-400">{session?.user?.email || ''}</p>
             <div className="flex items-center gap-2 mt-2">
               <span className={session?.user?.role === 'ADMIN' ? 'badge badge-lime' : session?.user?.role === 'PARTNER' ? 'badge bg-purple-500/20 text-purple-300' : 'badge bg-white/10 text-gray-400'}>
-                {session?.user?.role === 'ADMIN' ? 'Administrator' : session?.user?.role === 'PARTNER' ? 'Partner' : 'Medewerker'}
+                {session?.user?.role === 'ADMIN' ? 'Head of Office' : session?.user?.role === 'PARTNER' ? 'Partner' : 'Medewerker'}
               </span>
             </div>
           </div>

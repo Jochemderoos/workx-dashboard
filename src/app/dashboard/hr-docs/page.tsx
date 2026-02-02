@@ -401,6 +401,11 @@ const DOCUMENTS: Document[] = [
   THE_WAY_IT_WORKX,
 ]
 
+// Icon mapping for documents
+const documentIcons: Record<string, typeof Icons.home> = {
+  'the-way-it-workx': Icons.books,
+}
+
 // Icon mapping for chapters
 const chapterIcons: Record<string, typeof Icons.home> = {
   '👋': Icons.smile,
@@ -487,33 +492,36 @@ export default function HRDocsPage() {
       <div className="mb-6">
         <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
-            <Icons.fileText className="text-blue-400" size={18} />
+            <Icons.books className="text-blue-400" size={18} />
           </div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-white">HR Documenten</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white">The Way it Workx</h1>
         </div>
-        <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Personeelshandboeken en HR documenten</p>
+        <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Het personeelshandboek van Workx Advocaten</p>
       </div>
 
       {/* Document Tabs */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {DOCUMENTS.map((doc) => (
-          <button
-            key={doc.id}
-            onClick={() => {
-              setActiveDoc(doc.id)
-              setActiveChapter('')
-              setSearchQuery('')
-            }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              activeDoc === doc.id
-                ? 'bg-workx-lime text-workx-dark'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/5'
-            }`}
-          >
-            <span className="text-lg">{doc.icon}</span>
-            <span>{doc.title}</span>
-          </button>
-        ))}
+        {DOCUMENTS.map((doc) => {
+          const DocIcon = documentIcons[doc.id] || Icons.fileText
+          return (
+            <button
+              key={doc.id}
+              onClick={() => {
+                setActiveDoc(doc.id)
+                setActiveChapter('')
+                setSearchQuery('')
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                activeDoc === doc.id
+                  ? 'bg-workx-lime text-workx-dark'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/5'
+              }`}
+            >
+              <DocIcon size={18} />
+              <span>{doc.title}</span>
+            </button>
+          )
+        })}
 
         {canEdit && (
           <button
@@ -545,7 +553,12 @@ export default function HRDocsPage() {
             {/* Document Info */}
             <div className="mb-4 pb-4 border-b border-white/5">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{currentDoc.icon}</span>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
+                  {(() => {
+                    const DocIcon = documentIcons[currentDoc.id] || Icons.fileText
+                    return <DocIcon className="text-blue-400" size={22} />
+                  })()}
+                </div>
                 <div>
                   <h3 className="font-semibold text-white">{currentDoc.title}</h3>
                   <p className="text-xs text-gray-400">{currentDoc.description}</p>

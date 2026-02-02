@@ -53,6 +53,9 @@ model User {
   // Office attendance
   officeAttendances OfficeAttendance[]
 
+  // Sick days
+  sickDayEntries    SickDayEntry[]
+
   // Sessions for NextAuth
   sessions          Session[]
   accounts          Account[]
@@ -441,6 +444,25 @@ model EmployeeCompensation {
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==================== ZIEKTEDAGEN ====================
+
+// Individuele ziektedag registraties - met start en einddatum voor periodes
+model SickDayEntry {
+  id           String   @id @default(cuid())
+  userId       String
+  startDate    DateTime // Startdatum (of enkele dag)
+  endDate      DateTime // Einddatum (zelfde als startDate voor enkele dag)
+  workDays     Float    // Berekende werkdagen (ma-vr)
+  note         String?  // Optionele notitie
+  createdById  String?  // Wie heeft dit ingevoerd
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startDate])
 }
 
 // ==================== KANTOOR AANWEZIGHEID ====================

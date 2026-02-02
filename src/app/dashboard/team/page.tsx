@@ -65,9 +65,24 @@ interface TeamMember {
   _count: { assignedWork: number }
 }
 
+interface SickDayEntry {
+  id: string
+  userId: string
+  startDate: string
+  endDate: string
+  workDays: number
+  note: string | null
+  user: { id: string; name: string }
+}
+
+interface SickDaysResponse {
+  entries: SickDayEntry[]
+  totals: { userId: string; totalDays: number }[]
+}
+
 const roleConfig: Record<string, { label: string; color: string; bg: string }> = {
   PARTNER: { label: 'Partner', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-  ADMIN: { label: 'Staff', color: 'text-workx-lime', bg: 'bg-workx-lime/10' },
+  ADMIN: { label: 'Head of Office', color: 'text-workx-lime', bg: 'bg-workx-lime/10' },
   MANAGER: { label: 'Manager', color: 'text-blue-400', bg: 'bg-blue-500/10' },
   EMPLOYEE: { label: 'Advocaat', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
 }
@@ -87,10 +102,31 @@ export default function TeamPage() {
   const [newPassword, setNewPassword] = useState('')
   const [isResetting, setIsResetting] = useState(false)
 
+  // Sick days state
+  const [sickDaysData, setSickDaysData] = useState<SickDaysResponse>({ entries: [], totals: [] })
+  const [showSickDaysModal, setShowSickDaysModal] = useState(false)
+  const [sickDaysMember, setSickDaysMember] = useState<TeamMember | null>(null)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [entryMode, setEntryMode] = useState<'single' | 'period'>('single')
+  const [sickStartDate, setSickStartDate] = useState('')
+  const [sickEndDate, setSickEndDate] = useState('')
+  const [sickDaysNote, setSickDaysNote] = useState('')
+  const [isSavingSickDays, setIsSavingSickDays] = useState(false)
+  const [isDeletingEntry, setIsDeletingEntry] = useState<string | null>(null)
+
+  // Check if current user can manage (ADMIN or PARTNER)
+  const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
   // Check if current user can reset passwords (ADMIN or PARTNER)
-  const canResetPasswords = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
+  const canResetPasswords = canManage
 
   useEffect(() => { fetchMembers() }, [])
+
+  // Fetch sick days when user can manage or year changes
+  useEffect(() => {
+    if (canManage) {
+      fetchSickDays()
+    }
+  }, [canManage, selectedYear])
 
   const fetchMembers = async () => {
     try {
@@ -101,6 +137,104 @@ export default function TeamPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fetchSickDays = async () => {
+    try {
+      const res = await fetch(`/api/sick-days?year=${selectedYear}`)
+      if (res.ok) {
+        const data = await res.json()
+        setSickDaysData(data)
+      }
+    } catch (error) {
+      console.error('Error fetching sick days:', error)
+    }
+  }
+
+  const getSickDaysForMember = (memberId: string) => {
+    return sickDaysData.totals.find(t => t.userId === memberId)?.totalDays || 0
+  }
+
+  const getMemberEntries = (memberId: string) => {
+    return sickDaysData.entries.filter(e => e.userId === memberId)
+  }
+
+  const openSickDaysModal = (member: TeamMember) => {
+    setSickDaysMember(member)
+    setEntryMode('single')
+    setSickStartDate('')
+    setSickEndDate('')
+    setSickDaysNote('')
+    setShowSickDaysModal(true)
+  }
+
+  const handleSaveSickDays = async () => {
+    if (!sickDaysMember || !sickStartDate) {
+      toast.error('Selecteer een datum')
+      return
+    }
+
+    // Voor periode mode moet er ook een einddatum zijn
+    if (entryMode === 'period' && !sickEndDate) {
+      toast.error('Selecteer een einddatum')
+      return
+    }
+
+    setIsSavingSickDays(true)
+    try {
+      const res = await fetch('/api/sick-days', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: sickDaysMember.id,
+          startDate: sickStartDate,
+          endDate: entryMode === 'period' ? sickEndDate : sickStartDate,
+          note: sickDaysNote || null,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Kon niet opslaan')
+      }
+
+      toast.success(`Ziektedag(en) toegevoegd voor ${sickDaysMember.name}`)
+      // Reset form
+      setSickStartDate('')
+      setSickEndDate('')
+      setSickDaysNote('')
+      fetchSickDays()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsSavingSickDays(false)
+    }
+  }
+
+  const handleDeleteEntry = async (entryId: string) => {
+    setIsDeletingEntry(entryId)
+    try {
+      const res = await fetch(`/api/sick-days?id=${entryId}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) throw new Error('Kon niet verwijderen')
+
+      toast.success('Ziektedag verwijderd')
+      fetchSickDays()
+    } catch (error) {
+      toast.error('Kon ziektedag niet verwijderen')
+    } finally {
+      setIsDeletingEntry(null)
+    }
+  }
+
+  const formatDateNL = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
   }
 
   const handleResetPassword = async () => {
@@ -345,6 +479,24 @@ export default function TeamPage() {
                       In dienst sinds {new Date(member.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </div>
                   )}
+
+                  {/* Sick days button for managers */}
+                  {canManage && member.role !== 'PARTNER' && (
+                    <div className="mt-4 pt-4 border-t border-white/5">
+                      <button
+                        onClick={() => openSickDaysModal(member)}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all text-sm"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Icons.heart size={14} />
+                          Ziektedagen {selectedYear}
+                        </span>
+                        <span className={`font-medium ${getSickDaysForMember(member.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                          {getSickDaysForMember(member.id)} dagen
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -358,7 +510,8 @@ export default function TeamPage() {
                 <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4">Naam</th>
                 <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4">Functie</th>
                 <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4 hidden md:table-cell">In dienst</th>
-                {canResetPasswords && <th className="text-right text-xs font-medium text-gray-400 uppercase tracking-wider p-4 w-20">Acties</th>}
+                {canManage && <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4 hidden lg:table-cell">Ziektedagen</th>}
+                {canResetPasswords && <th className="text-right text-xs font-medium text-gray-400 uppercase tracking-wider p-4 w-24">Acties</th>}
               </tr>
             </thead>
             <tbody>
@@ -388,15 +541,37 @@ export default function TeamPage() {
                           : '-')}
                       </span>
                     </td>
+                    {canManage && (
+                      <td className="p-4 hidden lg:table-cell">
+                        {member.role === 'PARTNER' ? (
+                          <span className="text-sm text-gray-500">-</span>
+                        ) : (
+                          <span className={`text-sm font-medium ${getSickDaysForMember(member.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                            {getSickDaysForMember(member.id)} dagen
+                          </span>
+                        )}
+                      </td>
+                    )}
                     {canResetPasswords && (
                       <td className="p-4 text-right">
-                        <button
-                          onClick={() => openResetModal(member)}
-                          className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all"
-                          title="Wachtwoord resetten"
-                        >
-                          <Icons.lock size={14} />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          {member.role !== 'PARTNER' && (
+                            <button
+                              onClick={() => openSickDaysModal(member)}
+                              className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                              title="Ziektedagen bewerken"
+                            >
+                              <Icons.heart size={14} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openResetModal(member)}
+                            className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all"
+                            title="Wachtwoord resetten"
+                          >
+                            <Icons.lock size={14} />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -495,6 +670,202 @@ export default function TeamPage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sick Days Modal */}
+      {showSickDaysModal && sickDaysMember && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSickDaysModal(false)}>
+          <div className="card p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                  <Icons.heart className="text-red-400" size={18} />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-white text-lg">Ziektedagen</h2>
+                  {/* Year selector */}
+                  <select
+                    value={selectedYear}
+                    onChange={e => setSelectedYear(parseInt(e.target.value))}
+                    className="mt-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-gray-300 focus:outline-none focus:border-red-500/30"
+                  >
+                    {[2025, 2026, 2027, 2028, 2029, 2030].map(year => (
+                      <option key={year} value={year} className="bg-workx-dark">{year}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSickDaysModal(false)}
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            {/* Selected user info with total */}
+            <div className="flex items-center justify-between p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-4">
+                <TeamAvatar name={sickDaysMember.name} size="large" />
+                <div>
+                  <p className="font-medium text-white">{sickDaysMember.name}</p>
+                  <p className="text-sm text-gray-400">{sickDaysMember.email}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`text-2xl font-semibold ${getSickDaysForMember(sickDaysMember.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                  {getSickDaysForMember(sickDaysMember.id)}
+                </p>
+                <p className="text-xs text-gray-500">werkdagen</p>
+              </div>
+            </div>
+
+            {/* Existing entries */}
+            {getMemberEntries(sickDaysMember.id).length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm text-gray-400 mb-3">Geregistreerde periodes</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {getMemberEntries(sickDaysMember.id).map(entry => (
+                    <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-red-500/20 transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                          <Icons.calendar size={14} className="text-red-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-white">
+                            {formatDateNL(entry.startDate)}
+                            {entry.startDate !== entry.endDate && (
+                              <span className="text-gray-400"> - {formatDateNL(entry.endDate)}</span>
+                            )}
+                          </p>
+                          {entry.note && (
+                            <p className="text-xs text-gray-500 mt-0.5">{entry.note}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-red-400 font-medium">{entry.workDays} {entry.workDays === 1 ? 'dag' : 'dagen'}</span>
+                        <button
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          disabled={isDeletingEntry === entry.id}
+                          className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          title="Verwijderen"
+                        >
+                          {isDeletingEntry === entry.id ? (
+                            <span className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin inline-block" />
+                          ) : (
+                            <Icons.trash size={14} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add new entry */}
+            <div className="border-t border-white/5 pt-6">
+              <h3 className="text-sm text-gray-400 mb-4">Nieuwe ziektedag(en) toevoegen</h3>
+
+              {/* Entry mode toggle */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setEntryMode('single')}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                    entryMode === 'single'
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <Icons.calendar size={14} className="inline mr-2" />
+                  Enkele dag
+                </button>
+                <button
+                  onClick={() => setEntryMode('period')}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                    entryMode === 'period'
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <Icons.calendar size={14} className="inline mr-2" />
+                  Periode
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Date inputs */}
+                <div className={`grid gap-4 ${entryMode === 'period' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">
+                      {entryMode === 'single' ? 'Datum' : 'Startdatum'}
+                    </label>
+                    <input
+                      type="date"
+                      value={sickStartDate}
+                      onChange={e => setSickStartDate(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 focus:bg-white/10 transition-all"
+                    />
+                  </div>
+                  {entryMode === 'period' && (
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Einddatum</label>
+                      <input
+                        type="date"
+                        value={sickEndDate}
+                        onChange={e => setSickEndDate(e.target.value)}
+                        min={sickStartDate}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 focus:bg-white/10 transition-all"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Note */}
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
+                  <input
+                    type="text"
+                    value={sickDaysNote}
+                    onChange={e => setSickDaysNote(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 focus:bg-white/10 transition-all"
+                    placeholder="Bijv. griep, rugklachten..."
+                  />
+                </div>
+
+                <p className="text-xs text-gray-500">
+                  Werkdagen (ma-vr) worden automatisch berekend. Weekenden worden overgeslagen.
+                </p>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowSickDaysModal(false)}
+                  className="flex-1 btn-secondary"
+                >
+                  Sluiten
+                </button>
+                <button
+                  onClick={handleSaveSickDays}
+                  disabled={isSavingSickDays || !sickStartDate || (entryMode === 'period' && !sickEndDate)}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSavingSickDays ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Icons.plus size={16} />
+                      Toevoegen
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

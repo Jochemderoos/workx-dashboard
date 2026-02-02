@@ -71,6 +71,11 @@ interface ParentalLeave {
   note: string | null
 }
 
+interface SickDaysTotals {
+  userId: string
+  totalDays: number
+}
+
 interface EmployeeData {
   id: string
   name: string
@@ -115,9 +120,15 @@ export default function FinancienPage() {
   const [editingSalaryScale, setEditingSalaryScale] = useState<string | null>(null)
   const [isEditingSalarishuis, setIsEditingSalarishuis] = useState(false)
   const [editingVacation, setEditingVacation] = useState<string | null>(null)
+  const [sickDaysTotals, setSickDaysTotals] = useState<SickDaysTotals[]>([])
 
   // Check if user is PARTNER or ADMIN
   const isManager = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
+
+  // Get sick days for an employee
+  const getSickDays = (userId: string) => {
+    return sickDaysTotals.find(s => s.userId === userId)?.totalDays || 0
+  }
 
   // Load data from API
   useEffect(() => {
@@ -149,6 +160,16 @@ export default function FinancienPage() {
         if (empRes.ok) {
           const empData = await empRes.json()
           setEmployees(empData)
+        }
+
+        // Load sick days for managers
+        if (session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN') {
+          const sickRes = await fetch(`/api/sick-days?year=${currentYear}`)
+          if (sickRes.ok) {
+            const sickData = await sickRes.json()
+            // New API returns { entries, totals } - we only need totals here
+            setSickDaysTotals(sickData.totals || [])
+          }
         }
       } catch (error) {
         console.error('Error loading financial data:', error)
@@ -1625,7 +1646,7 @@ export default function FinancienPage() {
                         {/* Name and Role */}
                         <div className="flex-1 min-w-0">
                           <h3 className="text-white font-semibold text-lg truncate">{employee.name}</h3>
-                          <p className="text-gray-400 text-sm">{employee.role === 'ADMIN' ? 'Kantoormanager' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role}</p>
+                          <p className="text-gray-400 text-sm">{employee.role === 'ADMIN' ? 'Head of Office' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role}</p>
                           {yearsOfService !== null && (
                             <p className={`${isHannaOrLotte ? 'text-cyan-400/60' : 'text-workx-lime/60'} text-xs mt-1`}>
                               {yearsOfService} jaar bij Workx
@@ -1782,6 +1803,26 @@ export default function FinancienPage() {
                               </div>
                             )}
                           </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sick Days Section - alleen voor managers en niet voor Partners */}
+                    {isManager && employee.role !== 'PARTNER' && (
+                      <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Icons.heart size={14} className="text-red-400" />
+                            <span className="text-gray-400 text-sm">Ziektedagen {currentYear}</span>
+                          </div>
+                          <span className={`text-lg font-semibold ${getSickDays(employee.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                            {getSickDays(employee.id)} dagen
+                          </span>
+                        </div>
+                        {getSickDays(employee.id) > 5 && (
+                          <p className="text-xs text-red-400/60 mt-1">
+                            Meer dan 5 ziektedagen dit jaar
+                          </p>
                         )}
                       </div>
                     )}
