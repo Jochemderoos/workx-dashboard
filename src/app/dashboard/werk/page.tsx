@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
@@ -74,15 +73,13 @@ const priorityConfig = {
 }
 
 export default function WerkOverzichtPage() {
-  const router = useRouter()
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null) // null = checking
   const [showForm, setShowForm] = useState(false)
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
-  const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk' | 'urenoverzicht'>('werkdruk')
+  const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk' | 'urenoverzicht'>('zaken') // Default to zaken for everyone
 
   // Monthly hours state
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
@@ -307,13 +304,13 @@ export default function WerkOverzichtPage() {
         const user = await res.json()
         const isManager = user.role === 'PARTNER' || user.role === 'ADMIN'
         setCanEditWorkload(isManager)
-        setHasAccess(isManager)
-      } else {
-        setHasAccess(false)
+        // Als manager, default naar werkdruk tab
+        if (isManager && pageMode === 'zaken') {
+          setPageMode('werkdruk')
+        }
       }
     } catch (error) {
       console.error('Kon gebruiker niet laden')
-      setHasAccess(false)
     }
   }
 
@@ -483,35 +480,12 @@ export default function WerkOverzichtPage() {
     completed: workItems.filter(i => i.status === 'COMPLETED').length,
   }
 
-  if (isLoading || hasAccess === null) {
+  if (isLoading) {
     return (
       <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
         <div className="text-center">
           <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
           <p className="text-gray-400">Werk laden...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Alleen Partners en Hanna hebben toegang
-  if (!hasAccess) {
-    return (
-      <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
-        <div className="card p-8 text-center max-w-md">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-            <Icons.x className="text-red-400" size={32} />
-          </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Geen toegang</h2>
-          <p className="text-gray-400 mb-6">
-            Deze pagina is alleen beschikbaar voor Partners en Head of Office.
-          </p>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="btn-primary"
-          >
-            Terug naar Dashboard
-          </button>
         </div>
       </div>
     )
@@ -530,15 +504,17 @@ export default function WerkOverzichtPage() {
         <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {/* Mode Toggle */}
           <div className="flex gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-white/5 rounded-lg sm:rounded-xl">
-            <button
-              onClick={() => setPageMode('werkdruk')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                pageMode === 'werkdruk' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icons.activity size={14} className="sm:w-4 sm:h-4" />
-              <span>Werkdruk</span>
-            </button>
+            {canEditWorkload && (
+              <button
+                onClick={() => setPageMode('werkdruk')}
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  pageMode === 'werkdruk' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icons.activity size={14} className="sm:w-4 sm:h-4" />
+                <span>Werkdruk</span>
+              </button>
+            )}
             <button
               onClick={() => setPageMode('zaken')}
               className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
@@ -569,8 +545,8 @@ export default function WerkOverzichtPage() {
         </div>
       </div>
 
-      {/* WERKDRUK MODE */}
-      {pageMode === 'werkdruk' && (
+      {/* WERKDRUK MODE - alleen voor managers */}
+      {pageMode === 'werkdruk' && canEditWorkload && (
         <div className="space-y-6">
           {/* Upload Button */}
           {canEditWorkload && (
