@@ -208,7 +208,8 @@ export default function VakantiesPage() {
       const myPlRes = await fetch('/api/parental-leave')
       if (myPlRes.ok) {
         const data = await myPlRes.json()
-        setMyParentalLeave(data)
+        // API returns array, take first item or null if empty
+        setMyParentalLeave(Array.isArray(data) && data.length > 0 ? data[0] : null)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
