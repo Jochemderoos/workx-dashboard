@@ -28,7 +28,7 @@ const navigationItems = [
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', keywords: ['ontslag', 'vergoeding', 'berekenen'] },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', keywords: ['reorganisatie', 'ontslag', 'selectie'] },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', keywords: ['collega', 'medewerkers', 'mensen'] },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'HR Docs', keywords: ['handboek', 'regels', 'hr', 'documenten', 'beleid', 'the way it workx'] },
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', keywords: ['handboek', 'regels', 'hr', 'documenten', 'beleid', 'the way it workx'] },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', keywords: ['idee', 'bug', 'suggestie', 'melding'] },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', keywords: ['profiel', 'wachtwoord', 'account'] },
 ]
@@ -45,7 +45,7 @@ const mobileMenuItems = [
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitie' },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling' },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team' },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'HR Docs' },
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs' },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback' },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen' },
 ]
@@ -64,6 +64,7 @@ export default function TopBar({ user }: TopBarProps) {
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [greeting, setGreeting] = useState('')
+  const [dateString, setDateString] = useState('')
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [events, setEvents] = useState<any[]>([])
   const [workItems, setWorkItems] = useState<any[]>([])
@@ -74,10 +75,18 @@ export default function TopBar({ user }: TopBarProps) {
   const router = useRouter()
 
   useEffect(() => {
-    const hour = new Date().getHours()
+    const now = new Date()
+    const hour = now.getHours()
     if (hour < 12) setGreeting('Goedemorgen')
     else if (hour < 18) setGreeting('Goedemiddag')
     else setGreeting('Goedenavond')
+
+    // Set date string on client to avoid hydration mismatch
+    setDateString(now.toLocaleDateString('nl-NL', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    }))
   }, [])
 
   // Fetch content for search
@@ -394,11 +403,7 @@ export default function TopBar({ user }: TopBarProps) {
             <Icons.calendar size={14} className="text-workx-lime" />
           </span>
           <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
-            {new Date().toLocaleDateString('nl-NL', {
-              weekday: 'short',
-              day: 'numeric',
-              month: 'short',
-            })}
+            {dateString}
           </span>
         </div>
       </div>
