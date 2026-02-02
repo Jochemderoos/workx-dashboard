@@ -43,7 +43,7 @@ export async function GET() {
           }
         },
         vacationBalance: true,
-        parentalLeave: true
+        parentalLeaves: true
       },
       orderBy: { name: 'asc' }
     })
@@ -83,7 +83,7 @@ export async function GET() {
         bonusPending,
         bonusTotal: bonusPaid + bonusPending,
         vacationBalance: user.vacationBalance,
-        parentalLeave: user.parentalLeave
+        parentalLeaves: user.parentalLeaves
       }
     })
 
