@@ -438,6 +438,7 @@ export default function HRDocsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showMobileToc, setShowMobileToc] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+  const mobileNavRef = useRef<HTMLDivElement>(null)
 
   // Check if user can edit (Partner or Admin/Head of Office)
   const canEdit = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -453,6 +454,38 @@ export default function HRDocsPage() {
       setActiveChapter(currentDoc.chapters[0].id)
     }
   }, [currentDoc, activeChapter])
+
+  // Track which chapter is in view
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const chapterId = entry.target.id.replace('chapter-', '')
+            setActiveChapter(chapterId)
+          }
+        })
+      },
+      { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+    )
+
+    currentDoc.chapters.forEach((chapter) => {
+      const element = document.getElementById(`chapter-${chapter.id}`)
+      if (element) observer.observe(element)
+    })
+
+    return () => observer.disconnect()
+  }, [currentDoc.chapters])
+
+  // Scroll mobile nav to show active chapter
+  useEffect(() => {
+    if (mobileNavRef.current && activeChapter) {
+      const activeButton = mobileNavRef.current.querySelector(`[data-chapter="${activeChapter}"]`) as HTMLElement
+      if (activeButton) {
+        activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+      }
+    }
+  }, [activeChapter])
 
   // Filter chapters based on search
   const filteredChapters = useMemo(() => {
@@ -533,11 +566,44 @@ export default function HRDocsPage() {
         )}
       </div>
 
+      {/* Mobile Chapter Navigation - Always visible on mobile */}
+      <div className="lg:hidden mb-4">
+        <div className="card p-3">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium text-white/50 uppercase tracking-wider">Hoofdstukken</p>
+            <button
+              onClick={() => setShowMobileToc(true)}
+              className="text-xs text-workx-lime flex items-center gap-1"
+            >
+              <Icons.list size={14} />
+              Alle hoofdstukken
+            </button>
+          </div>
+          <div ref={mobileNavRef} className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
+            {currentDoc.chapters.map((chapter) => (
+              <button
+                key={chapter.id}
+                data-chapter={chapter.id}
+                onClick={() => scrollToChapter(chapter.id)}
+                className={`chapter-btn flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+                  activeChapter === chapter.id
+                    ? 'bg-workx-lime text-workx-dark font-medium'
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <span className="chapter-emoji text-base">{chapter.icon}</span>
+                <span className="whitespace-nowrap">{chapter.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Main Content Area */}
       <div className="flex gap-6">
         {/* Sidebar - Table of Contents */}
         <aside className="hidden lg:block w-72 flex-shrink-0">
-          <div className="card p-4 sticky top-4">
+          <div className="card p-4 sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
             {/* Search */}
             <div className="relative mb-4">
               <Icons.search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
@@ -581,13 +647,13 @@ export default function HRDocsPage() {
                   <button
                     key={chapter.id}
                     onClick={() => scrollToChapter(chapter.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all ${
+                    className={`chapter-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all ${
                       isActive
                         ? 'bg-workx-lime/10 text-workx-lime border border-workx-lime/20'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <span className="text-lg flex-shrink-0">{chapter.icon}</span>
+                    <span className="chapter-emoji text-lg flex-shrink-0">{chapter.icon}</span>
                     <span className="flex-1 truncate">{chapter.title}</span>
                     {isActive && <div className="w-1.5 h-1.5 rounded-full bg-workx-lime" />}
                   </button>
@@ -603,14 +669,6 @@ export default function HRDocsPage() {
             )}
           </div>
         </aside>
-
-        {/* Mobile TOC Button */}
-        <button
-          onClick={() => setShowMobileToc(true)}
-          className="lg:hidden fixed bottom-20 right-4 z-40 w-12 h-12 rounded-full bg-workx-lime text-workx-dark shadow-lg shadow-workx-lime/20 flex items-center justify-center"
-        >
-          <Icons.list size={20} />
-        </button>
 
         {/* Mobile TOC Drawer */}
         {showMobileToc && (
@@ -644,13 +702,13 @@ export default function HRDocsPage() {
                   <button
                     key={chapter.id}
                     onClick={() => scrollToChapter(chapter.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all ${
+                    className={`chapter-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all ${
                       activeChapter === chapter.id
                         ? 'bg-workx-lime/10 text-workx-lime'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <span className="text-lg">{chapter.icon}</span>
+                    <span className="chapter-emoji text-lg">{chapter.icon}</span>
                     <span className="flex-1">{chapter.title}</span>
                   </button>
                 ))}
