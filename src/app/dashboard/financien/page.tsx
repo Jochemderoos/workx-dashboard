@@ -63,12 +63,24 @@ interface VacationBalance {
 }
 
 interface ParentalLeave {
-  betaaldTotaalWeken: number
-  betaaldOpgenomenWeken: number
-  onbetaaldTotaalWeken: number
-  onbetaaldOpgenomenWeken: number
-  eindDatum: string | null
-  note: string | null
+  id: string
+  childNumber: number
+  kindNaam: string | null
+  kindGeboorteDatum: string | null
+  uitgerekendeDatum: string | null
+  zwangerschapsverlofStart: string | null
+  zwangerschapsverlofStatus: string | null
+  geboorteverlofPartner: string | null
+  aanvullendVerlofPartner: string | null
+  betaaldTotaalUren: number
+  betaaldOpgenomenUren: number
+  betaaldVerlofDetails: string | null
+  onbetaaldTotaalDagen: number
+  onbetaaldOpgenomenDagen: number
+  onbetaaldVerlofDetails: string | null
+  uwvAangevraagd: boolean
+  uwvGoedgekeurd: boolean
+  notities: string | null
 }
 
 interface SickDaysTotals {
@@ -94,7 +106,7 @@ interface EmployeeData {
   bonusPending: number
   bonusTotal: number
   vacationBalance: VacationBalance | null
-  parentalLeave: ParentalLeave | null
+  parentalLeaves: ParentalLeave[]
 }
 
 type TabType = 'overzicht' | 'grafieken' | 'budgetten' | 'salarishuis' | 'arbeidsvoorwaarden'
@@ -1759,7 +1771,7 @@ export default function FinancienPage() {
                             <Icons.sun size={14} className="text-green-400" />
                             <span className="text-gray-400 text-sm">Vakantiedagen {currentYear}</span>
                           </div>
-                          {employee.parentalLeave && (
+                          {employee.parentalLeaves && employee.parentalLeaves.length > 0 && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
                           )}
                         </div>
@@ -1786,22 +1798,34 @@ export default function FinancienPage() {
                         </div>
 
                         {/* Parental Leave indicator */}
-                        {employee.parentalLeave && (
-                          <div className="mt-3 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-purple-400">Betaald O.V.</span>
-                              <span className="text-white/60">
-                                {employee.parentalLeave.betaaldOpgenomenWeken}/{employee.parentalLeave.betaaldTotaalWeken} wk
-                              </span>
-                            </div>
-                            {employee.parentalLeave.onbetaaldTotaalWeken > 0 && (
-                              <div className="flex items-center justify-between text-xs mt-1">
-                                <span className="text-purple-400/70">Onbetaald O.V.</span>
-                                <span className="text-white/60">
-                                  {employee.parentalLeave.onbetaaldOpgenomenWeken}/{employee.parentalLeave.onbetaaldTotaalWeken} wk
-                                </span>
+                        {employee.parentalLeaves && employee.parentalLeaves.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {employee.parentalLeaves.map((leave) => (
+                              <div key={leave.id} className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                  <span className="text-purple-400 font-medium">
+                                    {leave.kindNaam || `Kind ${leave.childNumber}`}
+                                  </span>
+                                  {leave.uwvGoedgekeurd && (
+                                    <span className="text-green-400 text-[10px]">UWV ✓</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-purple-400/70">Betaald O.V.</span>
+                                  <span className="text-white/60">
+                                    {leave.betaaldOpgenomenUren}/{leave.betaaldTotaalUren} uur
+                                  </span>
+                                </div>
+                                {leave.onbetaaldTotaalDagen > 0 && (
+                                  <div className="flex items-center justify-between text-xs mt-1">
+                                    <span className="text-purple-400/70">Onbetaald O.V.</span>
+                                    <span className="text-white/60">
+                                      {leave.onbetaaldOpgenomenDagen}/{leave.onbetaaldTotaalDagen} dagen
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            ))}
                           </div>
                         )}
                       </div>
