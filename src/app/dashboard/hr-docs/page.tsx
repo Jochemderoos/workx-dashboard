@@ -585,25 +585,20 @@ export default function HRDocsPage() {
     setActiveChapter(chapterId)
     setShowMobileToc(false)
 
-    // Small delay to ensure state updates first
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
       const element = document.getElementById(`chapter-${chapterId}`)
       if (element) {
-        const headerOffset = 100 // Account for fixed headers
-        const elementPosition = element.getBoundingClientRect().top
-        const offsetPosition = elementPosition + window.pageYOffset - headerOffset
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        })
+        const yOffset = -80 // Account for sticky header
+        const y = element.getBoundingClientRect().top + window.scrollY + yOffset
+        window.scrollTo({ top: y, behavior: 'smooth' })
       }
+    })
 
-      // Re-enable observer after scroll completes
-      setTimeout(() => {
-        isManualScrolling.current = false
-      }, 1000)
-    }, 50)
+    // Re-enable observer after scroll completes
+    setTimeout(() => {
+      isManualScrolling.current = false
+    }, 1500)
   }
 
   // Highlight search matches in content
@@ -677,9 +672,14 @@ export default function HRDocsPage() {
             {currentDoc.chapters.map((chapter) => (
               <button
                 key={chapter.id}
+                type="button"
                 data-chapter={chapter.id}
-                onClick={() => scrollToChapter(chapter.id)}
-                className={`chapter-btn flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  scrollToChapter(chapter.id)
+                }}
+                className={`chapter-btn flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all cursor-pointer ${
                   activeChapter === chapter.id
                     ? 'bg-workx-lime text-workx-dark font-medium'
                     : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
@@ -696,8 +696,8 @@ export default function HRDocsPage() {
       {/* Main Content Area */}
       <div className="flex gap-6 relative">
         {/* Sidebar - Table of Contents */}
-        <aside className="hidden lg:block w-72 flex-shrink-0 self-start sticky top-4">
-          <div className="card p-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <aside className="hidden lg:block w-72 flex-shrink-0 self-start sticky top-2">
+          <div className="card p-4 max-h-[calc(100vh-1rem)] overflow-y-auto">
             {/* Search */}
             <div className="relative mb-4">
               <Icons.search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
@@ -740,8 +740,13 @@ export default function HRDocsPage() {
                 return (
                   <button
                     key={chapter.id}
-                    onClick={() => scrollToChapter(chapter.id)}
-                    className={`chapter-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all ${
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      scrollToChapter(chapter.id)
+                    }}
+                    className={`chapter-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all cursor-pointer ${
                       isActive
                         ? 'bg-workx-lime/10 text-workx-lime border border-workx-lime/20'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -795,8 +800,13 @@ export default function HRDocsPage() {
                 {filteredChapters.map((chapter) => (
                   <button
                     key={chapter.id}
-                    onClick={() => scrollToChapter(chapter.id)}
-                    className={`chapter-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all ${
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      scrollToChapter(chapter.id)
+                    }}
+                    className={`chapter-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all cursor-pointer ${
                       activeChapter === chapter.id
                         ? 'bg-workx-lime/10 text-workx-lime'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'

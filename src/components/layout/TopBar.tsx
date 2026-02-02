@@ -28,7 +28,7 @@ const navigationItems = [
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', keywords: ['ontslag', 'vergoeding', 'berekenen'] },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', keywords: ['reorganisatie', 'ontslag', 'selectie'] },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', keywords: ['collega', 'medewerkers', 'mensen'] },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'The Way it Workx', keywords: ['handboek', 'regels', 'hr', 'documenten', 'beleid'] },
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'HR Docs', keywords: ['handboek', 'regels', 'hr', 'documenten', 'beleid', 'the way it workx'] },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', keywords: ['idee', 'bug', 'suggestie', 'melding'] },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', keywords: ['profiel', 'wachtwoord', 'account'] },
 ]
@@ -45,7 +45,7 @@ const mobileMenuItems = [
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitie' },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling' },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team' },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'The Way it Workx' },
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'HR Docs' },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback' },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen' },
 ]
