@@ -125,6 +125,12 @@ export default function LustrumPage() {
   const [isMusicPlaying, setIsMusicPlaying] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  // Ideas box state
+  const [ideaContent, setIdeaContent] = useState('')
+  const [isAnonymous, setIsAnonymous] = useState(false)
+  const [isSubmittingIdea, setIsSubmittingIdea] = useState(false)
+  const [ideaSubmitted, setIdeaSubmitted] = useState(false)
+
   // Initialize audio on mount
   useEffect(() => {
     // Chill Ibiza/Spanish vibe music - royalty free lofi spanish guitar
@@ -150,6 +156,35 @@ export default function LustrumPage() {
       audioRef.current.play().catch(console.error)
     }
     setIsMusicPlaying(!isMusicPlaying)
+  }
+
+  // Submit idea
+  const submitIdea = async () => {
+    if (!ideaContent.trim() || isSubmittingIdea) return
+
+    setIsSubmittingIdea(true)
+    try {
+      const res = await fetch('/api/lustrum/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: ideaContent, isAnonymous }),
+      })
+
+      if (res.ok) {
+        setIdeaContent('')
+        setIsAnonymous(false)
+        setIdeaSubmitted(true)
+        setTimeout(() => setIdeaSubmitted(false), 5000)
+      } else {
+        const error = await res.json()
+        alert(error.error || 'Er ging iets mis')
+      }
+    } catch (error) {
+      console.error('Error submitting idea:', error)
+      alert('Er ging iets mis met de verbinding')
+    } finally {
+      setIsSubmittingIdea(false)
+    }
   }
 
   // Daily fact based on day of year
@@ -424,8 +459,8 @@ export default function LustrumPage() {
         <div className="absolute top-0 right-0 w-48 sm:w-96 h-48 sm:h-96 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-32 sm:w-64 h-32 sm:h-64 bg-yellow-500/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
-        {/* Confetti decoration - only visible on hover */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover/hero:opacity-100 transition-opacity duration-500">
+        {/* Confetti decoration - only visible on hover, hidden on mobile */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover/hero:opacity-100 transition-opacity duration-500 hidden sm:block">
           {[...Array(20)].map((_, i) => (
             <span
               key={i}
@@ -452,7 +487,7 @@ export default function LustrumPage() {
                   <h1 className="text-2xl sm:text-4xl font-bold text-white">Workx Lustrum - 15 Jaar!</h1>
                 </div>
               </div>
-              <p className="text-white/60 max-w-lg mb-4">
+              <p className="text-gray-400 max-w-lg mb-4">
                 We vieren ons 15-jarig jubileum met een onvergetelijke trip naar Mallorca!
                 Samen genieten van zon, zee, lekker eten en natuurlijk elkaar.
               </p>
@@ -484,7 +519,7 @@ export default function LustrumPage() {
 
             {/* Countdown */}
             <div className="flex-shrink-0">
-              <p className="text-center text-white/40 text-sm mb-3">Nog te gaan</p>
+              <p className="text-center text-gray-400 text-sm mb-3">Nog te gaan</p>
               <div className="flex gap-1.5 sm:gap-3">
                 {[
                   { value: countdown.days, label: 'dagen' },
@@ -499,7 +534,7 @@ export default function LustrumPage() {
                     <span className="text-xl sm:text-3xl font-bold text-orange-400 tabular-nums">
                       {String(item.value).padStart(2, '0')}
                     </span>
-                    <span className="text-[8px] sm:text-[10px] text-white/40 uppercase tracking-wider">
+                    <span className="text-xs sm:text-xs text-gray-400 uppercase tracking-wider">
                       {item.label}
                     </span>
                   </div>
@@ -543,7 +578,7 @@ export default function LustrumPage() {
               <p className="text-white text-sm font-medium">
                 {CAN_FRESSA_PHOTOS[currentPhotoIndex].caption}
               </p>
-              <p className="text-white/50 text-xs mt-1">
+              <p className="text-gray-400 text-xs mt-1">
                 Foto {currentPhotoIndex + 1} van {CAN_FRESSA_PHOTOS.length}
               </p>
             </div>
@@ -573,7 +608,7 @@ export default function LustrumPage() {
             </div>
             <div>
               <h3 className="text-white font-medium">Weer in Mallorca</h3>
-              <p className="text-xs text-white/40">Alaró, komende week</p>
+              <p className="text-xs text-gray-400">Alaró, komende week</p>
             </div>
           </div>
 
@@ -599,19 +634,19 @@ export default function LustrumPage() {
                         <p className="text-sm text-white">
                           {date.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
                         </p>
-                        <p className="text-xs text-white/40">{info.desc}</p>
+                        <p className="text-xs text-gray-400">{info.desc}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-orange-400">{day.tempMax}°</p>
-                      <p className="text-xs text-white/40">{day.tempMin}°</p>
+                      <p className="text-xs text-gray-400">{day.tempMin}°</p>
                     </div>
                   </div>
                 )
               })}
             </div>
           ) : (
-            <p className="text-white/40 text-sm text-center py-4">
+            <p className="text-gray-400 text-sm text-center py-4">
               Weerdata niet beschikbaar
             </p>
           )}
@@ -644,15 +679,15 @@ export default function LustrumPage() {
               <div className="space-y-2">
                 <div>
                   <span className="text-white font-semibold">{dailySpanish.word}</span>
-                  <span className="text-white/50 mx-2">—</span>
+                  <span className="text-gray-400 mx-2">—</span>
                   <span className="text-white/70">{dailySpanish.wordTranslation}</span>
                   {dailySpanish.pronunciation && (
-                    <span className="text-white/40 text-xs ml-2">({dailySpanish.pronunciation})</span>
+                    <span className="text-gray-400 text-xs ml-2">({dailySpanish.pronunciation})</span>
                   )}
                 </div>
                 <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                   <p className="text-yellow-400 italic">"{dailySpanish.phrase}"</p>
-                  <p className="text-white/60 text-sm mt-1">{dailySpanish.phraseTranslation}</p>
+                  <p className="text-gray-400 text-sm mt-1">{dailySpanish.phraseTranslation}</p>
                 </div>
               </div>
             </div>
@@ -669,7 +704,7 @@ export default function LustrumPage() {
             </div>
             <div>
               <h2 className="text-lg font-medium text-white">Locatie</h2>
-              <p className="text-xs text-white/40">Klik op een plaats om de afstand te zien</p>
+              <p className="text-xs text-gray-400">Klik op een plaats om de afstand te zien</p>
             </div>
           </div>
         </div>
@@ -979,7 +1014,7 @@ export default function LustrumPage() {
                   <span className="text-xl">🚗</span>
                 </div>
                 <div>
-                  <p className="text-white/80 text-xs">Vanaf Can Fressa naar</p>
+                  <p className="text-gray-200 text-xs">Vanaf Can Fressa naar</p>
                   <p className="text-white font-bold capitalize">{selectedLocation === 'portocolom' ? 'Porto Colom' : selectedLocation.charAt(0).toUpperCase() + selectedLocation.slice(1)}</p>
                 </div>
               </div>
@@ -1005,7 +1040,7 @@ export default function LustrumPage() {
 
           {/* Legend overlay */}
           <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3 text-xs space-y-1.5">
-            <p className="text-white/50 text-[10px] mb-2">Klik op een plaats</p>
+            <p className="text-gray-400 text-xs mb-2">Klik op een plaats</p>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-orange-500 ring-2 ring-white/50" />
               <span className="text-white">Can Fressa</span>
@@ -1050,7 +1085,7 @@ export default function LustrumPage() {
               </div>
               <div>
                 <h2 className="text-lg font-medium text-white">Vlieggegevens</h2>
-                <p className="text-xs text-white/40">Vluchtinformatie en tijden</p>
+                <p className="text-xs text-gray-400">Vluchtinformatie en tijden</p>
               </div>
             </div>
             {userCanEdit && (
@@ -1074,12 +1109,12 @@ export default function LustrumPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-lg">🛫</span>
                   <span className="text-sky-400 font-medium text-sm">Heenvlucht</span>
-                  <span className="text-white/40 text-xs ml-auto">{new Date(flightInfo.outbound.date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                  <span className="text-gray-400 text-xs ml-auto">{new Date(flightInfo.outbound.date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-white">{flightInfo.outbound.departureTime || '--:--'}</p>
-                    <p className="text-xs text-white/50">{flightInfo.outbound.departureAirport}</p>
+                    <p className="text-xs text-gray-400">{flightInfo.outbound.departureAirport}</p>
                   </div>
                   <div className="flex-1 mx-4 flex items-center">
                     <div className="flex-1 h-px bg-gradient-to-r from-sky-500/50 to-transparent" />
@@ -1088,7 +1123,7 @@ export default function LustrumPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-white">{flightInfo.outbound.arrivalTime || '--:--'}</p>
-                    <p className="text-xs text-white/50">{flightInfo.outbound.arrivalAirport}</p>
+                    <p className="text-xs text-gray-400">{flightInfo.outbound.arrivalAirport}</p>
                   </div>
                 </div>
               </div>
@@ -1098,12 +1133,12 @@ export default function LustrumPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-lg">🛬</span>
                   <span className="text-orange-400 font-medium text-sm">Terugvlucht</span>
-                  <span className="text-white/40 text-xs ml-auto">{new Date(flightInfo.return.date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                  <span className="text-gray-400 text-xs ml-auto">{new Date(flightInfo.return.date).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-center">
                     <p className="text-2xl font-bold text-white">{flightInfo.return.departureTime || '--:--'}</p>
-                    <p className="text-xs text-white/50">{flightInfo.return.departureAirport}</p>
+                    <p className="text-xs text-gray-400">{flightInfo.return.departureAirport}</p>
                   </div>
                   <div className="flex-1 mx-4 flex items-center">
                     <div className="flex-1 h-px bg-gradient-to-r from-orange-500/50 to-transparent" />
@@ -1112,7 +1147,7 @@ export default function LustrumPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-white">{flightInfo.return.arrivalTime || '--:--'}</p>
-                    <p className="text-xs text-white/50">{flightInfo.return.arrivalAirport}</p>
+                    <p className="text-xs text-gray-400">{flightInfo.return.arrivalAirport}</p>
                   </div>
                 </div>
               </div>
@@ -1120,7 +1155,7 @@ export default function LustrumPage() {
           ) : (
             <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
               <span className="text-4xl mb-3 opacity-30">✈️</span>
-              <p className="text-white/40 text-sm">Nog geen vluchtgegevens</p>
+              <p className="text-gray-400 text-sm">Nog geen vluchtgegevens</p>
               <p className="text-white/25 text-xs mt-1">Klik op 'Toevoegen' om vluchten in te voeren</p>
             </div>
           )}
@@ -1135,7 +1170,7 @@ export default function LustrumPage() {
               </div>
               <div>
                 <h2 className="text-lg font-medium text-white">Dagprogramma</h2>
-                <p className="text-xs text-white/40">30 sept - 4 okt 2026</p>
+                <p className="text-xs text-gray-400">30 sept - 4 okt 2026</p>
               </div>
             </div>
             {userCanEdit && (
@@ -1185,7 +1220,7 @@ export default function LustrumPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-white">{day.label}</p>
-                        <p className="text-[10px] text-violet-400">{day.subtitle}</p>
+                        <p className="text-xs text-violet-400">{day.subtitle}</p>
                       </div>
                     </div>
 
@@ -1207,14 +1242,14 @@ export default function LustrumPage() {
                               </div>
                               <p className="text-sm text-white font-medium">{item.title}</p>
                               {item.description && (
-                                <p className="text-xs text-white/50 mt-1">{item.description}</p>
+                                <p className="text-xs text-gray-400 mt-1">{item.description}</p>
                               )}
                               {item.responsible.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2">
                                   {item.responsible.map((name) => (
                                     <span
                                       key={name}
-                                      className="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 text-[10px] font-medium"
+                                      className="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 text-xs font-medium"
                                     >
                                       {name}
                                     </span>
@@ -1241,7 +1276,7 @@ export default function LustrumPage() {
           ) : (
             <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
               <span className="text-4xl mb-3 opacity-30">📅</span>
-              <p className="text-white/40 text-sm">Nog geen programma</p>
+              <p className="text-gray-400 text-sm">Nog geen programma</p>
               <p className="text-white/25 text-xs mt-1">Klik op 'Toevoegen' om activiteiten toe te voegen</p>
             </div>
           )}
@@ -1267,7 +1302,7 @@ export default function LustrumPage() {
                 </div>
                 <button
                   onClick={() => setShowFlightModal(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                  className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                 >
                   <Icons.x size={20} />
                 </button>
@@ -1282,7 +1317,7 @@ export default function LustrumPage() {
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-white/50 block mb-1">Datum</label>
+                    <label className="text-xs text-gray-400 block mb-1">Datum</label>
                     <input
                       type="date"
                       value={flightForm.outbound.date}
@@ -1291,7 +1326,7 @@ export default function LustrumPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-white/50 block mb-1">Vluchtnummer</label>
+                    <label className="text-xs text-gray-400 block mb-1">Vluchtnummer</label>
                     <input
                       type="text"
                       value={flightForm.outbound.flightNumber}
@@ -1301,7 +1336,7 @@ export default function LustrumPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-white/50 block mb-1">Vertrek</label>
+                    <label className="text-xs text-gray-400 block mb-1">Vertrek</label>
                     <div className="flex gap-2">
                       <input
                         type="time"
@@ -1318,7 +1353,7 @@ export default function LustrumPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-white/50 block mb-1">Aankomst</label>
+                    <label className="text-xs text-gray-400 block mb-1">Aankomst</label>
                     <div className="flex gap-2">
                       <input
                         type="time"
@@ -1344,7 +1379,7 @@ export default function LustrumPage() {
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-white/50 block mb-1">Datum</label>
+                    <label className="text-xs text-gray-400 block mb-1">Datum</label>
                     <input
                       type="date"
                       value={flightForm.return.date}
@@ -1353,7 +1388,7 @@ export default function LustrumPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-white/50 block mb-1">Vluchtnummer</label>
+                    <label className="text-xs text-gray-400 block mb-1">Vluchtnummer</label>
                     <input
                       type="text"
                       value={flightForm.return.flightNumber}
@@ -1363,7 +1398,7 @@ export default function LustrumPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-white/50 block mb-1">Vertrek</label>
+                    <label className="text-xs text-gray-400 block mb-1">Vertrek</label>
                     <div className="flex gap-2">
                       <input
                         type="time"
@@ -1380,7 +1415,7 @@ export default function LustrumPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-white/50 block mb-1">Aankomst</label>
+                    <label className="text-xs text-gray-400 block mb-1">Aankomst</label>
                     <div className="flex gap-2">
                       <input
                         type="time"
@@ -1403,7 +1438,7 @@ export default function LustrumPage() {
             <div className="p-6 border-t border-white/10 flex justify-end gap-3">
               <button
                 onClick={() => setShowFlightModal(false)}
-                className="px-4 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
               >
                 Annuleren
               </button>
@@ -1438,7 +1473,7 @@ export default function LustrumPage() {
                 </div>
                 <button
                   onClick={() => setShowProgramModal(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                  className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                 >
                   <Icons.x size={20} />
                 </button>
@@ -1448,7 +1483,7 @@ export default function LustrumPage() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-white/50 block mb-1">Datum</label>
+                  <label className="text-xs text-gray-400 block mb-1">Datum</label>
                   <select
                     value={programForm.date}
                     onChange={(e) => setProgramForm(prev => ({ ...prev, date: e.target.value }))}
@@ -1462,7 +1497,7 @@ export default function LustrumPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-white/50 block mb-1">Tijd (optioneel)</label>
+                  <label className="text-xs text-gray-400 block mb-1">Tijd (optioneel)</label>
                   <input
                     type="time"
                     value={programForm.time}
@@ -1473,7 +1508,7 @@ export default function LustrumPage() {
               </div>
 
               <div>
-                <label className="text-xs text-white/50 block mb-1">Activiteit</label>
+                <label className="text-xs text-gray-400 block mb-1">Activiteit</label>
                 <input
                   type="text"
                   value={programForm.title}
@@ -1484,7 +1519,7 @@ export default function LustrumPage() {
               </div>
 
               <div>
-                <label className="text-xs text-white/50 block mb-1">Beschrijving (optioneel)</label>
+                <label className="text-xs text-gray-400 block mb-1">Beschrijving (optioneel)</label>
                 <textarea
                   value={programForm.description}
                   onChange={(e) => setProgramForm(prev => ({ ...prev, description: e.target.value }))}
@@ -1495,7 +1530,7 @@ export default function LustrumPage() {
               </div>
 
               <div>
-                <label className="text-xs text-white/50 block mb-2">Verantwoordelijk (optioneel)</label>
+                <label className="text-xs text-gray-400 block mb-2">Verantwoordelijk (optioneel)</label>
                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                   {teamMembers.map((member) => (
                     <button
@@ -1504,16 +1539,16 @@ export default function LustrumPage() {
                       className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                         programForm.responsible.includes(member.name)
                           ? 'bg-violet-500/30 text-violet-300 border border-violet-500/50'
-                          : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                          : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
                       }`}
                     >
                       {member.name}
-                      {member.role === 'PARTNER' && <span className="ml-1 text-[10px] text-orange-400">●</span>}
-                      {member.role === 'ADMIN' && <span className="ml-1 text-[10px] text-sky-400">●</span>}
+                      {member.role === 'PARTNER' && <span className="ml-1 text-xs text-orange-400">●</span>}
+                      {member.role === 'ADMIN' && <span className="ml-1 text-xs text-sky-400">●</span>}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-white/30 mt-2">
+                <p className="text-xs text-white/30 mt-2">
                   <span className="text-orange-400">●</span> Partner <span className="text-sky-400 ml-2">●</span> Admin
                 </p>
               </div>
@@ -1525,7 +1560,7 @@ export default function LustrumPage() {
                   setProgramForm({ date: '2026-09-30', time: '', title: '', description: '', responsible: [] })
                   setShowProgramModal(false)
                 }}
-                className="px-4 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
               >
                 Annuleren
               </button>
@@ -1559,7 +1594,7 @@ export default function LustrumPage() {
             className={`px-4 py-2 rounded-lg text-sm transition-colors ${
               activeCategory === 'all'
                 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
             }`}
           >
             Alles ({HOTSPOTS.length})
@@ -1579,7 +1614,7 @@ export default function LustrumPage() {
                 className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
                   activeCategory === cat
                     ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                    : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                    : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
                 }`}
               >
                 <span className="hover:scale-125 transition-transform">{icons[cat]}</span>
@@ -1610,14 +1645,14 @@ export default function LustrumPage() {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-white font-medium truncate">{hotspot.name}</h3>
                     <p className="text-xs text-orange-400 mb-2">{hotspot.location}</p>
-                    <p className="text-sm text-white/60 line-clamp-2">{hotspot.description}</p>
+                    <p className="text-sm text-gray-400 line-clamp-2">{hotspot.description}</p>
                     {hotspot.tip && (
                       <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
                         <span>💡</span> {hotspot.tip}
                       </p>
                     )}
                     {hotspot.priceRange && (
-                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-white/5 text-xs text-white/40">
+                      <span className="inline-block mt-2 px-2 py-0.5 rounded-full bg-white/5 text-xs text-gray-400">
                         {hotspot.priceRange}
                       </span>
                     )}
@@ -1637,7 +1672,7 @@ export default function LustrumPage() {
           </div>
           <div>
             <h2 className="text-lg font-medium text-white">Een voorproefje van Mallorca</h2>
-            <p className="text-xs text-white/40">Sfeerimpressie van het eiland</p>
+            <p className="text-xs text-gray-400">Sfeerimpressie van het eiland</p>
           </div>
         </div>
         <div className="aspect-video rounded-xl overflow-hidden">
@@ -1660,7 +1695,7 @@ export default function LustrumPage() {
             </div>
             <div>
               <h2 className="text-lg font-medium text-white">Inpaklijst</h2>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-gray-400">
                 {checkedItems.size} van {PACKLIST.length} ingepakt
               </p>
             </div>
@@ -1678,7 +1713,7 @@ export default function LustrumPage() {
                 console.error('Error resetting packlist:', error)
               }
             }}
-            className="text-xs text-white/40 hover:text-white/60 transition-colors"
+            className="text-xs text-gray-400 hover:text-gray-400 transition-colors"
           >
             Reset
           </button>
@@ -1717,8 +1752,8 @@ export default function LustrumPage() {
                       key={item.id}
                       className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
                         checkedItems.has(item.id)
-                          ? 'bg-purple-500/10 line-through text-white/40'
-                          : 'bg-white/5 hover:bg-white/10 text-white/80'
+                          ? 'bg-purple-500/10 line-through text-gray-400'
+                          : 'bg-white/5 hover:bg-white/10 text-gray-200'
                       }`}
                     >
                       <input
@@ -1750,6 +1785,86 @@ export default function LustrumPage() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Ideas Box - Centered Call to Action */}
+      <div className="max-w-2xl mx-auto">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-orange-500/20 border border-pink-500/20 p-6 sm:p-8 group/ideas">
+          {/* Background decorations */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+
+          <div className="relative text-center">
+            {/* Header */}
+            <div className="mb-6">
+              <span className="text-5xl mb-4 block group-hover/ideas:scale-110 transition-transform duration-300">💡</span>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Heb jij een goed idee?</h3>
+              <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
+                Deel je leukste ideeën voor activiteiten, uitjes of andere dingen die we op Mallorca kunnen doen!
+              </p>
+            </div>
+
+            {ideaSubmitted ? (
+              <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <span className="text-4xl mb-3 block">🎉</span>
+                <p className="text-green-400 font-medium">Bedankt voor je idee!</p>
+                <p className="text-green-400/70 text-sm mt-1">We gaan er naar kijken</p>
+              </div>
+            ) : (
+              <>
+                {/* Textarea */}
+                <div className="mb-4">
+                  <textarea
+                    value={ideaContent}
+                    onChange={(e) => setIdeaContent(e.target.value.slice(0, 500))}
+                    placeholder="Bijv. een wijnproeverij, stranddag, kookworkshop, wandeling in de bergen..."
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 resize-none transition-all"
+                  />
+                  <div className="flex justify-between items-center mt-2 text-xs">
+                    <span className={`${ideaContent.length > 450 ? 'text-orange-400' : 'text-gray-500'}`}>
+                      {ideaContent.length}/500
+                    </span>
+                  </div>
+                </div>
+
+                {/* Anonymous toggle */}
+                <div className="flex items-center justify-center gap-3 mb-5">
+                  <button
+                    onClick={() => setIsAnonymous(!isAnonymous)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
+                      isAnonymous
+                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                        : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <span>{isAnonymous ? '🎭' : '👤'}</span>
+                    {isAnonymous ? 'Anoniem insturen' : 'Met mijn naam'}
+                  </button>
+                </div>
+
+                {/* Submit button */}
+                <button
+                  onClick={submitIdea}
+                  disabled={!ideaContent.trim() || isSubmittingIdea}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-orange-500 text-white font-medium hover:from-pink-600 hover:to-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 hover:scale-105 active:scale-95"
+                >
+                  {isSubmittingIdea ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Versturen...
+                    </>
+                  ) : (
+                    <>
+                      <span>✨</span>
+                      Idee insturen
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

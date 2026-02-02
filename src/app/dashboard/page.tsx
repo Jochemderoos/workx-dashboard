@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
-import { TEAM_PHOTOS, ADVOCATEN, getPhotoUrl } from '@/lib/team-photos'
+import { TEAM_PHOTOS, ALL_TEAM_MEMBERS, getPhotoUrl } from '@/lib/team-photos'
 import { LUSTRUM_CONFIG, MALLORCA_FACTS, getCountdown } from '@/lib/lustrum-data'
 
 // Inline Logo Component - yellow background with black text
@@ -40,22 +40,11 @@ function WorkxLogoSmall() {
   )
 }
 
-// Team verjaardagen - echte data uit loonstroken
-const TEAM_BIRTHDAYS = [
-  { name: 'Hanna Blaauboer', birthDate: '12-23' },        // 23-12-1991
-  { name: 'Justine Schellekens', birthDate: '06-29' },    // 29-6-1994
-  { name: 'Marlieke Schipper', birthDate: '01-10' },      // 10-1-1992
-  { name: 'Wies van Pesch', birthDate: '01-16' },          // 16-1-1991
-  { name: 'Emma van der Vos', birthDate: '09-04' },       // 4-9-1992
-  { name: 'Alain Heunen', birthDate: '04-03' },            // 3-4-1991
-  { name: 'Kay Maes', birthDate: '01-24' },               // 24-1-1999
-  { name: 'Erika van Zadelhof', birthDate: '06-23' },     // 23-6-1995
-  { name: 'Heleen Pesser', birthDate: '07-14' },           // 14-7-1999
-  { name: 'Barbara Rip', birthDate: '04-04' },            // 4-4-1996
-  { name: 'Lotte van Sint Truiden', birthDate: '06-03' }, // 3-6-2002
-  { name: 'Julia Groen', birthDate: '07-15' },            // 15-7-1992
-  { name: 'Jochem de Roos', birthDate: '03-02' },         // Enige echte uit originele lijst
-]
+// Team verjaardagen - wordt geladen uit database via /api/birthdays
+interface TeamBirthday {
+  name: string
+  birthDate: string // MM-DD format
+}
 
 // Team photos en advocaten lijst komen nu uit @/lib/team-photos
 
@@ -148,35 +137,35 @@ interface OfficeAttendanceData {
   isCurrentUserAttending: boolean
 }
 
-// Vakantiedagen en ouderschapsverlof worden geladen uit de database via API
-// Deze waarden worden nu leeg gelaten - data komt van de ingelogde gebruiker
-const VACATION_BALANCE = {
-  userName: '',
-  year: new Date().getFullYear(),
-  wettelijkeDagen: 0,
-  bovenwettelijkeDagen: 0,
-  overgedragenVorigJaar: 0,
-  opgenomenDitJaar: 0,
-  geplandDitJaar: 0,
-  lastUpdatedBy: '',
-  lastUpdated: '',
+// Vakantiedagen en ouderschapsverlof worden dynamisch geladen
+interface VacationBalanceData {
+  userName: string
+  year: number
+  overgedragenVorigJaar: number
+  opbouwLopendJaar: number
+  bijgekocht: number
+  opgenomenLopendJaar: number
+  totaalDagen: number
+  resterend: number
+  lastUpdatedBy: string
+  lastUpdated: string
+  isPartner: boolean
+  hasBalance: boolean
 }
 
-const PARENTAL_LEAVE = {
-  hasParentalLeave: false,
-  userName: '',
-  year: new Date().getFullYear(),
-  betaaldTotaalWeken: 0,
-  betaaldOpgenomenWeken: 0,
-  onbetaaldTotaalWeken: 0,
-  onbetaaldOpgenomenWeken: 0,
-  inzetPerWeek: 0,
-  startDatum: '',
-  eindDatum: '',
-  kindNaam: '',
-  kindGeboorteDatum: '',
-  lastUpdatedBy: '',
-  lastUpdated: '',
+interface ParentalLeaveData {
+  id: string
+  userId: string
+  betaaldTotaalWeken: number
+  betaaldOpgenomenWeken: number
+  onbetaaldTotaalWeken: number
+  onbetaaldOpgenomenWeken: number
+  kindNaam: string | null
+  kindGeboorteDatum: string | null
+  startDatum: string | null
+  eindDatum: string | null
+  inzetPerWeek: number | null
+  note: string | null
 }
 
 const quickLinks = [
@@ -203,12 +192,16 @@ function AppjeplekjeWidget({
         className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/20 border-2 border-cyan-500/30 p-4 block"
       >
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-            <span className="text-xl">🏢</span>
+          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+            <img
+              src="/workx-pand.png"
+              alt="Kantoor"
+              className="h-7 w-auto opacity-60"
+            />
           </div>
           <div>
             <p className="text-sm font-semibold text-white">Appjeplekje</p>
-            <p className="text-[11px] text-cyan-300/70">Laden...</p>
+            <p className="text-xs text-cyan-300">Laden...</p>
           </div>
         </div>
         <div className="h-3 bg-white/10 rounded-full animate-pulse"></div>
@@ -236,18 +229,24 @@ function AppjeplekjeWidget({
     >
       {/* Decorative glow */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-400/30 transition-colors" />
-      <div className="absolute -bottom-4 -left-4 text-5xl opacity-10 group-hover:opacity-20 transition-opacity">🏢</div>
+      <div className="absolute -bottom-4 -left-4 opacity-10 group-hover:opacity-20 transition-opacity">
+        <img src="/workx-pand.png" alt="" className="h-16 w-auto" />
+      </div>
 
       <div className="relative">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <span className="text-xl">🏢</span>
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <img
+                src="/workx-pand.png"
+                alt="Kantoor"
+                className="h-7 w-auto opacity-80"
+              />
             </div>
             <div>
               <p className="text-sm font-semibold text-white">Appjeplekje</p>
-              <p className="text-[11px] text-cyan-300/70 font-medium">📅 Vandaag op kantoor</p>
+              <p className="text-xs text-cyan-300 font-medium">Vandaag · {new Date().getDate()} {new Date().toLocaleDateString('nl-NL', { month: 'short' })}</p>
             </div>
           </div>
           <button
@@ -261,7 +260,7 @@ function AppjeplekjeWidget({
               data.isCurrentUserAttending
                 ? 'bg-green-500/30 text-green-300 border border-green-400/40 shadow-green-500/20 hover:bg-green-500/40'
                 : data.availableWorkplaces === 0
-                ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                ? 'bg-white/5 text-gray-500 cursor-not-allowed'
                 : 'bg-cyan-500 text-white hover:bg-cyan-400 shadow-cyan-500/30 hover:shadow-cyan-400/40 hover:scale-105'
             }`}
           >
@@ -288,7 +287,7 @@ function AppjeplekjeWidget({
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-white/60 font-medium">
+          <span className="text-xs text-gray-400 font-medium">
             {data.occupiedWorkplaces}/{data.totalWorkplaces} plekken bezet
             {data.availableWorkplaces > 0 && (
               <span className="text-cyan-300/70 ml-1">
@@ -303,7 +302,7 @@ function AppjeplekjeWidget({
                 return (
                   <div
                     key={a.id}
-                    className="w-7 h-7 rounded-full bg-white/10 border-2 border-cyan-900 flex items-center justify-center text-[10px] text-white/60 overflow-hidden"
+                    className="w-7 h-7 rounded-full bg-white/10 border-2 border-cyan-900 flex items-center justify-center text-xs text-gray-400 overflow-hidden"
                     title={a.name}
                   >
                     {photoUrl ? (
@@ -315,7 +314,7 @@ function AppjeplekjeWidget({
                 )
               })}
               {data.attendees.length > 5 && (
-                <div className="w-7 h-7 rounded-full bg-cyan-500/30 border-2 border-cyan-900 flex items-center justify-center text-[10px] text-cyan-300 font-bold">
+                <div className="w-7 h-7 rounded-full bg-cyan-500/30 border-2 border-cyan-900 flex items-center justify-center text-xs text-cyan-300 font-bold">
                   +{data.attendees.length - 5}
                 </div>
               )}
@@ -370,13 +369,13 @@ function LustrumTeaserWidget() {
                 <span className="text-2xl font-bold text-orange-400 tabular-nums">
                   {String(item.value).padStart(2, '0')}
                 </span>
-                <span className="text-xs text-white/40">{item.label}</span>
+                <span className="text-xs text-gray-400">{item.label}</span>
               </div>
             ))}
           </div>
           <div className="flex-1">
             <p className="text-sm text-white">tot Mallorca!</p>
-            <p className="text-xs text-white/40">30 sep - 4 okt 2026</p>
+            <p className="text-xs text-gray-400">30 sep - 4 okt 2026</p>
           </div>
         </div>
       ),
@@ -386,7 +385,7 @@ function LustrumTeaserWidget() {
       content: (
         <div>
           <p className="text-xs text-amber-400 mb-1">💡 Weetje van de dag</p>
-          <p className="text-sm text-white/80 line-clamp-2">{dailyFact}</p>
+          <p className="text-sm text-gray-200 line-clamp-2">{dailyFact}</p>
         </div>
       ),
     },
@@ -397,7 +396,7 @@ function LustrumTeaserWidget() {
           <span className="text-4xl">☀️</span>
           <div>
             <p className="text-sm text-white">Perfect weer in oktober</p>
-            <p className="text-xs text-white/40">Gemiddeld 22°C in Mallorca</p>
+            <p className="text-xs text-gray-400">Gemiddeld 22°C in Mallorca</p>
           </div>
         </div>
       ),
@@ -409,7 +408,7 @@ function LustrumTeaserWidget() {
           <span className="text-4xl">🏠</span>
           <div>
             <p className="text-sm text-white">Can Fressa, Alaró</p>
-            <p className="text-xs text-white/40">Finca bij de Serra de Tramuntana</p>
+            <p className="text-xs text-gray-400">Finca bij de Serra de Tramuntana</p>
           </div>
         </div>
       ),
@@ -484,6 +483,8 @@ export default function DashboardHome() {
   const [countdownDays, setCountdownDays] = useState(0)
   const [officeAttendance, setOfficeAttendance] = useState<OfficeAttendanceData | null>(null)
   const [isTogglingAttendance, setIsTogglingAttendance] = useState(false)
+  const [vacationBalance, setVacationBalance] = useState<VacationBalanceData | null>(null)
+  const [parentalLeave, setParentalLeave] = useState<ParentalLeaveData | null>(null)
   const [weather, setWeather] = useState<WeatherData>({
     temperature: 0,
     weatherCode: 0,
@@ -492,13 +493,32 @@ export default function DashboardHome() {
     location: 'Amsterdam',
     isLoading: true,
   })
+  const [teamBirthdays, setTeamBirthdays] = useState<TeamBirthday[]>([])
+
+  // Fetch birthdays from API
+  useEffect(() => {
+    const fetchBirthdays = async () => {
+      try {
+        const res = await fetch('/api/birthdays')
+        if (res.ok) {
+          const data = await res.json()
+          setTeamBirthdays(data.filter((u: TeamBirthday) => u.birthDate))
+        }
+      } catch (error) {
+        console.error('Error fetching birthdays:', error)
+      }
+    }
+    fetchBirthdays()
+  }, [])
 
   // Calculate next birthday
   const nextBirthday = useMemo(() => {
+    if (teamBirthdays.length === 0) return []
+
     const today = new Date()
     const currentYear = today.getFullYear()
 
-    const upcomingBirthdays = TEAM_BIRTHDAYS.map(member => {
+    const upcomingBirthdays = teamBirthdays.map(member => {
       const [month, day] = member.birthDate.split('-').map(Number)
       let birthdayThisYear = new Date(currentYear, month - 1, day)
 
@@ -512,7 +532,7 @@ export default function DashboardHome() {
     }).sort((a, b) => a.daysUntil - b.daysUntil)
 
     return upcomingBirthdays.slice(0, 3) // Return top 3
-  }, [])
+  }, [teamBirthdays])
 
   // Check if someone has birthday TODAY
   const birthdayToday = useMemo(() => {
@@ -685,7 +705,7 @@ export default function DashboardHome() {
   }, [])
 
   useEffect(() => {
-    Promise.all([fetchEvents(), fetchWork(), fetchVacations(), fetchCalendarAbsences(), fetchFeedback(), fetchCurrentUser(), fetchOfficeAttendance()]).finally(() => setIsLoading(false))
+    Promise.all([fetchEvents(), fetchWork(), fetchVacations(), fetchCalendarAbsences(), fetchFeedback(), fetchCurrentUser(), fetchOfficeAttendance(), fetchVacationBalance(), fetchParentalLeave()]).finally(() => setIsLoading(false))
   }, [])
 
   const fetchEvents = async () => {
@@ -824,6 +844,30 @@ export default function DashboardHome() {
     }
   }
 
+  const fetchVacationBalance = async () => {
+    try {
+      const res = await fetch('/api/user/vacation-balance')
+      if (res.ok) {
+        const data = await res.json()
+        setVacationBalance(data)
+      }
+    } catch (e) {
+      console.error('Error fetching vacation balance:', e)
+    }
+  }
+
+  const fetchParentalLeave = async () => {
+    try {
+      const res = await fetch('/api/parental-leave')
+      if (res.ok) {
+        const data = await res.json()
+        setParentalLeave(data)
+      }
+    } catch (e) {
+      console.error('Error fetching parental leave:', e)
+    }
+  }
+
   const toggleOfficeAttendance = async () => {
     if (!officeAttendance || isTogglingAttendance) return
     setIsTogglingAttendance(true)
@@ -955,7 +999,7 @@ export default function DashboardHome() {
               <div className="text-7xl font-bold text-white mb-2">
                 {countdownDays}
               </div>
-              <p className="text-2xl text-white/80">
+              <p className="text-2xl text-gray-200">
                 {countdownDays === 1 ? 'dag' : 'dagen'} tot Mallorca!
               </p>
             </div>
@@ -972,7 +1016,7 @@ export default function DashboardHome() {
               ))}
             </div>
 
-            <p className="text-white/60 mb-6">
+            <p className="text-gray-400 mb-6">
               30 september - 4 oktober 2026<br />
               <span className="text-orange-400">Can Fressa, Mallorca</span>
             </p>
@@ -1034,7 +1078,7 @@ export default function DashboardHome() {
             <div>
               <p className="text-workx-lime text-xs sm:text-sm font-medium mb-1">{getGreeting()}</p>
               <h1 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Welkom bij Workx</h1>
-              <p className="text-white/50 max-w-md hidden sm:block">
+              <p className="text-gray-400 max-w-md hidden sm:block">
                 Beheer je zaken, bereken bonussen en houd je team op de hoogte. Alles in één dashboard.
               </p>
             </div>
@@ -1061,8 +1105,8 @@ export default function DashboardHome() {
                 <>
                   <div className="text-4xl mb-1">{weatherInfo.icon}</div>
                   <p className="text-2xl font-semibold text-white">{weather.temperature}°</p>
-                  <p className="text-xs text-white/40">{weatherInfo.desc}</p>
-                  <div className="flex items-center justify-center gap-2 mt-2 text-[10px] text-white/30">
+                  <p className="text-xs text-gray-400">{weatherInfo.desc}</p>
+                  <div className="flex items-center justify-center gap-2 mt-2 text-xs text-gray-500">
                     <span className="flex items-center gap-0.5">
                       <Icons.wind size={10} />
                       {weather.windSpeed} km/h
@@ -1072,7 +1116,7 @@ export default function DashboardHome() {
                       {weather.humidity}%
                     </span>
                   </div>
-                  <p className="text-[10px] text-white/20 mt-1">{weather.location}</p>
+                  <p className="text-xs text-gray-500 mt-1">{weather.location}</p>
                 </>
               )}
             </div>
@@ -1082,7 +1126,7 @@ export default function DashboardHome() {
               <div className="text-5xl font-light text-white tabular-nums">
                 {currentTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
               </div>
-              <p className="text-white/40 mt-1">
+              <p className="text-gray-400 mt-1">
                 {currentTime.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
               {/* Workx Pand with bicycle hover animation */}
@@ -1101,7 +1145,7 @@ export default function DashboardHome() {
         <div className="lg:col-span-3">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-white">Snelle toegang</h2>
-            <span className="text-xs text-white/30">{quickLinks.length} tools</span>
+            <span className="text-xs text-gray-500">{quickLinks.length} tools</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickLinks.map(({ href, Icon, label, desc, color, iconAnim }) => (
@@ -1112,11 +1156,11 @@ export default function DashboardHome() {
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-100 transition-opacity`} />
               <div className="relative">
-                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-white/60 group-hover:text-workx-lime group-hover:bg-workx-lime/10 transition-all mb-3 icon-animated">
+                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 group-hover:text-workx-lime group-hover:bg-workx-lime/10 transition-all mb-3 icon-animated">
                   <Icon size={20} />
                 </div>
                 <h3 className="font-medium text-white text-sm mb-0.5">{label}</h3>
-                <p className="text-[11px] text-white/40">{desc}</p>
+                <p className="text-xs text-gray-400">{desc}</p>
               </div>
               <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Icons.arrowRight size={14} className="text-workx-lime" />
@@ -1157,7 +1201,7 @@ export default function DashboardHome() {
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-white">Wie is er weg?</h2>
-                    <p className="text-xs text-white/40">Overzicht komende 2 weken</p>
+                    <p className="text-xs text-gray-400">Overzicht komende 2 weken</p>
                   </div>
                 </div>
                 <Link href="/dashboard/vakanties" className="text-sm text-workx-lime hover:underline flex items-center gap-1">
@@ -1171,7 +1215,7 @@ export default function DashboardHome() {
                   {/* Week labels */}
                   <div className="grid grid-cols-5 gap-0.5 sm:gap-2">
                     {['Ma', 'Di', 'Wo', 'Do', 'Vr'].map(day => (
-                      <div key={day} className="text-center text-[8px] sm:text-[10px] font-medium text-white/30 uppercase">
+                      <div key={day} className="text-center text-xs sm:text-xs font-medium text-gray-500 uppercase">
                         {day}
                       </div>
                     ))}
@@ -1179,7 +1223,7 @@ export default function DashboardHome() {
 
                   {/* Current Week */}
                   <div>
-                    <p className="text-[10px] sm:text-xs font-medium text-white/50 mb-2 flex items-center gap-2">
+                    <p className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-workx-lime"></span>
                       Deze week
                     </p>
@@ -1219,18 +1263,18 @@ export default function DashboardHome() {
                                   title={v.personName}
                                 >
                                   <div
-                                    className="w-3.5 h-3.5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-[7px] sm:text-[10px] font-bold flex-shrink-0"
+                                    className="w-3.5 h-3.5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
                                     style={{ backgroundColor: v.color + '30', color: v.color }}
                                   >
                                     {v.personName.charAt(0)}
                                   </div>
-                                  <span className="text-[9px] sm:text-xs text-white/70 truncate hidden sm:inline">
+                                  <span className="text-xs text-white/70 truncate hidden sm:inline">
                                     {v.personName.split(' ')[0]}
                                   </span>
                                 </div>
                               ))}
                               {absences.length > 3 && (
-                                <p className="text-[7px] sm:text-[10px] text-white/40 text-center">+{absences.length - 3}</p>
+                                <p className="text-xs text-gray-400 text-center">+{absences.length - 3}</p>
                               )}
                             </div>
                           )}
@@ -1242,7 +1286,7 @@ export default function DashboardHome() {
 
                 {/* Next Week */}
                 <div>
-                  <p className="text-[10px] sm:text-xs font-medium text-white/50 mb-2 flex items-center gap-2">
+                  <p className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-blue-400"></span>
                     Volgende week
                   </p>
@@ -1256,7 +1300,7 @@ export default function DashboardHome() {
                           className="rounded-md sm:rounded-xl p-1 sm:p-3 min-h-[70px] sm:min-h-[140px] bg-white/[0.03] hover:bg-white/5 transition-all"
                         >
                           <div className="text-center mb-0.5 pb-0.5 sm:mb-2 sm:pb-2 border-b border-white/5">
-                            <p className="text-xs sm:text-lg font-bold text-white/80">
+                            <p className="text-xs sm:text-lg font-bold text-gray-200">
                               {dayInfo.date.getDate()}
                             </p>
                           </div>
@@ -1274,18 +1318,18 @@ export default function DashboardHome() {
                                   title={v.personName}
                                 >
                                   <div
-                                    className="w-3.5 h-3.5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-[7px] sm:text-[10px] font-bold flex-shrink-0"
+                                    className="w-3.5 h-3.5 sm:w-6 sm:h-6 rounded flex items-center justify-center text-xs font-bold flex-shrink-0"
                                     style={{ backgroundColor: v.color + '30', color: v.color }}
                                   >
                                     {v.personName.charAt(0)}
                                   </div>
-                                  <span className="text-[9px] sm:text-xs text-white/60 truncate hidden sm:inline">
+                                  <span className="text-xs text-gray-400 truncate hidden sm:inline">
                                     {v.personName.split(' ')[0]}
                                   </span>
                                 </div>
                               ))}
                               {absences.length > 3 && (
-                                <p className="text-[7px] sm:text-[10px] text-white/40 text-center">+{absences.length - 3}</p>
+                                <p className="text-xs text-gray-400 text-center">+{absences.length - 3}</p>
                               )}
                             </div>
                           )}
@@ -1297,7 +1341,7 @@ export default function DashboardHome() {
               </div>
 
               {/* Legend */}
-              <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-4 text-[10px] text-white/30">
+              <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-4 text-xs text-gray-500">
                 <span className="flex items-center gap-1.5">
                   <Icons.check size={12} className="text-green-500/50" />
                   Iedereen aanwezig
@@ -1334,9 +1378,9 @@ export default function DashboardHome() {
             ) : events.length === 0 ? (
               <div className="card p-12 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  <Icons.calendar className="text-white/20" size={28} />
+                  <Icons.calendar className="text-gray-500" size={28} />
                 </div>
-                <p className="text-white/50 mb-2">Geen aankomende events</p>
+                <p className="text-gray-400 mb-2">Geen aankomende events</p>
                 <Link href="/dashboard/agenda" className="text-sm text-workx-lime hover:underline">
                   Event toevoegen
                 </Link>
@@ -1358,7 +1402,7 @@ export default function DashboardHome() {
                       <h3 className="font-medium text-white truncate group-hover:text-workx-lime transition-colors">
                         {event.title}
                       </h3>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-white/40">
+                      <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
                         <span className="flex items-center gap-1">
                           <Icons.calendar size={12} />
                           {formatDate(event.startTime)}
@@ -1377,7 +1421,7 @@ export default function DashboardHome() {
                         )}
                       </div>
                     </div>
-                    <Icons.chevronRight className="text-white/20 group-hover:text-workx-lime transition-colors" size={18} />
+                    <Icons.chevronRight className="text-gray-500 group-hover:text-workx-lime transition-colors" size={18} />
                   </Link>
                 ))}
               </div>
@@ -1405,7 +1449,7 @@ export default function DashboardHome() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">Feedback</p>
-                    <p className="text-xs text-white/40">{feedbackItems.length} items</p>
+                    <p className="text-xs text-gray-400">{feedbackItems.length} items</p>
                   </div>
                 </div>
                 <Link href="/dashboard/feedback" className="text-xs text-purple-400 hover:underline">
@@ -1416,7 +1460,7 @@ export default function DashboardHome() {
               {feedbackItems.length === 0 ? (
                 <div className="text-center py-6">
                   <Icons.check className="text-green-400 mx-auto mb-2" size={24} />
-                  <p className="text-sm text-white/50">Geen feedback</p>
+                  <p className="text-sm text-gray-400">Geen feedback</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[200px] overflow-y-auto">
@@ -1433,13 +1477,13 @@ export default function DashboardHome() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-white truncate">{item.title}</p>
-                          <p className="text-xs text-white/40">
+                          <p className="text-xs text-gray-400">
                             {item.submittedBy} · {new Date(item.createdAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                           </p>
                         </div>
                         <button
                           onClick={() => deleteFeedback(item.id)}
-                          className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                          className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                           title="Verwijderen"
                         >
                           <Icons.x size={14} />
@@ -1467,21 +1511,21 @@ export default function DashboardHome() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">
-                      {PARENTAL_LEAVE.hasParentalLeave ? 'Mijn Vakantiedagen en Ouderschapsverlof' : 'Mijn vakantiedagen'}
+                      {parentalLeave ? 'Mijn Vakantiedagen en Ouderschapsverlof' : 'Mijn vakantiedagen'}
                     </p>
-                    <p className="text-xs text-white/40">Saldo {VACATION_BALANCE.year}</p>
+                    <p className="text-xs text-gray-400">Saldo {vacationBalance?.year || new Date().getFullYear()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="text-2xl font-bold text-workx-lime">
-                      {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar - VACATION_BALANCE.opgenomenDitJaar - VACATION_BALANCE.geplandDitJaar}
+                      {vacationBalance?.resterend || 0}
                     </p>
-                    <p className="text-xs text-white/40">vakantiedagen over</p>
+                    <p className="text-xs text-gray-400">vakantiedagen over</p>
                   </div>
                   <Icons.chevronDown
                     size={18}
-                    className={`text-white/30 transition-transform ${showVacationDetails ? 'rotate-180' : ''}`}
+                    className={`text-gray-500 transition-transform ${showVacationDetails ? 'rotate-180' : ''}`}
                   />
                 </div>
               </div>
@@ -1490,11 +1534,7 @@ export default function DashboardHome() {
               <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden flex">
                 <div
                   className="h-full bg-orange-400"
-                  style={{ width: `${(VACATION_BALANCE.opgenomenDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
-                />
-                <div
-                  className="h-full bg-blue-400"
-                  style={{ width: `${(VACATION_BALANCE.geplandDitJaar / (VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar)) * 100}%` }}
+                  style={{ width: `${vacationBalance?.totaalDagen ? (vacationBalance.opgenomenLopendJaar / vacationBalance.totaalDagen) * 100 : 0}%` }}
                 />
               </div>
             </button>
@@ -1504,66 +1544,68 @@ export default function DashboardHome() {
               <div className="mt-4 pt-4 border-t border-white/5 space-y-4 fade-in">
                 {/* Vakantiedagen */}
                 <div>
-                  <p className="text-xs text-white/50 mb-2 font-medium uppercase tracking-wider">Vakantiedagen</p>
+                  <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wider">Vakantiedagen</p>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="bg-white/5 rounded-lg p-2">
                       <p className="text-lg font-semibold text-workx-lime">
-                        {VACATION_BALANCE.wettelijkeDagen + VACATION_BALANCE.bovenwettelijkeDagen + VACATION_BALANCE.overgedragenVorigJaar}
+                        {vacationBalance?.totaalDagen || 0}
                       </p>
-                      <p className="text-[10px] text-white/40">Totaal</p>
+                      <p className="text-xs text-gray-400">Totaal</p>
                     </div>
                     <div className="bg-white/5 rounded-lg p-2">
-                      <p className="text-lg font-semibold text-orange-400">{VACATION_BALANCE.opgenomenDitJaar}</p>
-                      <p className="text-[10px] text-white/40">Opgenomen</p>
+                      <p className="text-lg font-semibold text-orange-400">{vacationBalance?.opgenomenLopendJaar || 0}</p>
+                      <p className="text-xs text-gray-400">Opgenomen</p>
                     </div>
                     <div className="bg-white/5 rounded-lg p-2">
-                      <p className="text-lg font-semibold text-blue-400">{VACATION_BALANCE.geplandDitJaar}</p>
-                      <p className="text-[10px] text-white/40">Gepland</p>
+                      <p className="text-lg font-semibold text-workx-lime">{vacationBalance?.resterend || 0}</p>
+                      <p className="text-xs text-gray-400">Resterend</p>
                     </div>
                   </div>
 
                   <div className="text-xs space-y-1.5 mt-3">
-                    <div className="flex justify-between text-white/50">
-                      <span>Wettelijk</span>
-                      <span className="text-white">{VACATION_BALANCE.wettelijkeDagen}d</span>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Opbouw dit jaar</span>
+                      <span className="text-white">{vacationBalance?.opbouwLopendJaar || 0}d</span>
                     </div>
-                    <div className="flex justify-between text-white/50">
-                      <span>Bovenwettelijk</span>
-                      <span className="text-white">{VACATION_BALANCE.bovenwettelijkeDagen}d</span>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Bijgekocht</span>
+                      <span className="text-white">{vacationBalance?.bijgekocht || 0}d</span>
                     </div>
-                    <div className="flex justify-between text-white/50">
+                    <div className="flex justify-between text-gray-400">
                       <span>Overgedragen</span>
-                      <span className="text-white">{VACATION_BALANCE.overgedragenVorigJaar}d</span>
+                      <span className="text-white">{vacationBalance?.overgedragenVorigJaar || 0}d</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Ouderschapsverlof */}
-                {PARENTAL_LEAVE.hasParentalLeave && (
+                {parentalLeave && (
                   <div className="pt-3 border-t border-white/5">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs text-white/50 font-medium uppercase tracking-wider">Ouderschapsverlof</p>
-                      <span className="text-[10px] text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
-                        {PARENTAL_LEAVE.kindNaam}
-                      </span>
+                      <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Ouderschapsverlof</p>
+                      {parentalLeave.kindNaam && (
+                        <span className="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+                          {parentalLeave.kindNaam}
+                        </span>
+                      )}
                     </div>
 
                     {/* Betaald verlof */}
                     <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 mb-2">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
-                        <span className="text-xs text-white/40">
-                          {PARENTAL_LEAVE.betaaldOpgenomenWeken} / {PARENTAL_LEAVE.betaaldTotaalWeken} weken
+                        <span className="text-xs text-gray-400">
+                          {parentalLeave.betaaldOpgenomenWeken} / {parentalLeave.betaaldTotaalWeken} weken
                         </span>
                       </div>
                       <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-green-400 rounded-full"
-                          style={{ width: `${(PARENTAL_LEAVE.betaaldOpgenomenWeken / PARENTAL_LEAVE.betaaldTotaalWeken) * 100}%` }}
+                          style={{ width: `${parentalLeave.betaaldTotaalWeken ? (parentalLeave.betaaldOpgenomenWeken / parentalLeave.betaaldTotaalWeken) * 100 : 0}%` }}
                         />
                       </div>
                       <p className="text-xs text-green-400 mt-1 font-medium">
-                        {PARENTAL_LEAVE.betaaldTotaalWeken - PARENTAL_LEAVE.betaaldOpgenomenWeken} weken resterend
+                        {parentalLeave.betaaldTotaalWeken - parentalLeave.betaaldOpgenomenWeken} weken resterend
                       </p>
                     </div>
 
@@ -1571,40 +1613,48 @@ export default function DashboardHome() {
                     <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
-                        <span className="text-xs text-white/40">
-                          {PARENTAL_LEAVE.onbetaaldOpgenomenWeken} / {PARENTAL_LEAVE.onbetaaldTotaalWeken} weken
+                        <span className="text-xs text-gray-400">
+                          {parentalLeave.onbetaaldOpgenomenWeken} / {parentalLeave.onbetaaldTotaalWeken} weken
                         </span>
                       </div>
                       <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-purple-400 rounded-full"
-                          style={{ width: `${(PARENTAL_LEAVE.onbetaaldOpgenomenWeken / PARENTAL_LEAVE.onbetaaldTotaalWeken) * 100}%` }}
+                          style={{ width: `${parentalLeave.onbetaaldTotaalWeken ? (parentalLeave.onbetaaldOpgenomenWeken / parentalLeave.onbetaaldTotaalWeken) * 100 : 0}%` }}
                         />
                       </div>
                       <p className="text-xs text-purple-400 mt-1 font-medium">
-                        {PARENTAL_LEAVE.onbetaaldTotaalWeken - PARENTAL_LEAVE.onbetaaldOpgenomenWeken} weken resterend
+                        {parentalLeave.onbetaaldTotaalWeken - parentalLeave.onbetaaldOpgenomenWeken} weken resterend
                       </p>
                     </div>
 
                     {/* Inzet planning */}
-                    <div className="mt-3 text-xs space-y-1">
-                      <div className="flex justify-between text-white/50">
-                        <span>Inzet per week</span>
-                        <span className="text-white">{PARENTAL_LEAVE.inzetPerWeek} uur</span>
+                    {(parentalLeave.inzetPerWeek || parentalLeave.eindDatum) && (
+                      <div className="mt-3 text-xs space-y-1">
+                        {parentalLeave.inzetPerWeek && (
+                          <div className="flex justify-between text-gray-400">
+                            <span>Inzet per week</span>
+                            <span className="text-white">{parentalLeave.inzetPerWeek} uur</span>
+                          </div>
+                        )}
+                        {parentalLeave.eindDatum && (
+                          <div className="flex justify-between text-gray-400">
+                            <span>Te gebruiken tot</span>
+                            <span className="text-white">
+                              {new Date(parentalLeave.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex justify-between text-white/50">
-                        <span>Te gebruiken tot</span>
-                        <span className="text-white">
-                          {new Date(PARENTAL_LEAVE.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
-                <p className="text-[10px] text-white/30 pt-2 border-t border-white/5">
-                  Bijgewerkt door {VACATION_BALANCE.lastUpdatedBy} op {new Date(VACATION_BALANCE.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
-                </p>
+                {vacationBalance?.lastUpdatedBy && vacationBalance?.lastUpdated && (
+                  <p className="text-xs text-gray-500 pt-2 border-t border-white/5">
+                    Bijgewerkt door {vacationBalance.lastUpdatedBy} op {new Date(vacationBalance.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -1638,12 +1688,12 @@ export default function DashboardHome() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">Verjaardagen</p>
-                  <p className="text-xs text-white/40">
+                  <p className="text-xs text-gray-400">
                     {birthdayToday ? '🎉 VANDAAG JARIG!' : 'Binnenkort jarig'}
                   </p>
                 </div>
               </div>
-              <Icons.arrowRight size={16} className="text-white/20 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
+              <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
             </div>
 
             {/* Featured birthday - First person */}
@@ -1668,7 +1718,7 @@ export default function DashboardHome() {
                         </span>
                       )}
                       {nextBirthday[0].daysUntil === 1 && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500 text-white">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500 text-white">
                           MORGEN
                         </span>
                       )}
@@ -1682,7 +1732,7 @@ export default function DashboardHome() {
                   {!birthdayToday && (
                     <div className="text-right">
                       <p className="text-2xl font-bold text-pink-400">{nextBirthday[0].daysUntil}</p>
-                      <p className="text-[10px] text-white/40">{nextBirthday[0].daysUntil === 1 ? 'dag' : 'dagen'}</p>
+                      <p className="text-xs text-gray-400">{nextBirthday[0].daysUntil === 1 ? 'dag' : 'dagen'}</p>
                     </div>
                   )}
                 </div>
@@ -1702,12 +1752,12 @@ export default function DashboardHome() {
                     </div>
                     <div>
                       <span className="text-sm text-white/70">{person.name.split(' ')[0]}</span>
-                      <span className="text-xs text-white/30 ml-2">
+                      <span className="text-xs text-gray-500 ml-2">
                         {person.date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
                   </div>
-                  <span className="text-xs text-white/40">
+                  <span className="text-xs text-gray-400">
                     {person.daysUntil}d
                   </span>
                 </div>
@@ -1717,46 +1767,79 @@ export default function DashboardHome() {
         </Link>
       </div>
 
-      {/* Bottom section with Team and Stats */}
+      {/* Bottom section with Widget and Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Team Photos - Left side */}
-        <div className="card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
-          <div className="relative">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                <Icons.users className="text-workx-lime" size={18} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-white">Team</p>
-                <p className="text-xs text-white/40">{ADVOCATEN.length} advocaten</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {ADVOCATEN.map((name) => {
-                const photoUrl = TEAM_PHOTOS[name]
-                return (
-                  <div key={name} className="relative group/avatar" title={name}>
-                    <img
-                      src={photoUrl}
-                      alt={name}
-                      className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 hover:ring-workx-lime/50 transition-all hover:scale-110"
-                    />
+        {/* Dynamic Widget based on role */}
+        {isAdmin ? (
+          /* Werkdruk Widget for Partners/Hanna */
+          <Link href="/dashboard/werk" className="card p-5 relative overflow-hidden group hover:border-workx-lime/30 transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                    <Icons.activity className="text-yellow-400" size={18} />
                   </div>
-                )
-              })}
+                  <div>
+                    <p className="text-sm font-medium text-white">Werkdruk</p>
+                    <p className="text-xs text-gray-400">Team overzicht</p>
+                  </div>
+                </div>
+                <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-workx-lime group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                  <span className="text-gray-400">Rustig</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                  <span className="text-gray-400">Normaal</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+                  <span className="text-gray-400">Druk</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                  <span className="text-gray-400">Zeer druk</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </Link>
+        ) : (
+          /* Feedback Widget for Employees */
+          <Link href="/dashboard/feedback" className="card p-5 relative overflow-hidden group hover:border-purple-500/30 transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <Icons.chat className="text-purple-400" size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Feedback</p>
+                    <p className="text-xs text-gray-400">Deel je ideeën</p>
+                  </div>
+                </div>
+                <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Heb je een idee of bug gevonden? Laat het weten via de feedback pagina.
+              </p>
+            </div>
+          </Link>
+        )}
 
-        {/* Stats - Right side */}
+        {/* Stats - Right side - All clickable */}
         {[
-          { icon: Icons.briefcase, label: 'Open zaken', value: workItems.length.toString(), color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover' },
-          { icon: Icons.calendar, label: 'Events deze week', value: events.length.toString(), color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover' },
-          { icon: Icons.clock, label: 'Vandaag', value: new Date().toLocaleDateString('nl-NL', { weekday: 'short' }), color: 'text-orange-400', bg: 'bg-orange-500/10', iconAnim: 'icon-clock-hover' },
+          { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Open zaken', value: workItems.length.toString(), color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover' },
+          { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Events deze week', value: events.length.toString(), color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover' },
+          { href: '/dashboard/appjeplekje', icon: Icons.clock, label: 'Vandaag', value: new Date().toLocaleDateString('nl-NL', { weekday: 'short' }), color: 'text-orange-400', bg: 'bg-orange-500/10', iconAnim: 'icon-clock-hover' },
         ].map((stat, index) => (
-          <div
+          <Link
             key={stat.label}
+            href={stat.href}
             className={`card p-5 group hover:border-white/10 transition-all relative overflow-hidden ${stat.iconAnim}`}
             style={{ animationDelay: `${index * 50}ms` }}
           >
@@ -1767,8 +1850,8 @@ export default function DashboardHome() {
               </div>
             </div>
             <p className="relative text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">{stat.value}</p>
-            <p className="relative text-sm text-white/40">{stat.label}</p>
-          </div>
+            <p className="relative text-sm text-gray-400">{stat.label}</p>
+          </Link>
         ))}
       </div>
     </div>

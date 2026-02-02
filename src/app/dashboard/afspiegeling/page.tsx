@@ -167,7 +167,7 @@ export default function AfspiegelingPage() {
           </div>
           <h1 className="text-2xl font-semibold text-white">Afspiegeling</h1>
         </div>
-        <p className="text-white/40">Bereken de ontslagvolgorde volgens het UWV afspiegelingsbeginsel</p>
+        <p className="text-gray-400">Bereken de ontslagvolgorde volgens het UWV afspiegelingsbeginsel</p>
       </div>
 
       {/* Info Card */}
@@ -179,7 +179,7 @@ export default function AfspiegelingPage() {
           </div>
           <div>
             <h3 className="font-medium text-white mb-1">UWV Afspiegelingsbeginsel</h3>
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-gray-400">
               Werknemers worden ingedeeld in <span className="text-red-400 font-medium">5 leeftijdsgroepen</span>.
               Per groep wordt evenredig ontslagen, waarbij binnen elke groep de werknemer met het
               <span className="text-red-400 font-medium"> kortste dienstverband</span> als eerste komt.
@@ -196,14 +196,14 @@ export default function AfspiegelingPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                  <Icons.users className="text-white/40" size={16} />
+                  <Icons.users className="text-gray-400" size={16} />
                 </div>
                 <span className="font-medium text-white">Werknemers</span>
                 <span className="badge badge-lime">{employees.length}</span>
               </div>
               <button
                 onClick={() => setShowForm(true)}
-                className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-workx-lime transition-colors"
+                className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-workx-lime transition-colors"
               >
                 <Icons.plus size={18} />
               </button>
@@ -214,7 +214,7 @@ export default function AfspiegelingPage() {
                 <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
                   <Icons.users className="text-white/20" size={28} />
                 </div>
-                <p className="text-white/40 mb-4">Nog geen werknemers toegevoegd</p>
+                <p className="text-gray-400 mb-4">Nog geen werknemers toegevoegd</p>
                 <button onClick={() => setShowForm(true)} className="btn-primary text-sm">
                   <Icons.plus size={14} className="mr-2" />
                   Werknemer toevoegen
@@ -233,13 +233,13 @@ export default function AfspiegelingPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${group?.color || 'from-white/10 to-white/5'} flex items-center justify-center`}>
-                          <span className={`text-sm font-semibold ${group?.text || 'text-white/60'}`}>
+                          <span className={`text-sm font-semibold ${group?.text || 'text-gray-400'}`}>
                             {emp.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
                           <p className="font-medium text-white">{emp.name}</p>
-                          <p className="text-xs text-white/40">
+                          <p className="text-xs text-gray-400">
                             {age}j · {formatTenure(emp.startDate)} · {emp.functionCategory}
                           </p>
                         </div>
@@ -260,13 +260,13 @@ export default function AfspiegelingPage() {
           {/* Settings Card */}
           <div className="card p-5 space-y-4">
             <h3 className="font-medium text-white flex items-center gap-2">
-              <Icons.settings size={16} className="text-white/40" />
+              <Icons.settings size={16} className="text-gray-400" />
               Berekening configureren
             </h3>
 
             {categories.length > 0 && (
               <div>
-                <label className="block text-sm text-white/60 mb-2">Functiecategorie</label>
+                <label className="block text-sm text-gray-400 mb-2">Functiecategorie</label>
                 <div className="relative">
                   <button
                     type="button"
@@ -279,7 +279,7 @@ export default function AfspiegelingPage() {
                     <span className="flex-1 text-white text-sm">
                       {functionFilter ? `${functionFilter} (${employees.filter(e => e.functionCategory === functionFilter).length})` : `Alle categorieën (${employees.length})`}
                     </span>
-                    <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                    <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
                   </button>
                   {showCategoryDropdown && (
                     <>
@@ -294,7 +294,7 @@ export default function AfspiegelingPage() {
                               <Icons.layers size={14} className="text-white/50" />
                             </div>
                             <span className="flex-1">Alle categorieën</span>
-                            <span className="text-white/40 text-xs">{employees.length}</span>
+                            <span className="text-gray-400 text-xs">{employees.length}</span>
                             {!functionFilter && <Icons.check size={16} className="ml-2 text-workx-lime" />}
                           </button>
                           {categories.map(c => (
@@ -307,7 +307,7 @@ export default function AfspiegelingPage() {
                                 <Icons.briefcase size={14} className="text-workx-lime" />
                               </div>
                               <span className="flex-1">{c}</span>
-                              <span className="text-white/40 text-xs">{employees.filter(e => e.functionCategory === c).length}</span>
+                              <span className="text-gray-400 text-xs">{employees.filter(e => e.functionCategory === c).length}</span>
                               {functionFilter === c && <Icons.check size={16} className="ml-2 text-workx-lime" />}
                             </button>
                           ))}
@@ -320,7 +320,7 @@ export default function AfspiegelingPage() {
             )}
 
             <div>
-              <label className="block text-sm text-white/60 mb-2">Aantal te ontslaan werknemers</label>
+              <label className="block text-sm text-gray-400 mb-2">Aantal te ontslaan werknemers</label>
               <input
                 type="number"
                 min="0"
@@ -343,7 +343,7 @@ export default function AfspiegelingPage() {
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium text-white flex items-center gap-2">
-              <Icons.chart size={16} className="text-white/40" />
+              <Icons.chart size={16} className="text-gray-400" />
               Resultaat
             </h3>
             {result && (
@@ -362,7 +362,7 @@ export default function AfspiegelingPage() {
               <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
                 <Icons.layers className="text-white/20" size={28} />
               </div>
-              <p className="text-white/40">Voeg werknemers toe en stel het aantal in</p>
+              <p className="text-gray-400">Voeg werknemers toe en stel het aantal in</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -370,21 +370,21 @@ export default function AfspiegelingPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-4 rounded-xl bg-white/5 text-center">
                   <p className="text-2xl font-semibold text-white">{result.total}</p>
-                  <p className="text-xs text-white/40">Totaal</p>
+                  <p className="text-xs text-gray-400">Totaal</p>
                 </div>
                 <div className="p-4 rounded-xl bg-red-500/10 text-center">
                   <p className="text-2xl font-semibold text-red-400">{result.count}</p>
-                  <p className="text-xs text-white/40">Ontslag</p>
+                  <p className="text-xs text-gray-400">Ontslag</p>
                 </div>
                 <div className="p-4 rounded-xl bg-workx-lime/10 text-center">
                   <p className="text-2xl font-semibold text-workx-lime">{result.percentage.toFixed(0)}%</p>
-                  <p className="text-xs text-white/40">Krimp</p>
+                  <p className="text-xs text-gray-400">Krimp</p>
                 </div>
               </div>
 
               {/* Age Groups */}
               <div>
-                <h4 className="text-sm text-white/60 mb-3">Verdeling per leeftijdsgroep</h4>
+                <h4 className="text-sm text-gray-400 mb-3">Verdeling per leeftijdsgroep</h4>
                 <div className="space-y-2">
                   {result.groups.map((g) => {
                     const groupConfig = AGE_GROUPS.find(ag => ag.label === g.label)
@@ -393,9 +393,9 @@ export default function AfspiegelingPage() {
                         <div className={`w-3 h-3 rounded-full ${
                           g.employees.length === 0 ? 'bg-white/20' : g.toBeDissmissed > 0 ? 'bg-red-400' : 'bg-green-400'
                         }`} />
-                        <span className={`text-sm font-medium ${groupConfig?.text || 'text-white/60'}`}>{g.label} jaar</span>
+                        <span className={`text-sm font-medium ${groupConfig?.text || 'text-gray-400'}`}>{g.label} jaar</span>
                         <div className="flex-1" />
-                        <span className="text-sm text-white/40">{g.employees.length}</span>
+                        <span className="text-sm text-gray-400">{g.employees.length}</span>
                         <Icons.arrowRight size={12} className="text-white/20" />
                         <span className={`text-sm font-medium ${g.toBeDissmissed > 0 ? 'text-red-400' : 'text-green-400'}`}>
                           {g.toBeDissmissed}
@@ -409,7 +409,7 @@ export default function AfspiegelingPage() {
               {/* Dismissed Employees */}
               {result.groups.some(g => g.dismissedEmployees.length > 0) && (
                 <div>
-                  <h4 className="text-sm text-white/60 mb-3">Voor ontslag voorgedragen</h4>
+                  <h4 className="text-sm text-gray-400 mb-3">Voor ontslag voorgedragen</h4>
                   <div className="space-y-2">
                     {result.groups.flatMap(g => g.dismissedEmployees).sort((a, b) => getTenure(a.startDate) - getTenure(b.startDate)).map((emp, i) => {
                       const age = getAge(emp.birthDate)
@@ -420,12 +420,12 @@ export default function AfspiegelingPage() {
                             {i + 1}
                           </span>
                           <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${group?.color || 'from-white/10 to-white/5'} flex items-center justify-center`}>
-                            <span className={`text-xs font-semibold ${group?.text || 'text-white/60'}`}>
+                            <span className={`text-xs font-semibold ${group?.text || 'text-gray-400'}`}>
                               {emp.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <span className="font-medium text-white">{emp.name}</span>
-                          <span className="text-xs text-white/40">({age}j, {formatTenure(emp.startDate)})</span>
+                          <span className="text-xs text-gray-400">({age}j, {formatTenure(emp.startDate)})</span>
                         </div>
                       )
                     })}
@@ -448,14 +448,14 @@ export default function AfspiegelingPage() {
                 </div>
                 <h2 className="font-semibold text-white">Werknemer toevoegen</h2>
               </div>
-              <button onClick={() => setShowForm(false)} className="p-2 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+              <button onClick={() => setShowForm(false)} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
                 <Icons.x size={18} />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-white/60 mb-2">Naam *</label>
+                <label className="block text-sm text-gray-400 mb-2">Naam *</label>
                 <div className="relative">
                   <Icons.user className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                   <input
@@ -471,7 +471,7 @@ export default function AfspiegelingPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Geboortedatum *</label>
+                  <label className="block text-sm text-gray-400 mb-2">Geboortedatum *</label>
                   <DatePicker
                     selected={newEmployee.birthDate ? new Date(newEmployee.birthDate) : null}
                     onChange={(date) => setNewEmployee({ ...newEmployee, birthDate: date ? date.toISOString().split('T')[0] : '' })}
@@ -480,7 +480,7 @@ export default function AfspiegelingPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">In dienst sinds *</label>
+                  <label className="block text-sm text-gray-400 mb-2">In dienst sinds *</label>
                   <DatePicker
                     selected={newEmployee.startDate ? new Date(newEmployee.startDate) : null}
                     onChange={(date) => setNewEmployee({ ...newEmployee, startDate: date ? date.toISOString().split('T')[0] : '' })}
@@ -491,7 +491,7 @@ export default function AfspiegelingPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">Functiecategorie *</label>
+                <label className="block text-sm text-gray-400 mb-2">Functiecategorie *</label>
                 <div className="relative">
                   <Icons.briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 z-10" size={16} />
                   <input
@@ -506,7 +506,7 @@ export default function AfspiegelingPage() {
                     <button
                       type="button"
                       onClick={() => setShowFormCategoryDropdown(!showFormCategoryDropdown)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-white transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-white transition-colors"
                     >
                       <Icons.chevronDown size={16} className={`transition-transform ${showFormCategoryDropdown ? 'rotate-180' : ''}`} />
                     </button>

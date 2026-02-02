@@ -3,6 +3,36 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Naam correcties voor incomplete namen
+const NAME_CORRECTIONS: Record<string, string> = {
+  'Emma van der': 'Emma van der Vos',
+  'Lotte van Sint': 'Lotte van Sint Truiden',
+  'Wies van': 'Wies van Pesch',
+  'Erika van': 'Erika van Zadelhof',
+}
+
+// One-time migration flag
+let workloadMigrationRun = false
+
+async function migrateWorkloadNames() {
+  if (workloadMigrationRun) return
+  workloadMigrationRun = true
+
+  try {
+    for (const [incorrectName, correctName] of Object.entries(NAME_CORRECTIONS)) {
+      // Update all records with incorrect name
+      await prisma.workload.updateMany({
+        where: { personName: incorrectName },
+        data: { personName: correctName }
+      })
+    }
+    console.log('Workload name migration completed')
+  } catch (error) {
+    console.error('Error during workload name migration:', error)
+    workloadMigrationRun = false
+  }
+}
+
 // GET - Haal alle werkdruk entries op
 export async function GET() {
   try {
@@ -10,6 +40,9 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Run migration on first access
+    await migrateWorkloadNames()
 
     const entries = await prisma.workload.findMany({
       orderBy: [

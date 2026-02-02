@@ -158,7 +158,7 @@ export default function TeamPage() {
       <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
         <div className="text-center">
           <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
-          <p className="text-white/40">Team laden...</p>
+          <p className="text-gray-400">Team laden...</p>
         </div>
       </div>
     )
@@ -169,13 +169,13 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center">
-              <Icons.users className="text-cyan-400" size={20} />
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center">
+              <Icons.users className="text-cyan-400" size={18} />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Team</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-white">Team</h1>
           </div>
-          <p className="text-white/40">Overzicht van alle teamleden en hun rollen</p>
+          <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Overzicht van alle teamleden en hun rollen</p>
         </div>
       </div>
 
@@ -188,7 +188,7 @@ export default function TeamPage() {
               <Icons.users className="text-cyan-400" size={16} />
             </div>
             <p className="text-xl sm:text-2xl font-semibold text-white">{stats.total}</p>
-            <p className="text-xs sm:text-sm text-white/40">Teamleden</p>
+            <p className="text-xs sm:text-sm text-gray-400">Teamleden</p>
           </div>
         </div>
 
@@ -199,7 +199,7 @@ export default function TeamPage() {
               <Icons.award className="text-purple-400" size={16} />
             </div>
             <p className="text-xl sm:text-2xl font-semibold text-white">{stats.partners}</p>
-            <p className="text-xs sm:text-sm text-white/40">Partners</p>
+            <p className="text-xs sm:text-sm text-gray-400">Partners</p>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ export default function TeamPage() {
               <Icons.user className="text-cyan-400" size={16} />
             </div>
             <p className="text-xl sm:text-2xl font-semibold text-white">{stats.employees}</p>
-            <p className="text-xs sm:text-sm text-white/40">Medewerkers</p>
+            <p className="text-xs sm:text-sm text-gray-400">Medewerkers</p>
           </div>
         </div>
 
@@ -221,7 +221,7 @@ export default function TeamPage() {
               <Icons.briefcase className="text-orange-400" size={16} />
             </div>
             <p className="text-xl sm:text-2xl font-semibold text-white">{stats.totalWork}</p>
-            <p className="text-xs sm:text-sm text-white/40">Actieve zaken</p>
+            <p className="text-xs sm:text-sm text-gray-400">Actieve zaken</p>
           </div>
         </div>
       </div>
@@ -230,7 +230,7 @@ export default function TeamPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1 w-full sm:w-auto">
           <div className="relative flex-1 sm:max-w-xs">
-            <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+            <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
             <input
               type="text"
               value={searchQuery}
@@ -246,11 +246,11 @@ export default function TeamPage() {
               className="flex items-center gap-3 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
             >
               {filterRole === 'all' ? (
-                <span className="text-white/70">Alle rollen</span>
+                <span className="text-gray-300">Alle rollen</span>
               ) : (
                 <span className={roleConfig[filterRole]?.color}>{roleConfig[filterRole]?.label}</span>
               )}
-              <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} />
+              <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showRoleDropdown && (
               <>
@@ -259,10 +259,10 @@ export default function TeamPage() {
                   <div className="py-1">
                     <button
                       onClick={() => { setFilterRole('all'); setShowRoleDropdown(false) }}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${filterRole === 'all' ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${filterRole === 'all' ? 'bg-workx-lime/10 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
                     >
                       <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center">
-                        <Icons.users size={12} className="text-white/50" />
+                        <Icons.users size={12} className="text-gray-400" />
                       </div>
                       <span>Alle rollen</span>
                       {filterRole === 'all' && <Icons.check size={16} className="ml-auto text-workx-lime" />}
@@ -271,7 +271,7 @@ export default function TeamPage() {
                       <button
                         key={key}
                         onClick={() => { setFilterRole(key); setShowRoleDropdown(false) }}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${filterRole === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${filterRole === key ? 'bg-workx-lime/10 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
                       >
                         <div className={`w-6 h-6 rounded-lg ${config.bg} flex items-center justify-center`}>
                           <Icons.user size={12} className={config.color} />
@@ -290,13 +290,13 @@ export default function TeamPage() {
         <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-workx-lime text-workx-dark' : 'text-white/40 hover:text-white'}`}
+            className={`p-2.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white'}`}
           >
             <Icons.grid size={16} />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-workx-lime text-workx-dark' : 'text-white/40 hover:text-white'}`}
+            className={`p-2.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white'}`}
           >
             <Icons.list size={16} />
           </button>
@@ -310,7 +310,7 @@ export default function TeamPage() {
             <Icons.users className="text-white/20" size={32} />
           </div>
           <h3 className="text-lg font-medium text-white mb-2">Geen teamleden gevonden</h3>
-          <p className="text-white/40">
+          <p className="text-gray-400">
             {searchQuery || filterRole !== 'all' ? 'Probeer andere filters' : 'Er zijn nog geen teamleden toegevoegd'}
           </p>
         </div>
@@ -340,7 +340,7 @@ export default function TeamPage() {
 
                   {/* Datum in dienst - alleen voor niet-partners */}
                   {member.role !== 'PARTNER' && member.startDate && (
-                    <div className="text-xs text-white/40 flex items-center gap-1.5">
+                    <div className="text-xs text-gray-400 flex items-center gap-1.5">
                       <Icons.calendar size={12} />
                       In dienst sinds {new Date(member.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </div>
@@ -355,10 +355,10 @@ export default function TeamPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4">Naam</th>
-                <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4">Functie</th>
-                <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider p-4 hidden md:table-cell">In dienst</th>
-                {canResetPasswords && <th className="text-right text-xs font-medium text-white/40 uppercase tracking-wider p-4 w-20">Acties</th>}
+                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4">Naam</th>
+                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4">Functie</th>
+                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4 hidden md:table-cell">In dienst</th>
+                {canResetPasswords && <th className="text-right text-xs font-medium text-gray-400 uppercase tracking-wider p-4 w-20">Acties</th>}
               </tr>
             </thead>
             <tbody>
@@ -382,7 +382,7 @@ export default function TeamPage() {
                       </span>
                     </td>
                     <td className="p-4 hidden md:table-cell">
-                      <span className="text-sm text-white/50">
+                      <span className="text-sm text-gray-400">
                         {member.role === 'PARTNER' ? '-' : (member.startDate
                           ? new Date(member.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
                           : '-')}
@@ -392,7 +392,7 @@ export default function TeamPage() {
                       <td className="p-4 text-right">
                         <button
                           onClick={() => openResetModal(member)}
-                          className="p-2 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all"
+                          className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all"
                           title="Wachtwoord resetten"
                         >
                           <Icons.lock size={14} />
@@ -422,7 +422,7 @@ export default function TeamPage() {
               </div>
               <button
                 onClick={() => setShowResetModal(false)}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 <Icons.x size={18} />
               </button>
@@ -433,15 +433,15 @@ export default function TeamPage() {
               <TeamAvatar name={selectedMember.name} size="large" />
               <div>
                 <p className="font-medium text-white">{selectedMember.name}</p>
-                <p className="text-sm text-white/40">{selectedMember.email}</p>
+                <p className="text-sm text-gray-400">{selectedMember.email}</p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-white/60 mb-2">Nieuw wachtwoord</label>
+                <label className="block text-sm text-gray-400 mb-2">Nieuw wachtwoord</label>
                 <div className="relative">
-                  <Icons.lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                  <Icons.lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                   <input
                     type="text"
                     value={newPassword}
@@ -451,21 +451,21 @@ export default function TeamPage() {
                     autoFocus
                   />
                 </div>
-                <p className="text-xs text-white/30 mt-1.5">
+                <p className="text-xs text-gray-500 mt-1.5">
                   Het nieuwe wachtwoord is direct actief. Informeer de medewerker over het nieuwe wachtwoord.
                 </p>
               </div>
 
               {/* Quick password suggestions */}
               <div>
-                <p className="text-xs text-white/40 mb-2">Snelle suggesties:</p>
+                <p className="text-xs text-gray-400 mb-2">Snelle suggesties:</p>
                 <div className="flex flex-wrap gap-2">
                   {['Workx2024!', 'Welkom123!', 'Reset2024!'].map(pwd => (
                     <button
                       key={pwd}
                       type="button"
                       onClick={() => setNewPassword(pwd)}
-                      className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg transition-colors"
+                      className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors"
                     >
                       {pwd}
                     </button>

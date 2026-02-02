@@ -360,7 +360,7 @@ export default function AgendaPage() {
       <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
         <div className="text-center">
           <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
-          <p className="text-white/40">Agenda laden...</p>
+          <p className="text-gray-400">Agenda laden...</p>
         </div>
       </div>
     )
@@ -369,24 +369,24 @@ export default function AgendaPage() {
   return (
     <div className="space-y-8 fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 flex items-center justify-center">
-              <Icons.calendar className="text-purple-400" size={20} />
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 flex items-center justify-center">
+              <Icons.calendar className="text-purple-400" size={18} />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Agenda</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-white">Agenda</h1>
           </div>
-          <p className="text-white/40">Gedeelde team kalender, events en verjaardagen</p>
+          <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Gedeelde team kalender, events en verjaardagen</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => handleBookRoom()} className="btn-secondary flex items-center gap-2">
-            <span>🏢</span>
-            Vergaderruimte boeken
+          <button onClick={() => handleBookRoom()} className="btn-secondary flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base px-2.5 sm:px-4 py-2 sm:py-2.5">
+            <span className="text-sm sm:text-base">🏢</span>
+            <span className="hidden xs:inline">Vergaderruimte</span>
           </button>
-          <button onClick={() => handleAddEvent()} className="btn-primary flex items-center gap-2">
-            <Icons.plus size={16} />
-            Nieuw event
+          <button onClick={() => handleAddEvent()} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base px-2.5 sm:px-4 py-2 sm:py-2.5">
+            <Icons.plus size={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Nieuw</span>
           </button>
         </div>
       </div>
@@ -413,7 +413,7 @@ export default function AgendaPage() {
                   </span>
                 )}
               </div>
-              <p className="text-white/60">
+              <p className="text-gray-400">
                 <span className="text-pink-400 font-medium">{nextBirthday.name}</span>
                 {' '}is jarig op{' '}
                 <span className="text-white">
@@ -423,7 +423,7 @@ export default function AgendaPage() {
             </div>
             <div className="text-right">
               <p className="text-3xl font-bold text-pink-400">{nextBirthday.daysUntil}</p>
-              <p className="text-xs text-white/40">{nextBirthday.daysUntil === 1 ? 'dag' : 'dagen'}</p>
+              <p className="text-xs text-gray-400">{nextBirthday.daysUntil === 1 ? 'dag' : 'dagen'}</p>
             </div>
           </div>
         </div>
@@ -435,65 +435,69 @@ export default function AgendaPage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
           {/* Navigation and view toggle */}
-          <div className="p-5 flex items-center justify-between border-b border-white/5 relative">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (currentView === 'month') setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
-                  else if (currentView === 'week') setSelectedDate(new Date((selectedDate || new Date()).getTime() - 7 * 24 * 60 * 60 * 1000))
-                  else setSelectedDate(new Date((selectedDate || new Date()).getTime() - 24 * 60 * 60 * 1000))
-                }}
-                className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
-              >
-                <Icons.chevronLeft size={18} />
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedDate(new Date())
-                  setCurrentMonth(new Date())
-                }}
-                className="px-3 py-1.5 text-xs text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-colors"
-              >
-                Vandaag
-              </button>
-              <button
-                onClick={() => {
-                  if (currentView === 'month') setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
-                  else if (currentView === 'week') setSelectedDate(new Date((selectedDate || new Date()).getTime() + 7 * 24 * 60 * 60 * 1000))
-                  else setSelectedDate(new Date((selectedDate || new Date()).getTime() + 24 * 60 * 60 * 1000))
-                }}
-                className="p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
-              >
-                <Icons.chevronRight size={18} />
-              </button>
+          <div className="p-3 sm:p-5 border-b border-white/5 relative">
+            {/* Top row: Navigation and View toggle */}
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <button
+                  onClick={() => {
+                    if (currentView === 'month') setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
+                    else if (currentView === 'week') setSelectedDate(new Date((selectedDate || new Date()).getTime() - 7 * 24 * 60 * 60 * 1000))
+                    else setSelectedDate(new Date((selectedDate || new Date()).getTime() - 24 * 60 * 60 * 1000))
+                  }}
+                  className="p-2 sm:p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
+                >
+                  <Icons.chevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedDate(new Date())
+                    setCurrentMonth(new Date())
+                  }}
+                  className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-colors"
+                >
+                  Vandaag
+                </button>
+                <button
+                  onClick={() => {
+                    if (currentView === 'month') setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
+                    else if (currentView === 'week') setSelectedDate(new Date((selectedDate || new Date()).getTime() + 7 * 24 * 60 * 60 * 1000))
+                    else setSelectedDate(new Date((selectedDate || new Date()).getTime() + 24 * 60 * 60 * 1000))
+                  }}
+                  className="p-2 sm:p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
+                >
+                  <Icons.chevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+              </div>
+
+              {/* View toggle */}
+              <div className="flex items-center bg-white/5 rounded-lg sm:rounded-xl p-0.5 sm:p-1">
+                {[
+                  { id: 'day' as AgendaView, label: 'Dag' },
+                  { id: 'week' as AgendaView, label: 'Week' },
+                  { id: 'month' as AgendaView, label: 'Maand' },
+                ].map((view) => (
+                  <button
+                    key={view.id}
+                    onClick={() => setCurrentView(view.id)}
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm rounded-md sm:rounded-lg transition-all ${
+                      currentView === view.id
+                        ? 'bg-workx-lime text-black font-medium'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {view.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <h2 className="font-semibold text-white capitalize text-lg">
-              {currentView === 'day' && selectedDate?.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              {currentView === 'week' && `Week ${Math.ceil(((selectedDate || new Date()).getDate()) / 7)} - ${(selectedDate || new Date()).toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}`}
+            {/* Month title - below on mobile, inline on desktop */}
+            <h2 className="font-semibold text-white capitalize text-base sm:text-lg text-center sm:absolute sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:pointer-events-none">
+              {currentView === 'day' && selectedDate?.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
+              {currentView === 'week' && `Week ${Math.ceil(((selectedDate || new Date()).getDate()) / 7)} - ${(selectedDate || new Date()).toLocaleDateString('nl-NL', { month: 'short' })}`}
               {currentView === 'month' && currentMonth.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
             </h2>
-
-            {/* View toggle */}
-            <div className="flex items-center bg-white/5 rounded-xl p-1">
-              {[
-                { id: 'day' as AgendaView, label: 'Dag' },
-                { id: 'week' as AgendaView, label: 'Week' },
-                { id: 'month' as AgendaView, label: 'Maand' },
-              ].map((view) => (
-                <button
-                  key={view.id}
-                  onClick={() => setCurrentView(view.id)}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
-                    currentView === view.id
-                      ? 'bg-workx-lime text-black font-medium'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  {view.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* DAY VIEW */}
@@ -509,7 +513,7 @@ export default function AgendaPage() {
                   })
                   return (
                     <div key={hour} className="flex gap-4 min-h-[60px]">
-                      <div className="w-16 text-right text-sm text-white/40 pt-1">
+                      <div className="w-16 text-right text-sm text-gray-400 pt-1">
                         {hour}:00
                       </div>
                       <div className="flex-1 border-t border-white/5 pt-2 space-y-1">
@@ -529,13 +533,13 @@ export default function AgendaPage() {
                                 </span>
                               </div>
                               {!event.isAllDay && (
-                                <p className="text-xs text-white/50 mt-1">
+                                <p className="text-xs text-gray-400 mt-1">
                                   {formatTime(event.startTime)} - {formatTime(event.endTime)}
                                   {event.location && ` · ${event.location}`}
                                 </p>
                               )}
                               {event.isAllDay && (
-                                <p className="text-xs text-white/50 mt-1">Hele dag</p>
+                                <p className="text-xs text-gray-400 mt-1">Hele dag</p>
                               )}
                             </div>
                           )
@@ -553,14 +557,14 @@ export default function AgendaPage() {
             <div className="p-5">
               {/* Week header */}
               <div className="grid grid-cols-8 mb-3">
-                <div className="text-xs text-white/40 py-2"></div>
+                <div className="text-xs text-gray-400 py-2"></div>
                 {Array.from({ length: 7 }, (_, i) => {
                   const day = new Date(selectedDate)
                   const dayOfWeek = day.getDay()
                   const diff = i - ((dayOfWeek + 6) % 7) // Adjust to start from Monday
                   day.setDate(day.getDate() + diff)
                   return (
-                    <div key={i} className={`text-center py-2 ${isToday(day) ? 'text-workx-lime' : 'text-white/60'}`}>
+                    <div key={i} className={`text-center py-2 ${isToday(day) ? 'text-workx-lime' : 'text-gray-400'}`}>
                       <div className="text-xs font-medium">{['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'][i]}</div>
                       <div className={`text-lg font-semibold ${isToday(day) ? 'bg-workx-lime text-black w-8 h-8 rounded-full flex items-center justify-center mx-auto' : ''}`}>
                         {day.getDate()}
@@ -574,7 +578,7 @@ export default function AgendaPage() {
               <div className="space-y-0">
                 {Array.from({ length: 10 }, (_, i) => i + 8).map((hour) => (
                   <div key={hour} className="grid grid-cols-8 min-h-[50px] border-t border-white/5">
-                    <div className="text-xs text-white/40 pr-2 text-right pt-1">{hour}:00</div>
+                    <div className="text-xs text-gray-400 pr-2 text-right pt-1">{hour}:00</div>
                     {Array.from({ length: 7 }, (_, dayIndex) => {
                       const day = new Date(selectedDate)
                       const dayOfWeek = day.getDay()
@@ -593,14 +597,14 @@ export default function AgendaPage() {
                             <div
                               key={event.id}
                               onClick={() => handleEdit(event)}
-                              className="text-[10px] p-1.5 rounded cursor-pointer hover:opacity-80 transition-opacity mb-1"
+                              className="text-xs p-1.5 rounded cursor-pointer hover:opacity-80 transition-opacity mb-1"
                               style={{ backgroundColor: event.color + '30', color: event.color }}
                             >
                               <span className="font-medium truncate block">
                                 {isRoomBooking(event) ? `🔔 ${event.createdBy?.name?.split(' ')[0]}` : event.title}
                               </span>
                               {!event.isAllDay && (
-                                <span className="text-white/50">{formatTime(event.startTime)}</span>
+                                <span className="text-gray-400">{formatTime(event.startTime)}</span>
                               )}
                             </div>
                           ))}
@@ -618,7 +622,7 @@ export default function AgendaPage() {
             <div className="p-5">
               <div className="grid grid-cols-7 mb-3">
                 {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map((day) => (
-                  <div key={day} className="text-center text-xs text-white/40 py-2 font-medium">{day}</div>
+                  <div key={day} className="text-center text-xs text-gray-400 py-2 font-medium">{day}</div>
                 ))}
               </div>
 
@@ -644,7 +648,7 @@ export default function AgendaPage() {
                     >
                       <div className="flex items-center justify-between">
                         <span className={`text-sm font-medium ${
-                          isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
+                          isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-gray-400' : 'text-gray-500'
                         }`}>
                           {day.date.getDate()}
                         </span>
@@ -658,7 +662,7 @@ export default function AgendaPage() {
                         {dayBirthdays.map((person, i) => (
                           <div
                             key={`bday-${i}`}
-                            className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate font-medium bg-pink-500/20 text-pink-400"
+                            className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md truncate font-medium bg-pink-500/20 text-pink-400"
                           >
                             <span>🎂</span>
                             <span className="truncate">{person.name.split(' ')[0]}</span>
@@ -670,7 +674,7 @@ export default function AgendaPage() {
                           return (
                             <div
                               key={event.id}
-                              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md truncate font-medium"
+                              className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md truncate font-medium"
                               style={{ backgroundColor: event.color + '20', color: event.color }}
                             >
                               <IconComponent size={10} />
@@ -679,7 +683,7 @@ export default function AgendaPage() {
                           )
                         })}
                         {(dayEvents.length + dayBirthdays.length) > 2 && (
-                          <span className="text-[10px] text-white/40 pl-1 font-medium">+{dayEvents.length + dayBirthdays.length - 2} meer</span>
+                          <span className="text-xs text-gray-400 pl-1 font-medium">+{dayEvents.length + dayBirthdays.length - 2} meer</span>
                         )}
                       </div>
                     </button>
@@ -695,13 +699,13 @@ export default function AgendaPage() {
               const IconComponent = config.icon
               const isVacation = key === 'VACATION'
               return (
-                <div key={key} className="flex items-center gap-2 text-xs text-white/50">
+                <div key={key} className="flex items-center gap-2 text-xs text-gray-400">
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: config.color + '30' }}>
                     <div className="w-full h-full rounded flex items-center justify-center" style={{ backgroundColor: config.color + '20' }} />
                   </div>
                   <IconComponent size={12} style={{ color: config.color }} />
                   <span>{config.label}</span>
-                  {isVacation && <span className="text-[10px] text-green-400/60">(uit verlof)</span>}
+                  {isVacation && <span className="text-xs text-green-400/60">(uit verlof)</span>}
                 </div>
               )
             })}
@@ -719,7 +723,7 @@ export default function AgendaPage() {
                 : 'Selecteer een dag'}
             </h3>
             {selectedDate && (
-              <p className="text-sm text-white/40 mb-4">
+              <p className="text-sm text-gray-400 mb-4">
                 {selectedDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
             )}
@@ -738,7 +742,7 @@ export default function AgendaPage() {
                       </div>
                       <div>
                         <span className="text-sm font-medium text-pink-400">{person.name}</span>
-                        <p className="text-xs text-white/40 mt-0.5">Verjaardag!</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Verjaardag!</p>
                       </div>
                     </div>
                   </div>
@@ -749,7 +753,7 @@ export default function AgendaPage() {
                     <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
                       <Icons.calendar className="text-purple-400/50" size={24} />
                     </div>
-                    <p className="text-sm text-white/40 mb-4">Geen events op deze dag</p>
+                    <p className="text-sm text-gray-400 mb-4">Geen events op deze dag</p>
                     <button
                       onClick={() => handleAddEvent(selectedDate)}
                       className="btn-primary text-sm py-2 px-4 inline-flex items-center gap-2"
@@ -784,7 +788,7 @@ export default function AgendaPage() {
                                 <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
                                   {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
                                 </span>
-                                <p className="text-xs text-white/30 mt-0.5">
+                                <p className="text-xs text-gray-500 mt-0.5">
                                   {isRoomBooking(event) ? 'Vergaderruimte gereserveerd' : (categoryConfig[event.category]?.label || 'Vakantie')}
                                 </p>
                               </div>
@@ -792,7 +796,7 @@ export default function AgendaPage() {
                             {!isVacation && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
-                                className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                               >
                                 <Icons.trash size={14} />
                               </button>
@@ -800,18 +804,18 @@ export default function AgendaPage() {
                           </div>
                           <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-3">
                             {!event.isAllDay ? (
-                              <p className="text-xs text-white/50 flex items-center gap-1.5">
+                              <p className="text-xs text-gray-400 flex items-center gap-1.5">
                                 <Icons.clock size={12} />
                                 {formatTime(event.startTime)} - {formatTime(event.endTime)}
                               </p>
                             ) : (
-                              <p className="text-xs text-white/50 flex items-center gap-1.5">
+                              <p className="text-xs text-gray-400 flex items-center gap-1.5">
                                 <Icons.sun size={12} />
                                 Hele dag
                               </p>
                             )}
                             {event.location && (
-                              <p className="text-xs text-white/50 flex items-center gap-1.5">
+                              <p className="text-xs text-gray-400 flex items-center gap-1.5">
                                 <Icons.mapPin size={12} />
                                 {event.location}
                               </p>
@@ -828,7 +832,7 @@ export default function AgendaPage() {
                     })}
                     <button
                       onClick={() => handleAddEvent(selectedDate)}
-                      className="w-full p-3 rounded-xl border border-dashed border-white/10 text-sm text-white/40 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all flex items-center justify-center gap-2"
+                      className="w-full p-3 rounded-xl border border-dashed border-white/10 text-sm text-gray-400 hover:text-white hover:border-white/20 hover:bg-white/5 transition-all flex items-center justify-center gap-2"
                     >
                       <Icons.plus size={14} />
                       Event toevoegen
@@ -839,9 +843,9 @@ export default function AgendaPage() {
             ) : (
               <div className="py-12 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  <Icons.calendar className="text-white/20" size={24} />
+                  <Icons.calendar className="text-gray-500" size={24} />
                 </div>
-                <p className="text-sm text-white/40">Klik op een dag in de kalender</p>
+                <p className="text-sm text-gray-400">Klik op een dag in de kalender</p>
               </div>
             )}
           </div>
@@ -864,7 +868,7 @@ export default function AgendaPage() {
               </div>
               <button
                 onClick={resetForm}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 <Icons.x size={18} />
               </button>
@@ -872,9 +876,9 @@ export default function AgendaPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm text-white/60 mb-2">Titel</label>
+                <label className="block text-sm text-gray-400 mb-2">Titel</label>
                 <div className="relative">
-                  <Icons.edit className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                  <Icons.edit className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                   <input
                     type="text"
                     value={title}
@@ -887,7 +891,7 @@ export default function AgendaPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">Categorie</label>
+                <label className="block text-sm text-gray-400 mb-2">Categorie</label>
                 <div className="grid grid-cols-3 gap-2">
                   {Object.entries(categoryConfig)
                     .filter(([key]) => key !== 'VACATION') // VACATION is only for imported vacation events
@@ -901,7 +905,7 @@ export default function AgendaPage() {
                         className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all text-sm ${
                           category === key
                             ? 'border-workx-lime bg-workx-lime/10 text-white'
-                            : 'border-white/10 text-white/40 hover:border-white/20 hover:bg-white/5'
+                            : 'border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/5'
                         }`}
                       >
                         <IconComponent size={14} style={{ color: category === key ? config.color : undefined }} />
@@ -921,7 +925,7 @@ export default function AgendaPage() {
                 />
                 <div>
                   <span className="text-white text-sm font-medium">Hele dag</span>
-                  <p className="text-xs text-white/40 mt-0.5">Event duurt de hele dag</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Event duurt de hele dag</p>
                 </div>
               </label>
 
@@ -945,7 +949,7 @@ export default function AgendaPage() {
                         className={`px-3 py-2 rounded-lg text-sm transition-all ${
                           recurring === option.value
                             ? 'bg-orange-500 text-white font-medium'
-                            : 'bg-white/5 text-white/60 hover:bg-white/10'
+                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
                         }`}
                       >
                         {option.label}
@@ -962,7 +966,7 @@ export default function AgendaPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Startdatum</label>
+                  <label className="block text-sm text-gray-400 mb-2">Startdatum</label>
                   <DatePicker
                     selected={startDate}
                     onChange={(date) => { setStartDate(date); if (!endDate) setEndDate(date) }}
@@ -971,7 +975,7 @@ export default function AgendaPage() {
                 </div>
                 {!isAllDay && (
                   <div>
-                    <label className="block text-sm text-white/60 mb-2">Starttijd</label>
+                    <label className="block text-sm text-gray-400 mb-2">Starttijd</label>
                     <TimePicker
                       value={startTime}
                       onChange={setStartTime}
@@ -983,7 +987,7 @@ export default function AgendaPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Einddatum</label>
+                  <label className="block text-sm text-gray-400 mb-2">Einddatum</label>
                   <DatePicker
                     selected={endDate}
                     onChange={setEndDate}
@@ -993,7 +997,7 @@ export default function AgendaPage() {
                 </div>
                 {!isAllDay && (
                   <div>
-                    <label className="block text-sm text-white/60 mb-2">Eindtijd</label>
+                    <label className="block text-sm text-gray-400 mb-2">Eindtijd</label>
                     <TimePicker
                       value={endTime}
                       onChange={setEndTime}
@@ -1004,7 +1008,7 @@ export default function AgendaPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">
+                <label className="block text-sm text-gray-400 mb-2">
                   {category === 'MEETING' ? 'Vergaderruimte' : 'Locatie'}
                 </label>
 
@@ -1020,7 +1024,7 @@ export default function AgendaPage() {
                           ? 'border-blue-500 bg-blue-500/20 text-white'
                           : roomAvailability.available
                           ? 'border-white/10 bg-white/5 text-white/80 hover:border-white/20 hover:bg-white/10'
-                          : 'border-red-500/30 bg-red-500/10 text-white/40 cursor-not-allowed'
+                          : 'border-red-500/30 bg-red-500/10 text-gray-400 cursor-not-allowed'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -1029,7 +1033,7 @@ export default function AgendaPage() {
                           <p className={`font-medium ${!roomAvailability.available ? 'line-through' : ''}`}>
                             {MEETING_ROOM.name}
                           </p>
-                          <p className="text-sm text-white/40">
+                          <p className="text-sm text-gray-400">
                             {roomAvailability.available ? (
                               <>Beschikbaar · max {MEETING_ROOM.capacity} personen</>
                             ) : (
@@ -1064,7 +1068,7 @@ export default function AgendaPage() {
                   </div>
                 ) : (
                   <div className="relative">
-                    <Icons.mapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                    <Icons.mapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                     <input
                       type="text"
                       value={location}
@@ -1077,7 +1081,7 @@ export default function AgendaPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">Beschrijving</label>
+                <label className="block text-sm text-gray-400 mb-2">Beschrijving</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}

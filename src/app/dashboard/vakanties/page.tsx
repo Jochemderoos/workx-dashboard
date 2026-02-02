@@ -525,7 +525,7 @@ export default function VakantiesPage() {
       <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
         <div className="text-center">
           <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
-          <p className="text-white/40">Vakanties laden...</p>
+          <p className="text-gray-400">Vakanties laden...</p>
         </div>
       </div>
     )
@@ -542,7 +542,7 @@ export default function VakantiesPage() {
             </div>
             <h1 className="text-xl sm:text-2xl font-semibold text-white">Vakanties & Verlof</h1>
           </div>
-          <p className="text-white/40 text-sm sm:text-base">
+          <p className="text-gray-400 text-sm sm:text-base">
             {pageMode === 'overzicht' ? 'Overzicht vakanties en ouderschapsverlof' : 'Beheer vakantiedagen en verlof per medewerker'}
           </p>
         </div>
@@ -552,7 +552,7 @@ export default function VakantiesPage() {
             <button
               onClick={() => setPageMode('overzicht')}
               className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                pageMode === 'overzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                pageMode === 'overzicht' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <Icons.calendar size={14} />
@@ -562,7 +562,7 @@ export default function VakantiesPage() {
               <button
                 onClick={() => setPageMode('beheer')}
                 className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  pageMode === 'beheer' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  pageMode === 'beheer' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Icons.settings size={14} />
@@ -591,7 +591,7 @@ export default function VakantiesPage() {
                   <Icons.users className="text-workx-lime" size={18} />
                 </div>
                 <p className="text-3xl font-semibold text-white">{vacationBalances.filter(b => !b.isPartner).length}</p>
-                <p className="text-sm text-white/40">Medewerkers</p>
+                <p className="text-sm text-gray-400">Medewerkers</p>
               </div>
             </div>
 
@@ -604,7 +604,7 @@ export default function VakantiesPage() {
                 <p className="text-3xl font-semibold text-white">
                   {vacationBalances.filter(b => !b.isPartner).reduce((sum, b) => sum + calculateResterend(b), 0).toFixed(1)}
                 </p>
-                <p className="text-sm text-white/40">Totaal resterend (team)</p>
+                <p className="text-sm text-gray-400">Totaal resterend (team)</p>
               </div>
             </div>
 
@@ -617,7 +617,7 @@ export default function VakantiesPage() {
                 <p className="text-3xl font-semibold text-white">
                   {vacationBalances.filter(b => !b.isPartner).reduce((sum, b) => sum + b.opgenomenLopendJaar, 0)}
                 </p>
-                <p className="text-sm text-white/40">Opgenomen dit jaar (team)</p>
+                <p className="text-sm text-gray-400">Opgenomen dit jaar (team)</p>
               </div>
             </div>
           </div>
@@ -632,7 +632,7 @@ export default function VakantiesPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-white">Saldo bewerken</h3>
-                    <p className="text-sm text-white/40">{editingBalance}</p>
+                    <p className="text-sm text-gray-400">{editingBalance}</p>
                   </div>
                 </div>
                 <button
@@ -640,7 +640,7 @@ export default function VakantiesPage() {
                     setEditingBalance(null)
                     setSelectedBalanceUserId('')
                   }}
-                  className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                 >
                   <Icons.x size={18} />
                 </button>
@@ -648,7 +648,7 @@ export default function VakantiesPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Overgedragen</label>
+                  <label className="block text-sm text-gray-400 mb-2">Overgedragen</label>
                   <input
                     type="number"
                     step="0.5"
@@ -658,7 +658,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Opbouw</label>
+                  <label className="block text-sm text-gray-400 mb-2">Opbouw</label>
                   <input
                     type="number"
                     step="0.5"
@@ -668,7 +668,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Bijgekocht</label>
+                  <label className="block text-sm text-gray-400 mb-2">Bijgekocht</label>
                   <input
                     type="number"
                     step="0.5"
@@ -678,7 +678,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Opgenomen</label>
+                  <label className="block text-sm text-gray-400 mb-2">Opgenomen</label>
                   <input
                     type="number"
                     step="0.5"
@@ -688,7 +688,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Resterend</label>
+                  <label className="block text-sm text-gray-400 mb-2">Resterend</label>
                   <div className="px-4 py-3 bg-workx-lime/10 border border-workx-lime/20 rounded-xl text-workx-lime font-semibold">
                     {(balanceForm.overgedragenVorigJaar + balanceForm.opbouwLopendJaar + balanceForm.bijgekocht - balanceForm.opgenomenLopendJaar).toFixed(1)} d
                   </div>
@@ -729,7 +729,7 @@ export default function VakantiesPage() {
             <div className="overflow-x-auto">
               <div className="min-w-[700px]">
                 {/* Table header */}
-                <div className="grid grid-cols-7 gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider">
+                <div className="grid grid-cols-7 gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider">
                   <div className="col-span-2">Medewerker</div>
                   <div className="text-right">Overgedragen</div>
                   <div className="text-right">Opbouw</div>
@@ -764,59 +764,59 @@ export default function VakantiesPage() {
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-white">{balance.personName}</p>
                             {balance.isPartner && (
-                              <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">Partner</span>
+                              <span className="text-xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">Partner</span>
                             )}
                           </div>
-                          <p className="text-xs text-white/40">
+                          <p className="text-xs text-gray-400">
                             {balance.isPartner ? 'Geen verlofrechten' : (balance.note || 'Medewerker')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         {balance.isPartner ? (
-                          <span className="text-white/30">-</span>
+                          <span className="text-gray-500">-</span>
                         ) : (
                           <>
                             <span className="text-white/70">{balance.overgedragenVorigJaar}</span>
-                            <span className="text-white/30 text-sm ml-1">d</span>
+                            <span className="text-gray-500 text-sm ml-1">d</span>
                           </>
                         )}
                       </div>
                       <div className="text-right">
                         {balance.isPartner ? (
-                          <span className="text-white/30">-</span>
+                          <span className="text-gray-500">-</span>
                         ) : (
                           <>
                             <span className="text-white/70">{balance.opbouwLopendJaar}</span>
-                            <span className="text-white/30 text-sm ml-1">d</span>
+                            <span className="text-gray-500 text-sm ml-1">d</span>
                           </>
                         )}
                       </div>
                       <div className="text-right">
                         {balance.isPartner ? (
-                          <span className="text-white/30">-</span>
+                          <span className="text-gray-500">-</span>
                         ) : (balance.bijgekocht || 0) > 0 ? (
                           <>
                             <span className="text-green-400">{balance.bijgekocht}</span>
-                            <span className="text-white/30 text-sm ml-1">d</span>
+                            <span className="text-gray-500 text-sm ml-1">d</span>
                           </>
                         ) : (
-                          <span className="text-white/30">-</span>
+                          <span className="text-gray-500">-</span>
                         )}
                       </div>
                       <div className="text-right">
                         {balance.isPartner ? (
-                          <span className="text-white/30">-</span>
+                          <span className="text-gray-500">-</span>
                         ) : (
                           <>
                             <span className="text-white/70">{balance.opgenomenLopendJaar}</span>
-                            <span className="text-white/30 text-sm ml-1">d</span>
+                            <span className="text-gray-500 text-sm ml-1">d</span>
                           </>
                         )}
                       </div>
                       <div className="text-right flex items-center justify-end gap-3">
                         {balance.isPartner ? (
-                          <div className="px-3 py-1.5 rounded-lg text-sm bg-white/5 text-white/30">
+                          <div className="px-3 py-1.5 rounded-lg text-sm bg-white/5 text-gray-500">
                             -
                           </div>
                         ) : (
@@ -830,7 +830,7 @@ export default function VakantiesPage() {
                             </div>
                             <button
                               onClick={() => handleEditBalance(balance)}
-                              className="p-2 text-white/30 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                              className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                             >
                               <Icons.edit size={16} />
                             </button>
@@ -871,8 +871,8 @@ export default function VakantiesPage() {
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
                   <Icons.heart className="text-purple-400/50" size={28} />
                 </div>
-                <p className="text-white/50 mb-2">Geen ouderschapsverlof geregistreerd</p>
-                <p className="text-sm text-white/30">Klik op 'Toevoegen' om verlof toe te voegen voor een medewerker</p>
+                <p className="text-gray-400 mb-2">Geen ouderschapsverlof geregistreerd</p>
+                <p className="text-sm text-gray-500">Klik op 'Toevoegen' om verlof toe te voegen voor een medewerker</p>
               </div>
             ) : (
               <div className="divide-y divide-white/5">
@@ -897,11 +897,11 @@ export default function VakantiesPage() {
                                 Onbetaald: {onbetaaldResterend}/{leave.onbetaaldTotaalWeken}w
                               </span>
                               {leave.kindNaam && (
-                                <span className="text-white/40">Kind: {leave.kindNaam}</span>
+                                <span className="text-gray-400">Kind: {leave.kindNaam}</span>
                               )}
                             </div>
                             {leave.eindDatum && (
-                              <p className="text-xs text-white/30 mt-1">
+                              <p className="text-xs text-gray-500 mt-1">
                                 Te gebruiken tot: {new Date(leave.eindDatum).toLocaleDateString('nl-NL')}
                               </p>
                             )}
@@ -910,13 +910,13 @@ export default function VakantiesPage() {
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleEditParentalLeave(leave)}
-                            className="p-2 text-white/40 hover:text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors"
                           >
                             <Icons.edit size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteParentalLeave(leave.userId)}
-                            className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                           >
                             <Icons.trash size={16} />
                           </button>
@@ -937,7 +937,7 @@ export default function VakantiesPage() {
               </div>
               <div>
                 <h3 className="font-medium text-white mb-1">Over verlof beheer</h3>
-                <p className="text-sm text-white/50 leading-relaxed">
+                <p className="text-sm text-gray-400 leading-relaxed">
                   Hier kun je de vakantiedagen en ouderschapsverlof van alle medewerkers beheren.
                   Klik op het bewerk-icoon om gegevens aan te passen. Wijzigingen worden direct opgeslagen.
                 </p>
@@ -959,7 +959,7 @@ export default function VakantiesPage() {
                   <Icons.sun className="text-yellow-400" size={18} />
                 </div>
                 <p className="text-3xl font-semibold text-white">{awayThisWeek.length}</p>
-                <p className="text-sm text-white/40">Afwezig deze week</p>
+                <p className="text-sm text-gray-400">Afwezig deze week</p>
               </div>
             </div>
 
@@ -970,7 +970,7 @@ export default function VakantiesPage() {
                   <Icons.calendar className="text-blue-400" size={18} />
                 </div>
                 <p className="text-3xl font-semibold text-white">{vacations.filter(v => v.status === 'APPROVED').length}</p>
-                <p className="text-sm text-white/40">Goedgekeurde vakanties</p>
+                <p className="text-sm text-gray-400">Goedgekeurde vakanties</p>
               </div>
             </div>
 
@@ -981,7 +981,7 @@ export default function VakantiesPage() {
                   <Icons.users className="text-purple-400" size={18} />
                 </div>
                 <p className="text-3xl font-semibold text-white">{uniquePeople.length}</p>
-                <p className="text-sm text-white/40">Teamleden met vakantie</p>
+                <p className="text-sm text-gray-400">Teamleden met vakantie</p>
               </div>
             </div>
           </div>
@@ -1005,7 +1005,7 @@ export default function VakantiesPage() {
                     </div>
                   </div>
                   {myParentalLeave.eindDatum && (
-                    <span className="text-xs text-white/40">
+                    <span className="text-xs text-gray-400">
                       Te gebruiken tot {new Date(myParentalLeave.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </span>
                   )}
@@ -1016,7 +1016,7 @@ export default function VakantiesPage() {
                   <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-green-400 font-medium">Betaald verlof (70% UWV)</span>
-                      <span className="text-xs text-white/40">
+                      <span className="text-xs text-gray-400">
                         {myParentalLeave.betaaldOpgenomenWeken} / {myParentalLeave.betaaldTotaalWeken} weken
                       </span>
                     </div>
@@ -1035,7 +1035,7 @@ export default function VakantiesPage() {
                   <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-purple-400 font-medium">Onbetaald verlof</span>
-                      <span className="text-xs text-white/40">
+                      <span className="text-xs text-gray-400">
                         {myParentalLeave.onbetaaldOpgenomenWeken} / {myParentalLeave.onbetaaldTotaalWeken} weken
                       </span>
                     </div>
@@ -1053,7 +1053,7 @@ export default function VakantiesPage() {
 
                 {myParentalLeave.note && (
                   <div className="mt-4 p-3 rounded-xl bg-white/5 border border-white/10">
-                    <p className="text-sm text-white/60 flex items-center gap-2">
+                    <p className="text-sm text-gray-400 flex items-center gap-2">
                       <Icons.info size={14} className="text-purple-400" />
                       {myParentalLeave.note}
                     </p>
@@ -1071,7 +1071,7 @@ export default function VakantiesPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-sm font-medium text-white mb-0.5">Schoolvakanties Noord-Holland</h3>
-                <p className="text-xs text-white/50">
+                <p className="text-xs text-gray-400">
                   Periodes gemarkeerd in <span className="text-red-400 font-medium">rood</span> zijn schoolvakanties.
                 </p>
               </div>
@@ -1100,7 +1100,7 @@ export default function VakantiesPage() {
                         {v.user.name.charAt(0)}
                       </div>
                       <span className="font-medium text-white">{v.user.name}</span>
-                      <span className="text-white/40 text-xs">
+                      <span className="text-gray-400 text-xs">
                         {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
                       </span>
                     </div>
@@ -1116,7 +1116,7 @@ export default function VakantiesPage() {
               <button
                 onClick={() => setViewMode('week')}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  viewMode === 'week' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  viewMode === 'week' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Icons.calendar size={14} />
@@ -1125,7 +1125,7 @@ export default function VakantiesPage() {
               <button
                 onClick={() => setViewMode('month')}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  viewMode === 'month' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  viewMode === 'month' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Icons.grid size={14} />
@@ -1134,7 +1134,7 @@ export default function VakantiesPage() {
               <button
                 onClick={() => setViewMode('timeline')}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  viewMode === 'timeline' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  viewMode === 'timeline' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Icons.list size={14} />
@@ -1150,11 +1150,11 @@ export default function VakantiesPage() {
                   else newDate.setMonth(newDate.getMonth() - 1)
                   setCurrentDate(newDate)
                 }}
-                className="p-2 sm:p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                className="p-2 sm:p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
               >
                 <Icons.chevronLeft size={18} />
               </button>
-              <span className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-white/60 min-w-[100px] sm:min-w-[140px] text-center">
+              <span className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-400 min-w-[100px] sm:min-w-[140px] text-center">
                 {viewMode === 'week'
                   ? `Week ${Math.ceil((currentDate.getDate() + new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay()) / 7)}`
                   : currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
@@ -1167,7 +1167,7 @@ export default function VakantiesPage() {
                   else newDate.setMonth(newDate.getMonth() + 1)
                   setCurrentDate(newDate)
                 }}
-                className="p-2 sm:p-2.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                className="p-2 sm:p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
               >
                 <Icons.chevronRight size={18} />
               </button>
@@ -1181,7 +1181,7 @@ export default function VakantiesPage() {
                 <h2 className="font-semibold text-white text-sm sm:text-base">
                   Week van {formatDate(getWeekDays(currentDate)[0])} - {formatDate(getWeekDays(currentDate)[6])}
                 </h2>
-                <div className="flex items-center gap-2 text-xs text-white/50">
+                <div className="flex items-center gap-2 text-xs text-gray-400">
                   <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" />
                   <span>Schoolvakantie</span>
                 </div>
@@ -1201,7 +1201,7 @@ export default function VakantiesPage() {
                       {schoolHoliday && (
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500/40 via-red-500/60 to-red-500/40" />
                       )}
-                      <div className={`text-center mb-3 ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400/80' : 'text-white/40'}`}>
+                      <div className={`text-center mb-3 ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400/80' : 'text-gray-400'}`}>
                         <p className="text-xs font-medium uppercase">
                           {day.toLocaleDateString('nl-NL', { weekday: 'short' })}
                         </p>
@@ -1209,7 +1209,7 @@ export default function VakantiesPage() {
                           {day.getDate()}
                         </p>
                         {schoolHoliday && (
-                          <p className="text-[9px] text-red-400/70 mt-0.5 truncate px-1">{schoolHoliday.name.replace(/\s*\d{4}$/, '')}</p>
+                          <p className="text-xs text-red-400/70 mt-0.5 truncate px-1">{schoolHoliday.name.replace(/\s*\d{4}$/, '')}</p>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -1223,7 +1223,7 @@ export default function VakantiesPage() {
                               style={{ backgroundColor: color + '20' }}
                             >
                               <p className="text-xs font-medium text-white truncate">{v.user.name}</p>
-                              {v.reason && <p className="text-[10px] text-white/40 truncate">{v.reason}</p>}
+                              {v.reason && <p className="text-xs text-gray-400 truncate">{v.reason}</p>}
                             </button>
                           )
                         })}
@@ -1243,7 +1243,7 @@ export default function VakantiesPage() {
                 <h2 className="font-semibold text-white capitalize">
                   {currentDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
                 </h2>
-                <div className="flex items-center gap-2 text-xs text-white/50">
+                <div className="flex items-center gap-2 text-xs text-gray-400">
                   <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/30" />
                   <span>Schoolvakantie</span>
                 </div>
@@ -1251,7 +1251,7 @@ export default function VakantiesPage() {
               <div className="p-5">
                 <div className="grid grid-cols-7 mb-3">
                   {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map(day => (
-                    <div key={day} className="text-center text-xs text-white/40 py-2 font-medium">{day}</div>
+                    <div key={day} className="text-center text-xs text-gray-400 py-2 font-medium">{day}</div>
                   ))}
                 </div>
                 <div className="grid grid-cols-7 gap-1">
@@ -1274,7 +1274,7 @@ export default function VakantiesPage() {
                         <span className={`text-sm font-medium ${
                           isToday(day.date) ? 'text-workx-lime' :
                           schoolHoliday && day.isCurrentMonth ? 'text-red-400' :
-                          day.isCurrentMonth ? 'text-white/60' : 'text-white/20'
+                          day.isCurrentMonth ? 'text-gray-400' : 'text-gray-500'
                         }`}>
                           {day.date.getDate()}
                         </span>
@@ -1284,7 +1284,7 @@ export default function VakantiesPage() {
                             return (
                               <div
                                 key={v.id}
-                                className="text-[10px] px-1.5 py-0.5 rounded truncate font-medium"
+                                className="text-xs px-1.5 py-0.5 rounded truncate font-medium"
                                 style={{ backgroundColor: color + '20', color }}
                               >
                                 {v.user.name.split(' ')[0]}
@@ -1292,7 +1292,7 @@ export default function VakantiesPage() {
                             )
                           })}
                           {dayVacations.length > 3 && (
-                            <span className="text-[10px] text-white/40">+{dayVacations.length - 3}</span>
+                            <span className="text-xs text-gray-400">+{dayVacations.length - 3}</span>
                           )}
                         </div>
                       </div>
@@ -1316,7 +1316,7 @@ export default function VakantiesPage() {
                       <Icons.sun className="text-yellow-400/50" size={32} />
                     </div>
                     <h3 className="text-lg font-medium text-white mb-2">Geen vakanties gepland</h3>
-                    <p className="text-white/40 mb-4">Voeg een vakantie toe om te beginnen</p>
+                    <p className="text-gray-400 mb-4">Voeg een vakantie toe om te beginnen</p>
                     <button onClick={() => setShowForm(true)} className="btn-primary inline-flex items-center gap-2">
                       <Icons.plus size={16} />
                       Vakantie toevoegen
@@ -1349,21 +1349,21 @@ export default function VakantiesPage() {
                             <div className="flex items-center gap-3">
                               <h3 className="font-medium text-white">{v.user.name}</h3>
                               {isActive && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-400">
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400">
                                   Nu afwezig
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-3 mt-1 text-sm text-white/40">
+                            <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
                               <span className="flex items-center gap-1.5">
                                 <Icons.calendar size={12} />
                                 {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
                               </span>
-                              <span className="text-white/20">•</span>
+                              <span className="text-gray-500">•</span>
                               <span>{v.days} {v.days === 1 ? 'dag' : 'dagen'}</span>
                               {v.reason && (
                                 <>
-                                  <span className="text-white/20">•</span>
+                                  <span className="text-gray-500">•</span>
                                   <span>{v.reason}</span>
                                 </>
                               )}
@@ -1373,13 +1373,13 @@ export default function VakantiesPage() {
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleEdit(v)}
-                                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                               >
                                 <Icons.edit size={16} />
                               </button>
                               <button
                                 onClick={() => handleDelete(v.id)}
-                                className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                               >
                                 <Icons.trash size={16} />
                               </button>
@@ -1413,7 +1413,7 @@ export default function VakantiesPage() {
               </div>
               <button
                 onClick={resetForm}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 <Icons.x size={18} />
               </button>
@@ -1423,7 +1423,7 @@ export default function VakantiesPage() {
               {/* Team member selection - only for admins */}
               {isAdmin && (
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Wie gaat er met vakantie?</label>
+                  <label className="block text-sm text-gray-400 mb-2">Wie gaat er met vakantie?</label>
                   <div className="relative">
                     <button
                       type="button"
@@ -1440,14 +1440,14 @@ export default function VakantiesPage() {
                       ) : (
                         <>
                           <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                            <Icons.user className="text-white/30" size={16} />
+                            <Icons.user className="text-gray-500" size={16} />
                           </div>
-                          <span className="flex-1 text-white/40">Selecteer een teamlid...</span>
+                          <span className="flex-1 text-gray-400">Selecteer een teamlid...</span>
                         </>
                       )}
                       <Icons.chevronDown
                         size={18}
-                        className={`text-white/30 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
+                        className={`text-gray-500 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
                       />
                     </button>
 
@@ -1494,7 +1494,7 @@ export default function VakantiesPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Van</label>
+                  <label className="block text-sm text-gray-400 mb-2">Van</label>
                   <DatePicker
                     selected={startDate}
                     onChange={setStartDate}
@@ -1503,7 +1503,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Tot en met</label>
+                  <label className="block text-sm text-gray-400 mb-2">Tot en met</label>
                   <DatePicker
                     selected={endDate}
                     onChange={setEndDate}
@@ -1514,9 +1514,9 @@ export default function VakantiesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">Reden (optioneel)</label>
+                <label className="block text-sm text-gray-400 mb-2">Reden (optioneel)</label>
                 <div className="relative">
-                  <Icons.edit className="absolute left-3 top-3 text-white/30" size={16} />
+                  <Icons.edit className="absolute left-3 top-3 text-gray-500" size={16} />
                   <input
                     type="text"
                     value={reason}
@@ -1559,7 +1559,7 @@ export default function VakantiesPage() {
               </div>
               <button
                 onClick={resetParentalLeaveForm}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 <Icons.x size={18} />
               </button>
@@ -1569,7 +1569,7 @@ export default function VakantiesPage() {
               {/* Team member selection - only when creating */}
               {!editingParentalLeave && (
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Medewerker</label>
+                  <label className="block text-sm text-gray-400 mb-2">Medewerker</label>
                   <div className="relative">
                     <button
                       type="button"
@@ -1586,14 +1586,14 @@ export default function VakantiesPage() {
                       ) : (
                         <>
                           <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                            <Icons.user className="text-white/30" size={16} />
+                            <Icons.user className="text-gray-500" size={16} />
                           </div>
-                          <span className="flex-1 text-white/40">Selecteer een medewerker...</span>
+                          <span className="flex-1 text-gray-400">Selecteer een medewerker...</span>
                         </>
                       )}
                       <Icons.chevronDown
                         size={18}
-                        className={`text-white/30 transition-transform ${showParentalMemberDropdown ? 'rotate-180' : ''}`}
+                        className={`text-gray-500 transition-transform ${showParentalMemberDropdown ? 'rotate-180' : ''}`}
                       />
                     </button>
 
@@ -1643,7 +1643,7 @@ export default function VakantiesPage() {
               {/* Kind gegevens */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Naam kind</label>
+                  <label className="block text-sm text-gray-400 mb-2">Naam kind</label>
                   <input
                     type="text"
                     value={parentalLeaveForm.kindNaam}
@@ -1653,7 +1653,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Geboortedatum kind</label>
+                  <label className="block text-sm text-gray-400 mb-2">Geboortedatum kind</label>
                   <DatePicker
                     selected={parentalLeaveForm.kindGeboorteDatum}
                     onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, kindGeboorteDatum: date })}
@@ -1668,7 +1668,7 @@ export default function VakantiesPage() {
                 <h4 className="text-sm font-medium text-green-400 mb-3">Betaald verlof (70% UWV)</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-white/50 mb-1">Totaal weken</label>
+                    <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
                     <input
                       type="number"
                       step="0.5"
@@ -1678,7 +1678,7 @@ export default function VakantiesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-white/50 mb-1">Opgenomen weken</label>
+                    <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
                     <input
                       type="number"
                       step="0.5"
@@ -1695,7 +1695,7 @@ export default function VakantiesPage() {
                 <h4 className="text-sm font-medium text-purple-400 mb-3">Onbetaald verlof</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-white/50 mb-1">Totaal weken</label>
+                    <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
                     <input
                       type="number"
                       step="0.5"
@@ -1705,7 +1705,7 @@ export default function VakantiesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-white/50 mb-1">Opgenomen weken</label>
+                    <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
                     <input
                       type="number"
                       step="0.5"
@@ -1720,7 +1720,7 @@ export default function VakantiesPage() {
               {/* Periode en inzet */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Startdatum</label>
+                  <label className="block text-sm text-gray-400 mb-2">Startdatum</label>
                   <DatePicker
                     selected={parentalLeaveForm.startDatum}
                     onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, startDatum: date })}
@@ -1728,7 +1728,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Te gebruiken tot</label>
+                  <label className="block text-sm text-gray-400 mb-2">Te gebruiken tot</label>
                   <DatePicker
                     selected={parentalLeaveForm.eindDatum}
                     onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, eindDatum: date })}
@@ -1737,7 +1737,7 @@ export default function VakantiesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Uren per week</label>
+                  <label className="block text-sm text-gray-400 mb-2">Uren per week</label>
                   <input
                     type="number"
                     step="0.5"
@@ -1751,7 +1751,7 @@ export default function VakantiesPage() {
 
               {/* Notitie */}
               <div>
-                <label className="block text-sm text-white/60 mb-2">Notitie (optioneel)</label>
+                <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
                 <textarea
                   value={parentalLeaveForm.note}
                   onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, note: e.target.value })}

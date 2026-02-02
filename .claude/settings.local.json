@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:workx-dashboard.vercel.app)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout:*)",
+      "Bash(npx vercel:*)",
+      "Bash(npx prisma db push:*)"
+    ]
+  }
+}

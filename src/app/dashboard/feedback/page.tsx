@@ -93,7 +93,7 @@ export default function FeedbackPage() {
       case 'DONE':
         return <span className="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400">Afgerond</span>
       case 'WONT_FIX':
-        return <span className="px-2 py-1 text-xs rounded-full bg-white/10 text-white/50">Niet opgepakt</span>
+        return <span className="px-2 py-1 text-xs rounded-full bg-white/10 text-gray-400">Niet opgepakt</span>
     }
   }
 
@@ -127,57 +127,57 @@ export default function FeedbackPage() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 flex items-center justify-center">
-              <Icons.chat className="text-indigo-400" size={20} />
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 flex items-center justify-center">
+              <Icons.chat className="text-indigo-400" size={18} />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Feedback & Ideeën</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-white">Feedback & Ideeën</h1>
           </div>
-          <p className="text-white/40">Deel je ideeën of meld problemen met het dashboard</p>
+          <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Deel je ideeën of meld problemen met het dashboard</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 self-start sm:self-auto"
         >
-          <Icons.plus size={16} />
+          <Icons.plus size={14} className="sm:w-4 sm:h-4" />
           Nieuw
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="card p-5 relative overflow-hidden group">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="card p-3 sm:p-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
-              <Icons.sparkles className="text-purple-400" size={18} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-2 sm:mb-3">
+              <Icons.sparkles className="text-purple-400" size={16} />
             </div>
-            <p className="text-3xl font-semibold text-white">{ideasCount}</p>
-            <p className="text-sm text-white/40">Ideeën</p>
+            <p className="text-xl sm:text-3xl font-semibold text-white">{ideasCount}</p>
+            <p className="text-xs sm:text-sm text-gray-400">Ideeën</p>
           </div>
         </div>
 
-        <div className="card p-5 relative overflow-hidden group">
+        <div className="card p-3 sm:p-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-red-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-3">
-              <Icons.alertCircle className="text-red-400" size={18} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-2 sm:mb-3">
+              <Icons.alertCircle className="text-red-400" size={16} />
             </div>
-            <p className="text-3xl font-semibold text-white">{bugsCount}</p>
-            <p className="text-sm text-white/40">Problemen</p>
+            <p className="text-xl sm:text-3xl font-semibold text-white">{bugsCount}</p>
+            <p className="text-xs sm:text-sm text-gray-400">Problemen</p>
           </div>
         </div>
 
-        <div className="card p-5 relative overflow-hidden group">
+        <div className="card p-3 sm:p-5 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
-              <Icons.bell className="text-blue-400" size={18} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-2 sm:mb-3">
+              <Icons.bell className="text-blue-400" size={16} />
             </div>
-            <p className="text-3xl font-semibold text-white">{newCount}</p>
-            <p className="text-sm text-white/40">Nieuw / Open</p>
+            <p className="text-xl sm:text-3xl font-semibold text-white">{newCount}</p>
+            <p className="text-xs sm:text-sm text-gray-400">Open</p>
           </div>
         </div>
       </div>
@@ -195,7 +195,7 @@ export default function FeedbackPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
               filter === f.id
                 ? 'bg-workx-lime text-workx-dark'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
             }`}
           >
             {f.icon && <f.icon size={16} />}
@@ -217,7 +217,7 @@ export default function FeedbackPage() {
               <Icons.chat className="text-white/20" size={28} />
             </div>
             <h3 className="text-lg font-medium text-white mb-2">Nog geen feedback</h3>
-            <p className="text-white/40 mb-6">Wees de eerste die een idee deelt of probleem meldt!</p>
+            <p className="text-gray-400 mb-6">Wees de eerste die een idee deelt of probleem meldt!</p>
             <button onClick={() => setShowForm(true)} className="btn-primary">
               <Icons.plus size={16} className="mr-2" />
               Feedback geven
@@ -247,7 +247,7 @@ export default function FeedbackPage() {
                         </span>
                         {getStatusBadge(item.status)}
                       </div>
-                      <p className="text-xs text-white/40 mt-1">
+                      <p className="text-xs text-gray-400 mt-1">
                         Door {item.submittedBy} op {new Date(item.createdAt).toLocaleDateString('nl-NL', {
                           day: 'numeric',
                           month: 'short',
@@ -266,7 +266,7 @@ export default function FeedbackPage() {
                         <Icons.chat size={12} className="text-workx-lime" />
                         <span className="text-xs text-workx-lime font-medium">Reactie</span>
                       </div>
-                      <p className="text-sm text-white/60">{item.response}</p>
+                      <p className="text-sm text-gray-400">{item.response}</p>
                     </div>
                   )}
                 </div>
@@ -284,7 +284,7 @@ export default function FeedbackPage() {
           </div>
           <div>
             <h3 className="font-medium text-white mb-1">Hoe werkt dit?</h3>
-            <p className="text-sm text-white/50 leading-relaxed">
+            <p className="text-sm text-gray-400 leading-relaxed">
               <strong className="text-purple-400">Ideeën</strong> zijn suggesties voor nieuwe functies of verbeteringen.
               <br />
               <strong className="text-red-400">Problemen</strong> zijn bugs of dingen die niet goed werken.
@@ -306,7 +306,7 @@ export default function FeedbackPage() {
                 </div>
                 <h2 className="font-semibold text-white text-lg">Feedback geven</h2>
               </div>
-              <button onClick={() => setShowForm(false)} className="p-2 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+              <button onClick={() => setShowForm(false)} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
                 <Icons.x size={18} />
               </button>
             </div>
@@ -314,7 +314,7 @@ export default function FeedbackPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Type selector */}
               <div>
-                <label className="block text-sm text-white/60 mb-3">Wat wil je delen?</label>
+                <label className="block text-sm text-gray-400 mb-3">Wat wil je delen?</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -329,13 +329,13 @@ export default function FeedbackPage() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                         form.type === 'IDEA' ? 'bg-purple-500/20' : 'bg-white/5'
                       }`}>
-                        <Icons.sparkles className={form.type === 'IDEA' ? 'text-purple-400' : 'text-white/40'} size={16} />
+                        <Icons.sparkles className={form.type === 'IDEA' ? 'text-purple-400' : 'text-gray-400'} size={16} />
                       </div>
                       <span className={`font-medium ${form.type === 'IDEA' ? 'text-purple-400' : 'text-white'}`}>
                         Idee
                       </span>
                     </div>
-                    <p className="text-xs text-white/40">Een suggestie voor iets nieuws of een verbetering</p>
+                    <p className="text-xs text-gray-400">Een suggestie voor iets nieuws of een verbetering</p>
                   </button>
 
                   <button
@@ -351,20 +351,20 @@ export default function FeedbackPage() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                         form.type === 'BUG' ? 'bg-red-500/20' : 'bg-white/5'
                       }`}>
-                        <Icons.alertCircle className={form.type === 'BUG' ? 'text-red-400' : 'text-white/40'} size={16} />
+                        <Icons.alertCircle className={form.type === 'BUG' ? 'text-red-400' : 'text-gray-400'} size={16} />
                       </div>
                       <span className={`font-medium ${form.type === 'BUG' ? 'text-red-400' : 'text-white'}`}>
                         Probleem
                       </span>
                     </div>
-                    <p className="text-xs text-white/40">Iets werkt niet goed of is kapot</p>
+                    <p className="text-xs text-gray-400">Iets werkt niet goed of is kapot</p>
                   </button>
                 </div>
               </div>
 
               {/* Title */}
               <div>
-                <label className="block text-sm text-white/60 mb-2">
+                <label className="block text-sm text-gray-400 mb-2">
                   {form.type === 'IDEA' ? 'Wat is je idee?' : 'Wat werkt niet?'} *
                 </label>
                 <input
@@ -378,7 +378,7 @@ export default function FeedbackPage() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm text-white/60 mb-2">Beschrijving *</label>
+                <label className="block text-sm text-gray-400 mb-2">Beschrijving *</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}

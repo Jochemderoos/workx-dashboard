@@ -14,6 +14,23 @@ export const Icons = {
     </svg>
   ),
 
+  // Grachtenpand - Amsterdam canal house with stepped gable
+  grachtenpand: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {/* Stepped gable roof typical for Amsterdam */}
+      <path d="M6 21V11l6-7 6 7v10H6z" />
+      {/* Steps on the gable */}
+      <path d="M8 11V9l4-4.5L16 9v2" />
+      {/* Door */}
+      <path d="M10 21v-5h4v5" />
+      {/* Windows - two rows */}
+      <rect x="9" y="12" width="2" height="2" rx="0.3" />
+      <rect x="13" y="12" width="2" height="2" rx="0.3" />
+      {/* Hook at top for lifting goods */}
+      <circle cx="12" cy="6" r="0.8" />
+    </svg>
+  ),
+
   calendar: ({ className, size = 20 }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <rect x="3" y="4" width="18" height="18" rx="2" />

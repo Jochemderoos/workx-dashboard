@@ -24,6 +24,7 @@
     "jspdf": "^2.5.1",
     "next": "14.1.0",
     "next-auth": "^4.24.0",
+    "puppeteer": "^24.36.1",
     "react": "^18.2.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^18.2.0",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.11.0",
+    "@types/puppeteer": "^5.4.7",
     "@types/react": "^18.2.0",
     "@types/react-datepicker": "^6.2.0",
     "@types/react-dom": "^18.2.0",

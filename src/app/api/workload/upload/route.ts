@@ -19,6 +19,23 @@ const MEDEWERKERS = [
   'Julia Groen',
 ]
 
+// Dutch day and month names for parsing
+const DUTCH_DAYS = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
+const DUTCH_MONTHS: Record<string, string> = {
+  'januari': '01',
+  'februari': '02',
+  'maart': '03',
+  'april': '04',
+  'mei': '05',
+  'juni': '06',
+  'juli': '07',
+  'augustus': '08',
+  'september': '09',
+  'oktober': '10',
+  'november': '11',
+  'december': '12',
+}
+
 // Bepaal werkdruk level op basis van uren
 function getWorkloadLevel(hours: number): 'green' | 'yellow' | 'orange' | 'red' {
   if (hours <= 3) return 'green'    // Rustig
@@ -27,65 +44,105 @@ function getWorkloadLevel(hours: number): 'green' | 'yellow' | 'orange' | 'red' 
   return 'red'                       // Heel druk
 }
 
-// Parse RTF content en extraheer namen met uren
-function parseRTFContent(content: string): Map<string, number> {
-  const result = new Map<string, number>()
+interface WorkloadEntry {
+  personName: string
+  date: string
+  hours: number
+}
 
-  // Zoek naar alle uren (Nederlands formaat met komma)
-  const hoursMatches = content.match(/\d+,\d+/g) || []
+// Parse RTF content met Dutch dates (e.g. "woensdag, 28 januari 2026")
+function parseRTFWithDutchDates(content: string): WorkloadEntry[] {
+  const results: WorkloadEntry[] = []
 
-  // Voor elke medewerker, zoek hun naam en de bijbehorende uren
-  for (const medewerker of MEDEWERKERS) {
-    const firstName = medewerker.split(' ')[0]
+  // Build pattern for Dutch dates: "maandag, 1 januari 2026" etc
+  const dayPattern = DUTCH_DAYS.join('|')
+  const monthPattern = Object.keys(DUTCH_MONTHS).join('|')
+  const dateRegex = new RegExp(`(${dayPattern}),\\s*(\\d{1,2})\\s+(${monthPattern})\\s+(\\d{4})`, 'gi')
 
-    // Zoek de positie van de naam in het document
-    const nameIndex = content.indexOf(firstName)
-    if (nameIndex === -1) continue
+  // Find all Dutch dates and their positions
+  let dateMatch
+  const datesFound: { date: string; pos: number }[] = []
 
-    // Zoek het stuk tekst rond de naam (RTF row)
-    // Zoek naar getallen in de buurt van de naam
-    const surroundingText = content.substring(nameIndex, nameIndex + 500)
+  while ((dateMatch = dateRegex.exec(content)) !== null) {
+    const day = dateMatch[2].padStart(2, '0')
+    const monthName = dateMatch[3].toLowerCase()
+    const year = dateMatch[4]
+    const month = DUTCH_MONTHS[monthName]
+    const isoDate = `${year}-${month}-${day}`
+    datesFound.push({ date: isoDate, pos: dateMatch.index })
+  }
 
-    // Vind uren in dit stuk (formaat: X,XX)
-    const hourMatches = surroundingText.match(/(\d+),(\d+)/g)
-    if (hourMatches && hourMatches.length > 0) {
-      // De eerste match na de naam is meestal het totaal aantal uren
-      // Filter out dates (like 01,02) and keep hour values
-      for (const match of hourMatches) {
-        const [whole, decimal] = match.split(',')
-        const hours = parseFloat(`${whole}.${decimal}`)
-        // Valid working hours are typically between 0 and 24
-        if (hours >= 0 && hours <= 24) {
-          result.set(medewerker, hours)
-          break
+  // For each date occurrence, find the employee (before) and hours (after)
+  for (const dateItem of datesFound) {
+    // Look back for employee name (within ~3000 chars before date)
+    const searchStart = Math.max(0, dateItem.pos - 3000)
+    const beforeDate = content.substring(searchStart, dateItem.pos)
+
+    // Find the closest employee first name before this date
+    let employeeName = ''
+    let closestDistance = Infinity
+
+    for (const medewerker of MEDEWERKERS) {
+      const firstName = medewerker.split(' ')[0]
+      const lastIndex = beforeDate.lastIndexOf(firstName)
+      if (lastIndex !== -1) {
+        const distance = beforeDate.length - lastIndex
+        if (distance < closestDistance) {
+          closestDistance = distance
+          employeeName = medewerker
         }
       }
     }
+
+    if (!employeeName) continue
+
+    // Look forward for hours (X,XX pattern) - check next ~500 chars after date
+    const afterDateEnd = Math.min(content.length, dateItem.pos + 500)
+    const afterDate = content.substring(dateItem.pos, afterDateEnd)
+
+    // Find hour values after the date (format: X,XX)
+    const hoursPattern = /(\d{1,2}),(\d{2})/g
+    const hoursMatches: number[] = []
+    let hMatch
+    while ((hMatch = hoursPattern.exec(afterDate)) !== null) {
+      const h = parseFloat(`${hMatch[1]}.${hMatch[2]}`)
+      if (h >= 0 && h <= 24) {
+        hoursMatches.push(h)
+      }
+      // Only look at first few matches (before next row)
+      if (hoursMatches.length >= 4) break
+    }
+
+    // The last valid hours value is typically "Besteed" (worked hours)
+    const hours = hoursMatches.length > 0 ? hoursMatches[hoursMatches.length - 1] : null
+
+    if (hours !== null) {
+      results.push({
+        personName: employeeName,
+        date: dateItem.date,
+        hours
+      })
+    }
   }
 
-  return result
+  return results
 }
 
-// Alternatieve parsing: zoek naar tabelrijen met namen en uren
-function parseRTFTable(content: string): Map<string, number> {
-  const result = new Map<string, number>()
-
-  // Split op table rows
+// Legacy parsing: zoek naar tabelrijen met namen en uren (voor single-date files)
+function parseRTFTable(content: string, dateStr: string): WorkloadEntry[] {
+  const results: WorkloadEntry[] = []
   const rows = content.split(/\\row|\\trowd/)
 
   for (const row of rows) {
-    // Check of deze row een medewerker bevat
     for (const medewerker of MEDEWERKERS) {
       const firstName = medewerker.split(' ')[0]
       if (row.includes(firstName)) {
-        // Zoek uren in deze row
         const hourMatches = row.match(/(\d+),(\d{2})/g)
         if (hourMatches) {
-          // Neem de laatste match (vaak het totaal)
           const lastMatch = hourMatches[hourMatches.length - 1]
           const hours = parseFloat(lastMatch.replace(',', '.'))
           if (hours >= 0 && hours <= 24) {
-            result.set(medewerker, hours)
+            results.push({ personName: medewerker, date: dateStr, hours })
           }
         }
         break
@@ -93,7 +150,7 @@ function parseRTFTable(content: string): Map<string, number> {
     }
   }
 
-  return result
+  return results
 }
 
 export async function POST(req: NextRequest) {
@@ -118,57 +175,65 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData()
     const file = formData.get('file') as File
-    const dateStr = formData.get('date') as string
+    const dateStr = formData.get('date') as string | null
 
     if (!file) {
       return NextResponse.json({ error: 'Geen bestand geüpload' }, { status: 400 })
     }
 
-    if (!dateStr) {
-      return NextResponse.json({ error: 'Geen datum opgegeven' }, { status: 400 })
-    }
-
     // Lees bestand als text
     const content = await file.text()
 
-    // Parse de RTF content
-    let hoursPerPerson = parseRTFTable(content)
+    // Try parsing with Dutch dates first (preferred method)
+    let workloadEntries = parseRTFWithDutchDates(content)
 
-    // Als tabel parsing weinig resultaten geeft, probeer de andere methode
-    if (hoursPerPerson.size < 3) {
-      hoursPerPerson = parseRTFContent(content)
+    // If no results and we have a date parameter, try legacy parsing
+    if (workloadEntries.length === 0 && dateStr) {
+      workloadEntries = parseRTFTable(content, dateStr)
     }
 
-    if (hoursPerPerson.size === 0) {
+    // Remove duplicates (same person + date), keep last occurrence
+    const uniqueEntries: WorkloadEntry[] = []
+    const seen = new Map<string, number>()
+    for (let i = 0; i < workloadEntries.length; i++) {
+      const entry = workloadEntries[i]
+      const key = `${entry.personName}|${entry.date}`
+      seen.set(key, i)
+    }
+    for (const [, idx] of Array.from(seen.entries())) {
+      uniqueEntries.push(workloadEntries[idx])
+    }
+
+    if (uniqueEntries.length === 0) {
       return NextResponse.json(
         { error: 'Kon geen uren data vinden in het bestand. Controleer of het een geldig urenoverzicht is.' },
         { status: 400 }
       )
     }
 
-    // Sla werkdruk op voor elke gevonden medewerker
-    const results: { name: string; hours: number; level: string }[] = []
+    // Sla werkdruk op voor elke gevonden entry
+    const results: { name: string; date: string; hours: number; level: string }[] = []
 
-    const entries = Array.from(hoursPerPerson.entries())
-    for (const entry of entries) {
-      const personName = entry[0]
-      const hours = entry[1]
-      const level = getWorkloadLevel(hours)
+    for (const entry of uniqueEntries) {
+      const level = getWorkloadLevel(entry.hours)
 
       await prisma.workload.upsert({
         where: {
-          personName_date: { personName, date: dateStr }
+          personName_date: { personName: entry.personName, date: entry.date }
         },
-        update: { level },
-        create: { personName, date: dateStr, level }
+        update: { level, hours: entry.hours },
+        create: { personName: entry.personName, date: entry.date, level, hours: entry.hours }
       })
 
-      results.push({ name: personName, hours, level })
+      results.push({ name: entry.personName, date: entry.date, hours: entry.hours, level })
     }
+
+    // Get unique dates from results
+    const uniqueDates = Array.from(new Set(results.map(r => r.date)))
 
     return NextResponse.json({
       success: true,
-      date: dateStr,
+      dates: uniqueDates,
       processed: results.length,
       results
     })

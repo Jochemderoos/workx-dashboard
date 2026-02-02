@@ -114,6 +114,7 @@ export default function FinancienPage() {
   const [editingEmployee, setEditingEmployee] = useState<string | null>(null)
   const [editingSalaryScale, setEditingSalaryScale] = useState<string | null>(null)
   const [isEditingSalarishuis, setIsEditingSalarishuis] = useState(false)
+  const [editingVacation, setEditingVacation] = useState<string | null>(null)
 
   // Check if user is PARTNER or ADMIN
   const isManager = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -433,7 +434,7 @@ export default function FinancienPage() {
           {/* Zero label */}
           {showZeroLine && (
             <span
-              className="absolute right-0 text-[8px] text-white/40 -translate-y-1/2"
+              className="absolute right-0 text-xs text-gray-400 -translate-y-1/2"
               style={{ top: `${(zeroY / height) * 100}%` }}
             >
               €0
@@ -442,7 +443,7 @@ export default function FinancienPage() {
         </div>
         <div className="flex justify-between mt-2 px-2">
           {labels.map((label, i) => (
-            <span key={i} className="text-[10px] text-white/40">{label}</span>
+            <span key={i} className="text-xs text-gray-400">{label}</span>
           ))}
         </div>
         <div className="flex justify-center gap-6 mt-4">
@@ -495,7 +496,7 @@ export default function FinancienPage() {
           <span className={`text-lg font-semibold ${isOverBudget ? 'text-red-400' : 'text-workx-lime'}`}>
             {percentage.toFixed(0)}%
           </span>
-          <span className="text-[10px] text-white/40">gebruikt</span>
+          <span className="text-xs text-gray-400">gebruikt</span>
         </div>
       </div>
     )
@@ -812,44 +813,47 @@ export default function FinancienPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold text-white">Financien</h1>
-          <p className="text-white/40 mt-1">Overzicht werkgeverslasten, omzet en budgetten</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white">Financiën</h1>
+          <p className="text-gray-400 mt-1 text-sm sm:text-base">Overzicht werkgeverslasten, omzet en budgetten</p>
         </div>
         <button
           onClick={downloadPDF}
-          className="flex items-center gap-2 px-4 py-2 bg-workx-lime text-workx-dark rounded-xl font-medium hover:bg-workx-lime/90 transition-colors"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-workx-lime text-workx-dark rounded-xl font-medium hover:bg-workx-lime/90 transition-colors text-sm sm:text-base self-start sm:self-auto"
         >
           <Icons.download size={18} />
-          PDF Export
+          <span className="hidden sm:inline">PDF Export</span>
+          <span className="sm:hidden">PDF</span>
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { id: 'overzicht' as TabType, label: 'Overzicht', icon: Icons.chart },
-          { id: 'grafieken' as TabType, label: 'Grafieken', icon: Icons.activity },
-          { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
-          { id: 'salarishuis' as TabType, label: 'Salarishuis', icon: Icons.euro },
-          { id: 'arbeidsvoorwaarden' as TabType, label: 'Arbeidsvoorwaarden', icon: Icons.users },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
-              activeTab === tab.id
-                ? 'bg-workx-lime text-workx-dark'
-                : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <tab.icon size={18} />
-            {tab.label}
-          </button>
-        ))}
+      {/* Tabs - horizontally scrollable on mobile */}
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-2">
+        <div className="flex gap-2">
+          {[
+            { id: 'overzicht' as TabType, label: 'Overzicht', icon: Icons.chart },
+            { id: 'grafieken' as TabType, label: 'Grafieken', icon: Icons.activity },
+            { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
+            { id: 'salarishuis' as TabType, label: 'Salarishuis', icon: Icons.euro },
+            { id: 'arbeidsvoorwaarden' as TabType, label: 'Arbeidsvoorwaarden', icon: Icons.users },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl font-medium transition-all whitespace-nowrap text-xs sm:text-base ${
+                activeTab === tab.id
+                  ? 'bg-workx-lime text-workx-dark'
+                  : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <tab.icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Overzicht Tab */}
@@ -883,17 +887,17 @@ export default function FinancienPage() {
                 positive: true
               }
             ].map((kpi, i) => (
-              <div key={i} className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-                <p className="text-white/40 text-sm">{kpi.label}</p>
-                <p className="text-2xl font-semibold text-white mt-1">{kpi.value}</p>
-                <div className={`flex items-center gap-1 mt-2 text-sm ${
+              <div key={i} className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
+                <p className="text-gray-400 text-xs sm:text-sm truncate">{kpi.label}</p>
+                <p className="text-lg sm:text-2xl font-semibold text-white mt-1 truncate">{kpi.value}</p>
+                <div className={`flex items-center gap-1 mt-1 sm:mt-2 text-xs sm:text-sm ${
                   (kpi.positive && kpi.diff > 0) || (!kpi.positive && kpi.diff < 0)
                     ? 'text-green-400'
                     : 'text-red-400'
                 }`}>
-                  {kpi.diff > 0 ? <Icons.trendingUp size={14} /> : <Icons.trendingDown size={14} />}
-                  <span>{kpi.diff > 0 ? '+' : ''}{i === 3 ? formatNumber(kpi.diff) : formatCurrency(kpi.diff)}</span>
-                  <span className="text-white/30">vs {years[0]}</span>
+                  {kpi.diff > 0 ? <Icons.trendingUp size={12} className="flex-shrink-0 sm:w-[14px] sm:h-[14px]" /> : <Icons.trendingDown size={12} className="flex-shrink-0 sm:w-[14px] sm:h-[14px]" />}
+                  <span className="truncate">{kpi.diff > 0 ? '+' : ''}{i === 3 ? formatNumber(kpi.diff) : formatCurrency(kpi.diff)}</span>
+                  <span className="text-white/30 hidden sm:inline">vs {years[0]}</span>
                 </div>
               </div>
             ))}
@@ -921,10 +925,10 @@ export default function FinancienPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/5">
-                    <th className="text-left py-3 px-4 text-white/40 text-sm font-medium">Categorie</th>
-                    <th className="text-left py-3 px-4 text-white/40 text-sm font-medium">Jaar</th>
+                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Categorie</th>
+                    <th className="text-left py-3 px-4 text-gray-400 text-sm font-medium">Jaar</th>
                     {periods.map(p => (
-                      <th key={p} className="text-right py-3 px-4 text-white/40 text-sm font-medium">{p}</th>
+                      <th key={p} className="text-right py-3 px-4 text-gray-400 text-sm font-medium">{p}</th>
                     ))}
                     <th className="text-right py-3 px-4 text-workx-lime text-sm font-medium">Totaal</th>
                   </tr>
@@ -936,7 +940,7 @@ export default function FinancienPage() {
                       {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Werkgeverslasten</td>}
                       <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
                       {getDataForYear(year).werkgeverslasten.map((v, i) => (
-                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-white/80'}`}>
+                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
                           {formatCurrency(v)}
                         </td>
                       ))}
@@ -952,7 +956,7 @@ export default function FinancienPage() {
                       {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Omzet</td>}
                       <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
                       {getDataForYear(year).omzet.map((v, i) => (
-                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-white/80'}`}>
+                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
                           {formatCurrency(v)}
                         </td>
                       ))}
@@ -968,7 +972,7 @@ export default function FinancienPage() {
                       {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Uren</td>}
                       <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
                       {getDataForYear(year).uren.map((v, i) => (
-                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-white/80'}`}>
+                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
                           {formatNumber(v)}
                         </td>
                       ))}
@@ -1028,7 +1032,7 @@ export default function FinancienPage() {
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
                     {periods.map((p, i) => (
                       <div key={p} className="space-y-1">
-                        <label className="text-[10px] text-white/40 block">{p}</label>
+                        <label className="text-xs text-gray-400 block">{p}</label>
                         <input
                           type="number"
                           value={currentYearData[category as keyof typeof currentYearData][i] || ''}
@@ -1126,8 +1130,8 @@ export default function FinancienPage() {
                             className={`w-10 rounded-t-lg transition-all ${barColors[i]}`}
                             style={{ height: `${(Math.abs(v) / max) * 100}%`, minHeight: 20 }}
                           />
-                          <span className="text-[10px] text-white/40">{years[i]}</span>
-                          <span className="text-[10px] text-white/80">{isUren ? formatNumber(v) : formatCurrency(v)}</span>
+                          <span className="text-xs text-gray-400">{years[i]}</span>
+                          <span className="text-xs text-gray-200">{isUren ? formatNumber(v) : formatCurrency(v)}</span>
                         </div>
                       ))}
                     </div>
@@ -1143,50 +1147,53 @@ export default function FinancienPage() {
       {activeTab === 'budgetten' && (
         <div className="space-y-6">
           {/* Budget Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-              <p className="text-white/40 text-sm">Totaal Budget</p>
-              <p className="text-2xl font-semibold text-white mt-1">{formatCurrency(totalBudget)}</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
+              <p className="text-gray-400 text-xs sm:text-sm">Totaal Budget</p>
+              <p className="text-base sm:text-2xl font-semibold text-white mt-1 truncate">{formatCurrency(totalBudget)}</p>
             </div>
-            <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-              <p className="text-white/40 text-sm">Totaal Besteed</p>
-              <p className="text-2xl font-semibold text-white mt-1">{formatCurrency(totalSpent)}</p>
-              <p className="text-sm text-white/40 mt-1">{((totalSpent / totalBudget) * 100).toFixed(1)}% van budget</p>
+            <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
+              <p className="text-gray-400 text-xs sm:text-sm">Besteed</p>
+              <p className="text-base sm:text-2xl font-semibold text-white mt-1 truncate">{formatCurrency(totalSpent)}</p>
+              <p className="text-xs sm:text-sm text-gray-400 mt-1 hidden sm:block">{((totalSpent / totalBudget) * 100).toFixed(1)}% van budget</p>
             </div>
-            <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-              <p className="text-white/40 text-sm">Nog te Besteden</p>
-              <p className={`text-2xl font-semibold mt-1 ${totalBudget - totalSpent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
+              <p className="text-gray-400 text-xs sm:text-sm">Beschikbaar</p>
+              <p className={`text-base sm:text-2xl font-semibold mt-1 truncate ${totalBudget - totalSpent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {formatCurrency(totalBudget - totalSpent)}
               </p>
             </div>
           </div>
 
           {/* Add Budget Form */}
-          <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-            <h3 className="text-white font-medium mb-4">Nieuw Budget Toevoegen</h3>
-            <div className="flex gap-4">
+          <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
+            <h3 className="text-white font-medium mb-4 text-sm sm:text-base">Nieuw Budget Toevoegen</h3>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <input
                 type="text"
                 value={newBudgetName}
                 onChange={(e) => setNewBudgetName(e.target.value)}
                 placeholder="Budget naam (bijv. Marketing)"
-                className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/50"
+                className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/50 text-sm sm:text-base"
               />
-              <input
-                type="number"
-                value={newBudgetAmount}
-                onChange={(e) => setNewBudgetAmount(e.target.value)}
-                placeholder="Bedrag"
-                className="w-40 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/50"
-              />
-              <button
-                onClick={addBudget}
-                disabled={!newBudgetName || !newBudgetAmount}
-                className="flex items-center gap-2 px-4 py-2 bg-workx-lime text-workx-dark rounded-xl font-medium hover:bg-workx-lime/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Icons.plus size={18} />
-                Toevoegen
-              </button>
+              <div className="flex gap-3 sm:gap-4">
+                <input
+                  type="number"
+                  value={newBudgetAmount}
+                  onChange={(e) => setNewBudgetAmount(e.target.value)}
+                  placeholder="Bedrag"
+                  className="flex-1 sm:w-40 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/50 text-sm sm:text-base"
+                />
+                <button
+                  onClick={addBudget}
+                  disabled={!newBudgetName || !newBudgetAmount}
+                  className="flex items-center gap-2 px-4 py-2 bg-workx-lime text-workx-dark rounded-xl font-medium hover:bg-workx-lime/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
+                >
+                  <Icons.plus size={18} />
+                  <span className="hidden sm:inline">Toevoegen</span>
+                  <span className="sm:hidden">+</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1213,10 +1220,10 @@ export default function FinancienPage() {
                             className="w-32 px-2 py-1 bg-white/5 border border-white/10 rounded text-white text-sm focus:outline-none focus:border-workx-lime/50"
                             autoFocus
                           />
-                          <span className="text-white/40 text-sm">budget</span>
+                          <span className="text-gray-400 text-sm">budget</span>
                         </div>
                       ) : (
-                        <p className="text-white/40 text-sm mt-1">
+                        <p className="text-gray-400 text-sm mt-1">
                           Budget: {formatCurrency(budget.budget)}
                           <button
                             onClick={() => setEditingBudget(budget.id)}
@@ -1249,17 +1256,17 @@ export default function FinancienPage() {
                   {/* Stats */}
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                      <p className="text-white/40 text-xs">Besteed</p>
+                      <p className="text-gray-400 text-xs">Besteed</p>
                       <p className="text-white font-medium">{formatCurrency(budget.spent)}</p>
                     </div>
                     <div>
-                      <p className="text-white/40 text-xs">Resterend</p>
+                      <p className="text-gray-400 text-xs">Resterend</p>
                       <p className={`font-medium ${remaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {formatCurrency(remaining)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-white/40 text-xs">Percentage</p>
+                      <p className="text-gray-400 text-xs">Percentage</p>
                       <p className={`font-medium ${percentage > 100 ? 'text-red-400' : 'text-workx-lime'}`}>
                         {percentage.toFixed(1)}%
                       </p>
@@ -1268,7 +1275,7 @@ export default function FinancienPage() {
 
                   {/* Update spent input */}
                   <div className="mt-4 pt-4 border-t border-white/10">
-                    <label className="text-white/40 text-xs block mb-2">Kosten bijwerken</label>
+                    <label className="text-gray-400 text-xs block mb-2">Kosten bijwerken</label>
                     <div className="flex gap-2">
                       <input
                         type="number"
@@ -1321,13 +1328,15 @@ export default function FinancienPage() {
       {activeTab === 'salarishuis' && (
         <div className="space-y-6">
           {/* Header with buttons for managers */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="text-white/60 text-sm">
-                Het salarishuis van Workx Advocaten - Tarieven per ervaringsjaar
+                <span className="hidden sm:inline">Het salarishuis van Workx Advocaten - Tarieven per ervaringsjaar</span>
+                <span className="sm:hidden">Salarishuis - Tarieven per jaar</span>
               </p>
-              <p className="text-white/40 text-xs mt-1">
-                Alle medewerkers gaan per 1 maart elk jaar automatisch een stap omhoog
+              <p className="text-gray-400 text-xs mt-1">
+                <span className="hidden sm:inline">Alle medewerkers gaan per 1 maart elk jaar automatisch een stap omhoog</span>
+                <span className="sm:hidden">Per 1 maart automatisch een stap omhoog</span>
               </p>
             </div>
             {isManager && (
@@ -1416,7 +1425,7 @@ export default function FinancienPage() {
                             ) : (
                               <>
                                 <span className="text-white font-semibold text-lg">{formatCurrency(scale.salary)}</span>
-                                <span className="text-white/40 text-sm ml-1">/maand</span>
+                                <span className="text-gray-400 text-sm ml-1">/maand</span>
                               </>
                             )}
                           </td>
@@ -1442,7 +1451,7 @@ export default function FinancienPage() {
                                   placeholder="min"
                                   className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-16 text-right focus:border-workx-lime/50 focus:outline-none"
                                 />
-                                <span className="text-white/40">-</span>
+                                <span className="text-gray-400">-</span>
                                 <input
                                   type="number"
                                   id={`rateMax-${scale.id}`}
@@ -1498,7 +1507,7 @@ export default function FinancienPage() {
                                   </button>
                                   <button
                                     onClick={() => setEditingSalaryScale(null)}
-                                    className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                                    className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
                                     title="Annuleren"
                                   >
                                     <Icons.x size={14} />
@@ -1507,7 +1516,7 @@ export default function FinancienPage() {
                               ) : (
                                 <button
                                   onClick={() => setEditingSalaryScale(scale.id)}
-                                  className="p-2 rounded-lg text-white/40 hover:text-workx-lime hover:bg-white/10 transition-colors"
+                                  className="p-2 rounded-lg text-gray-400 hover:text-workx-lime hover:bg-white/10 transition-colors"
                                   title="Bewerken"
                                 >
                                   <Icons.edit size={14} />
@@ -1527,7 +1536,7 @@ export default function FinancienPage() {
               <Icons.euro size={48} className="text-white/20 mx-auto mb-4" />
               <p className="text-white/60">Nog geen salarisschaal geladen</p>
               {isManager && (
-                <p className="text-white/40 text-sm mt-2">Klik op "Salarisschaal Laden" om te beginnen</p>
+                <p className="text-gray-400 text-sm mt-2">Klik op "Salarisschaal Laden" om te beginnen</p>
               )}
             </div>
           )}
@@ -1545,7 +1554,7 @@ export default function FinancienPage() {
                 : 'Jouw arbeidsvoorwaarden en bonussen'
               }
             </p>
-            <p className="text-white/40 text-xs mt-1">
+            <p className="text-gray-400 text-xs mt-1">
               Salarissen zijn gekoppeld aan het salarishuis per 1 maart 2026
             </p>
           </div>
@@ -1580,11 +1589,11 @@ export default function FinancienPage() {
                     <div className={`h-1 bg-gradient-to-r ${isHannaOrLotte ? 'from-cyan-400 via-cyan-400/50' : 'from-workx-lime via-workx-lime/50'} to-transparent`} />
 
                     {/* Photo and Name Section */}
-                    <div className="p-6 pb-4">
+                    <div className="p-4 sm:p-6 pb-4">
                       <div className="flex items-start gap-4">
                         {/* Photo */}
                         <div className="relative flex-shrink-0">
-                          <div className={`w-20 h-20 rounded-xl overflow-hidden ring-2 ${isHannaOrLotte ? 'ring-cyan-400/30 shadow-cyan-400/20' : 'ring-workx-lime/30 shadow-workx-lime/20'} shadow-lg`}>
+                          <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden ring-2 ${isHannaOrLotte ? 'ring-cyan-400/30 shadow-cyan-400/20' : 'ring-workx-lime/30 shadow-workx-lime/20'} shadow-lg`}>
                             {photoUrl ? (
                               <img
                                 src={photoUrl}
@@ -1593,7 +1602,7 @@ export default function FinancienPage() {
                               />
                             ) : (
                               <div className={`w-full h-full bg-gradient-to-br ${isHannaOrLotte ? 'from-cyan-400 to-cyan-400/60' : 'from-workx-lime to-workx-lime/60'} flex items-center justify-center`}>
-                                <span className="text-workx-dark text-2xl font-bold">
+                                <span className="text-workx-dark text-xl sm:text-2xl font-bold">
                                   {employee.name.charAt(0)}
                                 </span>
                               </div>
@@ -1608,7 +1617,7 @@ export default function FinancienPage() {
                           {/* Support staff badge */}
                           {isHannaOrLotte && (
                             <div className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-lg bg-cyan-400 flex items-center justify-center shadow-lg">
-                              <span className="text-workx-dark text-[10px] font-bold">STAFF</span>
+                              <span className="text-workx-dark text-xs font-bold">STAFF</span>
                             </div>
                           )}
                         </div>
@@ -1616,7 +1625,7 @@ export default function FinancienPage() {
                         {/* Name and Role */}
                         <div className="flex-1 min-w-0">
                           <h3 className="text-white font-semibold text-lg truncate">{employee.name}</h3>
-                          <p className="text-white/40 text-sm">{employee.role === 'ADMIN' ? 'Kantoormanager' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role}</p>
+                          <p className="text-gray-400 text-sm">{employee.role === 'ADMIN' ? 'Kantoormanager' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role}</p>
                           {yearsOfService !== null && (
                             <p className={`${isHannaOrLotte ? 'text-cyan-400/60' : 'text-workx-lime/60'} text-xs mt-1`}>
                               {yearsOfService} jaar bij Workx
@@ -1627,12 +1636,12 @@ export default function FinancienPage() {
                     </div>
 
                     {/* Stats Section */}
-                    <div className="px-6 py-4 border-t border-white/5 bg-black/20">
+                    <div className="px-4 sm:px-6 py-4 border-t border-white/5 bg-black/20">
                       {isHannaOrLotte ? (
                         /* Support Staff: Salary/Hourly wage only */
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">
+                            <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">
                               {isHourlyWage ? 'Uurloon' : 'Salaris'}
                             </p>
                             <p className="text-cyan-400 font-semibold">
@@ -1644,7 +1653,7 @@ export default function FinancienPage() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Type</p>
+                            <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Type</p>
                             <p className="text-white font-medium">
                               {isHourlyWage ? 'Uurloner' : 'Vast contract'}
                             </p>
@@ -1652,32 +1661,30 @@ export default function FinancienPage() {
                         </div>
                       ) : (
                         /* Lawyers: Experience year, salary, hourly rate */
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-4">
-                            {/* Experience Year */}
+                        <div>
+                          {/* Row 1: Experience Year and Hourly Rate */}
+                          <div className="flex justify-between items-start mb-4">
                             <div>
-                              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Ervaringsjaar</p>
-                              <p className="text-white font-medium">
+                              <span className="text-gray-400 text-sm block mb-1">Ervaringsjaar</span>
+                              <span className="text-white text-base">
                                 {salaryScale?.label || (employee.compensation?.experienceYear !== null ? `${employee.compensation?.experienceYear}e jaars` : '-')}
-                              </p>
+                              </span>
                             </div>
-
-                            {/* Hourly Rate */}
-                            <div>
-                              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Uurtarief</p>
-                              <p className="text-workx-lime font-semibold">
+                            <div className="text-right">
+                              <span className="text-gray-400 text-sm block mb-1">Uurtarief</span>
+                              <span className="text-workx-lime text-base font-semibold">
                                 {employee.compensation ? `€${employee.compensation.hourlyRate}` : '-'}
-                              </p>
+                              </span>
                             </div>
                           </div>
 
-                          {/* Salary from Salarishuis */}
-                          <div>
-                            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Bruto Salaris (per 1-3-2026)</p>
-                            <p className="text-white font-semibold text-lg">
+                          {/* Row 2: Salary */}
+                          <div className="pt-4 border-t border-gray-700">
+                            <span className="text-gray-400 text-sm block mb-1">Bruto Salaris</span>
+                            <span className="text-white font-bold text-xl">
                               {employee.compensation?.salary ? formatCurrency(employee.compensation.salary) : (salaryScale ? formatCurrency(salaryScale.salary) : '-')}
-                              <span className="text-white/40 text-sm font-normal ml-1">/maand</span>
-                            </p>
+                            </span>
+                            <span className="text-gray-500 text-sm ml-1">/mnd</span>
                           </div>
                         </div>
                       )}
@@ -1685,22 +1692,22 @@ export default function FinancienPage() {
 
                     {/* Bonus Section - only for lawyers */}
                     {!isHannaOrLotte && (
-                      <div className="px-6 py-4 border-t border-white/5">
-                        <p className="text-white/40 text-xs uppercase tracking-wider mb-3">Bonus {currentYear}</p>
-                        <div className="flex items-center gap-4">
+                      <div className="px-4 sm:px-6 py-4 border-t border-white/5">
+                        <p className="text-gray-400 text-xs uppercase tracking-wider mb-3">Bonus {currentYear}</p>
+                        <div className="grid grid-cols-2 gap-3">
                           {/* Paid Bonus */}
-                          <div className="flex-1">
+                          <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <div className="w-2 h-2 rounded-full bg-green-500" />
+                              <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
                               <span className="text-white/60 text-xs">Betaald</span>
                             </div>
                             <p className="text-green-400 font-semibold">{formatCurrency(employee.bonusPaid)}</p>
                           </div>
 
                           {/* Pending Bonus */}
-                          <div className="flex-1">
+                          <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                              <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse flex-shrink-0" />
                               <span className="text-white/60 text-xs">In afwachting</span>
                             </div>
                             <p className="text-orange-400 font-semibold">{formatCurrency(employee.bonusPending)}</p>
@@ -1725,33 +1732,35 @@ export default function FinancienPage() {
 
                     {/* Vacation Section */}
                     {employee.vacationBalance && (
-                      <div className="px-6 py-4 border-t border-white/5">
+                      <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-white/40 text-xs uppercase tracking-wider flex items-center gap-2">
-                            <Icons.sun size={12} className="text-green-400" />
-                            Vakantiedagen {currentYear}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <Icons.sun size={14} className="text-green-400" />
+                            <span className="text-gray-400 text-sm">Vakantiedagen {currentYear}</span>
+                          </div>
                           {employee.parentalLeave && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex justify-between items-start">
                           {/* Remaining Days */}
-                          <div className="flex-1">
-                            <p className="text-2xl font-bold text-green-400">
+                          <div>
+                            <span className="text-2xl font-bold text-green-400">
                               {(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht - employee.vacationBalance.opgenomenLopendJaar).toFixed(1)}
-                            </p>
-                            <p className="text-white/40 text-xs">dagen over</p>
+                            </span>
+                            <span className="text-gray-400 text-sm block">dagen over</span>
                           </div>
 
                           {/* Details */}
-                          <div className="flex-1 text-right space-y-1">
-                            <p className="text-xs text-white/50">
-                              <span className="text-white/30">Totaal:</span> {(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht).toFixed(1)}
-                            </p>
-                            <p className="text-xs text-white/50">
-                              <span className="text-white/30">Opgenomen:</span> {employee.vacationBalance.opgenomenLopendJaar.toFixed(1)}
-                            </p>
+                          <div className="text-right space-y-1">
+                            <div className="text-sm">
+                              <span className="text-gray-500">Totaal: </span>
+                              <span className="text-gray-300">{(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht).toFixed(1)}</span>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-gray-500">Opgenomen: </span>
+                              <span className="text-gray-300">{employee.vacationBalance.opgenomenLopendJaar.toFixed(1)}</span>
+                            </div>
                           </div>
                         </div>
 
@@ -1779,10 +1788,10 @@ export default function FinancienPage() {
 
                     {/* Edit Button (for managers) */}
                     {isManager && (
-                      <div className="px-6 py-3 border-t border-white/5 bg-black/10">
+                      <div className="px-4 sm:px-6 py-3 border-t border-white/5 bg-black/10">
                         <button
                           onClick={() => setEditingEmployee(editingEmployee === employee.id ? null : employee.id)}
-                          className={`w-full flex items-center justify-center gap-2 text-white/40 ${isHannaOrLotte ? 'hover:text-cyan-400' : 'hover:text-workx-lime'} transition-colors text-sm`}
+                          className={`w-full flex items-center justify-center gap-2 text-gray-400 ${isHannaOrLotte ? 'hover:text-cyan-400' : 'hover:text-workx-lime'} transition-colors text-sm`}
                         >
                           <Icons.edit size={14} />
                           <span>Bewerken</span>
@@ -1795,7 +1804,7 @@ export default function FinancienPage() {
                               /* Support staff edit form - manual salary/hourly wage */
                               <>
                                 <div>
-                                  <label className="text-white/40 text-xs block mb-1">Type beloning</label>
+                                  <label className="text-gray-400 text-xs block mb-1">Type beloning</label>
                                   <select
                                     defaultValue={isHourlyWage ? 'hourly' : 'salary'}
                                     onChange={async (e) => {
@@ -1825,7 +1834,7 @@ export default function FinancienPage() {
                                   </select>
                                 </div>
                                 <div>
-                                  <label className="text-white/40 text-xs block mb-1">
+                                  <label className="text-gray-400 text-xs block mb-1">
                                     {isHourlyWage ? 'Uurloon (€)' : 'Bruto salaris (€)'}
                                   </label>
                                   <input
@@ -1861,7 +1870,7 @@ export default function FinancienPage() {
                             ) : (
                               /* Lawyer edit form - experience year selection */
                               <div>
-                                <label className="text-white/40 text-xs block mb-1">Ervaringsjaar</label>
+                                <label className="text-gray-400 text-xs block mb-1">Ervaringsjaar</label>
                                 <select
                                   defaultValue={employee.compensation?.experienceYear ?? 0}
                                   onChange={async (e) => {

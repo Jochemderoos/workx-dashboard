@@ -529,13 +529,13 @@ export default function TransitiePage() {
     <div className="max-w-6xl space-y-8 fade-in">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center">
-            <Icons.calculator className="text-purple-400" size={20} />
+        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center">
+            <Icons.calculator className="text-purple-400" size={18} />
           </div>
-          <h1 className="text-2xl font-semibold text-white">Transitievergoeding</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white">Transitievergoeding</h1>
         </div>
-        <p className="text-white/40">Bereken de wettelijke transitievergoeding voor werknemers</p>
+        <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Bereken de wettelijke transitievergoeding voor werknemers</p>
       </div>
 
       {/* Info Card */}
@@ -547,7 +547,7 @@ export default function TransitiePage() {
           </div>
           <div>
             <h3 className="font-medium text-white mb-1">Wettelijke formule</h3>
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-gray-400">
               De transitievergoeding bedraagt{' '}
               <span className="text-purple-400 font-medium">1/3 bruto maandsalaris</span> per
               gewerkt jaar. Maximum is het hogere van{' '}
@@ -562,7 +562,7 @@ export default function TransitiePage() {
         {/* Form */}
         <div className="lg:col-span-3 card p-6 space-y-5">
           <h2 className="font-medium text-white flex items-center gap-2">
-            <Icons.edit size={16} className="text-white/40" />
+            <Icons.edit size={16} className="text-gray-400" />
             Gegevens invoeren
             {editingId && (
               <span className="ml-2 text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">
@@ -574,7 +574,7 @@ export default function TransitiePage() {
           {/* Werkgever / Werknemer */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-white/60 mb-2">Werkgever</label>
+              <label className="block text-sm text-gray-400 mb-2">Werkgever</label>
               <div className="relative">
                 <Icons.building
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"
@@ -590,7 +590,7 @@ export default function TransitiePage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm text-white/60 mb-2">Werknemer</label>
+              <label className="block text-sm text-gray-400 mb-2">Werknemer</label>
               <div className="relative">
                 <Icons.user
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"
@@ -610,7 +610,7 @@ export default function TransitiePage() {
           {/* Datums */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-white/60 mb-2">Datum in dienst *</label>
+              <label className="block text-sm text-gray-400 mb-2">Datum in dienst *</label>
               <DatePicker
                 selected={form.startDate ? new Date(form.startDate) : null}
                 onChange={(date) => setForm({ ...form, startDate: date ? date.toISOString().split('T')[0] : '' })}
@@ -619,7 +619,7 @@ export default function TransitiePage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-white/60 mb-2">Datum uit dienst *</label>
+              <label className="block text-sm text-gray-400 mb-2">Datum uit dienst *</label>
               <DatePicker
                 selected={form.endDate ? new Date(form.endDate) : null}
                 onChange={(date) => setForm({ ...form, endDate: date ? date.toISOString().split('T')[0] : '' })}
@@ -631,7 +631,7 @@ export default function TransitiePage() {
 
           {/* Bruto salaris */}
           <div>
-            <label className="block text-sm text-white/60 mb-2">Bruto maandsalaris *</label>
+            <label className="block text-sm text-gray-400 mb-2">Bruto maandsalaris *</label>
             <div className="relative">
               <Icons.euro
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"
@@ -659,7 +659,7 @@ export default function TransitiePage() {
               />
               <div className="flex-1">
                 <span className="text-white text-sm font-medium">Vakantiegeld</span>
-                <p className="text-xs text-white/40">Standaard 8% van het bruto maandsalaris</p>
+                <p className="text-xs text-gray-400">Standaard 8% van het bruto maandsalaris</p>
               </div>
               {form.vacationMoney && (
                 <div className="flex items-center gap-2">
@@ -670,7 +670,7 @@ export default function TransitiePage() {
                     onChange={(e) => setForm({ ...form, vacationPercent: e.target.value })}
                     className="w-16 bg-white/10 border border-white/10 rounded-lg px-2 py-1 text-sm text-white text-right focus:outline-none focus:border-workx-lime/50"
                   />
-                  <span className="text-white/40 text-sm">%</span>
+                  <span className="text-gray-400 text-sm">%</span>
                 </div>
               )}
             </label>
@@ -684,7 +684,7 @@ export default function TransitiePage() {
               />
               <div className="flex-1">
                 <span className="text-white text-sm font-medium">13e maand</span>
-                <p className="text-xs text-white/40">8,3% van het bruto jaarsalaris</p>
+                <p className="text-xs text-gray-400">8,3% van het bruto jaarsalaris</p>
               </div>
             </label>
           </div>
@@ -692,7 +692,7 @@ export default function TransitiePage() {
           {/* Bonus sectie */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <label className="block text-sm text-white/60">Bonus</label>
+              <label className="block text-sm text-gray-400">Bonus</label>
               {form.bonusType !== 'none' && (
                 <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
                   Actief
@@ -716,7 +716,7 @@ export default function TransitiePage() {
                     className={`flex-1 px-3 py-2 rounded-lg text-sm transition-all ${
                       form.bonusType === option.value
                         ? 'bg-purple-500/20 border-purple-500/50 text-purple-400 border'
-                        : 'bg-white/5 border border-white/10 text-white/60 hover:border-white/20'
+                        : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20'
                     }`}
                   >
                     {option.label}
@@ -753,7 +753,7 @@ export default function TransitiePage() {
                   {!form.endDate ? (
                     <div className="text-center py-4">
                       <Icons.calendar className="text-white/20 mx-auto mb-2" size={24} />
-                      <p className="text-sm text-white/40">
+                      <p className="text-sm text-gray-400">
                         Vul eerst de <span className="text-purple-400">einddatum</span> in om de bonus te berekenen
                       </p>
                     </div>
@@ -822,7 +822,7 @@ export default function TransitiePage() {
 
                       {/* Overig veld */}
                       <div>
-                        <label className="block text-xs text-white/40 mb-1">
+                        <label className="block text-xs text-gray-400 mb-1">
                           Overige variabele looncomponenten (totaal over 3 jaar)
                         </label>
                         <div className="relative">
@@ -895,7 +895,7 @@ export default function TransitiePage() {
           {/* Overwerk & Overige */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-white/60 mb-2">Overwerk p/m</label>
+              <label className="block text-sm text-gray-400 mb-2">Overwerk p/m</label>
               <div className="relative">
                 <Icons.euro
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"
@@ -912,7 +912,7 @@ export default function TransitiePage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm text-white/60 mb-2">Overige p/m</label>
+              <label className="block text-sm text-gray-400 mb-2">Overige p/m</label>
               <div className="relative">
                 <Icons.euro
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30"
@@ -942,7 +942,7 @@ export default function TransitiePage() {
               <span className="text-white text-sm font-medium">
                 Pensioen of AOW-leeftijd bereikt?
               </span>
-              <p className="text-xs text-white/40">Relevant voor de berekening</p>
+              <p className="text-xs text-gray-400">Relevant voor de berekening</p>
             </div>
           </label>
 
@@ -970,7 +970,7 @@ export default function TransitiePage() {
               <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 p-6 text-center">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
                 <div className="relative">
-                  <p className="text-sm text-white/60 mb-2">Transitievergoeding</p>
+                  <p className="text-sm text-gray-400 mb-2">Transitievergoeding</p>
                   <p className="text-4xl font-semibold text-purple-400 mb-1">
                     {formatCurrency(result.amount)}
                   </p>
@@ -985,8 +985,8 @@ export default function TransitiePage() {
               {/* Details */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-white/60 flex items-center gap-2">
-                    <Icons.calendar size={14} className="text-white/40" />
+                  <span className="text-sm text-gray-400 flex items-center gap-2">
+                    <Icons.calendar size={14} className="text-gray-400" />
                     Dienstverband
                   </span>
                   <span className="text-sm font-medium text-white">
@@ -994,8 +994,8 @@ export default function TransitiePage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-white/60 flex items-center gap-2">
-                    <Icons.euro size={14} className="text-white/40" />
+                  <span className="text-sm text-gray-400 flex items-center gap-2">
+                    <Icons.euro size={14} className="text-gray-400" />
                     Salaris (bruto p/m)
                   </span>
                   <span className="text-sm font-medium text-white">
@@ -1003,8 +1003,8 @@ export default function TransitiePage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-white/60 flex items-center gap-2">
-                    <Icons.chart size={14} className="text-white/40" />
+                  <span className="text-sm text-gray-400 flex items-center gap-2">
+                    <Icons.chart size={14} className="text-gray-400" />
                     Jaarsalaris
                   </span>
                   <span className="text-sm font-medium text-white">
@@ -1013,8 +1013,8 @@ export default function TransitiePage() {
                 </div>
                 {result.bonusPerMonth > 0 && (
                   <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                    <span className="text-sm text-white/60 flex items-center gap-2">
-                      <Icons.star size={14} className="text-white/40" />
+                    <span className="text-sm text-gray-400 flex items-center gap-2">
+                      <Icons.star size={14} className="text-gray-400" />
                       Bonus p/m
                     </span>
                     <span className="text-sm font-medium text-white">
@@ -1023,8 +1023,8 @@ export default function TransitiePage() {
                   </div>
                 )}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-white/60 flex items-center gap-2">
-                    <Icons.calculator size={14} className="text-white/40" />
+                  <span className="text-sm text-gray-400 flex items-center gap-2">
+                    <Icons.calculator size={14} className="text-gray-400" />
                     1/3 maandsalaris
                   </span>
                   <span className="text-sm font-medium text-white">
@@ -1074,7 +1074,7 @@ export default function TransitiePage() {
                 <Icons.calculator className="text-white/20" size={28} />
               </div>
               <h3 className="text-white font-medium mb-2">Klaar om te berekenen</h3>
-              <p className="text-white/40 text-sm">
+              <p className="text-gray-400 text-sm">
                 Vul de gegevens in om de transitievergoeding te berekenen
               </p>
             </div>
@@ -1084,7 +1084,7 @@ export default function TransitiePage() {
           {form.employeeName && employeeCalculations.length > 0 && (
             <div className="card p-4 space-y-3">
               <h3 className="text-sm font-medium text-white flex items-center gap-2">
-                <Icons.history size={14} className="text-white/40" />
+                <Icons.history size={14} className="text-gray-400" />
                 Eerdere berekeningen voor {form.employeeName}
               </h3>
               <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -1101,7 +1101,7 @@ export default function TransitiePage() {
                       <span className="text-sm font-medium text-white">
                         {formatCurrency(calc.amount)}
                       </span>
-                      <span className="text-xs text-white/40">
+                      <span className="text-xs text-gray-400">
                         {new Date(calc.createdAt).toLocaleDateString('nl-NL')}
                       </span>
                     </div>
@@ -1134,7 +1134,7 @@ export default function TransitiePage() {
       {savedCalculations.length > 0 && (
         <div className="card p-4 sm:p-6">
           <h2 className="font-medium text-white flex items-center gap-2 mb-4">
-            <Icons.history size={16} className="text-white/40" />
+            <Icons.history size={16} className="text-gray-400" />
             Alle opgeslagen berekeningen
           </h2>
 
@@ -1186,13 +1186,13 @@ export default function TransitiePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-2 text-white/40 font-medium">Datum</th>
-                  <th className="text-left py-3 px-2 text-white/40 font-medium">Werkgever</th>
-                  <th className="text-left py-3 px-2 text-white/40 font-medium">Werknemer</th>
-                  <th className="text-left py-3 px-2 text-white/40 font-medium">Dienstverband</th>
-                  <th className="text-right py-3 px-2 text-white/40 font-medium">Salaris</th>
-                  <th className="text-right py-3 px-2 text-white/40 font-medium">Transitie</th>
-                  <th className="text-right py-3 px-2 text-white/40 font-medium">Acties</th>
+                  <th className="text-left py-3 px-2 text-gray-400 font-medium">Datum</th>
+                  <th className="text-left py-3 px-2 text-gray-400 font-medium">Werkgever</th>
+                  <th className="text-left py-3 px-2 text-gray-400 font-medium">Werknemer</th>
+                  <th className="text-left py-3 px-2 text-gray-400 font-medium">Dienstverband</th>
+                  <th className="text-right py-3 px-2 text-gray-400 font-medium">Salaris</th>
+                  <th className="text-right py-3 px-2 text-gray-400 font-medium">Transitie</th>
+                  <th className="text-right py-3 px-2 text-gray-400 font-medium">Acties</th>
                 </tr>
               </thead>
               <tbody>
@@ -1203,12 +1203,12 @@ export default function TransitiePage() {
                       editingId === calc.id ? 'bg-purple-500/10' : ''
                     }`}
                   >
-                    <td className="py-3 px-2 text-white/60">
+                    <td className="py-3 px-2 text-gray-400">
                       {new Date(calc.createdAt).toLocaleDateString('nl-NL')}
                     </td>
                     <td className="py-3 px-2 text-white">{calc.employerName || '-'}</td>
                     <td className="py-3 px-2 text-white">{calc.employeeName || '-'}</td>
-                    <td className="py-3 px-2 text-white/60">
+                    <td className="py-3 px-2 text-gray-400">
                       {calc.years}j {calc.months}m
                     </td>
                     <td className="py-3 px-2 text-white text-right">
@@ -1221,14 +1221,14 @@ export default function TransitiePage() {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => loadCalculation(calc)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-purple-400 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-purple-400 transition-colors"
                           title="Laden"
                         >
                           <Icons.edit size={14} />
                         </button>
                         <button
                           onClick={() => deleteCalculation(calc.id)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-red-400 transition-colors"
                           title="Verwijderen"
                         >
                           <Icons.trash size={14} />
@@ -1247,7 +1247,7 @@ export default function TransitiePage() {
       <div className="card p-4 border-white/5">
         <div className="flex items-start gap-3">
           <Icons.shield size={16} className="text-white/30 mt-0.5" />
-          <p className="text-xs text-white/40 leading-relaxed">
+          <p className="text-xs text-gray-400 leading-relaxed">
             <strong className="text-white/50">Disclaimer:</strong> Deze berekening is indicatief en
             gebaseerd op de wettelijke regeling per 1 januari 2020. Maximum 2026: € 102.000 of
             jaarsalaris indien hoger. De daadwerkelijke transitievergoeding kan afwijken door

@@ -19,6 +19,7 @@ export async function GET() {
         role: true,
         phoneNumber: true,
         department: true,
+        birthDate: true,
       }
     })
 
@@ -43,7 +44,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { name, phoneNumber, department } = await req.json()
+    const { name, phoneNumber, department, birthDate } = await req.json()
 
     const user = await prisma.user.update({
       where: { id: session.user.id },
@@ -51,6 +52,7 @@ export async function PATCH(req: NextRequest) {
         ...(name && { name }),
         ...(phoneNumber !== undefined && { phoneNumber }),
         ...(department !== undefined && { department }),
+        ...(birthDate !== undefined && { birthDate }),
       },
       select: {
         id: true,
@@ -58,6 +60,7 @@ export async function PATCH(req: NextRequest) {
         email: true,
         phoneNumber: true,
         department: true,
+        birthDate: true,
       }
     })
 

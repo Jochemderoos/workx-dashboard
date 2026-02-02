@@ -56,6 +56,9 @@ model User {
   // Sessions for NextAuth
   sessions          Session[]
   accounts          Account[]
+
+  // Compensation
+  compensation      EmployeeCompensation?
 }
 
 model Account {
@@ -326,6 +329,7 @@ model Workload {
   personName String   // Naam van de medewerker
   date       String   // YYYY-MM-DD format
   level      String   // green, yellow, orange, red
+  hours      Float?   // Optioneel: aantal uren (uit upload)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -397,6 +401,46 @@ model LustrumPacklist {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId])
+}
+
+// Ideeënbox voor Lustrum - iedereen kan ideeën insturen
+model LustrumIdea {
+  id          String   @id @default(cuid())
+  content     String   // Het idee
+  submittedBy String   // Naam van de inzender
+  isAnonymous Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// ==================== SALARISHUIS & ARBEIDSVOORWAARDEN ====================
+
+// Salarisschaal - het salarishuis
+model SalaryScale {
+  id              String   @id @default(cuid())
+  experienceYear  Int      @unique // 0 = juridisch medewerker, 1 = 1e jaars, etc.
+  label           String   // "Juridisch medewerker", "1e jaars", etc.
+  salary          Float    // Bruto maandsalaris
+  hourlyRateBase  Float    // Basis uurtarief
+  hourlyRateMin   Float?   // Minimum range
+  hourlyRateMax   Float?   // Maximum range
+  validFrom       DateTime @default(now()) // Geldig vanaf datum
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Medewerker arbeidsvoorwaarden - per medewerker
+model EmployeeCompensation {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  experienceYear  Int?     // Hoeveelste jaars (null voor support staff zoals Hanna/Lotte)
+  hourlyRate      Float    // Actueel uurtarief (kan afwijken van schaal)
+  salary          Float?   // Handmatig ingevoerd salaris (voor Hanna/Lotte)
+  isHourlyWage    Boolean  @default(false) // True voor uurloners zoals Lotte
+  notes           String?  // Notities
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ==================== KANTOOR AANWEZIGHEID ====================

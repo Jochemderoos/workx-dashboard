@@ -19,7 +19,43 @@ interface User {
 export default function SettingsPage() {
   const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
-  const [profile, setProfile] = useState({ name: 'Admin Workx', phone: '', department: '' })
+  const [profile, setProfile] = useState({ name: '', phone: '', department: '', birthDate: '' })
+  const [profileLoaded, setProfileLoaded] = useState(false)
+
+  // Load profile from API
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const res = await fetch('/api/user/profile')
+        if (res.ok) {
+          const data = await res.json()
+          setProfile({
+            name: data.name || session?.user?.name || '',
+            phone: data.phoneNumber || '',
+            department: data.department || '',
+            birthDate: data.birthDate || ''
+          })
+        } else {
+          // Fallback to session data
+          setProfile(prev => ({
+            ...prev,
+            name: session?.user?.name || ''
+          }))
+        }
+      } catch (e) {
+        // Fallback to session data
+        setProfile(prev => ({
+          ...prev,
+          name: session?.user?.name || ''
+        }))
+      } finally {
+        setProfileLoaded(true)
+      }
+    }
+    if (session?.user) {
+      loadProfile()
+    }
+  }, [session])
   const [password, setPassword] = useState({ current: '', new: '', confirm: '' })
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'admin'>('profile')
 
@@ -134,7 +170,7 @@ export default function SettingsPage() {
     switch (role) {
       case 'ADMIN': return 'badge badge-lime'
       case 'PARTNER': return 'badge bg-purple-500/20 text-purple-300'
-      default: return 'badge bg-white/10 text-white/60'
+      default: return 'badge bg-white/10 text-gray-400'
     }
   }
 
@@ -153,7 +189,12 @@ export default function SettingsPage() {
       const res = await fetch('/api/user/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: profile.name, phoneNumber: profile.phone || null, department: profile.department || null }),
+        body: JSON.stringify({
+          name: profile.name,
+          phoneNumber: profile.phone || null,
+          department: profile.department || null,
+          birthDate: profile.birthDate || null
+        }),
       })
       if (!res.ok) throw new Error()
       toast.success('Profiel bijgewerkt')
@@ -197,13 +238,13 @@ export default function SettingsPage() {
     <div className="max-w-4xl space-y-8 fade-in">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-            <Icons.settings className="text-white/60" size={20} />
+        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+            <Icons.settings className="text-gray-400" size={18} />
           </div>
-          <h1 className="text-2xl font-semibold text-white">Instellingen</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white">Instellingen</h1>
         </div>
-        <p className="text-white/40">Beheer je account en voorkeuren</p>
+        <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Beheer je account en voorkeuren</p>
       </div>
 
       {/* Account Info Card */}
@@ -212,15 +253,16 @@ export default function SettingsPage() {
         <div className="relative flex items-center gap-5">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center shadow-lg shadow-workx-lime/20">
             <span className="text-workx-dark font-bold text-3xl">
-              {profile.name.charAt(0).toUpperCase()}
+              {(profile.name || session?.user?.name || 'U').charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-white">{profile.name}</h2>
-            <p className="text-white/40">admin@workxadvocaten.nl</p>
+            <h2 className="text-xl font-semibold text-white">{profile.name || session?.user?.name || 'Gebruiker'}</h2>
+            <p className="text-gray-400">{session?.user?.email || ''}</p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="badge badge-lime">Administrator</span>
-              <span className="text-xs text-white/30">Actief sinds jan 2024</span>
+              <span className={session?.user?.role === 'ADMIN' ? 'badge badge-lime' : session?.user?.role === 'PARTNER' ? 'badge bg-purple-500/20 text-purple-300' : 'badge bg-white/10 text-gray-400'}>
+                {session?.user?.role === 'ADMIN' ? 'Administrator' : session?.user?.role === 'PARTNER' ? 'Partner' : 'Medewerker'}
+              </span>
             </div>
           </div>
         </div>
@@ -235,7 +277,7 @@ export default function SettingsPage() {
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab.id
                 ? 'bg-workx-lime text-workx-dark'
-                : 'text-white/50 hover:text-white hover:bg-white/5'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
           >
             <tab.icon size={16} />
@@ -248,27 +290,24 @@ export default function SettingsPage() {
       {activeTab === 'profile' && (
         <div className="card p-6 space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-white/5">
-            <Icons.user className="text-white/40" size={18} />
+            <Icons.user className="text-gray-400" size={18} />
             <h2 className="font-medium text-white">Profiel informatie</h2>
           </div>
 
           <form onSubmit={updateProfile} className="space-y-5">
             <div>
-              <label className="block text-sm text-white/60 mb-2">Email</label>
-              <div className="relative">
-                <Icons.mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                <input
-                  type="email"
-                  value="admin@workxadvocaten.nl"
-                  disabled
-                  className="input-field pl-11 opacity-50 cursor-not-allowed"
-                />
-              </div>
+              <label className="block text-sm text-gray-400 mb-2">Email</label>
+              <input
+                type="email"
+                value={session?.user?.email || ''}
+                disabled
+                className="input-field opacity-50 cursor-not-allowed"
+              />
               <p className="text-xs text-white/30 mt-1.5">Email kan niet worden gewijzigd</p>
             </div>
 
             <div>
-              <label className="block text-sm text-white/60 mb-2">Volledige naam</label>
+              <label className="block text-sm text-gray-400 mb-2">Volledige naam</label>
               <div className="relative">
                 <Icons.user className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                 <input
@@ -283,7 +322,7 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-white/60 mb-2">Telefoonnummer</label>
+                <label className="block text-sm text-gray-400 mb-2">Telefoonnummer</label>
                 <div className="relative">
                   <Icons.phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                   <input
@@ -297,7 +336,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">Afdeling</label>
+                <label className="block text-sm text-gray-400 mb-2">Afdeling</label>
                 <div className="relative">
                   <Icons.briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                   <input
@@ -309,6 +348,21 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Verjaardag</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg">🎂</span>
+                <input
+                  type="text"
+                  value={profile.birthDate}
+                  onChange={(e) => setProfile({ ...profile, birthDate: e.target.value })}
+                  className="input-field pl-11"
+                  placeholder="MM-DD (bijv. 03-15 voor 15 maart)"
+                />
+              </div>
+              <p className="text-xs text-white/30 mt-1.5">Wordt getoond in de verjaardagen widget</p>
             </div>
 
             <div className="pt-4">
@@ -333,13 +387,13 @@ export default function SettingsPage() {
       {activeTab === 'security' && (
         <div className="card p-6 space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-white/5">
-            <Icons.shield className="text-white/40" size={18} />
+            <Icons.shield className="text-gray-400" size={18} />
             <h2 className="font-medium text-white">Wachtwoord wijzigen</h2>
           </div>
 
           <form onSubmit={updatePassword} className="space-y-5">
             <div>
-              <label className="block text-sm text-white/60 mb-2">Huidig wachtwoord</label>
+              <label className="block text-sm text-gray-400 mb-2">Huidig wachtwoord</label>
               <div className="relative">
                 <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                 <input
@@ -353,7 +407,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-white/60 mb-2">Nieuw wachtwoord</label>
+              <label className="block text-sm text-gray-400 mb-2">Nieuw wachtwoord</label>
               <div className="relative">
                 <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                 <input
@@ -368,7 +422,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-white/60 mb-2">Bevestig nieuw wachtwoord</label>
+              <label className="block text-sm text-gray-400 mb-2">Bevestig nieuw wachtwoord</label>
               <div className="relative">
                 <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                 <input
@@ -407,7 +461,7 @@ export default function SettingsPage() {
                 { icon: Icons.check, text: 'Combineer letters, cijfers en symbolen', done: true },
                 { icon: Icons.x, text: 'Schakel tweefactorauthenticatie in', done: false },
               ].map((tip, i) => (
-                <div key={i} className={`flex items-center gap-3 text-sm ${tip.done ? 'text-green-400' : 'text-white/40'}`}>
+                <div key={i} className={`flex items-center gap-3 text-sm ${tip.done ? 'text-green-400' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center ${tip.done ? 'bg-green-500/10' : 'bg-white/5'}`}>
                     <tip.icon size={12} />
                   </div>
@@ -422,7 +476,7 @@ export default function SettingsPage() {
       {activeTab === 'notifications' && (
         <div className="card p-6 space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-white/5">
-            <Icons.bell className="text-white/40" size={18} />
+            <Icons.bell className="text-gray-400" size={18} />
             <h2 className="font-medium text-white">Notificatie voorkeuren</h2>
           </div>
 
@@ -437,7 +491,7 @@ export default function SettingsPage() {
               <label key={setting.id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:border-white/10 transition-colors">
                 <div>
                   <h4 className="text-sm font-medium text-white">{setting.title}</h4>
-                  <p className="text-xs text-white/40 mt-0.5">{setting.desc}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{setting.desc}</p>
                 </div>
                 <div className="relative">
                   <input
@@ -467,7 +521,7 @@ export default function SettingsPage() {
           <div className="card p-6">
             <div className="flex items-center justify-between pb-4 border-b border-white/5">
               <div className="flex items-center gap-3">
-                <Icons.users className="text-white/40" size={18} />
+                <Icons.users className="text-gray-400" size={18} />
                 <h2 className="font-medium text-white">Gebruikersbeheer</h2>
               </div>
               <button
@@ -499,7 +553,7 @@ export default function SettingsPage() {
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-semibold ${
                         user.isActive
                           ? 'bg-gradient-to-br from-workx-lime to-workx-lime/80 text-workx-dark'
-                          : 'bg-white/10 text-white/40'
+                          : 'bg-white/10 text-gray-400'
                       }`}>
                         {user.name.charAt(0).toUpperCase()}
                       </div>
@@ -511,13 +565,13 @@ export default function SettingsPage() {
                             <span className="badge bg-red-500/20 text-red-300">Inactief</span>
                           )}
                         </div>
-                        <p className="text-sm text-white/40">{user.email}</p>
+                        <p className="text-sm text-gray-400">{user.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { setSelectedUser(user); setShowResetModal(true) }}
-                        className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                         title="Wachtwoord resetten"
                       >
                         <Icons.lock size={16} />
@@ -526,7 +580,7 @@ export default function SettingsPage() {
                         onClick={() => toggleUserActive(user)}
                         className={`p-2 rounded-lg transition-all ${
                           user.isActive
-                            ? 'text-white/40 hover:text-red-400 hover:bg-red-500/10'
+                            ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
                             : 'text-green-400 hover:bg-green-500/10'
                         }`}
                         title={user.isActive ? 'Deactiveren' : 'Activeren'}
@@ -555,13 +609,13 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-semibold text-white text-lg">Nieuw account aanmaken</h2>
-                  <p className="text-sm text-white/50">Voeg een nieuwe medewerker toe</p>
+                  <p className="text-sm text-gray-400">Voeg een nieuwe medewerker toe</p>
                 </div>
               </div>
 
               <form onSubmit={createUser} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Naam *</label>
+                  <label className="block text-sm text-gray-400 mb-2">Naam *</label>
                   <div className="relative">
                     <Icons.user className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                     <input
@@ -576,7 +630,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Email *</label>
+                  <label className="block text-sm text-gray-400 mb-2">Email *</label>
                   <div className="relative">
                     <Icons.mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                     <input
@@ -591,7 +645,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Wachtwoord *</label>
+                  <label className="block text-sm text-gray-400 mb-2">Wachtwoord *</label>
                   <div className="relative">
                     <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                     <input
@@ -607,7 +661,7 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-white/60 mb-2">Rol</label>
+                    <label className="block text-sm text-gray-400 mb-2">Rol</label>
                     <select
                       value={newUser.role}
                       onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
@@ -619,7 +673,7 @@ export default function SettingsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm text-white/60 mb-2">Afdeling</label>
+                    <label className="block text-sm text-gray-400 mb-2">Afdeling</label>
                     <input
                       type="text"
                       value={newUser.department}
@@ -672,13 +726,13 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-semibold text-white text-lg">Wachtwoord resetten</h2>
-                  <p className="text-sm text-white/50">{selectedUser.name}</p>
+                  <p className="text-sm text-gray-400">{selectedUser.name}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Nieuw wachtwoord</label>
+                  <label className="block text-sm text-gray-400 mb-2">Nieuw wachtwoord</label>
                   <div className="relative">
                     <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                     <input
@@ -729,7 +783,7 @@ export default function SettingsPage() {
         <div className="mt-4 flex items-center justify-between">
           <div>
             <h4 className="text-sm font-medium text-white">Account verwijderen</h4>
-            <p className="text-xs text-white/40 mt-0.5">Dit kan niet ongedaan worden gemaakt</p>
+            <p className="text-xs text-gray-400 mt-0.5">Dit kan niet ongedaan worden gemaakt</p>
           </div>
           <button className="px-4 py-2 text-sm text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/10 transition-colors">
             Account verwijderen

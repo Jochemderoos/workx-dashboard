@@ -83,14 +83,27 @@ export default function TopBar({ user }: TopBarProps) {
 
   return (
     <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-[100] backdrop-blur-sm bg-workx-dark/30">
-      {/* Mobile: Hamburger Menu */}
-      <div className="md:hidden">
+      {/* Mobile: Hamburger Menu + Home Button */}
+      <div className="md:hidden flex items-center gap-1">
         <button
           onClick={() => setShowMobileMenu(!showMobileMenu)}
           className="p-2 text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-all"
         >
           {showMobileMenu ? <Icons.x size={24} /> : <Icons.menu size={24} />}
         </button>
+        {pathname !== '/dashboard' && (
+          <Link
+            href="/dashboard"
+            className="relative p-1.5 rounded-lg hover:bg-workx-lime/10 transition-all group"
+            title="Naar Dashboard"
+          >
+            <img
+              src="/workx-pand.png"
+              alt="Home"
+              className="h-7 w-auto opacity-50 group-hover:opacity-90 transition-all drop-shadow-[0_0_8px_rgba(249,255,133,0.3)] group-hover:drop-shadow-[0_0_12px_rgba(249,255,133,0.5)]"
+            />
+          </Link>
+        )}
       </div>
 
       {/* Left: Greeting (desktop only) */}
@@ -129,64 +142,21 @@ export default function TopBar({ user }: TopBarProps) {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
-        {/* Quick actions */}
-        <button className="p-2.5 text-white/40 hover:text-workx-lime rounded-xl hover:bg-white/5 transition-all icon-zap-hover">
-          <span className="icon-animated">
-            <Icons.zap size={18} />
-          </span>
-        </button>
-
-        {/* Notifications */}
-        <div className="relative">
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2.5 text-white/40 hover:text-white rounded-xl hover:bg-white/5 transition-all icon-bell-hover"
+        {/* Home button (desktop) - Workx Grachtenpand */}
+        {pathname !== '/dashboard' && (
+          <Link
+            href="/dashboard"
+            className="hidden md:flex items-center gap-2.5 px-3 py-2 rounded-xl border border-workx-lime/20 hover:border-workx-lime/40 hover:bg-workx-lime/5 transition-all group"
+            title="Naar Dashboard"
           >
-            <span className="icon-animated">
-              <Icons.bell size={18} />
-            </span>
-            {notifications.length > 0 && (
-              <span className="notification-dot absolute top-1.5 right-1.5" />
-            )}
-          </button>
-
-          {showNotifications && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-              <div className="absolute right-0 top-full mt-3 w-80 z-50 fade-in-scale">
-                <div className="bg-workx-gray/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-                  <div className="p-4 border-b border-white/10 flex items-center justify-between">
-                    <span className="font-medium text-white">Notificaties</span>
-                    <span className="badge badge-lime">{notifications.length} nieuw</span>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notifications.map((n) => {
-                      const Icon = n.icon
-                      return (
-                        <div key={n.id} className="p-4 hover:bg-white/5 transition-colors cursor-pointer border-b border-white/5 last:border-0 group">
-                          <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg bg-white/5 ${n.color}`}>
-                              <Icon size={16} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-white group-hover:text-workx-lime transition-colors">{n.text}</p>
-                              <p className="text-xs text-white/40 mt-0.5">{n.time} geleden</p>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div className="p-3 border-t border-white/10">
-                    <button className="w-full text-center text-sm text-workx-lime hover:underline">
-                      Alle notificaties bekijken
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+            <img
+              src="/workx-pand.png"
+              alt="Home"
+              className="h-5 w-auto opacity-40 group-hover:opacity-80 group-hover:scale-105 transition-all drop-shadow-[0_0_6px_rgba(249,255,133,0.25)] group-hover:drop-shadow-[0_0_10px_rgba(249,255,133,0.4)]"
+            />
+            <span className="text-sm text-white/50 group-hover:text-workx-lime hidden lg:inline transition-colors">Home</span>
+          </Link>
+        )}
 
         {/* Date pill */}
         <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-workx-lime/30 hover:bg-white/10 transition-all cursor-default group icon-calendar-hover">

@@ -29,6 +29,7 @@ interface WorkloadEntry {
   personName: string
   date: string // YYYY-MM-DD
   level: WorkloadLevel
+  hours?: number | null
 }
 
 // Monthly hours types
@@ -61,11 +62,11 @@ const statusConfig = {
   IN_PROGRESS: { label: 'Bezig', color: 'bg-yellow-400', text: 'text-yellow-400', bg: 'bg-yellow-500/10', icon: Icons.play },
   PENDING_REVIEW: { label: 'Review', color: 'bg-purple-400', text: 'text-purple-400', bg: 'bg-purple-500/10', icon: Icons.eye },
   COMPLETED: { label: 'Klaar', color: 'bg-green-400', text: 'text-green-400', bg: 'bg-green-500/10', icon: Icons.check },
-  ON_HOLD: { label: 'On hold', color: 'bg-white/40', text: 'text-white/40', bg: 'bg-white/5', icon: Icons.pause },
+  ON_HOLD: { label: 'On hold', color: 'bg-white/40', text: 'text-gray-400', bg: 'bg-white/5', icon: Icons.pause },
 }
 
 const priorityConfig = {
-  LOW: { label: 'Laag', color: 'bg-white/30', text: 'text-white/40' },
+  LOW: { label: 'Laag', color: 'bg-white/30', text: 'text-gray-400' },
   MEDIUM: { label: 'Normaal', color: 'bg-blue-400', text: 'text-blue-400' },
   HIGH: { label: 'Hoog', color: 'bg-orange-400', text: 'text-orange-400' },
   URGENT: { label: 'Urgent', color: 'bg-red-400', text: 'text-red-400' },
@@ -78,7 +79,7 @@ export default function WerkOverzichtPage() {
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
-  const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk' | 'urenoverzicht'>('zaken')
+  const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk' | 'urenoverzicht'>('werkdruk')
 
   // Monthly hours state
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
@@ -119,11 +120,26 @@ export default function WerkOverzichtPage() {
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false)
   const [openItemStatusDropdown, setOpenItemStatusDropdown] = useState<string | null>(null)
 
-  // Calculate last 3 workdays
-  const last3Workdays = useMemo(() => {
+  // State for navigating history
+  const [historyOffset, setHistoryOffset] = useState(0)
+
+  // Calculate workdays with offset for navigation
+  // Only show today after 20:00 CET
+  const workdaysToShow = useMemo(() => {
     const days: Date[] = []
-    const today = new Date()
-    let current = new Date(today)
+    const now = new Date()
+    const currentHour = now.getHours()
+
+    // Start from today or yesterday based on time
+    let current = new Date(now)
+
+    // If it's before 20:00, don't include today
+    if (currentHour < 20) {
+      current.setDate(current.getDate() - 1)
+    }
+
+    // Apply history offset
+    current.setDate(current.getDate() - (historyOffset * 3))
 
     while (days.length < 3) {
       const dayOfWeek = current.getDay()
@@ -135,13 +151,23 @@ export default function WerkOverzichtPage() {
     }
 
     return days.reverse() // Oldest first
-  }, [])
+  }, [historyOffset])
+
+  // Alias for backwards compatibility
+  const last3Workdays = workdaysToShow
 
   // Get workload for a specific person and date
   const getWorkload = (person: string, date: Date): WorkloadLevel => {
     const dateStr = date.toISOString().split('T')[0]
     const entry = workloadEntries.find(e => e.personName === person && e.date === dateStr)
     return entry?.level || null
+  }
+
+  // Get workload entry with hours for a specific person and date
+  const getWorkloadEntry = (person: string, date: Date): WorkloadEntry | null => {
+    const dateStr = date.toISOString().split('T')[0]
+    const entry = workloadEntries.find(e => e.personName === person && e.date === dateStr)
+    return entry || null
   }
 
   // Set workload for a person on a date - saves to API
@@ -218,10 +244,11 @@ export default function WerkOverzichtPage() {
       const res = await fetch('/api/workload')
       if (res.ok) {
         const data = await res.json()
-        setWorkloadEntries(data.map((e: { personName: string; date: string; level: string }) => ({
+        setWorkloadEntries(data.map((e: { personName: string; date: string; level: string; hours?: number | null }) => ({
           personName: e.personName,
           date: e.date,
-          level: e.level as WorkloadLevel
+          level: e.level as WorkloadLevel,
+          hours: e.hours
         })))
       }
     } catch (error) {
@@ -232,12 +259,15 @@ export default function WerkOverzichtPage() {
   // Upload RTF bestand en verwerk uren naar werkdruk
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !uploadDate) return
+    if (!file) return
 
     setIsUploading(true)
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('date', uploadDate.toISOString().split('T')[0])
+    // Date is now optional - the file contains Dutch dates that are parsed automatically
+    if (uploadDate) {
+      formData.append('date', uploadDate.toISOString().split('T')[0])
+    }
 
     try {
       const res = await fetch('/api/workload/upload', {
@@ -251,7 +281,11 @@ export default function WerkOverzichtPage() {
         throw new Error(data.error || 'Upload mislukt')
       }
 
-      toast.success(`${data.processed} medewerkers verwerkt`)
+      // Show dates that were processed
+      const datesMsg = data.dates?.length > 1
+        ? `voor ${data.dates.length} dagen`
+        : data.dates?.[0] || ''
+      toast.success(`${data.processed} entries verwerkt ${datesMsg}`)
       setShowUploadModal(false)
       fetchWorkload() // Herlaad de werkdruk data
     } catch (error) {
@@ -446,7 +480,7 @@ export default function WerkOverzichtPage() {
       <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
         <div className="text-center">
           <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
-          <p className="text-white/40">Werk laden...</p>
+          <p className="text-gray-400">Werk laden...</p>
         </div>
       </div>
     )
@@ -455,55 +489,50 @@ export default function WerkOverzichtPage() {
   return (
     <div className="space-y-8 fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
-              <Icons.briefcase className="text-blue-400" size={20} />
-            </div>
-            <h1 className="text-2xl font-semibold text-white">Werk</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
+            <Icons.briefcase className="text-blue-400" size={18} />
           </div>
-          <p className="text-white/40">
-            {pageMode === 'zaken' ? 'Beheer zaken, taken en deadlines' : 'Werkdruk overzicht van het team'}
-          </p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white">Werk</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {/* Mode Toggle */}
-          <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
-            <button
-              onClick={() => setPageMode('zaken')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pageMode === 'zaken' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icons.briefcase size={16} />
-              Zaken
-            </button>
+          <div className="flex gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-white/5 rounded-lg sm:rounded-xl">
             <button
               onClick={() => setPageMode('werkdruk')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                pageMode === 'werkdruk' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                pageMode === 'werkdruk' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Icons.activity size={16} />
-              Werkdruk
+              <Icons.activity size={14} className="sm:w-4 sm:h-4" />
+              <span>Werkdruk</span>
+            </button>
+            <button
+              onClick={() => setPageMode('zaken')}
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                pageMode === 'zaken' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icons.briefcase size={14} className="sm:w-4 sm:h-4" />
+              <span>Zaken</span>
             </button>
             {canEditWorkload && (
               <button
                 onClick={() => setPageMode('urenoverzicht')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  pageMode === 'urenoverzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  pageMode === 'urenoverzicht' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icons.clock size={16} />
-                Urenoverzicht
+                <Icons.clock size={14} className="sm:w-4 sm:h-4" />
+                <span>Uren</span>
               </button>
             )}
           </div>
           {pageMode === 'zaken' && (
-            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
-              <Icons.plus size={16} />
-              Nieuw item
+            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm">
+              <Icons.plus size={14} className="sm:w-4 sm:h-4" />
+              <span>Nieuw</span>
             </button>
           )}
         </div>
@@ -525,104 +554,74 @@ export default function WerkOverzichtPage() {
             </div>
           )}
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="card p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-500/10 transition-colors" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-3">
-                  <Icons.check className="text-green-400" size={18} />
-                </div>
-                <p className="text-2xl font-semibold text-green-400">{todayStats.green}</p>
-                <p className="text-sm text-white/40">Rustig</p>
-              </div>
-            </div>
-
-            <div className="card p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-3">
-                  <Icons.minus className="text-yellow-400" size={18} />
-                </div>
-                <p className="text-2xl font-semibold text-yellow-400">{todayStats.yellow}</p>
-                <p className="text-sm text-white/40">Normaal</p>
-              </div>
-            </div>
-
-            <div className="card p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/10 transition-colors" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center mb-3">
-                  <Icons.alertTriangle className="text-orange-400" size={18} />
-                </div>
-                <p className="text-2xl font-semibold text-orange-400">{todayStats.orange}</p>
-                <p className="text-sm text-white/40">Druk</p>
-              </div>
-            </div>
-
-            <div className="card p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-red-500/10 transition-colors" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-3">
-                  <Icons.alertTriangle className="text-red-400" size={18} />
-                </div>
-                <p className="text-2xl font-semibold text-red-400">{todayStats.red}</p>
-                <p className="text-sm text-white/40">Zeer druk</p>
-              </div>
-            </div>
-
-            <div className="card p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/10 transition-colors" />
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-3">
-                  <Icons.help className="text-white/40" size={18} />
-                </div>
-                <p className="text-2xl font-semibold text-white/40">{todayStats.notFilled}</p>
-                <p className="text-sm text-white/40">Niet ingevuld</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Workload Overview */}
+          {/* Workload Overview - employees only */}
           <div className="card overflow-hidden">
             <div className="p-4 sm:p-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
                   <Icons.activity className="text-workx-lime" size={16} />
                 </div>
-                <h2 className="font-medium text-white text-sm sm:text-base">Werkdruk laatste 3 werkdagen</h2>
+                <h2 className="font-medium text-white text-sm sm:text-base">Werkdruk overzicht</h2>
+                {/* History Navigation */}
+                <div className="flex items-center gap-1 ml-2">
+                  <button
+                    onClick={() => setHistoryOffset(prev => prev + 1)}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    title="Eerdere dagen"
+                  >
+                    <Icons.chevronLeft size={16} />
+                  </button>
+                  <button
+                    onClick={() => setHistoryOffset(prev => Math.max(0, prev - 1))}
+                    disabled={historyOffset === 0}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Recentere dagen"
+                  >
+                    <Icons.chevronRight size={16} />
+                  </button>
+                  {historyOffset > 0 && (
+                    <button
+                      onClick={() => setHistoryOffset(0)}
+                      className="ml-1 px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime text-xs hover:bg-workx-lime/20 transition-colors"
+                    >
+                      Vandaag
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3 sm:gap-4 text-xs flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-400" />
-                  <span className="text-white/50">Rustig</span>
+                  <span className="text-gray-400">Rustig</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                  <span className="text-white/50">Normaal</span>
+                  <span className="text-gray-400">Normaal</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-orange-400" />
-                  <span className="text-white/50">Druk</span>
+                  <span className="text-gray-400">Druk</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-400" />
-                  <span className="text-white/50">Zeer druk</span>
+                  <span className="text-gray-400">Zeer druk</span>
                 </div>
               </div>
             </div>
 
-            {/* Table - scrollable on mobile */}
-            <div className="overflow-x-auto">
-              <div className="min-w-[550px]">
+            {/* Table - compact on mobile, full on desktop */}
+            <div className="overflow-x-auto sm:overflow-visible">
+              <div className="min-w-0 sm:min-w-[600px]">
                 {/* Table header */}
-                <div className="grid gap-4 px-5 py-3 bg-white/[0.02] border-b border-white/5 text-xs text-white/40 font-medium uppercase tracking-wider"
-                  style={{ gridTemplateColumns: '1fr repeat(3, 100px)' }}
+                <div className="grid gap-1 sm:gap-4 px-2 sm:px-5 py-2 sm:py-3 bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider"
+                  style={{ gridTemplateColumns: 'minmax(100px, 1fr) repeat(3, minmax(50px, 80px))' }}
                 >
-                  <div>Medewerker</div>
+                  <div className="hidden sm:block">Medewerker</div>
+                  <div className="sm:hidden">Naam</div>
               {last3Workdays.map(day => (
-                <div key={day.toISOString()} className="text-center">
-                  {day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
+                <div key={day.toISOString()} className="text-center text-[10px] sm:text-xs">
+                  <span className="hidden sm:inline">{day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                  <span className="sm:hidden">{day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric' })}</span>
                 </div>
               ))}
             </div>
@@ -631,54 +630,58 @@ export default function WerkOverzichtPage() {
             <div className="divide-y divide-white/5">
               {ADVOCATEN.map((person) => {
                 const photoUrl = TEAM_PHOTOS[person]
+                const firstName = person.split(' ')[0]
 
                 return (
                   <div
                     key={person}
-                    className="grid gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors"
-                    style={{ gridTemplateColumns: '1fr repeat(3, 100px)' }}
+                    className="grid gap-1 sm:gap-4 px-2 sm:px-5 py-2 sm:py-4 items-center hover:bg-white/[0.02] transition-colors"
+                    style={{ gridTemplateColumns: 'minmax(100px, 1fr) repeat(3, minmax(50px, 80px))' }}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                       <img
                         src={photoUrl}
                         alt={person}
-                        className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10"
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl object-cover ring-2 ring-white/10 flex-shrink-0"
                       />
-                      <div>
-                        <p className="font-medium text-white">{person}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-white text-sm sm:text-base whitespace-nowrap hidden sm:block">{person}</p>
+                        <p className="font-medium text-white text-xs sm:hidden">{firstName}</p>
                       </div>
                     </div>
                     {last3Workdays.map(day => {
                       const dateStr = day.toISOString().split('T')[0]
-                      const level = getWorkload(person, day)
+                      const entry = getWorkloadEntry(person, day)
+                      const level = entry?.level || null
+                      const hours = entry?.hours
                       const isEditing = editingWorkload?.person === person && editingWorkload?.date === dateStr
                       const isToday = day.toDateString() === new Date().toDateString()
 
                       return (
                         <div key={dateStr} className="flex justify-center">
                           {isEditing && canEditWorkload ? (
-                            <div className="flex items-center gap-1 bg-workx-dark/80 border border-white/10 rounded-xl p-2">
+                            <div className="flex items-center gap-0.5 sm:gap-1 bg-workx-dark/80 border border-white/10 rounded-lg sm:rounded-xl p-1 sm:p-2">
                               {(['green', 'yellow', 'orange', 'red'] as const).map(l => (
                                 <button
                                   key={l}
                                   onClick={() => saveWorkload(person, day, l)}
-                                  className={`w-8 h-8 rounded-lg ${workloadConfig[l].bg} ${workloadConfig[l].border} border-2 hover:scale-110 transition-transform flex items-center justify-center`}
+                                  className={`w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg ${workloadConfig[l].bg} ${workloadConfig[l].border} border-2 hover:scale-110 transition-transform flex items-center justify-center`}
                                 >
-                                  {level === l && <Icons.check size={14} className={workloadConfig[l].text} />}
+                                  {level === l && <Icons.check size={12} className={workloadConfig[l].text} />}
                                 </button>
                               ))}
                               <button
                                 onClick={() => setEditingWorkload(null)}
-                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40"
+                                className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400"
                               >
-                                <Icons.x size={14} />
+                                <Icons.x size={12} />
                               </button>
                             </div>
                           ) : (
                             <button
                               onClick={() => canEditWorkload && setEditingWorkload({ person, date: dateStr })}
                               disabled={!canEditWorkload}
-                              className={`w-full h-12 rounded-xl flex items-center justify-center transition-all ${
+                              className={`w-full h-8 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
                                 canEditWorkload ? 'hover:scale-105 cursor-pointer' : 'cursor-default'
                               } ${
                                 level
@@ -686,17 +689,14 @@ export default function WerkOverzichtPage() {
                                   : canEditWorkload
                                     ? 'bg-white/5 border border-dashed border-white/10 hover:border-white/20'
                                     : 'bg-white/5 border border-white/5'
-                              } ${isToday ? 'ring-2 ring-workx-lime/30 ring-offset-2 ring-offset-workx-dark' : ''}`}
+                              } ${isToday ? 'ring-2 ring-workx-lime/30 ring-offset-1 sm:ring-offset-2 ring-offset-workx-dark' : ''}`}
                             >
                               {level ? (
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-3 h-3 rounded-full ${workloadConfig[level].color}`} />
-                                  <span className={`text-sm font-medium ${workloadConfig[level].text}`}>
-                                    {workloadConfig[level].label}
-                                  </span>
-                                </div>
+                                <span className={`text-xs sm:text-sm font-bold ${workloadConfig[level].text}`}>
+                                  {hours != null ? hours.toFixed(1).replace('.', ',') : workloadConfig[level].label.charAt(0)}
+                                </span>
                               ) : (
-                                <span className="text-xs text-white/30">{canEditWorkload ? 'Invullen' : '-'}</span>
+                                <span className="text-[10px] sm:text-xs text-white/30">{canEditWorkload ? '-' : '-'}</span>
                               )}
                             </button>
                           )}
@@ -719,7 +719,7 @@ export default function WerkOverzichtPage() {
               </div>
               <div>
                 <h3 className="font-medium text-white mb-1">Over werkdruk tracking</h3>
-                <p className="text-sm text-white/50 leading-relaxed">
+                <p className="text-sm text-gray-400 leading-relaxed">
                   Klik op een cel om de werkdruk van een medewerker voor die dag in te vullen.
                   Dit overzicht helpt om snel te zien wie er veel aan het hoofd heeft en wie ruimte heeft om bij te springen.
                 </p>
@@ -740,7 +740,7 @@ export default function WerkOverzichtPage() {
                   key={year}
                   onClick={() => setSelectedYear(year)}
                   className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    selectedYear === year ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+                    selectedYear === year ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   {year}
@@ -767,7 +767,7 @@ export default function WerkOverzichtPage() {
                   <Icons.users className="text-blue-400" size={18} />
                 </div>
                 <p className="text-2xl font-semibold text-white">{monthlyHoursData.employees.length}</p>
-                <p className="text-sm text-white/40">Medewerkers</p>
+                <p className="text-sm text-gray-400">Medewerkers</p>
               </div>
             </div>
 
@@ -778,7 +778,7 @@ export default function WerkOverzichtPage() {
                   <Icons.clock className="text-workx-lime" size={18} />
                 </div>
                 <p className="text-2xl font-semibold text-workx-lime">{monthlyHoursData.grandTotal.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                <p className="text-sm text-white/40">Totaal factureerbaar</p>
+                <p className="text-sm text-gray-400">Totaal factureerbaar</p>
               </div>
             </div>
 
@@ -793,7 +793,7 @@ export default function WerkOverzichtPage() {
                     ? (monthlyHoursData.grandTotal.billable / monthlyHoursData.employees.length).toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
                     : 0}
                 </p>
-                <p className="text-sm text-white/40">Gem. per medewerker</p>
+                <p className="text-sm text-gray-400">Gem. per medewerker</p>
               </div>
             </div>
           </div>
@@ -901,7 +901,7 @@ export default function WerkOverzichtPage() {
                   <Icons.clock className="text-white/20" size={32} />
                 </div>
                 <h3 className="text-lg font-medium text-white mb-2">Nog geen uren data</h3>
-                <p className="text-white/40 mb-4">Upload een urenoverzicht bestand om te beginnen</p>
+                <p className="text-gray-400 mb-4">Upload een urenoverzicht bestand om te beginnen</p>
                 {selectedYear === new Date().getFullYear() && (
                   <button
                     onClick={() => setShowHoursUploadModal(true)}
@@ -947,7 +947,7 @@ export default function WerkOverzichtPage() {
                                 />
                               ) : (
                                 <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-                                  <Icons.user className="text-white/40" size={16} />
+                                  <Icons.user className="text-gray-400" size={16} />
                                 </div>
                               )}
                               <span className="font-medium text-white">{emp}</span>
@@ -1019,7 +1019,7 @@ export default function WerkOverzichtPage() {
               </div>
               <div>
                 <h3 className="font-medium text-white mb-1">Factureerbare uren per maand</h3>
-                <p className="text-sm text-white/50 leading-relaxed">
+                <p className="text-sm text-gray-400 leading-relaxed">
                   Overzicht van de factureerbare uren per medewerker, opgebouwd uit de BaseNet urenregistratie.
                   {selectedYear === new Date().getFullYear() && ' Upload maandelijks een nieuw RTF-bestand om de gegevens bij te werken.'}
                 </p>
@@ -1041,7 +1041,7 @@ export default function WerkOverzichtPage() {
                   <Icons.layers className="text-blue-400" size={18} />
                 </div>
                 <p className="text-2xl font-semibold text-white">{stats.total}</p>
-                <p className="text-sm text-white/40">Totaal</p>
+                <p className="text-sm text-gray-400">Totaal</p>
               </div>
             </div>
 
@@ -1052,7 +1052,7 @@ export default function WerkOverzichtPage() {
                   <Icons.play className="text-yellow-400" size={18} />
                 </div>
                 <p className="text-2xl font-semibold text-yellow-400">{stats.inProgress}</p>
-                <p className="text-sm text-white/40">In behandeling</p>
+                <p className="text-sm text-gray-400">In behandeling</p>
               </div>
             </div>
 
@@ -1063,7 +1063,7 @@ export default function WerkOverzichtPage() {
                   <Icons.check className="text-green-400" size={18} />
                 </div>
                 <p className="text-2xl font-semibold text-green-400">{stats.completed}</p>
-                <p className="text-sm text-white/40">Afgerond</p>
+                <p className="text-sm text-gray-400">Afgerond</p>
               </div>
             </div>
 
@@ -1074,7 +1074,7 @@ export default function WerkOverzichtPage() {
                   <Icons.flag className="text-red-400" size={18} />
                 </div>
                 <p className="text-2xl font-semibold text-red-400">{workItems.filter(i => i.priority === 'URGENT').length}</p>
-                <p className="text-sm text-white/40">Urgent</p>
+                <p className="text-sm text-gray-400">Urgent</p>
               </div>
             </div>
           </div>
@@ -1104,7 +1104,7 @@ export default function WerkOverzichtPage() {
                   <span>{statusConfig[statusFilter as keyof typeof statusConfig].label}</span>
                 </div>
               )}
-              <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showStatusFilterDropdown ? 'rotate-180' : ''}`} />
+              <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showStatusFilterDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showStatusFilterDropdown && (
               <>
@@ -1116,7 +1116,7 @@ export default function WerkOverzichtPage() {
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${statusFilter === 'all' ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
                     >
                       <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center">
-                        <Icons.layers size={12} className="text-white/50" />
+                        <Icons.layers size={12} className="text-gray-400" />
                       </div>
                       <span>Alle statussen</span>
                       {statusFilter === 'all' && <Icons.check size={16} className="ml-auto text-workx-lime" />}
@@ -1144,13 +1144,13 @@ export default function WerkOverzichtPage() {
         <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-workx-lime text-workx-dark' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+            className={`p-2.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
           >
             <Icons.list size={16} />
           </button>
           <button
             onClick={() => setViewMode('board')}
-            className={`p-2.5 rounded-lg transition-all ${viewMode === 'board' ? 'bg-workx-lime text-workx-dark' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+            className={`p-2.5 rounded-lg transition-all ${viewMode === 'board' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
           >
             <Icons.grid size={16} />
           </button>
@@ -1165,7 +1165,7 @@ export default function WerkOverzichtPage() {
                 <Icons.briefcase className="text-blue-400/50" size={32} />
               </div>
               <h3 className="text-lg font-medium text-white mb-2">Geen items gevonden</h3>
-              <p className="text-white/40 mb-4">Maak een nieuwe zaak of taak aan</p>
+              <p className="text-gray-400 mb-4">Maak een nieuwe zaak of taak aan</p>
               <button onClick={() => setShowForm(true)} className="btn-primary inline-flex items-center gap-2">
                 <Icons.plus size={16} />
                 Nieuw item
@@ -1206,9 +1206,9 @@ export default function WerkOverzichtPage() {
                         </div>
                       </div>
                       {item.description && (
-                        <p className="text-sm text-white/40 mb-3 line-clamp-1 ml-[52px]">{item.description}</p>
+                        <p className="text-sm text-gray-400 mb-3 line-clamp-1 ml-[52px]">{item.description}</p>
                       )}
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-white/40 ml-[52px]">
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400 ml-[52px]">
                         {item.clientName && (
                           <span className="flex items-center gap-1.5">
                             <Icons.user size={12} />
@@ -1271,13 +1271,13 @@ export default function WerkOverzichtPage() {
                       </div>
                       <button
                         onClick={() => handleEdit(item)}
-                        className="p-2 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                        className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
                       >
                         <Icons.edit size={14} />
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-2 text-white/40 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors"
+                        className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors"
                       >
                         <Icons.trash size={14} />
                       </button>
@@ -1318,7 +1318,7 @@ export default function WerkOverzichtPage() {
                         style={{ animationDelay: `${index * 30}ms` }}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className={`inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full ${priorityCfg.color === 'bg-white/30' ? 'bg-white/10 text-white/50' : priorityCfg.color.replace('bg-', 'bg-') + '/10 ' + priorityCfg.text}`}>
+                          <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${priorityCfg.color === 'bg-white/30' ? 'bg-white/10 text-gray-400' : priorityCfg.color.replace('bg-', 'bg-') + '/10 ' + priorityCfg.text}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${priorityCfg.color}`} />
                             {priorityCfg.label}
                           </span>
@@ -1330,7 +1330,7 @@ export default function WerkOverzichtPage() {
                           {item.title}
                         </h4>
                         {item.clientName && (
-                          <p className="text-xs text-white/40 flex items-center gap-1.5 mb-2">
+                          <p className="text-xs text-gray-400 flex items-center gap-1.5 mb-2">
                             <Icons.user size={10} />
                             {item.clientName}
                           </p>
@@ -1369,7 +1369,7 @@ export default function WerkOverzichtPage() {
               </div>
               <button
                 onClick={resetForm}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 <Icons.x size={18} />
               </button>
@@ -1415,7 +1415,7 @@ export default function WerkOverzichtPage() {
                         {(() => { const Icon = statusConfig[status].icon; return <Icon size={14} className={statusConfig[status].text} /> })()}
                       </div>
                       <span className="flex-1 text-white text-sm">{statusConfig[status].label}</span>
-                      <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                      <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
                     </button>
                     {showStatusDropdown && (
                       <>
@@ -1452,7 +1452,7 @@ export default function WerkOverzichtPage() {
                     >
                       <div className={`w-3 h-3 rounded-full ${priorityConfig[priority].color}`} />
                       <span className="flex-1 text-white text-sm">{priorityConfig[priority].label}</span>
-                      <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${showPriorityDropdown ? 'rotate-180' : ''}`} />
+                      <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showPriorityDropdown ? 'rotate-180' : ''}`} />
                     </button>
                     {showPriorityDropdown && (
                       <>
@@ -1574,7 +1574,7 @@ export default function WerkOverzichtPage() {
               </div>
               <button
                 onClick={() => setShowHoursUploadModal(false)}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 <Icons.x size={18} />
               </button>
@@ -1586,7 +1586,7 @@ export default function WerkOverzichtPage() {
                   <Icons.info className="text-blue-400 mt-0.5" size={16} />
                   <div className="text-sm text-white/70">
                     <p className="font-medium text-blue-400 mb-1">BaseNet export</p>
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-gray-400">
                       Upload het urenoverzicht bestand van BaseNet (.xlsx of .rtf).
                       De uren worden automatisch per maand per medewerker samengevoegd.
                     </p>
@@ -1609,7 +1609,7 @@ export default function WerkOverzichtPage() {
                       </>
                     ) : (
                       <>
-                        <Icons.upload className="text-white/40 mb-2" size={24} />
+                        <Icons.upload className="text-gray-400 mb-2" size={24} />
                         <p className="text-sm text-white/60">Klik om bestand te selecteren</p>
                         <p className="text-xs text-white/30 mt-1">RTF bestand van BaseNet</p>
                       </>
@@ -1652,28 +1652,20 @@ export default function WerkOverzichtPage() {
               </div>
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 <Icons.x size={18} />
               </button>
             </div>
 
             <div className="space-y-5">
-              <div>
-                <label className="block text-sm text-white/60 mb-2">Datum voor werkdruk</label>
-                <DatePicker
-                  selected={uploadDate}
-                  onChange={setUploadDate}
-                  placeholder="Selecteer datum..."
-                />
-              </div>
-
               <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
                 <div className="flex items-start gap-3">
                   <Icons.info className="text-blue-400 mt-0.5" size={16} />
                   <div className="text-sm text-white/70">
                     <p className="font-medium text-blue-400 mb-1">Uren naar werkdruk</p>
-                    <ul className="space-y-1 text-xs text-white/50">
+                    <p className="text-xs text-gray-400 mb-2">Datums worden automatisch uit het bestand gehaald</p>
+                    <ul className="space-y-1 text-xs text-gray-400">
                       <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-400" /> ≤3 uur = Rustig</li>
                       <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-400" /> ≤4 uur = Normaal</li>
                       <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-400" /> ≤5 uur = Druk</li>
@@ -1698,7 +1690,7 @@ export default function WerkOverzichtPage() {
                       </>
                     ) : (
                       <>
-                        <Icons.upload className="text-white/40 mb-2" size={24} />
+                        <Icons.upload className="text-gray-400 mb-2" size={24} />
                         <p className="text-sm text-white/60">Klik om bestand te selecteren</p>
                         <p className="text-xs text-white/30 mt-1">of sleep het hierheen</p>
                       </>
@@ -1709,7 +1701,7 @@ export default function WerkOverzichtPage() {
                     className="hidden"
                     accept=".docx,.rtf,.doc"
                     onChange={handleFileUpload}
-                    disabled={isUploading || !uploadDate}
+                    disabled={isUploading}
                   />
                 </label>
               </div>

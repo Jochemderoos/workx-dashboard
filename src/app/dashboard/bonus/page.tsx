@@ -392,30 +392,30 @@ export default function BonusPage() {
   return (
     <div className="space-y-8 fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 flex items-center justify-center">
-              <Icons.euro className="text-green-400" size={20} />
+          <div className="flex items-center gap-3 mb-1 sm:mb-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 flex items-center justify-center">
+              <Icons.euro className="text-green-400" size={18} />
             </div>
-            <h1 className="text-2xl font-semibold text-white">Bonus Calculator</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-white">Bonus Calculator</h1>
           </div>
-          <p className="text-white/40">Bereken en beheer je bonussen op basis van facturaties</p>
+          <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Bereken en beheer je bonussen op basis van facturaties</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => setShowBonusOverview(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 hover:bg-green-500/20 transition-all"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-500/10 border border-green-500/20 rounded-lg sm:rounded-xl text-green-400 hover:bg-green-500/20 transition-all text-xs sm:text-base"
           >
-            <Icons.euro size={16} />
-            Te betalen bonus
+            <Icons.euro size={14} className="sm:w-4 sm:h-4" />
+            <span>Te betalen</span>
             {bonusesToPay.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-green-500/20 rounded-full text-xs">{bonusesToPay.length}</span>
+              <span className="px-1.5 sm:px-2 py-0.5 bg-green-500/20 rounded-full text-xs">{bonusesToPay.length}</span>
             )}
           </button>
-          <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
-            <Icons.plus size={16} />
-            Nieuwe berekening
+          <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-base">
+            <Icons.plus size={14} className="sm:w-4 sm:h-4" />
+            <span>Nieuw</span>
           </button>
         </div>
       </div>
@@ -429,9 +429,9 @@ export default function BonusPage() {
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-workx-lime/10 flex items-center justify-center">
                 <Icons.chart className="text-workx-lime" size={18} />
               </div>
-              <span className="text-[10px] sm:text-xs text-white/30">{calculations.length} totaal</span>
+              <span className="text-xs sm:text-xs text-gray-500">{calculations.length} totaal</span>
             </div>
-            <p className="text-xs sm:text-sm text-white/50 mb-1">Totale bonus</p>
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Totale bonus</p>
             <p className="text-2xl sm:text-3xl font-semibold text-white">{formatCurrency(total)}</p>
           </div>
         </div>
@@ -443,9 +443,9 @@ export default function BonusPage() {
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
                 <Icons.check className="text-green-400" size={18} />
               </div>
-              <span className="badge badge-lime text-[10px] sm:text-xs">{paidPercentage.toFixed(0)}%</span>
+              <span className="badge badge-lime text-xs sm:text-xs">{paidPercentage.toFixed(0)}%</span>
             </div>
-            <p className="text-xs sm:text-sm text-white/50 mb-1">Bonus uitbetaald</p>
+            <p className="text-xs sm:text-sm text-gray-400 mb-1">Bonus uitbetaald</p>
             <p className="text-2xl sm:text-3xl font-semibold text-green-400">{formatCurrency(bonusPaidAmount)}</p>
           </div>
         </div>
@@ -457,9 +457,9 @@ export default function BonusPage() {
               <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                 <Icons.euro className="text-emerald-400" size={22} />
               </div>
-              <span className="text-xs text-white/30">{bonusesToPay.length} klaar</span>
+              <span className="text-xs text-gray-500">{bonusesToPay.length} klaar</span>
             </div>
-            <p className="text-sm text-white/50 mb-1">Te betalen bonus</p>
+            <p className="text-sm text-gray-400 mb-1">Te betalen bonus</p>
             <p className="text-3xl font-semibold text-emerald-400">{formatCurrency(bonusToPayAmount)}</p>
           </div>
         </div>
@@ -471,9 +471,9 @@ export default function BonusPage() {
               <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
                 <Icons.clock className="text-orange-400" size={22} />
               </div>
-              <span className="text-xs text-white/30">{pendingInvoices.length} wachtend</span>
+              <span className="text-xs text-gray-500">{pendingInvoices.length} wachtend</span>
             </div>
-            <p className="text-sm text-white/50 mb-1">Factuur niet betaald</p>
+            <p className="text-sm text-gray-400 mb-1">Factuur niet betaald</p>
             <p className="text-3xl font-semibold text-orange-400">{formatCurrency(pendingAmount)}</p>
           </div>
         </div>
@@ -483,7 +483,7 @@ export default function BonusPage() {
       {total > 0 && (
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-white/60">Bonus uitbetalingsvoortgang</span>
+            <span className="text-sm text-gray-400">Bonus uitbetalingsvoortgang</span>
             <span className="text-sm font-medium text-white">{paidPercentage.toFixed(1)}%</span>
           </div>
           <div className="h-3 bg-white/5 rounded-full overflow-hidden flex">
@@ -498,7 +498,7 @@ export default function BonusPage() {
               title="Te betalen"
             />
           </div>
-          <div className="flex justify-between mt-2 text-xs text-white/40">
+          <div className="flex justify-between mt-2 text-xs text-gray-400">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-green-400" />
               Uitbetaald: {formatCurrency(bonusPaidAmount)}
@@ -519,7 +519,7 @@ export default function BonusPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-white">Berekeningen</h2>
-          <span className="text-sm text-white/30">{calculations.length} totaal</span>
+          <span className="text-sm text-gray-500">{calculations.length} totaal</span>
         </div>
 
         {isLoading ? (
@@ -529,10 +529,10 @@ export default function BonusPage() {
         ) : calculations.length === 0 ? (
           <div className="card p-16 text-center">
             <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-              <Icons.euro className="text-white/20" size={32} />
+              <Icons.euro className="text-gray-600" size={32} />
             </div>
             <h3 className="text-lg font-medium text-white mb-2">Nog geen berekeningen</h3>
-            <p className="text-white/40 mb-6 max-w-sm mx-auto">
+            <p className="text-gray-400 mb-6 max-w-sm mx-auto">
               Voeg je eerste bonusberekening toe om te beginnen met het bijhouden van je verdiensten.
             </p>
             <button onClick={() => setShowForm(true)} className="btn-primary">
@@ -579,17 +579,17 @@ export default function BonusPage() {
                           {statusLabel}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-white/40">
+                      <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
                         <span>{formatCurrency(calc.invoiceAmount)} × {calc.bonusPercentage}%</span>
                         {calc.clientName && (
                           <>
-                            <span className="text-white/20">·</span>
+                            <span className="text-gray-600">·</span>
                             <span>{calc.clientName}</span>
                           </>
                         )}
                         {calc.invoiceNumber && (
                           <>
-                            <span className="text-white/20">·</span>
+                            <span className="text-gray-600">·</span>
                             <span>#{calc.invoiceNumber}</span>
                           </>
                         )}
@@ -597,13 +597,13 @@ export default function BonusPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => downloadPDF(calc)} className="p-2.5 text-white/40 hover:text-workx-lime rounded-lg hover:bg-white/5 transition-colors" title="Download PDF">
+                    <button onClick={() => downloadPDF(calc)} className="p-2.5 text-gray-400 hover:text-workx-lime rounded-lg hover:bg-white/5 transition-colors" title="Download PDF">
                       <Icons.download size={16} />
                     </button>
-                    <button onClick={() => handleEdit(calc)} className="p-2.5 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors" title="Bewerken">
+                    <button onClick={() => handleEdit(calc)} className="p-2.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors" title="Bewerken">
                       <Icons.edit size={16} />
                     </button>
-                    <button onClick={() => handleDelete(calc.id)} className="p-2.5 text-white/40 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors" title="Verwijderen">
+                    <button onClick={() => handleDelete(calc.id)} className="p-2.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors" title="Verwijderen">
                       <Icons.trash size={16} />
                     </button>
                   </div>
@@ -625,16 +625,16 @@ export default function BonusPage() {
                 </div>
                 <h2 className="font-semibold text-white text-lg">{editingId ? 'Bewerken' : 'Nieuwe berekening'}</h2>
               </div>
-              <button onClick={resetForm} className="p-2 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+              <button onClick={resetForm} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
                 <Icons.x size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm text-white/60 mb-2">Factuurbedrag (excl. BTW) *</label>
+                <label className="block text-sm text-gray-400 mb-2">Factuurbedrag (excl. BTW) *</label>
                 <div className="relative">
-                  <Icons.euro className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                  <Icons.euro className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                   <input
                     type="number"
                     step="0.01"
@@ -648,7 +648,7 @@ export default function BonusPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-white/60 mb-2">Bonus percentage</label>
+                <label className="block text-sm text-gray-400 mb-2">Bonus percentage</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -659,13 +659,13 @@ export default function BonusPage() {
                     onChange={(e) => setForm({ ...form, bonusPercentage: e.target.value })}
                     className="input-field pr-10"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30">%</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Klant</label>
+                  <label className="block text-sm text-gray-400 mb-2">Klant</label>
                   <input
                     type="text"
                     value={form.clientName}
@@ -675,7 +675,7 @@ export default function BonusPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-2">Factuurnummer</label>
+                  <label className="block text-sm text-gray-400 mb-2">Factuurnummer</label>
                   <input
                     type="text"
                     value={form.invoiceNumber}
@@ -696,7 +696,7 @@ export default function BonusPage() {
                   />
                   <div>
                     <span className="text-white text-sm font-medium">Factuur is betaald</span>
-                    <p className="text-xs text-white/40">Klant heeft de factuur betaald</p>
+                    <p className="text-xs text-gray-400">Klant heeft de factuur betaald</p>
                   </div>
                   {form.invoicePaid && <Icons.check size={18} className="ml-auto text-blue-400" />}
                 </label>
@@ -711,7 +711,7 @@ export default function BonusPage() {
                   />
                   <div>
                     <span className="text-white text-sm font-medium">Bonus is betaald</span>
-                    <p className="text-xs text-white/40">Bonus is uitbetaald aan medewerker</p>
+                    <p className="text-xs text-gray-400">Bonus is uitbetaald aan medewerker</p>
                   </div>
                   {form.bonusPaid && <Icons.check size={18} className="ml-auto text-green-400" />}
                 </label>
@@ -721,9 +721,9 @@ export default function BonusPage() {
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-workx-lime/10 to-workx-lime/5 border border-workx-lime/20 p-5">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
                   <div className="relative">
-                    <p className="text-sm text-white/60 mb-1">Berekende bonus</p>
+                    <p className="text-sm text-gray-400 mb-1">Berekende bonus</p>
                     <p className="text-3xl font-semibold text-workx-lime">{formatCurrency(calculatedBonus)}</p>
-                    <p className="text-xs text-white/40 mt-2">
+                    <p className="text-xs text-gray-400 mt-2">
                       {formatCurrency(parseFloat(form.invoiceAmount))} × {form.bonusPercentage}%
                     </p>
                   </div>
@@ -756,10 +756,10 @@ export default function BonusPage() {
                   </div>
                   <div>
                     <h2 className="font-semibold text-white text-lg">Te betalen bonussen</h2>
-                    <p className="text-sm text-white/40">{bonusesToPay.length} bonussen klaar voor uitbetaling</p>
+                    <p className="text-sm text-gray-400">{bonusesToPay.length} bonussen klaar voor uitbetaling</p>
                   </div>
                 </div>
-                <button onClick={() => setShowBonusOverview(false)} className="p-2 text-white/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+                <button onClick={() => setShowBonusOverview(false)} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
                   <Icons.x size={18} />
                 </button>
               </div>
@@ -770,9 +770,9 @@ export default function BonusPage() {
               {bonusesToPay.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                    <Icons.check className="text-white/20" size={28} />
+                    <Icons.check className="text-gray-600" size={28} />
                   </div>
-                  <p className="text-white/60">Alle bonussen zijn uitbetaald!</p>
+                  <p className="text-gray-400">Alle bonussen zijn uitbetaald!</p>
                 </div>
               ) : (
                 bonusesToPay.map((calc, index) => (
@@ -786,14 +786,14 @@ export default function BonusPage() {
                       </div>
                       <div>
                         <p className="font-medium text-white">{calc.clientName || 'Onbekende klant'}</p>
-                        <p className="text-sm text-white/40">
+                        <p className="text-sm text-gray-400">
                           {calc.invoiceNumber ? `#${calc.invoiceNumber}` : 'Geen factuurnr.'} · {formatCurrency(calc.invoiceAmount)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-emerald-400 text-lg">{formatCurrency(calc.bonusAmount)}</p>
-                      <p className="text-xs text-white/30">{calc.bonusPercentage}%</p>
+                      <p className="text-xs text-gray-500">{calc.bonusPercentage}%</p>
                     </div>
                   </div>
                 ))
@@ -804,7 +804,7 @@ export default function BonusPage() {
             {bonusesToPay.length > 0 && (
               <div className="p-6 border-t border-white/10 bg-white/[0.02]">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-white/60">Totaal te betalen</span>
+                  <span className="text-gray-400">Totaal te betalen</span>
                   <span className="text-2xl font-semibold text-emerald-400">{formatCurrency(bonusToPayAmount)}</span>
                 </div>
                 <div className="flex gap-3">

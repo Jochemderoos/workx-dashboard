@@ -203,7 +203,11 @@ export default function AppjeplekjePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl">🏢</span>
+            <img
+              src="/workx-pand.png"
+              alt="Kantoor"
+              className="h-8 sm:h-10 w-auto opacity-80"
+            />
             Appjeplekje
           </h1>
           <p className="text-white/50 mt-1 text-sm sm:text-base">Meld je aan voor een werkplek op kantoor</p>
@@ -236,7 +240,7 @@ export default function AppjeplekjePage() {
             {/* Weekday Headers */}
             <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1 sm:mb-2">
               {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map(day => (
-                <div key={day} className="text-center text-[10px] sm:text-xs font-medium text-white/40 py-1 sm:py-2">
+                <div key={day} className="text-center text-xs sm:text-xs font-medium text-gray-400 py-1 sm:py-2">
                   {day}
                 </div>
               ))}
@@ -278,7 +282,7 @@ export default function AppjeplekjePage() {
             </div>
 
             {/* Legend */}
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5 flex items-center gap-3 sm:gap-4 text-[9px] sm:text-[10px] text-white/40">
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5 flex items-center gap-3 sm:gap-4 text-xs sm:text-xs text-gray-400">
               <span className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded bg-workx-lime/20 ring-1 ring-workx-lime/40"></div>
                 Vandaag
@@ -297,7 +301,7 @@ export default function AppjeplekjePage() {
           <div className="card p-5">
             <div className="text-center mb-4">
               <p className="text-workx-lime text-sm font-medium">{formatSelectedDate()}</p>
-              <p className="text-white/40 text-xs mt-1">
+              <p className="text-gray-400 text-xs mt-1">
                 {new Date(selectedDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
             </div>
@@ -323,7 +327,7 @@ export default function AppjeplekjePage() {
                       style={{ width: `${occupancyPercentage}%` }}
                     />
                   </div>
-                  <p className="text-xs text-white/40 mt-1.5 text-center">
+                  <p className="text-xs text-gray-400 mt-1.5 text-center">
                     {attendanceData.availableWorkplaces} {attendanceData.availableWorkplaces === 1 ? 'plek' : 'plekken'} beschikbaar
                   </p>
                 </div>
@@ -367,7 +371,7 @@ export default function AppjeplekjePage() {
                 )}
               </>
             ) : (
-              <p className="text-center text-white/40">Kon data niet laden</p>
+              <p className="text-center text-gray-400">Kon data niet laden</p>
             )}
           </div>
 
@@ -423,7 +427,11 @@ export default function AppjeplekjePage() {
             ) : (
               <div className="text-center py-8">
                 <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3">
-                  <span className="text-3xl">🏢</span>
+                  <img
+                    src="/workx-pand.png"
+                    alt="Kantoor"
+                    className="h-10 w-auto opacity-60"
+                  />
                 </div>
                 <p className="text-white/50 text-sm">Nog niemand aangemeld</p>
                 <p className="text-white/30 text-xs mt-1">Wees de eerste!</p>

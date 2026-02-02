@@ -10,6 +10,28 @@ interface ParsedEntry {
   workedHours: number
 }
 
+// Naam normalisatie - fix bekende incomplete namen
+const NAME_CORRECTIONS: Record<string, string> = {
+  'Emma van der': 'Emma van der Vos',
+  'Lotte van Sint': 'Lotte van Sint Truiden',
+  'Wies van': 'Wies van Pesch',
+  'Erika van': 'Erika van Zadelhof',
+}
+
+function normalizeName(name: string): string {
+  // Check for exact matches first
+  if (NAME_CORRECTIONS[name]) {
+    return NAME_CORRECTIONS[name]
+  }
+  // Check if name starts with a known incomplete name
+  for (const [incomplete, complete] of Object.entries(NAME_CORRECTIONS)) {
+    if (name.startsWith(incomplete) && name.length <= incomplete.length + 1) {
+      return complete
+    }
+  }
+  return name
+}
+
 // Parse RTF naar plain text en extract uren data
 function parseRTFContent(buffer: Buffer): ParsedEntry[] {
   const content = buffer.toString('utf-8')
@@ -103,9 +125,12 @@ function parseRTFContent(buffer: Buffer): ParsedEntry[] {
           }
         }
 
-        const fullName = currentFirstName && currentLastName
+        const rawName = currentFirstName && currentLastName
           ? `${currentFirstName} ${currentLastName}`
           : ''
+
+        // Normalize the name to fix incomplete names like "Emma van der"
+        const fullName = normalizeName(rawName)
 
         if (fullName && billable > 0) {
           entries.push({
