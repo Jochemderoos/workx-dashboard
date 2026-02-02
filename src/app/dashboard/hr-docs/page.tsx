@@ -440,13 +440,63 @@ export default function HRDocsPage() {
   const contentRef = useRef<HTMLDivElement>(null)
   const mobileNavRef = useRef<HTMLDivElement>(null)
 
+  // Edit state
+  const [editingChapter, setEditingChapter] = useState<Chapter | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [editIcon, setEditIcon] = useState('')
+  const [localChapters, setLocalChapters] = useState<Record<string, Chapter>>({})
+
   // Check if user can edit (Partner or Admin/Head of Office)
   const canEdit = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
 
-  // Get current document
+  // Get current document with local edits applied
   const currentDoc = useMemo(() => {
-    return DOCUMENTS.find(d => d.id === activeDoc) || DOCUMENTS[0]
-  }, [activeDoc])
+    const doc = DOCUMENTS.find(d => d.id === activeDoc) || DOCUMENTS[0]
+    // Apply local edits to chapters
+    const chaptersWithEdits = doc.chapters.map(chapter => {
+      if (localChapters[chapter.id]) {
+        return localChapters[chapter.id]
+      }
+      return chapter
+    })
+    return { ...doc, chapters: chaptersWithEdits }
+  }, [activeDoc, localChapters])
+
+  // Open edit modal
+  const openEditModal = (chapter: Chapter) => {
+    setEditingChapter(chapter)
+    setEditTitle(chapter.title)
+    setEditContent(chapter.content)
+    setEditIcon(chapter.icon)
+  }
+
+  // Save chapter edits
+  const saveChapterEdit = () => {
+    if (!editingChapter) return
+
+    const updatedChapter: Chapter = {
+      ...editingChapter,
+      title: editTitle,
+      content: editContent,
+      icon: editIcon,
+    }
+
+    setLocalChapters(prev => ({
+      ...prev,
+      [editingChapter.id]: updatedChapter
+    }))
+
+    setEditingChapter(null)
+  }
+
+  // Cancel edit
+  const cancelEdit = () => {
+    setEditingChapter(null)
+    setEditTitle('')
+    setEditContent('')
+    setEditIcon('')
+  }
 
   // Set initial active chapter
   useEffect(() => {
@@ -737,7 +787,11 @@ export default function HRDocsPage() {
                   )}
                 </div>
                 {canEdit && (
-                  <button className="ml-auto p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+                  <button
+                    onClick={() => openEditModal(chapter)}
+                    className="ml-auto p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                    title="Hoofdstuk bewerken"
+                  >
                     <Icons.edit size={16} />
                   </button>
                 )}
@@ -781,6 +835,114 @@ export default function HRDocsPage() {
           )}
         </main>
       </div>
+
+      {/* Edit Chapter Modal */}
+      {editingChapter && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={cancelEdit}>
+          <div className="card p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
+                  <Icons.edit className="text-blue-400" size={18} />
+                </div>
+                <h2 className="font-semibold text-white text-lg">Hoofdstuk bewerken</h2>
+              </div>
+              <button
+                onClick={cancelEdit}
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            {/* Edit Form */}
+            <div className="space-y-4">
+              {/* Icon & Title Row */}
+              <div className="flex gap-4">
+                <div className="w-20">
+                  <label className="block text-sm text-gray-400 mb-2">Icoon</label>
+                  <input
+                    type="text"
+                    value={editIcon}
+                    onChange={(e) => setEditIcon(e.target.value)}
+                    className="input-field text-center text-2xl"
+                    maxLength={2}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm text-gray-400 mb-2">Titel</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="input-field"
+                    placeholder="Titel van het hoofdstuk"
+                  />
+                </div>
+              </div>
+
+              {/* Content */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Inhoud (HTML)
+                  <span className="text-white/30 ml-2">• Gebruik &lt;h3&gt; voor koppen, &lt;p&gt; voor paragrafen, &lt;ul&gt;/&lt;li&gt; voor lijsten</span>
+                </label>
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="input-field font-mono text-sm resize-none"
+                  rows={16}
+                  placeholder="<p>Paragraaf tekst...</p>"
+                />
+              </div>
+
+              {/* HTML Help */}
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                <p className="text-xs text-gray-400 mb-2 font-semibold">Veelgebruikte HTML tags:</p>
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="text-white/50">
+                    <code className="text-workx-lime">&lt;h3&gt;</code> Subkop
+                  </div>
+                  <div className="text-white/50">
+                    <code className="text-workx-lime">&lt;p class="text-white/70 mb-4"&gt;</code> Paragraaf
+                  </div>
+                  <div className="text-white/50">
+                    <code className="text-workx-lime">&lt;strong&gt;</code> Vetgedrukt
+                  </div>
+                  <div className="text-white/50">
+                    <code className="text-workx-lime">&lt;ul&gt;&lt;li&gt;</code> Opsomming
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
+              <button
+                onClick={cancelEdit}
+                className="flex-1 btn-secondary"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={saveChapterEdit}
+                className="flex-1 btn-primary flex items-center justify-center gap-2"
+              >
+                <Icons.check size={16} />
+                Opslaan
+              </button>
+            </div>
+
+            {/* Note about persistence */}
+            <p className="text-xs text-white/30 text-center mt-4">
+              Let op: wijzigingen worden lokaal opgeslagen en verdwijnen na het verversen van de pagina.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
