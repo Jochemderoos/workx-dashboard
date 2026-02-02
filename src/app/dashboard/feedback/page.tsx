@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
 
@@ -16,9 +17,11 @@ interface FeedbackItem {
   createdAt: string
   status: FeedbackStatus
   response?: string
+  processed: boolean
 }
 
 export default function FeedbackPage() {
+  const { data: session } = useSession()
   const [feedback, setFeedback] = useState<FeedbackItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -28,6 +31,9 @@ export default function FeedbackPage() {
     title: '',
     description: '',
   })
+
+  // Check if user is partner (can toggle processed)
+  const isPartner = session?.user?.role === 'PARTNER'
 
   // Fetch feedback from API
   useEffect(() => {
@@ -115,6 +121,42 @@ export default function FeedbackPage() {
   const ideasCount = feedback.filter(f => f.type === 'IDEA').length
   const bugsCount = feedback.filter(f => f.type === 'BUG').length
   const newCount = feedback.filter(f => f.status === 'NEW').length
+  const processedCount = feedback.filter(f => f.processed).length
+
+  const toggleProcessed = async (id: string, currentValue: boolean) => {
+    try {
+      const res = await fetch(`/api/feedback/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ processed: !currentValue })
+      })
+      if (res.ok) {
+        // Re-sort: move processed to bottom
+        const updated = feedback.map(f => f.id === id ? { ...f, processed: !currentValue } : f)
+        const sorted = [...updated].sort((a, b) => {
+          if (a.processed !== b.processed) return a.processed ? 1 : -1
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        })
+        setFeedback(sorted)
+        toast.success(!currentValue ? 'Gemarkeerd als verwerkt (wordt na 5 dagen verwijderd)' : 'Markering verwijderd')
+      }
+    } catch (error) {
+      toast.error('Kon status niet wijzigen')
+    }
+  }
+
+  const deleteFeedback = async (id: string) => {
+    if (!confirm('Weet je zeker dat je deze feedback wilt verwijderen?')) return
+    try {
+      const res = await fetch(`/api/feedback/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setFeedback(feedback.filter(f => f.id !== id))
+        toast.success('Feedback verwijderd')
+      }
+    } catch (error) {
+      toast.error('Kon feedback niet verwijderen')
+    }
+  }
 
   if (isLoading) {
     return (
@@ -229,15 +271,38 @@ export default function FeedbackPage() {
               key={item.id}
               className={`card p-5 border-l-4 ${
                 item.type === 'IDEA' ? 'border-l-purple-500' : 'border-l-red-500'
-              }`}
+              } ${item.processed ? 'opacity-60' : ''}`}
             >
               <div className="flex items-start gap-4">
+                {/* Checkbox and delete for partners */}
+                {isPartner && (
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => toggleProcessed(item.id, item.processed)}
+                      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                        item.processed
+                          ? 'bg-workx-lime border-workx-lime'
+                          : 'border-white/30 hover:border-workx-lime/50'
+                      }`}
+                      title={item.processed ? 'Als onverwerkt markeren' : 'Als verwerkt markeren'}
+                    >
+                      {item.processed && <Icons.check size={14} className="text-workx-dark" />}
+                    </button>
+                    <button
+                      onClick={() => deleteFeedback(item.id)}
+                      className="w-6 h-6 rounded-lg border-2 border-white/20 flex items-center justify-center hover:border-red-400/50 hover:bg-red-500/10 transition-all"
+                      title="Verwijderen"
+                    >
+                      <Icons.trash size={12} className="text-gray-400 hover:text-red-400" />
+                    </button>
+                  </div>
+                )}
                 {getTypeIcon(item.type)}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-medium text-white">{item.title}</h3>
+                        <h3 className={`font-medium ${item.processed ? 'text-white/60 line-through' : 'text-white'}`}>{item.title}</h3>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           item.type === 'IDEA'
                             ? 'bg-purple-500/20 text-purple-400'
@@ -246,6 +311,11 @@ export default function FeedbackPage() {
                           {item.type === 'IDEA' ? 'Idee' : 'Probleem'}
                         </span>
                         {getStatusBadge(item.status)}
+                        {item.processed && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-workx-lime/20 text-workx-lime">
+                            Verwerkt
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-400 mt-1">
                         Door {item.submittedBy} op {new Date(item.createdAt).toLocaleDateString('nl-NL', {

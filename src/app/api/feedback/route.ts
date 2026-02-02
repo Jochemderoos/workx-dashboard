@@ -11,13 +11,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Auto-delete processed items older than 5 days
+    const fiveDaysAgo = new Date()
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5)
+
+    await prisma.feedback.deleteMany({
+      where: {
+        processed: true,
+        processedAt: {
+          lt: fiveDaysAgo
+        }
+      }
+    })
+
     const feedback = await prisma.feedback.findMany({
       include: {
         submittedBy: {
           select: { name: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: [
+        { processed: 'asc' }, // Unprocessed first
+        { createdAt: 'desc' }  // Then by date
+      ]
     })
 
     // Map to include submittedBy name

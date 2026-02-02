@@ -25,14 +25,20 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { status, response } = await req.json()
+    const { status, response, processed } = await req.json()
+
+    const updateData: any = {}
+    if (status !== undefined) updateData.status = status
+    if (response !== undefined) updateData.response = response
+    if (processed !== undefined) {
+      updateData.processed = processed
+      // Set processedAt when marking as processed (for auto-delete after 5 days)
+      updateData.processedAt = processed ? new Date() : null
+    }
 
     const feedback = await prisma.feedback.update({
       where: { id: params.id },
-      data: {
-        status,
-        response,
-      },
+      data: updateData,
       include: {
         submittedBy: {
           select: { name: true }

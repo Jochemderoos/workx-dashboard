@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const all = searchParams.get('all') === 'true'
 
     if (all && isAdmin) {
-      // Fetch all parental leaves for admin
+      // Fetch all parental leaves for admin - grouped by user
       const leaves = await prisma.parentalLeave.findMany({
         include: {
           user: {
@@ -27,19 +27,19 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        orderBy: {
-          user: {
-            name: 'asc'
-          }
-        }
+        orderBy: [
+          { user: { name: 'asc' } },
+          { childNumber: 'asc' }
+        ]
       })
       return NextResponse.json(leaves)
     } else {
-      // Fetch own parental leave
-      const leave = await prisma.parentalLeave.findUnique({
-        where: { userId: session.user.id }
+      // Fetch own parental leave (all children)
+      const leaves = await prisma.parentalLeave.findMany({
+        where: { userId: session.user.id },
+        orderBy: { childNumber: 'asc' }
       })
-      return NextResponse.json(leave)
+      return NextResponse.json(leaves)
     }
   } catch (error) {
     console.error('Error fetching parental leave:', error)
@@ -67,27 +67,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Gebruiker ID is verplicht' }, { status: 400 })
     }
 
-    // Check if user already has parental leave
-    const existing = await prisma.parentalLeave.findUnique({
-      where: { userId }
+    // Get next child number for this user
+    const existingLeaves = await prisma.parentalLeave.findMany({
+      where: { userId },
+      orderBy: { childNumber: 'desc' },
+      take: 1
     })
-
-    if (existing) {
-      return NextResponse.json({ error: 'Gebruiker heeft al ouderschapsverlof' }, { status: 400 })
-    }
+    const nextChildNumber = existingLeaves.length > 0 ? existingLeaves[0].childNumber + 1 : 1
 
     const leave = await prisma.parentalLeave.create({
       data: {
         userId,
-        betaaldTotaalWeken: leaveData.betaaldTotaalWeken || 9,
-        betaaldOpgenomenWeken: leaveData.betaaldOpgenomenWeken || 0,
-        onbetaaldTotaalWeken: leaveData.onbetaaldTotaalWeken || 17,
-        onbetaaldOpgenomenWeken: leaveData.onbetaaldOpgenomenWeken || 0,
+        childNumber: leaveData.childNumber || nextChildNumber,
         kindNaam: leaveData.kindNaam || null,
         kindGeboorteDatum: leaveData.kindGeboorteDatum ? new Date(leaveData.kindGeboorteDatum) : null,
-        startDatum: leaveData.startDatum ? new Date(leaveData.startDatum) : null,
-        eindDatum: leaveData.eindDatum ? new Date(leaveData.eindDatum) : null,
-        inzetPerWeek: leaveData.inzetPerWeek || null,
+        uitgerekendeDatum: leaveData.uitgerekendeDatum ? new Date(leaveData.uitgerekendeDatum) : null,
+        zwangerschapsverlofStart: leaveData.zwangerschapsverlofStart ? new Date(leaveData.zwangerschapsverlofStart) : null,
+        zwangerschapsverlofStatus: leaveData.zwangerschapsverlofStatus || null,
+        geboorteverlofPartner: leaveData.geboorteverlofPartner || null,
+        aanvullendVerlofPartner: leaveData.aanvullendVerlofPartner || null,
+        betaaldTotaalUren: leaveData.betaaldTotaalUren ?? 324,
+        betaaldOpgenomenUren: leaveData.betaaldOpgenomenUren ?? 0,
+        betaaldVerlofDetails: leaveData.betaaldVerlofDetails || null,
+        betaaldVerlofEinddatum: leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null,
+        onbetaaldTotaalDagen: leaveData.onbetaaldTotaalDagen ?? 85,
+        onbetaaldOpgenomenDagen: leaveData.onbetaaldOpgenomenDagen ?? 0,
+        onbetaaldVerlofDetails: leaveData.onbetaaldVerlofDetails || null,
+        onbetaaldVerlofEinddatum: leaveData.onbetaaldVerlofEinddatum ? new Date(leaveData.onbetaaldVerlofEinddatum) : null,
+        uwvAangevraagd: leaveData.uwvAangevraagd ?? false,
+        uwvDetails: leaveData.uwvDetails || null,
         note: leaveData.note || null,
       },
       include: {
@@ -121,27 +129,36 @@ export async function PATCH(request: NextRequest) {
     }
 
     const data = await request.json()
-    const { id, userId, ...leaveData } = data
+    const { id, ...leaveData } = data
 
-    if (!id && !userId) {
-      return NextResponse.json({ error: 'ID of gebruiker ID is verplicht' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: 'ID is verplicht' }, { status: 400 })
     }
 
     const updateData: any = {}
 
-    if (leaveData.betaaldTotaalWeken !== undefined) updateData.betaaldTotaalWeken = leaveData.betaaldTotaalWeken
-    if (leaveData.betaaldOpgenomenWeken !== undefined) updateData.betaaldOpgenomenWeken = leaveData.betaaldOpgenomenWeken
-    if (leaveData.onbetaaldTotaalWeken !== undefined) updateData.onbetaaldTotaalWeken = leaveData.onbetaaldTotaalWeken
-    if (leaveData.onbetaaldOpgenomenWeken !== undefined) updateData.onbetaaldOpgenomenWeken = leaveData.onbetaaldOpgenomenWeken
+    // Handle all possible fields
     if (leaveData.kindNaam !== undefined) updateData.kindNaam = leaveData.kindNaam
     if (leaveData.kindGeboorteDatum !== undefined) updateData.kindGeboorteDatum = leaveData.kindGeboorteDatum ? new Date(leaveData.kindGeboorteDatum) : null
-    if (leaveData.startDatum !== undefined) updateData.startDatum = leaveData.startDatum ? new Date(leaveData.startDatum) : null
-    if (leaveData.eindDatum !== undefined) updateData.eindDatum = leaveData.eindDatum ? new Date(leaveData.eindDatum) : null
-    if (leaveData.inzetPerWeek !== undefined) updateData.inzetPerWeek = leaveData.inzetPerWeek
+    if (leaveData.uitgerekendeDatum !== undefined) updateData.uitgerekendeDatum = leaveData.uitgerekendeDatum ? new Date(leaveData.uitgerekendeDatum) : null
+    if (leaveData.zwangerschapsverlofStart !== undefined) updateData.zwangerschapsverlofStart = leaveData.zwangerschapsverlofStart ? new Date(leaveData.zwangerschapsverlofStart) : null
+    if (leaveData.zwangerschapsverlofStatus !== undefined) updateData.zwangerschapsverlofStatus = leaveData.zwangerschapsverlofStatus
+    if (leaveData.geboorteverlofPartner !== undefined) updateData.geboorteverlofPartner = leaveData.geboorteverlofPartner
+    if (leaveData.aanvullendVerlofPartner !== undefined) updateData.aanvullendVerlofPartner = leaveData.aanvullendVerlofPartner
+    if (leaveData.betaaldTotaalUren !== undefined) updateData.betaaldTotaalUren = leaveData.betaaldTotaalUren
+    if (leaveData.betaaldOpgenomenUren !== undefined) updateData.betaaldOpgenomenUren = leaveData.betaaldOpgenomenUren
+    if (leaveData.betaaldVerlofDetails !== undefined) updateData.betaaldVerlofDetails = leaveData.betaaldVerlofDetails
+    if (leaveData.betaaldVerlofEinddatum !== undefined) updateData.betaaldVerlofEinddatum = leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null
+    if (leaveData.onbetaaldTotaalDagen !== undefined) updateData.onbetaaldTotaalDagen = leaveData.onbetaaldTotaalDagen
+    if (leaveData.onbetaaldOpgenomenDagen !== undefined) updateData.onbetaaldOpgenomenDagen = leaveData.onbetaaldOpgenomenDagen
+    if (leaveData.onbetaaldVerlofDetails !== undefined) updateData.onbetaaldVerlofDetails = leaveData.onbetaaldVerlofDetails
+    if (leaveData.onbetaaldVerlofEinddatum !== undefined) updateData.onbetaaldVerlofEinddatum = leaveData.onbetaaldVerlofEinddatum ? new Date(leaveData.onbetaaldVerlofEinddatum) : null
+    if (leaveData.uwvAangevraagd !== undefined) updateData.uwvAangevraagd = leaveData.uwvAangevraagd
+    if (leaveData.uwvDetails !== undefined) updateData.uwvDetails = leaveData.uwvDetails
     if (leaveData.note !== undefined) updateData.note = leaveData.note
 
     const leave = await prisma.parentalLeave.update({
-      where: id ? { id } : { userId },
+      where: { id },
       data: updateData,
       include: {
         user: {
@@ -175,14 +192,13 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    const userId = searchParams.get('userId')
 
-    if (!id && !userId) {
-      return NextResponse.json({ error: 'ID of gebruiker ID is verplicht' }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ error: 'ID is verplicht' }, { status: 400 })
     }
 
     await prisma.parentalLeave.delete({
-      where: id ? { id } : { userId: userId! }
+      where: { id }
     })
 
     return NextResponse.json({ success: true })

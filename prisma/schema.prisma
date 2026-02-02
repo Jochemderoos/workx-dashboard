@@ -35,7 +35,7 @@ model User {
   // Vacation
   vacationBalance   VacationBalance?
   vacationRequests  VacationRequest[]
-  parentalLeave     ParentalLeave?
+  parentalLeaves    ParentalLeave[]   // Multiple children supported
 
   // Work items
   assignedWork      WorkItem[]        @relation("AssignedWork")
@@ -179,24 +179,50 @@ model VacationBalance {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Ouderschapsverlof tracking
+// Ouderschapsverlof tracking - ondersteunt meerdere kinderen per medewerker
 model ParentalLeave {
   id                      String   @id @default(cuid())
-  userId                  String   @unique
-  betaaldTotaalWeken      Float    @default(9)  // Standaard 9 weken betaald (UWV 70%)
-  betaaldOpgenomenWeken   Float    @default(0)
-  onbetaaldTotaalWeken    Float    @default(17) // 26 - 9 = 17 weken onbetaald
-  onbetaaldOpgenomenWeken Float    @default(0)
-  kindNaam                String?
-  kindGeboorteDatum       DateTime?
-  startDatum              DateTime?
-  eindDatum               DateTime?            // Tot wanneer te gebruiken
-  inzetPerWeek            Float?               // Uren per week opname
-  note                    String?
+  userId                  String
+  childNumber             Int      @default(1)  // Kind nummer (1, 2, etc.)
+
+  // Kind informatie
+  kindNaam                String?              // Naam van het kind
+  kindGeboorteDatum       DateTime?            // Geboortedatum (of null als nog niet geboren)
+  uitgerekendeDatum       DateTime?            // Uitgerekende datum (voor zwangerschap)
+
+  // Zwangerschapsverlof (WAZO) - 16 weken
+  zwangerschapsverlofStart    DateTime?        // Startdatum WAZO
+  zwangerschapsverlofStatus   String?          // Status tekst (bijv. "16 weken ontvangen")
+
+  // Geboorteverlof partner - 1 week + 5 weken aanvullend
+  geboorteverlofPartner       String?          // Status/details geboorteverlof partner
+  aanvullendVerlofPartner     String?          // 5 weken aanvullend partnerverlof
+
+  // Betaald ouderschapsverlof - 9 weken (70% UWV)
+  betaaldTotaalUren       Float    @default(324) // 9 weken x 36 uur = 324 uur
+  betaaldOpgenomenUren    Float    @default(0)
+  betaaldVerlofDetails    String?  @db.Text     // Details over opname
+  betaaldVerlofEinddatum  DateTime?            // Laatste dag betaald verlof
+
+  // Onbetaald ouderschapsverlof - 17 weken
+  onbetaaldTotaalDagen    Float    @default(85) // 17 weken = 85 dagen
+  onbetaaldOpgenomenDagen Float    @default(0)
+  onbetaaldVerlofDetails  String?  @db.Text     // Details over opname
+  onbetaaldVerlofEinddatum DateTime?           // Laatste dag onbetaald verlof
+
+  // UWV status
+  uwvAangevraagd          Boolean  @default(false)
+  uwvDetails              String?  @db.Text     // Details over UWV aanvraag/ontvangst
+
+  // Algemeen
+  note                    String?  @db.Text     // Extra notities
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, childNumber])
+  @@index([userId])
 }
 
 model VacationRequest {
@@ -276,6 +302,8 @@ model Feedback {
   description String
   status      String   @default("NEW") // NEW, IN_PROGRESS, DONE, WONT_FIX
   response    String?
+  processed   Boolean  @default(false) // Checkbox for admin to mark as processed
+  processedAt DateTime? // When marked as processed (for auto-delete after 5 days)
   submittedById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

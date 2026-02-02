@@ -6,63 +6,61 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 
-// Team Avatar Component
-function TeamAvatar({
-  name,
-  size = 'medium',
-  className = ''
-}: {
-  name: string
-  size?: 'small' | 'medium' | 'large'
-  className?: string
-}) {
-  const photoUrl = getPhotoUrl(name)
-  const [imageError, setImageError] = useState(false)
-
-  const sizeClasses = {
-    small: 'w-9 h-9 rounded-lg text-sm',
-    medium: 'w-14 h-14 rounded-xl text-xl',
-    large: 'w-12 h-12 rounded-xl text-lg',
-  }
-
-  const containerSizes = {
-    small: 'team-photo-small',
-    medium: 'team-photo-medium',
-    large: 'team-photo-large',
-  }
-
-  if (photoUrl && !imageError) {
-    return (
-      <div className={`team-photo-container team-photo-glow ${containerSizes[size]} flex-shrink-0 ${className}`}>
-        <img
-          src={photoUrl}
-          alt={name}
-          className="team-photo"
-          onError={() => setImageError(true)}
-          loading="lazy"
-        />
-      </div>
-    )
-  }
-
-  // Fallback to letter avatar
-  return (
-    <div className={`team-avatar-fallback ${sizeClasses[size]} flex-shrink-0 shadow-lg shadow-workx-lime/20 ${className}`}>
-      <span>{name.charAt(0).toUpperCase()}</span>
-    </div>
-  )
+interface ParentalLeave {
+  id: string
+  childNumber: number
+  kindNaam: string | null
+  kindGeboorteDatum: string | null
+  uitgerekendeDatum: string | null
+  zwangerschapsverlofStart: string | null
+  zwangerschapsverlofStatus: string | null
+  geboorteverlofPartner: string | null
+  aanvullendVerlofPartner: string | null
+  betaaldTotaalUren: number
+  betaaldOpgenomenUren: number
+  betaaldVerlofDetails: string | null
+  onbetaaldTotaalDagen: number
+  onbetaaldOpgenomenDagen: number
+  onbetaaldVerlofDetails: string | null
+  uwvAangevraagd: boolean
+  uwvDetails: string | null
+  note: string | null
 }
 
-interface TeamMember {
+interface VacationBalance {
+  overgedragenVorigJaar: number
+  opbouwLopendJaar: number
+  bijgekocht: number
+  opgenomenLopendJaar: number
+}
+
+interface SalaryScale {
+  id: string
+  experienceYear: number
+  label: string
+  salary: number
+  hourlyRateBase: number
+}
+
+interface EmployeeData {
   id: string
   name: string
   email: string
   role: string
-  department: string | null
-  phoneNumber: string | null
   startDate: string | null
-  createdAt: string
-  _count: { assignedWork: number }
+  department: string | null
+  compensation: {
+    experienceYear: number | null
+    hourlyRate: number
+    salary: number | null
+    isHourlyWage: boolean
+    notes: string | null
+  } | null
+  bonusPaid: number
+  bonusPending: number
+  bonusTotal: number
+  vacationBalance: VacationBalance | null
+  parentalLeaves: ParentalLeave[]
 }
 
 interface SickDayEntry {
@@ -72,7 +70,6 @@ interface SickDayEntry {
   endDate: string
   workDays: number
   note: string | null
-  user: { id: string; name: string }
 }
 
 interface SickDaysResponse {
@@ -80,33 +77,20 @@ interface SickDaysResponse {
   totals: { userId: string; totalDays: number }[]
 }
 
-const roleConfig: Record<string, { label: string; color: string; bg: string }> = {
-  PARTNER: { label: 'Partner', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-  ADMIN: { label: 'Head of Office', color: 'text-workx-lime', bg: 'bg-workx-lime/10' },
-  MANAGER: { label: 'Manager', color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  EMPLOYEE: { label: 'Advocaat', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
-}
-
 export default function TeamPage() {
   const { data: session } = useSession()
-  const [members, setMembers] = useState<TeamMember[]>([])
+  const [employees, setEmployees] = useState<EmployeeData[]>([])
+  const [salaryScales, setSalaryScales] = useState<SalaryScale[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterRole, setFilterRole] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false)
-
-  // Password reset state
-  const [showResetModal, setShowResetModal] = useState(false)
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
-  const [newPassword, setNewPassword] = useState('')
-  const [isResetting, setIsResetting] = useState(false)
+  const [expandedCard, setExpandedCard] = useState<string | null>(null)
+  const currentYear = new Date().getFullYear()
 
   // Sick days state
   const [sickDaysData, setSickDaysData] = useState<SickDaysResponse>({ entries: [], totals: [] })
   const [showSickDaysModal, setShowSickDaysModal] = useState(false)
-  const [sickDaysMember, setSickDaysMember] = useState<TeamMember | null>(null)
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [sickDaysMember, setSickDaysMember] = useState<EmployeeData | null>(null)
+  const [selectedYear, setSelectedYear] = useState(currentYear)
   const [entryMode, setEntryMode] = useState<'single' | 'period'>('single')
   const [sickStartDate, setSickStartDate] = useState('')
   const [sickEndDate, setSickEndDate] = useState('')
@@ -114,24 +98,53 @@ export default function TeamPage() {
   const [isSavingSickDays, setIsSavingSickDays] = useState(false)
   const [isDeletingEntry, setIsDeletingEntry] = useState<string | null>(null)
 
-  // Check if current user can manage (ADMIN or PARTNER)
-  const canManage = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
-  // Check if current user can reset passwords (ADMIN or PARTNER)
-  const canResetPasswords = canManage
+  // Parental leave modal state
+  const [showParentalModal, setShowParentalModal] = useState(false)
+  const [parentalMember, setParentalMember] = useState<EmployeeData | null>(null)
+  const [showAddLeaveForm, setShowAddLeaveForm] = useState(false)
+  const [editingLeave, setEditingLeave] = useState<ParentalLeave | null>(null)
+  const [isSavingLeave, setIsSavingLeave] = useState(false)
+  const [leaveForm, setLeaveForm] = useState({
+    kindNaam: '',
+    kindGeboorteDatum: '',
+    uitgerekendeDatum: '',
+    zwangerschapsverlofStart: '',
+    zwangerschapsverlofStatus: '',
+    geboorteverlofPartner: '',
+    aanvullendVerlofPartner: '',
+    betaaldTotaalUren: 324,
+    betaaldOpgenomenUren: 0,
+    betaaldVerlofDetails: '',
+    onbetaaldTotaalDagen: 85,
+    onbetaaldOpgenomenDagen: 0,
+    onbetaaldVerlofDetails: '',
+    uwvAangevraagd: false,
+    uwvDetails: '',
+    note: ''
+  })
 
-  useEffect(() => { fetchMembers() }, [])
+  // Check permissions
+  const isManager = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
+  const currentUserId = session?.user?.id
 
-  // Fetch sick days when user can manage or year changes
   useEffect(() => {
-    if (canManage) {
+    fetchData()
+  }, [])
+
+  useEffect(() => {
+    if (isManager) {
       fetchSickDays()
     }
-  }, [canManage, selectedYear])
+  }, [isManager, selectedYear])
 
-  const fetchMembers = async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch('/api/team')
-      if (res.ok) setMembers(await res.json())
+      const [empRes, scaleRes] = await Promise.all([
+        fetch('/api/financien/employee-compensation'),
+        fetch('/api/financien/salary-scales')
+      ])
+      if (empRes.ok) setEmployees(await empRes.json())
+      if (scaleRes.ok) setSalaryScales(await scaleRes.json())
     } catch (error) {
       toast.error('Kon team niet laden')
     } finally {
@@ -142,24 +155,36 @@ export default function TeamPage() {
   const fetchSickDays = async () => {
     try {
       const res = await fetch(`/api/sick-days?year=${selectedYear}`)
-      if (res.ok) {
-        const data = await res.json()
-        setSickDaysData(data)
-      }
+      if (res.ok) setSickDaysData(await res.json())
     } catch (error) {
       console.error('Error fetching sick days:', error)
     }
   }
 
-  const getSickDaysForMember = (memberId: string) => {
-    return sickDaysData.totals.find(t => t.userId === memberId)?.totalDays || 0
-  }
+  const getSickDays = (memberId: string) => sickDaysData.totals.find(t => t.userId === memberId)?.totalDays || 0
+  const getMemberEntries = (memberId: string) => sickDaysData.entries.filter(e => e.userId === memberId)
 
-  const getMemberEntries = (memberId: string) => {
-    return sickDaysData.entries.filter(e => e.userId === memberId)
-  }
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
 
-  const openSickDaysModal = (member: TeamMember) => {
+  const formatDateNL = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  const formatDateShort = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+
+  // Sort: current user first, then alphabetically
+  const sortedEmployees = [...employees].sort((a, b) => {
+    if (a.id === currentUserId) return -1
+    if (b.id === currentUserId) return 1
+    return a.name.localeCompare(b.name)
+  })
+
+  const filteredEmployees = sortedEmployees.filter(emp =>
+    emp.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const openSickDaysModal = (member: EmployeeData) => {
     setSickDaysMember(member)
     setEntryMode('single')
     setSickStartDate('')
@@ -169,16 +194,8 @@ export default function TeamPage() {
   }
 
   const handleSaveSickDays = async () => {
-    if (!sickDaysMember || !sickStartDate) {
-      toast.error('Selecteer een datum')
-      return
-    }
-
-    // Voor periode mode moet er ook een einddatum zijn
-    if (entryMode === 'period' && !sickEndDate) {
-      toast.error('Selecteer een einddatum')
-      return
-    }
+    if (!sickDaysMember || !sickStartDate) return toast.error('Selecteer een datum')
+    if (entryMode === 'period' && !sickEndDate) return toast.error('Selecteer een einddatum')
 
     setIsSavingSickDays(true)
     try {
@@ -192,14 +209,8 @@ export default function TeamPage() {
           note: sickDaysNote || null,
         }),
       })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Kon niet opslaan')
-      }
-
+      if (!res.ok) throw new Error((await res.json()).error || 'Kon niet opslaan')
       toast.success(`Ziektedag(en) toegevoegd voor ${sickDaysMember.name}`)
-      // Reset form
       setSickStartDate('')
       setSickEndDate('')
       setSickDaysNote('')
@@ -214,12 +225,8 @@ export default function TeamPage() {
   const handleDeleteEntry = async (entryId: string) => {
     setIsDeletingEntry(entryId)
     try {
-      const res = await fetch(`/api/sick-days?id=${entryId}`, {
-        method: 'DELETE',
-      })
-
+      const res = await fetch(`/api/sick-days?id=${entryId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Kon niet verwijderen')
-
       toast.success('Ziektedag verwijderd')
       fetchSickDays()
     } catch (error) {
@@ -229,62 +236,113 @@ export default function TeamPage() {
     }
   }
 
-  const formatDateNL = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('nl-NL', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
+  const openParentalModal = (member: EmployeeData) => {
+    setParentalMember(member)
+    setShowAddLeaveForm(false)
+    setEditingLeave(null)
+    resetLeaveForm()
+    setShowParentalModal(true)
+  }
+
+  const resetLeaveForm = () => {
+    setLeaveForm({
+      kindNaam: '',
+      kindGeboorteDatum: '',
+      uitgerekendeDatum: '',
+      zwangerschapsverlofStart: '',
+      zwangerschapsverlofStatus: '',
+      geboorteverlofPartner: '',
+      aanvullendVerlofPartner: '',
+      betaaldTotaalUren: 324,
+      betaaldOpgenomenUren: 0,
+      betaaldVerlofDetails: '',
+      onbetaaldTotaalDagen: 85,
+      onbetaaldOpgenomenDagen: 0,
+      onbetaaldVerlofDetails: '',
+      uwvAangevraagd: false,
+      uwvDetails: '',
+      note: ''
     })
   }
 
-  const handleResetPassword = async () => {
-    if (!selectedMember || !newPassword) return
-    if (newPassword.length < 6) {
-      toast.error('Wachtwoord moet minimaal 6 tekens bevatten')
-      return
-    }
+  const startEditLeave = (leave: ParentalLeave) => {
+    setEditingLeave(leave)
+    setLeaveForm({
+      kindNaam: leave.kindNaam || '',
+      kindGeboorteDatum: leave.kindGeboorteDatum ? leave.kindGeboorteDatum.split('T')[0] : '',
+      uitgerekendeDatum: leave.uitgerekendeDatum ? leave.uitgerekendeDatum.split('T')[0] : '',
+      zwangerschapsverlofStart: leave.zwangerschapsverlofStart ? leave.zwangerschapsverlofStart.split('T')[0] : '',
+      zwangerschapsverlofStatus: leave.zwangerschapsverlofStatus || '',
+      geboorteverlofPartner: leave.geboorteverlofPartner || '',
+      aanvullendVerlofPartner: leave.aanvullendVerlofPartner || '',
+      betaaldTotaalUren: leave.betaaldTotaalUren,
+      betaaldOpgenomenUren: leave.betaaldOpgenomenUren,
+      betaaldVerlofDetails: leave.betaaldVerlofDetails || '',
+      onbetaaldTotaalDagen: leave.onbetaaldTotaalDagen,
+      onbetaaldOpgenomenDagen: leave.onbetaaldOpgenomenDagen,
+      onbetaaldVerlofDetails: leave.onbetaaldVerlofDetails || '',
+      uwvAangevraagd: leave.uwvAangevraagd,
+      uwvDetails: leave.uwvDetails || '',
+      note: leave.note || ''
+    })
+    setShowAddLeaveForm(true)
+  }
 
-    setIsResetting(true)
+  const handleSaveLeave = async () => {
+    if (!parentalMember) return
+    setIsSavingLeave(true)
+
     try {
-      const res = await fetch('/api/admin/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedMember.id, newPassword }),
-      })
+      const payload = {
+        ...leaveForm,
+        kindGeboorteDatum: leaveForm.kindGeboorteDatum || null,
+        uitgerekendeDatum: leaveForm.uitgerekendeDatum || null,
+        zwangerschapsverlofStart: leaveForm.zwangerschapsverlofStart || null,
+      }
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Kon wachtwoord niet resetten')
+      if (editingLeave) {
+        // Update existing
+        const res = await fetch('/api/parental-leave', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingLeave.id, ...payload })
+        })
+        if (!res.ok) throw new Error('Kon niet opslaan')
+        toast.success('Verlof bijgewerkt')
+      } else {
+        // Create new
+        const res = await fetch('/api/parental-leave', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: parentalMember.id, ...payload })
+        })
+        if (!res.ok) throw new Error('Kon niet opslaan')
+        toast.success('Verlof toegevoegd')
+      }
 
-      toast.success(`Wachtwoord gereset voor ${selectedMember.name}`)
-      setShowResetModal(false)
-      setSelectedMember(null)
-      setNewPassword('')
+      // Refresh data
+      await fetchData()
+      setShowAddLeaveForm(false)
+      setEditingLeave(null)
+      resetLeaveForm()
     } catch (error: any) {
-      toast.error(error.message)
+      toast.error(error.message || 'Er ging iets mis')
     } finally {
-      setIsResetting(false)
+      setIsSavingLeave(false)
     }
   }
 
-  const openResetModal = (member: TeamMember) => {
-    setSelectedMember(member)
-    setNewPassword('')
-    setShowResetModal(true)
-  }
+  const handleDeleteLeave = async (leaveId: string) => {
+    if (!confirm('Weet je zeker dat je dit verlof wilt verwijderen?')) return
 
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.department?.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesRole = filterRole === 'all' || member.role === filterRole
-    return matchesSearch && matchesRole
-  })
-
-  const stats = {
-    total: members.length,
-    partners: members.filter(m => m.role === 'PARTNER').length,
-    employees: members.filter(m => m.role === 'EMPLOYEE').length,
-    totalWork: members.reduce((sum, m) => sum + m._count.assignedWork, 0),
+    try {
+      const res = await fetch(`/api/parental-leave?id=${leaveId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Kon niet verwijderen')
+      toast.success('Verlof verwijderd')
+      await fetchData()
+    } catch (error) {
+      toast.error('Kon verlof niet verwijderen')
+    }
   }
 
   if (isLoading) {
@@ -298,387 +356,372 @@ export default function TeamPage() {
     )
   }
 
+  // Render full employee card (voetbalplaatje style)
+  const renderEmployeeCard = (employee: EmployeeData, isCurrentUser: boolean) => {
+    const photoUrl = getPhotoUrl(employee.name)
+    const yearsAtWorkx = employee.startDate
+      ? Math.floor((new Date().getTime() - new Date(employee.startDate).getTime()) / (1000 * 60 * 60 * 24 * 365))
+      : null
+
+    const firstName = employee.name.split(' ')[0].toLowerCase()
+    const isSupportStaff = firstName === 'hanna' || firstName === 'lotte'
+    const isHourlyWage = employee.compensation?.isHourlyWage || false
+    const salaryScale = employee.compensation?.experienceYear !== null && employee.compensation?.experienceYear !== undefined
+      ? salaryScales.find(s => s.experienceYear === employee.compensation?.experienceYear)
+      : null
+
+    // Determine what to show based on role
+    const showFullInfo = isCurrentUser || isManager
+    const hasParentalLeave = employee.parentalLeaves && employee.parentalLeaves.length > 0
+    const hasPregnancyLeave = employee.parentalLeaves?.some(l => l.zwangerschapsverlofStart)
+    const isExpanded = expandedCard === employee.id
+
+    return (
+      <div key={employee.id} className="relative group">
+        {/* Glow effect on hover */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${isSupportStaff ? 'from-cyan-400/30 via-cyan-400/10' : 'from-workx-lime/30 via-workx-lime/10'} to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity`} />
+
+        <div className="relative bg-gradient-to-br from-workx-dark/80 to-workx-dark/40 rounded-2xl border border-white/10 overflow-hidden backdrop-blur-sm">
+          {/* Top accent bar */}
+          <div className={`h-1 bg-gradient-to-r ${isSupportStaff ? 'from-cyan-400 via-cyan-400/50' : 'from-workx-lime via-workx-lime/50'} to-transparent`} />
+
+          {/* Photo and Name Section */}
+          <div className="p-4 sm:p-6 pb-4">
+            <div className="flex items-start gap-4">
+              {/* Photo with badge */}
+              <div className="relative flex-shrink-0">
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden ring-2 ${isSupportStaff ? 'ring-cyan-400/30 shadow-cyan-400/20' : 'ring-workx-lime/30 shadow-workx-lime/20'} shadow-lg`}>
+                  {photoUrl ? (
+                    <img src={photoUrl} alt={employee.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${isSupportStaff ? 'from-cyan-400 to-cyan-400/60' : 'from-workx-lime to-workx-lime/60'} flex items-center justify-center`}>
+                      <span className="text-workx-dark text-xl sm:text-2xl font-bold">{employee.name.charAt(0)}</span>
+                    </div>
+                  )}
+                </div>
+                {/* Experience badge for lawyers */}
+                {!isSupportStaff && employee.compensation?.experienceYear !== null && employee.compensation?.experienceYear !== undefined && (
+                  <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-workx-lime flex items-center justify-center shadow-lg">
+                    <span className="text-workx-dark text-xs font-bold">{employee.compensation.experienceYear}</span>
+                  </div>
+                )}
+                {/* Staff badge */}
+                {isSupportStaff && (
+                  <div className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-lg bg-cyan-400 flex items-center justify-center shadow-lg">
+                    <span className="text-workx-dark text-[10px] font-bold">{firstName === 'hanna' ? 'H.O.O.' : 'STAFF'}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Name and Role */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-white font-semibold text-lg truncate">
+                  {employee.name}
+                  {isCurrentUser && <span className="ml-2 text-xs text-workx-lime">(jij)</span>}
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  {firstName === 'hanna' ? 'Head of Office' : employee.role === 'ADMIN' ? 'Head of Office' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role === 'PARTNER' ? 'Partner' : employee.role}
+                </p>
+                {employee.startDate && (
+                  <p className={`${isSupportStaff ? 'text-cyan-400/60' : 'text-workx-lime/60'} text-xs mt-1`}>
+                    In dienst: {formatDateNL(employee.startDate)}
+                    {yearsAtWorkx !== null && yearsAtWorkx > 0 && ` (${yearsAtWorkx} jaar)`}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Section - Always show experience year and hourly rate */}
+          <div className="px-4 sm:px-6 py-4 border-t border-white/5 bg-black/20">
+            {isSupportStaff ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">
+                    {isHourlyWage ? 'Uurloon' : 'Salaris'}
+                  </p>
+                  <p className="text-cyan-400 font-semibold">
+                    {showFullInfo && employee.compensation?.salary
+                      ? isHourlyWage
+                        ? `€${employee.compensation.salary}/uur`
+                        : formatCurrency(employee.compensation.salary)
+                      : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Type</p>
+                  <p className="text-white font-medium">
+                    {isHourlyWage ? 'Uurloner' : 'Vast contract'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* Row 1: Experience Year and Hourly Rate */}
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <span className="text-gray-400 text-sm block mb-1">Ervaringsjaar</span>
+                    <span className="text-white text-base">
+                      {salaryScale?.label || (employee.compensation?.experienceYear !== null ? `${employee.compensation?.experienceYear}e jaars` : '-')}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-gray-400 text-sm block mb-1">Uurtarief</span>
+                    <span className="text-workx-lime text-base font-semibold">
+                      {employee.compensation ? `€${employee.compensation.hourlyRate}` : '-'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Row 2: Salary - only for current user or manager */}
+                {showFullInfo && (
+                  <div className="pt-4 border-t border-gray-700">
+                    <span className="text-gray-400 text-sm block mb-1">Bruto Salaris</span>
+                    <span className="text-white font-bold text-xl">
+                      {employee.compensation?.salary ? formatCurrency(employee.compensation.salary) : (salaryScale ? formatCurrency(salaryScale.salary) : '-')}
+                    </span>
+                    <span className="text-gray-500 text-sm ml-1">/mnd</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Bonus Section - only for lawyers and when showFullInfo */}
+          {showFullInfo && !isSupportStaff && (
+            <div className="px-4 sm:px-6 py-4 border-t border-white/5">
+              <p className="text-gray-400 text-xs uppercase tracking-wider mb-3">Bonus {currentYear}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                    <span className="text-white/60 text-xs">Betaald</span>
+                  </div>
+                  <p className="text-green-400 font-semibold">{formatCurrency(employee.bonusPaid)}</p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse flex-shrink-0" />
+                    <span className="text-white/60 text-xs">In afwachting</span>
+                  </div>
+                  <p className="text-orange-400 font-semibold">{formatCurrency(employee.bonusPending)}</p>
+                </div>
+              </div>
+              {employee.bonusTotal > 0 && (
+                <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-green-500 to-green-400" style={{ width: `${(employee.bonusPaid / employee.bonusTotal) * 100}%` }} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Vacation Section - only when showFullInfo */}
+          {showFullInfo && employee.vacationBalance && (
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Icons.sun size={14} className="text-green-400" />
+                  <span className="text-gray-400 text-sm">Vakantiedagen {currentYear}</span>
+                </div>
+                {hasParentalLeave && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
+                )}
+              </div>
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-2xl font-bold text-green-400">
+                    {(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht - employee.vacationBalance.opgenomenLopendJaar).toFixed(1)}
+                  </span>
+                  <span className="text-gray-400 text-sm block">dagen over</span>
+                </div>
+                <div className="text-right space-y-1">
+                  <div className="text-sm">
+                    <span className="text-gray-500">Totaal: </span>
+                    <span className="text-gray-300">{(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht).toFixed(1)}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-gray-500">Opgenomen: </span>
+                    <span className="text-gray-300">{employee.vacationBalance.opgenomenLopendJaar.toFixed(1)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Parental Leave Summary - only when showFullInfo and has leave */}
+          {showFullInfo && hasParentalLeave && (
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Icons.users size={14} className="text-purple-400" />
+                  <span className="text-gray-400 text-sm">Verlof</span>
+                </div>
+                {employee.parentalLeaves.length > 1 && (
+                  <button
+                    onClick={() => setExpandedCard(isExpanded ? null : employee.id)}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    {isExpanded ? 'Minder' : 'Meer details'}
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {employee.parentalLeaves.slice(0, isExpanded ? undefined : 1).map((leave) => (
+                  <div key={leave.id} className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                    {/* Zwangerschaps/bevallingsverlof */}
+                    {leave.zwangerschapsverlofStart && (
+                      <div className="mb-2 pb-2 border-b border-purple-500/20">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-pink-400 text-xs font-medium">Zwangerschaps-/bevallingsverlof</span>
+                        </div>
+                        <p className="text-white/80 text-sm">
+                          Vanaf {formatDateShort(leave.zwangerschapsverlofStart)}
+                          {leave.zwangerschapsverlofStatus && <span className="text-gray-400 ml-1">({leave.zwangerschapsverlofStatus})</span>}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Kind info */}
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="text-purple-400 font-medium">
+                        {leave.kindNaam || `Kind ${leave.childNumber}`}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {leave.uwvAangevraagd && <span className="text-green-400 text-[10px]">UWV ✓</span>}
+                      </div>
+                    </div>
+
+                    {/* Betaald ouderschapsverlof */}
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-purple-400/70">Betaald O.V.</span>
+                      <span className="text-white/60">{leave.betaaldOpgenomenUren}/{leave.betaaldTotaalUren} uur</span>
+                    </div>
+                    <div className="h-1 bg-white/10 rounded-full overflow-hidden mb-2">
+                      <div className="h-full bg-purple-400" style={{ width: `${(leave.betaaldOpgenomenUren / leave.betaaldTotaalUren) * 100}%` }} />
+                    </div>
+
+                    {/* Onbetaald ouderschapsverlof */}
+                    {leave.onbetaaldTotaalDagen > 0 && (
+                      <>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-purple-400/70">Onbetaald O.V.</span>
+                          <span className="text-white/60">{leave.onbetaaldOpgenomenDagen}/{leave.onbetaaldTotaalDagen} dagen</span>
+                        </div>
+                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-purple-400/60" style={{ width: `${(leave.onbetaaldOpgenomenDagen / leave.onbetaaldTotaalDagen) * 100}%` }} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Geboorteverlof partner */}
+                    {leave.geboorteverlofPartner && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        Geboorteverlof partner: {leave.geboorteverlofPartner}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!isExpanded && employee.parentalLeaves.length > 1 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  + {employee.parentalLeaves.length - 1} meer kind(eren)
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Sick Days Section - only for managers and not for Partners */}
+          {isManager && employee.role !== 'PARTNER' && (
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icons.heart size={14} className="text-red-400" />
+                  <span className="text-gray-400 text-sm">Ziektedagen {currentYear}</span>
+                </div>
+                <span className={`text-lg font-semibold ${getSickDays(employee.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                  {getSickDays(employee.id)} dagen
+                </span>
+              </div>
+              {getSickDays(employee.id) > 5 && (
+                <p className="text-xs text-red-400/60 mt-1">
+                  Meer dan 5 ziektedagen dit jaar
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Manager Actions - only show buttons when relevant */}
+          {isManager && employee.role !== 'PARTNER' && (
+            <div className="px-4 sm:px-6 py-3 border-t border-white/5 bg-black/10 flex gap-2">
+              <button
+                onClick={() => openSickDaysModal(employee)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all"
+              >
+                <Icons.heart size={14} />
+                <span>Ziektedagen</span>
+              </button>
+              <button
+                onClick={() => openParentalModal(employee)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs transition-all"
+              >
+                <Icons.users size={14} />
+                <span>{hasParentalLeave ? 'O.V. Details' : 'Verlof toevoegen'}</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8 fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center">
-              <Icons.users className="text-cyan-400" size={18} />
-            </div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-white">Team</h1>
+      <div>
+        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 flex items-center justify-center">
+            <Icons.users className="text-cyan-400" size={18} />
           </div>
-          <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Overzicht van alle teamleden en hun rollen</p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white">Team</h1>
         </div>
+        <p className="text-gray-400 text-sm sm:text-base hidden sm:block">
+          Overzicht van het Workx team
+        </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <div className="card p-4 sm:p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-2 sm:mb-3">
-              <Icons.users className="text-cyan-400" size={16} />
-            </div>
-            <p className="text-xl sm:text-2xl font-semibold text-white">{stats.total}</p>
-            <p className="text-xs sm:text-sm text-gray-400">Teamleden</p>
-          </div>
-        </div>
-
-        <div className="card p-4 sm:p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-2 sm:mb-3">
-              <Icons.award className="text-purple-400" size={16} />
-            </div>
-            <p className="text-xl sm:text-2xl font-semibold text-white">{stats.partners}</p>
-            <p className="text-xs sm:text-sm text-gray-400">Partners</p>
-          </div>
-        </div>
-
-        <div className="card p-4 sm:p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-2 sm:mb-3">
-              <Icons.user className="text-cyan-400" size={16} />
-            </div>
-            <p className="text-xl sm:text-2xl font-semibold text-white">{stats.employees}</p>
-            <p className="text-xs sm:text-sm text-gray-400">Medewerkers</p>
-          </div>
-        </div>
-
-        <div className="card p-4 sm:p-5 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/10 transition-colors" />
-          <div className="relative">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-orange-500/10 flex items-center justify-center mb-2 sm:mb-3">
-              <Icons.briefcase className="text-orange-400" size={16} />
-            </div>
-            <p className="text-xl sm:text-2xl font-semibold text-white">{stats.totalWork}</p>
-            <p className="text-xs sm:text-sm text-gray-400">Actieve zaken</p>
-          </div>
-        </div>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Zoek teamleden..."
+          className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/30 focus:bg-white/10 transition-all"
+        />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1 w-full sm:w-auto">
-          <div className="relative flex-1 sm:max-w-xs">
-            <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Zoek teamleden..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/30 focus:bg-white/10 transition-all"
-            />
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className="flex items-center gap-3 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
-            >
-              {filterRole === 'all' ? (
-                <span className="text-gray-300">Alle rollen</span>
-              ) : (
-                <span className={roleConfig[filterRole]?.color}>{roleConfig[filterRole]?.label}</span>
-              )}
-              <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} />
-            </button>
-            {showRoleDropdown && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowRoleDropdown(false)} />
-                <div className="absolute left-0 top-full mt-2 w-48 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
-                  <div className="py-1">
-                    <button
-                      onClick={() => { setFilterRole('all'); setShowRoleDropdown(false) }}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${filterRole === 'all' ? 'bg-workx-lime/10 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
-                    >
-                      <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center">
-                        <Icons.users size={12} className="text-gray-400" />
-                      </div>
-                      <span>Alle rollen</span>
-                      {filterRole === 'all' && <Icons.check size={16} className="ml-auto text-workx-lime" />}
-                    </button>
-                    {Object.entries(roleConfig).map(([key, config]) => (
-                      <button
-                        key={key}
-                        onClick={() => { setFilterRole(key); setShowRoleDropdown(false) }}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-all ${filterRole === key ? 'bg-workx-lime/10 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
-                      >
-                        <div className={`w-6 h-6 rounded-lg ${config.bg} flex items-center justify-center`}>
-                          <Icons.user size={12} className={config.color} />
-                        </div>
-                        <span>{config.label}</span>
-                        {filterRole === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white'}`}
-          >
-            <Icons.grid size={16} />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-2.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white'}`}
-          >
-            <Icons.list size={16} />
-          </button>
-        </div>
+      {/* Team Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredEmployees.map((employee) => renderEmployeeCard(employee, employee.id === currentUserId))}
       </div>
 
-      {/* Team Members */}
-      {filteredMembers.length === 0 ? (
+      {filteredEmployees.length === 0 && (
         <div className="card p-16 text-center">
           <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
             <Icons.users className="text-white/20" size={32} />
           </div>
           <h3 className="text-lg font-medium text-white mb-2">Geen teamleden gevonden</h3>
-          <p className="text-gray-400">
-            {searchQuery || filterRole !== 'all' ? 'Probeer andere filters' : 'Er zijn nog geen teamleden toegevoegd'}
-          </p>
-        </div>
-      ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMembers.map((member, index) => {
-            const config = roleConfig[member.role] || roleConfig.EMPLOYEE
-            return (
-              <div
-                key={member.id}
-                className="card p-6 hover:border-white/10 transition-all group relative overflow-hidden"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                <div className="relative">
-                  {/* Avatar & Name */}
-                  <div className="flex items-start gap-4 mb-4">
-                    <TeamAvatar name={member.name} size="medium" />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-white text-lg truncate">{member.name}</h3>
-                      <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${config.bg} ${config.color} mt-1`}>
-                        {config.label}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Datum in dienst - alleen voor niet-partners */}
-                  {member.role !== 'PARTNER' && member.startDate && (
-                    <div className="text-xs text-gray-400 flex items-center gap-1.5">
-                      <Icons.calendar size={12} />
-                      In dienst sinds {new Date(member.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </div>
-                  )}
-
-                  {/* Sick days button for managers */}
-                  {canManage && member.role !== 'PARTNER' && (
-                    <div className="mt-4 pt-4 border-t border-white/5">
-                      <button
-                        onClick={() => openSickDaysModal(member)}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all text-sm"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Icons.heart size={14} />
-                          Ziektedagen {selectedYear}
-                        </span>
-                        <span className={`font-medium ${getSickDaysForMember(member.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                          {getSickDaysForMember(member.id)} dagen
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4">Naam</th>
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4">Functie</th>
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4 hidden md:table-cell">In dienst</th>
-                {canManage && <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider p-4 hidden lg:table-cell">Ziektedagen</th>}
-                {canResetPasswords && <th className="text-right text-xs font-medium text-gray-400 uppercase tracking-wider p-4 w-24">Acties</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMembers.map((member, index) => {
-                const config = roleConfig[member.role] || roleConfig.EMPLOYEE
-                return (
-                  <tr
-                    key={member.id}
-                    className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
-                    style={{ animationDelay: `${index * 30}ms` }}
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <TeamAvatar name={member.name} size="small" />
-                        <span className="font-medium text-white">{member.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full ${config.bg} ${config.color}`}>
-                        {config.label}
-                      </span>
-                    </td>
-                    <td className="p-4 hidden md:table-cell">
-                      <span className="text-sm text-gray-400">
-                        {member.role === 'PARTNER' ? '-' : (member.startDate
-                          ? new Date(member.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : '-')}
-                      </span>
-                    </td>
-                    {canManage && (
-                      <td className="p-4 hidden lg:table-cell">
-                        {member.role === 'PARTNER' ? (
-                          <span className="text-sm text-gray-500">-</span>
-                        ) : (
-                          <span className={`text-sm font-medium ${getSickDaysForMember(member.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                            {getSickDaysForMember(member.id)} dagen
-                          </span>
-                        )}
-                      </td>
-                    )}
-                    {canResetPasswords && (
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {member.role !== 'PARTNER' && (
-                            <button
-                              onClick={() => openSickDaysModal(member)}
-                              className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                              title="Ziektedagen bewerken"
-                            >
-                              <Icons.heart size={14} />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => openResetModal(member)}
-                            className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-all"
-                            title="Wachtwoord resetten"
-                          >
-                            <Icons.lock size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Password Reset Modal */}
-      {showResetModal && selectedMember && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowResetModal(false)}>
-          <div className="card p-6 w-full max-w-md relative" onClick={e => e.stopPropagation()}>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                  <Icons.lock className="text-workx-lime" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">Wachtwoord resetten</h2>
-              </div>
-              <button
-                onClick={() => setShowResetModal(false)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              >
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            {/* Selected user info */}
-            <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
-              <TeamAvatar name={selectedMember.name} size="large" />
-              <div>
-                <p className="font-medium text-white">{selectedMember.name}</p>
-                <p className="text-sm text-gray-400">{selectedMember.email}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Nieuw wachtwoord</label>
-                <div className="relative">
-                  <Icons.lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                  <input
-                    type="text"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    className="input-field pl-10"
-                    placeholder="Minimaal 6 tekens..."
-                    autoFocus
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1.5">
-                  Het nieuwe wachtwoord is direct actief. Informeer de medewerker over het nieuwe wachtwoord.
-                </p>
-              </div>
-
-              {/* Quick password suggestions */}
-              <div>
-                <p className="text-xs text-gray-400 mb-2">Snelle suggesties:</p>
-                <div className="flex flex-wrap gap-2">
-                  {['Workx2024!', 'Welkom123!', 'Reset2024!'].map(pwd => (
-                    <button
-                      key={pwd}
-                      type="button"
-                      onClick={() => setNewPassword(pwd)}
-                      className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors"
-                    >
-                      {pwd}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowResetModal(false)}
-                className="flex-1 btn-secondary"
-              >
-                Annuleren
-              </button>
-              <button
-                onClick={handleResetPassword}
-                disabled={!newPassword || newPassword.length < 6 || isResetting}
-                className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isResetting ? (
-                  <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Icons.check size={16} />
-                    Resetten
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+          <p className="text-gray-400">Probeer een andere zoekterm</p>
         </div>
       )}
 
       {/* Sick Days Modal */}
       {showSickDaysModal && sickDaysMember && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSickDaysModal(false)}>
-          <div className="card p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-16 sm:pt-20 overflow-y-auto" onClick={() => setShowSickDaysModal(false)}>
+          <div className="card p-6 w-full max-w-lg relative my-auto" onClick={e => e.stopPropagation()}>
             <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
             <div className="flex items-center justify-between mb-6">
@@ -688,7 +731,6 @@ export default function TeamPage() {
                 </div>
                 <div>
                   <h2 className="font-semibold text-white text-lg">Ziektedagen</h2>
-                  {/* Year selector */}
                   <select
                     value={selectedYear}
                     onChange={e => setSelectedYear(parseInt(e.target.value))}
@@ -700,26 +742,31 @@ export default function TeamPage() {
                   </select>
                 </div>
               </div>
-              <button
-                onClick={() => setShowSickDaysModal(false)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              >
+              <button onClick={() => setShowSickDaysModal(false)} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
                 <Icons.x size={18} />
               </button>
             </div>
 
-            {/* Selected user info with total */}
-            <div className="flex items-center justify-between p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
-              <div className="flex items-center gap-4">
-                <TeamAvatar name={sickDaysMember.name} size="large" />
-                <div>
-                  <p className="font-medium text-white">{sickDaysMember.name}</p>
-                  <p className="text-sm text-gray-400">{sickDaysMember.email}</p>
+            {/* Member info */}
+            <div className="flex items-center justify-between gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/10">
+                  {getPhotoUrl(sickDaysMember.name) ? (
+                    <img src={getPhotoUrl(sickDaysMember.name)!} alt={sickDaysMember.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-workx-lime to-workx-lime/60 flex items-center justify-center">
+                      <span className="text-workx-dark font-bold">{sickDaysMember.name.charAt(0)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-white truncate">{sickDaysMember.name}</p>
+                  <p className="text-sm text-gray-400 truncate">{sickDaysMember.email}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={`text-2xl font-semibold ${getSickDaysForMember(sickDaysMember.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                  {getSickDaysForMember(sickDaysMember.id)}
+              <div className="text-right flex-shrink-0">
+                <p className={`text-2xl font-semibold ${getSickDays(sickDaysMember.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                  {getSickDays(sickDaysMember.id)}
                 </p>
                 <p className="text-xs text-gray-500">werkdagen</p>
               </div>
@@ -739,13 +786,9 @@ export default function TeamPage() {
                         <div>
                           <p className="text-sm text-white">
                             {formatDateNL(entry.startDate)}
-                            {entry.startDate !== entry.endDate && (
-                              <span className="text-gray-400"> - {formatDateNL(entry.endDate)}</span>
-                            )}
+                            {entry.startDate !== entry.endDate && <span className="text-gray-400"> - {formatDateNL(entry.endDate)}</span>}
                           </p>
-                          {entry.note && (
-                            <p className="text-xs text-gray-500 mt-0.5">{entry.note}</p>
-                          )}
+                          {entry.note && <p className="text-xs text-gray-500 mt-0.5">{entry.note}</p>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -754,7 +797,6 @@ export default function TeamPage() {
                           onClick={() => handleDeleteEntry(entry.id)}
                           disabled={isDeletingEntry === entry.id}
                           className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                          title="Verwijderen"
                         >
                           {isDeletingEntry === entry.id ? (
                             <span className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin inline-block" />
@@ -773,100 +815,367 @@ export default function TeamPage() {
             <div className="border-t border-white/5 pt-6">
               <h3 className="text-sm text-gray-400 mb-4">Nieuwe ziektedag(en) toevoegen</h3>
 
-              {/* Entry mode toggle */}
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={() => setEntryMode('single')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-                    entryMode === 'single'
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent'
-                  }`}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'single' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
                 >
-                  <Icons.calendar size={14} className="inline mr-2" />
                   Enkele dag
                 </button>
                 <button
                   onClick={() => setEntryMode('period')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-                    entryMode === 'period'
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-transparent'
-                  }`}
+                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'period' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
                 >
-                  <Icons.calendar size={14} className="inline mr-2" />
                   Periode
                 </button>
               </div>
 
               <div className="space-y-4">
-                {/* Date inputs */}
                 <div className={`grid gap-4 ${entryMode === 'period' ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">
-                      {entryMode === 'single' ? 'Datum' : 'Startdatum'}
-                    </label>
-                    <input
-                      type="date"
-                      value={sickStartDate}
-                      onChange={e => setSickStartDate(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 focus:bg-white/10 transition-all"
-                    />
+                    <label className="block text-sm text-gray-400 mb-2">{entryMode === 'single' ? 'Datum' : 'Startdatum'}</label>
+                    <input type="date" value={sickStartDate} onChange={e => setSickStartDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
                   </div>
                   {entryMode === 'period' && (
                     <div>
                       <label className="block text-sm text-gray-400 mb-2">Einddatum</label>
-                      <input
-                        type="date"
-                        value={sickEndDate}
-                        onChange={e => setSickEndDate(e.target.value)}
-                        min={sickStartDate}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 focus:bg-white/10 transition-all"
-                      />
+                      <input type="date" value={sickEndDate} onChange={e => setSickEndDate(e.target.value)} min={sickStartDate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
                     </div>
                   )}
                 </div>
 
-                {/* Note */}
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
-                  <input
-                    type="text"
-                    value={sickDaysNote}
-                    onChange={e => setSickDaysNote(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 focus:bg-white/10 transition-all"
-                    placeholder="Bijv. griep, rugklachten..."
-                  />
+                  <input type="text" value={sickDaysNote} onChange={e => setSickDaysNote(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 transition-all" placeholder="Bijv. griep, rugklachten..." />
                 </div>
-
-                <p className="text-xs text-gray-500">
-                  Werkdagen (ma-vr) worden automatisch berekend. Weekenden worden overgeslagen.
-                </p>
               </div>
 
               <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowSickDaysModal(false)}
-                  className="flex-1 btn-secondary"
-                >
-                  Sluiten
-                </button>
+                <button onClick={() => setShowSickDaysModal(false)} className="flex-1 btn-secondary">Sluiten</button>
                 <button
                   onClick={handleSaveSickDays}
                   disabled={isSavingSickDays || !sickStartDate || (entryMode === 'period' && !sickEndDate)}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isSavingSickDays ? (
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Icons.plus size={16} />
-                      Toevoegen
-                    </>
-                  )}
+                  {isSavingSickDays ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Icons.plus size={16} />Toevoegen</>}
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Parental Leave Modal */}
+      {showParentalModal && parentalMember && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-8 sm:pt-12 overflow-y-auto" onClick={() => setShowParentalModal(false)}>
+          <div className="card p-6 w-full max-w-2xl relative my-4" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Icons.users className="text-purple-400" size={18} />
+                </div>
+                <h2 className="font-semibold text-white text-lg">
+                  {showAddLeaveForm ? (editingLeave ? 'Verlof bewerken' : 'Nieuw verlof') : 'Ouderschapsverlof'}
+                </h2>
+              </div>
+              <button onClick={() => setShowParentalModal(false)} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            {/* Member info */}
+            <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
+              <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-purple-500/20">
+                {getPhotoUrl(parentalMember.name) ? (
+                  <img src={getPhotoUrl(parentalMember.name)!} alt={parentalMember.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-400 to-purple-400/60 flex items-center justify-center">
+                    <span className="text-workx-dark font-bold">{parentalMember.name.charAt(0)}</span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="font-medium text-white">{parentalMember.name}</p>
+                <p className="text-sm text-gray-400">{parentalMember.email}</p>
+              </div>
+            </div>
+
+            {!showAddLeaveForm ? (
+              <>
+                {/* Existing leaves list */}
+                <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+                  {parentalMember.parentalLeaves.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <Icons.users size={32} className="mx-auto mb-3 opacity-50" />
+                      <p>Geen verlof geregistreerd</p>
+                    </div>
+                  ) : (
+                    parentalMember.parentalLeaves.map((leave) => (
+                      <div key={leave.id} className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-purple-400 font-semibold">{leave.kindNaam || `Kind ${leave.childNumber}`}</h4>
+                          <div className="flex items-center gap-2">
+                            {leave.uwvAangevraagd && <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">UWV ✓</span>}
+                            <button onClick={() => startEditLeave(leave)} className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-all">
+                              <Icons.edit size={14} />
+                            </button>
+                            <button onClick={() => handleDeleteLeave(leave.id)} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
+                              <Icons.trash size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Quick stats */}
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-400">Betaald O.V.</span>
+                            <p className="text-white">{leave.betaaldOpgenomenUren}/{leave.betaaldTotaalUren} uur</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">Onbetaald O.V.</span>
+                            <p className="text-white">{leave.onbetaaldOpgenomenDagen}/{leave.onbetaaldTotaalDagen} dagen</p>
+                          </div>
+                        </div>
+
+                        {leave.zwangerschapsverlofStart && (
+                          <p className="text-xs text-pink-400 mt-2">
+                            Zwangerschapsverlof vanaf {formatDateNL(leave.zwangerschapsverlofStart)}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
+                  <button onClick={() => setShowParentalModal(false)} className="flex-1 btn-secondary">Sluiten</button>
+                  <button onClick={() => { resetLeaveForm(); setShowAddLeaveForm(true) }} className="flex-1 btn-primary flex items-center justify-center gap-2">
+                    <Icons.plus size={16} />
+                    Kind toevoegen
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Add/Edit form */}
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                  {/* Kind info */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Naam kind</label>
+                      <input
+                        type="text"
+                        value={leaveForm.kindNaam}
+                        onChange={e => setLeaveForm({ ...leaveForm, kindNaam: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                        placeholder="Bijv. Emma"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Geboortedatum</label>
+                      <input
+                        type="date"
+                        value={leaveForm.kindGeboorteDatum}
+                        onChange={e => setLeaveForm({ ...leaveForm, kindGeboorteDatum: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Uitgerekende datum (indien nog niet geboren)</label>
+                    <input
+                      type="date"
+                      value={leaveForm.uitgerekendeDatum}
+                      onChange={e => setLeaveForm({ ...leaveForm, uitgerekendeDatum: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                    />
+                  </div>
+
+                  {/* Zwangerschapsverlof */}
+                  <div className="p-4 rounded-xl bg-pink-500/5 border border-pink-500/20">
+                    <h4 className="text-pink-400 font-medium text-sm mb-3">Zwangerschaps-/bevallingsverlof (WAZO)</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Startdatum verlof</label>
+                        <input
+                          type="date"
+                          value={leaveForm.zwangerschapsverlofStart}
+                          onChange={e => setLeaveForm({ ...leaveForm, zwangerschapsverlofStart: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Status</label>
+                        <input
+                          type="text"
+                          value={leaveForm.zwangerschapsverlofStatus}
+                          onChange={e => setLeaveForm({ ...leaveForm, zwangerschapsverlofStatus: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500/30"
+                          placeholder="Bijv. 16 weken ontvangen"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Partner verlof */}
+                  <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                    <h4 className="text-blue-400 font-medium text-sm mb-3">Geboorteverlof partner</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">1 week geboorteverlof</label>
+                        <input
+                          type="text"
+                          value={leaveForm.geboorteverlofPartner}
+                          onChange={e => setLeaveForm({ ...leaveForm, geboorteverlofPartner: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/30"
+                          placeholder="Bijv. 1 week opgenomen"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">5 weken aanvullend</label>
+                        <input
+                          type="text"
+                          value={leaveForm.aanvullendVerlofPartner}
+                          onChange={e => setLeaveForm({ ...leaveForm, aanvullendVerlofPartner: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/30"
+                          placeholder="Bijv. 5 weken aangevraagd"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Betaald ouderschapsverlof */}
+                  <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                    <h4 className="text-purple-400 font-medium text-sm mb-3">Betaald ouderschapsverlof (9 weken, 70% UWV)</h4>
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Totaal uren</label>
+                        <input
+                          type="number"
+                          value={leaveForm.betaaldTotaalUren}
+                          onChange={e => setLeaveForm({ ...leaveForm, betaaldTotaalUren: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Opgenomen uren</label>
+                        <input
+                          type="number"
+                          value={leaveForm.betaaldOpgenomenUren}
+                          onChange={e => setLeaveForm({ ...leaveForm, betaaldOpgenomenUren: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Details</label>
+                      <textarea
+                        value={leaveForm.betaaldVerlofDetails}
+                        onChange={e => setLeaveForm({ ...leaveForm, betaaldVerlofDetails: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[60px] resize-none"
+                        placeholder="Bijv. Vanaf 1 aug elke vrijdag..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Onbetaald ouderschapsverlof */}
+                  <div className="p-4 rounded-xl bg-gray-500/5 border border-gray-500/20">
+                    <h4 className="text-gray-400 font-medium text-sm mb-3">Onbetaald ouderschapsverlof (17 weken)</h4>
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Totaal dagen</label>
+                        <input
+                          type="number"
+                          value={leaveForm.onbetaaldTotaalDagen}
+                          onChange={e => setLeaveForm({ ...leaveForm, onbetaaldTotaalDagen: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Opgenomen dagen</label>
+                        <input
+                          type="number"
+                          value={leaveForm.onbetaaldOpgenomenDagen}
+                          onChange={e => setLeaveForm({ ...leaveForm, onbetaaldOpgenomenDagen: parseFloat(e.target.value) || 0 })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Details</label>
+                      <textarea
+                        value={leaveForm.onbetaaldVerlofDetails}
+                        onChange={e => setLeaveForm({ ...leaveForm, onbetaaldVerlofDetails: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30 min-h-[60px] resize-none"
+                        placeholder="Bijv. Elke maandag onbetaald..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* UWV Status */}
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <h4 className="text-gray-300 font-medium text-sm mb-3">UWV Status</h4>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={leaveForm.uwvAangevraagd}
+                          onChange={e => setLeaveForm({ ...leaveForm, uwvAangevraagd: e.target.checked })}
+                          className="w-5 h-5 rounded border-white/20 bg-white/5 text-purple-500 focus:ring-purple-500/50"
+                        />
+                        <span className="text-sm text-gray-300">Aangevraagd/ontvangen bij UWV</span>
+                      </label>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">UWV Details</label>
+                        <textarea
+                          value={leaveForm.uwvDetails}
+                          onChange={e => setLeaveForm({ ...leaveForm, uwvDetails: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[60px] resize-none"
+                          placeholder="Bijv. WAZO en 9 weken betaald O.V. ontvangen"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notities */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Notities</label>
+                    <textarea
+                      value={leaveForm.note}
+                      onChange={e => setLeaveForm({ ...leaveForm, note: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[80px] resize-none"
+                      placeholder="Eventuele opmerkingen..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
+                  <button
+                    onClick={() => { setShowAddLeaveForm(false); setEditingLeave(null); resetLeaveForm() }}
+                    className="flex-1 btn-secondary"
+                  >
+                    Annuleren
+                  </button>
+                  <button
+                    onClick={handleSaveLeave}
+                    disabled={isSavingLeave}
+                    className="flex-1 btn-primary flex items-center justify-center gap-2"
+                  >
+                    {isSavingLeave ? (
+                      <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Icons.check size={16} />
+                        {editingLeave ? 'Opslaan' : 'Toevoegen'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
