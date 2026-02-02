@@ -109,9 +109,20 @@ export default function VakantiesPage() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'timeline'>('week')
+  const [viewMode, setViewMode] = useState<'week' | 'month' | 'timeline'>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [pageMode, setPageMode] = useState<'overzicht' | 'beheer'>('overzicht')
+
+  // My vacation balance state (for non-partners)
+  const [myVacationBalance, setMyVacationBalance] = useState<{
+    overgedragenVorigJaar: number
+    opbouwLopendJaar: number
+    bijgekocht: number
+    opgenomenLopendJaar: number
+    totaalDagen: number
+    resterend: number
+    isPartner: boolean
+  } | null>(null)
 
   // Parental leave state
   const [myParentalLeave, setMyParentalLeave] = useState<ParentalLeave | null>(null)
@@ -210,6 +221,14 @@ export default function VakantiesPage() {
         const data = await myPlRes.json()
         // API returns array, take first item or null if empty
         setMyParentalLeave(Array.isArray(data) && data.length > 0 ? data[0] : null)
+      }
+
+      // Fetch own vacation balance (for non-partners)
+      const myBalRes = await fetch('/api/user/vacation-balance')
+      if (myBalRes.ok) {
+        const data = await myBalRes.json()
+        // Only set if not a partner
+        setMyVacationBalance(data.isPartner ? null : data)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -986,6 +1005,77 @@ export default function VakantiesPage() {
               </div>
             </div>
           </div>
+
+          {/* My Vacation Days Card - for non-partners */}
+          {myVacationBalance && (
+            <div className="card p-5 border-green-500/20 bg-gradient-to-br from-green-500/10 to-transparent relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                      <Icons.sun className="text-green-400" size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">Mijn Vakantiedagen</h3>
+                      <p className="text-xs text-green-400">{new Date().getFullYear()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Resterend */}
+                  <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                    <span className="text-sm text-green-400 font-medium block mb-1">Resterend</span>
+                    <p className="text-2xl font-bold text-green-400">
+                      {myVacationBalance.resterend.toFixed(1)}
+                      <span className="text-sm font-normal text-green-400/60 ml-1">dagen</span>
+                    </p>
+                  </div>
+
+                  {/* Opgenomen */}
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <span className="text-sm text-gray-400 font-medium block mb-1">Opgenomen</span>
+                    <p className="text-2xl font-bold text-white">
+                      {myVacationBalance.opgenomenLopendJaar.toFixed(1)}
+                      <span className="text-sm font-normal text-gray-400 ml-1">dagen</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-gray-400 mb-1">
+                    <span>Totaal: {myVacationBalance.totaalDagen.toFixed(1)} dagen</span>
+                    <span>{((myVacationBalance.opgenomenLopendJaar / myVacationBalance.totaalDagen) * 100).toFixed(0)}% opgenomen</span>
+                  </div>
+                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all"
+                      style={{ width: `${(myVacationBalance.opgenomenLopendJaar / myVacationBalance.totaalDagen) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-lg bg-white/5">
+                    <p className="text-xs text-gray-400">Overgedragen</p>
+                    <p className="text-sm font-medium text-white">{myVacationBalance.overgedragenVorigJaar}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white/5">
+                    <p className="text-xs text-gray-400">Opbouw</p>
+                    <p className="text-sm font-medium text-white">{myVacationBalance.opbouwLopendJaar}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white/5">
+                    <p className="text-xs text-gray-400">Bijgekocht</p>
+                    <p className="text-sm font-medium text-white">{myVacationBalance.bijgekocht || 0}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* My Parental Leave Card - for users with parental leave */}
           {myParentalLeave && (

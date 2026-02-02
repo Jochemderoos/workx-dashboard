@@ -185,6 +185,13 @@ function AppjeplekjeWidget({
   isToggling: boolean
   onToggle: () => void
 }) {
+  const [todayDate, setTodayDate] = useState('')
+
+  useEffect(() => {
+    const now = new Date()
+    setTodayDate(`${now.getDate()} ${now.toLocaleDateString('nl-NL', { month: 'short' })}`)
+  }, [])
+
   if (!data) {
     return (
       <Link
@@ -246,7 +253,7 @@ function AppjeplekjeWidget({
             </div>
             <div>
               <p className="text-sm font-semibold text-white">Appjeplekje</p>
-              <p className="text-xs text-cyan-300 font-medium">Vandaag · {new Date().getDate()} {new Date().toLocaleDateString('nl-NL', { month: 'short' })}</p>
+              <p className="text-xs text-cyan-300 font-medium">Vandaag{todayDate ? ` · ${todayDate}` : ''}</p>
             </div>
           </div>
           <button
@@ -1500,163 +1507,116 @@ export default function DashboardHome() {
           <div className="card p-4 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
 
-            <button
-              onClick={() => setShowVacationDetails(!showVacationDetails)}
-              className="w-full text-left relative"
-            >
-              <div className="flex items-center justify-between">
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
                     <Icons.sun className="text-workx-lime" size={18} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">
-                      {parentalLeave ? 'Mijn Vakantiedagen en Ouderschapsverlof' : 'Mijn vakantiedagen'}
-                    </p>
+                    <p className="text-sm font-medium text-white">Mijn Vakantiedagen</p>
                     <p className="text-xs text-gray-400">Saldo {vacationBalance?.year || new Date().getFullYear()}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-workx-lime">
-                      {vacationBalance?.resterend || 0}
-                    </p>
-                    <p className="text-xs text-gray-400">vakantiedagen over</p>
-                  </div>
-                  <Icons.chevronDown
-                    size={18}
-                    className={`text-gray-500 transition-transform ${showVacationDetails ? 'rotate-180' : ''}`}
-                  />
+                <Link href="/dashboard/vakanties" className="text-xs text-workx-lime hover:underline">
+                  Meer info
+                </Link>
+              </div>
+
+              {/* Vakantiedagen direct zichtbaar */}
+              <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                <div className="bg-white/5 rounded-lg p-2">
+                  <p className="text-lg font-semibold text-workx-lime">
+                    {vacationBalance?.totaalDagen || 0}
+                  </p>
+                  <p className="text-xs text-gray-400">Totaal</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-2">
+                  <p className="text-lg font-semibold text-orange-400">{vacationBalance?.opgenomenLopendJaar || 0}</p>
+                  <p className="text-xs text-gray-400">Opgenomen</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-2">
+                  <p className="text-lg font-semibold text-workx-lime">{vacationBalance?.resterend || 0}</p>
+                  <p className="text-xs text-gray-400">Resterend</p>
                 </div>
               </div>
 
-              {/* Mini progress bar */}
-              <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden flex">
+              {/* Progress bar */}
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-orange-400"
                   style={{ width: `${vacationBalance?.totaalDagen ? (vacationBalance.opgenomenLopendJaar / vacationBalance.totaalDagen) * 100 : 0}%` }}
                 />
               </div>
-            </button>
 
-            {/* Expandable details */}
-            {showVacationDetails && (
-              <div className="mt-4 pt-4 border-t border-white/5 space-y-4 fade-in">
-                {/* Vakantiedagen */}
-                <div>
-                  <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wider">Vakantiedagen</p>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <p className="text-lg font-semibold text-workx-lime">
-                        {vacationBalance?.totaalDagen || 0}
-                      </p>
-                      <p className="text-xs text-gray-400">Totaal</p>
+              {/* Ouderschapsverlof - alleen als aanwezig */}
+              {parentalLeave && (
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <button
+                    onClick={() => setShowVacationDetails(!showVacationDetails)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icons.heart className="text-purple-400" size={14} />
+                        <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Ouderschapsverlof</span>
+                        {parentalLeave.kindNaam && (
+                          <span className="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+                            {parentalLeave.kindNaam}
+                          </span>
+                        )}
+                      </div>
+                      <Icons.chevronDown
+                        size={14}
+                        className={`text-gray-500 transition-transform ${showVacationDetails ? 'rotate-180' : ''}`}
+                      />
                     </div>
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <p className="text-lg font-semibold text-orange-400">{vacationBalance?.opgenomenLopendJaar || 0}</p>
-                      <p className="text-xs text-gray-400">Opgenomen</p>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2">
-                      <p className="text-lg font-semibold text-workx-lime">{vacationBalance?.resterend || 0}</p>
-                      <p className="text-xs text-gray-400">Resterend</p>
-                    </div>
-                  </div>
+                  </button>
 
-                  <div className="text-xs space-y-1.5 mt-3">
-                    <div className="flex justify-between text-gray-400">
-                      <span>Opbouw dit jaar</span>
-                      <span className="text-white">{vacationBalance?.opbouwLopendJaar || 0}d</span>
+                  {showVacationDetails && (
+                    <div className="mt-3 space-y-2 fade-in">
+                      {/* Betaald verlof */}
+                      <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
+                          <span className="text-xs text-gray-400">
+                            {parentalLeave.betaaldOpgenomenWeken} / {parentalLeave.betaaldTotaalWeken} weken
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-green-400 rounded-full"
+                            style={{ width: `${parentalLeave.betaaldTotaalWeken ? (parentalLeave.betaaldOpgenomenWeken / parentalLeave.betaaldTotaalWeken) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-green-400 mt-1 font-medium">
+                          {parentalLeave.betaaldTotaalWeken - parentalLeave.betaaldOpgenomenWeken} weken resterend
+                        </p>
+                      </div>
+
+                      {/* Onbetaald verlof */}
+                      <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
+                          <span className="text-xs text-gray-400">
+                            {parentalLeave.onbetaaldOpgenomenWeken} / {parentalLeave.onbetaaldTotaalWeken} weken
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-purple-400 rounded-full"
+                            style={{ width: `${parentalLeave.onbetaaldTotaalWeken ? (parentalLeave.onbetaaldOpgenomenWeken / parentalLeave.onbetaaldTotaalWeken) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-purple-400 mt-1 font-medium">
+                          {parentalLeave.onbetaaldTotaalWeken - parentalLeave.onbetaaldOpgenomenWeken} weken resterend
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>Bijgekocht</span>
-                      <span className="text-white">{vacationBalance?.bijgekocht || 0}d</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>Overgedragen</span>
-                      <span className="text-white">{vacationBalance?.overgedragenVorigJaar || 0}d</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
-
-                {/* Ouderschapsverlof */}
-                {parentalLeave && (
-                  <div className="pt-3 border-t border-white/5">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Ouderschapsverlof</p>
-                      {parentalLeave.kindNaam && (
-                        <span className="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
-                          {parentalLeave.kindNaam}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Betaald verlof */}
-                    <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3 mb-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-green-400 font-medium">Betaald (70% UWV)</span>
-                        <span className="text-xs text-gray-400">
-                          {parentalLeave.betaaldOpgenomenWeken} / {parentalLeave.betaaldTotaalWeken} weken
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-green-400 rounded-full"
-                          style={{ width: `${parentalLeave.betaaldTotaalWeken ? (parentalLeave.betaaldOpgenomenWeken / parentalLeave.betaaldTotaalWeken) * 100 : 0}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-green-400 mt-1 font-medium">
-                        {parentalLeave.betaaldTotaalWeken - parentalLeave.betaaldOpgenomenWeken} weken resterend
-                      </p>
-                    </div>
-
-                    {/* Onbetaald verlof */}
-                    <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-purple-400 font-medium">Onbetaald</span>
-                        <span className="text-xs text-gray-400">
-                          {parentalLeave.onbetaaldOpgenomenWeken} / {parentalLeave.onbetaaldTotaalWeken} weken
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-purple-400 rounded-full"
-                          style={{ width: `${parentalLeave.onbetaaldTotaalWeken ? (parentalLeave.onbetaaldOpgenomenWeken / parentalLeave.onbetaaldTotaalWeken) * 100 : 0}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-purple-400 mt-1 font-medium">
-                        {parentalLeave.onbetaaldTotaalWeken - parentalLeave.onbetaaldOpgenomenWeken} weken resterend
-                      </p>
-                    </div>
-
-                    {/* Inzet planning */}
-                    {(parentalLeave.inzetPerWeek || parentalLeave.eindDatum) && (
-                      <div className="mt-3 text-xs space-y-1">
-                        {parentalLeave.inzetPerWeek && (
-                          <div className="flex justify-between text-gray-400">
-                            <span>Inzet per week</span>
-                            <span className="text-white">{parentalLeave.inzetPerWeek} uur</span>
-                          </div>
-                        )}
-                        {parentalLeave.eindDatum && (
-                          <div className="flex justify-between text-gray-400">
-                            <span>Te gebruiken tot</span>
-                            <span className="text-white">
-                              {new Date(parentalLeave.eindDatum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {vacationBalance?.lastUpdatedBy && vacationBalance?.lastUpdated && (
-                  <p className="text-xs text-gray-500 pt-2 border-t border-white/5">
-                    Bijgewerkt door {vacationBalance.lastUpdatedBy} op {new Date(vacationBalance.lastUpdated).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
