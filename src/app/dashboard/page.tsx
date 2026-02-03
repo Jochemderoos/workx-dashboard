@@ -596,13 +596,10 @@ export default function DashboardHome() {
           const formattedBirthdays = data.birthdays
             .filter((u: any) => u.birthDate)
             .map((u: any) => {
-              // birthDate comes as ISO string, extract month and day
-              const date = new Date(u.birthDate)
-              const month = String(date.getMonth() + 1).padStart(2, '0')
-              const day = String(date.getDate()).padStart(2, '0')
+              // birthDate is stored as MM-DD string directly
               return {
                 name: u.name,
-                birthDate: `${month}-${day}` // MM-DD format
+                birthDate: u.birthDate // Already in MM-DD format
               }
             })
           setTeamBirthdays(formattedBirthdays)
