@@ -73,6 +73,10 @@ export default function OpleidingenPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Certificate selection state for bulk print
+  const [selectedCertificates, setSelectedCertificates] = useState<Set<string>>(new Set())
+  const [isPrintingBulk, setIsPrintingBulk] = useState(false)
+
   const currentYear = new Date().getFullYear()
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]
 
@@ -463,6 +467,126 @@ export default function OpleidingenPage() {
     printWindow.print()
   }
 
+  // Toggle certificate selection
+  const toggleCertificateSelection = (id: string) => {
+    setSelectedCertificates(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  // Select all certificates
+  const selectAllCertificates = () => {
+    if (pointsSummary) {
+      setSelectedCertificates(new Set(pointsSummary.certificates.map(c => c.id)))
+    }
+  }
+
+  // Clear selection
+  const clearCertificateSelection = () => {
+    setSelectedCertificates(new Set())
+  }
+
+  // Print multiple certificates as one PDF
+  const handlePrintBulkCertificates = (certificatesToPrint: Certificate[]) => {
+    if (certificatesToPrint.length === 0) {
+      toast.error('Geen certificaten geselecteerd')
+      return
+    }
+
+    setIsPrintingBulk(true)
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Kon printvenster niet openen')
+      setIsPrintingBulk(false)
+      return
+    }
+
+    const userName = session?.user?.name || 'Onbekend'
+
+    // Generate HTML for all certificates
+    const certificatesHtml = certificatesToPrint.map((cert, index) => `
+      <div class="certificate ${index > 0 ? 'page-break' : ''}">
+        <div class="certificate-inner">
+          <div class="header">
+            <div class="logo"><span>Workx</span></div>
+            <div class="subtitle">ADVOCATEN</div>
+          </div>
+          <div class="badge">CERTIFICAAT</div>
+          <div class="name">${userName}</div>
+          <p class="label">heeft succesvol deelgenomen aan</p>
+          <div class="training">${cert.trainingName}</div>
+          ${cert.provider ? `<p class="provider">${cert.provider}</p>` : ''}
+          <div class="details">
+            <div class="detail">
+              <div class="detail-value">${new Date(cert.completedDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+              <div class="detail-label">Datum</div>
+            </div>
+            <div class="detail">
+              <div class="detail-value">${cert.points}</div>
+              <div class="detail-label">PO-punten</div>
+            </div>
+          </div>
+          ${cert.certificateUrl ? `
+          <div class="original">
+            <p style="color: #666; margin-bottom: 15px; font-size: 12px;">Origineel certificaat:</p>
+            <img src="${cert.certificateUrl}" alt="Origineel certificaat" />
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    `).join('')
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Certificaten - ${userName}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; }
+          .certificate { padding: 40px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+          .certificate-inner { max-width: 600px; width: 100%; text-align: center; border: 3px solid #f9ff85; padding: 50px; border-radius: 12px; background: white; }
+          .page-break { page-break-before: always; }
+          .header { margin-bottom: 30px; }
+          .logo { font-size: 28px; font-weight: 600; margin-bottom: 5px; }
+          .logo span { background: #f9ff85; padding: 2px 10px; border-radius: 4px; }
+          .subtitle { color: #666; font-size: 11px; letter-spacing: 3px; }
+          .badge { display: inline-block; background: linear-gradient(135deg, #f9ff85, #e8f060); padding: 8px 24px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 3px; margin: 30px 0 20px; }
+          .name { font-size: 28px; font-weight: 700; margin: 20px 0 10px; }
+          .label { color: #666; margin-bottom: 15px; }
+          .training { font-size: 20px; font-weight: 600; color: #333; margin: 15px 0; }
+          .provider { color: #666; margin-bottom: 30px; }
+          .details { display: flex; justify-content: center; gap: 60px; margin: 30px 0; }
+          .detail { text-align: center; }
+          .detail-value { font-size: 18px; font-weight: 600; }
+          .detail-label { font-size: 11px; color: #999; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+          .original { margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee; }
+          .original img { max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .certificate { padding: 20px; min-height: auto; }
+            .certificate-inner { border: 2px solid #f9ff85; padding: 30px; }
+            @page { margin: 15mm; }
+          }
+        </style>
+      </head>
+      <body>
+        ${certificatesHtml}
+      </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.print()
+    setIsPrintingBulk(false)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -612,8 +736,10 @@ export default function OpleidingenPage() {
                     type="number"
                     step="0.5"
                     min="0"
-                    value={sessionForm.points}
+                    value={sessionForm.points || ''}
                     onChange={(e) => setSessionForm({ ...sessionForm, points: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0"
                     className="input-field"
                   />
                 </div>
@@ -745,23 +871,68 @@ export default function OpleidingenPage() {
           )}
 
           {/* Action buttons */}
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Selection controls - left side */}
             {pointsSummary && pointsSummary.certificates.length > 0 && (
-              <button
-                onClick={handlePrintOverview}
-                className="btn-secondary flex items-center gap-2"
-              >
-                <Icons.download size={16} />
-                Overzicht PDF
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={selectedCertificates.size === pointsSummary.certificates.length ? clearCertificateSelection : selectAllCertificates}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  {selectedCertificates.size === pointsSummary.certificates.length ? 'Niets selecteren' : 'Alles selecteren'}
+                </button>
+                {selectedCertificates.size > 0 && (
+                  <span className="text-xs text-gray-500">
+                    {selectedCertificates.size} geselecteerd
+                  </span>
+                )}
+              </div>
             )}
-            <button
-              onClick={() => setShowCertificateForm(true)}
-              className="btn-primary flex items-center gap-2"
-            >
-              <Icons.plus size={16} />
-              Certificaat toevoegen
-            </button>
+
+            {/* Action buttons - right side */}
+            <div className="flex gap-2 ml-auto">
+              {/* Print selected */}
+              {selectedCertificates.size > 0 && pointsSummary && (
+                <button
+                  onClick={() => {
+                    const selected = pointsSummary.certificates.filter(c => selectedCertificates.has(c.id))
+                    handlePrintBulkCertificates(selected)
+                  }}
+                  disabled={isPrintingBulk}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <Icons.download size={16} />
+                  Print selectie ({selectedCertificates.size})
+                </button>
+              )}
+              {/* Print all certificates */}
+              {pointsSummary && pointsSummary.certificates.length > 0 && selectedCertificates.size === 0 && (
+                <>
+                  <button
+                    onClick={() => handlePrintBulkCertificates(pointsSummary.certificates)}
+                    disabled={isPrintingBulk}
+                    className="btn-secondary flex items-center gap-2"
+                  >
+                    <Icons.download size={16} />
+                    Alle certificaten
+                  </button>
+                  <button
+                    onClick={handlePrintOverview}
+                    className="btn-secondary flex items-center gap-2"
+                  >
+                    <Icons.file size={16} />
+                    Overzicht
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setShowCertificateForm(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Icons.plus size={16} />
+                Certificaat toevoegen
+              </button>
+            </div>
           </div>
 
           {/* Certificate form */}
@@ -863,8 +1034,10 @@ export default function OpleidingenPage() {
                     type="number"
                     step="0.5"
                     min="0"
-                    value={certificateForm.points}
+                    value={certificateForm.points || ''}
                     onChange={(e) => setCertificateForm({ ...certificateForm, points: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0"
                     className="input-field"
                   />
                 </div>
@@ -921,9 +1094,29 @@ export default function OpleidingenPage() {
           ) : (
             <div className="space-y-3">
               {pointsSummary.certificates.map((cert) => (
-                <div key={cert.id} className="card p-4 hover:bg-white/[0.02] transition-colors group">
+                <div
+                  key={cert.id}
+                  className={`card p-4 transition-colors group cursor-pointer ${
+                    selectedCertificates.has(cert.id)
+                      ? 'bg-workx-lime/5 border-workx-lime/30'
+                      : 'hover:bg-white/[0.02]'
+                  }`}
+                  onClick={() => toggleCertificateSelection(cert.id)}
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
+                      {/* Checkbox */}
+                      <div
+                        className={`w-5 h-5 mt-1 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                          selectedCertificates.has(cert.id)
+                            ? 'bg-workx-lime'
+                            : 'border-2 border-white/20 group-hover:border-white/40'
+                        }`}
+                      >
+                        {selectedCertificates.has(cert.id) && (
+                          <Icons.check size={12} className="text-workx-dark" />
+                        )}
+                      </div>
                       <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
                         <Icons.award className="text-green-400" size={20} />
                       </div>
@@ -952,15 +1145,21 @@ export default function OpleidingenPage() {
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                       <button
-                        onClick={() => handlePrintCertificate(cert)}
-                        className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handlePrintCertificate(cert)
+                        }}
+                        className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-colors"
                         title="Exporteer naar PDF"
                       >
                         <Icons.download size={16} />
                       </button>
                       <button
-                        onClick={() => handleDeleteCertificate(cert.id)}
-                        className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteCertificate(cert.id)
+                        }}
+                        className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                         title="Verwijderen"
                       >
                         <Icons.trash size={16} />

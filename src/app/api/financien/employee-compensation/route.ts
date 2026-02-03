@@ -26,7 +26,7 @@ export async function GET() {
     const users = await prisma.user.findMany({
       where: {
         isActive: true,
-        role: { not: 'PARTNER' }, // Filter partners eruit
+        role: { notIn: ['PARTNER', 'ADMIN'] }, // Filter partners en admin eruit
         NOT: {
           name: { contains: 'Lotte' } // Filter Lotte eruit
         }

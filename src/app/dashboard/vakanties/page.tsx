@@ -895,159 +895,7 @@ export default function VakantiesPage() {
             </div>
           </div>
 
-          {/* Edit form (when editing) */}
-          {editingBalance && (
-            <div className="card p-6 border-workx-lime/20 bg-gradient-to-br from-workx-lime/5 to-transparent">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                    <Icons.edit className="text-workx-lime" size={18} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white">Saldo bewerken</h3>
-                    <p className="text-sm text-gray-400">{editingBalance}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setEditingBalance(null)
-                    setSelectedBalanceUserId('')
-                  }}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                >
-                  <Icons.x size={18} />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Overgedragen</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={balanceForm.overgedragenVorigJaar}
-                    onChange={e => setBalanceForm({ ...balanceForm, overgedragenVorigJaar: parseFloat(e.target.value) || 0 })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Opbouw</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={balanceForm.opbouwLopendJaar}
-                    onChange={e => setBalanceForm({ ...balanceForm, opbouwLopendJaar: parseFloat(e.target.value) || 0 })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Bijgekocht</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={balanceForm.bijgekocht}
-                    onChange={e => setBalanceForm({ ...balanceForm, bijgekocht: parseFloat(e.target.value) || 0 })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Opgenomen</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={balanceForm.opgenomenLopendJaar}
-                    onChange={e => setBalanceForm({ ...balanceForm, opgenomenLopendJaar: parseFloat(e.target.value) || 0 })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Resterend</label>
-                  <div className="px-4 py-3 bg-workx-lime/10 border border-workx-lime/20 rounded-xl text-workx-lime font-semibold">
-                    {(balanceForm.overgedragenVorigJaar + balanceForm.opbouwLopendJaar + balanceForm.bijgekocht - balanceForm.opgenomenLopendJaar).toFixed(1)} d
-                  </div>
-                </div>
-              </div>
-
-              {/* Vakantieperiodes sectie */}
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Icons.calendar className="text-green-400" size={18} />
-                    <h4 className="font-medium text-white">Vakantieperiodes</h4>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setPeriodFormUserId(selectedBalanceUserId)
-                      setEditingPeriod(null)
-                      setShowPeriodForm(true)
-                    }}
-                    className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3"
-                  >
-                    <Icons.plus size={14} />
-                    Periode toevoegen
-                  </button>
-                </div>
-
-                {showPeriodForm && periodFormUserId === selectedBalanceUserId ? (
-                  <div className="bg-white/5 rounded-xl p-4 mb-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <button
-                        onClick={() => {
-                          setShowPeriodForm(false)
-                          setEditingPeriod(null)
-                        }}
-                        className="p-1 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                      >
-                        <Icons.chevronLeft size={16} />
-                      </button>
-                      <span className="text-sm text-gray-300">
-                        {editingPeriod ? 'Periode bewerken' : 'Nieuwe periode'}
-                      </span>
-                    </div>
-                    <VacationPeriodForm
-                      initialData={editingPeriod ? {
-                        startDate: new Date(editingPeriod.startDate),
-                        endDate: new Date(editingPeriod.endDate),
-                        werkdagen: parseWerkdagen(editingPeriod.werkdagen),
-                        note: editingPeriod.note || '',
-                      } : undefined}
-                      onSubmit={handleSubmitPeriod}
-                      onCancel={() => {
-                        setShowPeriodForm(false)
-                        setEditingPeriod(null)
-                      }}
-                      isSubmitting={isSubmittingPeriod}
-                      submitLabel={editingPeriod ? 'Bijwerken' : 'Toevoegen'}
-                    />
-                  </div>
-                ) : (
-                  <VacationPeriodList
-                    periods={vacationPeriods[selectedBalanceUserId] || []}
-                    onEdit={handleEditPeriod}
-                    onDelete={handleDeletePeriod}
-                  />
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setEditingBalance(null)
-                    setSelectedBalanceUserId('')
-                    setShowPeriodForm(false)
-                    setEditingPeriod(null)
-                  }}
-                  className="btn-secondary"
-                >
-                  Annuleren
-                </button>
-                <button onClick={handleSaveBalance} className="btn-primary flex items-center gap-2">
-                  <Icons.check size={16} />
-                  Opslaan
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Edit form moved to inline in table */}
 
           {/* Balances Table */}
           <div className="card overflow-hidden">
@@ -1106,14 +954,173 @@ export default function VakantiesPage() {
                   const initials = balance.personName.split(' ').map(n => n[0]).join('').slice(0, 2)
                   const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
                   const colorClass = colors[index % colors.length]
+                  const isEditing = editingBalance === balance.personName
 
                   return (
-                    <div
-                      key={balance.userId}
-                      className={`grid grid-cols-7 gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors group ${
-                        editingBalance === balance.personName ? 'bg-workx-lime/5' : ''
-                      }`}
-                    >
+                    <div key={balance.userId}>
+                      {/* Inline edit form - appears above this employee when editing */}
+                      {isEditing && (
+                        <div className="p-5 bg-gradient-to-r from-workx-lime/10 to-transparent border-l-4 border-workx-lime">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                                <Icons.edit className="text-workx-lime" size={18} />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-white">Saldo bewerken</h3>
+                                <p className="text-sm text-gray-400">{editingBalance}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setEditingBalance(null)
+                                setSelectedBalanceUserId('')
+                                setShowPeriodForm(false)
+                                setEditingPeriod(null)
+                              }}
+                              className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            >
+                              <Icons.x size={18} />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Overgedragen</label>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={balanceForm.overgedragenVorigJaar}
+                                onChange={e => setBalanceForm({ ...balanceForm, overgedragenVorigJaar: parseFloat(e.target.value) || 0 })}
+                                className="input-field text-sm py-2"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Opbouw</label>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={balanceForm.opbouwLopendJaar}
+                                onChange={e => setBalanceForm({ ...balanceForm, opbouwLopendJaar: parseFloat(e.target.value) || 0 })}
+                                className="input-field text-sm py-2"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Bijgekocht</label>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={balanceForm.bijgekocht}
+                                onChange={e => setBalanceForm({ ...balanceForm, bijgekocht: parseFloat(e.target.value) || 0 })}
+                                className="input-field text-sm py-2"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Opgenomen</label>
+                              <input
+                                type="number"
+                                step="0.5"
+                                value={balanceForm.opgenomenLopendJaar}
+                                onChange={e => setBalanceForm({ ...balanceForm, opgenomenLopendJaar: parseFloat(e.target.value) || 0 })}
+                                className="input-field text-sm py-2"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Resterend</label>
+                              <div className="px-3 py-2 bg-workx-lime/10 border border-workx-lime/20 rounded-xl text-workx-lime font-semibold text-sm">
+                                {(balanceForm.overgedragenVorigJaar + balanceForm.opbouwLopendJaar + balanceForm.bijgekocht - balanceForm.opgenomenLopendJaar).toFixed(1)} d
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Vakantieperiodes sectie */}
+                          <div className="pt-4 border-t border-white/10">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <Icons.calendar className="text-green-400" size={16} />
+                                <h4 className="font-medium text-white text-sm">Vakantieperiodes</h4>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setPeriodFormUserId(selectedBalanceUserId)
+                                  setEditingPeriod(null)
+                                  setShowPeriodForm(true)
+                                }}
+                                className="btn-secondary text-xs flex items-center gap-1.5 py-1 px-2"
+                              >
+                                <Icons.plus size={12} />
+                                Periode
+                              </button>
+                            </div>
+
+                            {showPeriodForm && periodFormUserId === selectedBalanceUserId ? (
+                              <div className="bg-white/5 rounded-xl p-4 mb-3">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <button
+                                    onClick={() => {
+                                      setShowPeriodForm(false)
+                                      setEditingPeriod(null)
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                                  >
+                                    <Icons.chevronLeft size={14} />
+                                  </button>
+                                  <span className="text-xs text-gray-300">
+                                    {editingPeriod ? 'Periode bewerken' : 'Nieuwe periode'}
+                                  </span>
+                                </div>
+                                <VacationPeriodForm
+                                  initialData={editingPeriod ? {
+                                    startDate: new Date(editingPeriod.startDate),
+                                    endDate: new Date(editingPeriod.endDate),
+                                    werkdagen: parseWerkdagen(editingPeriod.werkdagen),
+                                    note: editingPeriod.note || '',
+                                  } : undefined}
+                                  onSubmit={handleSubmitPeriod}
+                                  onCancel={() => {
+                                    setShowPeriodForm(false)
+                                    setEditingPeriod(null)
+                                  }}
+                                  isSubmitting={isSubmittingPeriod}
+                                  submitLabel={editingPeriod ? 'Bijwerken' : 'Toevoegen'}
+                                />
+                              </div>
+                            ) : (
+                              <VacationPeriodList
+                                periods={vacationPeriods[selectedBalanceUserId] || []}
+                                onEdit={handleEditPeriod}
+                                onDelete={handleDeletePeriod}
+                                compact
+                              />
+                            )}
+                          </div>
+
+                          <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-white/10">
+                            <button
+                              onClick={() => {
+                                setEditingBalance(null)
+                                setSelectedBalanceUserId('')
+                                setShowPeriodForm(false)
+                                setEditingPeriod(null)
+                              }}
+                              className="btn-secondary text-sm py-2 px-4"
+                            >
+                              Annuleren
+                            </button>
+                            <button onClick={handleSaveBalance} className="btn-primary text-sm py-2 px-4 flex items-center gap-2">
+                              <Icons.check size={14} />
+                              Opslaan
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Regular employee row */}
+                      <div
+                        className={`grid grid-cols-7 gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors group ${
+                          isEditing ? 'bg-workx-lime/5 border-l-4 border-workx-lime' : ''
+                        }`}
+                      >
                       <div className="col-span-2 flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${balance.isPartner ? 'from-purple-500/30 to-purple-600/10' : colorClass} flex items-center justify-center font-semibold text-sm text-white`}>
                           {initials}
@@ -1289,6 +1296,7 @@ export default function VakantiesPage() {
                         )}
                       </div>
                     </div>
+                  </div>
                   )
                 })}
               </div>

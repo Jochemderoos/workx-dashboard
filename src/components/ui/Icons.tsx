@@ -267,6 +267,12 @@ export const Icons = {
     </svg>
   ),
 
+  chevronUp: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M18 15l-6-6-6 6" />
+    </svg>
+  ),
+
   mapPin: ({ className, size = 20 }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
@@ -359,6 +365,17 @@ export const Icons = {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M12 2L2 7l10 5 10-5-10-5z" />
       <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+    </svg>
+  ),
+
+  gripVertical: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="9" cy="5" r="1" fill="currentColor" />
+      <circle cx="9" cy="12" r="1" fill="currentColor" />
+      <circle cx="9" cy="19" r="1" fill="currentColor" />
+      <circle cx="15" cy="5" r="1" fill="currentColor" />
+      <circle cx="15" cy="12" r="1" fill="currentColor" />
+      <circle cx="15" cy="19" r="1" fill="currentColor" />
     </svg>
   ),
 

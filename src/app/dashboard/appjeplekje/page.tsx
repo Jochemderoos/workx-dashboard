@@ -37,6 +37,14 @@ const getLocalDateString = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+interface WeekDayData {
+  date: string
+  dayName: string
+  dayNumber: number
+  attendees: Attendee[]
+  isToday: boolean
+}
+
 export default function AppjeplekjePage() {
   const [selectedDate, setSelectedDate] = useState(getLocalDateString(new Date()))
   const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null)
@@ -45,10 +53,72 @@ export default function AppjeplekjePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<'FULL_DAY' | 'MORNING' | 'AFTERNOON'>('FULL_DAY')
 
+  // Week overview state
+  const [weekData, setWeekData] = useState<WeekDayData[]>([])
+  const [isLoadingWeek, setIsLoadingWeek] = useState(true)
+
   // Haal data op voor geselecteerde datum
   useEffect(() => {
     fetchAttendance(selectedDate)
   }, [selectedDate])
+
+  // Haal weekoverzicht op
+  useEffect(() => {
+    fetchWeekOverview()
+  }, [])
+
+  // Haal data op voor de huidige week (ma-vr) - parallel voor snelheid
+  const fetchWeekOverview = async () => {
+    setIsLoadingWeek(true)
+    try {
+      const today = new Date()
+      const dayOfWeek = today.getDay()
+      // Bereken maandag van deze week
+      const monday = new Date(today)
+      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+      monday.setDate(today.getDate() + diff)
+
+      const dayNames = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag']
+
+      // Maak alle dates en fetch ze PARALLEL
+      const fetchPromises = Array.from({ length: 5 }, async (_, i) => {
+        const date = new Date(monday)
+        date.setDate(monday.getDate() + i)
+        const dateStr = getLocalDateString(date)
+        const isToday = dateStr === getLocalDateString(today)
+
+        try {
+          const res = await fetch(`/api/office-attendance?date=${dateStr}`)
+          if (res.ok) {
+            const data = await res.json()
+            return {
+              date: dateStr,
+              dayName: dayNames[i],
+              dayNumber: date.getDate(),
+              attendees: data.attendees || [],
+              isToday,
+            }
+          }
+        } catch {
+          // Ignore errors
+        }
+        return {
+          date: dateStr,
+          dayName: dayNames[i],
+          dayNumber: date.getDate(),
+          attendees: [],
+          isToday,
+        }
+      })
+
+      const weekDays = await Promise.all(fetchPromises)
+      setWeekData(weekDays)
+    } catch (error) {
+      console.error('Error fetching week overview:', error)
+    } finally {
+      setIsLoadingWeek(false)
+    }
+  }
 
   const fetchAttendance = async (date: string) => {
     setIsLoading(true)
@@ -124,6 +194,7 @@ export default function AppjeplekjePage() {
 
       // Refresh data
       await fetchAttendance(selectedDate)
+      await fetchWeekOverview()
     } catch (error) {
       console.error('Error toggling attendance:', error)
       alert('Er ging iets mis met de verbinding')
@@ -154,6 +225,7 @@ export default function AppjeplekjePage() {
 
       // Refresh data
       await fetchAttendance(selectedDate)
+      await fetchWeekOverview()
     } catch (error) {
       console.error('Error updating time slot:', error)
       alert('Er ging iets mis met de verbinding')
@@ -257,6 +329,101 @@ export default function AppjeplekjePage() {
           </h1>
           <p className="text-white/50 mt-1 text-sm sm:text-base">Meld je aan voor een werkplek op kantoor</p>
         </div>
+      </div>
+
+      {/* Week Overview - Main View */}
+      <div className="card p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Icons.calendar size={18} className="text-workx-lime" />
+            <h2 className="font-medium text-white">Deze week op kantoor</h2>
+          </div>
+          <p className="text-xs text-gray-400">
+            Week {Math.ceil((new Date().getDate() + new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay()) / 7)}
+          </p>
+        </div>
+
+        {isLoadingWeek ? (
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-40 bg-white/5 rounded-xl animate-pulse"></div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            {weekData.map((day) => (
+              <div
+                key={day.date}
+                onClick={() => setSelectedDate(day.date)}
+                className={`p-3 rounded-xl transition-all cursor-pointer ${
+                  day.date === selectedDate
+                    ? 'bg-workx-lime/20 border-2 border-workx-lime/50 ring-2 ring-workx-lime/20'
+                    : day.isToday
+                      ? 'bg-white/10 border-2 border-workx-lime/40'
+                      : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
+                }`}
+              >
+                {/* Day header */}
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+                  <span className={`text-sm font-medium ${day.isToday ? 'text-workx-lime' : 'text-white'}`}>
+                    {day.dayName}
+                  </span>
+                  <span className={`text-lg font-bold ${
+                    day.date === selectedDate ? 'text-workx-lime' : day.isToday ? 'text-workx-lime' : 'text-white/60'
+                  }`}>
+                    {day.dayNumber}
+                  </span>
+                </div>
+
+                {/* Attendees list */}
+                {day.attendees.length > 0 ? (
+                  <div className="space-y-2">
+                    {day.attendees.map((attendee) => {
+                      const photoUrl = getPhotoUrl(attendee.name)
+                      const firstName = attendee.name.split(' ')[0]
+                      return (
+                        <div key={attendee.id} className="flex items-center gap-2">
+                          {photoUrl ? (
+                            <img
+                              src={photoUrl}
+                              alt={attendee.name}
+                              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-medium text-white/80 flex-shrink-0">
+                              {attendee.name.charAt(0)}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm text-white/90 truncate block">{firstName}</span>
+                            {attendee.timeSlot && attendee.timeSlot !== 'FULL_DAY' && (
+                              <span className="text-[10px] text-white/40">
+                                {attendee.timeSlot === 'MORNING' ? 'ochtend' : 'middag'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-4 text-center">
+                    <p className="text-xs text-gray-500">Nog niemand</p>
+                  </div>
+                )}
+
+                {/* Footer with count */}
+                {day.attendees.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-white/5">
+                    <p className="text-[10px] text-gray-400 text-center">
+                      {day.attendees.length} {day.attendees.length === 1 ? 'persoon' : 'personen'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
