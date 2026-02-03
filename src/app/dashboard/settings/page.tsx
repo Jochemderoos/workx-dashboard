@@ -353,27 +353,55 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-sm text-gray-400 mb-2">Verjaardag</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg">🎂</span>
-                <input
-                  type="date"
-                  value={profile.birthDate ? `2000-${profile.birthDate}` : ''}
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎂</span>
+                <select
+                  value={profile.birthDate ? profile.birthDate.split('-')[1] : ''}
                   onChange={(e) => {
-                    if (e.target.value) {
-                      // Extract MM-DD from the date
-                      const parts = e.target.value.split('-')
-                      if (parts.length === 3) {
-                        const mmdd = `${parts[1]}-${parts[2]}`
-                        setProfile({ ...profile, birthDate: mmdd })
-                      }
-                    } else {
-                      setProfile({ ...profile, birthDate: '' })
+                    const day = e.target.value
+                    const month = profile.birthDate ? profile.birthDate.split('-')[0] : ''
+                    if (day && month) {
+                      setProfile({ ...profile, birthDate: `${month}-${day}` })
+                    } else if (day) {
+                      setProfile({ ...profile, birthDate: `01-${day}` })
                     }
                   }}
-                  className="input-field pl-11"
-                />
+                  className="input-field w-24 text-center"
+                >
+                  <option value="">Dag</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                    <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                  ))}
+                </select>
+                <select
+                  value={profile.birthDate ? profile.birthDate.split('-')[0] : ''}
+                  onChange={(e) => {
+                    const month = e.target.value
+                    const day = profile.birthDate ? profile.birthDate.split('-')[1] : ''
+                    if (month && day) {
+                      setProfile({ ...profile, birthDate: `${month}-${day}` })
+                    } else if (month) {
+                      setProfile({ ...profile, birthDate: `${month}-01` })
+                    }
+                  }}
+                  className="input-field flex-1"
+                >
+                  <option value="">Maand</option>
+                  <option value="01">Januari</option>
+                  <option value="02">Februari</option>
+                  <option value="03">Maart</option>
+                  <option value="04">April</option>
+                  <option value="05">Mei</option>
+                  <option value="06">Juni</option>
+                  <option value="07">Juli</option>
+                  <option value="08">Augustus</option>
+                  <option value="09">September</option>
+                  <option value="10">Oktober</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
               </div>
-              <p className="text-xs text-white/30 mt-1.5">Kies je geboortedatum (alleen dag en maand worden opgeslagen)</p>
+              <p className="text-xs text-white/30 mt-1.5">Wordt getoond in de verjaardagen widget</p>
             </div>
 
             <div className="pt-4">
