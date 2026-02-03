@@ -21,6 +21,7 @@ model User {
   phoneNumber    String?
   birthDate      String?   // Verjaardag in MM-DD format
   startDate      DateTime? // Datum in dienst (voor transitievergoeding etc)
+  werkdagen      String?   @default("1,2,3,4,5") // Standaard werkdagen patroon (1=Ma, 2=Di, etc)
   isActive       Boolean   @default(true) // Voor medewerkers die uit dienst zijn
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -35,6 +36,8 @@ model User {
   // Vacation
   vacationBalance   VacationBalance?
   vacationRequests  VacationRequest[]
+  vacationPeriods   VacationPeriod[]
+  createdPeriods    VacationPeriod[]  @relation("CreatedPeriods")
   parentalLeaves    ParentalLeave[]   // Multiple children supported
 
   // Work items
@@ -62,6 +65,10 @@ model User {
 
   // Compensation
   compensation      EmployeeCompensation?
+
+  // Opleidingen
+  createdTrainingSessions TrainingSession[] @relation("CreatedTrainingSessions")
+  certificates            Certificate[]     @relation("UserCertificates")
 }
 
 model Account {
@@ -176,7 +183,31 @@ model VacationBalance {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  periods VacationPeriod[]
+}
+
+// Vakantieperiodes - voor het bijhouden van specifieke vakantieperiodes met parttime ondersteuning
+model VacationPeriod {
+  id          String   @id @default(cuid())
+  userId      String
+  balanceId   String
+  year        Int
+  startDate   DateTime
+  endDate     DateTime
+  werkdagen   String   // "1,2,3,4,5" = Ma-Vr, werkdagen die meetellen
+  days        Float    // Berekende vakantiedagen
+  note        String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   VacationBalance @relation(fields: [balanceId], references: [id], onDelete: Cascade)
+  createdBy User            @relation("CreatedPeriods", fields: [createdById], references: [id])
+
+  @@index([userId, year])
+  @@index([balanceId])
 }
 
 // Ouderschapsverlof tracking - ondersteunt meerdere kinderen per medewerker
@@ -238,6 +269,9 @@ model VacationRequest {
   updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }
 
 // ==================== WORK ITEMS ====================
@@ -309,6 +343,8 @@ model Feedback {
   updatedAt   DateTime @updatedAt
 
   submittedBy User @relation(fields: [submittedById], references: [id], onDelete: Cascade)
+
+  @@index([processed])
 }
 
 // ==================== GEDEELDE AGENDA ====================
@@ -328,6 +364,10 @@ model CalendarEvent {
   updatedAt   DateTime @updatedAt
 
   createdBy   User     @relation("CreatedEvents", fields: [createdById], references: [id])
+
+  @@index([startTime])
+  @@index([endTime])
+  @@index([createdById])
 }
 
 // ==================== FINANCIEN ====================
@@ -491,6 +531,7 @@ model SickDayEntry {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, startDate])
+  @@index([userId])
 }
 
 // ==================== KANTOOR AANWEZIGHEID ====================
@@ -500,12 +541,58 @@ model OfficeAttendance {
   id        String   @id @default(cuid())
   userId    String
   date      String   // YYYY-MM-DD format
+  timeSlot  String   @default("FULL_DAY") // FULL_DAY, MORNING, AFTERNOON
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+  @@index([date])
+}
+
+// ==================== OPLEIDINGEN ====================
+
+// Workx Opleiding sessies - sprekers, data, onderwerpen
+model TrainingSession {
+  id          String   @id @default(cuid())
+  title       String   // Onderwerp van de opleiding
+  speaker     String   // Naam van de spreker
+  date        DateTime // Datum van de sessie
+  startTime   String?  // Starttijd (HH:MM)
+  endTime     String?  // Eindtijd (HH:MM)
+  location    String?  // Locatie
+  description String?  @db.Text // Beschrijving
+  points      Float    @default(1) // PO-punten
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy   User     @relation("CreatedTrainingSessions", fields: [createdById], references: [id])
+
+  @@index([date])
+}
+
+// Certificaten van individuele opleidingen
+model Certificate {
+  id              String   @id @default(cuid())
+  userId          String
+  year            Int      // Jaar van de opleiding
+  trainingName    String   // Naam van de opleiding
+  provider        String?  // Opleidingsinstituut
+  completedDate   DateTime // Datum afgerond
+  points          Float    // Behaalde punten
+  certificateUrl  String?  // URL naar opgeslagen certificaat
+  ocrProcessed    Boolean  @default(false) // Of OCR is toegepast
+  ocrRawText      String?  @db.Text // Ruwe OCR tekst voor debugging
+  note            String?  // Extra notities
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation("UserCertificates", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, year])
+  @@index([year])
 }
 
 // ==================== HR DOCUMENTEN ====================

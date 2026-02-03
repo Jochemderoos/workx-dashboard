@@ -5,6 +5,11 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import * as Popover from '@radix-ui/react-popover'
+import VacationPeriodForm, { VacationPeriodFormData } from '@/components/vacation/VacationPeriodForm'
+import VacationPeriodList, { VacationPeriod } from '@/components/vacation/VacationPeriodList'
+import WorkdaysCalculator from '@/components/vacation/WorkdaysCalculator'
+import { werkdagenToString, parseWerkdagen, DEFAULT_WERKDAGEN } from '@/lib/vacation-utils'
 
 interface VacationRequest {
   id: string
@@ -113,6 +118,11 @@ export default function VakantiesPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [pageMode, setPageMode] = useState<'overzicht' | 'beheer'>('overzicht')
 
+  // Day detail modal state
+  const [showDayModal, setShowDayModal] = useState(false)
+  const [selectedDayForModal, setSelectedDayForModal] = useState<Date | null>(null)
+  const [modalClickY, setModalClickY] = useState<number | undefined>(undefined)
+
   // My vacation balance state (for non-partners)
   const [myVacationBalance, setMyVacationBalance] = useState<{
     overgedragenVorigJaar: number
@@ -123,6 +133,8 @@ export default function VakantiesPage() {
     resterend: number
     isPartner: boolean
   } | null>(null)
+  const [myVacationPeriods, setMyVacationPeriods] = useState<VacationPeriod[]>([])
+  const [showMyPeriods, setShowMyPeriods] = useState(false)
 
   // Parental leave state
   const [myParentalLeave, setMyParentalLeave] = useState<ParentalLeave | null>(null)
@@ -158,6 +170,15 @@ export default function VakantiesPage() {
   // Check if current user is admin/partner
   const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
 
+  // Vacation periods state
+  const [vacationPeriods, setVacationPeriods] = useState<Record<string, VacationPeriod[]>>({}) // userId -> periods
+  const [showPeriodForm, setShowPeriodForm] = useState(false)
+  const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null)
+  const [periodFormUserId, setPeriodFormUserId] = useState<string>('')
+  const [isSubmittingPeriod, setIsSubmittingPeriod] = useState(false)
+  const [showPeriodsPopover, setShowPeriodsPopover] = useState<string | null>(null) // userId for which popover is open
+  const [showWorkdaysCalculator, setShowWorkdaysCalculator] = useState(false)
+
   // Balance editing state
   const [editingBalance, setEditingBalance] = useState<string | null>(null)
   const [selectedBalanceUserId, setSelectedBalanceUserId] = useState('')
@@ -177,7 +198,7 @@ export default function VakantiesPage() {
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
   const [showParentalMemberDropdown, setShowParentalMemberDropdown] = useState(false)
 
-  // Fetch data on mount
+  // Fetch all data from bundled API on mount
   useEffect(() => {
     fetchData()
   }, [])
@@ -185,50 +206,21 @@ export default function VakantiesPage() {
   const fetchData = async () => {
     setIsLoading(true)
     try {
-      // Fetch vacations - all approved for everyone, or user's own if not admin
-      const vacRes = await fetch('/api/vacation/requests?all=true')
-      if (vacRes.ok) {
-        const data = await vacRes.json()
-        setVacations(data)
-      }
-
-      // Fetch team members
-      const teamRes = await fetch('/api/team')
-      if (teamRes.ok) {
-        const data = await teamRes.json()
-        setTeamMembers(data)
-      }
-
-      // Fetch balances (admin only)
-      if (isAdmin) {
-        const balRes = await fetch('/api/vacation/balances')
-        if (balRes.ok) {
-          const data = await balRes.json()
-          setVacationBalances(data)
+      // Single bundled API call instead of 5-6 separate calls
+      const res = await fetch('/api/vacation/summary')
+      if (res.ok) {
+        const data = await res.json()
+        setVacations(data.vacations || [])
+        setTeamMembers(data.teamMembers || [])
+        setVacationBalances(data.vacationBalances || [])
+        setAllParentalLeaves(data.allParentalLeaves || [])
+        setMyParentalLeave(data.myParentalLeave)
+        setMyVacationBalance(data.myVacationBalance)
+        if (data.myVacationPeriods) {
+          setMyVacationPeriods(data.myVacationPeriods)
         }
-
-        // Fetch all parental leaves (admin only)
-        const plRes = await fetch('/api/parental-leave?all=true')
-        if (plRes.ok) {
-          const data = await plRes.json()
-          setAllParentalLeaves(data)
-        }
-      }
-
-      // Fetch own parental leave
-      const myPlRes = await fetch('/api/parental-leave')
-      if (myPlRes.ok) {
-        const data = await myPlRes.json()
-        // API returns array, take first item or null if empty
-        setMyParentalLeave(Array.isArray(data) && data.length > 0 ? data[0] : null)
-      }
-
-      // Fetch own vacation balance (for non-partners)
-      const myBalRes = await fetch('/api/user/vacation-balance')
-      if (myBalRes.ok) {
-        const data = await myBalRes.json()
-        // Only set if not a partner
-        setMyVacationBalance(data.isPartner ? null : data)
+      } else {
+        throw new Error('Failed to fetch data')
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -237,16 +229,6 @@ export default function VakantiesPage() {
       setIsLoading(false)
     }
   }
-
-  // Refetch when isAdmin changes (session loaded)
-  useEffect(() => {
-    if (session && isAdmin) {
-      fetch('/api/vacation/balances')
-        .then(res => res.ok ? res.json() : [])
-        .then(data => setVacationBalances(data))
-        .catch(() => {})
-    }
-  }, [session, isAdmin])
 
   const resetForm = () => {
     setSelectedUserId('')
@@ -344,7 +326,7 @@ export default function VakantiesPage() {
   }
 
   // Balance management
-  const handleEditBalance = (balance: VacationBalance) => {
+  const handleEditBalance = async (balance: VacationBalance) => {
     setSelectedBalanceUserId(balance.userId)
     setBalanceForm({
       overgedragenVorigJaar: balance.overgedragenVorigJaar,
@@ -353,6 +335,10 @@ export default function VakantiesPage() {
       opgenomenLopendJaar: balance.opgenomenLopendJaar,
     })
     setEditingBalance(balance.personName)
+    // Fetch vacation periods for this user
+    if (!vacationPeriods[balance.userId]) {
+      await fetchPeriodsForUser(balance.userId)
+    }
   }
 
   const handleSaveBalance = async () => {
@@ -382,6 +368,119 @@ export default function VakantiesPage() {
 
   const calculateResterend = (balance: VacationBalance) => {
     return balance.overgedragenVorigJaar + balance.opbouwLopendJaar + (balance.bijgekocht || 0) - balance.opgenomenLopendJaar
+  }
+
+  // Vacation period management
+  const fetchPeriodsForUser = async (userId: string) => {
+    try {
+      const year = new Date().getFullYear()
+      const res = await fetch(`/api/vacation/periods?userId=${userId}&year=${year}`)
+      if (res.ok) {
+        const periods = await res.json()
+        setVacationPeriods(prev => ({ ...prev, [userId]: periods }))
+      }
+    } catch (error) {
+      console.error('Error fetching periods:', error)
+    }
+  }
+
+  const handleOpenPeriodPopover = async (userId: string) => {
+    setShowPeriodsPopover(userId)
+    setPeriodFormUserId(userId)
+    // Fetch periods if not already loaded
+    if (!vacationPeriods[userId]) {
+      await fetchPeriodsForUser(userId)
+    }
+  }
+
+  const handleAddPeriod = (userId: string) => {
+    setPeriodFormUserId(userId)
+    setEditingPeriod(null)
+    setShowPeriodForm(true)
+  }
+
+  const handleEditPeriod = (period: VacationPeriod) => {
+    setEditingPeriod(period)
+    setPeriodFormUserId(period.userId)
+    setShowPeriodForm(true)
+  }
+
+  const handleSubmitPeriod = async (data: VacationPeriodFormData) => {
+    if (!periodFormUserId || !data.startDate || !data.endDate) return
+
+    setIsSubmittingPeriod(true)
+    try {
+      const werkdagenStr = werkdagenToString(data.werkdagen)
+
+      if (editingPeriod) {
+        // Update existing period
+        const res = await fetch('/api/vacation/periods', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingPeriod.id,
+            startDate: data.startDate.toISOString(),
+            endDate: data.endDate.toISOString(),
+            werkdagen: werkdagenStr,
+            note: data.note,
+          }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Kon periode niet bijwerken')
+        }
+        toast.success('Periode bijgewerkt')
+      } else {
+        // Create new period
+        const res = await fetch('/api/vacation/periods', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: periodFormUserId,
+            startDate: data.startDate.toISOString(),
+            endDate: data.endDate.toISOString(),
+            werkdagen: werkdagenStr,
+            note: data.note,
+          }),
+        })
+        if (!res.ok) {
+          const errData = await res.json()
+          throw new Error(errData.error || 'Kon periode niet toevoegen')
+        }
+        toast.success('Periode toegevoegd')
+      }
+
+      // Refresh data
+      setShowPeriodForm(false)
+      setEditingPeriod(null)
+      await fetchPeriodsForUser(periodFormUserId)
+      fetchData() // Refresh balance data
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsSubmittingPeriod(false)
+    }
+  }
+
+  const handleDeletePeriod = async (periodId: string) => {
+    try {
+      const res = await fetch(`/api/vacation/periods?id=${periodId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Kon periode niet verwijderen')
+      }
+      toast.success('Periode verwijderd')
+
+      // Refresh data
+      if (periodFormUserId) {
+        await fetchPeriodsForUser(periodFormUserId)
+      }
+      fetchData() // Refresh balance data
+    } catch (error: any) {
+      toast.error(error.message)
+    }
   }
 
   // Parental leave management
@@ -531,6 +630,13 @@ export default function VakantiesPage() {
   const formatDate = (date: Date) => date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
   const formatDateFull = (dateStr: string) => new Date(dateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
 
+  // Handle day click to show modal (only in week/month view)
+  const handleDayClick = (date: Date, e?: React.MouseEvent) => {
+    setSelectedDayForModal(date)
+    if (e) setModalClickY(e.clientY)
+    setShowDayModal(true)
+  }
+
   // Get unique people for timeline
   const uniquePeople = Array.from(new Set(vacations.map(v => v.user.name)))
 
@@ -591,10 +697,157 @@ export default function VakantiesPage() {
             )}
           </div>
           {pageMode === 'overzicht' && (
-            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-3 sm:px-4">
-              <Icons.plus size={14} />
-              <span className="hidden sm:inline">Vakantie</span> toevoegen
-            </button>
+            <Popover.Root open={showForm} onOpenChange={setShowForm}>
+              <Popover.Trigger asChild>
+                <button className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-3 sm:px-4">
+                  <Icons.plus size={14} />
+                  <span className="hidden sm:inline">Vakantie</span> toevoegen
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                  sideOffset={8}
+                  collisionPadding={16}
+                  side="bottom"
+                  align="end"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                        <Icons.sun className="text-yellow-400" size={18} />
+                      </div>
+                      <h2 className="font-semibold text-white text-lg">
+                        {editingId ? 'Vakantie bewerken' : 'Vakantie toevoegen'}
+                      </h2>
+                    </div>
+                    <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                      <Icons.x size={18} />
+                    </Popover.Close>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    {/* Team member selection - only for admins */}
+                    {isAdmin && (
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Wie gaat er met vakantie?</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowTeamDropdown(!showTeamDropdown)}
+                            className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
+                          >
+                            {selectedUserId ? (
+                              <>
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-workx-lime font-semibold text-sm">
+                                  {teamMembers.find(m => m.id === selectedUserId)?.name?.charAt(0) || '?'}
+                                </div>
+                                <span className="flex-1 text-white">{teamMembers.find(m => m.id === selectedUserId)?.name}</span>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                                  <Icons.user className="text-gray-500" size={16} />
+                                </div>
+                                <span className="flex-1 text-gray-400">Selecteer een teamlid...</span>
+                              </>
+                            )}
+                            <Icons.chevronDown
+                              size={18}
+                              className={`text-gray-500 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
+                            />
+                          </button>
+
+                          {showTeamDropdown && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                                <div className="max-h-64 overflow-y-auto py-1">
+                                  {teamMembers.map((member, index) => {
+                                    const isSelected = selectedUserId === member.id
+                                    const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                                    const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
+                                    const colorClass = colors[index % colors.length]
+
+                                    return (
+                                      <button
+                                        key={member.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedUserId(member.id)
+                                          setShowTeamDropdown(false)
+                                        }}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
+                                          isSelected
+                                            ? 'bg-workx-lime/10 text-white'
+                                            : 'text-white/70 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                      >
+                                        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
+                                          {initials}
+                                        </div>
+                                        <span className="flex-1 text-sm">{member.name}</span>
+                                        {isSelected && <Icons.check size={16} className="text-workx-lime" />}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Van</label>
+                        <DatePicker
+                          selected={startDate}
+                          onChange={setStartDate}
+                          placeholder="Selecteer startdatum..."
+                          maxDate={endDate || undefined}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Tot en met</label>
+                        <DatePicker
+                          selected={endDate}
+                          onChange={setEndDate}
+                          placeholder="Selecteer einddatum..."
+                          minDate={startDate || undefined}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Reden (optioneel)</label>
+                      <div className="relative">
+                        <Icons.edit className="absolute left-3 top-3 text-gray-500" size={16} />
+                        <input
+                          type="text"
+                          value={reason}
+                          onChange={e => setReason(e.target.value)}
+                          placeholder="Bijv. skivakantie, familiebezoek..."
+                          className="input-field pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-3">
+                      <Popover.Close className="flex-1 btn-secondary" onClick={resetForm}>
+                        Annuleren
+                      </Popover.Close>
+                      <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
+                        <Icons.check size={16} />
+                        {editingId ? 'Bijwerken' : 'Toevoegen'}
+                      </button>
+                    </div>
+                  </form>
+                  <Popover.Arrow className="fill-workx-gray" />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           )}
         </div>
       </div>
@@ -715,11 +968,74 @@ export default function VakantiesPage() {
                 </div>
               </div>
 
+              {/* Vakantieperiodes sectie */}
+              <div className="mt-6 pt-6 border-t border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Icons.calendar className="text-green-400" size={18} />
+                    <h4 className="font-medium text-white">Vakantieperiodes</h4>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setPeriodFormUserId(selectedBalanceUserId)
+                      setEditingPeriod(null)
+                      setShowPeriodForm(true)
+                    }}
+                    className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3"
+                  >
+                    <Icons.plus size={14} />
+                    Periode toevoegen
+                  </button>
+                </div>
+
+                {showPeriodForm && periodFormUserId === selectedBalanceUserId ? (
+                  <div className="bg-white/5 rounded-xl p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <button
+                        onClick={() => {
+                          setShowPeriodForm(false)
+                          setEditingPeriod(null)
+                        }}
+                        className="p-1 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                      >
+                        <Icons.chevronLeft size={16} />
+                      </button>
+                      <span className="text-sm text-gray-300">
+                        {editingPeriod ? 'Periode bewerken' : 'Nieuwe periode'}
+                      </span>
+                    </div>
+                    <VacationPeriodForm
+                      initialData={editingPeriod ? {
+                        startDate: new Date(editingPeriod.startDate),
+                        endDate: new Date(editingPeriod.endDate),
+                        werkdagen: parseWerkdagen(editingPeriod.werkdagen),
+                        note: editingPeriod.note || '',
+                      } : undefined}
+                      onSubmit={handleSubmitPeriod}
+                      onCancel={() => {
+                        setShowPeriodForm(false)
+                        setEditingPeriod(null)
+                      }}
+                      isSubmitting={isSubmittingPeriod}
+                      submitLabel={editingPeriod ? 'Bijwerken' : 'Toevoegen'}
+                    />
+                  </div>
+                ) : (
+                  <VacationPeriodList
+                    periods={vacationPeriods[selectedBalanceUserId] || []}
+                    onEdit={handleEditPeriod}
+                    onDelete={handleDeletePeriod}
+                  />
+                )}
+              </div>
+
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => {
                     setEditingBalance(null)
                     setSelectedBalanceUserId('')
+                    setShowPeriodForm(false)
+                    setEditingPeriod(null)
                   }}
                   className="btn-secondary"
                 >
@@ -742,7 +1058,29 @@ export default function VakantiesPage() {
                 </div>
                 <h2 className="font-medium text-white text-sm sm:text-base">Vakantiesaldo per medewerker</h2>
               </div>
-              <span className="badge badge-lime">{new Date().getFullYear()}</span>
+              <div className="flex items-center gap-2">
+                <Popover.Root open={showWorkdaysCalculator} onOpenChange={setShowWorkdaysCalculator}>
+                  <Popover.Trigger asChild>
+                    <button className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3">
+                      <Icons.calculator size={14} />
+                      Werkdagen berekenen
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-5 shadow-2xl z-50 animate-modal-in"
+                      sideOffset={8}
+                      collisionPadding={16}
+                      side="bottom"
+                      align="end"
+                    >
+                      <WorkdaysCalculator onClose={() => setShowWorkdaysCalculator(false)} />
+                      <Popover.Arrow className="fill-workx-gray" />
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
+                <span className="badge badge-lime">{new Date().getFullYear()}</span>
+              </div>
             </div>
 
             {/* Table - scrollable on mobile */}
@@ -828,10 +1166,103 @@ export default function VakantiesPage() {
                         {balance.isPartner ? (
                           <span className="text-gray-500">-</span>
                         ) : (
-                          <>
-                            <span className="text-white/70">{balance.opgenomenLopendJaar}</span>
-                            <span className="text-gray-500 text-sm ml-1">d</span>
-                          </>
+                          <Popover.Root
+                            open={showPeriodsPopover === balance.userId}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                handleOpenPeriodPopover(balance.userId)
+                              } else {
+                                setShowPeriodsPopover(null)
+                                setShowPeriodForm(false)
+                                setEditingPeriod(null)
+                              }
+                            }}
+                          >
+                            <Popover.Trigger asChild>
+                              <button
+                                className="inline-flex items-center gap-1 hover:bg-white/5 px-2 py-1 rounded-lg transition-colors text-left"
+                                title="Klik om periodes te bekijken"
+                              >
+                                <span className="text-white/70">{balance.opgenomenLopendJaar}</span>
+                                <span className="text-gray-500 text-sm">d</span>
+                                <Icons.chevronDown size={14} className="text-gray-500 ml-1" />
+                              </button>
+                            </Popover.Trigger>
+                            <Popover.Portal>
+                              <Popover.Content
+                                className="w-[90vw] max-w-lg bg-workx-gray rounded-2xl border border-white/10 p-5 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                                sideOffset={8}
+                                collisionPadding={16}
+                                side="bottom"
+                                align="center"
+                              >
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                                      <Icons.calendar className="text-green-400" size={18} />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-semibold text-white">Vakantieperiodes</h3>
+                                      <p className="text-sm text-gray-400">{balance.personName}</p>
+                                    </div>
+                                  </div>
+                                  <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                                    <Icons.x size={18} />
+                                  </Popover.Close>
+                                </div>
+
+                                {showPeriodForm ? (
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-4">
+                                      <button
+                                        onClick={() => {
+                                          setShowPeriodForm(false)
+                                          setEditingPeriod(null)
+                                        }}
+                                        className="p-1 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                                      >
+                                        <Icons.chevronLeft size={18} />
+                                      </button>
+                                      <span className="text-sm text-gray-300">
+                                        {editingPeriod ? 'Periode bewerken' : 'Nieuwe periode'}
+                                      </span>
+                                    </div>
+                                    <VacationPeriodForm
+                                      initialData={editingPeriod ? {
+                                        startDate: new Date(editingPeriod.startDate),
+                                        endDate: new Date(editingPeriod.endDate),
+                                        werkdagen: parseWerkdagen(editingPeriod.werkdagen),
+                                        note: editingPeriod.note || '',
+                                      } : undefined}
+                                      onSubmit={handleSubmitPeriod}
+                                      onCancel={() => {
+                                        setShowPeriodForm(false)
+                                        setEditingPeriod(null)
+                                      }}
+                                      isSubmitting={isSubmittingPeriod}
+                                      submitLabel={editingPeriod ? 'Bijwerken' : 'Toevoegen'}
+                                    />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <VacationPeriodList
+                                      periods={vacationPeriods[balance.userId] || []}
+                                      onEdit={handleEditPeriod}
+                                      onDelete={handleDeletePeriod}
+                                    />
+                                    <button
+                                      onClick={() => handleAddPeriod(balance.userId)}
+                                      className="w-full mt-4 btn-primary flex items-center justify-center gap-2"
+                                    >
+                                      <Icons.plus size={16} />
+                                      Periode toevoegen
+                                    </button>
+                                  </>
+                                )}
+                                <Popover.Arrow className="fill-workx-gray" />
+                              </Popover.Content>
+                            </Popover.Portal>
+                          </Popover.Root>
                         )}
                       </div>
                       <div className="text-right flex items-center justify-end gap-3">
@@ -874,16 +1305,253 @@ export default function VakantiesPage() {
                 </div>
                 <h2 className="font-medium text-white text-sm sm:text-base">Ouderschapsverlof</h2>
               </div>
-              <button
-                onClick={() => {
-                  resetParentalLeaveForm()
-                  setShowParentalLeaveForm(true)
-                }}
-                className="btn-primary text-sm flex items-center gap-2"
-              >
-                <Icons.plus size={14} />
-                Toevoegen
-              </button>
+              <Popover.Root open={showParentalLeaveForm} onOpenChange={(open) => { if (!open) resetParentalLeaveForm(); else setShowParentalLeaveForm(true) }}>
+                <Popover.Trigger asChild>
+                  <button
+                    onClick={() => resetParentalLeaveForm()}
+                    className="btn-primary text-sm flex items-center gap-2"
+                  >
+                    <Icons.plus size={14} />
+                    Toevoegen
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                    sideOffset={8}
+                    collisionPadding={16}
+                    side="bottom"
+                    align="end"
+                  >
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                          <Icons.heart className="text-purple-400" size={18} />
+                        </div>
+                        <h2 className="font-semibold text-white text-lg">
+                          {editingParentalLeave ? 'Ouderschapsverlof bewerken' : 'Ouderschapsverlof toevoegen'}
+                        </h2>
+                      </div>
+                      <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <Icons.x size={18} />
+                      </Popover.Close>
+                    </div>
+
+                    <div className="space-y-5">
+                      {/* Team member selection - only when creating */}
+                      {!editingParentalLeave && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Medewerker</label>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setShowParentalMemberDropdown(!showParentalMemberDropdown)}
+                              className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
+                            >
+                              {parentalLeaveForm.userId ? (
+                                <>
+                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500/20 to-pink-600/5 flex items-center justify-center text-pink-400 font-semibold text-sm">
+                                    {teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name?.charAt(0) || '?'}
+                                  </div>
+                                  <span className="flex-1 text-white">{teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                                    <Icons.user className="text-gray-500" size={16} />
+                                  </div>
+                                  <span className="flex-1 text-gray-400">Selecteer een medewerker...</span>
+                                </>
+                              )}
+                              <Icons.chevronDown
+                                size={18}
+                                className={`text-gray-500 transition-transform ${showParentalMemberDropdown ? 'rotate-180' : ''}`}
+                              />
+                            </button>
+
+                            {showParentalMemberDropdown && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowParentalMemberDropdown(false)} />
+                                <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                                  <div className="max-h-64 overflow-y-auto py-1 workx-scrollbar">
+                                    {teamMembers
+                                      .filter(m => !allParentalLeaves.some(pl => pl.userId === m.id))
+                                      .map((member, index) => {
+                                        const isSelected = parentalLeaveForm.userId === member.id
+                                        const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                                        const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
+                                        const colorClass = colors[index % colors.length]
+
+                                        return (
+                                          <button
+                                            key={member.id}
+                                            type="button"
+                                            onClick={() => {
+                                              setParentalLeaveForm({ ...parentalLeaveForm, userId: member.id })
+                                              setShowParentalMemberDropdown(false)
+                                            }}
+                                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
+                                              isSelected
+                                                ? 'bg-workx-lime/10 text-white'
+                                                : 'text-white/70 hover:bg-white/5 hover:text-white'
+                                            }`}
+                                          >
+                                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
+                                              {initials}
+                                            </div>
+                                            <span className="flex-1 text-sm">{member.name}</span>
+                                            {isSelected && <Icons.check size={16} className="text-workx-lime" />}
+                                          </button>
+                                        )
+                                      })}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Kind gegevens */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Naam kind</label>
+                          <input
+                            type="text"
+                            value={parentalLeaveForm.kindNaam}
+                            onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, kindNaam: e.target.value })}
+                            placeholder="Bijv. Emma"
+                            className="input-field"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Geboortedatum kind</label>
+                          <DatePicker
+                            selected={parentalLeaveForm.kindGeboorteDatum}
+                            onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, kindGeboorteDatum: date })}
+                            placeholder="Selecteer datum..."
+                            maxDate={new Date()}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Betaald verlof */}
+                      <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                        <h4 className="text-sm font-medium text-green-400 mb-3">Betaald verlof (70% UWV)</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={parentalLeaveForm.betaaldTotaalWeken}
+                              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldTotaalWeken: parseFloat(e.target.value) || 0 })}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={parentalLeaveForm.betaaldOpgenomenWeken}
+                              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })}
+                              className="input-field"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Onbetaald verlof */}
+                      <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                        <h4 className="text-sm font-medium text-purple-400 mb-3">Onbetaald verlof</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={parentalLeaveForm.onbetaaldTotaalWeken}
+                              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldTotaalWeken: parseFloat(e.target.value) || 0 })}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={parentalLeaveForm.onbetaaldOpgenomenWeken}
+                              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })}
+                              className="input-field"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Periode en inzet */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Startdatum</label>
+                          <DatePicker
+                            selected={parentalLeaveForm.startDatum}
+                            onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, startDatum: date })}
+                            placeholder="Selecteer datum..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Te gebruiken tot</label>
+                          <DatePicker
+                            selected={parentalLeaveForm.eindDatum}
+                            onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, eindDatum: date })}
+                            placeholder="Selecteer datum..."
+                            minDate={parentalLeaveForm.startDatum || undefined}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Uren per week</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={parentalLeaveForm.inzetPerWeek}
+                            onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, inzetPerWeek: parseFloat(e.target.value) || 0 })}
+                            className="input-field"
+                            placeholder="8"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Notitie */}
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
+                        <textarea
+                          value={parentalLeaveForm.note}
+                          onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, note: e.target.value })}
+                          placeholder="Eventuele opmerkingen..."
+                          rows={2}
+                          className="input-field resize-none"
+                        />
+                      </div>
+
+                      {/* Buttons */}
+                      <div className="flex gap-3 pt-3">
+                        <Popover.Close className="flex-1 btn-secondary" onClick={resetParentalLeaveForm}>
+                          Annuleren
+                        </Popover.Close>
+                        <button
+                          onClick={handleSaveParentalLeave}
+                          disabled={!editingParentalLeave && !parentalLeaveForm.userId}
+                          className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Icons.check size={16} />
+                          {editingParentalLeave ? 'Bijwerken' : 'Toevoegen'}
+                        </button>
+                      </div>
+                    </div>
+                    <Popover.Arrow className="fill-workx-gray" />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
             </div>
 
             {allParentalLeaves.length === 0 ? (
@@ -998,14 +1666,71 @@ export default function VakantiesPage() {
                     </p>
                   </div>
 
-                  {/* Opgenomen */}
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <span className="text-sm text-gray-400 font-medium block mb-1">Opgenomen</span>
-                    <p className="text-2xl font-bold text-white">
-                      {myVacationBalance.opgenomenLopendJaar.toFixed(1)}
-                      <span className="text-sm font-normal text-gray-400 ml-1">dagen</span>
-                    </p>
-                  </div>
+                  {/* Opgenomen - clickable to show periods */}
+                  <Popover.Root open={showMyPeriods} onOpenChange={setShowMyPeriods}>
+                    <Popover.Trigger asChild>
+                      <button className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-left w-full">
+                        <span className="text-sm text-gray-400 font-medium block mb-1 flex items-center gap-1">
+                          Opgenomen
+                          <Icons.chevronDown size={14} className="text-gray-500" />
+                        </span>
+                        <p className="text-2xl font-bold text-white">
+                          {myVacationBalance.opgenomenLopendJaar.toFixed(1)}
+                          <span className="text-sm font-normal text-gray-400 ml-1">dagen</span>
+                        </p>
+                      </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content
+                        className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-5 shadow-2xl max-h-[60vh] overflow-y-auto z-50 animate-modal-in"
+                        sideOffset={8}
+                        collisionPadding={16}
+                        side="bottom"
+                        align="center"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                              <Icons.calendar className="text-green-400" size={18} />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-white">Mijn vakantieperiodes</h3>
+                              <p className="text-sm text-gray-400">{new Date().getFullYear()}</p>
+                            </div>
+                          </div>
+                          <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                            <Icons.x size={18} />
+                          </Popover.Close>
+                        </div>
+
+                        {myVacationPeriods.length > 0 ? (
+                          <div className="space-y-3">
+                            {myVacationPeriods.map((period) => (
+                              <div key={period.id} className="p-3 bg-white/5 rounded-xl border border-white/10">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-white font-medium">
+                                    {new Date(period.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                                    {' - '}
+                                    {new Date(period.endDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </span>
+                                  <span className="text-workx-lime font-semibold">{period.days}d</span>
+                                </div>
+                                {period.note && (
+                                  <p className="text-sm text-gray-400">{period.note}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6">
+                            <Icons.calendar className="mx-auto text-gray-600 mb-2" size={32} />
+                            <p className="text-gray-400">Geen vakantieperiodes geregistreerd</p>
+                          </div>
+                        )}
+                        <Popover.Arrow className="fill-workx-gray" />
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
                 </div>
 
                 {/* Progress bar */}
@@ -1256,7 +1981,10 @@ export default function VakantiesPage() {
                       {schoolHoliday && (
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500/40 via-red-500/60 to-red-500/40" />
                       )}
-                      <div className={`text-center mb-3 ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400/80' : 'text-gray-400'}`}>
+                      <button
+                        onClick={(e) => handleDayClick(day, e)}
+                        className={`w-full text-center mb-3 p-2 -m-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer ${isToday(day) ? 'text-workx-lime' : schoolHoliday ? 'text-red-400/80' : 'text-gray-400'}`}
+                      >
                         <p className="text-xs font-medium uppercase">
                           {day.toLocaleDateString('nl-NL', { weekday: 'short' })}
                         </p>
@@ -1266,7 +1994,7 @@ export default function VakantiesPage() {
                         {schoolHoliday && (
                           <p className="text-xs text-red-400/70 mt-0.5 truncate px-1">{schoolHoliday.name.replace(/\s*\d{4}$/, '')}</p>
                         )}
-                      </div>
+                      </button>
                       <div className="space-y-2">
                         {dayVacations.map(v => {
                           const color = getColorForUser(v.user.name)
@@ -1316,8 +2044,9 @@ export default function VakantiesPage() {
                     return (
                       <div
                         key={i}
+                        onClick={(e) => day.isCurrentMonth && handleDayClick(day.date, e)}
                         className={`min-h-[100px] p-2 rounded-xl transition-colors relative ${
-                          day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
+                          day.isCurrentMonth ? 'hover:bg-white/5 cursor-pointer' : 'opacity-30'
                         } ${isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''} ${
                           schoolHoliday && day.isCurrentMonth ? 'bg-red-500/[0.08] ring-1 ring-red-500/20' :
                           isWeekend(day.date) && day.isCurrentMonth ? 'bg-white/[0.02]' : ''
@@ -1372,7 +2101,7 @@ export default function VakantiesPage() {
                     </div>
                     <h3 className="text-lg font-medium text-white mb-2">Geen vakanties gepland</h3>
                     <p className="text-gray-400 mb-4">Voeg een vakantie toe om te beginnen</p>
-                    <button onClick={() => setShowForm(true)} className="btn-primary inline-flex items-center gap-2">
+                    <button onClick={(e) => { setModalClickY(e.clientY); setShowForm(true) }} className="btn-primary inline-flex items-center gap-2">
                       <Icons.plus size={16} />
                       Vakantie toevoegen
                     </button>
@@ -1450,390 +2179,129 @@ export default function VakantiesPage() {
         </>
       )}
 
-      {/* Add/Edit Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={resetForm}>
+      {/* Day Detail Modal */}
+      {showDayModal && selectedDayForModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => { setShowDayModal(false); setModalClickY(undefined) }}
+        >
           <div
-            className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl"
+            className="w-full max-w-lg bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[calc(100vh-32px)] overflow-hidden flex flex-col animate-modal-in"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                  <Icons.sun className="text-yellow-400" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">
-                  {editingId ? 'Vakantie bewerken' : 'Vakantie toevoegen'}
+            {/* Header */}
+            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+                  {selectedDayForModal.toLocaleDateString('nl-NL', { weekday: 'long' })}
+                </p>
+                <h2 className="text-xl font-semibold text-white">
+                  {selectedDayForModal.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </h2>
               </div>
               <button
-                onClick={resetForm}
+                onClick={() => setShowDayModal(false)}
                 className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 <Icons.x size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Team member selection - only for admins */}
-              {isAdmin && (
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Wie gaat er met vakantie?</label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-                      className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
-                    >
-                      {selectedUserId ? (
-                        <>
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-workx-lime font-semibold text-sm">
-                            {teamMembers.find(m => m.id === selectedUserId)?.name?.charAt(0) || '?'}
-                          </div>
-                          <span className="flex-1 text-white">{teamMembers.find(m => m.id === selectedUserId)?.name}</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                            <Icons.user className="text-gray-500" size={16} />
-                          </div>
-                          <span className="flex-1 text-gray-400">Selecteer een teamlid...</span>
-                        </>
-                      )}
-                      <Icons.chevronDown
-                        size={18}
-                        className={`text-gray-500 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-
-                    {showTeamDropdown && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
-                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
-                          <div className="max-h-64 overflow-y-auto py-1">
-                            {teamMembers.map((member, index) => {
-                              const isSelected = selectedUserId === member.id
-                              const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
-                              const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
-                              const colorClass = colors[index % colors.length]
-
-                              return (
-                                <button
-                                  key={member.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedUserId(member.id)
-                                    setShowTeamDropdown(false)
-                                  }}
-                                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
-                                    isSelected
-                                      ? 'bg-workx-lime/10 text-white'
-                                      : 'text-white/70 hover:bg-white/5 hover:text-white'
-                                  }`}
-                                >
-                                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
-                                    {initials}
-                                  </div>
-                                  <span className="flex-1 text-sm">{member.name}</span>
-                                  {isSelected && <Icons.check size={16} className="text-workx-lime" />}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      </>
-                    )}
+            {/* Content */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-3">
+              {/* School Holiday indicator */}
+              {getSchoolHoliday(selectedDayForModal) && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                    <Icons.calendar className="text-red-400" size={16} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-red-400">{getSchoolHoliday(selectedDayForModal)?.name}</p>
+                    <p className="text-xs text-gray-500">Schoolvakantie Noord-Holland</p>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Van</label>
-                  <DatePicker
-                    selected={startDate}
-                    onChange={setStartDate}
-                    placeholder="Selecteer startdatum..."
-                    maxDate={endDate || undefined}
-                  />
+              {/* Vacations */}
+              {getVacationsForDate(selectedDayForModal).length === 0 ? (
+                <div className="py-10 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+                    <Icons.sun className="text-yellow-400/50" size={24} />
+                  </div>
+                  <p className="text-sm text-gray-400 mb-4">Niemand met vakantie op deze dag</p>
                 </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Tot en met</label>
-                  <DatePicker
-                    selected={endDate}
-                    onChange={setEndDate}
-                    placeholder="Selecteer einddatum..."
-                    minDate={startDate || undefined}
-                  />
-                </div>
-              </div>
+              ) : (
+                getVacationsForDate(selectedDayForModal).map(vacation => {
+                  const color = getColorForUser(vacation.user.name)
+                  return (
+                    <div
+                      key={vacation.id}
+                      onClick={() => { setShowDayModal(false); handleEdit(vacation) }}
+                      className="p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border border-white/5 hover:border-white/10"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm"
+                            style={{ backgroundColor: color + '20', color }}
+                          >
+                            {vacation.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
+                              {vacation.user.name}
+                            </span>
+                            <p className="text-xs text-gray-500 mt-0.5">Vakantie</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowDayModal(false); handleEdit(vacation) }}
+                          className="p-1.5 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Icons.edit size={14} />
+                        </button>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-3">
+                        <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                          <Icons.calendar size={12} />
+                          {formatDateFull(vacation.startDate)} - {formatDateFull(vacation.endDate)}
+                        </p>
+                        <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                          <Icons.clock size={12} />
+                          {vacation.days} {vacation.days === 1 ? 'dag' : 'dagen'}
+                        </p>
+                        {vacation.reason && (
+                          <p className="text-xs text-gray-400 w-full mt-1">
+                            {vacation.reason}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
 
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Reden (optioneel)</label>
-                <div className="relative">
-                  <Icons.edit className="absolute left-3 top-3 text-gray-500" size={16} />
-                  <input
-                    type="text"
-                    value={reason}
-                    onChange={e => setReason(e.target.value)}
-                    placeholder="Bijv. skivakantie, familiebezoek..."
-                    className="input-field pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-3">
-                <button type="button" onClick={resetForm} className="flex-1 btn-secondary">
-                  Annuleren
-                </button>
-                <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
-                  <Icons.check size={16} />
-                  {editingId ? 'Bijwerken' : 'Toevoegen'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Parental Leave Form Modal */}
-      {showParentalLeaveForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={resetParentalLeaveForm}>
-          <div
-            className="bg-workx-gray rounded-2xl p-6 w-full max-w-lg border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                  <Icons.heart className="text-purple-400" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">
-                  {editingParentalLeave ? 'Ouderschapsverlof bewerken' : 'Ouderschapsverlof toevoegen'}
-                </h2>
-              </div>
+            {/* Footer with action button */}
+            <div className="p-4 border-t border-white/5">
               <button
-                onClick={resetParentalLeaveForm}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                onClick={() => {
+                  setShowDayModal(false)
+                  setModalClickY(undefined)
+                  setStartDate(selectedDayForModal)
+                  setEndDate(selectedDayForModal)
+                  setShowForm(true)
+                }}
+                className="w-full btn-primary py-3 flex items-center justify-center gap-2"
               >
-                <Icons.x size={18} />
+                <Icons.plus size={16} />
+                Vakantie toevoegen
               </button>
             </div>
-
-            <div className="space-y-5">
-              {/* Team member selection - only when creating */}
-              {!editingParentalLeave && (
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Medewerker</label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowParentalMemberDropdown(!showParentalMemberDropdown)}
-                      className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
-                    >
-                      {parentalLeaveForm.userId ? (
-                        <>
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500/20 to-pink-600/5 flex items-center justify-center text-pink-400 font-semibold text-sm">
-                            {teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name?.charAt(0) || '?'}
-                          </div>
-                          <span className="flex-1 text-white">{teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name}</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                            <Icons.user className="text-gray-500" size={16} />
-                          </div>
-                          <span className="flex-1 text-gray-400">Selecteer een medewerker...</span>
-                        </>
-                      )}
-                      <Icons.chevronDown
-                        size={18}
-                        className={`text-gray-500 transition-transform ${showParentalMemberDropdown ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-
-                    {showParentalMemberDropdown && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setShowParentalMemberDropdown(false)} />
-                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
-                          <div className="max-h-64 overflow-y-auto py-1 workx-scrollbar">
-                            {teamMembers
-                              .filter(m => !allParentalLeaves.some(pl => pl.userId === m.id))
-                              .map((member, index) => {
-                                const isSelected = parentalLeaveForm.userId === member.id
-                                const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
-                                const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
-                                const colorClass = colors[index % colors.length]
-
-                                return (
-                                  <button
-                                    key={member.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setParentalLeaveForm({ ...parentalLeaveForm, userId: member.id })
-                                      setShowParentalMemberDropdown(false)
-                                    }}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
-                                      isSelected
-                                        ? 'bg-workx-lime/10 text-white'
-                                        : 'text-white/70 hover:bg-white/5 hover:text-white'
-                                    }`}
-                                  >
-                                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
-                                      {initials}
-                                    </div>
-                                    <span className="flex-1 text-sm">{member.name}</span>
-                                    {isSelected && <Icons.check size={16} className="text-workx-lime" />}
-                                  </button>
-                                )
-                              })}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Kind gegevens */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Naam kind</label>
-                  <input
-                    type="text"
-                    value={parentalLeaveForm.kindNaam}
-                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, kindNaam: e.target.value })}
-                    placeholder="Bijv. Emma"
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Geboortedatum kind</label>
-                  <DatePicker
-                    selected={parentalLeaveForm.kindGeboorteDatum}
-                    onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, kindGeboorteDatum: date })}
-                    placeholder="Selecteer datum..."
-                    maxDate={new Date()}
-                  />
-                </div>
-              </div>
-
-              {/* Betaald verlof */}
-              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-                <h4 className="text-sm font-medium text-green-400 mb-3">Betaald verlof (70% UWV)</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={parentalLeaveForm.betaaldTotaalWeken}
-                      onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldTotaalWeken: parseFloat(e.target.value) || 0 })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={parentalLeaveForm.betaaldOpgenomenWeken}
-                      onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })}
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Onbetaald verlof */}
-              <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                <h4 className="text-sm font-medium text-purple-400 mb-3">Onbetaald verlof</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={parentalLeaveForm.onbetaaldTotaalWeken}
-                      onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldTotaalWeken: parseFloat(e.target.value) || 0 })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={parentalLeaveForm.onbetaaldOpgenomenWeken}
-                      onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })}
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Periode en inzet */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Startdatum</label>
-                  <DatePicker
-                    selected={parentalLeaveForm.startDatum}
-                    onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, startDatum: date })}
-                    placeholder="Selecteer datum..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Te gebruiken tot</label>
-                  <DatePicker
-                    selected={parentalLeaveForm.eindDatum}
-                    onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, eindDatum: date })}
-                    placeholder="Selecteer datum..."
-                    minDate={parentalLeaveForm.startDatum || undefined}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Uren per week</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={parentalLeaveForm.inzetPerWeek}
-                    onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, inzetPerWeek: parseFloat(e.target.value) || 0 })}
-                    className="input-field"
-                    placeholder="8"
-                  />
-                </div>
-              </div>
-
-              {/* Notitie */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
-                <textarea
-                  value={parentalLeaveForm.note}
-                  onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, note: e.target.value })}
-                  placeholder="Eventuele opmerkingen..."
-                  rows={2}
-                  className="input-field resize-none"
-                />
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-3 pt-3">
-                <button type="button" onClick={resetParentalLeaveForm} className="flex-1 btn-secondary">
-                  Annuleren
-                </button>
-                <button
-                  onClick={handleSaveParentalLeave}
-                  disabled={!editingParentalLeave && !parentalLeaveForm.userId}
-                  className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Icons.check size={16} />
-                  {editingParentalLeave ? 'Bijwerken' : 'Toevoegen'}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
+
     </div>
   )
 }

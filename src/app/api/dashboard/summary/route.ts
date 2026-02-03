@@ -1,0 +1,327 @@
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+// GET - Fetch all dashboard data in one bundled API call
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userId = session.user.id
+    const now = new Date()
+    const currentYear = now.getFullYear()
+
+    // Format today's date as YYYY-MM-DD for office attendance queries
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    // Calculate tomorrow's date
+    const tomorrowDate = new Date(now)
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+    const tomorrow = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`
+
+    // Fetch all data in parallel using Promise.all
+    const [
+      calendarEvents,
+      workItems,
+      upcomingVacations,
+      upcomingVacationPeriods,
+      feedback,
+      officeAttendance,
+      tomorrowAttendance,
+      vacationBalance,
+      parentalLeave,
+      currentUser,
+      birthdays,
+    ] = await Promise.all([
+      // 1. Calendar Events - upcoming 3 events (startTime >= now, limit 3, include createdBy)
+      prisma.calendarEvent.findMany({
+        where: {
+          startTime: { gte: now },
+        },
+        include: {
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { startTime: 'asc' },
+        take: 3,
+      }),
+
+      // 2. Work Items - user's active work items (assigneeId = current user, limit 10)
+      prisma.workItem.findMany({
+        where: {
+          assigneeId: userId,
+          status: { notIn: ['DONE', 'CANCELLED'] }, // Active items (not completed or cancelled)
+        },
+        include: {
+          assignee: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          { priority: 'desc' },
+          { createdAt: 'desc' },
+        ],
+        take: 10,
+      }),
+
+      // 3. Upcoming Vacations - approved vacations ending >= today (status: APPROVED, include user, limit 10)
+      prisma.vacationRequest.findMany({
+        where: {
+          status: 'APPROVED',
+          endDate: { gte: now },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { startDate: 'asc' },
+        take: 10,
+      }),
+
+      // 3b. Upcoming Vacation Periods - periods ending >= today
+      prisma.vacationPeriod.findMany({
+        where: {
+          endDate: { gte: now },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { startDate: 'asc' },
+        take: 10,
+      }),
+
+      // 4. Feedback - unprocessed feedback (processed: false, include submittedBy, limit 5)
+      prisma.feedback.findMany({
+        where: {
+          processed: false,
+        },
+        include: {
+          submittedBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+
+      // 5. Office Attendance - today's attendance (date = today, include user)
+      prisma.officeAttendance.findMany({
+        where: {
+          date: today,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+
+      // 6. Tomorrow's Attendance - tomorrow's attendance (date = tomorrow, include user)
+      prisma.officeAttendance.findMany({
+        where: {
+          date: tomorrow,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+
+      // 7. Vacation Balance - current user's balance (userId, year = current year)
+      prisma.vacationBalance.findFirst({
+        where: {
+          userId: userId,
+          year: currentYear,
+        },
+      }),
+
+      // 8. Parental Leave - current user's parental leave
+      prisma.parentalLeave.findMany({
+        where: {
+          userId: userId,
+        },
+        orderBy: { childNumber: 'asc' },
+      }),
+
+      // 9. Current User - current user info (name, role, email, birthDate)
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          email: true,
+          birthDate: true,
+        },
+      }),
+
+      // 10. Birthdays - all users with birthDate (select name, birthDate where birthDate not null)
+      prisma.user.findMany({
+        where: {
+          isActive: true,
+          birthDate: { not: null },
+        },
+        select: {
+          id: true,
+          name: true,
+          birthDate: true,
+        },
+        orderBy: { name: 'asc' },
+      }),
+    ])
+
+    // Calculate vacation balance totals for easier frontend use
+    const isPartner = currentUser?.role === 'PARTNER'
+    const defaultOpbouw = isPartner ? 0 : 25
+
+    const vacationBalanceFormatted = vacationBalance
+      ? {
+          year: vacationBalance.year,
+          overgedragenVorigJaar: vacationBalance.overgedragenVorigJaar,
+          opbouwLopendJaar: vacationBalance.opbouwLopendJaar,
+          bijgekocht: vacationBalance.bijgekocht,
+          opgenomenLopendJaar: vacationBalance.opgenomenLopendJaar,
+          totaalDagen:
+            vacationBalance.overgedragenVorigJaar +
+            vacationBalance.opbouwLopendJaar +
+            vacationBalance.bijgekocht,
+          resterend:
+            vacationBalance.overgedragenVorigJaar +
+            vacationBalance.opbouwLopendJaar +
+            vacationBalance.bijgekocht -
+            vacationBalance.opgenomenLopendJaar,
+          hasBalance: true,
+        }
+      : {
+          year: currentYear,
+          overgedragenVorigJaar: 0,
+          opbouwLopendJaar: defaultOpbouw,
+          bijgekocht: 0,
+          opgenomenLopendJaar: 0,
+          totaalDagen: defaultOpbouw,
+          resterend: defaultOpbouw,
+          hasBalance: false,
+        }
+
+    // Format office attendance for easier frontend use
+    const TOTAL_WORKPLACES = 11
+    const officeAttendanceFormatted = {
+      date: today,
+      attendees: officeAttendance.map((a) => ({
+        id: a.id,
+        userId: a.userId,
+        name: a.user.name,
+        avatarUrl: a.user.avatarUrl,
+      })),
+      totalWorkplaces: TOTAL_WORKPLACES,
+      occupiedWorkplaces: officeAttendance.length,
+      availableWorkplaces: TOTAL_WORKPLACES - officeAttendance.length,
+      isCurrentUserAttending: officeAttendance.some((a) => a.userId === userId),
+    }
+
+    const tomorrowAttendanceFormatted = {
+      date: tomorrow,
+      attendees: tomorrowAttendance.map((a) => ({
+        id: a.id,
+        userId: a.userId,
+        name: a.user.name,
+        avatarUrl: a.user.avatarUrl,
+      })),
+      totalWorkplaces: TOTAL_WORKPLACES,
+      occupiedWorkplaces: tomorrowAttendance.length,
+      availableWorkplaces: TOTAL_WORKPLACES - tomorrowAttendance.length,
+      isCurrentUserAttending: tomorrowAttendance.some((a) => a.userId === userId),
+    }
+
+    // Format feedback with submittedBy name
+    const feedbackFormatted = feedback.map((f) => ({
+      ...f,
+      submittedByName: f.submittedBy.name,
+    }))
+
+    // Combine vacation requests and periods for "who's away" widget
+    const combinedUpcomingVacations = [
+      ...upcomingVacations.map((v: any) => ({
+        id: v.id,
+        personName: v.user.name,
+        startDate: v.startDate,
+        endDate: v.endDate,
+        note: v.reason,
+        days: v.days,
+        type: 'request' as const,
+      })),
+      ...upcomingVacationPeriods.map((p: any) => ({
+        id: p.id,
+        personName: p.user.name,
+        startDate: p.startDate,
+        endDate: p.endDate,
+        note: p.note,
+        days: p.days,
+        type: 'period' as const,
+      })),
+    ].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+      .slice(0, 10)
+
+    // Return all dashboard data in one response
+    return NextResponse.json({
+      calendarEvents,
+      workItems,
+      upcomingVacations: combinedUpcomingVacations,
+      feedback: feedbackFormatted,
+      officeAttendance: officeAttendanceFormatted,
+      tomorrowAttendance: tomorrowAttendanceFormatted,
+      vacationBalance: vacationBalanceFormatted,
+      parentalLeave,
+      currentUser,
+      birthdays,
+      // Meta information
+      fetchedAt: now.toISOString(),
+    })
+  } catch (error) {
+    console.error('Error fetching dashboard summary:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch dashboard summary' },
+      { status: 500 }
+    )
+  }
+}

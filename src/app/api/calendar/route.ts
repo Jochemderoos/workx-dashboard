@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getDutchHolidays, getHolidayName } from '@/lib/vacation-utils'
+
+export const revalidate = 60 // 1 minute cache
 
 // GET - Fetch calendar events (optionally including vacations)
 export async function GET(req: NextRequest) {
@@ -55,6 +58,23 @@ export async function GET(req: NextRequest) {
         orderBy: { startDate: 'asc' },
       })
 
+      // Also fetch vacation periods
+      const periodFilter = startDate && endDate ? {
+        OR: [
+          { startDate: { gte: new Date(startDate), lte: new Date(endDate) } },
+          { endDate: { gte: new Date(startDate), lte: new Date(endDate) } },
+          { AND: [{ startDate: { lte: new Date(startDate) } }, { endDate: { gte: new Date(endDate) } }] }
+        ]
+      } : upcoming === 'true' ? {
+        endDate: { gte: new Date() }
+      } : {}
+
+      const vacationPeriods = await prisma.vacationPeriod.findMany({
+        where: periodFilter,
+        include: { user: { select: { id: true, name: true } } },
+        orderBy: { startDate: 'asc' },
+      })
+
       // Convert vacations to calendar event format
       const vacationEvents = vacations.map(v => ({
         id: `vacation-${v.id}`,
@@ -68,11 +88,60 @@ export async function GET(req: NextRequest) {
         category: 'VACATION',
         createdBy: v.user,
         isVacation: true, // Flag to identify vacation events
+        isPeriod: false,
         vacationId: v.id,
       }))
 
+      // Convert vacation periods to calendar event format
+      const periodEvents = vacationPeriods.map(p => ({
+        id: `period-${p.id}`,
+        title: `🏖️ ${p.user.name} - Vakantie`,
+        description: p.note || `${p.days} dag${p.days !== 1 ? 'en' : ''} vakantie`,
+        startTime: p.startDate,
+        endTime: p.endDate,
+        isAllDay: true,
+        location: null,
+        color: '#22c55e', // Green for vacations
+        category: 'VACATION',
+        createdBy: p.user,
+        isVacation: true,
+        isPeriod: true, // Flag to identify period events
+        periodId: p.id,
+      }))
+
+      // Get Dutch national holidays for the date range
+      const holidayEvents: any[] = []
+      if (startDate && endDate) {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        // Get holidays for all years in the range
+        for (let year = start.getFullYear(); year <= end.getFullYear(); year++) {
+          const holidays = getDutchHolidays(year)
+          holidays.forEach(h => {
+            if (h >= start && h <= end) {
+              const name = getHolidayName(h)
+              if (name) {
+                holidayEvents.push({
+                  id: `holiday-${h.toISOString().split('T')[0]}`,
+                  title: `🎉 ${name}`,
+                  description: 'Nationale feestdag',
+                  startTime: h,
+                  endTime: h,
+                  isAllDay: true,
+                  location: null,
+                  color: '#f59e0b', // Amber/orange for holidays
+                  category: 'HOLIDAY',
+                  createdBy: null,
+                  isHoliday: true,
+                })
+              }
+            }
+          })
+        }
+      }
+
       // Merge and sort by start time
-      const allEvents = [...events, ...vacationEvents].sort((a, b) =>
+      const allEvents = [...events, ...vacationEvents, ...periodEvents, ...holidayEvents].sort((a, b) =>
         new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
       )
 

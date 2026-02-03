@@ -639,6 +639,30 @@ export const Icons = {
     </svg>
   ),
 
+  // Presentation icon for training sessions
+  presentation: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M2 3h20M12 21l-4-4h8l-4 4M4 3v11a1 1 0 001 1h14a1 1 0 001-1V3" />
+      <circle cx="12" cy="9" r="2" />
+    </svg>
+  ),
+
+  // File/document icon
+  file: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <path d="M14 2v6h6" />
+    </svg>
+  ),
+
+  // Graduation cap for Opleidingen
+  graduationCap: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 10l-10-5L2 10l10 5 10-5zM6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5" />
+      <path d="M22 10v6" />
+    </svg>
+  ),
+
   // Stacked books icon for HR Documents / The Way it Workx
   books: ({ className, size = 20 }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
