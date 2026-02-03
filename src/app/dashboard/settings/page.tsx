@@ -356,14 +356,24 @@ export default function SettingsPage() {
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg">🎂</span>
                 <input
-                  type="text"
-                  value={profile.birthDate}
-                  onChange={(e) => setProfile({ ...profile, birthDate: e.target.value })}
+                  type="date"
+                  value={profile.birthDate ? `2000-${profile.birthDate}` : ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      // Extract MM-DD from the date
+                      const parts = e.target.value.split('-')
+                      if (parts.length === 3) {
+                        const mmdd = `${parts[1]}-${parts[2]}`
+                        setProfile({ ...profile, birthDate: mmdd })
+                      }
+                    } else {
+                      setProfile({ ...profile, birthDate: '' })
+                    }
+                  }}
                   className="input-field pl-11"
-                  placeholder="MM-DD (bijv. 03-15 voor 15 maart)"
                 />
               </div>
-              <p className="text-xs text-white/30 mt-1.5">Wordt getoond in de verjaardagen widget</p>
+              <p className="text-xs text-white/30 mt-1.5">Kies je geboortedatum (alleen dag en maand worden opgeslagen)</p>
             </div>
 
             <div className="pt-4">
