@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Icons } from '@/components/ui/Icons'
-import { URGENCY_CONFIG, START_METHOD_LABELS } from '@/lib/zaken-utils'
+import { URGENCY_CONFIG, START_METHOD_LABELS } from '@/lib/zaken-constants'
 
 interface ZaakOffer {
   id: string

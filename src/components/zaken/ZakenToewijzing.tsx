@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
-import { EXPERIENCE_LABELS, URGENCY_CONFIG, START_METHOD_LABELS } from '@/lib/zaken-utils'
+import { EXPERIENCE_LABELS, URGENCY_CONFIG, START_METHOD_LABELS } from '@/lib/zaken-constants'
 
 interface Zaak {
   id: string

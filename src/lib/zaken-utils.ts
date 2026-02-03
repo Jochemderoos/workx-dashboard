@@ -1,32 +1,10 @@
+// Server-only functions for zaken management
+// This file should only be imported in API routes, not client components
+
 import { prisma } from '@/lib/prisma'
-import { sendZaakOfferEmail, sendAllDeclinedEmail, sendZaakAssignedEmail } from '@/lib/email'
 
-// Experience year labels
-export const EXPERIENCE_LABELS: Record<number, string> = {
-  0: 'Juridisch medewerker',
-  1: '1e jaars',
-  2: '2e jaars',
-  3: '3e jaars',
-  4: '4e jaars',
-  5: '5e jaars',
-  6: '6e jaars',
-  7: '7e jaars',
-  8: '8+ jaars',
-}
-
-// Urgency config
-export const URGENCY_CONFIG = {
-  LOW: { label: 'Laag', color: '#22c55e', bgColor: 'bg-green-500/10', textColor: 'text-green-400' },
-  NORMAL: { label: 'Normaal', color: '#3b82f6', bgColor: 'bg-blue-500/10', textColor: 'text-blue-400' },
-  HIGH: { label: 'Hoog', color: '#f59e0b', bgColor: 'bg-amber-500/10', textColor: 'text-amber-400' },
-  URGENT: { label: 'Urgent', color: '#ef4444', bgColor: 'bg-red-500/10', textColor: 'text-red-400' },
-}
-
-// Start method labels
-export const START_METHOD_LABELS = {
-  CONTACT_CLIENT: 'Neem contact op met klant',
-  INFO_FROM_PARTNER: 'Vraag info bij partner',
-}
+// Re-export constants for convenience
+export { EXPERIENCE_LABELS, URGENCY_CONFIG, START_METHOD_LABELS } from './zaken-constants'
 
 /**
  * Calculate worked hours for a user on their last working day
@@ -120,8 +98,9 @@ export async function generateAssignmentQueue(zaakId: string, minimumExperienceY
 
 /**
  * Offer the zaak to the next person in queue
+ * Returns the assignment data needed for email notification, or null if no one left
  */
-export async function offerToNextInQueue(zaakId: string): Promise<boolean> {
+export async function offerToNextInQueue(zaakId: string) {
   // Find the first PENDING assignment
   const nextAssignment = await prisma.zaakAssignment.findFirst({
     where: { zaakId, status: 'PENDING' },
@@ -153,7 +132,6 @@ export async function offerToNextInQueue(zaakId: string): Promise<boolean> {
       include: { createdBy: true },
     })
 
-    // Notify partners
     const partners = await prisma.user.findMany({
       where: { role: 'PARTNER', isActive: true },
     })
@@ -163,15 +141,16 @@ export async function offerToNextInQueue(zaakId: string): Promise<boolean> {
       reason: a.declineReason || (a.status === 'TIMEOUT' ? 'Geen reactie (timeout)' : undefined),
     }))
 
-    for (const partner of partners) {
-      await sendAllDeclinedEmail({
-        to: partner.email,
+    // Return data for email notification
+    return {
+      success: false,
+      allDeclined: true,
+      emailData: {
+        partners,
         zaakDescription: zaak?.shortDescription || 'Onbekende zaak',
         responses,
-      })
+      }
     }
-
-    return false
   }
 
   // Update assignment status
@@ -193,19 +172,20 @@ export async function offerToNextInQueue(zaakId: string): Promise<boolean> {
     data: { status: 'OFFERING' },
   })
 
-  // Send email notification
-  await sendZaakOfferEmail({
-    to: nextAssignment.user.email,
-    userName: nextAssignment.user.name.split(' ')[0], // First name
-    zaakDescription: nextAssignment.zaak.shortDescription,
-    urgency: nextAssignment.zaak.urgency,
-    createdByName: nextAssignment.zaak.createdBy.name,
-    clientName: nextAssignment.zaak.clientName || undefined,
-    startsQuickly: nextAssignment.zaak.startsQuickly,
-    dashboardUrl: `${process.env.NEXTAUTH_URL}/dashboard/werk`,
-  })
-
-  return true
+  // Return data for email notification
+  return {
+    success: true,
+    allDeclined: false,
+    emailData: {
+      to: nextAssignment.user.email,
+      userName: nextAssignment.user.name.split(' ')[0],
+      zaakDescription: nextAssignment.zaak.shortDescription,
+      urgency: nextAssignment.zaak.urgency,
+      createdByName: nextAssignment.zaak.createdBy.name,
+      clientName: nextAssignment.zaak.clientName || undefined,
+      startsQuickly: nextAssignment.zaak.startsQuickly,
+    }
+  }
 }
 
 /**
@@ -251,15 +231,17 @@ export async function handleAcceptZaak(zaakId: string, userId: string) {
     data: { status: 'SKIPPED' },
   })
 
-  // Notify the partner who created the zaak
-  await sendZaakAssignedEmail({
-    to: assignment.zaak.createdBy.email,
-    userName: assignment.zaak.createdBy.name,
-    zaakDescription: assignment.zaak.shortDescription,
+  // Return data for email notification
+  return {
+    success: true,
     assigneeName: assignment.user.name,
-  })
-
-  return { success: true, assigneeName: assignment.user.name }
+    emailData: {
+      to: assignment.zaak.createdBy.email,
+      userName: assignment.zaak.createdBy.name,
+      zaakDescription: assignment.zaak.shortDescription,
+      assigneeName: assignment.user.name,
+    }
+  }
 }
 
 /**
@@ -286,14 +268,12 @@ export async function handleDeclineZaak(zaakId: string, userId: string, reason?:
     },
   })
 
-  // Offer to next person
-  await offerToNextInQueue(zaakId)
-
-  return { success: true }
+  // Offer to next person and return email data
+  return await offerToNextInQueue(zaakId)
 }
 
 /**
- * Process expired offers (called by cron job)
+ * Process expired offers (called by cron job or on page load)
  */
 export async function processExpiredOffers() {
   const now = new Date()
@@ -306,6 +286,8 @@ export async function processExpiredOffers() {
     },
   })
 
+  const results = []
+
   for (const offer of expiredOffers) {
     // Mark as timeout
     await prisma.zaakAssignment.update({
@@ -314,8 +296,9 @@ export async function processExpiredOffers() {
     })
 
     // Offer to next person
-    await offerToNextInQueue(offer.zaakId)
+    const result = await offerToNextInQueue(offer.zaakId)
+    results.push(result)
   }
 
-  return { processed: expiredOffers.length }
+  return { processed: expiredOffers.length, results }
 }
