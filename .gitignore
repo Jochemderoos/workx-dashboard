@@ -41,3 +41,4 @@ prisma/*.db
 prisma/*.db-journal
 
 .vercel
+.env*.local

@@ -366,6 +366,15 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-modal-in {
+  animation: modalIn 0.2s ease-out forwards;
+}
+
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
@@ -1882,6 +1891,36 @@ textarea::-webkit-scrollbar-thumb:hover {
   60% { transform: scale(1.2) rotate(-8deg); }
   80% { transform: scale(1.1) rotate(5deg); }
   100% { transform: scale(1) rotate(0deg); }
+}
+
+/* HR Docs chapter sections - scroll offset for anchor links */
+[id^="chapter-"] {
+  scroll-margin-top: 2rem;
+}
+
+/* Touch-friendly chapter buttons */
+.chapter-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(249, 255, 133, 0.2);
+  user-select: none;
+}
+
+/* HR Docs sidebar - allow scrolling inside card */
+.hr-docs-sidebar {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* HR Docs mobile - ensure page can scroll */
+.hr-docs-page {
+  overflow: visible !important;
+  touch-action: pan-y pan-x;
+}
+
+/* Ensure main content sections are scrollable on mobile */
+.hr-docs-page main,
+.hr-docs-page section {
+  touch-action: pan-y pan-x;
 }
 
 /* ==================== WORKX PAND HOVER ANIMATION WITH BICYCLE ==================== */

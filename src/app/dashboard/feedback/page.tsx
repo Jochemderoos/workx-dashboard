@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
 
@@ -179,13 +180,135 @@ export default function FeedbackPage() {
           </div>
           <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Deel je ideeën of meld problemen met het dashboard</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn-primary flex items-center gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 self-start sm:self-auto"
-        >
-          <Icons.plus size={14} className="sm:w-4 sm:h-4" />
-          Nieuw
-        </button>
+        <Popover.Root open={showForm} onOpenChange={setShowForm}>
+          <Popover.Trigger asChild>
+            <button
+              className="btn-primary flex items-center gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-2.5 self-start sm:self-auto"
+            >
+              <Icons.plus size={14} className="sm:w-4 sm:h-4" />
+              Nieuw
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+              sideOffset={8}
+              collisionPadding={16}
+              side="bottom"
+              align="end"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                    <Icons.chat className="text-indigo-400" size={18} />
+                  </div>
+                  <h2 className="font-semibold text-white text-lg">Feedback geven</h2>
+                </div>
+                <Popover.Close className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+                  <Icons.x size={18} />
+                </Popover.Close>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Type selector */}
+                <div>
+                  <label className="block text-sm text-gray-400 mb-3">Wat wil je delen?</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, type: 'IDEA' })}
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        form.type === 'IDEA'
+                          ? 'border-purple-500 bg-purple-500/10'
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          form.type === 'IDEA' ? 'bg-purple-500/20' : 'bg-white/5'
+                        }`}>
+                          <Icons.sparkles className={form.type === 'IDEA' ? 'text-purple-400' : 'text-gray-400'} size={16} />
+                        </div>
+                        <span className={`font-medium ${form.type === 'IDEA' ? 'text-purple-400' : 'text-white'}`}>
+                          Idee
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400">Een suggestie voor iets nieuws of een verbetering</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, type: 'BUG' })}
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        form.type === 'BUG'
+                          ? 'border-red-500 bg-red-500/10'
+                          : 'border-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          form.type === 'BUG' ? 'bg-red-500/20' : 'bg-white/5'
+                        }`}>
+                          <Icons.alertCircle className={form.type === 'BUG' ? 'text-red-400' : 'text-gray-400'} size={16} />
+                        </div>
+                        <span className={`font-medium ${form.type === 'BUG' ? 'text-red-400' : 'text-white'}`}>
+                          Probleem
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400">Iets werkt niet goed of is kapot</p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">
+                    {form.type === 'IDEA' ? 'Wat is je idee?' : 'Wat werkt niet?'} *
+                  </label>
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    className="input-field"
+                    placeholder={form.type === 'IDEA' ? 'Bijv. "Export naar Excel toevoegen"' : 'Bijv. "Kalender laadt niet"'}
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Beschrijving *</label>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    className="input-field min-h-[100px] resize-none"
+                    placeholder={form.type === 'IDEA'
+                      ? 'Beschrijf je idee. Waarom zou dit handig zijn?'
+                      : 'Beschrijf wat er mis gaat. Wanneer gebeurt dit? Welke stappen heb je genomen?'
+                    }
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Popover.Close className="flex-1 btn-secondary">
+                    Annuleren
+                  </Popover.Close>
+                  <button
+                    type="submit"
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+                      form.type === 'IDEA'
+                        ? 'bg-purple-500 hover:bg-purple-600 text-white'
+                        : 'bg-red-500 hover:bg-red-600 text-white'
+                    }`}
+                  >
+                    {form.type === 'IDEA' ? <Icons.sparkles size={16} /> : <Icons.alertCircle size={16} />}
+                    {form.type === 'IDEA' ? 'Idee indienen' : 'Probleem melden'}
+                  </button>
+                </div>
+              </form>
+              <Popover.Arrow className="fill-workx-gray" />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
       </div>
 
       {/* Stats */}
@@ -365,121 +488,6 @@ export default function FeedbackPage() {
         </div>
       </div>
 
-      {/* Submit Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
-          <div className="bg-workx-gray rounded-2xl p-6 w-full max-w-lg border border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                  <Icons.chat className="text-indigo-400" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">Feedback geven</h2>
-              </div>
-              <button onClick={() => setShowForm(false)} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Type selector */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-3">Wat wil je delen?</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, type: 'IDEA' })}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      form.type === 'IDEA'
-                        ? 'border-purple-500 bg-purple-500/10'
-                        : 'border-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        form.type === 'IDEA' ? 'bg-purple-500/20' : 'bg-white/5'
-                      }`}>
-                        <Icons.sparkles className={form.type === 'IDEA' ? 'text-purple-400' : 'text-gray-400'} size={16} />
-                      </div>
-                      <span className={`font-medium ${form.type === 'IDEA' ? 'text-purple-400' : 'text-white'}`}>
-                        Idee
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400">Een suggestie voor iets nieuws of een verbetering</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, type: 'BUG' })}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      form.type === 'BUG'
-                        ? 'border-red-500 bg-red-500/10'
-                        : 'border-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        form.type === 'BUG' ? 'bg-red-500/20' : 'bg-white/5'
-                      }`}>
-                        <Icons.alertCircle className={form.type === 'BUG' ? 'text-red-400' : 'text-gray-400'} size={16} />
-                      </div>
-                      <span className={`font-medium ${form.type === 'BUG' ? 'text-red-400' : 'text-white'}`}>
-                        Probleem
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400">Iets werkt niet goed of is kapot</p>
-                  </button>
-                </div>
-              </div>
-
-              {/* Title */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  {form.type === 'IDEA' ? 'Wat is je idee?' : 'Wat werkt niet?'} *
-                </label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="input-field"
-                  placeholder={form.type === 'IDEA' ? 'Bijv. "Export naar Excel toevoegen"' : 'Bijv. "Kalender laadt niet"'}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Beschrijving *</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="input-field min-h-[100px] resize-none"
-                  placeholder={form.type === 'IDEA'
-                    ? 'Beschrijf je idee. Waarom zou dit handig zijn?'
-                    : 'Beschrijf wat er mis gaat. Wanneer gebeurt dit? Welke stappen heb je genomen?'
-                  }
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 btn-secondary">
-                  Annuleren
-                </button>
-                <button
-                  type="submit"
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors ${
-                    form.type === 'IDEA'
-                      ? 'bg-purple-500 hover:bg-purple-600 text-white'
-                      : 'bg-red-500 hover:bg-red-600 text-white'
-                  }`}
-                >
-                  {form.type === 'IDEA' ? <Icons.sparkles size={16} /> : <Icons.alertCircle size={16} />}
-                  {form.type === 'IDEA' ? 'Idee indienen' : 'Probleem melden'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

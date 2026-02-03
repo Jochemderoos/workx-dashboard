@@ -35,7 +35,7 @@ export async function sendZaakOfferEmail(data: ZaakEmailData) {
 
   try {
     const response = await resend.emails.send({
-      from: 'Workx Dashboard <noreply@workxadvocaten.nl>',
+      from: 'Workx Dashboard <onboarding@resend.dev>',
       to: data.to,
       subject: `Nieuwe zaak voor jou: ${data.zaakDescription.substring(0, 50)}${data.zaakDescription.length > 50 ? '...' : ''}`,
       html: `
@@ -137,7 +137,7 @@ export async function sendZaakAssignedEmail(data: {
 
   try {
     const response = await resend.emails.send({
-      from: 'Workx Dashboard <noreply@workxadvocaten.nl>',
+      from: 'Workx Dashboard <onboarding@resend.dev>',
       to: data.to,
       subject: `Zaak toegewezen: ${data.zaakDescription.substring(0, 40)}...`,
       html: `
@@ -181,7 +181,7 @@ export async function sendAllDeclinedEmail(data: {
 
   try {
     const response = await resend.emails.send({
-      from: 'Workx Dashboard <noreply@workxadvocaten.nl>',
+      from: 'Workx Dashboard <onboarding@resend.dev>',
       to: data.to,
       subject: `Actie vereist: Niemand beschikbaar voor zaak`,
       html: `

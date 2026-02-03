@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { TEAM_PHOTOS, ALL_TEAM_MEMBERS, getPhotoUrl } from '@/lib/team-photos'
 import { LUSTRUM_CONFIG, MALLORCA_FACTS, getCountdown } from '@/lib/lustrum-data'
@@ -56,6 +57,7 @@ interface CalendarEvent {
   isAllDay: boolean
   location: string | null
   color: string
+  category?: string
 }
 
 interface WorkItem {
@@ -168,29 +170,45 @@ interface ParentalLeaveData {
   note: string | null
 }
 
-const quickLinks = [
-  { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10', iconAnim: 'icon-calendar-hover' },
-  { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10', iconAnim: 'icon-euro-hover' },
-  { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10', iconAnim: 'icon-briefcase-hover' },
-  { href: '/dashboard/lustrum', Icon: Icons.star, label: 'Lustrum', desc: '15 jaar Workx!', color: 'from-orange-500/20 to-amber-600/10', iconAnim: 'icon-star-hover' },
+const allQuickLinks = [
+  { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10', iconAnim: 'icon-calendar-hover', hideFor: [] as string[] },
+  { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10', iconAnim: 'icon-euro-hover', hideFor: ['PARTNER', 'OFFICE_MANAGER'] },
+  { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10', iconAnim: 'icon-briefcase-hover', hideFor: ['MEDEWERKER', 'ADVOCAAT'] },
+  { href: '/dashboard/lustrum', Icon: Icons.star, label: 'Lustrum', desc: '15 jaar Workx!', color: 'from-orange-500/20 to-amber-600/10', iconAnim: 'icon-star-hover', hideFor: [] as string[] },
 ]
 
-// Appjeplekje Widget - Compact office attendance widget
+// Appjeplekje Widget - Compact office attendance widget with today/tomorrow tabs
 function AppjeplekjeWidget({
-  data,
-  isToggling,
-  onToggle,
+  todayData,
+  tomorrowData,
+  isTogglingToday,
+  isTogglingTomorrow,
+  onToggleToday,
+  onToggleTomorrow,
 }: {
-  data: OfficeAttendanceData | null
-  isToggling: boolean
-  onToggle: () => void
+  todayData: OfficeAttendanceData | null
+  tomorrowData: OfficeAttendanceData | null
+  isTogglingToday: boolean
+  isTogglingTomorrow: boolean
+  onToggleToday: () => void
+  onToggleTomorrow: () => void
 }) {
-  const [todayDate, setTodayDate] = useState('')
+  const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>('today')
+  const [dateLabels, setDateLabels] = useState({ today: '', tomorrow: '' })
 
   useEffect(() => {
     const now = new Date()
-    setTodayDate(`${now.getDate()} ${now.toLocaleDateString('nl-NL', { month: 'short' })}`)
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    setDateLabels({
+      today: `${now.getDate()} ${now.toLocaleDateString('nl-NL', { month: 'short' })}`,
+      tomorrow: `${tomorrow.getDate()} ${tomorrow.toLocaleDateString('nl-NL', { month: 'short' })}`
+    })
   }, [])
+
+  const data = selectedDay === 'today' ? todayData : tomorrowData
+  const isToggling = selectedDay === 'today' ? isTogglingToday : isTogglingTomorrow
+  const onToggle = selectedDay === 'today' ? onToggleToday : onToggleTomorrow
 
   if (!data) {
     return (
@@ -253,7 +271,9 @@ function AppjeplekjeWidget({
             </div>
             <div>
               <p className="text-sm font-semibold text-white">Appjeplekje</p>
-              <p className="text-xs text-cyan-300 font-medium">Vandaag{todayDate ? ` · ${todayDate}` : ''}</p>
+              <p className="text-xs text-cyan-300 font-medium">
+                {selectedDay === 'today' ? 'Vandaag' : 'Morgen'} · {selectedDay === 'today' ? dateLabels.today : dateLabels.tomorrow}
+              </p>
             </div>
           </div>
           <button
@@ -280,6 +300,30 @@ function AppjeplekjeWidget({
             ) : (
               <span className="flex items-center gap-1.5"><Icons.plus size={14} /> Aanmelden</span>
             )}
+          </button>
+        </div>
+
+        {/* Day selector tabs */}
+        <div className="flex gap-1 mb-3 p-1 bg-white/5 rounded-lg">
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedDay('today') }}
+            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              selectedDay === 'today'
+                ? 'bg-cyan-500 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Vandaag
+          </button>
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedDay('tomorrow') }}
+            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              selectedDay === 'tomorrow'
+                ? 'bg-cyan-500 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Morgen
           </button>
         </div>
 
@@ -313,7 +357,14 @@ function AppjeplekjeWidget({
                     title={a.name}
                   >
                     {photoUrl ? (
-                      <img src={photoUrl} alt={a.name} className="w-full h-full object-cover" />
+                      <Image
+                        src={photoUrl}
+                        alt={a.name}
+                        width={28}
+                        height={28}
+                        className="w-full h-full object-cover"
+                        unoptimized
+                      />
                     ) : (
                       a.name.charAt(0)
                     )}
@@ -365,25 +416,24 @@ function LustrumTeaserWidget() {
     // Countdown
     {
       content: (
-        <div className="flex items-center gap-4">
+        <div className="w-full">
+          <p className="text-sm text-gray-400 mb-2">Nog <span className="text-orange-400 font-semibold">{countdown.days}</span> dagen tot Mallorca!</p>
           <div className="flex gap-2">
             {[
               { value: countdown.days, label: 'd' },
               { value: countdown.hours, label: 'u' },
               { value: countdown.minutes, label: 'm' },
+              { value: countdown.seconds, label: 's' },
             ].map((item) => (
-              <div key={item.label} className="text-center">
-                <span className="text-2xl font-bold text-orange-400 tabular-nums">
+              <div key={item.label} className="text-center bg-orange-500/10 rounded-lg px-2 py-1.5 flex-1">
+                <span className="text-xl font-bold text-orange-400 tabular-nums block">
                   {String(item.value).padStart(2, '0')}
                 </span>
-                <span className="text-xs text-gray-400">{item.label}</span>
+                <span className="text-xs text-gray-500">{item.label}</span>
               </div>
             ))}
           </div>
-          <div className="flex-1">
-            <p className="text-sm text-white">tot Mallorca!</p>
-            <p className="text-xs text-gray-400">30 sep - 4 okt 2026</p>
-          </div>
+          <p className="text-xs text-gray-500 mt-2">30 sep - 4 okt 2026</p>
         </div>
       ),
     },
@@ -391,19 +441,21 @@ function LustrumTeaserWidget() {
     {
       content: (
         <div>
-          <p className="text-xs text-amber-400 mb-1">💡 Weetje van de dag</p>
-          <p className="text-sm text-gray-200 line-clamp-2">{dailyFact}</p>
+          <p className="text-xs text-amber-400 mb-2 flex items-center gap-2">
+            <span className="text-lg">💡</span> Weetje van de dag
+          </p>
+          <p className="text-base text-gray-200 line-clamp-2">{dailyFact}</p>
         </div>
       ),
     },
     // Weather teaser
     {
       content: (
-        <div className="flex items-center gap-4">
-          <span className="text-4xl">☀️</span>
+        <div className="flex items-center gap-5">
+          <span className="text-5xl">☀️</span>
           <div>
-            <p className="text-sm text-white">Perfect weer in oktober</p>
-            <p className="text-xs text-gray-400">Gemiddeld 22°C in Mallorca</p>
+            <p className="text-base font-medium text-white">Perfect weer in oktober</p>
+            <p className="text-sm text-gray-400">Gemiddeld 22°C in Mallorca</p>
           </div>
         </div>
       ),
@@ -411,11 +463,11 @@ function LustrumTeaserWidget() {
     // Location teaser
     {
       content: (
-        <div className="flex items-center gap-4">
-          <span className="text-4xl">🏠</span>
+        <div className="flex items-center gap-5">
+          <span className="text-5xl">🏠</span>
           <div>
-            <p className="text-sm text-white">Can Fressa, Alaró</p>
-            <p className="text-xs text-gray-400">Finca bij de Serra de Tramuntana</p>
+            <p className="text-base font-medium text-white">Can Fressa, Alaró</p>
+            <p className="text-sm text-gray-400">Finca bij de Serra de Tramuntana</p>
           </div>
         </div>
       ),
@@ -429,9 +481,7 @@ function LustrumTeaserWidget() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20 flex items-center justify-center">
             <span className="text-lg">🌴</span>
           </div>
-          <div>
-            <h2 className="text-lg font-medium text-white">Lustrum 15 Jaar</h2>
-          </div>
+          <h2 className="text-lg font-medium text-white whitespace-nowrap">15 Jaar Workx</h2>
         </div>
         <Link href="/dashboard/lustrum" className="text-sm text-orange-400 hover:underline flex items-center gap-1">
           Bekijk alles
@@ -441,22 +491,22 @@ function LustrumTeaserWidget() {
 
       <Link
         href="/dashboard/lustrum"
-        className="card p-4 block group hover:border-orange-500/30 transition-all relative overflow-hidden"
+        className="card p-5 block group hover:border-orange-500/30 transition-all relative overflow-hidden"
       >
         {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-16 sm:w-32 h-16 sm:h-32 bg-orange-500/10 rounded-full blur-2xl sm:blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute -bottom-4 -left-4 text-4xl sm:text-6xl opacity-10 group-hover:opacity-20 transition-opacity">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/20 transition-colors" />
+        <div className="absolute -bottom-4 -left-4 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">
           🎉
         </div>
 
         <div className="relative">
           {/* Rotating content */}
-          <div className="min-h-[60px] flex items-center">
+          <div className="min-h-[80px] flex items-center">
             {teasers[teaserIndex].content}
           </div>
 
-          {/* Dots indicator - hidden on mobile */}
-          <div className="hidden sm:flex gap-1.5 mt-3">
+          {/* Dots indicator */}
+          <div className="flex gap-1.5 mt-4">
             {teasers.map((_, i) => (
               <button
                 key={i}
@@ -489,7 +539,9 @@ export default function DashboardHome() {
   const [showCountdownPopup, setShowCountdownPopup] = useState(false)
   const [countdownDays, setCountdownDays] = useState(0)
   const [officeAttendance, setOfficeAttendance] = useState<OfficeAttendanceData | null>(null)
+  const [tomorrowAttendance, setTomorrowAttendance] = useState<OfficeAttendanceData | null>(null)
   const [isTogglingAttendance, setIsTogglingAttendance] = useState(false)
+  const [isTogglingTomorrowAttendance, setIsTogglingTomorrowAttendance] = useState(false)
   const [vacationBalance, setVacationBalance] = useState<VacationBalanceData | null>(null)
   const [parentalLeave, setParentalLeave] = useState<ParentalLeaveData | null>(null)
   const [weather, setWeather] = useState<WeatherData>({
@@ -502,21 +554,76 @@ export default function DashboardHome() {
   })
   const [teamBirthdays, setTeamBirthdays] = useState<TeamBirthday[]>([])
 
-  // Fetch birthdays from API
-  useEffect(() => {
-    const fetchBirthdays = async () => {
-      try {
-        const res = await fetch('/api/birthdays')
-        if (res.ok) {
-          const data = await res.json()
-          setTeamBirthdays(data.filter((u: TeamBirthday) => u.birthDate))
+  // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
+  const fetchDashboardSummary = async () => {
+    try {
+      const res = await fetch('/api/dashboard/summary')
+      if (res.ok) {
+        const data = await res.json()
+
+        // Set calendar events
+        if (data.calendarEvents) {
+          setEvents(data.calendarEvents)
         }
-      } catch (error) {
-        console.error('Error fetching birthdays:', error)
+
+        // Set office attendance (today)
+        if (data.officeAttendance) {
+          setOfficeAttendance(data.officeAttendance)
+        }
+
+        // Set tomorrow attendance
+        if (data.tomorrowAttendance) {
+          setTomorrowAttendance(data.tomorrowAttendance)
+        }
+
+        // Set vacation balance
+        if (data.vacationBalance) {
+          setVacationBalance(data.vacationBalance)
+        }
+
+        // Set parental leave
+        if (data.parentalLeave && data.parentalLeave.length > 0) {
+          setParentalLeave(data.parentalLeave[0])
+        }
+
+        // Set current user
+        if (data.currentUser) {
+          setCurrentUser({ name: data.currentUser.name, role: data.currentUser.role })
+        }
+
+        // Set birthdays
+        if (data.birthdays) {
+          const formattedBirthdays = data.birthdays
+            .filter((u: any) => u.birthDate)
+            .map((u: any) => {
+              // birthDate comes as ISO string, extract month and day
+              const date = new Date(u.birthDate)
+              const month = String(date.getMonth() + 1).padStart(2, '0')
+              const day = String(date.getDate()).padStart(2, '0')
+              return {
+                name: u.name,
+                birthDate: `${month}-${day}` // MM-DD format
+              }
+            })
+          setTeamBirthdays(formattedBirthdays)
+        }
+
+        // Set feedback
+        if (data.feedback) {
+          setFeedbackItems(data.feedback.map((f: any) => ({
+            id: f.id,
+            type: f.type,
+            title: f.title,
+            description: f.description,
+            submittedBy: f.submittedByName,
+            createdAt: f.createdAt,
+          })))
+        }
       }
+    } catch (error) {
+      console.error('Error fetching dashboard summary:', error)
     }
-    fetchBirthdays()
-  }, [])
+  }
 
   // Calculate next birthday
   const nextBirthday = useMemo(() => {
@@ -545,6 +652,12 @@ export default function DashboardHome() {
   const birthdayToday = useMemo(() => {
     return nextBirthday.find(b => b.daysUntil === 0)
   }, [nextBirthday])
+
+  // Filter quick links based on user role
+  const quickLinks = useMemo(() => {
+    const userRole = currentUser?.role || 'MEDEWERKER'
+    return allQuickLinks.filter(link => !link.hideFor.includes(userRole))
+  }, [currentUser?.role])
 
   // Calculate who's away this week (vacations + calendar absences)
   const awayThisWeek = useMemo(() => {
@@ -711,18 +824,17 @@ export default function DashboardHome() {
     }
   }, [])
 
+  // Main data fetch: 1 bundled API call + 3 specialized calls (was 11 separate calls)
   useEffect(() => {
-    Promise.all([fetchEvents(), fetchWork(), fetchVacations(), fetchCalendarAbsences(), fetchFeedback(), fetchCurrentUser(), fetchOfficeAttendance(), fetchVacationBalance(), fetchParentalLeave()]).finally(() => setIsLoading(false))
+    Promise.all([
+      fetchDashboardSummary(),  // Bundled: events, attendance, balance, parental, user, birthdays, feedback
+      fetchWork(),              // Separate: needs specific query params
+      fetchVacations(),         // Separate: needs all=true
+      fetchCalendarAbsences(),  // Separate: needs date range filter
+    ]).finally(() => setIsLoading(false))
   }, [])
 
-  const fetchEvents = async () => {
-    try {
-      const res = await fetch('/api/calendar?upcoming=true&limit=5')
-      if (res.ok) setEvents(await res.json())
-    } catch (e) {
-      console.error(e)
-    }
-  }
+  // fetchEvents removed - now handled by fetchDashboardSummary
 
   const fetchWork = async () => {
     try {
@@ -790,42 +902,23 @@ export default function DashboardHome() {
     }
   }
 
-  const fetchFeedback = async () => {
-    try {
-      const res = await fetch('/api/feedback')
-      if (res.ok) {
-        const data = await res.json()
-        setFeedbackItems(data)
-      }
-    } catch (e) {
-      console.error('Error fetching feedback:', e)
-    }
-  }
+  // fetchFeedback and fetchCurrentUser removed - now handled by fetchDashboardSummary
 
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await fetch('/api/user/profile')
-      if (res.ok) {
-        const data = await res.json()
-        setCurrentUser({ name: data.name, role: data.role })
-      }
-    } catch (e) {
-      console.error('Error fetching user:', e)
-    }
+  // Helper to format date string
+  const formatDateStr = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   }
 
   const fetchOfficeAttendance = async () => {
     try {
-      // Use local date to avoid timezone issues
       const now = new Date()
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const today = formatDateStr(now)
       const res = await fetch(`/api/office-attendance?date=${today}`)
       if (res.ok) {
         const data = await res.json()
         setOfficeAttendance(data)
       } else {
         console.error('Error fetching office attendance:', res.status, res.statusText)
-        // Set default data so widget still renders
         setOfficeAttendance({
           date: today,
           attendees: [],
@@ -837,9 +930,8 @@ export default function DashboardHome() {
       }
     } catch (e) {
       console.error('Error fetching office attendance:', e)
-      // Set default data so widget still renders
       const now = new Date()
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const today = formatDateStr(now)
       setOfficeAttendance({
         date: today,
         attendees: [],
@@ -851,38 +943,49 @@ export default function DashboardHome() {
     }
   }
 
-  const fetchVacationBalance = async () => {
+  const fetchTomorrowAttendance = async () => {
     try {
-      const res = await fetch('/api/user/vacation-balance')
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const tomorrowStr = formatDateStr(tomorrow)
+      const res = await fetch(`/api/office-attendance?date=${tomorrowStr}`)
       if (res.ok) {
         const data = await res.json()
-        setVacationBalance(data)
+        setTomorrowAttendance(data)
+      } else {
+        setTomorrowAttendance({
+          date: tomorrowStr,
+          attendees: [],
+          totalWorkplaces: 11,
+          occupiedWorkplaces: 0,
+          availableWorkplaces: 11,
+          isCurrentUserAttending: false,
+        })
       }
     } catch (e) {
-      console.error('Error fetching vacation balance:', e)
+      console.error('Error fetching tomorrow attendance:', e)
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      setTomorrowAttendance({
+        date: formatDateStr(tomorrow),
+        attendees: [],
+        totalWorkplaces: 11,
+        occupiedWorkplaces: 0,
+        availableWorkplaces: 11,
+        isCurrentUserAttending: false,
+      })
     }
   }
 
-  const fetchParentalLeave = async () => {
-    try {
-      const res = await fetch('/api/parental-leave')
-      if (res.ok) {
-        const data = await res.json()
-        setParentalLeave(data)
-      }
-    } catch (e) {
-      console.error('Error fetching parental leave:', e)
-    }
-  }
+  // fetchVacationBalance and fetchParentalLeave removed - now handled by fetchDashboardSummary
 
   const toggleOfficeAttendance = async () => {
     if (!officeAttendance || isTogglingAttendance) return
     setIsTogglingAttendance(true)
 
     try {
-      // Use local date to avoid timezone issues
       const now = new Date()
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const today = formatDateStr(now)
       let res: Response
 
       if (officeAttendance.isCurrentUserAttending) {
@@ -908,6 +1011,42 @@ export default function DashboardHome() {
       alert('Er ging iets mis met de verbinding')
     } finally {
       setIsTogglingAttendance(false)
+    }
+  }
+
+  const toggleTomorrowAttendance = async () => {
+    if (!tomorrowAttendance || isTogglingTomorrowAttendance) return
+    setIsTogglingTomorrowAttendance(true)
+
+    try {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const tomorrowStr = formatDateStr(tomorrow)
+      let res: Response
+
+      if (tomorrowAttendance.isCurrentUserAttending) {
+        res = await fetch(`/api/office-attendance?date=${tomorrowStr}`, { method: 'DELETE' })
+      } else {
+        res = await fetch('/api/office-attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: tomorrowStr }),
+        })
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error('API Error:', errorData)
+        alert(errorData.error || 'Er ging iets mis')
+        return
+      }
+
+      await fetchTomorrowAttendance()
+    } catch (e) {
+      console.error('Error toggling tomorrow attendance:', e)
+      alert('Er ging iets mis met de verbinding')
+    } finally {
+      setIsTogglingTomorrowAttendance(false)
     }
   }
 
@@ -973,28 +1112,29 @@ export default function DashboardHome() {
     <div className="space-y-8 fade-in">
       {/* LUSTRUM COUNTDOWN MILESTONE POPUP */}
       {showCountdownPopup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          {/* Confetti background */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {[...Array(60)].map((_, i) => (
-              <span
-                key={i}
-                className="absolute animate-bounce"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  animationDuration: `${1 + Math.random() * 2}s`,
-                  fontSize: `${1 + Math.random() * 1.5}rem`,
-                }}
-              >
-                {['🎉', '✨', '🌴', '☀️', '🎊', '🏝️', '🍹', '⭐', '🥳', '🎈'][Math.floor(Math.random() * 10)]}
-              </span>
-            ))}
-          </div>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] overflow-y-auto" onClick={() => setShowCountdownPopup(false)}>
+          <div className="min-h-full flex items-start justify-center p-4" style={{ paddingTop: '15vh' }}>
+            {/* Confetti background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(60)].map((_, i) => (
+                <span
+                  key={i}
+                  className="absolute animate-bounce"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animationDelay: `${Math.random() * 2}s`,
+                    animationDuration: `${1 + Math.random() * 2}s`,
+                    fontSize: `${1 + Math.random() * 1.5}rem`,
+                  }}
+                >
+                  {['🎉', '✨', '🌴', '☀️', '🎊', '🏝️', '🍹', '⭐', '🥳', '🎈'][Math.floor(Math.random() * 10)]}
+                </span>
+              ))}
+            </div>
 
-          {/* Popup Content */}
-          <div className="relative max-w-lg w-full bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-yellow-500/20 border-2 border-orange-500/40 rounded-3xl p-8 shadow-2xl text-center transform animate-pulse">
+            {/* Popup Content */}
+            <div className="relative max-w-lg w-full bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-yellow-500/20 border-2 border-orange-500/40 rounded-3xl p-8 shadow-2xl text-center transform animate-pulse animate-modal-in" onClick={(e) => e.stopPropagation()}>
             <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-6xl">
               {countdownDays <= 10 ? '🚨' : '🎉'}
             </div>
@@ -1034,6 +1174,7 @@ export default function DashboardHome() {
             >
               {countdownDays <= 10 ? 'Ik ben er klaar voor! 🎉' : 'Sluit af'}
             </button>
+            </div>
           </div>
         </div>
       )}
@@ -1094,9 +1235,12 @@ export default function DashboardHome() {
           {/* Mobile Appjeplekje Widget - Only visible on mobile */}
           <div className="lg:hidden">
             <AppjeplekjeWidget
-              data={officeAttendance}
-              isToggling={isTogglingAttendance}
-              onToggle={toggleOfficeAttendance}
+              todayData={officeAttendance}
+              tomorrowData={tomorrowAttendance}
+              isTogglingToday={isTogglingAttendance}
+              isTogglingTomorrow={isTogglingTomorrowAttendance}
+              onToggleToday={toggleOfficeAttendance}
+              onToggleTomorrow={toggleTomorrowAttendance}
             />
           </div>
 
@@ -1147,14 +1291,14 @@ export default function DashboardHome() {
       </div>
 
       {/* Quick Links Grid + Appjeplekje (Desktop) */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Quick Links - Takes 3 columns on desktop */}
         <div className="lg:col-span-3">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-white">Snelle toegang</h2>
             <span className="text-xs text-gray-500">{quickLinks.length} tools</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {quickLinks.map(({ href, Icon, label, desc, color, iconAnim }) => (
             <Link
               key={href}
@@ -1177,33 +1321,36 @@ export default function DashboardHome() {
           </div>
         </div>
 
-        {/* Desktop Appjeplekje Widget - Only visible on desktop */}
-        <div className="hidden lg:block">
+        {/* Desktop Appjeplekje Widget - Only visible on desktop, now 2 columns wide */}
+        <div className="hidden lg:block lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-white">Kantoor</h2>
           </div>
           <AppjeplekjeWidget
-            data={officeAttendance}
-            isToggling={isTogglingAttendance}
-            onToggle={toggleOfficeAttendance}
+            todayData={officeAttendance}
+            tomorrowData={tomorrowAttendance}
+            isTogglingToday={isTogglingAttendance}
+            isTogglingTomorrow={isTogglingTomorrowAttendance}
+            onToggleToday={toggleOfficeAttendance}
+            onToggleTomorrow={toggleTomorrowAttendance}
           />
         </div>
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Events & Absence Column */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           {/* Absence Overview - 2 Weeks */}
-          <div className="card p-3 sm:p-5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+          <Link href="/dashboard/vakanties" className="card p-3 sm:p-5 relative overflow-hidden block group hover:border-yellow-500/30 transition-all">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-yellow-500/10 transition-colors" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none group-hover:bg-orange-500/10 transition-colors" />
 
             <div className="relative">
               {/* Header - stays fixed */}
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/10 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Icons.users className="text-yellow-400" size={20} />
                   </div>
                   <div>
@@ -1211,10 +1358,10 @@ export default function DashboardHome() {
                     <p className="text-xs text-gray-400">Overzicht komende 2 weken</p>
                   </div>
                 </div>
-                <Link href="/dashboard/vakanties" className="text-sm text-workx-lime hover:underline flex items-center gap-1">
-                  Beheren
-                  <Icons.arrowRight size={14} />
-                </Link>
+                <div className="text-sm text-workx-lime flex items-center gap-1">
+                  Bekijk alles
+                  <Icons.arrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
 
               {/* 2-Week Grid */}
@@ -1359,7 +1506,7 @@ export default function DashboardHome() {
                 </span>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Upcoming Events */}
           <div>
@@ -1377,60 +1524,59 @@ export default function DashboardHome() {
             </div>
 
             {isLoading ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="card h-20 animate-pulse" />
+                  <div key={i} className="card h-14 animate-pulse" />
                 ))}
               </div>
             ) : events.length === 0 ? (
-              <div className="card p-12 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                  <Icons.calendar className="text-gray-500" size={28} />
+              <div className="card p-8 text-center">
+                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-3">
+                  <Icons.calendar className="text-gray-500" size={20} />
                 </div>
-                <p className="text-gray-400 mb-2">Geen aankomende events</p>
-                <Link href="/dashboard/agenda" className="text-sm text-workx-lime hover:underline">
+                <p className="text-gray-400 text-sm mb-2">Geen aankomende events</p>
+                <Link href="/dashboard/agenda" className="text-xs text-workx-lime hover:underline">
                   Event toevoegen
                 </Link>
               </div>
             ) : (
-              <div className="space-y-2">
-                {events.map((event, index) => (
+              <div className="space-y-1.5">
+                {events.slice(0, 3).map((event, index) => (
                   <Link
                     key={event.id}
                     href="/dashboard/agenda"
-                    className="card p-4 flex items-center gap-4 group hover:border-white/10 transition-all"
+                    className="card p-3 flex items-center gap-3 group hover:border-white/10 transition-all"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div
-                      className="w-1 h-12 rounded-full flex-shrink-0"
+                      className="w-1 h-10 rounded-full flex-shrink-0"
                       style={{ backgroundColor: event.color }}
                     />
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-white truncate group-hover:text-workx-lime transition-colors">
+                      <h3 className="text-sm font-medium text-white truncate group-hover:text-workx-lime transition-colors">
                         {event.title}
                       </h3>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
                         <span className="flex items-center gap-1">
-                          <Icons.calendar size={12} />
+                          <Icons.calendar size={10} />
                           {formatDate(event.startTime)}
                         </span>
                         {!event.isAllDay && (
                           <span className="flex items-center gap-1">
-                            <Icons.clock size={12} />
+                            <Icons.clock size={10} />
                             {formatTime(event.startTime)}
-                          </span>
-                        )}
-                        {event.location && (
-                          <span className="flex items-center gap-1 truncate">
-                            <Icons.mapPin size={12} />
-                            {event.location}
                           </span>
                         )}
                       </div>
                     </div>
-                    <Icons.chevronRight className="text-gray-500 group-hover:text-workx-lime transition-colors" size={18} />
+                    <Icons.chevronRight className="text-gray-500 group-hover:text-workx-lime transition-colors" size={14} />
                   </Link>
                 ))}
+                {events.length > 3 && (
+                  <Link href="/dashboard/agenda" className="block text-center text-xs text-gray-500 hover:text-workx-lime py-1">
+                    +{events.length - 3} meer events
+                  </Link>
+                )}
               </div>
             )}
           </div>
@@ -1445,13 +1591,13 @@ export default function DashboardHome() {
         {/* Admin: Feedback Widget / Others: Vacation Card */}
         {isAdmin ? (
           /* Feedback Widget for Admin */
-          <div className="card p-4 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+          <Link href="/dashboard/feedback" className="card p-4 relative overflow-hidden block group hover:border-purple-500/30 transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
 
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Icons.chat className="text-purple-400" size={18} />
                   </div>
                   <div>
@@ -1459,9 +1605,7 @@ export default function DashboardHome() {
                     <p className="text-xs text-gray-400">{feedbackItems.length} items</p>
                   </div>
                 </div>
-                <Link href="/dashboard/feedback" className="text-xs text-purple-400 hover:underline">
-                  Alles bekijken
-                </Link>
+                <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
               </div>
 
               {feedbackItems.length === 0 ? (
@@ -1489,7 +1633,7 @@ export default function DashboardHome() {
                           </p>
                         </div>
                         <button
-                          onClick={() => deleteFeedback(item.id)}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteFeedback(item.id) }}
                           className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                           title="Verwijderen"
                         >
@@ -1501,16 +1645,16 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
-          </div>
+          </Link>
         ) : (
           /* Vacation Card for Employees */
-          <div className="card p-4 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+          <Link href="/dashboard/vakanties" className="card p-4 relative overflow-hidden group block hover:border-workx-lime/30 transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
 
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Icons.sun className="text-workx-lime" size={18} />
                   </div>
                   <div>
@@ -1518,9 +1662,7 @@ export default function DashboardHome() {
                     <p className="text-xs text-gray-400">Saldo {vacationBalance?.year || new Date().getFullYear()}</p>
                   </div>
                 </div>
-                <Link href="/dashboard/vakanties" className="text-xs text-workx-lime hover:underline">
-                  Meer info
-                </Link>
+                <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-workx-lime group-hover:translate-x-1 transition-all" />
               </div>
 
               {/* Vakantiedagen direct zichtbaar */}
@@ -1553,7 +1695,7 @@ export default function DashboardHome() {
               {parentalLeave && (
                 <div className="mt-4 pt-4 border-t border-white/5">
                   <button
-                    onClick={() => setShowVacationDetails(!showVacationDetails)}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowVacationDetails(!showVacationDetails) }}
                     className="w-full text-left"
                   >
                     <div className="flex items-center justify-between">
@@ -1617,7 +1759,7 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
-          </div>
+          </Link>
         )}
 
         {/* Birthday Card - GROOTS on birthday, normal otherwise */}
@@ -1728,7 +1870,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Bottom section with Widget and Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Dynamic Widget based on role */}
         {isAdmin ? (
           /* Werkdruk Widget for Partners/Hanna */
@@ -1747,7 +1889,7 @@ export default function DashboardHome() {
                 </div>
                 <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-workx-lime group-hover:translate-x-1 transition-all" />
               </div>
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-4 text-xs">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
                   <span className="text-gray-400">Rustig</span>
@@ -1795,7 +1937,6 @@ export default function DashboardHome() {
         {[
           { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Open zaken', value: workItems.length.toString(), color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover' },
           { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Events deze week', value: events.length.toString(), color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover' },
-          { href: '/dashboard/appjeplekje', icon: Icons.clock, label: 'Vandaag', value: new Date().toLocaleDateString('nl-NL', { weekday: 'short' }), color: 'text-orange-400', bg: 'bg-orange-500/10', iconAnim: 'icon-clock-hover' },
         ].map((stat, index) => (
           <Link
             key={stat.label}

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+export const revalidate = 300 // 5 minute cache
+
 // GET - Haal vluchtgegevens en programma op
 export async function GET() {
   try {

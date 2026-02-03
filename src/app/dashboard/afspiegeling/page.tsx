@@ -439,8 +439,9 @@ export default function AfspiegelingPage() {
 
       {/* Add Employee Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 fade-in" onClick={() => setShowForm(false)}>
-          <div className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" onClick={() => setShowForm(false)}>
+          <div className="min-h-full flex items-start justify-center p-4" style={{ paddingTop: '15vh' }}>
+            <div className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl animate-modal-in" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
@@ -555,6 +556,7 @@ export default function AfspiegelingPage() {
                   Toevoegen
                 </button>
               </div>
+            </div>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 
@@ -655,20 +656,500 @@ export default function TeamPage() {
           {/* Manager Actions - only show buttons when relevant */}
           {isManager && employee.role !== 'PARTNER' && (
             <div className="px-4 sm:px-6 py-3 border-t border-white/5 bg-black/10 flex gap-2">
-              <button
-                onClick={() => openSickDaysModal(employee)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all"
+              <Popover.Root
+                open={showSickDaysModal && sickDaysMember?.id === employee.id}
+                onOpenChange={(open) => { if (!open) setShowSickDaysModal(false); else openSickDaysModal(employee) }}
               >
-                <Icons.heart size={14} />
-                <span>Ziektedagen</span>
-              </button>
-              <button
-                onClick={() => openParentalModal(employee)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs transition-all"
+                <Popover.Trigger asChild>
+                  <button
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all"
+                  >
+                    <Icons.heart size={14} />
+                    <span>Ziektedagen</span>
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                    sideOffset={8}
+                    collisionPadding={16}
+                    side="bottom"
+                    align="end"
+                  >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                          <Icons.heart className="text-red-400" size={18} />
+                        </div>
+                        <div>
+                          <h2 className="font-semibold text-white text-lg">Ziektedagen</h2>
+                          <select
+                            value={selectedYear}
+                            onChange={e => setSelectedYear(parseInt(e.target.value))}
+                            className="mt-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-gray-300 focus:outline-none focus:border-red-500/30"
+                          >
+                            {[2025, 2026, 2027, 2028, 2029, 2030].map(year => (
+                              <option key={year} value={year} className="bg-workx-dark">{year}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <Icons.x size={18} />
+                      </Popover.Close>
+                    </div>
+
+                    {/* Member info */}
+                    <div className="flex items-center justify-between gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/10">
+                          {getPhotoUrl(employee.name) ? (
+                            <img src={getPhotoUrl(employee.name)!} alt={employee.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-workx-lime to-workx-lime/60 flex items-center justify-center">
+                              <span className="text-workx-dark font-bold">{employee.name.charAt(0)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-white truncate">{employee.name}</p>
+                          <p className="text-sm text-gray-400 truncate">{employee.email}</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className={`text-2xl font-semibold ${getSickDays(employee.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                          {getSickDays(employee.id)}
+                        </p>
+                        <p className="text-xs text-gray-500">werkdagen</p>
+                      </div>
+                    </div>
+
+                    {/* Existing entries */}
+                    {getMemberEntries(employee.id).length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-sm text-gray-400 mb-3">Geregistreerde periodes</h3>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {getMemberEntries(employee.id).map(entry => (
+                            <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-red-500/20 transition-all">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                                  <Icons.calendar size={14} className="text-red-400" />
+                                </div>
+                                <div>
+                                  <p className="text-sm text-white">
+                                    {formatDateNL(entry.startDate)}
+                                    {entry.startDate !== entry.endDate && <span className="text-gray-400"> - {formatDateNL(entry.endDate)}</span>}
+                                  </p>
+                                  {entry.note && <p className="text-xs text-gray-500 mt-0.5">{entry.note}</p>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-red-400 font-medium">{entry.workDays} {entry.workDays === 1 ? 'dag' : 'dagen'}</span>
+                                <button
+                                  onClick={() => handleDeleteEntry(entry.id)}
+                                  disabled={isDeletingEntry === entry.id}
+                                  className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                  {isDeletingEntry === entry.id ? (
+                                    <span className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin inline-block" />
+                                  ) : (
+                                    <Icons.trash size={14} />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Add new entry */}
+                    <div className="border-t border-white/5 pt-6">
+                      <h3 className="text-sm text-gray-400 mb-4">Nieuwe ziektedag(en) toevoegen</h3>
+
+                      <div className="flex gap-2 mb-4">
+                        <button
+                          onClick={() => setEntryMode('single')}
+                          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'single' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
+                        >
+                          Enkele dag
+                        </button>
+                        <button
+                          onClick={() => setEntryMode('period')}
+                          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'period' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
+                        >
+                          Periode
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className={`grid gap-4 ${entryMode === 'period' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">{entryMode === 'single' ? 'Datum' : 'Startdatum'}</label>
+                            <input type="date" value={sickStartDate} onChange={e => setSickStartDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
+                          </div>
+                          {entryMode === 'period' && (
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Einddatum</label>
+                              <input type="date" value={sickEndDate} onChange={e => setSickEndDate(e.target.value)} min={sickStartDate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
+                          <input type="text" value={sickDaysNote} onChange={e => setSickDaysNote(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 transition-all" placeholder="Bijv. griep, rugklachten..." />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 mt-6">
+                        <Popover.Close className="flex-1 btn-secondary">Sluiten</Popover.Close>
+                        <button
+                          onClick={handleSaveSickDays}
+                          disabled={isSavingSickDays || !sickStartDate || (entryMode === 'period' && !sickEndDate)}
+                          className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {isSavingSickDays ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Icons.plus size={16} />Toevoegen</>}
+                        </button>
+                      </div>
+                    </div>
+                    <Popover.Arrow className="fill-workx-gray" />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+              <Popover.Root
+                open={showParentalModal && parentalMember?.id === employee.id}
+                onOpenChange={(open) => { if (!open) setShowParentalModal(false); else openParentalModal(employee) }}
               >
-                <Icons.users size={14} />
-                <span>{hasParentalLeave ? 'O.V. Details' : 'Verlof toevoegen'}</span>
-              </button>
+                <Popover.Trigger asChild>
+                  <button
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs transition-all"
+                  >
+                    <Icons.users size={14} />
+                    <span>{hasParentalLeave ? 'O.V. Details' : 'Verlof toevoegen'}</span>
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                    sideOffset={8}
+                    collisionPadding={16}
+                    side="bottom"
+                    align="end"
+                  >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                          <Icons.users className="text-purple-400" size={18} />
+                        </div>
+                        <h2 className="font-semibold text-white text-lg">
+                          {showAddLeaveForm ? (editingLeave ? 'Verlof bewerken' : 'Nieuw verlof') : 'Ouderschapsverlof'}
+                        </h2>
+                      </div>
+                      <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <Icons.x size={18} />
+                      </Popover.Close>
+                    </div>
+
+                    {/* Member info */}
+                    <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-purple-500/20">
+                        {getPhotoUrl(employee.name) ? (
+                          <img src={getPhotoUrl(employee.name)!} alt={employee.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-400 to-purple-400/60 flex items-center justify-center">
+                            <span className="text-workx-dark font-bold">{employee.name.charAt(0)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{employee.name}</p>
+                        <p className="text-sm text-gray-400">{employee.email}</p>
+                      </div>
+                    </div>
+
+                    {!showAddLeaveForm ? (
+                      <>
+                        {/* Existing leaves list */}
+                        <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+                          {employee.parentalLeaves.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400">
+                              <Icons.users size={32} className="mx-auto mb-3 opacity-50" />
+                              <p>Geen verlof geregistreerd</p>
+                            </div>
+                          ) : (
+                            employee.parentalLeaves.map((leave) => (
+                              <div key={leave.id} className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-purple-400 font-semibold">{leave.kindNaam || `Kind ${leave.childNumber}`}</h4>
+                                  <div className="flex items-center gap-2">
+                                    {leave.uwvAangevraagd && <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">UWV ✓</span>}
+                                    <button onClick={() => startEditLeave(leave)} className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-all">
+                                      <Icons.edit size={14} />
+                                    </button>
+                                    <button onClick={() => handleDeleteLeave(leave.id)} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
+                                      <Icons.trash size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Quick stats */}
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div>
+                                    <span className="text-gray-400">Betaald O.V.</span>
+                                    <p className="text-white">{leave.betaaldOpgenomenUren}/{leave.betaaldTotaalUren} uur</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Onbetaald O.V.</span>
+                                    <p className="text-white">{leave.onbetaaldOpgenomenDagen}/{leave.onbetaaldTotaalDagen} dagen</p>
+                                  </div>
+                                </div>
+
+                                {leave.zwangerschapsverlofStart && (
+                                  <p className="text-xs text-pink-400 mt-2">
+                                    Zwangerschapsverlof vanaf {formatDateNL(leave.zwangerschapsverlofStart)}
+                                  </p>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
+                          <Popover.Close className="flex-1 btn-secondary">Sluiten</Popover.Close>
+                          <button onClick={() => { resetLeaveForm(); setShowAddLeaveForm(true) }} className="flex-1 btn-primary flex items-center justify-center gap-2">
+                            <Icons.plus size={16} />
+                            Kind toevoegen
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Add/Edit form */}
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                          {/* Kind info */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Naam kind</label>
+                              <input
+                                type="text"
+                                value={leaveForm.kindNaam}
+                                onChange={e => setLeaveForm({ ...leaveForm, kindNaam: e.target.value })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                                placeholder="Bijv. Emma"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Geboortedatum</label>
+                              <input
+                                type="date"
+                                value={leaveForm.kindGeboorteDatum}
+                                onChange={e => setLeaveForm({ ...leaveForm, kindGeboorteDatum: e.target.value })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Uitgerekende datum (indien nog niet geboren)</label>
+                            <input
+                              type="date"
+                              value={leaveForm.uitgerekendeDatum}
+                              onChange={e => setLeaveForm({ ...leaveForm, uitgerekendeDatum: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                            />
+                          </div>
+
+                          {/* Zwangerschapsverlof */}
+                          <div className="p-4 rounded-xl bg-pink-500/5 border border-pink-500/20">
+                            <h4 className="text-pink-400 font-medium text-sm mb-3">Zwangerschaps-/bevallingsverlof (WAZO)</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">Startdatum verlof</label>
+                                <input
+                                  type="date"
+                                  value={leaveForm.zwangerschapsverlofStart}
+                                  onChange={e => setLeaveForm({ ...leaveForm, zwangerschapsverlofStart: e.target.value })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500/30"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">Status</label>
+                                <input
+                                  type="text"
+                                  value={leaveForm.zwangerschapsverlofStatus}
+                                  onChange={e => setLeaveForm({ ...leaveForm, zwangerschapsverlofStatus: e.target.value })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500/30"
+                                  placeholder="Bijv. 16 weken ontvangen"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Partner verlof */}
+                          <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                            <h4 className="text-blue-400 font-medium text-sm mb-3">Geboorteverlof partner</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">1 week geboorteverlof</label>
+                                <input
+                                  type="text"
+                                  value={leaveForm.geboorteverlofPartner}
+                                  onChange={e => setLeaveForm({ ...leaveForm, geboorteverlofPartner: e.target.value })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/30"
+                                  placeholder="Bijv. 1 week opgenomen"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">5 weken aanvullend</label>
+                                <input
+                                  type="text"
+                                  value={leaveForm.aanvullendVerlofPartner}
+                                  onChange={e => setLeaveForm({ ...leaveForm, aanvullendVerlofPartner: e.target.value })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/30"
+                                  placeholder="Bijv. 5 weken aangevraagd"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Betaald ouderschapsverlof */}
+                          <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                            <h4 className="text-purple-400 font-medium text-sm mb-3">Betaald ouderschapsverlof (9 weken, 70% UWV)</h4>
+                            <div className="grid grid-cols-2 gap-4 mb-3">
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">Totaal uren</label>
+                                <input
+                                  type="number"
+                                  value={leaveForm.betaaldTotaalUren}
+                                  onChange={e => setLeaveForm({ ...leaveForm, betaaldTotaalUren: parseFloat(e.target.value) || 0 })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">Opgenomen uren</label>
+                                <input
+                                  type="number"
+                                  value={leaveForm.betaaldOpgenomenUren}
+                                  onChange={e => setLeaveForm({ ...leaveForm, betaaldOpgenomenUren: parseFloat(e.target.value) || 0 })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Details</label>
+                              <textarea
+                                value={leaveForm.betaaldVerlofDetails}
+                                onChange={e => setLeaveForm({ ...leaveForm, betaaldVerlofDetails: e.target.value })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[60px] resize-none"
+                                placeholder="Bijv. Vanaf 1 aug elke vrijdag..."
+                              />
+                            </div>
+                          </div>
+
+                          {/* Onbetaald ouderschapsverlof */}
+                          <div className="p-4 rounded-xl bg-gray-500/5 border border-gray-500/20">
+                            <h4 className="text-gray-400 font-medium text-sm mb-3">Onbetaald ouderschapsverlof (17 weken)</h4>
+                            <div className="grid grid-cols-2 gap-4 mb-3">
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">Totaal dagen</label>
+                                <input
+                                  type="number"
+                                  value={leaveForm.onbetaaldTotaalDagen}
+                                  onChange={e => setLeaveForm({ ...leaveForm, onbetaaldTotaalDagen: parseFloat(e.target.value) || 0 })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">Opgenomen dagen</label>
+                                <input
+                                  type="number"
+                                  value={leaveForm.onbetaaldOpgenomenDagen}
+                                  onChange={e => setLeaveForm({ ...leaveForm, onbetaaldOpgenomenDagen: parseFloat(e.target.value) || 0 })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Details</label>
+                              <textarea
+                                value={leaveForm.onbetaaldVerlofDetails}
+                                onChange={e => setLeaveForm({ ...leaveForm, onbetaaldVerlofDetails: e.target.value })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30 min-h-[60px] resize-none"
+                                placeholder="Bijv. Elke maandag onbetaald..."
+                              />
+                            </div>
+                          </div>
+
+                          {/* UWV Status */}
+                          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                            <h4 className="text-gray-300 font-medium text-sm mb-3">UWV Status</h4>
+                            <div className="space-y-3">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={leaveForm.uwvAangevraagd}
+                                  onChange={e => setLeaveForm({ ...leaveForm, uwvAangevraagd: e.target.checked })}
+                                  className="w-5 h-5 rounded border-white/20 bg-white/5 text-purple-500 focus:ring-purple-500/50"
+                                />
+                                <span className="text-sm text-gray-300">Aangevraagd/ontvangen bij UWV</span>
+                              </label>
+                              <div>
+                                <label className="block text-sm text-gray-400 mb-2">UWV Details</label>
+                                <textarea
+                                  value={leaveForm.uwvDetails}
+                                  onChange={e => setLeaveForm({ ...leaveForm, uwvDetails: e.target.value })}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[60px] resize-none"
+                                  placeholder="Bijv. WAZO en 9 weken betaald O.V. ontvangen"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Notities */}
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Notities</label>
+                            <textarea
+                              value={leaveForm.note}
+                              onChange={e => setLeaveForm({ ...leaveForm, note: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[80px] resize-none"
+                              placeholder="Eventuele opmerkingen..."
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
+                          <button
+                            onClick={() => { setShowAddLeaveForm(false); setEditingLeave(null); resetLeaveForm() }}
+                            className="flex-1 btn-secondary"
+                          >
+                            Annuleren
+                          </button>
+                          <button
+                            onClick={handleSaveLeave}
+                            disabled={isSavingLeave}
+                            className="flex-1 btn-primary flex items-center justify-center gap-2"
+                          >
+                            {isSavingLeave ? (
+                              <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <Icons.check size={16} />
+                                {editingLeave ? 'Opslaan' : 'Toevoegen'}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                    <Popover.Arrow className="fill-workx-gray" />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
             </div>
           )}
         </div>
@@ -715,468 +1196,6 @@ export default function TeamPage() {
           </div>
           <h3 className="text-lg font-medium text-white mb-2">Geen teamleden gevonden</h3>
           <p className="text-gray-400">Probeer een andere zoekterm</p>
-        </div>
-      )}
-
-      {/* Sick Days Modal */}
-      {showSickDaysModal && sickDaysMember && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-16 sm:pt-20 overflow-y-auto" onClick={() => setShowSickDaysModal(false)}>
-          <div className="card p-6 w-full max-w-lg relative my-auto" onClick={e => e.stopPropagation()}>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-                  <Icons.heart className="text-red-400" size={18} />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-white text-lg">Ziektedagen</h2>
-                  <select
-                    value={selectedYear}
-                    onChange={e => setSelectedYear(parseInt(e.target.value))}
-                    className="mt-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-gray-300 focus:outline-none focus:border-red-500/30"
-                  >
-                    {[2025, 2026, 2027, 2028, 2029, 2030].map(year => (
-                      <option key={year} value={year} className="bg-workx-dark">{year}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <button onClick={() => setShowSickDaysModal(false)} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            {/* Member info */}
-            <div className="flex items-center justify-between gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
-              <div className="flex items-center gap-4 min-w-0 flex-1">
-                <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/10">
-                  {getPhotoUrl(sickDaysMember.name) ? (
-                    <img src={getPhotoUrl(sickDaysMember.name)!} alt={sickDaysMember.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-workx-lime to-workx-lime/60 flex items-center justify-center">
-                      <span className="text-workx-dark font-bold">{sickDaysMember.name.charAt(0)}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-white truncate">{sickDaysMember.name}</p>
-                  <p className="text-sm text-gray-400 truncate">{sickDaysMember.email}</p>
-                </div>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className={`text-2xl font-semibold ${getSickDays(sickDaysMember.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                  {getSickDays(sickDaysMember.id)}
-                </p>
-                <p className="text-xs text-gray-500">werkdagen</p>
-              </div>
-            </div>
-
-            {/* Existing entries */}
-            {getMemberEntries(sickDaysMember.id).length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm text-gray-400 mb-3">Geregistreerde periodes</h3>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {getMemberEntries(sickDaysMember.id).map(entry => (
-                    <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-red-500/20 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                          <Icons.calendar size={14} className="text-red-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-white">
-                            {formatDateNL(entry.startDate)}
-                            {entry.startDate !== entry.endDate && <span className="text-gray-400"> - {formatDateNL(entry.endDate)}</span>}
-                          </p>
-                          {entry.note && <p className="text-xs text-gray-500 mt-0.5">{entry.note}</p>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-red-400 font-medium">{entry.workDays} {entry.workDays === 1 ? 'dag' : 'dagen'}</span>
-                        <button
-                          onClick={() => handleDeleteEntry(entry.id)}
-                          disabled={isDeletingEntry === entry.id}
-                          className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          {isDeletingEntry === entry.id ? (
-                            <span className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin inline-block" />
-                          ) : (
-                            <Icons.trash size={14} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Add new entry */}
-            <div className="border-t border-white/5 pt-6">
-              <h3 className="text-sm text-gray-400 mb-4">Nieuwe ziektedag(en) toevoegen</h3>
-
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => setEntryMode('single')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'single' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
-                >
-                  Enkele dag
-                </button>
-                <button
-                  onClick={() => setEntryMode('period')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'period' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
-                >
-                  Periode
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className={`grid gap-4 ${entryMode === 'period' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">{entryMode === 'single' ? 'Datum' : 'Startdatum'}</label>
-                    <input type="date" value={sickStartDate} onChange={e => setSickStartDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
-                  </div>
-                  {entryMode === 'period' && (
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Einddatum</label>
-                      <input type="date" value={sickEndDate} onChange={e => setSickEndDate(e.target.value)} min={sickStartDate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
-                  <input type="text" value={sickDaysNote} onChange={e => setSickDaysNote(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 transition-all" placeholder="Bijv. griep, rugklachten..." />
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowSickDaysModal(false)} className="flex-1 btn-secondary">Sluiten</button>
-                <button
-                  onClick={handleSaveSickDays}
-                  disabled={isSavingSickDays || !sickStartDate || (entryMode === 'period' && !sickEndDate)}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isSavingSickDays ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Icons.plus size={16} />Toevoegen</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Parental Leave Modal */}
-      {showParentalModal && parentalMember && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-8 sm:pt-12 overflow-y-auto" onClick={() => setShowParentalModal(false)}>
-          <div className="card p-6 w-full max-w-2xl relative my-4" onClick={e => e.stopPropagation()}>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                  <Icons.users className="text-purple-400" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">
-                  {showAddLeaveForm ? (editingLeave ? 'Verlof bewerken' : 'Nieuw verlof') : 'Ouderschapsverlof'}
-                </h2>
-              </div>
-              <button onClick={() => setShowParentalModal(false)} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            {/* Member info */}
-            <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
-              <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-purple-500/20">
-                {getPhotoUrl(parentalMember.name) ? (
-                  <img src={getPhotoUrl(parentalMember.name)!} alt={parentalMember.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-400 to-purple-400/60 flex items-center justify-center">
-                    <span className="text-workx-dark font-bold">{parentalMember.name.charAt(0)}</span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="font-medium text-white">{parentalMember.name}</p>
-                <p className="text-sm text-gray-400">{parentalMember.email}</p>
-              </div>
-            </div>
-
-            {!showAddLeaveForm ? (
-              <>
-                {/* Existing leaves list */}
-                <div className="space-y-4 max-h-[50vh] overflow-y-auto">
-                  {parentalMember.parentalLeaves.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <Icons.users size={32} className="mx-auto mb-3 opacity-50" />
-                      <p>Geen verlof geregistreerd</p>
-                    </div>
-                  ) : (
-                    parentalMember.parentalLeaves.map((leave) => (
-                      <div key={leave.id} className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-purple-400 font-semibold">{leave.kindNaam || `Kind ${leave.childNumber}`}</h4>
-                          <div className="flex items-center gap-2">
-                            {leave.uwvAangevraagd && <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">UWV ✓</span>}
-                            <button onClick={() => startEditLeave(leave)} className="p-1.5 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-all">
-                              <Icons.edit size={14} />
-                            </button>
-                            <button onClick={() => handleDeleteLeave(leave.id)} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all">
-                              <Icons.trash size={14} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Quick stats */}
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="text-gray-400">Betaald O.V.</span>
-                            <p className="text-white">{leave.betaaldOpgenomenUren}/{leave.betaaldTotaalUren} uur</p>
-                          </div>
-                          <div>
-                            <span className="text-gray-400">Onbetaald O.V.</span>
-                            <p className="text-white">{leave.onbetaaldOpgenomenDagen}/{leave.onbetaaldTotaalDagen} dagen</p>
-                          </div>
-                        </div>
-
-                        {leave.zwangerschapsverlofStart && (
-                          <p className="text-xs text-pink-400 mt-2">
-                            Zwangerschapsverlof vanaf {formatDateNL(leave.zwangerschapsverlofStart)}
-                          </p>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
-                  <button onClick={() => setShowParentalModal(false)} className="flex-1 btn-secondary">Sluiten</button>
-                  <button onClick={() => { resetLeaveForm(); setShowAddLeaveForm(true) }} className="flex-1 btn-primary flex items-center justify-center gap-2">
-                    <Icons.plus size={16} />
-                    Kind toevoegen
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Add/Edit form */}
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                  {/* Kind info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Naam kind</label>
-                      <input
-                        type="text"
-                        value={leaveForm.kindNaam}
-                        onChange={e => setLeaveForm({ ...leaveForm, kindNaam: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
-                        placeholder="Bijv. Emma"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Geboortedatum</label>
-                      <input
-                        type="date"
-                        value={leaveForm.kindGeboorteDatum}
-                        onChange={e => setLeaveForm({ ...leaveForm, kindGeboorteDatum: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Uitgerekende datum (indien nog niet geboren)</label>
-                    <input
-                      type="date"
-                      value={leaveForm.uitgerekendeDatum}
-                      onChange={e => setLeaveForm({ ...leaveForm, uitgerekendeDatum: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
-                    />
-                  </div>
-
-                  {/* Zwangerschapsverlof */}
-                  <div className="p-4 rounded-xl bg-pink-500/5 border border-pink-500/20">
-                    <h4 className="text-pink-400 font-medium text-sm mb-3">Zwangerschaps-/bevallingsverlof (WAZO)</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Startdatum verlof</label>
-                        <input
-                          type="date"
-                          value={leaveForm.zwangerschapsverlofStart}
-                          onChange={e => setLeaveForm({ ...leaveForm, zwangerschapsverlofStart: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Status</label>
-                        <input
-                          type="text"
-                          value={leaveForm.zwangerschapsverlofStatus}
-                          onChange={e => setLeaveForm({ ...leaveForm, zwangerschapsverlofStatus: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-500/30"
-                          placeholder="Bijv. 16 weken ontvangen"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Partner verlof */}
-                  <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
-                    <h4 className="text-blue-400 font-medium text-sm mb-3">Geboorteverlof partner</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">1 week geboorteverlof</label>
-                        <input
-                          type="text"
-                          value={leaveForm.geboorteverlofPartner}
-                          onChange={e => setLeaveForm({ ...leaveForm, geboorteverlofPartner: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/30"
-                          placeholder="Bijv. 1 week opgenomen"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">5 weken aanvullend</label>
-                        <input
-                          type="text"
-                          value={leaveForm.aanvullendVerlofPartner}
-                          onChange={e => setLeaveForm({ ...leaveForm, aanvullendVerlofPartner: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/30"
-                          placeholder="Bijv. 5 weken aangevraagd"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Betaald ouderschapsverlof */}
-                  <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
-                    <h4 className="text-purple-400 font-medium text-sm mb-3">Betaald ouderschapsverlof (9 weken, 70% UWV)</h4>
-                    <div className="grid grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Totaal uren</label>
-                        <input
-                          type="number"
-                          value={leaveForm.betaaldTotaalUren}
-                          onChange={e => setLeaveForm({ ...leaveForm, betaaldTotaalUren: parseFloat(e.target.value) || 0 })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Opgenomen uren</label>
-                        <input
-                          type="number"
-                          value={leaveForm.betaaldOpgenomenUren}
-                          onChange={e => setLeaveForm({ ...leaveForm, betaaldOpgenomenUren: parseFloat(e.target.value) || 0 })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Details</label>
-                      <textarea
-                        value={leaveForm.betaaldVerlofDetails}
-                        onChange={e => setLeaveForm({ ...leaveForm, betaaldVerlofDetails: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[60px] resize-none"
-                        placeholder="Bijv. Vanaf 1 aug elke vrijdag..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Onbetaald ouderschapsverlof */}
-                  <div className="p-4 rounded-xl bg-gray-500/5 border border-gray-500/20">
-                    <h4 className="text-gray-400 font-medium text-sm mb-3">Onbetaald ouderschapsverlof (17 weken)</h4>
-                    <div className="grid grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Totaal dagen</label>
-                        <input
-                          type="number"
-                          value={leaveForm.onbetaaldTotaalDagen}
-                          onChange={e => setLeaveForm({ ...leaveForm, onbetaaldTotaalDagen: parseFloat(e.target.value) || 0 })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Opgenomen dagen</label>
-                        <input
-                          type="number"
-                          value={leaveForm.onbetaaldOpgenomenDagen}
-                          onChange={e => setLeaveForm({ ...leaveForm, onbetaaldOpgenomenDagen: parseFloat(e.target.value) || 0 })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Details</label>
-                      <textarea
-                        value={leaveForm.onbetaaldVerlofDetails}
-                        onChange={e => setLeaveForm({ ...leaveForm, onbetaaldVerlofDetails: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30 min-h-[60px] resize-none"
-                        placeholder="Bijv. Elke maandag onbetaald..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* UWV Status */}
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <h4 className="text-gray-300 font-medium text-sm mb-3">UWV Status</h4>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={leaveForm.uwvAangevraagd}
-                          onChange={e => setLeaveForm({ ...leaveForm, uwvAangevraagd: e.target.checked })}
-                          className="w-5 h-5 rounded border-white/20 bg-white/5 text-purple-500 focus:ring-purple-500/50"
-                        />
-                        <span className="text-sm text-gray-300">Aangevraagd/ontvangen bij UWV</span>
-                      </label>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">UWV Details</label>
-                        <textarea
-                          value={leaveForm.uwvDetails}
-                          onChange={e => setLeaveForm({ ...leaveForm, uwvDetails: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[60px] resize-none"
-                          placeholder="Bijv. WAZO en 9 weken betaald O.V. ontvangen"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Notities */}
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Notities</label>
-                    <textarea
-                      value={leaveForm.note}
-                      onChange={e => setLeaveForm({ ...leaveForm, note: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30 min-h-[80px] resize-none"
-                      placeholder="Eventuele opmerkingen..."
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
-                  <button
-                    onClick={() => { setShowAddLeaveForm(false); setEditingLeave(null); resetLeaveForm() }}
-                    className="flex-1 btn-secondary"
-                  >
-                    Annuleren
-                  </button>
-                  <button
-                    onClick={handleSaveLeave}
-                    disabled={isSavingLeave}
-                    className="flex-1 btn-primary flex items-center justify-center gap-2"
-                  >
-                    {isSavingLeave ? (
-                      <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Icons.check size={16} />
-                        {editingLeave ? 'Opslaan' : 'Toevoegen'}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
         </div>
       )}
     </div>

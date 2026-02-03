@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import TimePicker from '@/components/ui/TimePicker'
@@ -17,10 +18,8 @@ interface CalendarEvent {
   isAllDay: boolean
   location: string | null
   color: string
-  category: 'GENERAL' | 'MEETING' | 'DEADLINE' | 'TRAINING' | 'SOCIAL' | 'HOLIDAY' | 'VACATION' | 'ABSENCE'
+  category: 'GENERAL' | 'MEETING' | 'DEADLINE' | 'TRAINING' | 'SOCIAL'
   createdBy: { id: string; name: string }
-  isVacation?: boolean // Flag for vacation events from API
-  vacationId?: string  // Original vacation request ID
 }
 
 interface TeamMember {
@@ -54,9 +53,6 @@ const categoryConfig = {
   DEADLINE: { label: 'Deadline', icon: Icons.flag, color: '#f87171' },
   TRAINING: { label: 'Training', icon: Icons.award, color: '#a78bfa' },
   SOCIAL: { label: 'Sociaal', icon: Icons.coffee, color: '#34d399' },
-  HOLIDAY: { label: 'Feestdag', icon: Icons.star, color: '#fbbf24' },
-  VACATION: { label: 'Vakantie', icon: Icons.sun, color: '#22c55e' },
-  ABSENCE: { label: 'Afwezig', icon: Icons.userMinus, color: '#f97316' },
 }
 
 export default function AgendaPage() {
@@ -87,17 +83,40 @@ export default function AgendaPage() {
   }
   const [location, setLocation] = useState('')
   const [category, setCategory] = useState<CalendarEvent['category']>('GENERAL')
-  const [recurring, setRecurring] = useState<'none' | 'month' | 'year'>('none')
 
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [eventToDelete, setEventToDelete] = useState<string | null>(null)
 
+  // Day detail modal state (for week/month view on mobile and desktop)
+  const [showDayModal, setShowDayModal] = useState(false)
+
+  // Modal positioning - capture click Y to position modal at click height
+  const [modalClickY, setModalClickY] = useState<number | undefined>(undefined)
+
+  // Handle day click - open modal for week/month view
+  const handleDayClick = (date: Date, e?: React.MouseEvent) => {
+    setSelectedDate(date)
+    if (e) setModalClickY(e.clientY)
+    if (currentView !== 'day') {
+      setShowDayModal(true)
+    }
+  }
+
   // Fetch birthdays from database
   useEffect(() => {
     fetch('/api/birthdays')
       .then(res => res.ok ? res.json() : [])
-      .then(data => setTeamBirthdays(data))
+      .then(data => {
+        // Transform birthDate from ISO format to MM-DD format
+        const transformed = data.map((u: any) => ({
+          ...u,
+          birthDate: u.birthDate
+            ? `${String(new Date(u.birthDate).getMonth() + 1).padStart(2, '0')}-${String(new Date(u.birthDate).getDate()).padStart(2, '0')}`
+            : null
+        }))
+        setTeamBirthdays(transformed)
+      })
       .catch(() => setTeamBirthdays([]))
   }, [])
 
@@ -176,8 +195,8 @@ export default function AgendaPage() {
     try {
       const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
       const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
-      // Include vacations in the calendar view
-      const res = await fetch(`/api/calendar?startDate=${startOfMonth.toISOString()}&endDate=${endOfMonth.toISOString()}&includeVacations=true`)
+      // Fetch calendar events (vacations are handled separately in Vakantie&Verlof)
+      const res = await fetch(`/api/calendar?startDate=${startOfMonth.toISOString()}&endDate=${endOfMonth.toISOString()}`)
       if (res.ok) setEvents(await res.json())
     } catch (error) {
       // Demo mode - use empty array
@@ -190,14 +209,15 @@ export default function AgendaPage() {
   const resetForm = () => {
     setTitle(''); setDescription(''); setStartDate(null); setStartTime('09:00')
     setEndDate(null); setEndTime('10:00'); setIsAllDay(false); setLocation('')
-    setCategory('GENERAL'); setRecurring('none'); setEditingEvent(null); setShowForm(false)
+    setCategory('GENERAL'); setEditingEvent(null); setShowForm(false); setModalClickY(undefined)
   }
 
-  const handleAddEvent = (date?: Date) => {
+  const handleAddEvent = (date?: Date, e?: React.MouseEvent) => {
     if (date) {
       setStartDate(date)
       setEndDate(date)
     }
+    if (e) setModalClickY(e.clientY)
     setShowForm(true)
   }
 
@@ -213,11 +233,6 @@ export default function AgendaPage() {
   }
 
   const handleEdit = (event: CalendarEvent) => {
-    // Vacation events can't be edited from agenda - redirect to vakanties page
-    if (event.isVacation) {
-      window.location.href = '/dashboard/vakanties'
-      return
-    }
     setTitle(event.title)
     setDescription(event.description || '')
     setStartDate(new Date(event.startTime))
@@ -236,66 +251,25 @@ export default function AgendaPage() {
     if (!title || !startDate || !endDate) return toast.error('Vul alle verplichte velden in')
 
     try {
-      // Calculate all dates for recurring events
-      const datesToCreate: Date[] = []
+      const startDateStr = formatDateForAPI(startDate)
+      const endDateStr = formatDateForAPI(endDate)
 
-      if (recurring !== 'none' && category === 'ABSENCE') {
-        // Get all occurrences of this weekday for month/year
-        const dayOfWeek = startDate.getDay()
-        const startYear = startDate.getFullYear()
-        const startMonth = startDate.getMonth()
+      const startDateTime = isAllDay ? new Date(startDateStr + 'T00:00:00') : new Date(startDateStr + 'T' + startTime)
+      const endDateTime = isAllDay ? new Date(endDateStr + 'T23:59:59') : new Date(endDateStr + 'T' + endTime)
 
-        let endPeriod: Date
-        if (recurring === 'month') {
-          // End of current month
-          endPeriod = new Date(startYear, startMonth + 1, 0)
-        } else {
-          // End of year
-          endPeriod = new Date(startYear, 11, 31)
-        }
+      const res = await fetch(editingEvent ? `/api/calendar/${editingEvent.id}` : '/api/calendar', {
+        method: editingEvent ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title, description: description || null, startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(), isAllDay, location: location || null,
+          color: categoryConfig[category].color, category,
+        }),
+      })
 
-        // Find all matching weekdays from startDate to endPeriod
-        const current = new Date(startDate)
-        while (current <= endPeriod) {
-          datesToCreate.push(new Date(current))
-          current.setDate(current.getDate() + 7) // Next week same day
-        }
-      } else {
-        datesToCreate.push(startDate)
-      }
+      if (!res.ok) throw new Error()
 
-      // Create events for all dates
-      let successCount = 0
-      for (const date of datesToCreate) {
-        const startDateStr = formatDateForAPI(date)
-        // For multi-day events (or when editing), use actual endDate; for recurring single-day events, use same date
-        const endDateStr = (editingEvent || datesToCreate.length === 1) ? formatDateForAPI(endDate) : startDateStr
-
-        const startDateTime = isAllDay ? new Date(startDateStr + 'T00:00:00') : new Date(startDateStr + 'T' + startTime)
-        const endDateTime = isAllDay ? new Date(endDateStr + 'T23:59:59') : new Date(endDateStr + 'T' + endTime)
-
-        const res = await fetch(editingEvent ? `/api/calendar/${editingEvent.id}` : '/api/calendar', {
-          method: editingEvent ? 'PATCH' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title, description: description || null, startTime: startDateTime.toISOString(),
-            endTime: endDateTime.toISOString(), isAllDay, location: location || null,
-            color: categoryConfig[category].color, category,
-          }),
-        })
-        if (res.ok) successCount++
-
-        // Only create one event when editing
-        if (editingEvent) break
-      }
-
-      if (successCount === 0) throw new Error()
-
-      if (datesToCreate.length > 1) {
-        toast.success(`${successCount} afwezigheden aangemaakt`)
-      } else {
-        toast.success(editingEvent ? 'Event bijgewerkt' : 'Event aangemaakt')
-      }
+      toast.success(editingEvent ? 'Event bijgewerkt' : 'Event aangemaakt')
       resetForm()
       fetchEvents()
     } catch (error) {
@@ -379,11 +353,11 @@ export default function AgendaPage() {
           <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Gedeelde team kalender, events en verjaardagen</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => handleBookRoom()} className="btn-secondary flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base px-2.5 sm:px-4 py-2 sm:py-2.5">
+          <button onClick={(e) => { setModalClickY(e.clientY); handleBookRoom() }} className="btn-secondary flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base px-2.5 sm:px-4 py-2 sm:py-2.5">
             <span className="text-sm sm:text-base">🏢</span>
             <span className="hidden xs:inline">Vergaderruimte</span>
           </button>
-          <button onClick={() => handleAddEvent()} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base px-2.5 sm:px-4 py-2 sm:py-2.5">
+          <button onClick={(e) => { setModalClickY(e.clientY); handleAddEvent() }} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base px-2.5 sm:px-4 py-2 sm:py-2.5">
             <Icons.plus size={14} className="sm:w-4 sm:h-4" />
             <span className="hidden xs:inline">Nieuw</span>
           </button>
@@ -562,13 +536,18 @@ export default function AgendaPage() {
                   const dayOfWeek = day.getDay()
                   const diff = i - ((dayOfWeek + 6) % 7) // Adjust to start from Monday
                   day.setDate(day.getDate() + diff)
+                  const clickDate = new Date(day) // Create new date instance for closure
                   return (
-                    <div key={i} className={`text-center py-2 ${isToday(day) ? 'text-workx-lime' : 'text-gray-400'}`}>
+                    <button
+                      key={i}
+                      onClick={(e) => handleDayClick(clickDate, e)}
+                      className={`text-center py-2 hover:bg-white/5 rounded-lg transition-colors ${isToday(day) ? 'text-workx-lime' : 'text-gray-400'}`}
+                    >
                       <div className="text-xs font-medium">{['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'][i]}</div>
                       <div className={`text-lg font-semibold ${isToday(day) ? 'bg-workx-lime text-black w-8 h-8 rounded-full flex items-center justify-center mx-auto' : ''}`}>
                         {day.getDate()}
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -632,60 +611,171 @@ export default function AgendaPage() {
                   const isSelected = selectedDate?.toDateString() === day.date.toDateString()
                   const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6
                   const hasBirthday = dayBirthdays.length > 0
+                  const isPopoverOpen = showDayModal && selectedDate?.toDateString() === day.date.toDateString()
 
                   return (
-                    <button
+                    <Popover.Root
                       key={index}
-                      onClick={() => setSelectedDate(day.date)}
-                      className={`relative p-2 min-h-[90px] rounded-xl text-left transition-all ${
-                        day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
-                      } ${isSelected ? 'bg-white/5 ring-1 ring-workx-lime/50 shadow-lg shadow-workx-lime/5' : ''} ${
-                        isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''
-                      } ${isWeekend && day.isCurrentMonth && !isSelected && !isToday(day.date) ? 'bg-white/[0.02]' : ''} ${
-                        hasBirthday && day.isCurrentMonth ? 'ring-1 ring-pink-500/30' : ''
-                      }`}
+                      open={isPopoverOpen}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          setSelectedDate(day.date)
+                          setShowDayModal(true)
+                        } else {
+                          setShowDayModal(false)
+                        }
+                      }}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-medium ${
-                          isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-gray-400' : 'text-gray-500'
-                        }`}>
-                          {day.date.getDate()}
-                        </span>
-                        {hasBirthday && day.isCurrentMonth && (
-                          <span className="text-sm">🎂</span>
-                        )}
-                      </div>
-
-                      <div className="mt-1.5 space-y-1">
-                        {/* Show birthdays first */}
-                        {dayBirthdays.map((person, i) => (
-                          <div
-                            key={`bday-${i}`}
-                            className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md truncate font-medium bg-pink-500/20 text-pink-400"
-                          >
-                            <span>🎂</span>
-                            <span className="truncate">{person.name.split(' ')[0]}</span>
+                      <Popover.Trigger asChild>
+                        <button
+                          className={`relative p-2 min-h-[90px] rounded-xl text-left transition-all ${
+                            day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
+                          } ${isSelected ? 'bg-white/5 ring-1 ring-workx-lime/50 shadow-lg shadow-workx-lime/5' : ''} ${
+                            isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''
+                          } ${isWeekend && day.isCurrentMonth && !isSelected && !isToday(day.date) ? 'bg-white/[0.02]' : ''} ${
+                            hasBirthday && day.isCurrentMonth ? 'ring-1 ring-pink-500/30' : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`text-sm font-medium ${
+                              isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-gray-400' : 'text-gray-500'
+                            }`}>
+                              {day.date.getDate()}
+                            </span>
+                            {hasBirthday && day.isCurrentMonth && (
+                              <span className="text-sm">🎂</span>
+                            )}
                           </div>
-                        ))}
-                        {/* Then show events */}
-                        {dayEvents.slice(0, dayBirthdays.length > 0 ? 1 : 2).map((event) => {
-                          const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
-                          return (
-                            <div
-                              key={event.id}
-                              className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md truncate font-medium"
-                              style={{ backgroundColor: event.color + '20', color: event.color }}
-                            >
-                              <IconComponent size={10} />
-                              <span className="truncate">{isRoomBooking(event) ? formatRoomBookingTitle(event, true) : event.title}</span>
+
+                          <div className="mt-1.5 space-y-1">
+                            {/* Show birthdays first */}
+                            {dayBirthdays.map((person, i) => (
+                              <div
+                                key={`bday-${i}`}
+                                className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md truncate font-medium bg-pink-500/20 text-pink-400"
+                              >
+                                <span>🎂</span>
+                                <span className="truncate">{person.name.split(' ')[0]}</span>
+                              </div>
+                            ))}
+                            {/* Then show events */}
+                            {dayEvents.slice(0, dayBirthdays.length > 0 ? 1 : 2).map((event) => {
+                              const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
+                              return (
+                                <div
+                                  key={event.id}
+                                  className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md truncate font-medium"
+                                  style={{ backgroundColor: event.color + '20', color: event.color }}
+                                >
+                                  <IconComponent size={10} />
+                                  <span className="truncate">{isRoomBooking(event) ? formatRoomBookingTitle(event, true) : event.title}</span>
+                                </div>
+                              )
+                            })}
+                            {(dayEvents.length + dayBirthdays.length) > 2 && (
+                              <span className="text-xs text-gray-400 pl-1 font-medium">+{dayEvents.length + dayBirthdays.length - 2} meer</span>
+                            )}
+                          </div>
+                        </button>
+                      </Popover.Trigger>
+
+                      <Popover.Portal>
+                        <Popover.Content
+                          className="w-[320px] sm:w-[380px] bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[70vh] overflow-hidden flex flex-col z-50 animate-modal-in"
+                          sideOffset={8}
+                          collisionPadding={16}
+                          side="bottom"
+                          align="center"
+                        >
+                          {/* Header */}
+                          <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                            <div>
+                              <h2 className="font-semibold text-white text-base capitalize">
+                                {day.date.toLocaleDateString('nl-NL', { weekday: 'long' })}
+                              </h2>
+                              <p className="text-sm text-gray-400">
+                                {day.date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}
+                              </p>
                             </div>
-                          )
-                        })}
-                        {(dayEvents.length + dayBirthdays.length) > 2 && (
-                          <span className="text-xs text-gray-400 pl-1 font-medium">+{dayEvents.length + dayBirthdays.length - 2} meer</span>
-                        )}
-                      </div>
-                    </button>
+                            <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                              <Icons.x size={18} />
+                            </Popover.Close>
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-4 overflow-y-auto flex-1 space-y-2">
+                            {/* Birthdays */}
+                            {dayBirthdays.map((person, i) => (
+                              <div
+                                key={`popover-bday-${i}`}
+                                className="p-3 rounded-xl bg-gradient-to-r from-pink-500/10 to-pink-600/5 border border-pink-500/20"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-lg bg-pink-500/20 flex items-center justify-center">
+                                    <span className="text-base">🎂</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-sm font-medium text-pink-400">{person.name}</span>
+                                    <p className="text-xs text-gray-400">Verjaardag!</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Events */}
+                            {dayEvents.length === 0 && dayBirthdays.length === 0 ? (
+                              <div className="py-6 text-center">
+                                <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mx-auto mb-3">
+                                  <Icons.calendar className="text-purple-400/50" size={20} />
+                                </div>
+                                <p className="text-sm text-gray-400">Geen events</p>
+                              </div>
+                            ) : (
+                              dayEvents.map((event) => {
+                                const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
+                                return (
+                                  <div
+                                    key={event.id}
+                                    onClick={() => { setShowDayModal(false); handleEdit(event) }}
+                                    className="p-3 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border border-white/5"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                                        style={{ backgroundColor: event.color + '20' }}
+                                      >
+                                        <IconComponent size={14} style={{ color: event.color }} />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors block truncate">
+                                          {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
+                                        </span>
+                                        <p className="text-xs text-gray-400">
+                                          {!event.isAllDay ? `${formatTime(event.startTime)} - ${formatTime(event.endTime)}` : 'Hele dag'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })
+                            )}
+                          </div>
+
+                          {/* Footer */}
+                          <div className="p-3 border-t border-white/5">
+                            <button
+                              onClick={() => { setShowDayModal(false); handleAddEvent(day.date) }}
+                              className="w-full btn-primary py-2.5 text-sm flex items-center justify-center gap-2"
+                            >
+                              <Icons.plus size={14} />
+                              Event toevoegen
+                            </button>
+                          </div>
+
+                          <Popover.Arrow className="fill-workx-gray" />
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
                   )
                 })}
               </div>
@@ -696,7 +786,6 @@ export default function AgendaPage() {
           <div className="px-5 pb-5 flex flex-wrap gap-4 border-t border-white/5 pt-4">
             {Object.entries(categoryConfig).map(([key, config]) => {
               const IconComponent = config.icon
-              const isVacation = key === 'VACATION'
               return (
                 <div key={key} className="flex items-center gap-2 text-xs text-gray-400">
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: config.color + '30' }}>
@@ -704,7 +793,6 @@ export default function AgendaPage() {
                   </div>
                   <IconComponent size={12} style={{ color: config.color }} />
                   <span>{config.label}</span>
-                  {isVacation && <span className="text-xs text-green-400/60">(uit verlof)</span>}
                 </div>
               )
             })}
@@ -765,14 +853,11 @@ export default function AgendaPage() {
                   <>
                     {getEventsForDate(selectedDate).map((event, index) => {
                       const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
-                      const isVacation = event.isVacation || event.category === 'VACATION'
                       return (
                         <div
                           key={event.id}
                           onClick={() => handleEdit(event)}
-                          className={`p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border hover:border-white/10 ${
-                            isVacation ? 'border-green-500/20' : 'border-white/5'
-                          }`}
+                          className="p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border border-white/5 hover:border-white/10"
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
                           <div className="flex items-start justify-between">
@@ -788,18 +873,16 @@ export default function AgendaPage() {
                                   {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
                                 </span>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                  {isRoomBooking(event) ? 'Vergaderruimte gereserveerd' : (categoryConfig[event.category]?.label || 'Vakantie')}
+                                  {isRoomBooking(event) ? 'Vergaderruimte gereserveerd' : categoryConfig[event.category]?.label}
                                 </p>
                               </div>
                             </div>
-                            {!isVacation && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
-                                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                              >
-                                <Icons.trash size={14} />
-                              </button>
-                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
+                              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                            >
+                              <Icons.trash size={14} />
+                            </button>
                           </div>
                           <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-3">
                             {!event.isAllDay ? (
@@ -817,12 +900,6 @@ export default function AgendaPage() {
                               <p className="text-xs text-gray-400 flex items-center gap-1.5">
                                 <Icons.mapPin size={12} />
                                 {event.location}
-                              </p>
-                            )}
-                            {isVacation && (
-                              <p className="text-xs text-green-400 flex items-center gap-1.5">
-                                <Icons.arrowRight size={12} />
-                                Bekijk in vakanties
                               </p>
                             )}
                           </div>
@@ -851,11 +928,13 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Event form modal */}
+      {/* Event form modal - positioned near click */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={resetForm}>
+        <>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={resetForm} />
           <div
-            className="bg-workx-gray rounded-2xl p-6 w-full max-w-lg border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="fixed z-50 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-lg bg-workx-gray rounded-2xl p-6 border border-white/10 shadow-2xl max-h-[80vh] overflow-y-auto animate-modal-in"
+            style={{ top: `clamp(16px, ${modalClickY ? modalClickY - 20 : 100}px, calc(100vh - 500px))` }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -892,9 +971,7 @@ export default function AgendaPage() {
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Categorie</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(categoryConfig)
-                    .filter(([key]) => key !== 'VACATION') // VACATION is only for imported vacation events
-                    .map(([key, config]) => {
+                  {Object.entries(categoryConfig).map(([key, config]) => {
                     const IconComponent = config.icon
                     return (
                       <button
@@ -927,41 +1004,6 @@ export default function AgendaPage() {
                   <p className="text-xs text-gray-400 mt-0.5">Event duurt de hele dag</p>
                 </div>
               </label>
-
-              {/* Recurring option - only for ABSENCE category */}
-              {category === 'ABSENCE' && (
-                <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
-                  <label className="block text-sm text-orange-400 font-medium mb-3">
-                    <Icons.refresh size={14} className="inline mr-2" />
-                    Herhalen (parttime dag)
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: 'none', label: 'Eenmalig' },
-                      { value: 'month', label: 'Hele maand' },
-                      { value: 'year', label: 'Heel jaar' },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setRecurring(option.value as 'none' | 'month' | 'year')}
-                        className={`px-3 py-2 rounded-lg text-sm transition-all ${
-                          recurring === option.value
-                            ? 'bg-orange-500 text-white font-medium'
-                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                  {recurring !== 'none' && startDate && (
-                    <p className="text-xs text-orange-400/70 mt-3">
-                      Elke {startDate.toLocaleDateString('nl-NL', { weekday: 'long' })} t/m {recurring === 'month' ? 'einde maand' : 'einde jaar'}
-                    </p>
-                  )}
-                </div>
-              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1109,6 +1151,139 @@ export default function AgendaPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </>
+      )}
+
+      {/* Day Detail Modal - only for week view (month view uses Popover) */}
+      {showDayModal && selectedDate && currentView === 'week' && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => { setShowDayModal(false); setModalClickY(undefined) }}
+        >
+          <div
+            className="w-full max-w-md bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[80vh] overflow-hidden flex flex-col animate-modal-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-white text-lg capitalize">
+                  {selectedDate.toLocaleDateString('nl-NL', { weekday: 'long' })}
+                </h2>
+                <p className="text-sm text-gray-400">
+                  {selectedDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDayModal(false)}
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-3">
+              {/* Birthdays */}
+              {getBirthdaysForDate(selectedDate).map((person, i) => (
+                <div
+                  key={`modal-bday-${i}`}
+                  className="p-4 rounded-xl bg-gradient-to-r from-pink-500/10 to-pink-600/5 border border-pink-500/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
+                      <span className="text-lg">🎂</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-pink-400">{person.name}</span>
+                      <p className="text-xs text-gray-400 mt-0.5">Verjaardag!</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Events */}
+              {getEventsForDate(selectedDate).length === 0 && getBirthdaysForDate(selectedDate).length === 0 ? (
+                <div className="py-10 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
+                    <Icons.calendar className="text-purple-400/50" size={24} />
+                  </div>
+                  <p className="text-sm text-gray-400 mb-4">Geen events op deze dag</p>
+                </div>
+              ) : (
+                getEventsForDate(selectedDate).map((event, index) => {
+                  const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
+                  return (
+                    <div
+                      key={event.id}
+                      onClick={() => { setShowDayModal(false); handleEdit(event) }}
+                      className="p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border border-white/5 hover:border-white/10"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center"
+                            style={{ backgroundColor: event.color + '20' }}
+                          >
+                            <IconComponent size={18} style={{ color: event.color }} />
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
+                              {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
+                            </span>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {isRoomBooking(event) ? 'Vergaderruimte gereserveerd' : (categoryConfig[event.category]?.label || 'Event')}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowDayModal(false); handleDeleteClick(event.id) }}
+                          className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Icons.trash size={14} />
+                        </button>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-3">
+                        {!event.isAllDay ? (
+                          <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                            <Icons.clock size={12} />
+                            {formatTime(event.startTime)} - {formatTime(event.endTime)}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                            <Icons.sun size={12} />
+                            Hele dag
+                          </p>
+                        )}
+                        {event.location && (
+                          <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                            <Icons.mapPin size={12} />
+                            {event.location}
+                          </p>
+                        )}
+                        {event.description && (
+                          <p className="text-xs text-gray-400 w-full mt-1">
+                            {event.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Footer with action button */}
+            <div className="p-4 border-t border-white/5">
+              <button
+                onClick={() => { setShowDayModal(false); setModalClickY(undefined); handleAddEvent(selectedDate) }}
+                className="w-full btn-primary py-3 flex items-center justify-center gap-2"
+              >
+                <Icons.plus size={16} />
+                Event toevoegen
+              </button>
+            </div>
           </div>
         </div>
       )}

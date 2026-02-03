@@ -45,20 +45,22 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' }
     })
 
-    // Format response - filter for current year
+    // Format response - show existing balance regardless of year (prevents data loss at year boundaries)
     const balances = users.map(user => {
-      const balance = user.vacationBalance?.year === currentYear ? user.vacationBalance : null
+      const balance = user.vacationBalance
       const isPartner = user.role === 'PARTNER'
 
       return {
         userId: user.id,
         personName: user.name,
         isPartner,
+        year: balance?.year || currentYear,
         overgedragenVorigJaar: balance?.overgedragenVorigJaar || 0,
-        opbouwLopendJaar: balance?.opbouwLopendJaar || (isPartner ? 0 : 25),
+        opbouwLopendJaar: balance?.opbouwLopendJaar ?? (isPartner ? 0 : 25),
         bijgekocht: balance?.bijgekocht || 0,
         opgenomenLopendJaar: balance?.opgenomenLopendJaar || 0,
         note: isPartner ? 'Partner' : '',
+        needsYearUpdate: balance ? balance.year !== currentYear : false,
       }
     })
 

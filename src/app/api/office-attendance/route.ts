@@ -19,6 +19,11 @@ export async function GET(request: Request) {
     // Gebruik vandaag als geen datum is meegegeven
     const date = dateParam || new Date().toISOString().split('T')[0]
 
+    // Haal huidige gebruiker op
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+    })
+
     // Haal alle aanwezigen op voor deze datum
     const attendances = await prisma.officeAttendance.findMany({
       where: { date },
@@ -34,15 +39,11 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'asc' },
     })
 
-    // Haal huidige gebruiker op
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email! },
-    })
-
-    // Check of huidige gebruiker is aangemeld
-    const isCurrentUserAttending = attendances.some(
+    // Check of huidige gebruiker is aangemeld en haal timeSlot op
+    const currentUserAttendance = attendances.find(
       (a) => a.userId === currentUser?.id
     )
+    const isCurrentUserAttending = !!currentUserAttendance
 
     return NextResponse.json({
       date,
@@ -51,11 +52,13 @@ export async function GET(request: Request) {
         userId: a.userId,
         name: a.user.name,
         avatarUrl: a.user.avatarUrl,
+        timeSlot: a.timeSlot || 'FULL_DAY',
       })),
       totalWorkplaces: TOTAL_WORKPLACES,
       occupiedWorkplaces: attendances.length,
       availableWorkplaces: TOTAL_WORKPLACES - attendances.length,
       isCurrentUserAttending,
+      currentUserTimeSlot: currentUserAttendance?.timeSlot || null,
       currentUserId: currentUser?.id,
     })
   } catch (error: any) {
@@ -89,8 +92,9 @@ export async function POST(request: Request) {
     const now = new Date()
     const defaultDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const date = body.date || defaultDate
+    const timeSlot = body.timeSlot || 'FULL_DAY' // FULL_DAY, MORNING, AFTERNOON
 
-    console.log('POST office-attendance: Date:', date, 'UserId:', user.id)
+    console.log('POST office-attendance: Date:', date, 'UserId:', user.id, 'TimeSlot:', timeSlot)
 
     // Check of gebruiker al aangemeld is
     const existing = await prisma.officeAttendance.findFirst({
@@ -101,6 +105,19 @@ export async function POST(request: Request) {
     })
 
     if (existing) {
+      // Update timeSlot als die anders is
+      if (existing.timeSlot !== timeSlot) {
+        const updated = await prisma.officeAttendance.update({
+          where: { id: existing.id },
+          data: { timeSlot },
+        })
+        console.log('POST office-attendance: Updated timeSlot')
+        return NextResponse.json({
+          success: true,
+          attendance: updated,
+          message: 'Tijdslot bijgewerkt',
+        })
+      }
       console.log('POST office-attendance: Already registered')
       return NextResponse.json({
         success: true,
@@ -128,6 +145,7 @@ export async function POST(request: Request) {
       data: {
         userId: user.id,
         date,
+        timeSlot,
       },
     })
 

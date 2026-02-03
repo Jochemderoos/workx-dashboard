@@ -1,7 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['www.workxadvocaten.nl', 'workxadvocaten.nl'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'www.workxadvocaten.nl',
+      },
+      {
+        protocol: 'https',
+        hostname: 'workxadvocaten.nl',
+      },
+    ],
   },
 }
 

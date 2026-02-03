@@ -6,7 +6,21 @@
       "Bash(npx tsc:*)",
       "Bash(timeout:*)",
       "Bash(npx vercel:*)",
-      "Bash(npx prisma db push:*)"
+      "Bash(npx prisma db push:*)",
+      "Bash(npm run build:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd HR Documents page with The Way it Workx content\n\n- Add full content from The Way it Workx PDF \\(employee handbook\\)\n- Include all chapters: Start, Lunch, Werkplek, Team, Ontwikkelen, \n  Veilig Werken, Vrije Dagen, Waarneming, Beloning, Financieel Gezond\n- Integrate Toelichting Bonusregeling with visual examples\n- Add Bijlagen section with references to Basenet documents\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(vercel --version:*)",
+      "Bash(vercel whoami:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd books icon for The Way it Workx in sidebar\n\n- Add stacked books icon to Icons component\n- Rename HR Documenten to The Way it Workx\n- Add books hover animation \\(stack wobble effect\\)\n- Fix filetext hover class name\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npx next build)",
+      "Bash(npx supabase:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres.zkrihqpmunjglyzkajcx:AmsterdamSupa448!@aws-1-eu-west-1.pooler.supabase.com:5432/postgres\" npx prisma db push:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(python:*)",
+      "Bash(node:*)",
+      "Bash(git commit:*)",
+      "Bash(npx ts-node:*)"
     ]
   }
 }

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+export const revalidate = 3600 // 1 hour cache
+
 // GET all team birthdays
 export async function GET(req: NextRequest) {
   try {

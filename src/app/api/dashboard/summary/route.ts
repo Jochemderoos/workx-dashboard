@@ -37,7 +37,7 @@ export async function GET() {
       currentUser,
       birthdays,
     ] = await Promise.all([
-      // 1. Calendar Events - upcoming 3 events (startTime >= now, limit 3, include createdBy)
+      // 1. Calendar Events - upcoming events (fetch more to allow social event prioritization)
       prisma.calendarEvent.findMany({
         where: {
           startTime: { gte: now },
@@ -51,7 +51,7 @@ export async function GET() {
           },
         },
         orderBy: { startTime: 'asc' },
-        take: 3,
+        take: 10, // Fetch more to prioritize social events
       }),
 
       // 2. Work Items - user's active work items (assigneeId = current user, limit 10)
@@ -167,11 +167,10 @@ export async function GET() {
         orderBy: { createdAt: 'asc' },
       }),
 
-      // 7. Vacation Balance - current user's balance (userId, year = current year)
-      prisma.vacationBalance.findFirst({
+      // 7. Vacation Balance - current user's balance (fetch regardless of year)
+      prisma.vacationBalance.findUnique({
         where: {
           userId: userId,
-          year: currentYear,
         },
       }),
 
@@ -214,6 +213,8 @@ export async function GET() {
     const isPartner = currentUser?.role === 'PARTNER'
     const defaultOpbouw = isPartner ? 0 : 25
 
+    // If balance exists but is from a different year, still show it (with year indicator)
+    // This prevents data from "disappearing" at year boundaries
     const vacationBalanceFormatted = vacationBalance
       ? {
           year: vacationBalance.year,
@@ -231,6 +232,7 @@ export async function GET() {
             vacationBalance.bijgekocht -
             vacationBalance.opgenomenLopendJaar,
           hasBalance: true,
+          needsYearUpdate: vacationBalance.year !== currentYear,
         }
       : {
           year: currentYear,
@@ -241,6 +243,7 @@ export async function GET() {
           totaalDagen: defaultOpbouw,
           resterend: defaultOpbouw,
           hasBalance: false,
+          needsYearUpdate: false,
         }
 
     // Format office attendance for easier frontend use
@@ -302,9 +305,16 @@ export async function GET() {
     ].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
       .slice(0, 10)
 
+    // Prioritize SOCIAL events in calendar - ensure social event is shown first if available
+    const socialEvents = calendarEvents.filter((e: any) => e.category === 'SOCIAL')
+    const otherEvents = calendarEvents.filter((e: any) => e.category !== 'SOCIAL')
+    const prioritizedEvents = socialEvents.length > 0
+      ? [socialEvents[0], ...otherEvents.filter((e: any) => e.id !== socialEvents[0]?.id)].slice(0, 3)
+      : calendarEvents.slice(0, 3)
+
     // Return all dashboard data in one response
     return NextResponse.json({
-      calendarEvents,
+      calendarEvents: prioritizedEvents,
       workItems,
       upcomingVacations: combinedUpcomingVacations,
       feedback: feedbackFormatted,

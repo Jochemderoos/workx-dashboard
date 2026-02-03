@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { DOCUMENTS as BASE_DOCUMENTS, Chapter, Document } from './documents'
 import { KNOWHOW_OFFICEMANAGEMENT } from './knowhow-document'
@@ -168,6 +169,7 @@ export default function HRDocsPage() {
   const [editIcon, setEditIcon] = useState('')
   const [savedChapters, setSavedChapters] = useState<Record<string, Chapter>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [modalClickY, setModalClickY] = useState<number | undefined>(undefined)
 
   // Check if user can edit (Partner or Admin/Head of Office)
   const canEdit = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -211,7 +213,8 @@ export default function HRDocsPage() {
   }, [activeDoc, savedChapters])
 
   // Open edit modal
-  const openEditModal = (chapter: Chapter) => {
+  const openEditModal = (chapter: Chapter, e?: React.MouseEvent) => {
+    if (e) setModalClickY(e.clientY)
     setEditingChapter(chapter)
     setEditTitle(chapter.title)
     setEditContent(htmlToCleanText(chapter.content))
@@ -588,13 +591,107 @@ export default function HRDocsPage() {
                   )}
                 </div>
                 {canEdit && (
-                  <button
-                    onClick={() => openEditModal(chapter)}
-                    className="ml-auto p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-                    title="Hoofdstuk bewerken"
+                  <Popover.Root
+                    open={editingChapter?.id === chapter.id}
+                    onOpenChange={(open) => { if (!open) cancelEdit(); else openEditModal(chapter) }}
                   >
-                    <Icons.edit size={16} />
-                  </button>
+                    <Popover.Trigger asChild>
+                      <button
+                        className="ml-auto p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                        title="Hoofdstuk bewerken"
+                      >
+                        <Icons.edit size={16} />
+                      </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content
+                        className="w-[90vw] max-w-3xl bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                        sideOffset={8}
+                        collisionPadding={16}
+                        side="bottom"
+                        align="end"
+                      >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
+                              <Icons.edit className="text-blue-400" size={18} />
+                            </div>
+                            <h2 className="font-semibold text-white text-lg">Hoofdstuk bewerken</h2>
+                          </div>
+                          <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                            <Icons.x size={18} />
+                          </Popover.Close>
+                        </div>
+
+                        {/* Title Input */}
+                        <div className="mb-4">
+                          <label className="block text-sm text-gray-400 mb-2">Titel</label>
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={e => setEditTitle(e.target.value)}
+                            className="input-field"
+                            placeholder="Hoofdstuk titel..."
+                          />
+                        </div>
+
+                        {/* Icon Input */}
+                        <div className="mb-4">
+                          <label className="block text-sm text-gray-400 mb-2">Icoon (emoji)</label>
+                          <input
+                            type="text"
+                            value={editIcon}
+                            onChange={e => setEditIcon(e.target.value)}
+                            className="input-field w-20 text-center text-xl"
+                            placeholder="📄"
+                            maxLength={2}
+                          />
+                        </div>
+
+                        {/* Content Textarea */}
+                        <div className="mb-4">
+                          <label className="block text-sm text-gray-400 mb-2">Inhoud</label>
+                          <textarea
+                            value={editContent}
+                            onChange={e => setEditContent(e.target.value)}
+                            className="input-field min-h-[200px] font-mono text-sm resize-y"
+                            placeholder="Schrijf hier de inhoud..."
+                          />
+                          <div className="mt-2 p-3 rounded-lg bg-white/5 text-xs text-gray-400 space-y-1">
+                            <p className="font-medium text-gray-300">Opmaak tips:</p>
+                            <div><code className="text-workx-lime">## Titel</code> Subkop</div>
+                            <div><code className="text-workx-lime">**tekst**</code> Vetgedrukt</div>
+                            <div><code className="text-workx-lime">• </code> Opsomming</div>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-3 pt-4 border-t border-white/5">
+                          <Popover.Close className="flex-1 btn-secondary">
+                            Annuleren
+                          </Popover.Close>
+                          <button
+                            onClick={saveChapterEdit}
+                            disabled={isSaving}
+                            className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            {isSaving ? (
+                              <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <Icons.check size={16} />
+                                Opslaan
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <Popover.Arrow className="fill-workx-gray" />
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
                 )}
               </div>
 
@@ -637,115 +734,6 @@ export default function HRDocsPage() {
         </main>
       </div>
 
-      {/* Edit Chapter Modal */}
-      {editingChapter && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={cancelEdit}>
-          <div className="card p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative" onClick={e => e.stopPropagation()}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-            {/* Modal Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
-                  <Icons.edit className="text-blue-400" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">Hoofdstuk bewerken</h2>
-              </div>
-              <button
-                onClick={cancelEdit}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              >
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            {/* Edit Form */}
-            <div className="space-y-4">
-              {/* Icon & Title Row */}
-              <div className="flex gap-4">
-                <div className="w-20">
-                  <label className="block text-sm text-gray-400 mb-2">Icoon</label>
-                  <input
-                    type="text"
-                    value={editIcon}
-                    onChange={(e) => setEditIcon(e.target.value)}
-                    className="input-field text-center text-2xl"
-                    maxLength={2}
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-sm text-gray-400 mb-2">Titel</label>
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="input-field"
-                    placeholder="Titel van het hoofdstuk"
-                  />
-                </div>
-              </div>
-
-              {/* Content */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  Inhoud
-                </label>
-                <textarea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  className="input-field text-sm resize-none leading-relaxed"
-                  rows={16}
-                  placeholder="Typ hier de tekst..."
-                />
-              </div>
-
-              {/* Formatting Help */}
-              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                <p className="text-xs text-gray-400 mb-2 font-semibold">Opmaak tips:</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="text-white/50">
-                    <code className="text-workx-lime">### </code> Subkop
-                  </div>
-                  <div className="text-white/50">
-                    <code className="text-workx-lime">#### </code> Kleine kop
-                  </div>
-                  <div className="text-white/50">
-                    <code className="text-workx-lime">**tekst**</code> Vetgedrukt
-                  </div>
-                  <div className="text-white/50">
-                    <code className="text-workx-lime">• </code> Opsomming
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex gap-3 mt-6 pt-6 border-t border-white/5">
-              <button
-                onClick={cancelEdit}
-                disabled={isSaving}
-                className="flex-1 btn-secondary"
-              >
-                Annuleren
-              </button>
-              <button
-                onClick={saveChapterEdit}
-                disabled={isSaving}
-                className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isSaving ? (
-                  <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Icons.check size={16} />
-                    Opslaan
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

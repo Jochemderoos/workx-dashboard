@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { useSession } from 'next-auth/react'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -524,13 +525,135 @@ export default function SettingsPage() {
                 <Icons.users className="text-gray-400" size={18} />
                 <h2 className="font-medium text-white">Gebruikersbeheer</h2>
               </div>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary flex items-center gap-2"
-              >
-                <Icons.plus size={16} />
-                Nieuw account
-              </button>
+              <Popover.Root open={showCreateModal} onOpenChange={setShowCreateModal}>
+                <Popover.Trigger asChild>
+                  <button className="btn-primary flex items-center gap-2">
+                    <Icons.plus size={16} />
+                    Nieuw account
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                    sideOffset={8}
+                    collisionPadding={16}
+                    side="bottom"
+                    align="end"
+                  >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+                    <div className="relative">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                          <Icons.userPlus className="text-workx-lime" size={24} />
+                        </div>
+                        <div>
+                          <h2 className="font-semibold text-white text-lg">Nieuw account aanmaken</h2>
+                          <p className="text-sm text-gray-400">Voeg een nieuwe medewerker toe</p>
+                        </div>
+                      </div>
+
+                      <form onSubmit={createUser} className="space-y-4">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Naam *</label>
+                          <div className="relative">
+                            <Icons.user className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                            <input
+                              type="text"
+                              value={newUser.name}
+                              onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                              className="input-field pl-11"
+                              placeholder="Volledige naam"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Email *</label>
+                          <div className="relative">
+                            <Icons.mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                            <input
+                              type="email"
+                              value={newUser.email}
+                              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                              className="input-field pl-11"
+                              placeholder="naam@workxadvocaten.nl"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Wachtwoord *</label>
+                          <div className="relative">
+                            <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                            <input
+                              type="password"
+                              value={newUser.password}
+                              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                              className="input-field pl-11"
+                              placeholder="Minimaal 6 tekens"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Rol</label>
+                            <select
+                              value={newUser.role}
+                              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                              className="input-field"
+                            >
+                              <option value="EMPLOYEE">Medewerker</option>
+                              <option value="PARTNER">Partner</option>
+                              <option value="ADMIN">Admin</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Afdeling</label>
+                            <input
+                              type="text"
+                              value={newUser.department}
+                              onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
+                              className="input-field"
+                              placeholder="Optioneel"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-4">
+                          <Popover.Close asChild>
+                            <button
+                              type="button"
+                              className="flex-1 btn-secondary"
+                            >
+                              Annuleren
+                            </button>
+                          </Popover.Close>
+                          <button
+                            type="submit"
+                            disabled={createLoading}
+                            className="flex-1 btn-primary disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            {createLoading ? (
+                              <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <Icons.check size={16} />
+                                Aanmaken
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                    <Popover.Arrow className="fill-workx-gray" />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
             </div>
 
             {/* Users list */}
@@ -569,13 +692,90 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => { setSelectedUser(user); setShowResetModal(true) }}
-                        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-                        title="Wachtwoord resetten"
+                      <Popover.Root
+                        open={showResetModal && selectedUser?.id === user.id}
+                        onOpenChange={(open) => {
+                          if (open) {
+                            setSelectedUser(user)
+                            setShowResetModal(true)
+                          } else {
+                            setShowResetModal(false)
+                            setSelectedUser(null)
+                            setNewPassword('')
+                          }
+                        }}
                       >
-                        <Icons.lock size={16} />
-                      </button>
+                        <Popover.Trigger asChild>
+                          <button
+                            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                            title="Wachtwoord resetten"
+                          >
+                            <Icons.lock size={16} />
+                          </button>
+                        </Popover.Trigger>
+                        <Popover.Portal>
+                          <Popover.Content
+                            className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                            sideOffset={8}
+                            collisionPadding={16}
+                            side="bottom"
+                            align="end"
+                          >
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+                            <div className="relative">
+                              <div className="flex items-center gap-4 mb-6">
+                                <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                                  <Icons.lock className="text-orange-400" size={24} />
+                                </div>
+                                <div>
+                                  <h2 className="font-semibold text-white text-lg">Wachtwoord resetten</h2>
+                                  <p className="text-sm text-gray-400">{user.name}</p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="block text-sm text-gray-400 mb-2">Nieuw wachtwoord</label>
+                                  <div className="relative">
+                                    <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                                    <input
+                                      type="password"
+                                      value={newPassword}
+                                      onChange={(e) => setNewPassword(e.target.value)}
+                                      className="input-field pl-11"
+                                      placeholder="Minimaal 6 tekens"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                  <Popover.Close asChild>
+                                    <button className="flex-1 btn-secondary">
+                                      Annuleren
+                                    </button>
+                                  </Popover.Close>
+                                  <button
+                                    onClick={resetPassword}
+                                    disabled={createLoading || newPassword.length < 6}
+                                    className="flex-1 px-4 py-2.5 rounded-xl font-medium bg-orange-500 hover:bg-orange-600 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                  >
+                                    {createLoading ? (
+                                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Icons.check size={16} />
+                                        Resetten
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <Popover.Arrow className="fill-workx-gray" />
+                          </Popover.Content>
+                        </Popover.Portal>
+                      </Popover.Root>
                       <button
                         onClick={() => toggleUserActive(user)}
                         className={`p-2 rounded-lg transition-all ${
@@ -592,183 +792,6 @@ export default function SettingsPage() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Create User Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 fade-in" onClick={() => setShowCreateModal(false)}>
-          <div className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-            <div className="relative">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                  <Icons.userPlus className="text-workx-lime" size={24} />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-white text-lg">Nieuw account aanmaken</h2>
-                  <p className="text-sm text-gray-400">Voeg een nieuwe medewerker toe</p>
-                </div>
-              </div>
-
-              <form onSubmit={createUser} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Naam *</label>
-                  <div className="relative">
-                    <Icons.user className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="text"
-                      value={newUser.name}
-                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                      className="input-field pl-11"
-                      placeholder="Volledige naam"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Email *</label>
-                  <div className="relative">
-                    <Icons.mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                      className="input-field pl-11"
-                      placeholder="naam@workxadvocaten.nl"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Wachtwoord *</label>
-                  <div className="relative">
-                    <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="password"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                      className="input-field pl-11"
-                      placeholder="Minimaal 6 tekens"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Rol</label>
-                    <select
-                      value={newUser.role}
-                      onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                      className="input-field"
-                    >
-                      <option value="EMPLOYEE">Medewerker</option>
-                      <option value="PARTNER">Partner</option>
-                      <option value="ADMIN">Admin</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">Afdeling</label>
-                    <input
-                      type="text"
-                      value={newUser.department}
-                      onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
-                      className="input-field"
-                      placeholder="Optioneel"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="flex-1 btn-secondary"
-                  >
-                    Annuleren
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={createLoading}
-                    className="flex-1 btn-primary disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {createLoading ? (
-                      <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Icons.check size={16} />
-                        Aanmaken
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reset Password Modal */}
-      {showResetModal && selectedUser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 fade-in" onClick={() => { setShowResetModal(false); setSelectedUser(null); setNewPassword('') }}>
-          <div className="bg-workx-gray rounded-2xl p-6 w-full max-w-sm border border-white/10 shadow-2xl relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-            <div className="relative">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                  <Icons.lock className="text-orange-400" size={24} />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-white text-lg">Wachtwoord resetten</h2>
-                  <p className="text-sm text-gray-400">{selectedUser.name}</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Nieuw wachtwoord</label>
-                  <div className="relative">
-                    <Icons.lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="input-field pl-11"
-                      placeholder="Minimaal 6 tekens"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => { setShowResetModal(false); setSelectedUser(null); setNewPassword('') }}
-                    className="flex-1 btn-secondary"
-                  >
-                    Annuleren
-                  </button>
-                  <button
-                    onClick={resetPassword}
-                    disabled={createLoading || newPassword.length < 6}
-                    className="flex-1 px-4 py-2.5 rounded-xl font-medium bg-orange-500 hover:bg-orange-600 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {createLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Icons.check size={16} />
-                        Resetten
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}

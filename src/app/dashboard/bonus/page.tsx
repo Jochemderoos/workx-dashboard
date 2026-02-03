@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { jsPDF } from 'jspdf'
+import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { drawWorkxLogo } from '@/lib/pdf'
 
@@ -403,20 +404,244 @@ export default function BonusPage() {
           <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Bereken en beheer je bonussen op basis van facturaties</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={() => setShowBonusOverview(true)}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-500/10 border border-green-500/20 rounded-lg sm:rounded-xl text-green-400 hover:bg-green-500/20 transition-all text-xs sm:text-base"
-          >
-            <Icons.euro size={14} className="sm:w-4 sm:h-4" />
-            <span>Te betalen</span>
-            {bonusesToPay.length > 0 && (
-              <span className="px-1.5 sm:px-2 py-0.5 bg-green-500/20 rounded-full text-xs">{bonusesToPay.length}</span>
-            )}
-          </button>
-          <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-base">
-            <Icons.plus size={14} className="sm:w-4 sm:h-4" />
-            <span>Nieuw</span>
-          </button>
+          <Popover.Root open={showBonusOverview} onOpenChange={setShowBonusOverview}>
+            <Popover.Trigger asChild>
+              <button
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-500/10 border border-green-500/20 rounded-lg sm:rounded-xl text-green-400 hover:bg-green-500/20 transition-all text-xs sm:text-base"
+              >
+                <Icons.euro size={14} className="sm:w-4 sm:h-4" />
+                <span>Te betalen</span>
+                {bonusesToPay.length > 0 && (
+                  <span className="px-1.5 sm:px-2 py-0.5 bg-green-500/20 rounded-full text-xs">{bonusesToPay.length}</span>
+                )}
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className="w-[90vw] max-w-2xl bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[80vh] overflow-hidden flex flex-col z-50 animate-modal-in"
+                sideOffset={8}
+                collisionPadding={16}
+                side="bottom"
+                align="end"
+              >
+                {/* Header */}
+                <div className="p-6 border-b border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                        <Icons.euro className="text-emerald-400" size={18} />
+                      </div>
+                      <div>
+                        <h2 className="font-semibold text-white text-lg">Te betalen bonussen</h2>
+                        <p className="text-sm text-gray-400">{bonusesToPay.length} bonussen klaar voor uitbetaling</p>
+                      </div>
+                    </div>
+                    <Popover.Close className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+                      <Icons.x size={18} />
+                    </Popover.Close>
+                  </div>
+                </div>
+
+                {/* List */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                  {bonusesToPay.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                        <Icons.check className="text-gray-600" size={28} />
+                      </div>
+                      <p className="text-gray-400">Alle bonussen zijn uitbetaald!</p>
+                    </div>
+                  ) : (
+                    bonusesToPay.map((calc, index) => (
+                      <div
+                        key={calc.id}
+                        className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <span className="text-emerald-400 font-semibold text-sm">{index + 1}</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-white">{calc.clientName || 'Onbekende klant'}</p>
+                            <p className="text-sm text-gray-400">
+                              {calc.invoiceNumber ? `#${calc.invoiceNumber}` : 'Geen factuurnr.'} · {formatCurrency(calc.invoiceAmount)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-emerald-400 text-lg">{formatCurrency(calc.bonusAmount)}</p>
+                          <p className="text-xs text-gray-500">{calc.bonusPercentage}%</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Footer with total and actions */}
+                {bonusesToPay.length > 0 && (
+                  <div className="p-6 border-t border-white/10 bg-white/[0.02]">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-400">Totaal te betalen</span>
+                      <span className="text-2xl font-semibold text-emerald-400">{formatCurrency(bonusToPayAmount)}</span>
+                    </div>
+                    <div className="flex gap-3">
+                      <Popover.Close className="flex-1 btn-secondary">
+                        Sluiten
+                      </Popover.Close>
+                      <button
+                        onClick={() => { downloadBonusOverviewPDF(); }}
+                        className="flex-1 btn-primary flex items-center justify-center gap-2"
+                      >
+                        <Icons.download size={16} />
+                        Download PDF
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <Popover.Arrow className="fill-workx-gray" />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+          <Popover.Root open={showForm} onOpenChange={(open) => { if (!open) resetForm(); else setShowForm(true); }}>
+            <Popover.Trigger asChild>
+              <button className="btn-primary flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-base">
+                <Icons.plus size={14} className="sm:w-4 sm:h-4" />
+                <span>Nieuw</span>
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className="w-[90vw] max-w-lg bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                sideOffset={8}
+                collisionPadding={16}
+                side="bottom"
+                align="end"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                      <Icons.calculator className="text-workx-lime" size={18} />
+                    </div>
+                    <h2 className="font-semibold text-white text-lg">{editingId ? 'Bewerken' : 'Nieuwe berekening'}</h2>
+                  </div>
+                  <Popover.Close className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
+                    <Icons.x size={18} />
+                  </Popover.Close>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Factuurbedrag (excl. BTW) *</label>
+                    <div className="relative">
+                      <Icons.euro className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={form.invoiceAmount}
+                        onChange={(e) => setForm({ ...form, invoiceAmount: e.target.value })}
+                        className="input-field pl-11"
+                        placeholder="0,00"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Bonus percentage</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={form.bonusPercentage}
+                        onChange={(e) => setForm({ ...form, bonusPercentage: e.target.value })}
+                        className="input-field pr-10"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Klant</label>
+                      <input
+                        type="text"
+                        value={form.clientName}
+                        onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+                        className="input-field"
+                        placeholder="Klantnaam"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Factuurnummer</label>
+                      <input
+                        type="text"
+                        value={form.invoiceNumber}
+                        onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
+                        className="input-field"
+                        placeholder="2024-001"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${form.invoicePaid ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+                      <input
+                        type="checkbox"
+                        checked={form.invoicePaid}
+                        onChange={(e) => setForm({ ...form, invoicePaid: e.target.checked, bonusPaid: e.target.checked ? form.bonusPaid : false })}
+                        className="w-5 h-5 rounded accent-blue-400"
+                      />
+                      <div>
+                        <span className="text-white text-sm font-medium">Factuur is betaald</span>
+                        <p className="text-xs text-gray-400">Klant heeft de factuur betaald</p>
+                      </div>
+                      {form.invoicePaid && <Icons.check size={18} className="ml-auto text-blue-400" />}
+                    </label>
+
+                    <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${!form.invoicePaid ? 'opacity-50 cursor-not-allowed' : form.bonusPaid ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+                      <input
+                        type="checkbox"
+                        checked={form.bonusPaid}
+                        onChange={(e) => setForm({ ...form, bonusPaid: e.target.checked })}
+                        disabled={!form.invoicePaid}
+                        className="w-5 h-5 rounded accent-green-400"
+                      />
+                      <div>
+                        <span className="text-white text-sm font-medium">Bonus is betaald</span>
+                        <p className="text-xs text-gray-400">Bonus is uitbetaald aan medewerker</p>
+                      </div>
+                      {form.bonusPaid && <Icons.check size={18} className="ml-auto text-green-400" />}
+                    </label>
+                  </div>
+
+                  {form.invoiceAmount && parseFloat(form.invoiceAmount) > 0 && (
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-workx-lime/10 to-workx-lime/5 border border-workx-lime/20 p-5">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                      <div className="relative">
+                        <p className="text-sm text-gray-400 mb-1">Berekende bonus</p>
+                        <p className="text-3xl font-semibold text-workx-lime">{formatCurrency(calculatedBonus)}</p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          {formatCurrency(parseFloat(form.invoiceAmount))} × {form.bonusPercentage}%
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <Popover.Close className="flex-1 btn-secondary">
+                      Annuleren
+                    </Popover.Close>
+                    <button type="submit" className="flex-1 btn-primary">
+                      {editingId ? 'Bijwerken' : 'Opslaan'}
+                    </button>
+                  </div>
+                </form>
+                <Popover.Arrow className="fill-workx-gray" />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
       </div>
 
@@ -450,7 +675,10 @@ export default function BonusPage() {
           </div>
         </div>
 
-        <div className="card p-6 relative overflow-hidden group cursor-pointer hover:border-green-500/30" onClick={() => bonusesToPay.length > 0 && setShowBonusOverview(true)}>
+        <div
+          className="card p-6 relative overflow-hidden group cursor-pointer hover:border-green-500/30"
+          onClick={() => { if (bonusesToPay.length > 0) { setShowBonusOverview(true) } }}
+        >
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-emerald-500/10 transition-colors" />
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
@@ -613,220 +841,6 @@ export default function BonusPage() {
           </div>
         )}
       </div>
-
-      {/* Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 fade-in" onClick={resetForm}>
-          <div className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                  <Icons.calculator className="text-workx-lime" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">{editingId ? 'Bewerken' : 'Nieuwe berekening'}</h2>
-              </div>
-              <button onClick={resetForm} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Factuurbedrag (excl. BTW) *</label>
-                <div className="relative">
-                  <Icons.euro className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.invoiceAmount}
-                    onChange={(e) => setForm({ ...form, invoiceAmount: e.target.value })}
-                    className="input-field pl-11"
-                    placeholder="0,00"
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Bonus percentage</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    value={form.bonusPercentage}
-                    onChange={(e) => setForm({ ...form, bonusPercentage: e.target.value })}
-                    className="input-field pr-10"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">%</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Klant</label>
-                  <input
-                    type="text"
-                    value={form.clientName}
-                    onChange={(e) => setForm({ ...form, clientName: e.target.value })}
-                    className="input-field"
-                    placeholder="Klantnaam"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Factuurnummer</label>
-                  <input
-                    type="text"
-                    value={form.invoiceNumber}
-                    onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
-                    className="input-field"
-                    placeholder="2024-001"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${form.invoicePaid ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
-                  <input
-                    type="checkbox"
-                    checked={form.invoicePaid}
-                    onChange={(e) => setForm({ ...form, invoicePaid: e.target.checked, bonusPaid: e.target.checked ? form.bonusPaid : false })}
-                    className="w-5 h-5 rounded accent-blue-400"
-                  />
-                  <div>
-                    <span className="text-white text-sm font-medium">Factuur is betaald</span>
-                    <p className="text-xs text-gray-400">Klant heeft de factuur betaald</p>
-                  </div>
-                  {form.invoicePaid && <Icons.check size={18} className="ml-auto text-blue-400" />}
-                </label>
-
-                <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${!form.invoicePaid ? 'opacity-50 cursor-not-allowed' : form.bonusPaid ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
-                  <input
-                    type="checkbox"
-                    checked={form.bonusPaid}
-                    onChange={(e) => setForm({ ...form, bonusPaid: e.target.checked })}
-                    disabled={!form.invoicePaid}
-                    className="w-5 h-5 rounded accent-green-400"
-                  />
-                  <div>
-                    <span className="text-white text-sm font-medium">Bonus is betaald</span>
-                    <p className="text-xs text-gray-400">Bonus is uitbetaald aan medewerker</p>
-                  </div>
-                  {form.bonusPaid && <Icons.check size={18} className="ml-auto text-green-400" />}
-                </label>
-              </div>
-
-              {form.invoiceAmount && parseFloat(form.invoiceAmount) > 0 && (
-                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-workx-lime/10 to-workx-lime/5 border border-workx-lime/20 p-5">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-                  <div className="relative">
-                    <p className="text-sm text-gray-400 mb-1">Berekende bonus</p>
-                    <p className="text-3xl font-semibold text-workx-lime">{formatCurrency(calculatedBonus)}</p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      {formatCurrency(parseFloat(form.invoiceAmount))} × {form.bonusPercentage}%
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={resetForm} className="flex-1 btn-secondary">
-                  Annuleren
-                </button>
-                <button type="submit" className="flex-1 btn-primary">
-                  {editingId ? 'Bijwerken' : 'Opslaan'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Bonus Overview Modal */}
-      {showBonusOverview && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 fade-in" onClick={() => setShowBonusOverview(false)}>
-          <div className="bg-workx-gray rounded-2xl w-full max-w-2xl border border-white/10 shadow-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="p-6 border-b border-white/10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                    <Icons.euro className="text-emerald-400" size={18} />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-white text-lg">Te betalen bonussen</h2>
-                    <p className="text-sm text-gray-400">{bonusesToPay.length} bonussen klaar voor uitbetaling</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowBonusOverview(false)} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
-                  <Icons.x size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-3">
-              {bonusesToPay.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                    <Icons.check className="text-gray-600" size={28} />
-                  </div>
-                  <p className="text-gray-400">Alle bonussen zijn uitbetaald!</p>
-                </div>
-              ) : (
-                bonusesToPay.map((calc, index) => (
-                  <div
-                    key={calc.id}
-                    className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                        <span className="text-emerald-400 font-semibold text-sm">{index + 1}</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-white">{calc.clientName || 'Onbekende klant'}</p>
-                        <p className="text-sm text-gray-400">
-                          {calc.invoiceNumber ? `#${calc.invoiceNumber}` : 'Geen factuurnr.'} · {formatCurrency(calc.invoiceAmount)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-emerald-400 text-lg">{formatCurrency(calc.bonusAmount)}</p>
-                      <p className="text-xs text-gray-500">{calc.bonusPercentage}%</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Footer with total and actions */}
-            {bonusesToPay.length > 0 && (
-              <div className="p-6 border-t border-white/10 bg-white/[0.02]">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-400">Totaal te betalen</span>
-                  <span className="text-2xl font-semibold text-emerald-400">{formatCurrency(bonusToPayAmount)}</span>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowBonusOverview(false)}
-                    className="flex-1 btn-secondary"
-                  >
-                    Sluiten
-                  </button>
-                  <button
-                    onClick={() => { downloadBonusOverviewPDF(); }}
-                    className="flex-1 btn-primary flex items-center justify-center gap-2"
-                  >
-                    <Icons.download size={16} />
-                    Download PDF
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

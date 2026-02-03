@@ -1283,17 +1283,97 @@ export default function LustrumPage() {
         </div>
       </div>
 
+      {/* Ideas Box - Centered Call to Action */}
+      <div className="max-w-2xl mx-auto">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-orange-500/20 border border-pink-500/20 p-6 sm:p-8 group/ideas">
+          {/* Background decorations */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+
+          <div className="relative text-center">
+            {/* Header */}
+            <div className="mb-6">
+              <span className="text-5xl mb-4 block group-hover/ideas:scale-110 transition-transform duration-300">💡</span>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Heb jij een goed idee?</h3>
+              <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
+                Deel je leukste ideeën voor activiteiten, uitjes of andere dingen die we op Mallorca kunnen doen!
+              </p>
+            </div>
+
+            {ideaSubmitted ? (
+              <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <span className="text-4xl mb-3 block">🎉</span>
+                <p className="text-green-400 font-medium">Bedankt voor je idee!</p>
+                <p className="text-green-400/70 text-sm mt-1">We gaan er naar kijken</p>
+              </div>
+            ) : (
+              <>
+                {/* Textarea */}
+                <div className="mb-4">
+                  <textarea
+                    value={ideaContent}
+                    onChange={(e) => setIdeaContent(e.target.value.slice(0, 500))}
+                    placeholder="Bijv. een wijnproeverij, stranddag, kookworkshop, wandeling in de bergen..."
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 resize-none transition-all"
+                  />
+                  <div className="flex justify-between items-center mt-2 text-xs">
+                    <span className={`${ideaContent.length > 450 ? 'text-orange-400' : 'text-gray-500'}`}>
+                      {ideaContent.length}/500
+                    </span>
+                  </div>
+                </div>
+
+                {/* Anonymous toggle */}
+                <div className="flex items-center justify-center gap-3 mb-5">
+                  <button
+                    onClick={() => setIsAnonymous(!isAnonymous)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
+                      isAnonymous
+                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                        : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <span>{isAnonymous ? '🎭' : '👤'}</span>
+                    {isAnonymous ? 'Anoniem insturen' : 'Met mijn naam'}
+                  </button>
+                </div>
+
+                {/* Submit button */}
+                <button
+                  onClick={submitIdea}
+                  disabled={!ideaContent.trim() || isSubmittingIdea}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-orange-500 text-white font-medium hover:from-pink-600 hover:to-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 hover:scale-105 active:scale-95"
+                >
+                  {isSubmittingIdea ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Versturen...
+                    </>
+                  ) : (
+                    <>
+                      <span>✨</span>
+                      Idee insturen
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Flight Modal */}
       {showFlightModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto"
           onClick={() => setShowFlightModal(false)}
         >
-          <div
-            className="absolute left-1/2 w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl"
-            style={{ top: '28%', transform: 'translateX(-50%)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="min-h-full flex items-start justify-center p-4" style={{ paddingTop: '15vh' }}>
+            <div
+              className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl animate-modal-in"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="p-6 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1451,20 +1531,21 @@ export default function LustrumPage() {
               </button>
             </div>
           </div>
+          </div>
         </div>
       )}
 
       {/* Program Modal */}
       {showProgramModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto"
           onClick={() => setShowProgramModal(false)}
         >
-          <div
-            className="absolute left-1/2 w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl"
-            style={{ top: '28%', transform: 'translateX(-50%)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="min-h-full flex items-start justify-center p-4" style={{ paddingTop: '15vh' }}>
+            <div
+              className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl animate-modal-in"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="p-6 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1572,6 +1653,7 @@ export default function LustrumPage() {
                 {isSavingProgram ? 'Toevoegen...' : 'Toevoegen'}
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}
@@ -1785,86 +1867,6 @@ export default function LustrumPage() {
               </div>
             )
           })}
-        </div>
-      </div>
-
-      {/* Ideas Box - Centered Call to Action */}
-      <div className="max-w-2xl mx-auto">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-orange-500/20 border border-pink-500/20 p-6 sm:p-8 group/ideas">
-          {/* Background decorations */}
-          <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-
-          <div className="relative text-center">
-            {/* Header */}
-            <div className="mb-6">
-              <span className="text-5xl mb-4 block group-hover/ideas:scale-110 transition-transform duration-300">💡</span>
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Heb jij een goed idee?</h3>
-              <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
-                Deel je leukste ideeën voor activiteiten, uitjes of andere dingen die we op Mallorca kunnen doen!
-              </p>
-            </div>
-
-            {ideaSubmitted ? (
-              <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <span className="text-4xl mb-3 block">🎉</span>
-                <p className="text-green-400 font-medium">Bedankt voor je idee!</p>
-                <p className="text-green-400/70 text-sm mt-1">We gaan er naar kijken</p>
-              </div>
-            ) : (
-              <>
-                {/* Textarea */}
-                <div className="mb-4">
-                  <textarea
-                    value={ideaContent}
-                    onChange={(e) => setIdeaContent(e.target.value.slice(0, 500))}
-                    placeholder="Bijv. een wijnproeverij, stranddag, kookworkshop, wandeling in de bergen..."
-                    rows={3}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-pink-500/50 focus:outline-none focus:ring-2 focus:ring-pink-500/20 resize-none transition-all"
-                  />
-                  <div className="flex justify-between items-center mt-2 text-xs">
-                    <span className={`${ideaContent.length > 450 ? 'text-orange-400' : 'text-gray-500'}`}>
-                      {ideaContent.length}/500
-                    </span>
-                  </div>
-                </div>
-
-                {/* Anonymous toggle */}
-                <div className="flex items-center justify-center gap-3 mb-5">
-                  <button
-                    onClick={() => setIsAnonymous(!isAnonymous)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
-                      isAnonymous
-                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                        : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
-                    }`}
-                  >
-                    <span>{isAnonymous ? '🎭' : '👤'}</span>
-                    {isAnonymous ? 'Anoniem insturen' : 'Met mijn naam'}
-                  </button>
-                </div>
-
-                {/* Submit button */}
-                <button
-                  onClick={submitIdea}
-                  disabled={!ideaContent.trim() || isSubmittingIdea}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-orange-500 text-white font-medium hover:from-pink-600 hover:to-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 hover:scale-105 active:scale-95"
-                >
-                  {isSubmittingIdea ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Versturen...
-                    </>
-                  ) : (
-                    <>
-                      <span>✨</span>
-                      Idee insturen
-                    </>
-                  )}
-                </button>
-              </>
-            )}
-          </div>
         </div>
       </div>
 

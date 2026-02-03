@@ -9,6 +9,7 @@ interface Attendee {
   userId: string
   name: string
   avatarUrl: string | null
+  timeSlot: 'FULL_DAY' | 'MORNING' | 'AFTERNOON'
 }
 
 interface AttendanceData {
@@ -18,8 +19,15 @@ interface AttendanceData {
   occupiedWorkplaces: number
   availableWorkplaces: number
   isCurrentUserAttending: boolean
+  currentUserTimeSlot: 'FULL_DAY' | 'MORNING' | 'AFTERNOON' | null
   currentUserId: string
 }
+
+const TIME_SLOTS = [
+  { value: 'FULL_DAY', label: 'Hele dag', icon: '🏢' },
+  { value: 'MORNING', label: 'Ochtend', icon: '🌅' },
+  { value: 'AFTERNOON', label: 'Middag', icon: '🌆' },
+] as const
 
 // Helper functie om lokale datum string te krijgen (YYYY-MM-DD)
 const getLocalDateString = (date: Date) => {
@@ -35,6 +43,7 @@ export default function AppjeplekjePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isToggling, setIsToggling] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<'FULL_DAY' | 'MORNING' | 'AFTERNOON'>('FULL_DAY')
 
   // Haal data op voor geselecteerde datum
   useEffect(() => {
@@ -48,6 +57,10 @@ export default function AppjeplekjePage() {
       if (res.ok) {
         const data = await res.json()
         setAttendanceData(data)
+        // Update selected time slot if user is attending
+        if (data.currentUserTimeSlot) {
+          setSelectedTimeSlot(data.currentUserTimeSlot)
+        }
       } else {
         console.error('API error:', res.status)
         // Set default data
@@ -58,6 +71,7 @@ export default function AppjeplekjePage() {
           occupiedWorkplaces: 0,
           availableWorkplaces: 11,
           isCurrentUserAttending: false,
+          currentUserTimeSlot: null,
           currentUserId: '',
         })
       }
@@ -71,6 +85,7 @@ export default function AppjeplekjePage() {
         occupiedWorkplaces: 0,
         availableWorkplaces: 11,
         isCurrentUserAttending: false,
+        currentUserTimeSlot: null,
         currentUserId: '',
       })
     } finally {
@@ -96,7 +111,7 @@ export default function AppjeplekjePage() {
         res = await fetch('/api/office-attendance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ date: selectedDate }),
+          body: JSON.stringify({ date: selectedDate, timeSlot: selectedTimeSlot }),
         })
       }
 
@@ -111,6 +126,36 @@ export default function AppjeplekjePage() {
       await fetchAttendance(selectedDate)
     } catch (error) {
       console.error('Error toggling attendance:', error)
+      alert('Er ging iets mis met de verbinding')
+    } finally {
+      setIsToggling(false)
+    }
+  }
+
+  // Update time slot (if already attending)
+  const updateTimeSlot = async (newTimeSlot: 'FULL_DAY' | 'MORNING' | 'AFTERNOON') => {
+    if (!attendanceData?.isCurrentUserAttending || isToggling) return
+    setIsToggling(true)
+    setSelectedTimeSlot(newTimeSlot)
+
+    try {
+      const res = await fetch('/api/office-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: selectedDate, timeSlot: newTimeSlot }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error('API Error:', errorData)
+        alert(errorData.error || 'Er ging iets mis')
+        return
+      }
+
+      // Refresh data
+      await fetchAttendance(selectedDate)
+    } catch (error) {
+      console.error('Error updating time slot:', error)
       alert('Er ging iets mis met de verbinding')
     } finally {
       setIsToggling(false)
@@ -332,6 +377,36 @@ export default function AppjeplekjePage() {
                   </p>
                 </div>
 
+                {/* Time Slot Selector */}
+                <div className="mb-4">
+                  <label className="block text-sm text-white/60 mb-2">Wanneer kom je?</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {TIME_SLOTS.map((slot) => (
+                      <button
+                        key={slot.value}
+                        onClick={() => {
+                          if (attendanceData.isCurrentUserAttending) {
+                            updateTimeSlot(slot.value)
+                          } else {
+                            setSelectedTimeSlot(slot.value)
+                          }
+                        }}
+                        disabled={isToggling}
+                        className={`
+                          py-2 px-2 rounded-lg text-xs font-medium transition-all flex flex-col items-center gap-1
+                          ${selectedTimeSlot === slot.value
+                            ? 'bg-workx-lime/20 text-workx-lime border border-workx-lime/40'
+                            : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
+                          }
+                        `}
+                      >
+                        <span className="text-base">{slot.icon}</span>
+                        <span>{slot.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Toggle Button */}
                 <button
                   onClick={toggleAttendance}
@@ -366,7 +441,7 @@ export default function AppjeplekjePage() {
                 {attendanceData.isCurrentUserAttending && (
                   <p className="text-center text-xs text-green-400 mt-2 flex items-center justify-center gap-1">
                     <Icons.check size={14} />
-                    Je bent aangemeld voor deze dag
+                    Je bent aangemeld ({TIME_SLOTS.find(s => s.value === attendanceData.currentUserTimeSlot)?.label || 'Hele dag'})
                   </p>
                 )}
               </>
@@ -412,14 +487,21 @@ export default function AppjeplekjePage() {
                           {attendee.name.charAt(0)}
                         </div>
                       )}
-                      <span className={`text-sm ${
-                        attendee.userId === attendanceData.currentUserId
-                          ? 'text-workx-lime font-medium'
-                          : 'text-white/80'
-                      }`}>
-                        {attendee.name}
-                        {attendee.userId === attendanceData.currentUserId && ' (jij)'}
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-sm block ${
+                          attendee.userId === attendanceData.currentUserId
+                            ? 'text-workx-lime font-medium'
+                            : 'text-white/80'
+                        }`}>
+                          {attendee.name}
+                          {attendee.userId === attendanceData.currentUserId && ' (jij)'}
+                        </span>
+                        {attendee.timeSlot && attendee.timeSlot !== 'FULL_DAY' && (
+                          <span className="text-xs text-white/40">
+                            {attendee.timeSlot === 'MORNING' ? '🌅 Ochtend' : '🌆 Middag'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
