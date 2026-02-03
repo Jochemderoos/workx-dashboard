@@ -69,6 +69,11 @@ model User {
   // Opleidingen
   createdTrainingSessions TrainingSession[] @relation("CreatedTrainingSessions")
   certificates            Certificate[]     @relation("UserCertificates")
+
+  // Zaken toewijzing
+  createdZaken      Zaak[]            @relation("CreatedZaken")
+  assignedZaken     Zaak[]            @relation("AssignedZaken")
+  zaakAssignments   ZaakAssignment[]
 }
 
 model Account {
@@ -612,4 +617,85 @@ model HRDocumentChapter {
 
   @@unique([documentId, chapterId])
   @@index([documentId])
+}
+
+// ==================== ZAKEN TOEWIJZING ====================
+
+// Nieuwe zaak aangemaakt door Partner
+model Zaak {
+  id                    String   @id @default(cuid())
+  shortDescription      String   // Korte beschrijving
+  fullDescription       String?  @db.Text // Uitgebreide beschrijving
+
+  // Vereisten
+  minimumExperienceYear Int      // Minimum ervaringsjaar (0=JM, 1=1e jaars, etc.)
+
+  // Start instructies
+  startMethod           String   // "CONTACT_CLIENT" | "INFO_FROM_PARTNER"
+  startInstructions     String?  @db.Text // Extra instructies
+
+  // Urgentie & planning
+  urgency               String   @default("NORMAL") // "LOW" | "NORMAL" | "HIGH" | "URGENT"
+  startsQuickly         Boolean  @default(false) // Zaak gaat snel lopen
+
+  // Status tracking
+  status                String   @default("PENDING_ASSIGNMENT")
+  // "PENDING_ASSIGNMENT" | "OFFERING" | "ASSIGNED" | "ALL_DECLINED" | "CANCELLED"
+
+  // Client info (optioneel)
+  clientName            String?
+  clientContact         String?  // Telefoonnummer of email
+
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relaties
+  createdById           String
+  createdBy             User     @relation("CreatedZaken", fields: [createdById], references: [id])
+
+  assignedToId          String?  // Wie is uiteindelijk toegewezen
+  assignedTo            User?    @relation("AssignedZaken", fields: [assignedToId], references: [id])
+  assignedAt            DateTime?
+
+  // Toewijzing queue
+  assignmentQueue       ZaakAssignment[]
+
+  @@index([status])
+  @@index([createdById])
+  @@index([assignedToId])
+}
+
+// Queue voor toewijzing - houdt bij wie de zaak heeft gezien
+model ZaakAssignment {
+  id                String   @id @default(cuid())
+  zaakId            String
+  userId            String
+
+  // Positie in de queue (gebaseerd op gewerkte uren)
+  queuePosition     Int      // 1 = eerste in de rij (minste uren)
+  hoursWorkedBasis  Float    // Uren waarop positie is gebaseerd
+
+  // Status van dit aanbod
+  status            String   @default("PENDING")
+  // "PENDING" | "OFFERED" | "ACCEPTED" | "DECLINED" | "TIMEOUT" | "SKIPPED"
+
+  // Wanneer aangeboden
+  offeredAt         DateTime?
+  expiresAt         DateTime? // offeredAt + 2 uur
+
+  // Response
+  respondedAt       DateTime?
+  declineReason     String?  // Optionele reden bij afwijzing
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  zaak              Zaak     @relation(fields: [zaakId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([zaakId, userId])
+  @@index([userId, status])
+  @@index([zaakId, queuePosition])
+  @@index([status, expiresAt])
 }

@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
+import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { TEAM_PHOTOS, ADVOCATEN } from '@/lib/team-photos'
+import ZakenToewijzing from '@/components/zaken/ZakenToewijzing'
 
 interface WorkItem {
   id: string
@@ -79,7 +81,7 @@ export default function WerkOverzichtPage() {
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
-  const [pageMode, setPageMode] = useState<'zaken' | 'werkdruk' | 'urenoverzicht'>('zaken') // Default to zaken for everyone
+  const [pageMode, setPageMode] = useState<'zaken' | 'toewijzing' | 'werkdruk' | 'urenoverzicht'>('zaken') // Default to zaken for everyone
 
   // Monthly hours state
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
@@ -524,6 +526,15 @@ export default function WerkOverzichtPage() {
               <Icons.briefcase size={14} className="sm:w-4 sm:h-4" />
               <span>Zaken</span>
             </button>
+            <button
+              onClick={() => setPageMode('toewijzing')}
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                pageMode === 'toewijzing' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icons.send size={14} className="sm:w-4 sm:h-4" />
+              <span>Toewijzing</span>
+            </button>
             {canEditWorkload && (
               <button
                 onClick={() => setPageMode('urenoverzicht')}
@@ -537,10 +548,216 @@ export default function WerkOverzichtPage() {
             )}
           </div>
           {pageMode === 'zaken' && (
-            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm">
-              <Icons.plus size={14} className="sm:w-4 sm:h-4" />
-              <span>Nieuw</span>
-            </button>
+            <Popover.Root open={showForm} onOpenChange={(open) => { if (!open) resetForm(); else setShowForm(true) }}>
+              <Popover.Trigger asChild>
+                <button className="btn-primary flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm">
+                  <Icons.plus size={14} className="sm:w-4 sm:h-4" />
+                  <span>Nieuw</span>
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="w-[90vw] max-w-lg bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                  sideOffset={8}
+                  collisionPadding={16}
+                  side="bottom"
+                  align="end"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                        <Icons.briefcase className="text-blue-400" size={18} />
+                      </div>
+                      <h2 className="font-semibold text-white text-lg">{editingItem ? 'Item bewerken' : 'Nieuw werk item'}</h2>
+                    </div>
+                    <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                      <Icons.x size={18} />
+                    </Popover.Close>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Titel</label>
+                      <div className="relative">
+                        <Icons.edit className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                        <input
+                          type="text"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          placeholder="Korte beschrijving van de zaak"
+                          className="input-field pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Beschrijving</label>
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Details en notities..."
+                        className="input-field resize-none"
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Status</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                            className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
+                          >
+                            <div className={`w-7 h-7 rounded-lg ${statusConfig[status].bg} flex items-center justify-center`}>
+                              {(() => { const Icon = statusConfig[status].icon; return <Icon size={14} className={statusConfig[status].text} /> })()}
+                            </div>
+                            <span className="flex-1 text-white text-sm">{statusConfig[status].label}</span>
+                            <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                          </button>
+                          {showStatusDropdown && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                                <div className="py-1">
+                                  {Object.entries(statusConfig).map(([key, config]) => (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={() => { setStatus(key as WorkItem['status']); setShowStatusDropdown(false) }}
+                                      className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm transition-all ${status === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                                    >
+                                      <div className={`w-7 h-7 rounded-lg ${config.bg} flex items-center justify-center`}>
+                                        <config.icon size={14} className={config.text} />
+                                      </div>
+                                      <span>{config.label}</span>
+                                      {status === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Prioriteit</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
+                            className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
+                          >
+                            <div className={`w-3 h-3 rounded-full ${priorityConfig[priority].color}`} />
+                            <span className="flex-1 text-white text-sm">{priorityConfig[priority].label}</span>
+                            <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showPriorityDropdown ? 'rotate-180' : ''}`} />
+                          </button>
+                          {showPriorityDropdown && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setShowPriorityDropdown(false)} />
+                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                                <div className="py-1">
+                                  {Object.entries(priorityConfig).map(([key, config]) => (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={() => { setPriority(key as WorkItem['priority']); setShowPriorityDropdown(false) }}
+                                      className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm transition-all ${priority === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
+                                    >
+                                      <div className={`w-3 h-3 rounded-full ${config.color}`} />
+                                      <span>{config.label}</span>
+                                      {priority === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Deadline</label>
+                        <DatePicker
+                          selected={dueDate}
+                          onChange={(date) => setDueDate(date)}
+                          placeholder="Selecteer deadline..."
+                          isClearable
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Geschatte uren</label>
+                        <div className="relative">
+                          <Icons.clock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            value={estimatedHours}
+                            onChange={(e) => setEstimatedHours(e.target.value)}
+                            placeholder="0"
+                            className="input-field pl-10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Klant</label>
+                        <div className="relative">
+                          <Icons.user className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                          <input
+                            type="text"
+                            value={clientName}
+                            onChange={(e) => setClientName(e.target.value)}
+                            placeholder="Klantnaam"
+                            className="input-field pl-10"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Zaaknummer</label>
+                        <div className="relative">
+                          <Icons.folder className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+                          <input
+                            type="text"
+                            value={caseNumber}
+                            onChange={(e) => setCaseNumber(e.target.value)}
+                            placeholder="2024-001"
+                            className="input-field pl-10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-3">
+                      <Popover.Close className="flex-1 btn-secondary">
+                        Annuleren
+                      </Popover.Close>
+                      {editingItem && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(editingItem.id)}
+                          className="px-4 py-2.5 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors"
+                        >
+                          <Icons.trash size={16} />
+                        </button>
+                      )}
+                      <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
+                        <Icons.check size={16} />
+                        {editingItem ? 'Bijwerken' : 'Aanmaken'}
+                      </button>
+                    </div>
+                  </form>
+                  <Popover.Arrow className="fill-workx-gray" />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           )}
         </div>
       </div>
@@ -551,13 +768,89 @@ export default function WerkOverzichtPage() {
           {/* Upload Button */}
           {canEditWorkload && (
             <div className="flex justify-end">
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="btn-primary flex items-center gap-2"
-              >
-                <Icons.upload size={16} />
-                Uren uploaden
-              </button>
+              <Popover.Root open={showUploadModal} onOpenChange={setShowUploadModal}>
+                <Popover.Trigger asChild>
+                  <button className="btn-primary flex items-center gap-2">
+                    <Icons.upload size={16} />
+                    Uren uploaden
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="w-[90vw] max-w-lg bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                    sideOffset={8}
+                    collisionPadding={16}
+                    side="bottom"
+                    align="end"
+                  >
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                          <Icons.upload className="text-workx-lime" size={18} />
+                        </div>
+                        <h2 className="font-semibold text-white text-lg">Uren uploaden</h2>
+                      </div>
+                      <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <Icons.x size={18} />
+                      </Popover.Close>
+                    </div>
+
+                    <div className="space-y-5">
+                      <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                        <div className="flex items-start gap-3">
+                          <Icons.info className="text-blue-400 mt-0.5" size={16} />
+                          <div className="text-sm text-white/70">
+                            <p className="font-medium text-blue-400 mb-1">Uren naar werkdruk</p>
+                            <p className="text-xs text-gray-400 mb-2">Datums worden automatisch uit het bestand gehaald</p>
+                            <ul className="space-y-1 text-xs text-gray-400">
+                              <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-400" /> &lt;=3 uur = Rustig</li>
+                              <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-400" /> &lt;=4 uur = Normaal</li>
+                              <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-400" /> &lt;=5 uur = Druk</li>
+                              <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-400" /> &gt;5 uur = Heel druk</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Urenoverzicht bestand (.docx / .rtf)</label>
+                        <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                          isUploading
+                            ? 'border-workx-lime/50 bg-workx-lime/5'
+                            : 'border-white/20 hover:border-workx-lime/50 hover:bg-white/5'
+                        }`}>
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            {isUploading ? (
+                              <>
+                                <div className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin mb-2" />
+                                <p className="text-sm text-workx-lime">Verwerken...</p>
+                              </>
+                            ) : (
+                              <>
+                                <Icons.upload className="text-gray-400 mb-2" size={24} />
+                                <p className="text-sm text-white/60">Klik om bestand te selecteren</p>
+                                <p className="text-xs text-white/30 mt-1">of sleep het hierheen</p>
+                              </>
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".docx,.rtf,.doc"
+                            onChange={handleFileUpload}
+                            disabled={isUploading}
+                          />
+                        </label>
+                      </div>
+
+                      <Popover.Close className="w-full btn-secondary">
+                        Annuleren
+                      </Popover.Close>
+                    </div>
+                    <Popover.Arrow className="fill-workx-gray" />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
             </div>
           )}
 
@@ -755,13 +1048,86 @@ export default function WerkOverzichtPage() {
               ))}
             </div>
             {selectedYear === new Date().getFullYear() && (
-              <button
-                onClick={() => setShowHoursUploadModal(true)}
-                className="btn-primary flex items-center gap-2"
-              >
-                <Icons.upload size={16} />
-                Uren uploaden
-              </button>
+              <Popover.Root open={showHoursUploadModal} onOpenChange={setShowHoursUploadModal}>
+                <Popover.Trigger asChild>
+                  <button className="btn-primary flex items-center gap-2">
+                    <Icons.upload size={16} />
+                    Uren uploaden
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="w-[90vw] max-w-lg bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                    sideOffset={8}
+                    collisionPadding={16}
+                    side="bottom"
+                    align="end"
+                  >
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                          <Icons.upload className="text-workx-lime" size={18} />
+                        </div>
+                        <h2 className="font-semibold text-white text-lg">Uren uploaden {selectedYear}</h2>
+                      </div>
+                      <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <Icons.x size={18} />
+                      </Popover.Close>
+                    </div>
+
+                    <div className="space-y-5">
+                      <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                        <div className="flex items-start gap-3">
+                          <Icons.info className="text-blue-400 mt-0.5" size={16} />
+                          <div className="text-sm text-white/70">
+                            <p className="font-medium text-blue-400 mb-1">BaseNet export</p>
+                            <p className="text-xs text-gray-400">
+                              Upload het urenoverzicht bestand van BaseNet (.xlsx of .rtf).
+                              De uren worden automatisch per maand per medewerker samengevoegd.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">BaseNet RTF bestand</label>
+                        <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                          isUploadingHours
+                            ? 'border-workx-lime/50 bg-workx-lime/5'
+                            : 'border-white/20 hover:border-workx-lime/50 hover:bg-white/5'
+                        }`}>
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            {isUploadingHours ? (
+                              <>
+                                <div className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin mb-2" />
+                                <p className="text-sm text-workx-lime">Verwerken...</p>
+                              </>
+                            ) : (
+                              <>
+                                <Icons.upload className="text-gray-400 mb-2" size={24} />
+                                <p className="text-sm text-white/60">Klik om bestand te selecteren</p>
+                                <p className="text-xs text-white/30 mt-1">RTF bestand van BaseNet</p>
+                              </>
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".rtf"
+                            onChange={handleHoursUpload}
+                            disabled={isUploadingHours}
+                          />
+                        </label>
+                      </div>
+
+                      <Popover.Close className="w-full btn-secondary">
+                        Annuleren
+                      </Popover.Close>
+                    </div>
+                    <Popover.Arrow className="fill-workx-gray" />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
             )}
           </div>
 
@@ -1360,369 +1726,11 @@ export default function WerkOverzichtPage() {
         </>
       )}
 
-      {/* Form modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={resetForm}>
-          <div
-            className="bg-workx-gray rounded-2xl p-6 w-full max-w-lg border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Icons.briefcase className="text-blue-400" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">{editingItem ? 'Item bewerken' : 'Nieuw werk item'}</h2>
-              </div>
-              <button
-                onClick={resetForm}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              >
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm text-white/60 mb-2">Titel</label>
-                <div className="relative">
-                  <Icons.edit className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Korte beschrijving van de zaak"
-                    className="input-field pl-10"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/60 mb-2">Beschrijving</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Details en notities..."
-                  className="input-field resize-none"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-white/60 mb-2">Status</label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                      className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
-                    >
-                      <div className={`w-7 h-7 rounded-lg ${statusConfig[status].bg} flex items-center justify-center`}>
-                        {(() => { const Icon = statusConfig[status].icon; return <Icon size={14} className={statusConfig[status].text} /> })()}
-                      </div>
-                      <span className="flex-1 text-white text-sm">{statusConfig[status].label}</span>
-                      <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
-                    </button>
-                    {showStatusDropdown && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
-                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
-                          <div className="py-1">
-                            {Object.entries(statusConfig).map(([key, config]) => (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => { setStatus(key as WorkItem['status']); setShowStatusDropdown(false) }}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm transition-all ${status === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
-                              >
-                                <div className={`w-7 h-7 rounded-lg ${config.bg} flex items-center justify-center`}>
-                                  <config.icon size={14} className={config.text} />
-                                </div>
-                                <span>{config.label}</span>
-                                {status === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm text-white/60 mb-2">Prioriteit</label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
-                      className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/30"
-                    >
-                      <div className={`w-3 h-3 rounded-full ${priorityConfig[priority].color}`} />
-                      <span className="flex-1 text-white text-sm">{priorityConfig[priority].label}</span>
-                      <Icons.chevronDown size={16} className={`text-gray-400 transition-transform ${showPriorityDropdown ? 'rotate-180' : ''}`} />
-                    </button>
-                    {showPriorityDropdown && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setShowPriorityDropdown(false)} />
-                        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
-                          <div className="py-1">
-                            {Object.entries(priorityConfig).map(([key, config]) => (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => { setPriority(key as WorkItem['priority']); setShowPriorityDropdown(false) }}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm transition-all ${priority === key ? 'bg-workx-lime/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
-                              >
-                                <div className={`w-3 h-3 rounded-full ${config.color}`} />
-                                <span>{config.label}</span>
-                                {priority === key && <Icons.check size={16} className="ml-auto text-workx-lime" />}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-white/60 mb-2">Deadline</label>
-                  <DatePicker
-                    selected={dueDate}
-                    onChange={(date) => setDueDate(date)}
-                    placeholder="Selecteer deadline..."
-                    isClearable
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-white/60 mb-2">Geschatte uren</label>
-                  <div className="relative">
-                    <Icons.clock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={estimatedHours}
-                      onChange={(e) => setEstimatedHours(e.target.value)}
-                      placeholder="0"
-                      className="input-field pl-10"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-white/60 mb-2">Klant</label>
-                  <div className="relative">
-                    <Icons.user className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="text"
-                      value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
-                      placeholder="Klantnaam"
-                      className="input-field pl-10"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm text-white/60 mb-2">Zaaknummer</label>
-                  <div className="relative">
-                    <Icons.folder className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-                    <input
-                      type="text"
-                      value={caseNumber}
-                      onChange={(e) => setCaseNumber(e.target.value)}
-                      placeholder="2024-001"
-                      className="input-field pl-10"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-3">
-                <button type="button" onClick={resetForm} className="flex-1 btn-secondary">
-                  Annuleren
-                </button>
-                {editingItem && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(editingItem.id)}
-                    className="px-4 py-2.5 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors"
-                  >
-                    <Icons.trash size={16} />
-                  </button>
-                )}
-                <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
-                  <Icons.check size={16} />
-                  {editingItem ? 'Bijwerken' : 'Aanmaken'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* TOEWIJZING MODE */}
+      {pageMode === 'toewijzing' && (
+        <ZakenToewijzing isPartner={canEditWorkload} />
       )}
 
-      {/* Upload Urenoverzicht Modal */}
-      {showHoursUploadModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowHoursUploadModal(false)}>
-          <div
-            className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                  <Icons.upload className="text-workx-lime" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">Uren uploaden {selectedYear}</h2>
-              </div>
-              <button
-                onClick={() => setShowHoursUploadModal(false)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              >
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <div className="flex items-start gap-3">
-                  <Icons.info className="text-blue-400 mt-0.5" size={16} />
-                  <div className="text-sm text-white/70">
-                    <p className="font-medium text-blue-400 mb-1">BaseNet export</p>
-                    <p className="text-xs text-gray-400">
-                      Upload het urenoverzicht bestand van BaseNet (.xlsx of .rtf).
-                      De uren worden automatisch per maand per medewerker samengevoegd.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/60 mb-2">BaseNet RTF bestand</label>
-                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-                  isUploadingHours
-                    ? 'border-workx-lime/50 bg-workx-lime/5'
-                    : 'border-white/20 hover:border-workx-lime/50 hover:bg-white/5'
-                }`}>
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    {isUploadingHours ? (
-                      <>
-                        <div className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin mb-2" />
-                        <p className="text-sm text-workx-lime">Verwerken...</p>
-                      </>
-                    ) : (
-                      <>
-                        <Icons.upload className="text-gray-400 mb-2" size={24} />
-                        <p className="text-sm text-white/60">Klik om bestand te selecteren</p>
-                        <p className="text-xs text-white/30 mt-1">RTF bestand van BaseNet</p>
-                      </>
-                    )}
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".rtf"
-                    onChange={handleHoursUpload}
-                    disabled={isUploadingHours}
-                  />
-                </label>
-              </div>
-
-              <button
-                onClick={() => setShowHoursUploadModal(false)}
-                className="w-full btn-secondary"
-              >
-                Annuleren
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Upload Werkdruk Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowUploadModal(false)}>
-          <div
-            className="bg-workx-gray rounded-2xl p-6 w-full max-w-md border border-white/10 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
-                  <Icons.upload className="text-workx-lime" size={18} />
-                </div>
-                <h2 className="font-semibold text-white text-lg">Uren uploaden</h2>
-              </div>
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              >
-                <Icons.x size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <div className="flex items-start gap-3">
-                  <Icons.info className="text-blue-400 mt-0.5" size={16} />
-                  <div className="text-sm text-white/70">
-                    <p className="font-medium text-blue-400 mb-1">Uren naar werkdruk</p>
-                    <p className="text-xs text-gray-400 mb-2">Datums worden automatisch uit het bestand gehaald</p>
-                    <ul className="space-y-1 text-xs text-gray-400">
-                      <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-400" /> ≤3 uur = Rustig</li>
-                      <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-400" /> ≤4 uur = Normaal</li>
-                      <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-400" /> ≤5 uur = Druk</li>
-                      <li className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-400" /> &gt;5 uur = Heel druk</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/60 mb-2">Urenoverzicht bestand (.docx / .rtf)</label>
-                <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-                  isUploading
-                    ? 'border-workx-lime/50 bg-workx-lime/5'
-                    : 'border-white/20 hover:border-workx-lime/50 hover:bg-white/5'
-                }`}>
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    {isUploading ? (
-                      <>
-                        <div className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin mb-2" />
-                        <p className="text-sm text-workx-lime">Verwerken...</p>
-                      </>
-                    ) : (
-                      <>
-                        <Icons.upload className="text-gray-400 mb-2" size={24} />
-                        <p className="text-sm text-white/60">Klik om bestand te selecteren</p>
-                        <p className="text-xs text-white/30 mt-1">of sleep het hierheen</p>
-                      </>
-                    )}
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".docx,.rtf,.doc"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                  />
-                </label>
-              </div>
-
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="w-full btn-secondary"
-              >
-                Annuleren
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

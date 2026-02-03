@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
 import EasterEggs from '@/components/ui/EasterEggs'
+import ZaakNotificationWrapper from '@/components/zaken/ZaakNotificationWrapper'
 import Image from 'next/image'
 
 export default async function DashboardLayout({
@@ -63,7 +64,9 @@ export default async function DashboardLayout({
         <TopBar user={user} />
         <main className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10">
           <div className="max-w-7xl mx-auto">
-            {children}
+            <ZaakNotificationWrapper userRole={user.role}>
+              {children}
+            </ZaakNotificationWrapper>
           </div>
         </main>
       </div>
