@@ -353,55 +353,102 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-sm text-gray-400 mb-2">Verjaardag</label>
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🎂</span>
-                <select
-                  value={profile.birthDate ? profile.birthDate.split('-')[1] : ''}
-                  onChange={(e) => {
-                    const day = e.target.value
-                    const month = profile.birthDate ? profile.birthDate.split('-')[0] : ''
-                    if (day && month) {
-                      setProfile({ ...profile, birthDate: `${month}-${day}` })
-                    } else if (day) {
-                      setProfile({ ...profile, birthDate: `01-${day}` })
-                    }
-                  }}
-                  className="input-field w-24 text-center"
-                >
-                  <option value="">Dag</option>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                    <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
-                  ))}
-                </select>
-                <select
-                  value={profile.birthDate ? profile.birthDate.split('-')[0] : ''}
-                  onChange={(e) => {
-                    const month = e.target.value
-                    const day = profile.birthDate ? profile.birthDate.split('-')[1] : ''
-                    if (month && day) {
-                      setProfile({ ...profile, birthDate: `${month}-${day}` })
-                    } else if (month) {
-                      setProfile({ ...profile, birthDate: `${month}-01` })
-                    }
-                  }}
-                  className="input-field flex-1"
-                >
-                  <option value="">Maand</option>
-                  <option value="01">Januari</option>
-                  <option value="02">Februari</option>
-                  <option value="03">Maart</option>
-                  <option value="04">April</option>
-                  <option value="05">Mei</option>
-                  <option value="06">Juni</option>
-                  <option value="07">Juli</option>
-                  <option value="08">Augustus</option>
-                  <option value="09">September</option>
-                  <option value="10">Oktober</option>
-                  <option value="11">November</option>
-                  <option value="12">December</option>
-                </select>
-              </div>
-              <p className="text-xs text-white/30 mt-1.5">Wordt getoond in de verjaardagen widget</p>
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-workx-gray/90 to-workx-dark/95 border border-white/10 rounded-xl text-left hover:border-workx-lime/30 hover:shadow-lg hover:shadow-workx-lime/5 focus:outline-none focus:border-workx-lime/50 focus:ring-2 focus:ring-workx-lime/20 transition-all duration-300 group"
+                  >
+                    <span className="text-lg">🎂</span>
+                    <span className={profile.birthDate ? 'text-white' : 'text-white/40'}>
+                      {profile.birthDate
+                        ? (() => {
+                            const [m, d] = profile.birthDate.split('-')
+                            const months = ['', 'januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+                            return `${parseInt(d)} ${months[parseInt(m)]}`
+                          })()
+                        : 'Selecteer je verjaardag...'}
+                    </span>
+                    <Icons.chevronDown size={16} className="ml-auto text-white/30 group-hover:text-workx-lime transition-colors" />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="w-72 bg-workx-gray rounded-2xl border border-white/10 p-4 shadow-2xl z-50 animate-modal-in"
+                    sideOffset={8}
+                    align="start"
+                  >
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-2">Dag</label>
+                        <div className="grid grid-cols-7 gap-1">
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map(d => {
+                            const dayStr = String(d).padStart(2, '0')
+                            const isSelected = profile.birthDate?.split('-')[1] === dayStr
+                            return (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() => {
+                                  const month = profile.birthDate ? profile.birthDate.split('-')[0] : '01'
+                                  setProfile({ ...profile, birthDate: `${month}-${dayStr}` })
+                                }}
+                                className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
+                                  isSelected
+                                    ? 'bg-workx-lime text-workx-dark'
+                                    : 'text-white hover:bg-white/10'
+                                }`}
+                              >
+                                {d}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-2">Maand</label>
+                        <div className="grid grid-cols-3 gap-1">
+                          {[
+                            { val: '01', label: 'Jan' },
+                            { val: '02', label: 'Feb' },
+                            { val: '03', label: 'Mrt' },
+                            { val: '04', label: 'Apr' },
+                            { val: '05', label: 'Mei' },
+                            { val: '06', label: 'Jun' },
+                            { val: '07', label: 'Jul' },
+                            { val: '08', label: 'Aug' },
+                            { val: '09', label: 'Sep' },
+                            { val: '10', label: 'Okt' },
+                            { val: '11', label: 'Nov' },
+                            { val: '12', label: 'Dec' },
+                          ].map(m => {
+                            const isSelected = profile.birthDate?.split('-')[0] === m.val
+                            return (
+                              <button
+                                key={m.val}
+                                type="button"
+                                onClick={() => {
+                                  const day = profile.birthDate ? profile.birthDate.split('-')[1] : '01'
+                                  setProfile({ ...profile, birthDate: `${m.val}-${day}` })
+                                }}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                  isSelected
+                                    ? 'bg-workx-lime text-workx-dark'
+                                    : 'text-white hover:bg-white/10'
+                                }`}
+                              >
+                                {m.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <Popover.Arrow className="fill-workx-gray" />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+              <p className="text-xs text-white/30 mt-2">Wordt getoond in de verjaardagen widget</p>
             </div>
 
             <div className="pt-4">
