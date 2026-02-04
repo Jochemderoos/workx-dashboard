@@ -68,6 +68,7 @@ const toolsMenuItems = [
 
 const manageMenuItems = [
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover' },
+  { href: '/dashboard/chat', icon: Icons.slack, label: 'Slack Chat', iconAnim: 'icon-chat-hover' },
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover' },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover' },
 ]
