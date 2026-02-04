@@ -323,7 +323,7 @@ export async function getChannelHistory(
 }
 
 /**
- * List all Slack channels (public only)
+ * List all Slack channels (public + private)
  */
 export async function listSlackChannels(): Promise<Array<{
   id: string
@@ -334,7 +334,7 @@ export async function listSlackChannels(): Promise<Array<{
 }>> {
   try {
     const result = await slack.conversations.list({
-      types: 'public_channel',
+      types: 'public_channel,private_channel',
       exclude_archived: true,
       limit: 200,
     })
