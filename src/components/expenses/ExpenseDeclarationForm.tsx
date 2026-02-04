@@ -221,16 +221,17 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-6 px-4 pb-4 overflow-y-auto">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Modal */}
-      <div
-        ref={modalRef}
-        className="relative w-full max-w-4xl bg-workx-dark border border-white/10 rounded-2xl shadow-2xl my-auto"
-        style={{ maxHeight: 'calc(100vh - 48px)' }}
-      >
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto"
+      onClick={onClose}
+    >
+      <div className="min-h-full flex items-start justify-center p-4" style={{ paddingTop: '5vh' }}>
+        {/* Modal */}
+        <div
+          ref={modalRef}
+          className="w-full max-w-4xl bg-workx-dark border border-white/10 rounded-2xl shadow-2xl animate-modal-in"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-white/10 bg-workx-dark rounded-t-2xl">
           <div className="flex items-center gap-3">
@@ -519,6 +520,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
             </div>
           </div>
         )}
+      </div>
       </div>
 
       {/* Print styles */}
