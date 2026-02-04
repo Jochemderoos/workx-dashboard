@@ -323,12 +323,13 @@ export async function getChannelHistory(
 }
 
 /**
- * List all Slack channels the bot is in
+ * List all Slack channels (public ones, and private where bot is member)
  */
 export async function listSlackChannels(): Promise<Array<{
   id: string
   name: string
   isPrivate: boolean
+  isMember: boolean
   memberCount?: number
 }>> {
   try {
@@ -340,16 +341,30 @@ export async function listSlackChannels(): Promise<Array<{
     if (!result.channels) return []
 
     return result.channels
-      .filter((c) => c.is_member) // Only channels where bot is member
+      .filter((c) => !c.is_private || c.is_member) // Public channels + private where member
       .map((c) => ({
         id: c.id!,
         name: c.name || '',
         isPrivate: c.is_private || false,
+        isMember: c.is_member || false,
         memberCount: c.num_members,
       }))
   } catch (error) {
     console.error('Error listing Slack channels:', error)
     return []
+  }
+}
+
+/**
+ * Join a Slack channel
+ */
+export async function joinChannel(channelId: string): Promise<boolean> {
+  try {
+    await slack.conversations.join({ channel: channelId })
+    return true
+  } catch (error) {
+    console.error('Error joining Slack channel:', error)
+    return false
   }
 }
 

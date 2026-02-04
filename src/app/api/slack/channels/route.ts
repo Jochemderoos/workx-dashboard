@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { listSlackChannels, getChannelHistory, postToChannel } from '@/lib/slack'
+import { listSlackChannels, getChannelHistory, postToChannel, joinChannel } from '@/lib/slack'
 
 // GET - List Slack channels or get messages from a channel
 export async function GET(req: NextRequest) {
@@ -16,6 +16,9 @@ export async function GET(req: NextRequest) {
 
     // If channelId provided, get messages
     if (channelId) {
+      // Try to join the channel first (for public channels)
+      await joinChannel(channelId)
+
       const limit = parseInt(searchParams.get('limit') || '20')
       const messages = await getChannelHistory(channelId, limit)
       return NextResponse.json({ messages })
