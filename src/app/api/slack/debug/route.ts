@@ -11,9 +11,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get raw channel list
+    // Get raw channel list (public only - we don't have groups:read scope)
     const result = await slack.conversations.list({
-      types: 'public_channel,private_channel',
+      types: 'public_channel',
       exclude_archived: true,
       limit: 100,
     })

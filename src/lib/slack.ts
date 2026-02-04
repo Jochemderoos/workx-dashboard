@@ -323,7 +323,7 @@ export async function getChannelHistory(
 }
 
 /**
- * List all Slack channels (public ones, and private where bot is member)
+ * List all Slack channels (public ones only - we don't have groups:read scope)
  */
 export async function listSlackChannels(): Promise<Array<{
   id: string
@@ -334,21 +334,20 @@ export async function listSlackChannels(): Promise<Array<{
 }>> {
   try {
     const result = await slack.conversations.list({
-      types: 'public_channel,private_channel',
+      types: 'public_channel',
       exclude_archived: true,
+      limit: 200,
     })
 
     if (!result.channels) return []
 
-    return result.channels
-      .filter((c) => !c.is_private || c.is_member) // Public channels + private where member
-      .map((c) => ({
-        id: c.id!,
-        name: c.name || '',
-        isPrivate: c.is_private || false,
-        isMember: c.is_member || false,
-        memberCount: c.num_members,
-      }))
+    return result.channels.map((c) => ({
+      id: c.id!,
+      name: c.name || '',
+      isPrivate: c.is_private || false,
+      isMember: c.is_member || false,
+      memberCount: c.num_members,
+    }))
   } catch (error) {
     console.error('Error listing Slack channels:', error)
     return []
