@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { processExpiredOffers } from '@/lib/zaken-utils'
+import { processExpiredOffers, processReminders } from '@/lib/zaken-utils'
 
 // GET - Check for pending zaak offers for the current user
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    // Process any expired offers first (background cleanup)
+    // Process phase transitions and expired offers (background cleanup)
+    // Order matters: first INITIAL→REMINDER, then REMINDER→TIMEOUT
+    processReminders().catch(console.error)
     processExpiredOffers().catch(console.error)
 
     // Find active offer for this user
@@ -39,6 +41,7 @@ export async function GET(req: NextRequest) {
         id: pendingOffer.id,
         zaakId: pendingOffer.zaakId,
         expiresAt: pendingOffer.expiresAt,
+        phase: pendingOffer.phase, // INITIAL = no popup, REMINDER = show popup
         zaak: {
           id: pendingOffer.zaak.id,
           shortDescription: pendingOffer.zaak.shortDescription,
@@ -54,6 +57,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error checking pending offers:', error)
-    return NextResponse.json({ error: 'Failed to check offers' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon aanbiedingen niet controleren' }, { status: 500 })
   }
 }

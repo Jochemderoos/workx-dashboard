@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const channels = await prisma.chatChannel.findMany({
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(channels)
   } catch (error) {
     console.error('Error fetching channels:', error)
-    return NextResponse.json({ error: 'Failed to fetch channels' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen channels' }, { status: 500 })
   }
 }
 
@@ -35,12 +35,12 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { name, description, isPrivate } = await req.json()
     if (!name) {
-      return NextResponse.json({ error: 'Channel name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Channel name is verplicht' }, { status: 400 })
     }
 
     const existingChannel = await prisma.chatChannel.findFirst({
@@ -62,6 +62,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(channel, { status: 201 })
   } catch (error) {
     console.error('Error creating channel:', error)
-    return NextResponse.json({ error: 'Failed to create channel' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet aanmaken channel' }, { status: 500 })
   }
 }

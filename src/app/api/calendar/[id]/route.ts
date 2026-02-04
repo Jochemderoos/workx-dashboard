@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const event = await prisma.calendarEvent.findUnique({
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json(event)
   } catch (error) {
     console.error('Error fetching event:', error)
-    return NextResponse.json({ error: 'Failed to fetch event' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen event' }, { status: 500 })
   }
 }
 
@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user is creator or admin/partner
@@ -72,7 +72,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json(event)
   } catch (error) {
     console.error('Error updating event:', error)
-    return NextResponse.json({ error: 'Failed to update event' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet bijwerken event' }, { status: 500 })
   }
 }
 
@@ -81,7 +81,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user is creator or admin/partner
@@ -109,6 +109,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting event:', error)
-    return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet verwijderen event' }, { status: 500 })
   }
 }

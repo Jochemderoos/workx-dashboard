@@ -39,7 +39,7 @@ export async function POST() {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const user = await prisma.user.findUnique({
@@ -47,7 +47,7 @@ export async function POST() {
     })
 
     if (!user || !['PARTNER', 'ADMIN'].includes(user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     // Seed alle salarisschalen
@@ -113,6 +113,6 @@ export async function POST() {
     })
   } catch (error) {
     console.error('Error seeding salary scales:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }

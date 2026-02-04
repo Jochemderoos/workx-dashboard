@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching work items:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch work items' },
+      { error: 'Kon niet ophalen work items' },
       { status: 500 }
     )
   }
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const {
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     if (!title) {
       return NextResponse.json(
-        { error: 'Title is required' },
+        { error: 'Title is verplicht' },
         { status: 400 }
       )
     }
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error creating work item:', error)
     return NextResponse.json(
-      { error: 'Failed to create work item' },
+      { error: 'Kon niet aanmaken work item' },
       { status: 500 }
     )
   }

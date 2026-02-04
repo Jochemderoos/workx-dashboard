@@ -696,9 +696,15 @@ model ZaakAssignment {
   status            String   @default("PENDING")
   // "PENDING" | "OFFERED" | "ACCEPTED" | "DECLINED" | "TIMEOUT" | "SKIPPED"
 
+  // Notification phase - determines what notifications to show
+  phase             String   @default("INITIAL")
+  // "INITIAL" = First hour, Slack only (no popup)
+  // "REMINDER" = Second hour, Slack reminder + popup shown
+
   // Wanneer aangeboden
   offeredAt         DateTime?
-  expiresAt         DateTime? // offeredAt + 2 uur
+  expiresAt         DateTime? // offeredAt + 1 uur (fase 1) of + 2 uur (fase 2)
+  reminderSentAt    DateTime? // Wanneer reminder is verstuurd
 
   // Response
   respondedAt       DateTime?
@@ -729,4 +735,100 @@ model YearlyUpgradeLog {
   changes       String   @db.Text // JSON met alle wijzigingen
 
   @@unique([type, year])
+}
+
+// ==================== PUSH NOTIFICATIONS ====================
+
+// Browser push notification subscriptions
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique // Push service endpoint URL
+  p256dh    String   // Public encryption key
+  auth      String   // Authentication secret
+  userAgent String?  // Browser info for debugging
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ==================== AUDIT LOG ====================
+
+// Audit log voor admin acties
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String   // Wie voerde de actie uit
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
+  entityType  String   // User, VacationBalance, SalaryScale, etc.
+  entityId    String?  // ID van de betreffende entity (optioneel)
+  description String   // Leesbare beschrijving van de actie
+  oldValue    String?  @db.Text // JSON van oude waarde (bij UPDATE/DELETE)
+  newValue    String?  @db.Text // JSON van nieuwe waarde (bij CREATE/UPDATE)
+  ipAddress   String?  // IP adres van de gebruiker
+  userAgent   String?  // Browser info
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ==================== EXPENSE DECLARATIONS ====================
+
+// Declaratieformulier voor onkosten
+model ExpenseDeclaration {
+  id            String   @id @default(cuid())
+  userId        String
+
+  // Persoonlijke gegevens
+  employeeName  String
+  bankAccount   String   // IBAN
+
+  // Status
+  status        String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, PAID
+  submittedAt   DateTime?
+  approvedAt    DateTime?
+  approvedById  String?
+  rejectedAt    DateTime?
+  rejectedById  String?
+  rejectionNote String?
+  paidAt        DateTime?
+
+  // Totaal (wordt berekend uit items)
+  totalAmount   Float    @default(0)
+
+  // Notities
+  note          String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  items         ExpenseItem[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Individuele declaratie items (facturen)
+model ExpenseItem {
+  id            String   @id @default(cuid())
+  declarationId String
+
+  description   String   // Omschrijving factuur
+  date          DateTime // Datum factuur
+  amount        Float    // Bedrag
+
+  // Bijlage (factuur upload)
+  attachmentUrl String?  // URL naar geüploade factuur
+  attachmentName String? // Originele bestandsnaam
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  declaration   ExpenseDeclaration @relation(fields: [declarationId], references: [id], onDelete: Cascade)
+
+  @@index([declarationId])
 }

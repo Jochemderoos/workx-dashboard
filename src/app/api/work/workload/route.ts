@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Get all users with their work items
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching workload:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch workload' },
+      { error: 'Kon niet ophalen workload' },
       { status: 500 }
     )
   }

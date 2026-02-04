@@ -6,7 +6,9 @@ import {
   notifyNewZaakAssignment,
   notifyZaakAccepted,
   notifyZaakDeclined,
+  notifyZaakReminder,
 } from '@/lib/slack'
+import { sendZaakReminderPush } from '@/lib/push-notifications'
 
 // Re-export constants for convenience
 export { EXPERIENCE_LABELS, URGENCY_CONFIG, START_METHOD_LABELS } from './zaken-constants'
@@ -57,9 +59,16 @@ async function calculateRelevantHours(userId: string, userName: string, werkdage
 /**
  * Generate the assignment queue for a new zaak
  * Orders employees by least hours worked (to balance workload)
+ * @param zaakId - The zaak to generate queue for
+ * @param minimumExperienceYear - Minimum experience year required
+ * @param excludedUserIds - User IDs to exclude from the queue
  */
-export async function generateAssignmentQueue(zaakId: string, minimumExperienceYear: number) {
-  // Get all active employees with sufficient experience
+export async function generateAssignmentQueue(
+  zaakId: string,
+  minimumExperienceYear: number,
+  excludedUserIds: string[] = []
+) {
+  // Get all active employees with sufficient experience (excluding specified users)
   const eligibleEmployees = await prisma.user.findMany({
     where: {
       isActive: true,
@@ -67,12 +76,15 @@ export async function generateAssignmentQueue(zaakId: string, minimumExperienceY
       compensation: {
         experienceYear: { gte: minimumExperienceYear },
       },
+      // Exclude specified users
+      ...(excludedUserIds.length > 0 && {
+        id: { notIn: excludedUserIds },
+      }),
     },
     include: { compensation: true },
   })
 
   if (eligibleEmployees.length === 0) {
-    console.log('No eligible employees found for zaak:', zaakId)
     return []
   }
 
@@ -158,14 +170,15 @@ export async function offerToNextInQueue(zaakId: string) {
     }
   }
 
-  // Update assignment status
+  // Update assignment status - Phase 1: 1 hour initial offer (Slack only, no popup)
   const now = new Date()
-  const expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000) // +2 hours
+  const expiresAt = new Date(now.getTime() + 1 * 60 * 60 * 1000) // +1 hour for initial phase
 
   await prisma.zaakAssignment.update({
     where: { id: nextAssignment.id },
     data: {
       status: 'OFFERED',
+      phase: 'INITIAL',
       offeredAt: now,
       expiresAt,
     },
@@ -317,15 +330,84 @@ export async function handleDeclineZaak(zaakId: string, userId: string, reason?:
 }
 
 /**
- * Process expired offers (called by cron job or on page load)
+ * Process reminders for INITIAL phase offers that have expired (1 hour passed)
+ * Transitions them to REMINDER phase, sends Slack reminder, and extends deadline by 1 hour
+ */
+export async function processReminders() {
+  const now = new Date()
+
+  // Find all INITIAL phase offers that have expired
+  const expiredInitialOffers = await prisma.zaakAssignment.findMany({
+    where: {
+      status: 'OFFERED',
+      phase: 'INITIAL',
+      expiresAt: { lt: now },
+    },
+    include: {
+      user: true,
+      zaak: {
+        include: { createdBy: true }
+      }
+    },
+  })
+
+  const results = []
+
+  for (const offer of expiredInitialOffers) {
+    // Extend deadline by 1 more hour and transition to REMINDER phase
+    const newExpiresAt = new Date(now.getTime() + 1 * 60 * 60 * 1000)
+
+    await prisma.zaakAssignment.update({
+      where: { id: offer.id },
+      data: {
+        phase: 'REMINDER',
+        expiresAt: newExpiresAt,
+        reminderSentAt: now,
+      },
+    })
+
+    // Send Slack reminder notification
+    try {
+      await notifyZaakReminder(offer.user.email, {
+        id: offer.zaakId,
+        title: offer.zaak.shortDescription,
+        clientName: offer.zaak.clientName || undefined,
+        createdByName: offer.zaak.createdBy.name,
+        expiresAt: newExpiresAt,
+      })
+    } catch (error) {
+      console.error('Error sending Slack reminder:', error)
+    }
+
+    // Send browser push notification
+    try {
+      await sendZaakReminderPush(offer.userId, {
+        title: offer.zaak.shortDescription,
+        clientName: offer.zaak.clientName || undefined,
+        createdByName: offer.zaak.createdBy.name,
+      })
+      results.push({ id: offer.id, status: 'reminder_sent' })
+    } catch (error) {
+      console.error('Error sending push notification:', error)
+      results.push({ id: offer.id, status: 'reminder_failed', error })
+    }
+  }
+
+  return { processed: expiredInitialOffers.length, results }
+}
+
+/**
+ * Process expired offers in REMINDER phase (called by cron job or on page load)
+ * Only timeouts assignments in REMINDER phase (2 hours total have passed)
  */
 export async function processExpiredOffers() {
   const now = new Date()
 
-  // Find all expired offers
+  // Find all REMINDER phase offers that have expired (2 hours total)
   const expiredOffers = await prisma.zaakAssignment.findMany({
     where: {
       status: 'OFFERED',
+      phase: 'REMINDER',
       expiresAt: { lt: now },
     },
   })

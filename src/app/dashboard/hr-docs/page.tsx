@@ -7,6 +7,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { DOCUMENTS as BASE_DOCUMENTS, Chapter, Document } from './documents'
 import { KNOWHOW_OFFICEMANAGEMENT } from './knowhow-document'
+import ExpenseDeclarationForm from '@/components/expenses/ExpenseDeclarationForm'
 
 // Combine all documents
 const ALL_DOCUMENTS: Document[] = [...BASE_DOCUMENTS, KNOWHOW_OFFICEMANAGEMENT]
@@ -170,6 +171,10 @@ export default function HRDocsPage() {
   const [savedChapters, setSavedChapters] = useState<Record<string, Chapter>>({})
   const [isSaving, setIsSaving] = useState(false)
   const [modalClickY, setModalClickY] = useState<number | undefined>(undefined)
+
+  // Expense declaration state
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [expenseFormClickY, setExpenseFormClickY] = useState<number | undefined>(undefined)
 
   // Check if user can edit (Partner or Admin/Head of Office)
   const canEdit = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -368,14 +373,37 @@ export default function HRDocsPage() {
     <div className="fade-in pb-8 hr-docs-page">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
-            <Icons.books className="text-blue-400" size={18} />
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
+                <Icons.books className="text-blue-400" size={18} />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white">The Way it Workx</h1>
+            </div>
+            <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Het personeelshandboek van Workx Advocaten</p>
           </div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-white">The Way it Workx</h1>
+          <button
+            onClick={(e) => {
+              setExpenseFormClickY(e.clientY)
+              setShowExpenseForm(true)
+            }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Icons.euro size={16} />
+            <span className="hidden sm:inline">Declaratieformulier</span>
+            <span className="sm:hidden">Declaratie</span>
+          </button>
         </div>
-        <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Het personeelshandboek van Workx Advocaten</p>
       </div>
+
+      {/* Expense Declaration Modal */}
+      {showExpenseForm && (
+        <ExpenseDeclarationForm
+          onClose={() => setShowExpenseForm(false)}
+          clickY={expenseFormClickY}
+        />
+      )}
 
       {/* Document Tabs */}
       <div className="flex flex-wrap gap-2 mb-6">

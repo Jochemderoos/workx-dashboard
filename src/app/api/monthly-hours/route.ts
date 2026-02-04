@@ -56,7 +56,6 @@ async function migrateIncompleteNames() {
         }
       }
     }
-    console.log('Name migration completed successfully')
   } catch (error) {
     console.error('Error during name migration:', error)
     migrationRun = false // Allow retry on error
@@ -68,7 +67,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check of gebruiker Partner of Admin is
@@ -103,7 +102,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching monthly hours:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch monthly hours' },
+      { error: 'Kon niet ophalen monthly hours' },
       { status: 500 }
     )
   }
@@ -114,7 +113,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check of gebruiker Partner of Admin is
@@ -161,7 +160,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error saving monthly hours:', error)
     return NextResponse.json(
-      { error: 'Failed to save monthly hours' },
+      { error: 'Kon niet opslaan monthly hours' },
       { status: 500 }
     )
   }

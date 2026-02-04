@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
   try {
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(calculations)
   } catch (error) {
     console.error('Error fetching transitie calculations:', error)
-    return NextResponse.json({ error: 'Failed to fetch calculations' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen calculations' }, { status: 500 })
   }
 }
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
   try {
@@ -63,6 +63,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(calculation)
   } catch (error) {
     console.error('Error creating transitie calculation:', error)
-    return NextResponse.json({ error: 'Failed to create calculation' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet aanmaken calculation' }, { status: 500 })
   }
 }

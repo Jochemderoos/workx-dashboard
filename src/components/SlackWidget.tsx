@@ -96,7 +96,7 @@ export function SlackWidget({ currentUserName }: SlackWidgetProps) {
         setSelectedChannel(data.channels[0])
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load channels')
+      setError(err instanceof Error ? err.message : 'Kon niet laden channels')
     } finally {
       setLoading(false)
     }

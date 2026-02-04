@@ -11,7 +11,7 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user is admin or partner
@@ -22,7 +22,7 @@ export async function PATCH(
     const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
 
     if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     const { status, response, processed } = await req.json()
@@ -52,7 +52,7 @@ export async function PATCH(
     })
   } catch (error) {
     console.error('Error updating feedback:', error)
-    return NextResponse.json({ error: 'Failed to update feedback' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet bijwerken feedback' }, { status: 500 })
   }
 }
 
@@ -64,7 +64,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user is admin or partner
@@ -75,7 +75,7 @@ export async function DELETE(
     const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
 
     if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     await prisma.feedback.delete({
@@ -85,6 +85,6 @@ export async function DELETE(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting feedback:', error)
-    return NextResponse.json({ error: 'Failed to delete feedback' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet verwijderen feedback' }, { status: 500 })
   }
 }

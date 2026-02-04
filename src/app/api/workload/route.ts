@@ -26,7 +26,6 @@ async function migrateWorkloadNames() {
         data: { personName: correctName }
       })
     }
-    console.log('Workload name migration completed')
   } catch (error) {
     console.error('Error during workload name migration:', error)
     workloadMigrationRun = false
@@ -38,7 +37,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Run migration on first access
@@ -55,7 +54,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching workload:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch workload' },
+      { error: 'Kon niet ophalen workload' },
       { status: 500 }
     )
   }
@@ -66,7 +65,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check of gebruiker Partner of Admin is
@@ -112,7 +111,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error saving workload:', error)
     return NextResponse.json(
-      { error: 'Failed to save workload' },
+      { error: 'Kon niet opslaan workload' },
       { status: 500 }
     )
   }

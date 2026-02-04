@@ -15,7 +15,7 @@ interface ZaakEmailData {
 
 export async function sendZaakOfferEmail(data: ZaakEmailData) {
   if (!resend) {
-    console.log('Email not configured - would send to:', data.to)
+    console.warn('Email not configured - skipping send to:', data.to)
     return { success: false, error: 'Email not configured' }
   }
 
@@ -131,7 +131,7 @@ export async function sendZaakAssignedEmail(data: {
   assigneeName: string
 }) {
   if (!resend) {
-    console.log('Email not configured - would send assignment notification to:', data.to)
+    console.warn('Email not configured - skipping assignment notification to:', data.to)
     return { success: false, error: 'Email not configured' }
   }
 
@@ -175,7 +175,7 @@ export async function sendAllDeclinedEmail(data: {
   responses: { name: string; reason?: string }[]
 }) {
   if (!resend) {
-    console.log('Email not configured - would send all-declined notification to:', data.to)
+    console.warn('Email not configured - skipping all-declined notification to:', data.to)
     return { success: false, error: 'Email not configured' }
   }
 

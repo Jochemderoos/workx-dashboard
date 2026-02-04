@@ -10,7 +10,7 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const workItem = await prisma.workItem.findUnique({
@@ -42,7 +42,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching work item:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch work item' },
+      { error: 'Kon niet ophalen work item' },
       { status: 500 }
     )
   }
@@ -55,7 +55,7 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const data = await req.json()
@@ -94,7 +94,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating work item:', error)
     return NextResponse.json(
-      { error: 'Failed to update work item' },
+      { error: 'Kon niet bijwerken work item' },
       { status: 500 }
     )
   }
@@ -107,7 +107,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     await prisma.workItem.delete({
@@ -118,7 +118,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting work item:', error)
     return NextResponse.json(
-      { error: 'Failed to delete work item' },
+      { error: 'Kon niet verwijderen work item' },
       { status: 500 }
     )
   }

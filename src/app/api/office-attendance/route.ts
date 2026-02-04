@@ -73,18 +73,14 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      console.log('POST office-attendance: No session')
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
-
-    console.log('POST office-attendance: User email:', session.user.email)
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email! },
     })
 
     if (!user) {
-      console.log('POST office-attendance: User not found in DB')
       return NextResponse.json({ error: 'Gebruiker niet gevonden' }, { status: 404 })
     }
 
@@ -94,8 +90,6 @@ export async function POST(request: Request) {
     const defaultDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const date = body.date || defaultDate
     const timeSlot = body.timeSlot || 'FULL_DAY' // FULL_DAY, MORNING, AFTERNOON
-
-    console.log('POST office-attendance: Date:', date, 'UserId:', user.id, 'TimeSlot:', timeSlot)
 
     // Check of gebruiker al aangemeld is
     const existing = await prisma.officeAttendance.findFirst({
@@ -112,14 +106,12 @@ export async function POST(request: Request) {
           where: { id: existing.id },
           data: { timeSlot },
         })
-        console.log('POST office-attendance: Updated timeSlot')
         return NextResponse.json({
           success: true,
           attendance: updated,
           message: 'Tijdslot bijgewerkt',
         })
       }
-      console.log('POST office-attendance: Already registered')
       return NextResponse.json({
         success: true,
         attendance: existing,
@@ -131,8 +123,6 @@ export async function POST(request: Request) {
     const currentCount = await prisma.officeAttendance.count({
       where: { date },
     })
-
-    console.log('POST office-attendance: Current count:', currentCount)
 
     if (currentCount >= TOTAL_WORKPLACES) {
       return NextResponse.json(
@@ -149,8 +139,6 @@ export async function POST(request: Request) {
         timeSlot,
       },
     })
-
-    console.log('POST office-attendance: Created:', attendance.id)
 
     return NextResponse.json({
       success: true,

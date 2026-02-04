@@ -11,7 +11,7 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const calculation = await prisma.bonusCalculation.findFirst({
@@ -32,7 +32,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching bonus calculation:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch calculation' },
+      { error: 'Kon niet ophalen calculation' },
       { status: 500 }
     )
   }
@@ -46,7 +46,7 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const {
@@ -94,7 +94,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating bonus calculation:', error)
     return NextResponse.json(
-      { error: 'Failed to update calculation' },
+      { error: 'Kon niet bijwerken calculation' },
       { status: 500 }
     )
   }
@@ -108,7 +108,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Verify ownership
@@ -134,7 +134,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting bonus calculation:', error)
     return NextResponse.json(
-      { error: 'Failed to delete calculation' },
+      { error: 'Kon niet verwijderen calculation' },
       { status: 500 }
     )
   }

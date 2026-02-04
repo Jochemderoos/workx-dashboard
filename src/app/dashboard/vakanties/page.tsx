@@ -178,7 +178,7 @@ export default function VakantiesPage() {
           setMyVacationPeriods(data.myVacationPeriods)
         }
       } else {
-        throw new Error('Failed to fetch data')
+        throw new Error('Kon niet ophalen data')
       }
     } catch (error) {
       console.error('Error fetching data:', error)

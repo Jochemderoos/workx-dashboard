@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching vacation requests:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch requests' },
+      { error: 'Kon niet ophalen requests' },
       { status: 500 }
     )
   }
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { startDate, endDate, days, reason, userId: requestedUserId } = await req.json()
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error creating vacation request:', error)
     return NextResponse.json(
-      { error: 'Failed to create request' },
+      { error: 'Kon niet aanmaken request' },
       { status: 500 }
     )
   }

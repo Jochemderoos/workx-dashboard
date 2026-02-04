@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const currentUser = await prisma.user.findUnique({
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     })
 
     if (!currentUser || !['ADMIN', 'PARTNER'].includes(currentUser.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     const url = new URL(req.url)
@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error previewing hourly rate upgrade:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }
 
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const currentUser = await prisma.user.findUnique({
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (!currentUser || !['ADMIN', 'PARTNER'].includes(currentUser.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     const body = await req.json()
@@ -279,6 +279,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error executing hourly rate upgrade:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }

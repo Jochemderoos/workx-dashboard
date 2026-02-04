@@ -6,6 +6,14 @@ import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { EXPERIENCE_LABELS, URGENCY_CONFIG, START_METHOD_LABELS } from '@/lib/zaken-constants'
 
+interface Employee {
+  id: string
+  name: string
+  experienceYear?: number
+  isAvailable: boolean
+  unavailableReason?: string
+}
+
 interface Zaak {
   id: string
   shortDescription: string
@@ -56,12 +64,40 @@ export default function ZakenToewijzing({ isPartner }: ZakenToewijzingProps) {
     startsQuickly: false,
     clientName: '',
     clientContact: '',
+    // New assignment options
+    assignmentMode: 'queue' as 'queue' | 'direct',
+    directAssigneeId: '',
+    excludedUserIds: [] as string[],
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [loadingEmployees, setLoadingEmployees] = useState(false)
 
   useEffect(() => {
     fetchZaken()
   }, [statusFilter])
+
+  // Fetch employees when form is opened
+  useEffect(() => {
+    if (showForm && employees.length === 0) {
+      fetchEmployees()
+    }
+  }, [showForm])
+
+  const fetchEmployees = async () => {
+    setLoadingEmployees(true)
+    try {
+      const res = await fetch('/api/zaken/employees')
+      if (res.ok) {
+        const data = await res.json()
+        setEmployees(data)
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error)
+    } finally {
+      setLoadingEmployees(false)
+    }
+  }
 
   const fetchZaken = async () => {
     setIsLoading(true)
@@ -88,17 +124,28 @@ export default function ZakenToewijzing({ isPartner }: ZakenToewijzingProps) {
       return
     }
 
+    if (form.assignmentMode === 'direct' && !form.directAssigneeId) {
+      toast.error('Selecteer een medewerker voor directe toewijzing')
+      return
+    }
+
     setIsSubmitting(true)
     try {
+      const payload = {
+        ...form,
+        excludedUserIds: form.excludedUserIds.length > 0 ? form.excludedUserIds : undefined,
+        directAssigneeId: form.assignmentMode === 'direct' ? form.directAssigneeId : undefined,
+      }
+
       const res = await fetch('/api/zaken', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || 'Failed to create zaak')
+        throw new Error(data.error || 'Kon niet aanmaken zaak')
       }
 
       const data = await res.json()
@@ -120,6 +167,9 @@ export default function ZakenToewijzing({ isPartner }: ZakenToewijzingProps) {
         startsQuickly: false,
         clientName: '',
         clientContact: '',
+        assignmentMode: 'queue',
+        directAssigneeId: '',
+        excludedUserIds: [],
       })
       fetchZaken()
     } catch (error) {
@@ -357,6 +407,102 @@ export default function ZakenToewijzing({ isPartner }: ZakenToewijzingProps) {
                   placeholder="Extra instructies voor hoe de zaak op te starten..."
                 />
               </div>
+            </div>
+
+            {/* Assignment Options */}
+            <div className="border-t border-white/10 pt-4 mt-4">
+              <h4 className="text-sm font-medium text-white mb-3">Toewijzing opties</h4>
+
+              {/* Assignment Mode */}
+              <div className="flex gap-4 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="assignmentMode"
+                    checked={form.assignmentMode === 'queue'}
+                    onChange={() => setForm({ ...form, assignmentMode: 'queue', directAssigneeId: '' })}
+                    className="w-4 h-4 text-workx-lime focus:ring-workx-lime/50"
+                  />
+                  <span className="text-sm text-gray-300">Automatische queue</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="assignmentMode"
+                    checked={form.assignmentMode === 'direct'}
+                    onChange={() => setForm({ ...form, assignmentMode: 'direct', excludedUserIds: [] })}
+                    className="w-4 h-4 text-workx-lime focus:ring-workx-lime/50"
+                  />
+                  <span className="text-sm text-gray-300">Direct toewijzen</span>
+                </label>
+              </div>
+
+              {loadingEmployees ? (
+                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                  <span className="w-4 h-4 border-2 border-gray-500/30 border-t-gray-500 rounded-full animate-spin" />
+                  Medewerkers laden...
+                </div>
+              ) : form.assignmentMode === 'direct' ? (
+                /* Direct Assignment Dropdown */
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Toewijzen aan *</label>
+                  <select
+                    value={form.directAssigneeId}
+                    onChange={(e) => setForm({ ...form, directAssigneeId: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">Selecteer medewerker...</option>
+                    {employees
+                      .filter(e => e.experienceYear && e.experienceYear >= form.minimumExperienceYear)
+                      .map((emp) => (
+                        <option key={emp.id} value={emp.id} disabled={!emp.isAvailable}>
+                          {emp.name} {!emp.isAvailable && `(${emp.unavailableReason})`}
+                        </option>
+                      ))}
+                  </select>
+                  {employees.filter(e => e.experienceYear && e.experienceYear >= form.minimumExperienceYear).length === 0 && (
+                    <p className="text-xs text-amber-400 mt-1">
+                      Geen medewerkers met voldoende ervaring (min. jaar {form.minimumExperienceYear})
+                    </p>
+                  )}
+                </div>
+              ) : (
+                /* Exclude from Queue */
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Uitsluiten van queue (optioneel)</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {employees
+                      .filter(e => e.experienceYear && e.experienceYear >= form.minimumExperienceYear)
+                      .map((emp) => (
+                        <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.excludedUserIds.includes(emp.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setForm({ ...form, excludedUserIds: [...form.excludedUserIds, emp.id] })
+                              } else {
+                                setForm({ ...form, excludedUserIds: form.excludedUserIds.filter(id => id !== emp.id) })
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-white/20 bg-white/5 text-workx-lime focus:ring-workx-lime/50"
+                          />
+                          <span className={`text-sm ${!emp.isAvailable ? 'text-gray-500' : 'text-gray-300'}`}>
+                            {emp.name}
+                            {!emp.isAvailable && (
+                              <span className="text-xs text-amber-400 ml-1">({emp.unavailableReason})</span>
+                            )}
+                          </span>
+                        </label>
+                      ))}
+                  </div>
+                  {form.excludedUserIds.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      {form.excludedUserIds.length} medewerker(s) uitgesloten
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-2">

@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react'
 import ZaakOfferPopup from './ZaakOfferPopup'
 import toast from 'react-hot-toast'
+import { usePushNotifications } from '@/lib/hooks'
 
 interface ZaakOffer {
   id: string
   zaakId: string
   expiresAt: string
+  phase: 'INITIAL' | 'REMINDER' // INITIAL = Slack only, REMINDER = Slack + popup
   zaak: {
     id: string
     shortDescription: string
@@ -41,9 +43,36 @@ interface ZaakNotificationProviderProps {
 export default function ZaakNotificationProvider({ children, userRole }: ZaakNotificationProviderProps) {
   const [pendingOffer, setPendingOffer] = useState<ZaakOffer | null>(null)
   const [showPopup, setShowPopup] = useState(false)
+  const [hasAskedForPush, setHasAskedForPush] = useState(false)
 
   // Only show offers for employees (not partners/admins who create zaken)
   const shouldPoll = userRole === 'EMPLOYEE'
+
+  // Push notifications
+  const { isSupported, isSubscribed, permission, subscribe } = usePushNotifications()
+
+  // Auto-subscribe to push notifications for employees
+  useEffect(() => {
+    if (!shouldPoll || !isSupported || isSubscribed || hasAskedForPush) return
+
+    // Only ask once per session
+    setHasAskedForPush(true)
+
+    // If permission not yet asked, ask after a short delay
+    if (permission === 'default') {
+      const timer = setTimeout(async () => {
+        const result = await subscribe()
+        if (result) {
+          toast.success('Push notificaties ingeschakeld')
+        }
+      }, 5000) // Wait 5 seconds after page load
+
+      return () => clearTimeout(timer)
+    } else if (permission === 'granted' && !isSubscribed) {
+      // Permission already granted but not subscribed
+      subscribe()
+    }
+  }, [shouldPoll, isSupported, isSubscribed, permission, subscribe, hasAskedForPush])
 
   const checkForOffers = useCallback(async () => {
     if (!shouldPoll) return
@@ -53,12 +82,21 @@ export default function ZaakNotificationProvider({ children, userRole }: ZaakNot
       if (res.ok) {
         const data = await res.json()
         if (data.offer) {
-          // Check if this is a new offer
-          if (!pendingOffer || pendingOffer.id !== data.offer.id) {
-            setPendingOffer(data.offer)
-            setShowPopup(true)
-            // Play notification sound (optional)
-            // new Audio('/notification.mp3').play().catch(() => {})
+          const offer = data.offer as ZaakOffer
+          setPendingOffer(offer)
+
+          // Only show popup in REMINDER phase (after 1 hour of no response)
+          // In INITIAL phase, the employee only gets a Slack notification
+          if (offer.phase === 'REMINDER') {
+            // Check if this is a new reminder or phase change
+            if (!pendingOffer || pendingOffer.id !== offer.id || pendingOffer.phase !== 'REMINDER') {
+              setShowPopup(true)
+              // Play notification sound for reminder
+              // new Audio('/notification.mp3').play().catch(() => {})
+            }
+          } else {
+            // INITIAL phase - no popup, just track the offer
+            setShowPopup(false)
           }
         } else {
           setPendingOffer(null)

@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const user = await prisma.user.findUnique({
@@ -31,7 +31,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching profile:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch profile' },
+      { error: 'Kon niet ophalen profile' },
       { status: 500 }
     )
   }
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { name, phoneNumber, department, birthDate } = await req.json()
@@ -68,7 +68,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error('Error updating profile:', error)
     return NextResponse.json(
-      { error: 'Failed to update profile' },
+      { error: 'Kon niet bijwerken profile' },
       { status: 500 }
     )
   }

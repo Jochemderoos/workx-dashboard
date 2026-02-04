@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Auto-delete processed items older than 5 days
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Error fetching feedback:', error)
-    return NextResponse.json({ error: 'Failed to fetch feedback' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen feedback' }, { status: 500 })
   }
 }
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { type, title, description } = await req.json()
@@ -83,6 +83,6 @@ export async function POST(req: NextRequest) {
     }, { status: 201 })
   } catch (error) {
     console.error('Error creating feedback:', error)
-    return NextResponse.json({ error: 'Failed to create feedback' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet aanmaken feedback' }, { status: 500 })
   }
 }

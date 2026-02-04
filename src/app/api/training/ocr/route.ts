@@ -7,13 +7,13 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { imageBase64 } = await req.json()
 
     if (!imageBase64) {
-      return NextResponse.json({ error: 'Image data is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Image data is verplicht' }, { status: 400 })
     }
 
     const openaiApiKey = process.env.OPENAI_API_KEY
@@ -125,6 +125,6 @@ Let op:
     }
   } catch (error) {
     console.error('Error in OCR processing:', error)
-    return NextResponse.json({ error: 'Failed to process image' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet verwerken image' }, { status: 500 })
   }
 }

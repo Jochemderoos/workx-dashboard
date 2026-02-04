@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if JAR events already exist for 2026
@@ -91,7 +91,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const result = await prisma.calendarEvent.deleteMany({
@@ -110,6 +110,6 @@ export async function DELETE(req: NextRequest) {
     }, { status: 200 })
   } catch (error) {
     console.error('Error deleting JAR events:', error)
-    return NextResponse.json({ error: 'Failed to delete JAR events' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet verwijderen JAR events' }, { status: 500 })
   }
 }

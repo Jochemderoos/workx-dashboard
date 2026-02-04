@@ -8,7 +8,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const currentUser = await prisma.user.findUnique({
@@ -99,7 +99,7 @@ export async function GET() {
     return NextResponse.json(employeeData)
   } catch (error) {
     console.error('Error fetching employee compensation:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }
 
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const currentUser = await prisma.user.findUnique({
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
     })
 
     if (!currentUser || !['PARTNER', 'ADMIN'].includes(currentUser.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     const data = await request.json()
@@ -152,6 +152,6 @@ export async function POST(request: Request) {
     return NextResponse.json(compensation)
   } catch (error) {
     console.error('Error saving employee compensation:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }

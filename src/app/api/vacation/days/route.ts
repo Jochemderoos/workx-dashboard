@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const currentYear = new Date().getFullYear()
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching vacation balance:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch vacation balance' },
+      { error: 'Kon niet ophalen vacation balance' },
       { status: 500 }
     )
   }
@@ -52,7 +52,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Only admins and partners can update vacation balance
@@ -84,7 +84,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error('Error updating vacation balance:', error)
     return NextResponse.json(
-      { error: 'Failed to update vacation balance' },
+      { error: 'Kon niet bijwerken vacation balance' },
       { status: 500 }
     )
   }

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
 
     if (!channelId) {
-      return NextResponse.json({ error: 'Channel ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Channel ID is verplicht' }, { status: 400 })
     }
 
     const messages = await prisma.chatMessage.findMany({
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(messages)
   } catch (error) {
     console.error('Error fetching messages:', error)
-    return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen messages' }, { status: 500 })
   }
 }
 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { content, channelId } = await req.json()

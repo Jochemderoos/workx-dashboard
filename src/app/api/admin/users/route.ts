@@ -3,13 +3,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { logAuditAction, getIpFromRequest, getUserAgentFromRequest } from '@/lib/audit-log'
 
 // GET all users (for admin panel)
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user has permission (ADMIN or PARTNER)
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user has permission (ADMIN or PARTNER)
@@ -190,6 +191,18 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // Audit log
+    await logAuditAction({
+      userId: session.user.id,
+      action: 'CREATE',
+      entityType: 'User',
+      entityId: newUser.id,
+      description: `Nieuwe gebruiker aangemaakt: ${newUser.name} (${newUser.email})`,
+      newValue: { name: newUser.name, email: newUser.email, role: newUser.role },
+      ipAddress: getIpFromRequest(req),
+      userAgent: getUserAgentFromRequest(req),
+    })
+
     return NextResponse.json({
       success: true,
       message: `Account aangemaakt voor ${newUser.name}`,
@@ -209,7 +222,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user has permission (ADMIN or PARTNER)
@@ -234,6 +247,12 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
+    // Get current user data for audit log
+    const oldUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, role: true, isActive: true }
+    })
+
     const updateData: { isActive?: boolean; role?: string } = {}
     if (typeof isActive === 'boolean') updateData.isActive = isActive
     if (role) updateData.role = role
@@ -248,6 +267,27 @@ export async function PATCH(req: NextRequest) {
         role: true,
         isActive: true,
       }
+    })
+
+    // Audit log
+    const changes: string[] = []
+    if (typeof isActive === 'boolean' && oldUser?.isActive !== isActive) {
+      changes.push(isActive ? 'geactiveerd' : 'gedeactiveerd')
+    }
+    if (role && oldUser?.role !== role) {
+      changes.push(`rol gewijzigd naar ${role}`)
+    }
+
+    await logAuditAction({
+      userId: session.user.id,
+      action: role && oldUser?.role !== role ? 'ROLE_CHANGE' : 'UPDATE',
+      entityType: 'User',
+      entityId: userId,
+      description: `Gebruiker ${updatedUser.name} bijgewerkt: ${changes.join(', ')}`,
+      oldValue: oldUser,
+      newValue: { role: updatedUser.role, isActive: updatedUser.isActive },
+      ipAddress: getIpFromRequest(req),
+      userAgent: getUserAgentFromRequest(req),
     })
 
     return NextResponse.json({

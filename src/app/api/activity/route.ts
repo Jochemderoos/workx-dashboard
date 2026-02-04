@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const url = new URL(req.url)
@@ -176,6 +176,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching activity:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }

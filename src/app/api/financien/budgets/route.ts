@@ -16,7 +16,7 @@ async function checkEditAccess(userId: string) {
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
   try {
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(budgets)
   } catch (error) {
     console.error('Error fetching budgets:', error)
-    return NextResponse.json({ error: 'Failed to fetch budgets' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen budgets' }, { status: 500 })
   }
 }
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
   if (!await checkEditAccess(session.user.id)) {
@@ -61,6 +61,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(newBudget)
   } catch (error) {
     console.error('Error creating budget:', error)
-    return NextResponse.json({ error: 'Failed to create budget' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet aanmaken budget' }, { status: 500 })
   }
 }

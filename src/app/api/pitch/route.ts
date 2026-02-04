@@ -20,7 +20,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const teamMembers = getAvailableTeamMembers()
@@ -41,7 +41,7 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Error fetching pitch info:', error)
-    return NextResponse.json({ error: 'Failed to fetch pitch info' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen pitch info' }, { status: 500 })
   }
 }
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const body = await req.json()
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
     if (!selectedTeamMembers || !Array.isArray(selectedTeamMembers)) {
       return NextResponse.json(
-        { error: 'selectedTeamMembers is required and must be an array' },
+        { error: 'selectedTeamMembers is verplicht and must be an array' },
         { status: 400 }
       )
     }

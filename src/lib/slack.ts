@@ -264,6 +264,70 @@ export async function notifyZaakDeclined(
 }
 
 /**
+ * Send reminder notification for zaak assignment (after 1 hour no response)
+ */
+export async function notifyZaakReminder(
+  userEmail: string,
+  zaak: {
+    id: string
+    title: string
+    clientName?: string
+    createdByName: string
+    expiresAt: Date
+  }
+): Promise<boolean> {
+  const dashboardUrl = process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app'
+  const zaakUrl = `${dashboardUrl}/dashboard/werk`
+
+  const expiresIn = Math.round((zaak.expiresAt.getTime() - Date.now()) / (1000 * 60))
+  const expiresText = expiresIn > 60 ? `${Math.round(expiresIn / 60)} uur` : `${expiresIn} minuten`
+
+  const blocks = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: '⏰ Herinnering: zaak wacht op reactie!',
+        emoji: true,
+      },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*${zaak.title}*${zaak.clientName ? `\nKlant: ${zaak.clientName}` : ''}\nVan: ${zaak.createdByName}`,
+      },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `🚨 *Laatste kans!* Reageer binnen *${expiresText}*, anders gaat de zaak naar de volgende collega.`,
+      },
+    },
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: '✅ Nu reageren',
+            emoji: true,
+          },
+          url: zaakUrl,
+          style: 'primary',
+        },
+      ],
+    },
+  ]
+
+  const fallbackMessage = `⏰ Herinnering: ${zaak.title}\nLaatste kans! Reageer binnen ${expiresText}\n${zaakUrl}`
+
+  return sendDirectMessage(userEmail, fallbackMessage, blocks)
+}
+
+/**
  * Test Slack connection
  */
 export async function testSlackConnection(): Promise<{

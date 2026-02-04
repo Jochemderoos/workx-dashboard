@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
     // Non-admins can only view their own periods
     if (!isAdmin && userId !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     const periods = await prisma.vacationPeriod.findMany({
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(periods)
   } catch (error) {
     console.error('Error fetching vacation periods:', error)
-    return NextResponse.json({ error: 'Failed to fetch vacation periods' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen vacation periods' }, { status: 500 })
   }
 }
 
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const body = await req.json()
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(period, { status: 201 })
   } catch (error) {
     console.error('Error creating vacation period:', error)
-    return NextResponse.json({ error: 'Failed to create vacation period' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet aanmaken vacation period' }, { status: 500 })
   }
 }
 
@@ -199,14 +199,14 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const body = await req.json()
     const { id, startDate, endDate, werkdagen, note } = body
 
     if (!id) {
-      return NextResponse.json({ error: 'Period id is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Period id is verplicht' }, { status: 400 })
     }
 
     // Check if user has admin permissions
@@ -282,7 +282,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(updatedPeriod)
   } catch (error) {
     console.error('Error updating vacation period:', error)
-    return NextResponse.json({ error: 'Failed to update vacation period' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet bijwerken vacation period' }, { status: 500 })
   }
 }
 
@@ -291,14 +291,14 @@ export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json({ error: 'Period id is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Period id is verplicht' }, { status: 400 })
     }
 
     // Check if user has admin permissions
@@ -340,6 +340,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting vacation period:', error)
-    return NextResponse.json({ error: 'Failed to delete vacation period' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet verwijderen vacation period' }, { status: 500 })
   }
 }

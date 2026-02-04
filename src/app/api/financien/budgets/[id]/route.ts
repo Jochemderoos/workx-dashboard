@@ -19,7 +19,7 @@ export async function PATCH(
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
   if (!await checkFinancialAccess(session.user.id)) {
@@ -43,7 +43,7 @@ export async function PATCH(
     return NextResponse.json(updated)
   } catch (error) {
     console.error('Error updating budget:', error)
-    return NextResponse.json({ error: 'Failed to update budget' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet bijwerken budget' }, { status: 500 })
   }
 }
 
@@ -54,7 +54,7 @@ export async function DELETE(
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
   if (!await checkFinancialAccess(session.user.id)) {
@@ -69,6 +69,6 @@ export async function DELETE(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting budget:', error)
-    return NextResponse.json({ error: 'Failed to delete budget' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet verwijderen budget' }, { status: 500 })
   }
 }

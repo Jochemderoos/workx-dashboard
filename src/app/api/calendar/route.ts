@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(events)
   } catch (error) {
     console.error('Error fetching calendar events:', error)
-    return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen events' }, { status: 500 })
   }
 }
 
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { title, description, startTime, endTime, isAllDay, location, color, category } = await req.json()
@@ -186,6 +186,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(event, { status: 201 })
   } catch (error) {
     console.error('Error creating calendar event:', error)
-    return NextResponse.json({ error: 'Failed to create event' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet aanmaken event' }, { status: 500 })
   }
 }

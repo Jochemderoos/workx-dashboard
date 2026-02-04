@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const userId = session.user.id
@@ -335,7 +335,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching dashboard summary:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch dashboard summary' },
+      { error: 'Kon niet ophalen dashboard summary' },
       { status: 500 }
     )
   }

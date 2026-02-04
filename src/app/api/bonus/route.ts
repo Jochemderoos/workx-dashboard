@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const calculations = await prisma.bonusCalculation.findMany({
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(calculations)
   } catch (error) {
     console.error('Error fetching bonus calculations:', error)
-    return NextResponse.json({ error: 'Failed to fetch calculations' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen calculations' }, { status: 500 })
   }
 }
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { invoiceAmount, bonusPercentage, invoicePaid, bonusPaid, invoiceNumber, clientName, description } = await req.json()
@@ -53,6 +53,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(calculation, { status: 201 })
   } catch (error) {
     console.error('Error creating bonus calculation:', error)
-    return NextResponse.json({ error: 'Failed to create calculation' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet aanmaken calculation' }, { status: 500 })
   }
 }

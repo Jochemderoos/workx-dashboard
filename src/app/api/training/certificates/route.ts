@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const isAdmin = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
 
     if (!isAdmin && userId !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     // Fetch certificates for the user and year
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching certificates:', error)
-    return NextResponse.json({ error: 'Failed to fetch certificates' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen certificates' }, { status: 500 })
   }
 }
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const body = await req.json()
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(certificate, { status: 201 })
   } catch (error) {
     console.error('Error creating certificate:', error)
-    return NextResponse.json({ error: 'Failed to create certificate' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet aanmaken certificate' }, { status: 500 })
   }
 }
 
@@ -104,14 +104,14 @@ export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json({ error: 'Certificate ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Certificate ID is verplicht' }, { status: 400 })
     }
 
     // Check if user owns this certificate or is admin
@@ -142,6 +142,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting certificate:', error)
-    return NextResponse.json({ error: 'Failed to delete certificate' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet verwijderen certificate' }, { status: 500 })
   }
 }

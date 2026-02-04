@@ -11,7 +11,7 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user is admin or partner
@@ -38,7 +38,7 @@ export async function PATCH(
     // Check permissions
     const isOwnRequest = request.userId === session.user.id
     if (!isAdmin && !isOwnRequest) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     // Employees can only edit their own pending requests
@@ -126,7 +126,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating vacation request:', error)
     return NextResponse.json(
-      { error: 'Failed to update request' },
+      { error: 'Kon niet bijwerken request' },
       { status: 500 }
     )
   }
@@ -140,7 +140,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user is admin or partner
@@ -204,7 +204,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting vacation request:', error)
     return NextResponse.json(
-      { error: 'Failed to delete request' },
+      { error: 'Kon niet verwijderen request' },
       { status: 500 }
     )
   }

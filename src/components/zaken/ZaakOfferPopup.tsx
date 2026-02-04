@@ -8,6 +8,7 @@ interface ZaakOffer {
   id: string
   zaakId: string
   expiresAt: string
+  phase: 'INITIAL' | 'REMINDER'
   zaak: {
     id: string
     shortDescription: string
@@ -189,20 +190,33 @@ export default function ZaakOfferPopup({ offer, onAccept, onDecline }: ZaakOffer
 
       {/* Modal */}
       <div className="relative w-full max-w-xl bg-gradient-to-br from-workx-dark to-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
-        {/* Header with urgency indicator */}
-        <div className={`px-6 py-4 border-b border-white/10 ${urgency.bgColor}`}>
+        {/* Header with urgency/reminder indicator */}
+        <div className={`px-6 py-4 border-b border-white/10 ${offer.phase === 'REMINDER' ? 'bg-amber-500/10' : urgency.bgColor}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-workx-lime/20 flex items-center justify-center">
-                <Icons.briefcase className="text-workx-lime" size={20} />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${offer.phase === 'REMINDER' ? 'bg-amber-500/20' : 'bg-workx-lime/20'}`}>
+                {offer.phase === 'REMINDER' ? (
+                  <Icons.alertTriangle className="text-amber-400" size={20} />
+                ) : (
+                  <Icons.briefcase className="text-workx-lime" size={20} />
+                )}
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">Nieuwe zaak voor jou!</h2>
+                <h2 className="text-lg font-semibold text-white">
+                  {offer.phase === 'REMINDER' ? 'Herinnering: Zaak wacht!' : 'Nieuwe zaak voor jou!'}
+                </h2>
                 <p className="text-sm text-gray-400">Van {offer.zaak.createdBy.name}</p>
               </div>
             </div>
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${urgency.bgColor} ${urgency.textColor}`}>
-              {urgency.label}
+            <div className="flex items-center gap-2">
+              {offer.phase === 'REMINDER' && (
+                <div className="px-3 py-1 rounded-full text-sm font-medium bg-amber-500/20 text-amber-400">
+                  Laatste kans
+                </div>
+              )}
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${urgency.bgColor} ${urgency.textColor}`}>
+                {urgency.label}
+              </div>
             </div>
           </div>
         </div>

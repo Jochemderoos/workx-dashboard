@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error with Slack channels:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch' },
+      { error: error instanceof Error ? error.message : 'Kon niet ophalen' },
       { status: 500 }
     )
   }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     const { channelId, message } = await req.json()

@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
   try {
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching 2026 data:', error)
-    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet ophalen data' }, { status: 500 })
   }
 }
 
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
   // Check role - alleen ADMIN en PARTNER mogen financiele data wijzigen
@@ -90,6 +90,6 @@ export async function PUT(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error updating 2026 data:', error)
-    return NextResponse.json({ error: 'Failed to update data' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet bijwerken data' }, { status: 500 })
   }
 }

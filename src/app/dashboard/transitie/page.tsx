@@ -247,7 +247,7 @@ export default function TransitiePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(calculationData)
         })
-        if (!res.ok) throw new Error('Failed to update')
+        if (!res.ok) throw new Error('Kon niet bijwerken')
         const updated = await res.json()
         setSavedCalculations(prev => prev.map(c => c.id === editingId ? updated : c))
         setEditingId(null)
@@ -258,7 +258,7 @@ export default function TransitiePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(calculationData)
         })
-        if (!res.ok) throw new Error('Failed to save')
+        if (!res.ok) throw new Error('Kon niet opslaan')
         const newCalc = await res.json()
         setSavedCalculations(prev => [newCalc, ...prev])
         toast.success('Berekening opgeslagen')
@@ -311,7 +311,7 @@ export default function TransitiePage() {
   const deleteCalculation = async (id: string) => {
     try {
       const res = await fetch(`/api/transitie/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete')
+      if (!res.ok) throw new Error('Kon niet verwijderen')
 
       setSavedCalculations(prev => prev.filter(c => c.id !== id))
       if (editingId === id) {

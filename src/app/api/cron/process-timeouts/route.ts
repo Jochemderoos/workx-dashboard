@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { processExpiredOffers } from '@/lib/zaken-utils'
+import { processExpiredOffers, processReminders } from '@/lib/zaken-utils'
 
 // This endpoint is called by Vercel Cron or external scheduler
-// to process expired zaak offers
+// to process expired zaak offers and send reminders
+//
+// Two-phase flow:
+// 1. INITIAL phase (first hour): Only Slack notification, no popup
+// 2. REMINDER phase (second hour): Slack reminder + in-app popup shown
+//
+// This cron processes:
+// 1. INITIAL → REMINDER transitions (after 1 hour)
+// 2. REMINDER → TIMEOUT transitions (after 2 hours total)
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,19 +19,29 @@ export async function GET(req: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const result = await processExpiredOffers()
+    // First: Process INITIAL → REMINDER transitions (send reminders after 1 hour)
+    const reminderResult = await processReminders()
+
+    // Second: Process REMINDER → TIMEOUT transitions (timeout after 2 hours total)
+    const timeoutResult = await processExpiredOffers()
 
     return NextResponse.json({
       success: true,
-      processed: result.processed,
+      reminders: {
+        processed: reminderResult.processed,
+        results: reminderResult.results,
+      },
+      timeouts: {
+        processed: timeoutResult.processed,
+      },
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
     console.error('Error processing timeouts:', error)
-    return NextResponse.json({ error: 'Failed to process timeouts' }, { status: 500 })
+    return NextResponse.json({ error: 'Kon niet verwerken timeouts' }, { status: 500 })
   }
 }
 

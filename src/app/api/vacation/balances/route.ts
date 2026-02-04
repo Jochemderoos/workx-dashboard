@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user is admin or partner
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
 
     if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     const currentYear = new Date().getFullYear()
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching vacation balances:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch balances' },
+      { error: 'Kon niet ophalen balances' },
       { status: 500 }
     )
   }
@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Check if user is admin or partner
@@ -90,7 +90,7 @@ export async function PATCH(req: NextRequest) {
     const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
 
     if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     const { userId, overgedragenVorigJaar, opbouwLopendJaar, bijgekocht, opgenomenLopendJaar } = await req.json()
@@ -122,7 +122,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error('Error updating vacation balance:', error)
     return NextResponse.json(
-      { error: 'Failed to update balance' },
+      { error: 'Kon niet bijwerken balance' },
       { status: 500 }
     )
   }

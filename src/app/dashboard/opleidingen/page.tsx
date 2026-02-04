@@ -135,7 +135,7 @@ export default function OpleidingenPage() {
         }),
       })
 
-      if (!res.ok) throw new Error('Failed to create session')
+      if (!res.ok) throw new Error('Kon niet aanmaken session')
 
       toast.success('Opleidingssessie toegevoegd')
       setShowSessionForm(false)
@@ -163,7 +163,7 @@ export default function OpleidingenPage() {
         method: 'DELETE',
       })
 
-      if (!res.ok) throw new Error('Failed to delete session')
+      if (!res.ok) throw new Error('Kon niet verwijderen session')
 
       toast.success('Sessie verwijderd')
       fetchSessions()
@@ -233,7 +233,7 @@ export default function OpleidingenPage() {
         }),
       })
 
-      if (!res.ok) throw new Error('Failed to create certificate')
+      if (!res.ok) throw new Error('Kon niet aanmaken certificate')
 
       toast.success('Certificaat toegevoegd')
       setShowCertificateForm(false)
@@ -261,7 +261,7 @@ export default function OpleidingenPage() {
         method: 'DELETE',
       })
 
-      if (!res.ok) throw new Error('Failed to delete certificate')
+      if (!res.ok) throw new Error('Kon niet verwijderen certificate')
 
       toast.success('Certificaat verwijderd')
       fetchCertificates()

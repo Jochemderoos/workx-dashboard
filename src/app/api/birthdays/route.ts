@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
     // Get all active users with birthdays
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching birthdays:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch birthdays' },
+      { error: 'Kon niet ophalen birthdays' },
       { status: 500 }
     )
   }
