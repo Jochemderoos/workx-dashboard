@@ -20,7 +20,7 @@ export async function GET() {
       select: { id: true, name: true, role: true },
     })
 
-    const isAdmin = currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
+    const isAdmin = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'OFFICE_MANAGER'
 
     // Fetch all data in parallel using Promise.all
     const [
