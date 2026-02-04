@@ -1,4 +1,5 @@
 import { WebClient } from '@slack/web-api'
+import { CACHE_CONFIG } from '@/lib/config'
 
 // Initialize Slack client
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN)
@@ -17,7 +18,7 @@ export interface SlackUser {
 // Cache for Slack users (email -> Slack user ID)
 let userCache: Map<string, SlackUser> | null = null
 let cacheTimestamp = 0
-const CACHE_TTL = 1000 * 60 * 60 // 1 hour
+const CACHE_TTL = CACHE_CONFIG.SLACK_USERS
 
 /**
  * Get all Slack users and cache them

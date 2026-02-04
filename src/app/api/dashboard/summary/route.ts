@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { OFFICE_CONFIG, getDefaultVacationDays } from '@/lib/config'
 
 // GET - Fetch all dashboard data in one bundled API call
 export async function GET() {
@@ -210,8 +211,7 @@ export async function GET() {
     ])
 
     // Calculate vacation balance totals for easier frontend use
-    const isPartner = currentUser?.role === 'PARTNER'
-    const defaultOpbouw = isPartner ? 0 : 25
+    const defaultOpbouw = getDefaultVacationDays(currentUser?.role || 'EMPLOYEE')
 
     // If balance exists but is from a different year, still show it (with year indicator)
     // This prevents data from "disappearing" at year boundaries
@@ -247,7 +247,7 @@ export async function GET() {
         }
 
     // Format office attendance for easier frontend use
-    const TOTAL_WORKPLACES = 11
+    const { TOTAL_WORKPLACES } = OFFICE_CONFIG
     const officeAttendanceFormatted = {
       date: today,
       attendees: officeAttendance.map((a) => ({

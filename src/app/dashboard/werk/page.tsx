@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import { formatDateForAPI } from '@/lib/date-utils'
 import { TEAM_PHOTOS, ADVOCATEN } from '@/lib/team-photos'
 import ZakenToewijzing from '@/components/zaken/ZakenToewijzing'
 
@@ -160,21 +161,21 @@ export default function WerkOverzichtPage() {
 
   // Get workload for a specific person and date
   const getWorkload = (person: string, date: Date): WorkloadLevel => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateForAPI(date)
     const entry = workloadEntries.find(e => e.personName === person && e.date === dateStr)
     return entry?.level || null
   }
 
   // Get workload entry with hours for a specific person and date
   const getWorkloadEntry = (person: string, date: Date): WorkloadEntry | null => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateForAPI(date)
     const entry = workloadEntries.find(e => e.personName === person && e.date === dateStr)
     return entry || null
   }
 
   // Set workload for a person on a date - saves to API
   const saveWorkload = async (person: string, date: Date, level: WorkloadLevel) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateForAPI(date)
 
     try {
       const res = await fetch('/api/workload', {
@@ -206,7 +207,7 @@ export default function WerkOverzichtPage() {
 
   // Count workload levels for today
   const todayStats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = formatDateForAPI(new Date())
     const todayEntries = workloadEntries.filter(e => e.date === today)
     return {
       green: todayEntries.filter(e => e.level === 'green').length,
@@ -268,7 +269,7 @@ export default function WerkOverzichtPage() {
     formData.append('file', file)
     // Date is now optional - the file contains Dutch dates that are parsed automatically
     if (uploadDate) {
-      formData.append('date', uploadDate.toISOString().split('T')[0])
+      formData.append('date', formatDateForAPI(uploadDate))
     }
 
     try {
@@ -433,7 +434,7 @@ export default function WerkOverzichtPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title, description: description || null, status, priority,
-          dueDate: dueDate ? dueDate.toISOString().split('T')[0] : null, estimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
+          dueDate: dueDate ? formatDateForAPI(dueDate) : null, estimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
           clientName: clientName || null, caseNumber: caseNumber || null,
         }),
       })
@@ -950,7 +951,7 @@ export default function WerkOverzichtPage() {
                       </div>
                     </div>
                     {last3Workdays.map(day => {
-                      const dateStr = day.toISOString().split('T')[0]
+                      const dateStr = formatDateForAPI(day)
                       const entry = getWorkloadEntry(person, day)
                       const level = entry?.level || null
                       const hours = entry?.hours

@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import { formatDateForAPI } from '@/lib/date-utils'
 import {
   drawWorkxLogo,
   createPDFHeader,
@@ -613,7 +614,7 @@ export default function TransitiePage() {
               <label className="block text-sm text-gray-400 mb-2">Datum in dienst *</label>
               <DatePicker
                 selected={form.startDate ? new Date(form.startDate) : null}
-                onChange={(date) => setForm({ ...form, startDate: date ? date.toISOString().split('T')[0] : '' })}
+                onChange={(date) => setForm({ ...form, startDate: date ? formatDateForAPI(date) : '' })}
                 placeholder="Selecteer datum..."
                 maxDate={form.endDate ? new Date(form.endDate) : undefined}
               />
@@ -622,7 +623,7 @@ export default function TransitiePage() {
               <label className="block text-sm text-gray-400 mb-2">Datum uit dienst *</label>
               <DatePicker
                 selected={form.endDate ? new Date(form.endDate) : null}
-                onChange={(date) => setForm({ ...form, endDate: date ? date.toISOString().split('T')[0] : '' })}
+                onChange={(date) => setForm({ ...form, endDate: date ? formatDateForAPI(date) : '' })}
                 placeholder="Selecteer datum..."
                 minDate={form.startDate ? new Date(form.startDate) : undefined}
               />

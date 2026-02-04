@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { OFFICE_CONFIG } from '@/lib/config'
 
-const TOTAL_WORKPLACES = 11
+const { TOTAL_WORKPLACES } = OFFICE_CONFIG
 
 // GET - Haal aanwezigheid op voor een specifieke datum (of vandaag)
 export async function GET(request: Request) {

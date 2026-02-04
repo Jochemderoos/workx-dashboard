@@ -8,6 +8,7 @@ import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import TimePicker from '@/components/ui/TimePicker'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { formatDateForAPI, formatDateTimeForAPI } from '@/lib/date-utils'
 
 interface CalendarEvent {
   id: string
@@ -73,14 +74,6 @@ export default function AgendaPage() {
   const [endTime, setEndTime] = useState('10:00')
   const [isAllDay, setIsAllDay] = useState(false)
 
-  // Helper to format date for API (using local timezone, not UTC)
-  const formatDateForAPI = (date: Date | null) => {
-    if (!date) return ''
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
   const [location, setLocation] = useState('')
   const [category, setCategory] = useState<CalendarEvent['category']>('GENERAL')
 
@@ -196,7 +189,7 @@ export default function AgendaPage() {
       const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
       const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
       // Fetch calendar events (vacations are handled separately in Vakantie&Verlof)
-      const res = await fetch(`/api/calendar?startDate=${startOfMonth.toISOString()}&endDate=${endOfMonth.toISOString()}`)
+      const res = await fetch(`/api/calendar?startDate=${formatDateForAPI(startOfMonth)}&endDate=${formatDateForAPI(endOfMonth)}`)
       if (res.ok) setEvents(await res.json())
     } catch (error) {
       // Demo mode - use empty array
@@ -261,8 +254,8 @@ export default function AgendaPage() {
         method: editingEvent ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title, description: description || null, startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(), isAllDay, location: location || null,
+          title, description: description || null, startTime: formatDateTimeForAPI(startDateTime),
+          endTime: formatDateTimeForAPI(endDateTime), isAllDay, location: location || null,
           color: categoryConfig[category].color, category,
         }),
       })

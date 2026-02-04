@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import { formatDateForAPI } from '@/lib/date-utils'
 
 interface TrainingSession {
   id: string
@@ -130,7 +131,7 @@ export default function OpleidingenPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...sessionForm,
-          date: sessionForm.date.toISOString(),
+          date: formatDateForAPI(sessionForm.date),
         }),
       })
 
@@ -227,7 +228,7 @@ export default function OpleidingenPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...certificateForm,
-          completedDate: certificateForm.completedDate.toISOString(),
+          completedDate: formatDateForAPI(certificateForm.completedDate),
           certificateUrl: previewImage, // Store base64 for now
         }),
       })

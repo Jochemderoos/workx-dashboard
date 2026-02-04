@@ -10,6 +10,8 @@ import VacationPeriodForm, { VacationPeriodFormData } from '@/components/vacatio
 import VacationPeriodList, { VacationPeriod } from '@/components/vacation/VacationPeriodList'
 import WorkdaysCalculator from '@/components/vacation/WorkdaysCalculator'
 import { werkdagenToString, parseWerkdagen, DEFAULT_WERKDAGEN } from '@/lib/vacation-utils'
+import { SCHOOL_HOLIDAYS, COLORS, getColorForUser, type SchoolHoliday } from '@/lib/config'
+import { formatDateForAPI } from '@/lib/date-utils'
 
 interface VacationRequest {
   id: string
@@ -61,51 +63,7 @@ interface ParentalLeave {
   }
 }
 
-// Schoolvakanties Noord-Holland (Regio Noord)
-interface SchoolHoliday {
-  name: string
-  startDate: string
-  endDate: string
-}
-
-const SCHOOL_HOLIDAYS: SchoolHoliday[] = [
-  // 2025
-  { name: 'Voorjaarsvakantie 2025', startDate: '2025-02-22', endDate: '2025-03-02' },
-  { name: 'Meivakantie 2025', startDate: '2025-04-26', endDate: '2025-05-11' },
-  { name: 'Zomervakantie 2025', startDate: '2025-07-19', endDate: '2025-08-31' },
-  { name: 'Herfstvakantie 2025', startDate: '2025-10-18', endDate: '2025-10-26' },
-  { name: 'Kerstvakantie 2025', startDate: '2025-12-20', endDate: '2026-01-04' },
-  // 2026
-  { name: 'Voorjaarsvakantie 2026', startDate: '2026-02-21', endDate: '2026-03-01' },
-  { name: 'Meivakantie 2026', startDate: '2026-04-25', endDate: '2026-05-10' },
-  { name: 'Zomervakantie 2026', startDate: '2026-07-11', endDate: '2026-08-23' },
-  { name: 'Herfstvakantie 2026', startDate: '2026-10-17', endDate: '2026-10-25' },
-  { name: 'Kerstvakantie 2026', startDate: '2026-12-19', endDate: '2027-01-03' },
-  // 2027
-  { name: 'Voorjaarsvakantie 2027', startDate: '2027-02-20', endDate: '2027-02-28' },
-  { name: 'Meivakantie 2027', startDate: '2027-05-01', endDate: '2027-05-09' },
-  { name: 'Zomervakantie 2027', startDate: '2027-07-17', endDate: '2027-08-29' },
-]
-
-const COLORS = [
-  { name: 'Lime', value: '#f9ff85' },
-  { name: 'Blauw', value: '#60a5fa' },
-  { name: 'Paars', value: '#a78bfa' },
-  { name: 'Roze', value: '#f472b6' },
-  { name: 'Oranje', value: '#fb923c' },
-  { name: 'Groen', value: '#34d399' },
-  { name: 'Cyan', value: '#22d3ee' },
-  { name: 'Rood', value: '#f87171' },
-]
-
-// Assign a consistent color based on user name
-function getColorForUser(name: string): string {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return COLORS[Math.abs(hash) % COLORS.length].value
-}
+// School holidays and colors are now imported from @/lib/config
 
 export default function VakantiesPage() {
   const { data: session } = useSession()
@@ -240,11 +198,7 @@ export default function VakantiesPage() {
     setShowTeamDropdown(false)
   }
 
-  // Helper to format date for API
-  const formatDateForAPI = (date: Date | null) => {
-    if (!date) return ''
-    return date.toISOString().split('T')[0]
-  }
+  // formatDateForAPI is now imported from @/lib/date-utils
 
   // Create or update vacation
   const handleSubmit = async (e: React.FormEvent) => {
@@ -414,13 +368,14 @@ export default function VakantiesPage() {
 
       if (editingPeriod) {
         // Update existing period
+        // Use date-only format (YYYY-MM-DD) to avoid timezone issues
         const res = await fetch('/api/vacation/periods', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             id: editingPeriod.id,
-            startDate: data.startDate.toISOString(),
-            endDate: data.endDate.toISOString(),
+            startDate: formatDateForAPI(data.startDate),
+            endDate: formatDateForAPI(data.endDate),
             werkdagen: werkdagenStr,
             note: data.note,
           }),
@@ -432,13 +387,14 @@ export default function VakantiesPage() {
         toast.success('Periode bijgewerkt')
       } else {
         // Create new period
+        // Use date-only format (YYYY-MM-DD) to avoid timezone issues
         const res = await fetch('/api/vacation/periods', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: periodFormUserId,
-            startDate: data.startDate.toISOString(),
-            endDate: data.endDate.toISOString(),
+            startDate: formatDateForAPI(data.startDate),
+            endDate: formatDateForAPI(data.endDate),
             werkdagen: werkdagenStr,
             note: data.note,
           }),
@@ -618,7 +574,7 @@ export default function VakantiesPage() {
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
 
   const getSchoolHoliday = (date: Date): SchoolHoliday | null => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateForAPI(date)
     for (const holiday of SCHOOL_HOLIDAYS) {
       if (dateStr >= holiday.startDate && dateStr <= holiday.endDate) {
         return holiday

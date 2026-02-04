@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import { formatDateForAPI } from '@/lib/date-utils'
 
 interface Employee {
   id: string
@@ -475,7 +476,7 @@ export default function AfspiegelingPage() {
                   <label className="block text-sm text-gray-400 mb-2">Geboortedatum *</label>
                   <DatePicker
                     selected={newEmployee.birthDate ? new Date(newEmployee.birthDate) : null}
-                    onChange={(date) => setNewEmployee({ ...newEmployee, birthDate: date ? date.toISOString().split('T')[0] : '' })}
+                    onChange={(date) => setNewEmployee({ ...newEmployee, birthDate: date ? formatDateForAPI(date) : '' })}
                     placeholder="Geboortedatum..."
                     maxDate={new Date()}
                   />
@@ -484,7 +485,7 @@ export default function AfspiegelingPage() {
                   <label className="block text-sm text-gray-400 mb-2">In dienst sinds *</label>
                   <DatePicker
                     selected={newEmployee.startDate ? new Date(newEmployee.startDate) : null}
-                    onChange={(date) => setNewEmployee({ ...newEmployee, startDate: date ? date.toISOString().split('T')[0] : '' })}
+                    onChange={(date) => setNewEmployee({ ...newEmployee, startDate: date ? formatDateForAPI(date) : '' })}
                     placeholder="Startdatum..."
                     maxDate={new Date()}
                   />

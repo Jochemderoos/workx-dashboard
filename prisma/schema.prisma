@@ -75,6 +75,9 @@ model User {
   createdZaken      Zaak[]            @relation("CreatedZaken")
   assignedZaken     Zaak[]            @relation("AssignedZaken")
   zaakAssignments   ZaakAssignment[]
+
+  @@index([isActive])
+  @@index([role])
 }
 
 model Account {
@@ -153,6 +156,9 @@ model ChatMessage {
   channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   parent    ChatMessage? @relation("ThreadReplies", fields: [parentId], references: [id])
   replies   ChatMessage[] @relation("ThreadReplies")
+
+  @@index([channelId, createdAt])
+  @@index([senderId])
 }
 
 // ==================== BONUS CALCULATOR ====================
@@ -172,6 +178,10 @@ model BonusCalculation {
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([bonusPaid])
 }
 
 // ==================== VACATION ====================
@@ -278,6 +288,8 @@ model VacationRequest {
 
   @@index([userId])
   @@index([status])
+  @@index([status, endDate])
+  @@index([startDate, endDate])
 }
 
 // ==================== WORK ITEMS ====================

@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { TEAM_PHOTOS, ALL_TEAM_MEMBERS, getPhotoUrl } from '@/lib/team-photos'
 import { LUSTRUM_CONFIG, MALLORCA_FACTS, getCountdown } from '@/lib/lustrum-data'
+import { formatDateForAPI, parseDateFromAPI } from '@/lib/date-utils'
 
 // Inline Logo Component - yellow background with black text
 function WorkxLogoSmall() {
@@ -723,20 +724,20 @@ export default function DashboardHome() {
 
   // Helper to get absences for a specific date (combines vacations + calendar absences)
   const getAbsencesForDate = (date: Date) => {
-    // Normalize date to YYYY-MM-DD string for comparison
-    const checkDateStr = date.toISOString().split('T')[0]
+    // Normalize date to YYYY-MM-DD string for comparison (using local date formatting to avoid timezone issues)
+    const checkDateStr = formatDateForAPI(date)
 
     // Get vacation absences
     const vacationAbsences = vacations.filter(v => {
-      const startStr = new Date(v.startDate).toISOString().split('T')[0]
-      const endStr = new Date(v.endDate).toISOString().split('T')[0]
+      const startStr = formatDateForAPI(parseDateFromAPI(v.startDate) || new Date(v.startDate))
+      const endStr = formatDateForAPI(parseDateFromAPI(v.endDate) || new Date(v.endDate))
       return startStr <= checkDateStr && endStr >= checkDateStr
     })
 
     // Get calendar absences (part-time days, etc.)
     const calAbsences = calendarAbsences.filter(a => {
-      const startStr = new Date(a.startDate).toISOString().split('T')[0]
-      const endStr = new Date(a.endDate).toISOString().split('T')[0]
+      const startStr = formatDateForAPI(parseDateFromAPI(a.startDate) || new Date(a.startDate))
+      const endStr = formatDateForAPI(parseDateFromAPI(a.endDate) || new Date(a.endDate))
       return startStr <= checkDateStr && endStr >= checkDateStr
     })
 
@@ -810,7 +811,7 @@ export default function DashboardHome() {
 
     if (isMilestone) {
       // Check localStorage to not show same milestone twice per day
-      const today = new Date().toISOString().split('T')[0]
+      const today = formatDateForAPI(new Date())
       const storageKey = `lustrum-milestone-${days}-${today}`
       const alreadyShown = localStorage.getItem(storageKey)
 
@@ -877,7 +878,7 @@ export default function DashboardHome() {
       const endOfNextWeek = new Date(startOfWeek)
       endOfNextWeek.setDate(startOfWeek.getDate() + 13) // Sunday next week
 
-      const res = await fetch(`/api/calendar?startDate=${startOfWeek.toISOString()}&endDate=${endOfNextWeek.toISOString()}`)
+      const res = await fetch(`/api/calendar?startDate=${formatDateForAPI(startOfWeek)}&endDate=${formatDateForAPI(endOfNextWeek)}`)
       if (res.ok) {
         const data = await res.json()
         // Filter only ABSENCE category events and transform

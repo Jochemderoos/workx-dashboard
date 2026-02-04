@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getDefaultVacationDays } from '@/lib/config'
 
 // GET - Fetch all vacation page data in one bundled API call
 export async function GET() {
@@ -160,7 +161,7 @@ export async function GET() {
 
     // Format my vacation balance
     const isPartner = currentUser?.role === 'PARTNER'
-    const defaultOpbouw = isPartner ? 0 : 25
+    const defaultOpbouw = getDefaultVacationDays(currentUser?.role || 'EMPLOYEE')
 
     const myVacationBalanceFormatted = myVacationBalance
       ? {

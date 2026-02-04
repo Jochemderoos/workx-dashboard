@@ -4,6 +4,32 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { calculateVacationDays, parseWerkdagen, DEFAULT_WERKDAGEN_STRING } from '@/lib/vacation-utils'
 
+/**
+ * Parse a date string to a Date object, ensuring we get the correct local date
+ * regardless of timezone. This handles both ISO strings and date-only strings.
+ */
+function parseLocalDate(dateStr: string | Date): Date {
+  if (dateStr instanceof Date) {
+    // If it's already a Date, normalize it to midnight local time
+    return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate())
+  }
+
+  // If it's an ISO string like "2026-03-18T23:00:00.000Z", extract the date part
+  // accounting for potential timezone shifts
+  const date = new Date(dateStr)
+
+  // Check if this looks like a UTC midnight that should be the next day in local time
+  // or if we should just use the date components directly
+  if (dateStr.includes('T')) {
+    // ISO string - use UTC date components to avoid timezone issues
+    return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  }
+
+  // Date-only string like "2026-03-18" - parse directly
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 // GET - Fetch vacation periods for a user/year
 export async function GET(req: NextRequest) {
   try {
@@ -85,8 +111,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'userId, startDate, and endDate are required' }, { status: 400 })
     }
 
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    // Parse dates properly to avoid timezone issues
+    const start = parseLocalDate(startDate)
+    const end = parseLocalDate(endDate)
     const year = start.getFullYear()
 
     // Parse werkdagen
@@ -205,8 +232,9 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Calculate new days if dates or werkdagen changed
-    const newStart = startDate ? new Date(startDate) : existingPeriod.startDate
-    const newEnd = endDate ? new Date(endDate) : existingPeriod.endDate
+    // Parse dates properly to avoid timezone issues
+    const newStart = startDate ? parseLocalDate(startDate) : parseLocalDate(existingPeriod.startDate)
+    const newEnd = endDate ? parseLocalDate(endDate) : parseLocalDate(existingPeriod.endDate)
     const newWerkdagenStr = werkdagen || existingPeriod.werkdagen
     const newWerkdagenArray = parseWerkdagen(newWerkdagenStr)
     const newDays = calculateVacationDays(newStart, newEnd, newWerkdagenArray)
