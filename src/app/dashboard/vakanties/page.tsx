@@ -1325,7 +1325,7 @@ export default function VakantiesPage() {
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content
-                    className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+                    className="w-[90vw] max-w-xl bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
                     sideOffset={8}
                     collisionPadding={16}
                     side="bottom"
@@ -1498,7 +1498,7 @@ export default function VakantiesPage() {
                       </div>
 
                       {/* Periode en inzet */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm text-gray-400 mb-2">Startdatum</label>
                           <DatePicker
@@ -1516,17 +1516,17 @@ export default function VakantiesPage() {
                             minDate={parentalLeaveForm.startDatum || undefined}
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Uren per week</label>
-                          <input
-                            type="number"
-                            step="0.5"
-                            value={parentalLeaveForm.inzetPerWeek}
-                            onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, inzetPerWeek: parseFloat(e.target.value) || 0 })}
-                            className="input-field"
-                            placeholder="8"
-                          />
-                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Uren per week</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={parentalLeaveForm.inzetPerWeek}
+                          onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, inzetPerWeek: parseFloat(e.target.value) || 0 })}
+                          className="input-field w-32"
+                          placeholder="8"
+                        />
                       </div>
 
                       {/* Notitie */}
