@@ -401,26 +401,27 @@ export default function AgendaPage() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
           {/* Navigation and view toggle */}
-          <div className="p-3 sm:p-5 border-b border-white/5 relative">
+          <div className="p-4 sm:p-5 border-b border-white/5 relative bg-gradient-to-r from-white/[0.02] to-transparent">
             {/* Top row: Navigation and View toggle */}
-            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-0">
-              <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center justify-between gap-2">
+              {/* Navigation controls */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   onClick={() => {
                     if (currentView === 'month') setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
                     else if (currentView === 'week') setSelectedDate(new Date((selectedDate || new Date()).getTime() - 7 * 24 * 60 * 60 * 1000))
                     else setSelectedDate(new Date((selectedDate || new Date()).getTime() - 24 * 60 * 60 * 1000))
                   }}
-                  className="p-2 sm:p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
+                  className="p-2 sm:p-2.5 text-white/50 hover:text-white hover:bg-white/[0.08] rounded-xl transition-all hover:scale-105"
                 >
-                  <Icons.chevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <Icons.chevronLeft size={18} />
                 </button>
                 <button
                   onClick={() => {
                     setSelectedDate(new Date())
                     setCurrentMonth(new Date())
                   }}
-                  className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-colors"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-workx-lime hover:bg-workx-lime/15 border border-workx-lime/30 rounded-xl transition-all hover:scale-105"
                 >
                   Vandaag
                 </button>
@@ -430,82 +431,135 @@ export default function AgendaPage() {
                     else if (currentView === 'week') setSelectedDate(new Date((selectedDate || new Date()).getTime() + 7 * 24 * 60 * 60 * 1000))
                     else setSelectedDate(new Date((selectedDate || new Date()).getTime() + 24 * 60 * 60 * 1000))
                   }}
-                  className="p-2 sm:p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
+                  className="p-2 sm:p-2.5 text-white/50 hover:text-white hover:bg-white/[0.08] rounded-xl transition-all hover:scale-105"
                 >
-                  <Icons.chevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <Icons.chevronRight size={18} />
                 </button>
               </div>
 
+              {/* Month/Week/Day title */}
+              <h2 className="hidden sm:block font-semibold text-white capitalize text-lg">
+                {currentView === 'day' && selectedDate?.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {currentView === 'week' && `Week ${Math.ceil(((selectedDate || new Date()).getDate()) / 7)} · ${(selectedDate || new Date()).toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}`}
+                {currentView === 'month' && currentMonth.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
+              </h2>
+
               {/* View toggle */}
-              <div className="flex items-center bg-white/5 rounded-lg sm:rounded-xl p-0.5 sm:p-1">
+              <div className="flex items-center bg-white/5 backdrop-blur-sm rounded-xl p-1 border border-white/5">
                 {[
-                  { id: 'day' as AgendaView, label: 'Dag' },
-                  { id: 'week' as AgendaView, label: 'Week' },
-                  { id: 'month' as AgendaView, label: 'Maand' },
+                  { id: 'day' as AgendaView, label: 'Dag', icon: Icons.sun },
+                  { id: 'week' as AgendaView, label: 'Week', icon: Icons.grid },
+                  { id: 'month' as AgendaView, label: 'Maand', icon: Icons.calendar },
                 ].map((view) => (
                   <button
                     key={view.id}
                     onClick={() => setCurrentView(view.id)}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm rounded-md sm:rounded-lg transition-all ${
+                    className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
                       currentView === view.id
-                        ? 'bg-workx-lime text-black font-medium'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-gradient-to-r from-workx-lime to-[#d4d96e] text-black font-semibold shadow-lg shadow-workx-lime/20'
+                        : 'text-white/50 hover:text-white hover:bg-white/5'
                     }`}
                   >
+                    <view.icon size={14} className="hidden sm:block" />
                     {view.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Month title - below on mobile, inline on desktop */}
-            <h2 className="font-semibold text-white capitalize text-base sm:text-lg text-center sm:absolute sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:pointer-events-none">
+            {/* Mobile title */}
+            <h2 className="sm:hidden font-semibold text-white capitalize text-base text-center mt-3">
               {currentView === 'day' && selectedDate?.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
-              {currentView === 'week' && `Week ${Math.ceil(((selectedDate || new Date()).getDate()) / 7)} - ${(selectedDate || new Date()).toLocaleDateString('nl-NL', { month: 'short' })}`}
+              {currentView === 'week' && `Week ${Math.ceil(((selectedDate || new Date()).getDate()) / 7)} · ${(selectedDate || new Date()).toLocaleDateString('nl-NL', { month: 'short' })}`}
               {currentView === 'month' && currentMonth.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
             </h2>
           </div>
 
           {/* DAY VIEW */}
           {currentView === 'day' && selectedDate && (
-            <div className="p-5">
-              <div className="space-y-2">
-                {/* Time slots */}
-                {Array.from({ length: 12 }, (_, i) => i + 8).map((hour) => {
+            <div className="p-4 sm:p-5">
+              {/* Day header with full date */}
+              <div className="flex items-center justify-between mb-5 pb-4 border-b border-white/5">
+                <div>
+                  <h3 className="text-lg font-semibold text-white capitalize">
+                    {selectedDate.toLocaleDateString('nl-NL', { weekday: 'long' })}
+                  </h3>
+                  <p className="text-sm text-white/50">
+                    {selectedDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+                {isToday(selectedDate) && (
+                  <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-workx-lime/20 to-workx-lime/10 text-workx-lime border border-workx-lime/20">
+                    Vandaag
+                  </span>
+                )}
+              </div>
+
+              {/* Time slots */}
+              <div className="space-y-0 rounded-xl overflow-hidden border border-white/5">
+                {Array.from({ length: 12 }, (_, i) => i + 8).map((hour, idx) => {
                   const hourEvents = getEventsForDate(selectedDate).filter(event => {
                     if (event.isAllDay) return hour === 8
                     const eventHour = new Date(event.startTime).getHours()
                     return eventHour === hour
                   })
+                  const isCurrentHour = isToday(selectedDate) && new Date().getHours() === hour
                   return (
-                    <div key={hour} className="flex gap-4 min-h-[60px]">
-                      <div className="w-16 text-right text-sm text-gray-400 pt-1">
+                    <div
+                      key={hour}
+                      className={`flex gap-4 min-h-[60px] ${idx > 0 ? 'border-t border-white/5' : ''} ${
+                        isCurrentHour ? 'bg-workx-lime/[0.03]' : ''
+                      }`}
+                    >
+                      <div className={`w-16 text-right text-sm pt-2 pr-3 font-medium ${
+                        isCurrentHour ? 'text-workx-lime' : 'text-white/40'
+                      }`}>
                         {hour}:00
                       </div>
-                      <div className="flex-1 border-t border-white/5 pt-2 space-y-1">
+                      <div className="flex-1 pt-2 pb-2 pr-3 space-y-2">
                         {hourEvents.map((event) => {
                           const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
                           return (
                             <div
                               key={event.id}
                               onClick={() => handleEdit(event)}
-                              className="p-3 rounded-xl cursor-pointer hover:opacity-80 transition-opacity"
-                              style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+                              className="p-3 rounded-xl cursor-pointer hover:scale-[1.01] transition-all border group"
+                              style={{
+                                backgroundColor: event.color + '15',
+                                borderColor: event.color + '30',
+                                borderLeftWidth: '3px',
+                                borderLeftColor: event.color
+                              }}
                             >
                               <div className="flex items-center gap-2">
-                                <IconComponent size={14} style={{ color: event.color }} />
-                                <span className="font-medium text-white">
+                                <div
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                                  style={{ backgroundColor: event.color + '25' }}
+                                >
+                                  <IconComponent size={14} style={{ color: event.color }} />
+                                </div>
+                                <span className="font-semibold text-white group-hover:text-workx-lime transition-colors">
                                   {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
                                 </span>
                               </div>
                               {!event.isAllDay && (
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-xs text-white/50 mt-2 flex items-center gap-2">
+                                  <Icons.clock size={12} />
                                   {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                                  {event.location && ` · ${event.location}`}
+                                  {event.location && (
+                                    <>
+                                      <span className="text-white/20">·</span>
+                                      <Icons.mapPin size={12} />
+                                      {event.location}
+                                    </>
+                                  )}
                                 </p>
                               )}
                               {event.isAllDay && (
-                                <p className="text-xs text-gray-400 mt-1">Hele dag</p>
+                                <p className="text-xs text-white/50 mt-2 flex items-center gap-2">
+                                  <Icons.sun size={12} />
+                                  Hele dag
+                                </p>
                               )}
                             </div>
                           )
@@ -520,24 +574,36 @@ export default function AgendaPage() {
 
           {/* WEEK VIEW */}
           {currentView === 'week' && selectedDate && (
-            <div className="p-5">
+            <div className="p-4 sm:p-5">
               {/* Week header */}
-              <div className="grid grid-cols-8 mb-3">
-                <div className="text-xs text-gray-400 py-2"></div>
+              <div className="grid grid-cols-8 mb-4 gap-1">
+                <div className="text-[11px] text-white/40 py-2 font-semibold uppercase"></div>
                 {Array.from({ length: 7 }, (_, i) => {
                   const day = new Date(selectedDate)
                   const dayOfWeek = day.getDay()
                   const diff = i - ((dayOfWeek + 6) % 7) // Adjust to start from Monday
                   day.setDate(day.getDate() + diff)
                   const clickDate = new Date(day) // Create new date instance for closure
+                  const isTodayDay = isToday(day)
+                  const isWeekendDay = day.getDay() === 0 || day.getDay() === 6
                   return (
                     <button
                       key={i}
                       onClick={(e) => handleDayClick(clickDate, e)}
-                      className={`text-center py-2 hover:bg-white/5 rounded-lg transition-colors ${isToday(day) ? 'text-workx-lime' : 'text-gray-400'}`}
+                      className={`text-center py-2 px-1 rounded-xl transition-all duration-200 hover:bg-white/[0.08] hover:scale-105 ${
+                        isTodayDay ? 'bg-gradient-to-br from-workx-lime/15 to-workx-lime/5' : ''
+                      } ${isWeekendDay && !isTodayDay ? 'bg-white/[0.02]' : ''}`}
                     >
-                      <div className="text-xs font-medium">{['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'][i]}</div>
-                      <div className={`text-lg font-semibold ${isToday(day) ? 'bg-workx-lime text-black w-8 h-8 rounded-full flex items-center justify-center mx-auto' : ''}`}>
+                      <div className={`text-[11px] font-semibold uppercase tracking-wide mb-1 ${
+                        isTodayDay ? 'text-workx-lime' : 'text-white/40'
+                      }`}>
+                        {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'][i]}
+                      </div>
+                      <div className={`text-lg font-bold transition-all ${
+                        isTodayDay
+                          ? 'bg-gradient-to-br from-workx-lime to-[#d4d96e] text-black w-9 h-9 rounded-xl flex items-center justify-center mx-auto shadow-lg shadow-workx-lime/30'
+                          : 'text-white/80'
+                      }`}>
                         {day.getDate()}
                       </div>
                     </button>
@@ -546,15 +612,17 @@ export default function AgendaPage() {
               </div>
 
               {/* Time grid */}
-              <div className="space-y-0">
-                {Array.from({ length: 10 }, (_, i) => i + 8).map((hour) => (
-                  <div key={hour} className="grid grid-cols-8 min-h-[50px] border-t border-white/5">
-                    <div className="text-xs text-gray-400 pr-2 text-right pt-1">{hour}:00</div>
+              <div className="rounded-xl overflow-hidden border border-white/5">
+                {Array.from({ length: 10 }, (_, i) => i + 8).map((hour, idx) => (
+                  <div key={hour} className={`grid grid-cols-8 min-h-[52px] ${idx > 0 ? 'border-t border-white/5' : ''}`}>
+                    <div className="text-[11px] text-white/40 pr-3 text-right pt-2 font-medium">{hour}:00</div>
                     {Array.from({ length: 7 }, (_, dayIndex) => {
                       const day = new Date(selectedDate)
                       const dayOfWeek = day.getDay()
                       const diff = dayIndex - ((dayOfWeek + 6) % 7)
                       day.setDate(day.getDate() + diff)
+                      const isTodayDay = isToday(day)
+                      const isWeekendDay = day.getDay() === 0 || day.getDay() === 6
 
                       const hourEvents = getEventsForDate(day).filter(event => {
                         if (event.isAllDay) return hour === 8
@@ -563,19 +631,28 @@ export default function AgendaPage() {
                       })
 
                       return (
-                        <div key={dayIndex} className="border-l border-white/5 px-1 py-1">
+                        <div
+                          key={dayIndex}
+                          className={`border-l border-white/5 px-1 py-1 ${
+                            isTodayDay ? 'bg-workx-lime/[0.03]' : isWeekendDay ? 'bg-white/[0.01]' : ''
+                          }`}
+                        >
                           {hourEvents.map((event) => (
                             <div
                               key={event.id}
                               onClick={() => handleEdit(event)}
-                              className="text-xs p-1.5 rounded cursor-pointer hover:opacity-80 transition-opacity mb-1"
-                              style={{ backgroundColor: event.color + '30', color: event.color }}
+                              className="text-[11px] p-1.5 rounded-lg cursor-pointer hover:scale-[1.02] transition-all mb-1 border"
+                              style={{
+                                backgroundColor: event.color + '25',
+                                color: event.color,
+                                borderColor: event.color + '30'
+                              }}
                             >
-                              <span className="font-medium truncate block">
+                              <span className="font-semibold truncate block">
                                 {isRoomBooking(event) ? `🔔 ${event.createdBy?.name?.split(' ')[0]}` : event.title}
                               </span>
                               {!event.isAllDay && (
-                                <span className="text-gray-400">{formatTime(event.startTime)}</span>
+                                <span className="text-white/50 text-[10px]">{formatTime(event.startTime)}</span>
                               )}
                             </div>
                           ))}
@@ -588,16 +665,18 @@ export default function AgendaPage() {
             </div>
           )}
 
-          {/* MONTH VIEW (original calendar grid) */}
+          {/* MONTH VIEW (modern calendar grid) */}
           {currentView === 'month' && (
-            <div className="p-5">
-              <div className="grid grid-cols-7 mb-3">
+            <div className="p-4 sm:p-5">
+              {/* Day names header */}
+              <div className="grid grid-cols-7 mb-2">
                 {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map((day) => (
-                  <div key={day} className="text-center text-xs text-gray-400 py-2 font-medium">{day}</div>
+                  <div key={day} className="text-center text-[11px] text-white/40 py-2 font-semibold uppercase tracking-wider">{day}</div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1">
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 gap-1.5">
                 {getDaysInMonth(currentMonth).map((day, index) => {
                   const dayEvents = getEventsForDate(day.date)
                   const dayBirthdays = getBirthdaysForDate(day.date)
@@ -605,6 +684,7 @@ export default function AgendaPage() {
                   const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6
                   const hasBirthday = dayBirthdays.length > 0
                   const isPopoverOpen = showDayModal && selectedDate?.toDateString() === day.date.toDateString()
+                  const hasContent = dayEvents.length > 0 || hasBirthday
 
                   return (
                     <Popover.Root
@@ -621,31 +701,47 @@ export default function AgendaPage() {
                     >
                       <Popover.Trigger asChild>
                         <button
-                          className={`relative p-2 min-h-[90px] rounded-xl text-left transition-all ${
-                            day.isCurrentMonth ? 'hover:bg-white/5' : 'opacity-30'
-                          } ${isSelected ? 'bg-white/5 ring-1 ring-workx-lime/50 shadow-lg shadow-workx-lime/5' : ''} ${
-                            isToday(day.date) ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''
-                          } ${isWeekend && day.isCurrentMonth && !isSelected && !isToday(day.date) ? 'bg-white/[0.02]' : ''} ${
-                            hasBirthday && day.isCurrentMonth ? 'ring-1 ring-pink-500/30' : ''
+                          className={`relative p-2 min-h-[100px] rounded-xl text-left transition-all duration-200 group ${
+                            day.isCurrentMonth
+                              ? 'hover:bg-white/[0.08] hover:scale-[1.02] hover:shadow-lg hover:shadow-black/20'
+                              : 'opacity-30'
+                          } ${isSelected
+                              ? 'bg-workx-lime/10 ring-1 ring-workx-lime/50 shadow-lg shadow-workx-lime/10'
+                              : ''
+                          } ${isToday(day.date)
+                              ? 'bg-gradient-to-br from-workx-lime/15 to-workx-lime/5 ring-1 ring-workx-lime/40'
+                              : ''
+                          } ${isWeekend && day.isCurrentMonth && !isSelected && !isToday(day.date)
+                              ? 'bg-white/[0.02]'
+                              : ''
+                          } ${hasBirthday && day.isCurrentMonth && !isToday(day.date) && !isSelected
+                              ? 'ring-1 ring-pink-500/30 bg-pink-500/[0.03]'
+                              : ''
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className={`text-sm font-medium ${
-                              isToday(day.date) ? 'text-workx-lime' : day.isCurrentMonth ? 'text-gray-400' : 'text-gray-500'
+                          {/* Day number and birthday icon */}
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className={`text-sm font-semibold transition-colors ${
+                              isToday(day.date)
+                                ? 'text-workx-lime'
+                                : day.isCurrentMonth
+                                  ? 'text-white/80 group-hover:text-white'
+                                  : 'text-white/20'
                             }`}>
                               {day.date.getDate()}
                             </span>
                             {hasBirthday && day.isCurrentMonth && (
-                              <span className="text-sm">🎂</span>
+                              <span className="text-sm animate-bounce">🎂</span>
                             )}
                           </div>
 
-                          <div className="mt-1.5 space-y-1">
+                          {/* Events and birthdays */}
+                          <div className="space-y-1">
                             {/* Show birthdays first */}
                             {dayBirthdays.map((person, i) => (
                               <div
                                 key={`bday-${i}`}
-                                className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md truncate font-medium bg-pink-500/20 text-pink-400"
+                                className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-lg truncate font-medium bg-gradient-to-r from-pink-500/25 to-pink-600/15 text-pink-300 border border-pink-500/20"
                               >
                                 <span>🎂</span>
                                 <span className="truncate">{person.name.split(' ')[0]}</span>
@@ -657,18 +753,27 @@ export default function AgendaPage() {
                               return (
                                 <div
                                   key={event.id}
-                                  className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md truncate font-medium"
-                                  style={{ backgroundColor: event.color + '20', color: event.color }}
+                                  className="flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-lg truncate font-medium border transition-all group-hover:scale-[1.02]"
+                                  style={{
+                                    backgroundColor: event.color + '20',
+                                    color: event.color,
+                                    borderColor: event.color + '30'
+                                  }}
                                 >
-                                  <IconComponent size={10} />
+                                  <IconComponent size={10} className="flex-shrink-0" />
                                   <span className="truncate">{isRoomBooking(event) ? formatRoomBookingTitle(event, true) : event.title}</span>
                                 </div>
                               )
                             })}
                             {(dayEvents.length + dayBirthdays.length) > 2 && (
-                              <span className="text-xs text-gray-400 pl-1 font-medium">+{dayEvents.length + dayBirthdays.length - 2} meer</span>
+                              <span className="text-[10px] text-white/40 pl-1 font-medium">+{dayEvents.length + dayBirthdays.length - 2} meer</span>
                             )}
                           </div>
+
+                          {/* Hover indicator dot for days with content */}
+                          {hasContent && day.isCurrentMonth && (
+                            <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-workx-lime/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          )}
                         </button>
                       </Popover.Trigger>
 
@@ -776,16 +881,21 @@ export default function AgendaPage() {
           )}
 
           {/* Category legend */}
-          <div className="px-5 pb-5 flex flex-wrap gap-4 border-t border-white/5 pt-4">
+          <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex flex-wrap gap-2 sm:gap-3 border-t border-white/5 pt-4 bg-gradient-to-r from-white/[0.01] to-transparent">
             {Object.entries(categoryConfig).map(([key, config]) => {
               const IconComponent = config.icon
               return (
-                <div key={key} className="flex items-center gap-2 text-xs text-gray-400">
-                  <div className="w-3 h-3 rounded" style={{ backgroundColor: config.color + '30' }}>
-                    <div className="w-full h-full rounded flex items-center justify-center" style={{ backgroundColor: config.color + '20' }} />
-                  </div>
-                  <IconComponent size={12} style={{ color: config.color }} />
-                  <span>{config.label}</span>
+                <div
+                  key={key}
+                  className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg border transition-all hover:scale-105"
+                  style={{
+                    backgroundColor: config.color + '10',
+                    borderColor: config.color + '20',
+                    color: config.color
+                  }}
+                >
+                  <IconComponent size={12} />
+                  <span className="font-medium">{config.label}</span>
                 </div>
               )
             })}
