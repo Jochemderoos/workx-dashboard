@@ -2,6 +2,11 @@
 // This file should only be imported in API routes, not client components
 
 import { prisma } from '@/lib/prisma'
+import {
+  notifyNewZaakAssignment,
+  notifyZaakAccepted,
+  notifyZaakDeclined,
+} from '@/lib/slack'
 
 // Re-export constants for convenience
 export { EXPERIENCE_LABELS, URGENCY_CONFIG, START_METHOD_LABELS } from './zaken-constants'
@@ -172,6 +177,20 @@ export async function offerToNextInQueue(zaakId: string) {
     data: { status: 'OFFERING' },
   })
 
+  // Send Slack notification to the employee
+  try {
+    await notifyNewZaakAssignment(nextAssignment.user.email, {
+      id: zaakId,
+      title: nextAssignment.zaak.shortDescription,
+      clientName: nextAssignment.zaak.clientName || undefined,
+      createdByName: nextAssignment.zaak.createdBy.name,
+      expiresAt,
+    })
+  } catch (error) {
+    console.error('Error sending Slack notification:', error)
+    // Don't fail the operation if Slack fails
+  }
+
   // Return data for email notification
   return {
     success: true,
@@ -231,6 +250,16 @@ export async function handleAcceptZaak(zaakId: string, userId: string) {
     data: { status: 'SKIPPED' },
   })
 
+  // Send Slack notification to the creator
+  try {
+    await notifyZaakAccepted(assignment.zaak.createdBy.email, {
+      title: assignment.zaak.shortDescription,
+      acceptedByName: assignment.user.name,
+    })
+  } catch (error) {
+    console.error('Error sending Slack accept notification:', error)
+  }
+
   // Return data for email notification
   return {
     success: true,
@@ -252,6 +281,10 @@ export async function handleDeclineZaak(zaakId: string, userId: string, reason?:
     where: {
       zaakId_userId: { zaakId, userId },
     },
+    include: {
+      user: true,
+      zaak: { include: { createdBy: true } },
+    },
   })
 
   if (!assignment || assignment.status !== 'OFFERED') {
@@ -267,6 +300,17 @@ export async function handleDeclineZaak(zaakId: string, userId: string, reason?:
       declineReason: reason,
     },
   })
+
+  // Send Slack notification to the creator
+  try {
+    await notifyZaakDeclined(assignment.zaak.createdBy.email, {
+      title: assignment.zaak.shortDescription,
+      declinedByName: assignment.user.name,
+      reason,
+    })
+  } catch (error) {
+    console.error('Error sending Slack decline notification:', error)
+  }
 
   // Offer to next person and return email data
   return await offerToNextInQueue(zaakId)
