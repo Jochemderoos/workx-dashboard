@@ -313,6 +313,7 @@ export async function GET() {
       : calendarEvents.slice(0, 3)
 
     // Return all dashboard data in one response
+    // Add cache headers: browser can cache for 30s, must revalidate after
     return NextResponse.json({
       calendarEvents: prioritizedEvents,
       workItems,
@@ -326,6 +327,10 @@ export async function GET() {
       birthdays,
       // Meta information
       fetchedAt: now.toISOString(),
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60'
+      }
     })
   } catch (error) {
     console.error('Error fetching dashboard summary:', error)

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")  // Directe connectie voor migraties (zonder pooler)
 }
 
 // Rollen: EMPLOYEE (medewerker), PARTNER (Marnix, Jochem, Juliette, Bas), ADMIN (Hanna - kantoormanager)
@@ -299,6 +300,9 @@ model WorkItem {
 
   assignee     User?     @relation("AssignedWork", fields: [assigneeId], references: [id])
   createdBy    User      @relation("CreatedWork", fields: [createdById], references: [id])
+
+  @@index([assigneeId])
+  @@index([status])
 }
 
 // ==================== TRANSITIEVERGOEDING (voor opslag berekeningen) ====================
