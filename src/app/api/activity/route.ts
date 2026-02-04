@@ -160,7 +160,7 @@ export async function GET(req: NextRequest) {
         id: `zaak-${z.id}`,
         type: 'zaak',
         title: 'maakte een nieuwe zaak',
-        description: z.title,
+        description: z.shortDescription,
         userName: z.createdBy?.name || 'Onbekend',
         userPhoto: z.createdBy?.avatarUrl,
         createdAt: z.createdAt,

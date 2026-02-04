@@ -28,7 +28,7 @@ export async function GET() {
         zaak: {
           select: {
             id: true,
-            title: true,
+            shortDescription: true,
             createdBy: {
               select: { name: true },
             },
@@ -44,7 +44,7 @@ export async function GET() {
         id: `zaak-${assignment.id}`,
         type: 'zaak',
         title: 'Nieuwe zaak beschikbaar',
-        message: `${assignment.zaak.title} - van ${assignment.zaak.createdBy?.name || 'onbekend'}`,
+        message: `${assignment.zaak?.shortDescription || 'Nieuwe zaak'} - van ${assignment.zaak?.createdBy?.name || 'onbekend'}`,
         createdAt: assignment.createdAt,
         read: false,
         href: '/dashboard/werk',

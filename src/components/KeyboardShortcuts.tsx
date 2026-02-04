@@ -126,7 +126,7 @@ export function KeyboardShortcuts({ onToggleSearch }: KeyboardShortcutsProps) {
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-workx-lime/20 flex items-center justify-center">
-              <Icons.keyboard size={20} className="text-workx-lime" />
+              <Icons.command size={20} className="text-workx-lime" />
             </div>
             <div>
               <h2 className="text-xl font-semibold">Sneltoetsen</h2>
@@ -137,7 +137,7 @@ export function KeyboardShortcuts({ onToggleSearch }: KeyboardShortcutsProps) {
             onClick={() => setShowHelp(false)}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
           >
-            <Icons.close size={20} className="text-gray-400" />
+            <Icons.x size={20} className="text-gray-400" />
           </button>
         </div>
 
