@@ -67,10 +67,7 @@ export async function GET(req: NextRequest) {
     const employees = await prisma.user.findMany({
       where: {
         isActive: true,
-        compensation: {
-          isNot: null,
-          experienceYear: { not: null }
-        }
+        compensation: { isNot: null }
       },
       include: {
         compensation: true
@@ -81,7 +78,7 @@ export async function GET(req: NextRequest) {
     const salaryScales = await prisma.salaryScale.findMany()
     const scaleMap = new Map(salaryScales.map(s => [s.experienceYear, s]))
 
-    // Calculate preview changes
+    // Calculate preview changes - only for employees with experienceYear set
     const changes: UpgradeChange[] = []
     for (const employee of employees) {
       if (employee.compensation && employee.compensation.experienceYear !== null) {
@@ -166,10 +163,7 @@ export async function POST(req: NextRequest) {
     const employees = await prisma.user.findMany({
       where: {
         isActive: true,
-        compensation: {
-          isNot: null,
-          experienceYear: { not: null }
-        }
+        compensation: { isNot: null }
       },
       include: {
         compensation: true
@@ -180,7 +174,7 @@ export async function POST(req: NextRequest) {
     const salaryScales = await prisma.salaryScale.findMany()
     const scaleMap = new Map(salaryScales.map(s => [s.experienceYear, s]))
 
-    // Execute upgrades
+    // Execute upgrades - only for employees with experienceYear set
     const changes: UpgradeChange[] = []
     for (const employee of employees) {
       if (employee.compensation && employee.compensation.experienceYear !== null) {
