@@ -53,15 +53,19 @@ export function SlackWidget() {
   const fetchChannels = async () => {
     try {
       setLoading(true)
+      console.log('[SlackWidget] Fetching channels...')
       const res = await fetch('/api/slack/channels')
       const data = await res.json()
+      console.log('[SlackWidget] Channels response:', data)
       if (data.error) throw new Error(data.error)
       setChannels(data.channels || [])
       // Auto-select first channel if available
-      if (data.channels?.length > 0 && !selectedChannel) {
+      if (data.channels?.length > 0) {
+        console.log('[SlackWidget] Auto-selecting channel:', data.channels[0])
         setSelectedChannel(data.channels[0])
       }
     } catch (err) {
+      console.error('[SlackWidget] Error fetching channels:', err)
       setError(err instanceof Error ? err.message : 'Failed to load channels')
     } finally {
       setLoading(false)
@@ -70,12 +74,15 @@ export function SlackWidget() {
 
   const fetchMessages = async (channelId: string) => {
     try {
+      console.log('[SlackWidget] Fetching messages for channel:', channelId)
       const res = await fetch(`/api/slack/channels?channelId=${channelId}&limit=30`)
       const data = await res.json()
+      console.log('[SlackWidget] Messages response:', data)
       if (data.error) throw new Error(data.error)
       setMessages(data.messages || [])
+      console.log('[SlackWidget] Set messages count:', (data.messages || []).length)
     } catch (err) {
-      console.error('Error fetching messages:', err)
+      console.error('[SlackWidget] Error fetching messages:', err)
     }
   }
 
