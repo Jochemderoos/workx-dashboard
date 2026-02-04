@@ -69,7 +69,21 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { email, name, password, role, department } = await req.json()
+    const {
+      email,
+      name,
+      password,
+      role,
+      department,
+      startDate,
+      birthDate,
+      phoneNumber,
+      avatarUrl,
+      werkdagen,
+      experienceYear,
+      hourlyRate,
+      isHourlyWage
+    } = await req.json()
 
     // Validation
     if (!email || !name || !password) {
@@ -101,7 +115,16 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user
+    // Determine salary based on experience year if applicable
+    let salary = null
+    if (experienceYear !== undefined && experienceYear !== null) {
+      const scale = await prisma.salaryScale.findUnique({
+        where: { experienceYear: experienceYear }
+      })
+      salary = scale?.salary || null
+    }
+
+    // Create user with all fields
     const newUser = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
@@ -109,6 +132,11 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         role: role || 'EMPLOYEE',
         department: department || null,
+        startDate: startDate ? new Date(startDate) : null,
+        birthDate: birthDate || null,
+        phoneNumber: phoneNumber || null,
+        avatarUrl: avatarUrl || null,
+        werkdagen: werkdagen || '1,2,3,4,5',
         isActive: true,
       },
       select: {
@@ -117,6 +145,11 @@ export async function POST(req: NextRequest) {
         name: true,
         role: true,
         department: true,
+        startDate: true,
+        birthDate: true,
+        phoneNumber: true,
+        avatarUrl: true,
+        werkdagen: true,
         isActive: true,
         createdAt: true,
       }
@@ -134,6 +167,28 @@ export async function POST(req: NextRequest) {
         opgenomenLopendJaar: 0,
       }
     })
+
+    // Create employee compensation if experience year or hourly rate is provided
+    if (experienceYear !== undefined || hourlyRate !== undefined) {
+      // Determine hourly rate from scale if not provided
+      let effectiveHourlyRate = hourlyRate
+      if (!effectiveHourlyRate && experienceYear !== undefined && experienceYear !== null) {
+        const scale = await prisma.salaryScale.findUnique({
+          where: { experienceYear: experienceYear }
+        })
+        effectiveHourlyRate = scale?.hourlyRateBase || 0
+      }
+
+      await prisma.employeeCompensation.create({
+        data: {
+          userId: newUser.id,
+          experienceYear: experienceYear ?? null,
+          hourlyRate: effectiveHourlyRate || 0,
+          salary: salary,
+          isHourlyWage: isHourlyWage || false,
+        }
+      })
+    }
 
     return NextResponse.json({
       success: true,

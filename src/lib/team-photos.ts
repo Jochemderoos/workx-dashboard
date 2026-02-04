@@ -26,12 +26,15 @@ export const TEAM_PHOTOS: Record<string, string> = {
   'Lotte van Sint Truiden': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/01/Lotte.jpg',
 }
 
-// Helper functie om foto URL te krijgen op basis van naam
-// Probeert eerst exacte match, dan eerste naam
-export function getPhotoUrl(name: string): string | null {
+// Helper functie om foto URL te krijgen op basis van naam of avatarUrl
+// Prioriteit: avatarUrl > exacte match > voornaam match
+export function getPhotoUrl(name: string, avatarUrl?: string | null): string | null {
+  // Eerst avatarUrl als die is opgegeven
+  if (avatarUrl) return avatarUrl
+
   if (!name) return null
 
-  // Exacte match
+  // Exacte match in hardcoded photos
   if (TEAM_PHOTOS[name]) return TEAM_PHOTOS[name]
 
   // Probeer op voornaam

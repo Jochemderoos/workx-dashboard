@@ -3,6 +3,10 @@ import { WebClient } from '@slack/web-api'
 // Initialize Slack client
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN)
 
+// Workx branding for Slack bot messages
+const WORKX_BOT_NAME = 'Workx Dashboard'
+const WORKX_ICON_URL = 'https://workx-dashboard.vercel.app/workx-logo.png'
+
 export interface SlackUser {
   id: string
   email: string
@@ -85,11 +89,13 @@ export async function sendDirectMessage(
       return false
     }
 
-    // Send message
+    // Send message with Workx branding
     await slack.chat.postMessage({
       channel: conversation.channel.id,
       text: message,
       blocks: blocks,
+      username: WORKX_BOT_NAME,
+      icon_url: WORKX_ICON_URL,
     })
 
     return true
@@ -126,6 +132,8 @@ export async function sendChannelMessage(
       channel: channel.id,
       text: message,
       blocks: blocks,
+      username: WORKX_BOT_NAME,
+      icon_url: WORKX_ICON_URL,
     })
 
     return true
@@ -289,6 +297,13 @@ export async function getChannelHistory(
   text: string
   ts: string
   userInfo?: SlackUser
+  files?: Array<{
+    id: string
+    name: string
+    mimetype: string
+    url: string
+    thumb?: string
+  }>
 }>> {
   try {
     const result = await slack.conversations.history({
@@ -303,16 +318,38 @@ export async function getChannelHistory(
     const usersArray = Array.from(users.values())
 
     return result.messages
-      .filter((msg) => msg.type === 'message' && !msg.subtype)
+      .filter((msg) => msg.type === 'message')
       .map((msg) => {
+        const msgAny = msg as any
+
         // Find user info by Slack ID
-        const userInfo = usersArray.find((u) => u.id === msg.user)
+        let userInfo = usersArray.find((u) => u.id === msg.user)
+
+        // If message was sent via bot with custom username, use that instead
+        if (msgAny.username && msgAny.bot_id) {
+          userInfo = {
+            id: msg.user || 'bot',
+            email: '',
+            name: msgAny.username,
+            realName: msgAny.username,
+          }
+        }
+
+        // Extract file attachments
+        const files = msgAny.files?.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          mimetype: f.mimetype,
+          url: f.url_private || f.permalink,
+          thumb: f.thumb_360 || f.thumb_80,
+        }))
 
         return {
           user: msg.user || 'unknown',
           text: msg.text || '',
           ts: msg.ts || '',
           userInfo,
+          files,
         }
       })
       .reverse() // Oldest first
@@ -376,17 +413,50 @@ export async function joinChannel(channelId: string): Promise<boolean> {
 export async function postToChannel(
   channelId: string,
   message: string,
-  senderName?: string
+  senderName?: string,
+  senderIconUrl?: string
 ): Promise<boolean> {
   try {
     await slack.chat.postMessage({
       channel: channelId,
-      text: senderName ? `*${senderName}:* ${message}` : message,
+      text: message,
+      username: senderName || 'Workx Dashboard',
+      icon_url: senderIconUrl || 'https://workx-dashboard.vercel.app/logo-icon.png',
     })
     return true
   } catch (error) {
     console.error('Error posting to Slack channel:', error)
     return false
+  }
+}
+
+/**
+ * Upload a file to Slack channel
+ */
+export async function uploadFile(
+  channelId: string,
+  file: Buffer,
+  filename: string,
+  title?: string
+): Promise<{ ok: boolean; fileUrl?: string; error?: string }> {
+  try {
+    const result = await slack.files.uploadV2({
+      channel_id: channelId,
+      file,
+      filename,
+      title: title || filename,
+    }) as any
+
+    return {
+      ok: true,
+      fileUrl: result.file?.permalink,
+    }
+  } catch (error) {
+    console.error('Error uploading file to Slack:', error)
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Upload failed',
+    }
   }
 }
 

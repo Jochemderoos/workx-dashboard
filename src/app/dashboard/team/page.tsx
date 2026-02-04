@@ -78,6 +78,43 @@ interface SickDaysResponse {
   totals: { userId: string; totalDays: number }[]
 }
 
+interface ExperienceUpgradePreview {
+  alreadyProcessed: boolean
+  year: number
+  effectiveDate?: string
+  totalEmployees?: number
+  changes?: Array<{
+    userId: string
+    userName: string
+    oldExperienceYear: number
+    newExperienceYear: number
+    oldSalary: number | null
+    newSalary: number | null
+  }>
+  processedAt?: string
+}
+
+interface HourlyRateUpgradePreview {
+  alreadyProcessed: boolean
+  year: number
+  effectiveDate?: string
+  defaultIncrease?: number
+  scaleChanges?: Array<{
+    experienceYear: number
+    label: string
+    oldHourlyRateBase: number
+    newHourlyRateBase: number
+  }>
+  employeeChanges?: Array<{
+    userId: string
+    userName: string
+    experienceYear: number | null
+    oldHourlyRate: number
+    newHourlyRate: number
+  }>
+  processedAt?: string
+}
+
 export default function TeamPage() {
   const { data: session } = useSession()
   const [employees, setEmployees] = useState<EmployeeData[]>([])
@@ -98,6 +135,38 @@ export default function TeamPage() {
   const [sickDaysNote, setSickDaysNote] = useState('')
   const [isSavingSickDays, setIsSavingSickDays] = useState(false)
   const [isDeletingEntry, setIsDeletingEntry] = useState<string | null>(null)
+
+  // Add team member modal state
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false)
+  const [isAddingMember, setIsAddingMember] = useState(false)
+  const [newMemberForm, setNewMemberForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+    birthDate: '',
+    startDate: '',
+    role: 'EMPLOYEE',
+    department: '',
+    werkdagen: '1,2,3,4,5',
+    experienceYear: '',
+    hourlyRate: '',
+    avatarUrl: '',
+    isHourlyWage: false
+  })
+
+  // Experience year upgrade modal state
+  const [showExperienceUpgradeModal, setShowExperienceUpgradeModal] = useState(false)
+  const [experienceUpgradePreview, setExperienceUpgradePreview] = useState<ExperienceUpgradePreview | null>(null)
+  const [isLoadingExperiencePreview, setIsLoadingExperiencePreview] = useState(false)
+  const [isExecutingExperienceUpgrade, setIsExecutingExperienceUpgrade] = useState(false)
+
+  // Hourly rate upgrade modal state
+  const [showHourlyRateUpgradeModal, setShowHourlyRateUpgradeModal] = useState(false)
+  const [hourlyRateUpgradePreview, setHourlyRateUpgradePreview] = useState<HourlyRateUpgradePreview | null>(null)
+  const [isLoadingHourlyRatePreview, setIsLoadingHourlyRatePreview] = useState(false)
+  const [isExecutingHourlyRateUpgrade, setIsExecutingHourlyRateUpgrade] = useState(false)
+  const [hourlyRateIncrease, setHourlyRateIncrease] = useState(10)
 
   // Parental leave modal state
   const [showParentalModal, setShowParentalModal] = useState(false)
@@ -343,6 +412,144 @@ export default function TeamPage() {
       await fetchData()
     } catch (error) {
       toast.error('Kon verlof niet verwijderen')
+    }
+  }
+
+  // Add new team member
+  const resetNewMemberForm = () => {
+    setNewMemberForm({
+      name: '',
+      email: '',
+      password: '',
+      phoneNumber: '',
+      birthDate: '',
+      startDate: '',
+      role: 'EMPLOYEE',
+      department: '',
+      werkdagen: '1,2,3,4,5',
+      experienceYear: '',
+      hourlyRate: '',
+      avatarUrl: '',
+      isHourlyWage: false
+    })
+  }
+
+  const handleAddMember = async () => {
+    if (!newMemberForm.name || !newMemberForm.email || !newMemberForm.password) {
+      return toast.error('Naam, email en wachtwoord zijn verplicht')
+    }
+
+    setIsAddingMember(true)
+    try {
+      const payload = {
+        ...newMemberForm,
+        experienceYear: newMemberForm.experienceYear ? parseInt(newMemberForm.experienceYear) : undefined,
+        hourlyRate: newMemberForm.hourlyRate ? parseFloat(newMemberForm.hourlyRate) : undefined,
+      }
+
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Kon teamlid niet toevoegen')
+      }
+
+      toast.success(`${newMemberForm.name} is toegevoegd aan het team!`)
+      setShowAddMemberModal(false)
+      resetNewMemberForm()
+      await fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsAddingMember(false)
+    }
+  }
+
+  // Experience year upgrade
+  const fetchExperienceUpgradePreview = async () => {
+    setIsLoadingExperiencePreview(true)
+    try {
+      const res = await fetch(`/api/cron/yearly-upgrade?year=${currentYear}`)
+      if (!res.ok) throw new Error('Kon preview niet laden')
+      const data = await res.json()
+      setExperienceUpgradePreview(data)
+    } catch (error) {
+      toast.error('Kon preview niet laden')
+    } finally {
+      setIsLoadingExperiencePreview(false)
+    }
+  }
+
+  const executeExperienceUpgrade = async () => {
+    if (!confirm('Weet je zeker dat je alle ervaringsjaren wilt ophogen? Dit kan niet ongedaan gemaakt worden.')) return
+
+    setIsExecutingExperienceUpgrade(true)
+    try {
+      const res = await fetch('/api/cron/yearly-upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: currentYear })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upgrade mislukt')
+      }
+
+      const result = await res.json()
+      toast.success(`${result.totalUpdated} medewerkers opgehoogd naar volgend ervaringsjaar!`)
+      setShowExperienceUpgradeModal(false)
+      await fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsExecutingExperienceUpgrade(false)
+    }
+  }
+
+  // Hourly rate upgrade
+  const fetchHourlyRateUpgradePreview = async () => {
+    setIsLoadingHourlyRatePreview(true)
+    try {
+      const res = await fetch(`/api/financien/hourly-rate-upgrade?year=${currentYear}&increase=${hourlyRateIncrease}`)
+      if (!res.ok) throw new Error('Kon preview niet laden')
+      const data = await res.json()
+      setHourlyRateUpgradePreview(data)
+    } catch (error) {
+      toast.error('Kon preview niet laden')
+    } finally {
+      setIsLoadingHourlyRatePreview(false)
+    }
+  }
+
+  const executeHourlyRateUpgrade = async () => {
+    if (!confirm('Weet je zeker dat je alle uurtarieven wilt verhogen? Dit kan niet ongedaan gemaakt worden.')) return
+
+    setIsExecutingHourlyRateUpgrade(true)
+    try {
+      const res = await fetch('/api/financien/hourly-rate-upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: currentYear, defaultIncrease: hourlyRateIncrease })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upgrade mislukt')
+      }
+
+      const result = await res.json()
+      toast.success(`${result.totalScalesUpdated} schalen en ${result.totalEmployeesUpdated} medewerkers bijgewerkt!`)
+      setShowHourlyRateUpgradeModal(false)
+      await fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsExecutingHourlyRateUpgrade(false)
     }
   }
 
@@ -1172,16 +1379,45 @@ export default function TeamPage() {
         </p>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Zoek teamleden..."
-          className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/30 focus:bg-white/10 transition-all"
-        />
+      {/* Search and Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="relative max-w-md w-full sm:w-auto">
+          <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Zoek teamleden..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/30 focus:bg-white/10 transition-all"
+          />
+        </div>
+
+        {isManager && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowAddMemberModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-workx-lime hover:bg-workx-lime/90 text-workx-dark font-medium rounded-xl transition-all"
+            >
+              <Icons.plus size={16} />
+              <span className="hidden sm:inline">Teamlid toevoegen</span>
+              <span className="sm:hidden">Toevoegen</span>
+            </button>
+            <button
+              onClick={() => { setShowExperienceUpgradeModal(true); fetchExperienceUpgradePreview() }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-medium rounded-xl transition-all border border-blue-500/20"
+            >
+              <Icons.trendingUp size={16} />
+              <span className="hidden sm:inline">Ervaringsjaar</span>
+            </button>
+            <button
+              onClick={() => { setShowHourlyRateUpgradeModal(true); fetchHourlyRateUpgradePreview() }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 font-medium rounded-xl transition-all border border-green-500/20"
+            >
+              <Icons.dollarSign size={16} />
+              <span className="hidden sm:inline">Uurtarief</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Team Cards */}
@@ -1196,6 +1432,457 @@ export default function TeamPage() {
           </div>
           <h3 className="text-lg font-medium text-white mb-2">Geen teamleden gevonden</h3>
           <p className="text-gray-400">Probeer een andere zoekterm</p>
+        </div>
+      )}
+
+      {/* Add Team Member Modal */}
+      {showAddMemberModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-workx-gray rounded-2xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-workx-gray z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.userPlus className="text-workx-lime" size={18} />
+                </div>
+                <h2 className="text-xl font-semibold text-white">Teamlid toevoegen</h2>
+              </div>
+              <button
+                onClick={() => { setShowAddMemberModal(false); resetNewMemberForm() }}
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Persoonlijke gegevens */}
+              <div>
+                <h3 className="text-sm text-gray-400 uppercase tracking-wider mb-4">Persoonlijke gegevens</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Naam *</label>
+                    <input
+                      type="text"
+                      value={newMemberForm.name}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, name: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="Volledige naam"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Email *</label>
+                    <input
+                      type="email"
+                      value={newMemberForm.email}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, email: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="email@workxadvocaten.nl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Wachtwoord *</label>
+                    <input
+                      type="password"
+                      value={newMemberForm.password}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, password: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="Min. 6 tekens"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Telefoonnummer</label>
+                    <input
+                      type="tel"
+                      value={newMemberForm.phoneNumber}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, phoneNumber: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="+31 6 12345678"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Verjaardag (MM-DD)</label>
+                    <input
+                      type="text"
+                      value={newMemberForm.birthDate}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, birthDate: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="03-15"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Foto URL</label>
+                    <input
+                      type="url"
+                      value={newMemberForm.avatarUrl}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, avatarUrl: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dienstverband */}
+              <div>
+                <h3 className="text-sm text-gray-400 uppercase tracking-wider mb-4">Dienstverband</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Startdatum</label>
+                    <input
+                      type="date"
+                      value={newMemberForm.startDate}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, startDate: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Rol</label>
+                    <select
+                      value={newMemberForm.role}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, role: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                    >
+                      <option value="EMPLOYEE" className="bg-workx-dark">Medewerker (Advocaat)</option>
+                      <option value="PARTNER" className="bg-workx-dark">Partner</option>
+                      <option value="ADMIN" className="bg-workx-dark">Admin</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Afdeling</label>
+                    <input
+                      type="text"
+                      value={newMemberForm.department}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, department: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="Bijv. Arbeidsrecht"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Werkdagen</label>
+                    <input
+                      type="text"
+                      value={newMemberForm.werkdagen}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, werkdagen: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="1,2,3,4,5 (Ma=1, Di=2, etc.)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Arbeidsvoorwaarden */}
+              <div>
+                <h3 className="text-sm text-gray-400 uppercase tracking-wider mb-4">Arbeidsvoorwaarden (optioneel)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Ervaringsjaar</label>
+                    <select
+                      value={newMemberForm.experienceYear}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, experienceYear: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                    >
+                      <option value="" className="bg-workx-dark">Selecteer...</option>
+                      <option value="0" className="bg-workx-dark">Juridisch medewerker</option>
+                      <option value="1" className="bg-workx-dark">1e jaars</option>
+                      <option value="2" className="bg-workx-dark">2e jaars</option>
+                      <option value="3" className="bg-workx-dark">3e jaars</option>
+                      <option value="4" className="bg-workx-dark">4e jaars</option>
+                      <option value="5" className="bg-workx-dark">5e jaars</option>
+                      <option value="6" className="bg-workx-dark">6e jaars</option>
+                      <option value="7" className="bg-workx-dark">7e jaars</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Uurtarief (€)</label>
+                    <input
+                      type="number"
+                      value={newMemberForm.hourlyRate}
+                      onChange={e => setNewMemberForm({ ...newMemberForm, hourlyRate: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                      placeholder="Wordt automatisch bepaald bij ervaringsjaar"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newMemberForm.isHourlyWage}
+                        onChange={e => setNewMemberForm({ ...newMemberForm, isHourlyWage: e.target.checked })}
+                        className="w-5 h-5 rounded border-white/20 bg-white/5 text-workx-lime focus:ring-workx-lime/50"
+                      />
+                      <span className="text-sm text-gray-300">Uurloner (bijv. stagiair)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/10 flex gap-3">
+              <button
+                onClick={() => { setShowAddMemberModal(false); resetNewMemberForm() }}
+                className="flex-1 btn-secondary"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={handleAddMember}
+                disabled={isAddingMember}
+                className="flex-1 btn-primary flex items-center justify-center gap-2"
+              >
+                {isAddingMember ? (
+                  <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Icons.check size={16} />
+                    Toevoegen
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Experience Year Upgrade Modal */}
+      {showExperienceUpgradeModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-workx-gray rounded-2xl border border-white/10 w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-workx-gray z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Icons.trendingUp className="text-blue-400" size={18} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Ervaringsjaar Ophoging</h2>
+                  <p className="text-sm text-gray-400">Ingangsdatum: 1 maart {currentYear}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowExperienceUpgradeModal(false)}
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {isLoadingExperiencePreview ? (
+                <div className="flex items-center justify-center py-12">
+                  <span className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : experienceUpgradePreview?.alreadyProcessed ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                    <Icons.check className="text-green-400" size={28} />
+                  </div>
+                  <h3 className="text-lg font-medium text-white mb-2">Al uitgevoerd</h3>
+                  <p className="text-gray-400 text-sm">
+                    De ervaringsjaar ophoging voor {currentYear} is al uitgevoerd op{' '}
+                    {experienceUpgradePreview.processedAt && new Date(experienceUpgradePreview.processedAt).toLocaleDateString('nl-NL')}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-gray-400 text-sm mb-6">
+                    Dit verhoogt het ervaringsjaar van alle medewerkers met 1 en past het salaris aan op basis van de nieuwe schaal.
+                  </p>
+
+                  {experienceUpgradePreview?.changes && experienceUpgradePreview.changes.length > 0 ? (
+                    <div className="space-y-3 mb-6">
+                      <h4 className="text-sm text-gray-400 uppercase tracking-wider">
+                        Voorgestelde wijzigingen ({experienceUpgradePreview.totalEmployees} medewerkers)
+                      </h4>
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {experienceUpgradePreview.changes.map((change) => (
+                          <div key={change.userId} className="p-3 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+                            <div>
+                              <p className="text-white font-medium">{change.userName}</p>
+                              <p className="text-sm text-gray-400">
+                                {change.oldExperienceYear}e jaars → {change.newExperienceYear}e jaars
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              {change.newSalary && (
+                                <p className="text-blue-400 font-semibold">
+                                  {formatCurrency(change.newSalary)}
+                                </p>
+                              )}
+                              {change.oldSalary && change.newSalary && (
+                                <p className="text-xs text-gray-500">
+                                  was {formatCurrency(change.oldSalary)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-400">
+                      Geen medewerkers met ervaringsjaar gevonden
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowExperienceUpgradeModal(false)}
+                      className="flex-1 btn-secondary"
+                    >
+                      Annuleren
+                    </button>
+                    <button
+                      onClick={executeExperienceUpgrade}
+                      disabled={isExecutingExperienceUpgrade || !experienceUpgradePreview?.changes?.length}
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isExecutingExperienceUpgrade ? (
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Icons.trendingUp size={16} />
+                          Uitvoeren
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hourly Rate Upgrade Modal */}
+      {showHourlyRateUpgradeModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-workx-gray rounded-2xl border border-white/10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 bg-workx-gray z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                  <Icons.dollarSign className="text-green-400" size={18} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Uurtarief Verhoging</h2>
+                  <p className="text-sm text-gray-400">Ingangsdatum: 1 januari {currentYear}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHourlyRateUpgradeModal(false)}
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {isLoadingHourlyRatePreview ? (
+                <div className="flex items-center justify-center py-12">
+                  <span className="w-8 h-8 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : hourlyRateUpgradePreview?.alreadyProcessed ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                    <Icons.check className="text-green-400" size={28} />
+                  </div>
+                  <h3 className="text-lg font-medium text-white mb-2">Al uitgevoerd</h3>
+                  <p className="text-gray-400 text-sm">
+                    De uurtarief verhoging voor {currentYear} is al uitgevoerd op{' '}
+                    {hourlyRateUpgradePreview.processedAt && new Date(hourlyRateUpgradePreview.processedAt).toLocaleDateString('nl-NL')}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Increase amount input */}
+                  <div className="mb-6">
+                    <label className="block text-sm text-gray-400 mb-2">Verhoging per uur (€)</label>
+                    <div className="flex gap-3">
+                      <input
+                        type="number"
+                        value={hourlyRateIncrease}
+                        onChange={e => setHourlyRateIncrease(parseFloat(e.target.value) || 0)}
+                        className="w-32 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-green-500/30"
+                      />
+                      <button
+                        onClick={fetchHourlyRateUpgradePreview}
+                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl transition-all flex items-center gap-2"
+                      >
+                        <Icons.refresh size={16} />
+                        Preview
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Scale changes preview */}
+                  {hourlyRateUpgradePreview?.scaleChanges && hourlyRateUpgradePreview.scaleChanges.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-sm text-gray-400 uppercase tracking-wider mb-3">
+                        Salarisschalen ({hourlyRateUpgradePreview.scaleChanges.length})
+                      </h4>
+                      <div className="max-h-48 overflow-y-auto space-y-2">
+                        {hourlyRateUpgradePreview.scaleChanges.map((scale) => (
+                          <div key={scale.experienceYear} className="p-3 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+                            <div>
+                              <p className="text-white font-medium">{scale.label}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-green-400 font-semibold">€{scale.newHourlyRateBase}/uur</p>
+                              <p className="text-xs text-gray-500">was €{scale.oldHourlyRateBase}/uur</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Employee changes preview */}
+                  {hourlyRateUpgradePreview?.employeeChanges && hourlyRateUpgradePreview.employeeChanges.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-sm text-gray-400 uppercase tracking-wider mb-3">
+                        Medewerkers ({hourlyRateUpgradePreview.employeeChanges.length})
+                      </h4>
+                      <div className="max-h-48 overflow-y-auto space-y-2">
+                        {hourlyRateUpgradePreview.employeeChanges.map((emp) => (
+                          <div key={emp.userId} className="p-3 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+                            <div>
+                              <p className="text-white font-medium">{emp.userName}</p>
+                              <p className="text-sm text-gray-400">{emp.experienceYear}e jaars</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-green-400 font-semibold">€{emp.newHourlyRate}/uur</p>
+                              <p className="text-xs text-gray-500">was €{emp.oldHourlyRate}/uur</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowHourlyRateUpgradeModal(false)}
+                      className="flex-1 btn-secondary"
+                    >
+                      Annuleren
+                    </button>
+                    <button
+                      onClick={executeHourlyRateUpgrade}
+                      disabled={isExecutingHourlyRateUpgrade || !hourlyRateUpgradePreview?.scaleChanges?.length}
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isExecutingHourlyRateUpgrade ? (
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Icons.dollarSign size={16} />
+                          Uitvoeren
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -703,3 +703,18 @@ model ZaakAssignment {
   @@index([zaakId, queuePosition])
   @@index([status, expiresAt])
 }
+
+// ==================== JAARLIJKSE UPGRADES ====================
+
+// Logging voor jaarlijkse upgrades (ervaringsjaar en uurtarief)
+model YearlyUpgradeLog {
+  id            String   @id @default(cuid())
+  type          String   // "EXPERIENCE_YEAR" | "HOURLY_RATE"
+  year          Int      // Jaar waarvoor de upgrade geldt
+  effectiveDate DateTime // Ingangsdatum (1 maart of 1 januari)
+  processedAt   DateTime @default(now())
+  processedBy   String?  // userId of "CRON"
+  changes       String   @db.Text // JSON met alle wijzigingen
+
+  @@unique([type, year])
+}
