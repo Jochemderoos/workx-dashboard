@@ -79,6 +79,24 @@ export default function Sidebar({ user }: SidebarProps) {
   const NavLink = ({ href, icon: Icon, label, iconAnim, badge }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string }) => {
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
     const isLustrum = href === '/dashboard/lustrum'
+    const isSlack = href === '/dashboard/chat'
+
+    if (isSlack) {
+      return (
+        <Link href={href} className={`nav-link group relative ${isActive ? 'active' : ''}`}>
+          {/* Slack rainbow glow on hover */}
+          <div className="absolute -inset-1 bg-gradient-to-r from-[#E01E5A] via-[#ECB22E] via-[#2EB67D] to-[#36C5F0] rounded-xl opacity-0 group-hover:opacity-30 blur-md transition-opacity" />
+          <div className="relative flex items-center gap-3 w-full">
+            <span className="icon-animated">
+              <Icon size={18} />
+            </span>
+            <span className="flex-1">{label}</span>
+            {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
+          </div>
+        </Link>
+      )
+    }
+
     return (
       <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link group/lustrum' : ''}`}>
         <span className="icon-animated">
