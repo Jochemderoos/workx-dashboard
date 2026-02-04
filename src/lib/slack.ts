@@ -278,4 +278,99 @@ export async function testSlackConnection(): Promise<{
   }
 }
 
+/**
+ * Get channel history from Slack
+ */
+export async function getChannelHistory(
+  channelId: string,
+  limit: number = 20
+): Promise<Array<{
+  user: string
+  text: string
+  ts: string
+  userInfo?: SlackUser
+}>> {
+  try {
+    const result = await slack.conversations.history({
+      channel: channelId,
+      limit,
+    })
+
+    if (!result.messages) return []
+
+    // Get user info for each unique user
+    const users = await getSlackUsers()
+    const usersArray = Array.from(users.values())
+
+    return result.messages
+      .filter((msg) => msg.type === 'message' && !msg.subtype)
+      .map((msg) => {
+        // Find user info by Slack ID
+        const userInfo = usersArray.find((u) => u.id === msg.user)
+
+        return {
+          user: msg.user || 'unknown',
+          text: msg.text || '',
+          ts: msg.ts || '',
+          userInfo,
+        }
+      })
+      .reverse() // Oldest first
+  } catch (error) {
+    console.error('Error fetching Slack channel history:', error)
+    return []
+  }
+}
+
+/**
+ * List all Slack channels the bot is in
+ */
+export async function listSlackChannels(): Promise<Array<{
+  id: string
+  name: string
+  isPrivate: boolean
+  memberCount?: number
+}>> {
+  try {
+    const result = await slack.conversations.list({
+      types: 'public_channel,private_channel',
+      exclude_archived: true,
+    })
+
+    if (!result.channels) return []
+
+    return result.channels
+      .filter((c) => c.is_member) // Only channels where bot is member
+      .map((c) => ({
+        id: c.id!,
+        name: c.name || '',
+        isPrivate: c.is_private || false,
+        memberCount: c.num_members,
+      }))
+  } catch (error) {
+    console.error('Error listing Slack channels:', error)
+    return []
+  }
+}
+
+/**
+ * Post message to Slack channel by ID
+ */
+export async function postToChannel(
+  channelId: string,
+  message: string,
+  senderName?: string
+): Promise<boolean> {
+  try {
+    await slack.chat.postMessage({
+      channel: channelId,
+      text: senderName ? `*${senderName}:* ${message}` : message,
+    })
+    return true
+  } catch (error) {
+    console.error('Error posting to Slack channel:', error)
+    return false
+  }
+}
+
 export { slack }
