@@ -351,11 +351,22 @@ export default function AppjeplekjePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-            {weekData.map((day) => (
+            {weekData.map((day) => {
+              // Check of dag in het verleden is (voor mobiel filtering)
+              const now = new Date()
+              const currentHour = now.getHours()
+              const todayStr = getLocalDateString(now)
+              const isPastDay = currentHour >= 20
+                ? day.date <= todayStr  // Na 20:00: vandaag is ook verleden
+                : day.date < todayStr   // Voor 20:00: alleen gisteren en eerder
+
+              return (
               <div
                 key={day.date}
                 onClick={() => setSelectedDate(day.date)}
                 className={`p-3 rounded-xl transition-all cursor-pointer ${
+                  isPastDay ? 'hidden sm:block' : '' // Verberg verleden dagen op mobiel
+                } ${
                   day.date === selectedDate
                     ? 'bg-workx-lime/20 border-2 border-workx-lime/50 ring-2 ring-workx-lime/20'
                     : day.isToday
@@ -421,7 +432,7 @@ export default function AppjeplekjePage() {
                   </div>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
