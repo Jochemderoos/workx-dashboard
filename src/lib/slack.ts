@@ -341,13 +341,16 @@ export async function listSlackChannels(): Promise<Array<{
 
     if (!result.channels) return []
 
-    return result.channels.map((c) => ({
-      id: c.id!,
-      name: c.name || '',
-      isPrivate: c.is_private || false,
-      isMember: c.is_member || false,
-      memberCount: c.num_members,
-    }))
+    // Only return channels where the bot is a member
+    return result.channels
+      .filter((c) => c.is_member)
+      .map((c) => ({
+        id: c.id!,
+        name: c.name || '',
+        isPrivate: c.is_private || false,
+        isMember: c.is_member || false,
+        memberCount: c.num_members,
+      }))
   } catch (error) {
     console.error('Error listing Slack channels:', error)
     return []
