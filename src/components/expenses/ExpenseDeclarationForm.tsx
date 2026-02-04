@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface ExpenseItem {
   id?: string
@@ -220,14 +221,15 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-6 px-4 pb-4 overflow-y-auto">
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-workx-dark border border-white/10 rounded-2xl shadow-2xl"
+        className="relative w-full max-w-4xl bg-workx-dark border border-white/10 rounded-2xl shadow-2xl my-auto"
+        style={{ maxHeight: 'calc(100vh - 48px)' }}
       >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-white/10 bg-workx-dark rounded-t-2xl">
@@ -375,11 +377,11 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                       {items.map((item, index) => (
                         <tr key={index} className="border-b border-white/5 hover:bg-white/5">
                           <td className="px-4 py-3">
-                            <input
-                              type="date"
-                              value={item.date}
-                              onChange={(e) => updateItem(index, 'date', e.target.value)}
-                              className="input-field text-sm py-1.5 w-36"
+                            <DatePicker
+                              selected={item.date ? new Date(item.date + 'T12:00:00') : null}
+                              onChange={(date) => updateItem(index, 'date', date ? date.toISOString().split('T')[0] : '')}
+                              placeholder="Datum..."
+                              dateFormat="d MMM yyyy"
                             />
                           </td>
                           <td className="px-4 py-3">
