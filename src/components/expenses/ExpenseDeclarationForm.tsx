@@ -27,14 +27,12 @@ interface ExpenseDeclaration {
 
 interface ExpenseDeclarationFormProps {
   onClose: () => void
-  clickY?: number
 }
 
-export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDeclarationFormProps) {
+export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFormProps) {
   const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isPrinting, setIsPrinting] = useState(false)
-  const printRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
 
   // View state
@@ -46,7 +44,7 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
   const [employeeName, setEmployeeName] = useState(session?.user?.name || '')
   const [bankAccount, setBankAccount] = useState('')
   const [note, setNote] = useState('')
-  const [items, setItems] = useState<ExpenseItem[]>([{ description: '', date: '', amount: 0 }])
+  const [items, setItems] = useState<ExpenseItem[]>([])
 
   // Calculate total
   const totalAmount = items.reduce((sum, item) => sum + (item.amount || 0), 0)
@@ -94,20 +92,18 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
     setEmployeeName(session?.user?.name || '')
     setBankAccount('')
     setNote('')
-    setItems([{ description: '', date: '', amount: 0 }])
+    setItems([])
     setView('form')
   }
 
-  // Add new item row
+  // Add new item
   const addItem = () => {
-    setItems([...items, { description: '', date: '', amount: 0 }])
+    setItems([...items, { description: '', date: new Date().toISOString().split('T')[0], amount: 0 }])
   }
 
-  // Remove item row
+  // Remove item
   const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index))
-    }
+    setItems(items.filter((_, i) => i !== index))
   }
 
   // Update item
@@ -120,13 +116,12 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
   // Handle file attachment
   const handleFileAttachment = (index: number, file: File | null) => {
     if (!file) {
-      updateItem(index, 'attachmentUrl', '')
-      updateItem(index, 'attachmentName', '')
+      const newItems = [...items]
+      newItems[index] = { ...newItems[index], attachmentUrl: '', attachmentName: '' }
+      setItems(newItems)
       return
     }
 
-    // For now, store the file name - in production you'd upload to a storage service
-    // Create a local URL for preview/print
     const reader = new FileReader()
     reader.onload = (e) => {
       const newItems = [...items]
@@ -140,19 +135,19 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
     reader.readAsDataURL(file)
   }
 
-  // Validate IBAN (basic check)
+  // Validate IBAN
   const isValidIBAN = (iban: string) => {
     const cleaned = iban.replace(/\s/g, '').toUpperCase()
     return /^[A-Z]{2}[0-9]{2}[A-Z0-9]{4,30}$/.test(cleaned)
   }
 
-  // Format IBAN for display
+  // Format IBAN
   const formatIBAN = (iban: string) => {
     const cleaned = iban.replace(/\s/g, '').toUpperCase()
     return cleaned.match(/.{1,4}/g)?.join(' ') || cleaned
   }
 
-  // Save declaration (auto-saves as DRAFT)
+  // Save declaration
   const saveDeclaration = async () => {
     if (!employeeName.trim()) {
       toast.error('Vul je naam in')
@@ -166,7 +161,7 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
 
     const validItems = items.filter(i => i.description && i.date && i.amount > 0)
     if (validItems.length === 0) {
-      toast.error('Voeg minimaal één complete kostenpost toe')
+      toast.error('Voeg minimaal één kostenpost toe')
       return false
     }
 
@@ -185,7 +180,7 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
           bankAccount: bankAccount.replace(/\s/g, '').toUpperCase(),
           items: validItems,
           note: note.trim(),
-          submit: false, // Always save as draft
+          submit: false,
         }),
       })
 
@@ -197,7 +192,6 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
       const saved = await res.json()
       setCurrentDeclaration(saved)
 
-      // Refresh declarations list
       const listRes = await fetch('/api/expenses')
       if (listRes.ok) {
         setSavedDeclarations(await listRes.json())
@@ -213,9 +207,8 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
     }
   }
 
-  // Print/PDF generation
+  // Print
   const handlePrint = async () => {
-    // First save the current state
     const saved = await saveDeclaration()
     if (!saved) return
 
@@ -226,15 +219,8 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
     }, 100)
   }
 
-  // Scroll modal into view when it mounts
-  useEffect(() => {
-    if (modalRef.current) {
-      modalRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [])
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
 
@@ -252,7 +238,7 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
             <div>
               <h2 className="text-xl font-semibold text-white">Declaratieformulier</h2>
               <p className="text-sm text-gray-400">
-                {currentDeclaration ? 'Formulier bewerken' : 'Nieuw formulier'}
+                {view === 'history' ? 'Eerdere declaraties' : items.length > 0 ? `${items.length} kostenpost${items.length !== 1 ? 'en' : ''}` : 'Voeg je kosten toe'}
               </p>
             </div>
           </div>
@@ -295,22 +281,15 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
                     onClick={() => loadDeclaration(decl)}
                   >
                     <div>
-                      <p className="text-white font-medium">
-                        {decl.employeeName}
-                      </p>
+                      <p className="text-white font-medium">{decl.employeeName}</p>
                       <p className="text-sm text-gray-400">
                         {new Date(decl.createdAt).toLocaleDateString('nl-NL')} • {decl.items.length} kostenpost{decl.items.length !== 1 ? 'en' : ''}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-workx-lime font-bold">
+                      <p className="text-workx-lime font-bold text-lg">
                         € {decl.totalAmount.toFixed(2).replace('.', ',')}
                       </p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        decl.status === 'DRAFT' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'
-                      }`}>
-                        {decl.status === 'DRAFT' ? 'Concept' : 'Geprint'}
-                      </span>
                     </div>
                   </div>
                 ))}
@@ -319,111 +298,118 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
           </div>
         ) : (
           /* Form View */
-          <>
-            <div ref={printRef} className="p-6 space-y-6">
-              {/* Print Header (only visible when printing) */}
-              <div className="hidden print:block mb-8 text-center">
-                <h1 className="text-2xl font-bold mb-1">Declaratieformulier</h1>
-                <p className="text-gray-500">Workx Advocaten</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Datum: {new Date().toLocaleDateString('nl-NL')}
-                </p>
-              </div>
+          <div className="p-6 space-y-6" id="expense-print-area">
+            {/* Print Header */}
+            <div className="hidden print:block mb-8 text-center">
+              <h1 className="text-2xl font-bold mb-1">Declaratieformulier</h1>
+              <p className="text-gray-500">Workx Advocaten - {new Date().toLocaleDateString('nl-NL')}</p>
+            </div>
 
-              {/* Personal Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Naam medewerker *</label>
-                  <input
-                    type="text"
-                    value={employeeName}
-                    onChange={(e) => setEmployeeName(e.target.value)}
-                    className="input-field"
-                    placeholder="Je volledige naam"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">IBAN Rekeningnummer *</label>
-                  <input
-                    type="text"
-                    value={formatIBAN(bankAccount)}
-                    onChange={(e) => setBankAccount(e.target.value)}
-                    className="input-field font-mono"
-                    placeholder="NL00 BANK 0000 0000 00"
-                  />
-                </div>
-              </div>
-
-              {/* Expense Items */}
+            {/* Personal Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm text-gray-400">Kostenposten</label>
+                <label className="block text-sm text-gray-400 mb-2">Naam medewerker</label>
+                <input
+                  type="text"
+                  value={employeeName}
+                  onChange={(e) => setEmployeeName(e.target.value)}
+                  className="input-field"
+                  placeholder="Je volledige naam"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">IBAN Rekeningnummer</label>
+                <input
+                  type="text"
+                  value={formatIBAN(bankAccount)}
+                  onChange={(e) => setBankAccount(e.target.value)}
+                  className="input-field font-mono"
+                  placeholder="NL00 BANK 0000 0000 00"
+                />
+              </div>
+            </div>
+
+            {/* Expense Table */}
+            <div className="card p-0 overflow-hidden">
+              <div className="bg-white/5 px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                <h3 className="font-medium text-white flex items-center gap-2">
+                  <Icons.fileText size={18} className="text-workx-lime" />
+                  Kostenposten
+                </h3>
+                <button
+                  onClick={addItem}
+                  className="btn-primary text-sm py-1.5 px-3 flex items-center gap-1.5"
+                >
+                  <Icons.plus size={16} />
+                  Kostenpost toevoegen
+                </button>
+              </div>
+
+              {items.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                    <Icons.plus size={32} className="text-gray-500" />
+                  </div>
+                  <p className="text-gray-400 mb-4">Nog geen kostenposten toegevoegd</p>
                   <button
                     onClick={addItem}
-                    className="text-sm text-workx-lime hover:text-workx-lime/80 flex items-center gap-1"
+                    className="btn-primary flex items-center gap-2 mx-auto"
                   >
-                    <Icons.plus size={14} />
-                    Kostenpost toevoegen
+                    <Icons.plus size={16} />
+                    Eerste kostenpost toevoegen
                   </button>
                 </div>
-
-                <div className="space-y-4">
-                  {items.map((item, index) => (
-                    <div key={index} className="p-4 bg-white/5 rounded-xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-white">Kostenpost {index + 1}</span>
-                        {items.length > 1 && (
-                          <button
-                            onClick={() => removeItem(index)}
-                            className="p-1 text-gray-500 hover:text-red-400 transition-colors"
-                          >
-                            <Icons.trash size={16} />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="md:col-span-2">
-                          <label className="block text-xs text-gray-500 mb-1">Omschrijving</label>
-                          <input
-                            type="text"
-                            value={item.description}
-                            onChange={(e) => updateItem(index, 'description', e.target.value)}
-                            className="input-field text-sm"
-                            placeholder="Bijv. Reiskosten, Parkeren, Lunch cliënt..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Datum</label>
-                          <input
-                            type="date"
-                            value={item.date}
-                            onChange={(e) => updateItem(index, 'date', e.target.value)}
-                            className="input-field text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Bedrag (€)</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={item.amount || ''}
-                            onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)}
-                            className="input-field text-sm"
-                            placeholder="0,00"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-xs text-gray-500 mb-1">Bon/Factuur bijlage</label>
-                          <div className="flex items-center gap-2">
-                            <label className="flex-1 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
-                              <Icons.paperclip size={16} className="text-gray-400" />
-                              <span className="text-sm text-gray-400 truncate">
-                                {item.attachmentName || 'Bestand kiezen...'}
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-white/10">
+                        <th className="px-4 py-3 font-medium">Datum</th>
+                        <th className="px-4 py-3 font-medium">Omschrijving</th>
+                        <th className="px-4 py-3 font-medium text-right">Bedrag</th>
+                        <th className="px-4 py-3 font-medium">Bijlage</th>
+                        <th className="px-4 py-3 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, index) => (
+                        <tr key={index} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="px-4 py-3">
+                            <input
+                              type="date"
+                              value={item.date}
+                              onChange={(e) => updateItem(index, 'date', e.target.value)}
+                              className="input-field text-sm py-1.5 w-36"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              value={item.description}
+                              onChange={(e) => updateItem(index, 'description', e.target.value)}
+                              className="input-field text-sm py-1.5"
+                              placeholder="Bijv. Parkeren, Reiskosten..."
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-400">€</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.amount || ''}
+                                onChange={(e) => updateItem(index, 'amount', parseFloat(e.target.value) || 0)}
+                                className="input-field text-sm py-1.5 w-24 text-right"
+                                placeholder="0,00"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-400 hover:text-white">
+                              <Icons.paperclip size={14} />
+                              <span className="truncate max-w-[100px]">
+                                {item.attachmentName || 'Bijlage...'}
                               </span>
                               <input
                                 type="file"
@@ -432,171 +418,129 @@ export default function ExpenseDeclarationForm({ onClose, clickY }: ExpenseDecla
                                 onChange={(e) => handleFileAttachment(index, e.target.files?.[0] || null)}
                               />
                             </label>
-                            {item.attachmentName && (
-                              <button
-                                onClick={() => handleFileAttachment(index, null)}
-                                className="p-2 text-gray-500 hover:text-red-400"
-                              >
-                                <Icons.x size={16} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => removeItem(index)}
+                              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                            >
+                              <Icons.trash size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-workx-lime/10">
+                        <td colSpan={2} className="px-4 py-4 text-right font-medium text-gray-400">
+                          Totaal te declareren:
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <span className="text-2xl font-bold text-workx-lime">
+                            € {totalAmount.toFixed(2).replace('.', ',')}
+                          </span>
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
+              )}
+            </div>
 
-                {/* Total */}
-                <div className="mt-4 pt-4 border-t border-white/10 flex justify-end">
-                  <div className="bg-workx-lime/10 px-6 py-3 rounded-xl">
-                    <span className="text-gray-400 text-sm mr-4">Totaal te declareren:</span>
-                    <span className="text-workx-lime text-2xl font-bold">
-                      € {totalAmount.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
+            {/* Note */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Opmerkingen (optioneel)</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="input-field min-h-[60px]"
+                placeholder="Extra toelichting..."
+              />
+            </div>
+
+            {/* Print signature area */}
+            <div className="hidden print:block mt-8 pt-8 border-t border-gray-300">
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <p className="text-sm mb-16">Handtekening:</p>
+                  <div className="border-b border-gray-400"></div>
                 </div>
-              </div>
-
-              {/* Note */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Opmerkingen (optioneel)</label>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="input-field min-h-[80px]"
-                  placeholder="Extra toelichting..."
-                />
-              </div>
-
-              {/* Print section: Attachments list */}
-              <div className="hidden print:block mt-8 pt-4 border-t border-gray-300">
-                <h3 className="font-semibold mb-2">Bijlagen:</h3>
-                <ul className="text-sm">
-                  {items.filter(i => i.attachmentName).map((item, idx) => (
-                    <li key={idx}>• {item.attachmentName} ({item.description})</li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Print signature area */}
-              <div className="hidden print:block mt-8 pt-4 border-t border-gray-300">
-                <div className="grid grid-cols-2 gap-8 mt-8">
-                  <div>
-                    <p className="text-sm mb-16">Handtekening medewerker:</p>
-                    <div className="border-b border-gray-400"></div>
-                  </div>
-                  <div>
-                    <p className="text-sm mb-16">Datum:</p>
-                    <div className="border-b border-gray-400"></div>
-                  </div>
+                <div>
+                  <p className="text-sm mb-16">Datum:</p>
+                  <div className="border-b border-gray-400"></div>
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Footer Actions */}
-            <div className="sticky bottom-0 flex items-center justify-between p-6 border-t border-white/10 bg-workx-dark rounded-b-2xl">
-              <div className="flex gap-2">
-                <button
-                  onClick={startNewForm}
-                  className="btn-secondary flex items-center gap-2"
-                  title="Start een nieuw leeg formulier"
-                >
-                  <Icons.plus size={16} />
-                  Nieuw formulier
-                </button>
-              </div>
+        {/* Footer Actions */}
+        {view === 'form' && (
+          <div className="sticky bottom-0 flex items-center justify-between p-6 border-t border-white/10 bg-workx-dark rounded-b-2xl">
+            <button
+              onClick={startNewForm}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Icons.plus size={16} />
+              Nieuw formulier
+            </button>
 
-              <div className="flex gap-2">
-                <button onClick={onClose} className="btn-secondary">
-                  Sluiten
-                </button>
-                <button
-                  onClick={saveDeclaration}
-                  disabled={isLoading}
-                  className="btn-secondary flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
-                  ) : (
-                    <Icons.save size={16} />
-                  )}
-                  Opslaan
-                </button>
-                <button
-                  onClick={handlePrint}
-                  disabled={isLoading || isPrinting}
-                  className="btn-primary flex items-center gap-2"
-                >
-                  {isPrinting ? (
-                    <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
-                  ) : (
-                    <Icons.fileText size={16} />
-                  )}
-                  Print formulier
-                </button>
-              </div>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="btn-secondary">
+                Sluiten
+              </button>
+              <button
+                onClick={saveDeclaration}
+                disabled={isLoading || items.length === 0}
+                className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <span className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
+                ) : (
+                  <Icons.save size={16} />
+                )}
+                Opslaan
+              </button>
+              <button
+                onClick={handlePrint}
+                disabled={isLoading || isPrinting || items.length === 0}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50"
+              >
+                {isPrinting ? (
+                  <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                ) : (
+                  <Icons.fileText size={16} />
+                )}
+                Print formulier
+              </button>
             </div>
-          </>
+          </div>
         )}
       </div>
 
       {/* Print styles */}
       <style jsx global>{`
         @media print {
-          body * {
-            visibility: hidden;
+          body * { visibility: hidden; }
+          #expense-print-area, #expense-print-area * { visibility: visible !important; }
+          #expense-print-area {
+            position: absolute; left: 0; top: 0; width: 100%;
+            background: white !important; color: black !important; padding: 40px !important;
           }
-          #expense-print-area,
-          #expense-print-area * {
-            visibility: visible !important;
+          #expense-print-area input, #expense-print-area textarea {
+            border: none !important; background: transparent !important;
+            color: black !important; padding: 0 !important;
           }
-          .print\\:block {
-            display: block !important;
+          #expense-print-area table { border-collapse: collapse; }
+          #expense-print-area th, #expense-print-area td {
+            border: 1px solid #ddd !important; padding: 8px !important;
           }
-          .print\\:hidden {
-            display: none !important;
-          }
-          [data-print-content],
-          [data-print-content] * {
-            visibility: visible !important;
-          }
-          [data-print-content] {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            background: white !important;
-            color: black !important;
-            padding: 40px !important;
-          }
-          [data-print-content] input,
-          [data-print-content] textarea {
-            border: none !important;
-            background: transparent !important;
-            color: black !important;
-            padding: 0 !important;
-          }
-          [data-print-content] .input-field {
-            border-bottom: 1px solid #ccc !important;
-          }
-          .bg-workx-lime\\/10 {
-            background: #f0f0f0 !important;
-          }
-          .text-workx-lime {
-            color: #000 !important;
-          }
-          .text-gray-400,
-          .text-gray-500 {
-            color: #666 !important;
-          }
-          .text-white {
-            color: #000 !important;
-          }
-          .bg-white\\/5 {
-            background: #f5f5f5 !important;
-            border: 1px solid #ddd !important;
-          }
+          #expense-print-area .btn-primary, #expense-print-area .btn-secondary { display: none !important; }
+          .text-workx-lime { color: #000 !important; }
+          .text-gray-400, .text-gray-500 { color: #666 !important; }
+          .text-white { color: #000 !important; }
+          .bg-workx-lime\\/10 { background: #f0f0f0 !important; }
         }
       `}</style>
     </div>

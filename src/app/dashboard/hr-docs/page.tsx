@@ -174,7 +174,6 @@ export default function HRDocsPage() {
 
   // Expense declaration state
   const [showExpenseForm, setShowExpenseForm] = useState(false)
-  const [expenseFormClickY, setExpenseFormClickY] = useState<number | undefined>(undefined)
 
   // Check if user can edit (Partner or Admin/Head of Office)
   const canEdit = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -384,10 +383,7 @@ export default function HRDocsPage() {
             <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Het personeelshandboek van Workx Advocaten</p>
           </div>
           <button
-            onClick={(e) => {
-              setExpenseFormClickY(e.clientY)
-              setShowExpenseForm(true)
-            }}
+            onClick={() => setShowExpenseForm(true)}
             className="btn-primary flex items-center gap-2"
           >
             <Icons.euro size={16} />
@@ -399,10 +395,7 @@ export default function HRDocsPage() {
 
       {/* Expense Declaration Modal */}
       {showExpenseForm && (
-        <ExpenseDeclarationForm
-          onClose={() => setShowExpenseForm(false)}
-          clickY={expenseFormClickY}
-        />
+        <ExpenseDeclarationForm onClose={() => setShowExpenseForm(false)} />
       )}
 
       {/* Document Tabs */}
