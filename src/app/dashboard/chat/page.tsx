@@ -1,8 +1,11 @@
 'use client'
 
+import { useSession } from 'next-auth/react'
 import { SlackWidget } from '@/components/SlackWidget'
 
 export default function ChatPage() {
+  const { data: session } = useSession()
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
@@ -12,7 +15,7 @@ export default function ChatPage() {
         </p>
       </div>
 
-      <SlackWidget />
+      <SlackWidget currentUserName={session?.user?.name || undefined} />
 
       <div className="mt-4 p-4 bg-workx-gray/20 rounded-lg">
         <p className="text-sm text-workx-muted">

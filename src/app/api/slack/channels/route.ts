@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { listSlackChannels, getChannelHistory, postToChannel, joinChannel } from '@/lib/slack'
+import { getPhotoUrl } from '@/lib/team-photos'
 
 // GET - List Slack channels or get messages from a channel
 export async function GET(req: NextRequest) {
@@ -53,7 +54,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const success = await postToChannel(channelId, message, session.user.name)
+    // Get user's team photo for personalized messages
+    const userName = session.user.name || 'Dashboard Gebruiker'
+    const userPhotoUrl = getPhotoUrl(userName)
+
+    const success = await postToChannel(channelId, message, userName, userPhotoUrl || undefined)
 
     if (!success) {
       return NextResponse.json(

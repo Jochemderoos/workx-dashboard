@@ -4,6 +4,14 @@ import { useState, useEffect, useRef } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { getPhotoUrl } from '@/lib/team-photos'
 
+interface SlackFile {
+  id: string
+  name: string
+  mimetype: string
+  url: string
+  thumb?: string
+}
+
 interface SlackMessage {
   user: string
   text: string
@@ -14,6 +22,7 @@ interface SlackMessage {
     realName: string
     email: string
   }
+  files?: SlackFile[]
 }
 
 interface SlackChannel {
@@ -36,19 +45,25 @@ const EMOJI_CATEGORIES = {
   'Eten': ['🍕', '🍔', '🍟', '🌭', '🍿', '🧀', '🥐', '🥖', '🥨', '🥯', '🍞', '☕', '🍵', '🧃', '🥤', '🍺', '🍷', '🥃', '🍸', '🍹'],
 }
 
-export function SlackWidget() {
+interface SlackWidgetProps {
+  currentUserName?: string
+}
+
+export function SlackWidget({ currentUserName }: SlackWidgetProps) {
   const [channels, setChannels] = useState<SlackChannel[]>([])
   const [selectedChannel, setSelectedChannel] = useState<SlackChannel | null>(null)
   const [messages, setMessages] = useState<SlackMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [channelPickerOpen, setChannelPickerOpen] = useState(false)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<string>('Smileys')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch channels on mount
   useEffect(() => {
@@ -101,22 +116,46 @@ export function SlackWidget() {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedChannel || sending) return
 
+    const messageText = newMessage.trim()
+
+    // Optimistic update - add message immediately to UI
+    const optimisticMessage: SlackMessage = {
+      user: 'me',
+      text: messageText,
+      ts: `optimistic-${Date.now()}`,
+      userInfo: {
+        id: 'me',
+        name: currentUserName || 'Jij',
+        realName: currentUserName || 'Jij',
+        email: '',
+      },
+    }
+    setMessages(prev => [...prev, optimisticMessage])
+    setNewMessage('')
+
+    // Send in background
+    setSending(true)
     try {
-      setSending(true)
       const res = await fetch('/api/slack/channels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           channelId: selectedChannel.id,
-          message: newMessage.trim(),
+          message: messageText,
         }),
       })
       const data = await res.json()
-      if (data.error) throw new Error(data.error)
-
-      setNewMessage('')
-      fetchMessages(selectedChannel.id)
+      if (data.error) {
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.ts !== optimisticMessage.ts))
+        console.error('Error sending message:', data.error)
+      } else {
+        // Fetch after short delay to get the real message with proper user info
+        setTimeout(() => fetchMessages(selectedChannel.id), 1500)
+      }
     } catch (err) {
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.ts !== optimisticMessage.ts))
       console.error('Error sending message:', err)
     } finally {
       setSending(false)
@@ -126,6 +165,34 @@ export function SlackWidget() {
   const addEmoji = (emoji: string) => {
     setNewMessage(prev => prev + emoji)
     inputRef.current?.focus()
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !selectedChannel || uploading) return
+
+    try {
+      setUploading(true)
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('channelId', selectedChannel.id)
+
+      const res = await fetch('/api/slack/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+
+      // Refresh messages to show the upload
+      fetchMessages(selectedChannel.id)
+    } catch (err) {
+      console.error('Error uploading file:', err)
+    } finally {
+      setUploading(false)
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
   const formatTime = (ts: string) => {
@@ -337,9 +404,55 @@ export function SlackWidget() {
                           </span>
                           <span className="text-xs text-gray-600">{formatTime(msg.ts)}</span>
                         </div>
-                        <p className="text-sm text-gray-300 break-words leading-relaxed">
-                          {formatSlackText(msg.text)}
-                        </p>
+                        {msg.text && (
+                          <p className="text-sm text-gray-300 break-words leading-relaxed">
+                            {formatSlackText(msg.text)}
+                          </p>
+                        )}
+                        {/* File attachments */}
+                        {msg.files && msg.files.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            {msg.files.map((file) => (
+                              <a
+                                key={file.id}
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group/file max-w-xs"
+                                title="Opent in Slack"
+                              >
+                                {/* File icon or thumbnail */}
+                                {file.mimetype?.startsWith('image/') && file.thumb ? (
+                                  <img
+                                    src={file.thumb}
+                                    alt={file.name}
+                                    className="w-12 h-12 rounded-lg object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white truncate group-hover/file:text-workx-lime transition-colors">
+                                    {file.name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/>
+                                    </svg>
+                                    Opent in Slack
+                                  </p>
+                                </div>
+                                <svg className="w-4 h-4 text-gray-500 group-hover/file:text-workx-lime transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -353,7 +466,35 @@ export function SlackWidget() {
 
       {/* Input area */}
       <div className="p-4 border-t border-white/5 bg-gradient-to-r from-white/[0.02] to-transparent">
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileUpload}
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+        />
+
         <div className="flex gap-3 items-end">
+          {/* File upload button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || !selectedChannel}
+            className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all text-gray-400 hover:text-blue-400 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            title="Bestand uploaden"
+          >
+            {uploading ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+            )}
+          </button>
+
           {/* Emoji picker */}
           <Popover.Root open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
             <Popover.Trigger asChild>
@@ -437,8 +578,9 @@ export function SlackWidget() {
 
           {/* Send button */}
           <button
+            type="button"
             onClick={sendMessage}
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || !selectedChannel || sending}
             className="p-3 rounded-xl bg-gradient-to-r from-workx-lime to-workx-lime/80 text-workx-dark font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-workx-lime/25 hover:scale-105 transition-all"
           >
             {sending ? (
