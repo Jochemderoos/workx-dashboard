@@ -56,6 +56,27 @@ async function drawWorkxLogo(
   })
 }
 
+/**
+ * Detect actual document type from data URL
+ * More reliable than stored documentType
+ */
+function detectDocumentType(dataUrl: string | null, storedType: string | null): string {
+  if (!dataUrl) return storedType || 'unknown'
+
+  // Check the MIME type in the data URL
+  if (dataUrl.startsWith('data:application/pdf')) return 'pdf'
+  if (dataUrl.startsWith('data:image/')) return 'image'
+  if (dataUrl.includes('application/vnd.openxmlformats-officedocument.wordprocessingml')) return 'docx'
+  if (dataUrl.includes('application/msword')) return 'docx'
+  if (dataUrl.includes('application/vnd.openxmlformats-officedocument.spreadsheetml')) return 'excel'
+  if (dataUrl.includes('application/vnd.ms-excel')) return 'excel'
+  if (dataUrl.includes('application/vnd.openxmlformats-officedocument.presentationml')) return 'powerpoint'
+  if (dataUrl.includes('application/vnd.ms-powerpoint')) return 'powerpoint'
+
+  // Fallback to stored type
+  return storedType || 'unknown'
+}
+
 // POST - Generate PDF for bundle
 export async function POST(
   req: NextRequest,
@@ -96,7 +117,9 @@ export async function POST(
     // ============================================
     // 1. PROCESSTUK (main document) - FIRST
     // ============================================
-    if (bundle.mainDocumentUrl && bundle.mainDocumentType === 'pdf') {
+    const mainDocType = detectDocumentType(bundle.mainDocumentUrl, bundle.mainDocumentType)
+
+    if (bundle.mainDocumentUrl && mainDocType === 'pdf') {
       try {
         const base64Data = bundle.mainDocumentUrl.split(',')[1]
         if (base64Data) {
@@ -115,49 +138,60 @@ export async function POST(
     }
 
     // ============================================
-    // 2. PRODUCTIE-OVERZICHT page (logo + list only)
+    // 2. PRODUCTIELIJST page (logo + title + list)
     // ============================================
-    const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
+    if (bundle.productions.length > 0) {
+      const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
 
-    // Add Workx logo (top-left)
-    await drawWorkxLogo(indexPage, pdfDoc, 30, pageHeight - LOGO_HEIGHT - 30)
+      // Add Workx logo (top-left)
+      await drawWorkxLogo(indexPage, pdfDoc, 30, pageHeight - LOGO_HEIGHT - 30)
 
-    // Production list - starting below logo
-    let y = pageHeight - 120
-
-    for (const production of bundle.productions) {
-      // Yellow highlight box for production number
-      indexPage.drawRectangle({
+      // Title "Productielijst"
+      indexPage.drawText('Productielijst', {
         x: 30,
-        y: y - 8,
-        width: 40,
-        height: 28,
-        color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
-      })
-
-      // Production number
-      indexPage.drawText(String(production.productionNumber), {
-        x: 42,
-        y: y,
-        size: 14,
+        y: pageHeight - 110,
+        size: 28,
         font: helveticaBold,
         color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
       })
 
-      // Production title
-      indexPage.drawText(production.title, {
-        x: 85,
-        y: y,
-        size: 12,
-        font: helvetica,
-        color: rgb(0, 0, 0),
-      })
+      // Production list - starting below title
+      let y = pageHeight - 160
 
-      y -= 38
+      for (const production of bundle.productions) {
+        // Yellow highlight box for production number
+        indexPage.drawRectangle({
+          x: 30,
+          y: y - 8,
+          width: 40,
+          height: 28,
+          color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
+        })
 
-      // Check if we need a new page
-      if (y < 80) {
-        break
+        // Production number
+        indexPage.drawText(String(production.productionNumber), {
+          x: 42,
+          y: y,
+          size: 14,
+          font: helveticaBold,
+          color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+        })
+
+        // Production title
+        indexPage.drawText(production.title, {
+          x: 85,
+          y: y,
+          size: 12,
+          font: helvetica,
+          color: rgb(0, 0, 0),
+        })
+
+        y -= 38
+
+        // Check if we need a new page
+        if (y < 80) {
+          break
+        }
       }
     }
 
@@ -227,8 +261,11 @@ export async function POST(
         color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
       })
 
+      // Detect actual document type from the data URL
+      const docType = detectDocumentType(production.documentUrl, production.documentType)
+
       // Add production document if present (NO logo on attachments)
-      if (production.documentUrl && production.documentType === 'pdf') {
+      if (production.documentUrl && docType === 'pdf') {
         try {
           const base64Data = production.documentUrl.split(',')[1]
           if (base64Data) {
@@ -240,7 +277,7 @@ export async function POST(
         } catch (err) {
           console.error('Error adding production document:', err)
         }
-      } else if (production.documentUrl && production.documentType === 'image') {
+      } else if (production.documentUrl && docType === 'image') {
         try {
           const base64Data = production.documentUrl.split(',')[1]
           if (base64Data) {
@@ -273,20 +310,20 @@ export async function POST(
         } catch (err) {
           console.error('Error adding production image:', err)
         }
-      } else if (production.documentUrl && (production.documentType === 'excel' || production.documentType === 'powerpoint' || production.documentType === 'docx')) {
+      } else if (production.documentUrl && (docType === 'excel' || docType === 'powerpoint' || docType === 'docx')) {
         // For Office documents that can't be embedded, add a placeholder page
         const placeholderPage = pdfDoc.addPage([pageWidth, pageHeight])
 
         // File type label and color
         let typeLabel = 'Document'
         let typeColor = { r: 0.3, g: 0.3, b: 0.3 }
-        if (production.documentType === 'excel') {
+        if (docType === 'excel') {
           typeLabel = 'Excel Bestand'
           typeColor = { r: 0.13, g: 0.55, b: 0.13 } // Green
-        } else if (production.documentType === 'powerpoint') {
+        } else if (docType === 'powerpoint') {
           typeLabel = 'PowerPoint Bestand'
           typeColor = { r: 0.85, g: 0.33, b: 0.1 } // Orange
-        } else if (production.documentType === 'docx') {
+        } else if (docType === 'docx') {
           typeLabel = 'Word Document'
           typeColor = { r: 0.1, g: 0.4, b: 0.8 } // Blue
         }
