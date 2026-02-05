@@ -113,13 +113,37 @@ export default function WorkxflowPage() {
           const updated = await res.json()
           setActiveBundle(updated)
           setBundles(prev => prev.map(b => b.id === updated.id ? updated : b))
-          toast.success('Dagvaarding geüpload')
+          toast.success('Processtuk geüpload')
         }
       } catch (error) {
         toast.error('Upload mislukt')
       }
     }
     reader.readAsDataURL(file)
+  }
+
+  const removeMainDocument = async () => {
+    if (!activeBundle) return
+
+    try {
+      const res = await fetch(`/api/workxflow/${activeBundle.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mainDocumentUrl: null,
+          mainDocumentName: null,
+          mainDocumentType: null,
+        }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setActiveBundle(updated)
+        setBundles(prev => prev.map(b => b.id === updated.id ? updated : b))
+        toast.success('Processtuk verwijderd')
+      }
+    } catch (error) {
+      toast.error('Verwijderen mislukt')
+    }
   }
 
   const addProduction = async (file?: File) => {
@@ -517,13 +541,21 @@ export default function WorkxflowPage() {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium text-white">{activeBundle.mainDocumentName}</p>
-                        <p className="text-xs text-gray-500">Dagvaarding / Hoofddocument</p>
+                        <p className="text-xs text-gray-500">Processtuk</p>
                       </div>
                       <button
                         onClick={() => mainDocInputRef.current?.click()}
                         className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+                        title="Vervangen"
                       >
                         <Icons.refresh size={16} />
+                      </button>
+                      <button
+                        onClick={removeMainDocument}
+                        className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                        title="Verwijderen"
+                      >
+                        <Icons.trash size={16} />
                       </button>
                     </div>
                   ) : (
@@ -532,7 +564,7 @@ export default function WorkxflowPage() {
                       className="text-center py-4 cursor-pointer hover:bg-white/5 rounded-lg transition-colors"
                     >
                       <Icons.upload className="mx-auto mb-2 text-gray-500" size={24} />
-                      <p className="text-sm text-gray-400">Upload dagvaarding (PDF of Word)</p>
+                      <p className="text-sm text-gray-400">Upload processtuk (PDF of Word)</p>
                       <p className="text-xs text-gray-600 mt-1">Dit document wordt zonder logo geprint</p>
                     </div>
                   )}
@@ -684,7 +716,7 @@ export default function WorkxflowPage() {
 
             {activeBundle ? (
               <div className="space-y-1">
-                {/* Main document (dagvaarding) */}
+                {/* Main document (processtuk) */}
                 {activeBundle.mainDocumentUrl ? (
                   <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <div className="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center flex-shrink-0">
@@ -692,7 +724,7 @@ export default function WorkxflowPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-blue-300 truncate">
-                        {activeBundle.mainDocumentName || 'Dagvaarding'}
+                        {activeBundle.mainDocumentName || 'Processtuk'}
                       </p>
                       <p className="text-[10px] text-blue-400/60">Lade 1 • Briefpapier</p>
                     </div>
@@ -702,7 +734,7 @@ export default function WorkxflowPage() {
                     <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center flex-shrink-0">
                       <Icons.file className="text-gray-600" size={14} />
                     </div>
-                    <p className="text-xs text-gray-500">Geen dagvaarding geüpload</p>
+                    <p className="text-xs text-gray-500">Geen processtuk geüpload</p>
                   </div>
                 )}
 
@@ -783,7 +815,7 @@ export default function WorkxflowPage() {
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Legenda</p>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded bg-blue-500/30 border border-blue-500/50" />
-                    <span className="text-[10px] text-gray-400">Dagvaarding (lade 1)</span>
+                    <span className="text-[10px] text-gray-400">Processtuk (lade 1)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded bg-yellow-500/30 border border-yellow-500/50" />
