@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Select printer
   selectPrinter: () => ipcRenderer.invoke('select-printer'),
 
+  // Get printer settings
+  getPrinterSettings: () => ipcRenderer.invoke('get-printer-settings'),
+
+  // Save printer settings
+  savePrinterSettings: (settings) => ipcRenderer.invoke('save-printer-settings', settings),
+
   // Listen for print progress updates
   onPrintProgress: (callback) => {
     ipcRenderer.on('print-progress', (event, data) => callback(data))

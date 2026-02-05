@@ -13,6 +13,40 @@ try {
 // Keep a global reference of the window object
 let mainWindow
 
+// Settings file path
+const settingsPath = path.join(app.getPath('userData'), 'printer-settings.json')
+
+// Default settings
+const defaultSettings = {
+  selectedPrinter: '',
+  tray1Name: 'Auto', // Briefpapier (processtuk + bijlagen)
+  tray2Name: 'Manual', // Geel papier (productievellen)
+}
+
+// Load settings
+function loadSettings() {
+  try {
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf8')
+      return { ...defaultSettings, ...JSON.parse(data) }
+    }
+  } catch (e) {
+    console.error('Error loading settings:', e)
+  }
+  return defaultSettings
+}
+
+// Save settings
+function saveSettings(settings) {
+  try {
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
+    return true
+  } catch (e) {
+    console.error('Error saving settings:', e)
+    return false
+  }
+}
+
 // Production URL (change to your deployed URL)
 const WEBAPP_URL = process.env.WEBAPP_URL || 'https://workx-dashboard.vercel.app'
 
@@ -57,9 +91,20 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
 })
 
-// IPC Handlers for printing
+// IPC Handlers
 
-// Get available printers
+// Get printer settings
+ipcMain.handle('get-printer-settings', async () => {
+  return loadSettings()
+})
+
+// Save printer settings
+ipcMain.handle('save-printer-settings', async (event, settings) => {
+  const success = saveSettings(settings)
+  return { success }
+})
+
+// Get available printers with details
 ipcMain.handle('get-printers', async () => {
   try {
     if (print && print.getPrinters) {
@@ -79,6 +124,7 @@ ipcMain.handle('get-printers', async () => {
 // Print a document
 ipcMain.handle('print-document', async (event, options) => {
   const { documentUrl, printerName, tray, copies = 1 } = options
+  const settings = loadSettings()
 
   try {
     // Extract base64 data if it's a data URL
@@ -95,16 +141,13 @@ ipcMain.handle('print-document', async (event, options) => {
     if (print && print.print) {
       // Use pdf-to-printer for Windows
       const printOptions = {
-        printer: printerName,
+        printer: printerName || settings.selectedPrinter || undefined,
         copies: copies,
       }
 
-      // Add tray selection if supported
+      // Add tray selection based on settings
       if (tray) {
-        printOptions.paperSource = tray === 1 ? 'Auto' : tray === 2 ? 'Manual' : 'Auto'
-        // Note: Tray names vary by printer. Common options:
-        // "Auto", "Manual", "Tray 1", "Tray 2", "Cassette 1", "Cassette 2", etc.
-        // You may need to configure this based on your specific printer
+        printOptions.paperSource = tray === 1 ? settings.tray1Name : settings.tray2Name
       }
 
       await print.print(pdfPath, printOptions)
@@ -116,7 +159,7 @@ ipcMain.handle('print-document', async (event, options) => {
           {
             silent: false,
             printBackground: true,
-            deviceName: printerName,
+            deviceName: printerName || settings.selectedPrinter || undefined,
             copies: copies,
           },
           (success, errorType) => {
@@ -137,6 +180,7 @@ ipcMain.handle('print-document', async (event, options) => {
 // Print bundle with multiple jobs to different trays
 ipcMain.handle('print-bundle', async (event, printData) => {
   const { printJobs, trayConfig } = printData
+  const settings = loadSettings()
 
   try {
     const results = []
@@ -150,10 +194,10 @@ ipcMain.handle('print-bundle', async (event, printData) => {
         status: 'printing',
       })
 
-      // Determine printer and tray settings
-      // In production, you'd want to let users configure their printer/tray mapping
-      const printerName = '' // Default printer
+      // Determine tray based on job type
       const tray = job.tray || 1
+      const trayName = tray === 1 ? settings.tray1Name : settings.tray2Name
+      const trayDescription = tray === 1 ? 'Briefpapier' : 'Geel productie-papier'
 
       // Save PDF to temp file
       let pdfPath
@@ -168,13 +212,12 @@ ipcMain.handle('print-bundle', async (event, printData) => {
         continue
       }
 
-      // Show dialog to select printer/tray for each job type
-      const trayInfo = trayConfig[tray]
+      // Show dialog to confirm print
       const dialogResult = await dialog.showMessageBox(mainWindow, {
         type: 'info',
         title: `Printen: ${job.name}`,
-        message: `Klaar om te printen naar ${trayInfo?.name || `Lade ${tray}`}`,
-        detail: `${job.description}\n\nControleer dat de juiste printer en lade zijn geselecteerd.`,
+        message: `Klaar om te printen naar ${trayDescription}`,
+        detail: `${job.description}\n\nPrinter: ${settings.selectedPrinter || 'Standaard'}\nLade: ${trayName}\n\nControleer dat de juiste printer en lade zijn geselecteerd.`,
         buttons: ['Printen', 'Overslaan', 'Annuleren alle'],
       })
 
@@ -192,7 +235,11 @@ ipcMain.handle('print-bundle', async (event, printData) => {
       // Print the document
       if (print && print.print) {
         try {
-          await print.print(pdfPath)
+          const printOptions = {
+            printer: settings.selectedPrinter || undefined,
+            paperSource: trayName,
+          }
+          await print.print(pdfPath, printOptions)
           results.push({ job: job.name, success: true })
         } catch (err) {
           results.push({ job: job.name, success: false, error: err.message })

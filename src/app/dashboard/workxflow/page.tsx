@@ -41,14 +41,38 @@ export default function WorkxflowPage() {
   const [isPrinting, setIsPrinting] = useState(false)
   const [isElectron, setIsElectron] = useState(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [showPrinterSettings, setShowPrinterSettings] = useState(false)
+  const [printerSettings, setPrinterSettings] = useState({
+    selectedPrinter: '',
+    tray1Name: 'Auto',
+    tray2Name: 'Manual',
+  })
+  const [availablePrinters, setAvailablePrinters] = useState<string[]>([])
 
   const mainDocInputRef = useRef<HTMLInputElement>(null)
   const productionInputRef = useRef<HTMLInputElement>(null)
 
-  // Check if running in Electron
+  // Check if running in Electron and load printer settings
   useEffect(() => {
     // @ts-ignore
-    setIsElectron(typeof window !== 'undefined' && window.electronAPI !== undefined)
+    const electronAvailable = typeof window !== 'undefined' && window.electronAPI !== undefined
+    setIsElectron(electronAvailable)
+
+    if (electronAvailable) {
+      // Load printer settings
+      // @ts-ignore
+      window.electronAPI.getPrinterSettings().then((settings: any) => {
+        setPrinterSettings(settings)
+      })
+      // Load available printers
+      // @ts-ignore
+      window.electronAPI.getPrinters().then((result: any) => {
+        if (result.success && result.printers) {
+          const names = result.printers.map((p: any) => p.name || p.deviceName || p)
+          setAvailablePrinters(names)
+        }
+      })
+    }
   }, [])
 
   // Fetch bundles
@@ -369,6 +393,23 @@ export default function WorkxflowPage() {
     }
   }
 
+  const savePrinterSettings = async () => {
+    if (!isElectron) return
+
+    try {
+      // @ts-ignore
+      const result = await window.electronAPI.savePrinterSettings(printerSettings)
+      if (result.success) {
+        toast.success('Printer instellingen opgeslagen')
+        setShowPrinterSettings(false)
+      } else {
+        toast.error('Kon instellingen niet opslaan')
+      }
+    } catch (error) {
+      toast.error('Kon instellingen niet opslaan')
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -398,13 +439,24 @@ export default function WorkxflowPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowNewBundleForm(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90 transition-all"
-        >
-          <Icons.plus size={18} />
-          Nieuwe Bundle
-        </button>
+        <div className="flex items-center gap-2">
+          {isElectron && (
+            <button
+              onClick={() => setShowPrinterSettings(true)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/10 text-gray-300 hover:bg-white/15 transition-all"
+              title="Printer instellingen"
+            >
+              <Icons.settings size={18} />
+            </button>
+          )}
+          <button
+            onClick={() => setShowNewBundleForm(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90 transition-all"
+          >
+            <Icons.plus size={18} />
+            Nieuwe Bundle
+          </button>
+        </div>
       </div>
 
 
@@ -898,6 +950,100 @@ export default function WorkxflowPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Printer settings modal */}
+      {showPrinterSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="card p-6 max-w-lg w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-medium text-white">Printer Instellingen</h3>
+              <button
+                onClick={() => setShowPrinterSettings(false)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {/* Printer selection */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Printer</label>
+                <select
+                  value={printerSettings.selectedPrinter}
+                  onChange={(e) => setPrinterSettings(prev => ({ ...prev, selectedPrinter: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg bg-white/10 border border-white/10 text-white"
+                >
+                  <option value="">Standaard printer</option>
+                  {availablePrinters.map((printer) => (
+                    <option key={printer} value={printer}>{printer}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Selecteer de printer voor Workxflow documenten</p>
+              </div>
+
+              {/* Tray 1 - Briefpapier */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Lade voor Briefpapier
+                  <span className="text-blue-400 ml-2 text-xs font-normal">(processtuk + bijlagen)</span>
+                </label>
+                <input
+                  type="text"
+                  value={printerSettings.tray1Name}
+                  onChange={(e) => setPrinterSettings(prev => ({ ...prev, tray1Name: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg bg-white/10 border border-white/10 text-white"
+                  placeholder="bijv. Tray 1, Auto, Cassette 1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Veelvoorkomende waarden: Auto, Manual, Tray 1, Tray 2, Cassette 1, Drawer 1
+                </p>
+              </div>
+
+              {/* Tray 2 - Geel papier */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Lade voor Geel Papier
+                  <span className="text-yellow-400 ml-2 text-xs font-normal">(productievellen)</span>
+                </label>
+                <input
+                  type="text"
+                  value={printerSettings.tray2Name}
+                  onChange={(e) => setPrinterSettings(prev => ({ ...prev, tray2Name: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg bg-white/10 border border-white/10 text-white"
+                  placeholder="bijv. Tray 2, Manual, Cassette 2"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Dit is de lade waar het gele papier met logo in zit
+                </p>
+              </div>
+
+              {/* Info box */}
+              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <p className="text-xs text-blue-300">
+                  <strong>Tip:</strong> De lade-namen verschillen per printer. Check de printerinstellingen
+                  of print een testpagina om de juiste namen te vinden.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-white/10">
+              <button
+                onClick={() => setShowPrinterSettings(false)}
+                className="px-4 py-2 rounded-lg bg-white/10 text-gray-300 hover:bg-white/15"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={savePrinterSettings}
+                className="px-4 py-2 rounded-lg bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90"
+              >
+                Opslaan
+              </button>
+            </div>
           </div>
         </div>
       )}
