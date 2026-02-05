@@ -189,8 +189,21 @@ export default function WorkxflowPage() {
       reader.onload = async (e) => {
         production.documentUrl = e.target?.result as string
         production.documentName = file.name
-        production.documentType = file.type.includes('pdf') ? 'pdf' :
-                                   file.type.includes('image') ? 'image' : 'docx'
+        // Detect document type based on MIME type or file extension
+        let docType = 'other'
+        const fileName = file.name.toLowerCase()
+        if (file.type.includes('pdf') || fileName.endsWith('.pdf')) {
+          docType = 'pdf'
+        } else if (file.type.includes('image') || /\.(jpg|jpeg|png|gif|webp)$/.test(fileName)) {
+          docType = 'image'
+        } else if (file.type.includes('word') || /\.(doc|docx)$/.test(fileName)) {
+          docType = 'docx'
+        } else if (file.type.includes('excel') || file.type.includes('spreadsheet') || /\.(xls|xlsx)$/.test(fileName)) {
+          docType = 'excel'
+        } else if (file.type.includes('powerpoint') || file.type.includes('presentation') || /\.(ppt|pptx)$/.test(fileName)) {
+          docType = 'powerpoint'
+        }
+        production.documentType = docType
 
         await saveProduction(production)
       }
@@ -650,7 +663,7 @@ export default function WorkxflowPage() {
                 <input
                   ref={productionInputRef}
                   type="file"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp"
                   multiple
                   onChange={(e) => {
                     const files = e.target.files
@@ -791,19 +804,21 @@ export default function WorkxflowPage() {
                           type="application/pdf"
                           className="w-full h-full"
                         >
-                          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                          <div className="w-full h-full bg-red-50 flex items-center justify-center">
                             <div className="text-center p-2">
-                              <Icons.file className="mx-auto text-red-400 mb-1" size={24} />
-                              <p className="text-[8px] text-gray-600">PDF</p>
+                              <Icons.file className="mx-auto text-red-500 mb-1" size={28} />
+                              <p className="text-[9px] text-red-600 font-medium">PDF</p>
                             </div>
                           </div>
                         </object>
                       ) : (
                         <div className="w-full h-full bg-blue-50 flex items-center justify-center">
                           <div className="text-center p-2">
-                            <Icons.file className="mx-auto text-blue-400 mb-1" size={28} />
-                            <p className="text-[9px] text-blue-600 font-medium">Word Document</p>
-                            <p className="text-[7px] text-gray-500 mt-1">{activeBundle.mainDocumentName}</p>
+                            <div className="w-12 h-12 mx-auto mb-2 bg-blue-500 rounded-lg flex items-center justify-center">
+                              <span className="text-white font-bold">DOC</span>
+                            </div>
+                            <p className="text-[9px] text-blue-700 font-medium">Word Document</p>
+                            <p className="text-[7px] text-gray-500 mt-1 px-2 truncate">{activeBundle.mainDocumentName}</p>
                           </div>
                         </div>
                       )}
@@ -880,19 +895,41 @@ export default function WorkxflowPage() {
                                 type="application/pdf"
                                 className="w-full h-full"
                               >
-                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                <div className="w-full h-full bg-red-50 flex items-center justify-center">
                                   <div className="text-center p-2">
-                                    <Icons.file className="mx-auto text-red-400 mb-1" size={24} />
-                                    <p className="text-[8px] text-gray-600">PDF Preview</p>
+                                    <Icons.file className="mx-auto text-red-500 mb-1" size={28} />
+                                    <p className="text-[9px] text-red-600 font-medium">PDF</p>
                                   </div>
                                 </div>
                               </object>
+                            ) : production.documentType === 'excel' ? (
+                              <div className="w-full h-full bg-green-50 flex items-center justify-center">
+                                <div className="text-center p-2">
+                                  <div className="w-10 h-10 mx-auto mb-2 bg-green-500 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">XLS</span>
+                                  </div>
+                                  <p className="text-[9px] text-green-700 font-medium">Excel</p>
+                                  <p className="text-[7px] text-gray-500 mt-1 px-2 truncate">{production.documentName}</p>
+                                </div>
+                              </div>
+                            ) : production.documentType === 'powerpoint' ? (
+                              <div className="w-full h-full bg-orange-50 flex items-center justify-center">
+                                <div className="text-center p-2">
+                                  <div className="w-10 h-10 mx-auto mb-2 bg-orange-500 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">PPT</span>
+                                  </div>
+                                  <p className="text-[9px] text-orange-700 font-medium">PowerPoint</p>
+                                  <p className="text-[7px] text-gray-500 mt-1 px-2 truncate">{production.documentName}</p>
+                                </div>
+                              </div>
                             ) : (
                               <div className="w-full h-full bg-blue-50 flex items-center justify-center">
                                 <div className="text-center p-2">
-                                  <Icons.file className="mx-auto text-blue-400 mb-1" size={24} />
-                                  <p className="text-[8px] text-blue-600 font-medium">Word Document</p>
-                                  <p className="text-[7px] text-gray-500 mt-1">{production.documentName}</p>
+                                  <div className="w-10 h-10 mx-auto mb-2 bg-blue-500 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">DOC</span>
+                                  </div>
+                                  <p className="text-[9px] text-blue-700 font-medium">Word</p>
+                                  <p className="text-[7px] text-gray-500 mt-1 px-2 truncate">{production.documentName}</p>
                                 </div>
                               </div>
                             )}

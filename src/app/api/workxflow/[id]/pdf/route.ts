@@ -273,6 +273,55 @@ export async function POST(
         } catch (err) {
           console.error('Error adding production image:', err)
         }
+      } else if (production.documentUrl && (production.documentType === 'excel' || production.documentType === 'powerpoint' || production.documentType === 'docx')) {
+        // For Office documents that can't be embedded, add a placeholder page
+        const placeholderPage = pdfDoc.addPage([pageWidth, pageHeight])
+
+        // File type label and color
+        let typeLabel = 'Document'
+        let typeColor = { r: 0.3, g: 0.3, b: 0.3 }
+        if (production.documentType === 'excel') {
+          typeLabel = 'Excel Bestand'
+          typeColor = { r: 0.13, g: 0.55, b: 0.13 } // Green
+        } else if (production.documentType === 'powerpoint') {
+          typeLabel = 'PowerPoint Bestand'
+          typeColor = { r: 0.85, g: 0.33, b: 0.1 } // Orange
+        } else if (production.documentType === 'docx') {
+          typeLabel = 'Word Document'
+          typeColor = { r: 0.1, g: 0.4, b: 0.8 } // Blue
+        }
+
+        // Draw placeholder content
+        const labelWidth = helveticaBold.widthOfTextAtSize(typeLabel, 24)
+        placeholderPage.drawText(typeLabel, {
+          x: (pageWidth - labelWidth) / 2,
+          y: pageHeight / 2 + 30,
+          size: 24,
+          font: helveticaBold,
+          color: rgb(typeColor.r, typeColor.g, typeColor.b),
+        })
+
+        // Document name
+        const docName = production.documentName || production.title
+        const nameWidth = helvetica.widthOfTextAtSize(docName, 14)
+        placeholderPage.drawText(docName, {
+          x: (pageWidth - nameWidth) / 2,
+          y: pageHeight / 2 - 10,
+          size: 14,
+          font: helvetica,
+          color: rgb(0.3, 0.3, 0.3),
+        })
+
+        // Note
+        const note = '(Zie origineel bestand)'
+        const noteWidth = helvetica.widthOfTextAtSize(note, 11)
+        placeholderPage.drawText(note, {
+          x: (pageWidth - noteWidth) / 2,
+          y: pageHeight / 2 - 40,
+          size: 11,
+          font: helvetica,
+          color: rgb(0.5, 0.5, 0.5),
+        })
       }
     }
 
