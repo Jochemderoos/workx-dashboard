@@ -198,10 +198,22 @@ export default function WorkxflowPage() {
           docType = 'image'
         } else if (file.type.includes('word') || /\.(doc|docx)$/.test(fileName)) {
           docType = 'docx'
+          toast('💡 Tip: Upload Word bestanden als PDF voor preview', {
+            duration: 5000,
+            icon: '📄'
+          })
         } else if (file.type.includes('excel') || file.type.includes('spreadsheet') || /\.(xls|xlsx)$/.test(fileName)) {
           docType = 'excel'
+          toast('💡 Tip: Upload Excel bestanden als PDF voor preview', {
+            duration: 5000,
+            icon: '📊'
+          })
         } else if (file.type.includes('powerpoint') || file.type.includes('presentation') || /\.(ppt|pptx)$/.test(fileName)) {
           docType = 'powerpoint'
+          toast('💡 Tip: Upload PowerPoint bestanden als PDF voor preview', {
+            duration: 5000,
+            icon: '📽️'
+          })
         }
         production.documentType = docType
 
