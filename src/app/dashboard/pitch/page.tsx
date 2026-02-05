@@ -808,7 +808,9 @@ export default function PitchPage() {
 
       {/* Selection tab */}
       {activeTab === 'select' && (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="grid lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* Main selection area - 3 columns */}
+          <div className="lg:col-span-3 space-y-4 sm:space-y-6">
           {/* Client Logo Upload */}
           <div className="card p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
@@ -1063,6 +1065,135 @@ export default function PitchPage() {
             <p className="text-xs text-gray-500 mt-4 text-center">Bijlagen zijn optioneel</p>
           </div>
         </div>
+          </div>
+
+          {/* Live Preview sidebar - 1 column */}
+          <div className="lg:col-span-1">
+            <div className="card p-4 sticky top-4">
+              <h2 className="font-medium text-white mb-4 flex items-center gap-2">
+                <Icons.eye size={16} className="text-workx-lime" />
+                Live Preview
+              </h2>
+
+              <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
+                {/* Intro sections preview */}
+                {pitchInfo?.introSections.filter(s => selectedIntro.has(s.key)).map((section, idx) => (
+                  <div key={section.key} className="space-y-1">
+                    {idx === 0 && (
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Intro & Diensten</p>
+                    )}
+                    <div
+                      className="relative rounded-lg overflow-hidden shadow-md"
+                      style={{ aspectRatio: '297/210', background: 'linear-gradient(135deg, #1a365d 0%, #2d3748 100%)' }}
+                    >
+                      {/* Workx style header */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-workx-lime" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
+                        <p className="text-[9px] text-white/80 font-medium text-center line-clamp-2">{section.label}</p>
+                        <p className="text-[7px] text-white/50 mt-1">{section.pageCount} pagina{section.pageCount > 1 ? "'s" : ""}</p>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-blue-600/80 p-1">
+                        <p className="text-[7px] text-white text-center">Intro</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Team CVs preview */}
+                {Array.from(selectedTeam).length > 0 && (
+                  <div className="space-y-1 pt-2 border-t border-white/10">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Team CV's ({selectedTeam.size})</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {Array.from(selectedTeam).map((name) => (
+                        <div
+                          key={name}
+                          className="relative rounded-lg overflow-hidden shadow-md"
+                          style={{ aspectRatio: '297/210', background: 'linear-gradient(135deg, #065f46 0%, #064e3b 100%)' }}
+                        >
+                          <div className="absolute top-0 left-0 right-0 h-0.5 bg-workx-lime" />
+                          <div className="absolute inset-0 flex flex-col items-center justify-center p-1">
+                            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center mb-1">
+                              <Icons.user size={10} className="text-white/70" />
+                            </div>
+                            <p className="text-[7px] text-white/90 font-medium text-center line-clamp-2 px-1">{name}</p>
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 bg-green-600/80 p-0.5">
+                            <p className="text-[6px] text-white text-center">CV</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bijlagen preview */}
+                {pitchInfo?.bijlagenSections.filter(s => selectedBijlagen.has(s.key)).length > 0 && (
+                  <div className="space-y-1 pt-2 border-t border-white/10">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Bijlagen</p>
+                    {pitchInfo?.bijlagenSections.filter(s => selectedBijlagen.has(s.key)).map((section) => (
+                      <div
+                        key={section.key}
+                        className="relative rounded-lg overflow-hidden shadow-md"
+                        style={{ aspectRatio: '297/210', background: 'linear-gradient(135deg, #5b21b6 0%, #4c1d95 100%)' }}
+                      >
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-workx-lime" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
+                          <p className="text-[9px] text-white/80 font-medium text-center line-clamp-2">{section.label}</p>
+                          <p className="text-[7px] text-white/50 mt-1">{section.pageCount} pagina{section.pageCount > 1 ? "'s" : ""}</p>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-purple-600/80 p-1">
+                          <p className="text-[7px] text-white text-center">Bijlage</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {selectedIntro.size === 0 && selectedTeam.size === 0 && selectedBijlagen.size === 0 && (
+                  <div className="text-center py-8 border-2 border-dashed border-white/10 rounded-lg">
+                    <Icons.eye className="mx-auto mb-2 text-gray-600" size={24} />
+                    <p className="text-xs text-gray-500">Selecteer onderdelen<br />om preview te zien</p>
+                  </div>
+                )}
+
+                {/* Client logo indicator */}
+                {clientLogo && (
+                  <div className="pt-2 border-t border-white/10">
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                      <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center overflow-hidden">
+                        <img src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-orange-400 font-medium">Klant logo</p>
+                        <p className="text-[8px] text-gray-500 truncate">{logoPresets[logoPosition.preset]?.label || 'Aangepast'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary */}
+                <div className="pt-3 border-t border-white/10">
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>Intro pagina's:</span>
+                    <span className="text-blue-400 font-medium">{pageStats.intro}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>Team CV's:</span>
+                    <span className="text-green-400 font-medium">{pageStats.team}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>Bijlagen:</span>
+                    <span className="text-purple-400 font-medium">{pageStats.bijlagen}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-white mt-2 pt-2 border-t border-white/10">
+                    <span className="font-medium">Totaal:</span>
+                    <span className="font-semibold text-workx-lime">{pageStats.total} pagina's</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
