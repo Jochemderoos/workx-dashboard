@@ -876,19 +876,34 @@ export default function WorkxflowPage() {
             {activeBundle ? (
               <div className="space-y-4">
                 {/* Main document (processtuk) with logo preview */}
-                <div className="space-y-2">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Processtuk</p>
+                <div className="space-y-2 group">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Processtuk</p>
+                    {activeBundle.mainDocumentUrl && (
+                      <button
+                        onClick={removeMainDocument}
+                        className="p-1 rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                        title="Verwijderen"
+                      >
+                        <Icons.trash size={12} />
+                      </button>
+                    )}
+                  </div>
                   {activeBundle.mainDocumentUrl ? (
-                    <div className="relative bg-white rounded-lg overflow-hidden shadow-lg" style={{ aspectRatio: '210/297' }}>
-                      {/* Workx logo overlay (top-left, flush) - yellow style */}
+                    <div
+                      className="relative bg-white rounded-lg overflow-hidden shadow-lg cursor-pointer hover:ring-2 hover:ring-workx-lime/50 transition-all"
+                      style={{ aspectRatio: '210/297' }}
+                      onClick={() => mainDocInputRef.current?.click()}
+                      title="Klik om te vervangen"
+                    >
+                      {/* Workx logo overlay (top-left, flush) - using actual image */}
                       {includeLogoOnProcesstuk && (
                         <div className="absolute top-0 left-0 z-10">
-                          <div style={{ background: '#f9ff85' }}>
-                            <div className="px-2 py-1.5">
-                              <p className="text-[12px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
-                              <p className="text-[6px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
-                            </div>
-                          </div>
+                          <img
+                            src="/workx-logo.png"
+                            alt="Workx"
+                            className="h-6 w-auto"
+                          />
                         </div>
                       )}
                       {/* Document preview */}
@@ -896,7 +911,7 @@ export default function WorkxflowPage() {
                         <object
                           data={activeBundle.mainDocumentUrl}
                           type="application/pdf"
-                          className="w-full h-full"
+                          className="w-full h-full pointer-events-none"
                         >
                           <div className="w-full h-full bg-red-50 flex items-center justify-center">
                             <div className="text-center p-2">
@@ -918,14 +933,18 @@ export default function WorkxflowPage() {
                       )}
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 to-blue-600/80 p-2">
                         <p className="text-[9px] text-white truncate font-medium">{activeBundle.mainDocumentName}</p>
-                        <p className="text-[7px] text-blue-200">Lade 1 • Briefpapier met logo</p>
+                        <p className="text-[7px] text-blue-200">Klik om te vervangen</p>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-white/5 rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center p-6" style={{ aspectRatio: '210/297' }}>
+                    <div
+                      className="bg-white/5 rounded-lg border-2 border-dashed border-white/20 hover:border-workx-lime/50 flex items-center justify-center p-6 cursor-pointer transition-all"
+                      style={{ aspectRatio: '210/297' }}
+                      onClick={() => mainDocInputRef.current?.click()}
+                    >
                       <div className="text-center">
                         <Icons.upload className="mx-auto text-gray-600 mb-2" size={24} />
-                        <p className="text-xs text-gray-500">Upload processtuk</p>
+                        <p className="text-xs text-gray-500">Klik om te uploaden</p>
                         <p className="text-[9px] text-gray-600 mt-1">PDF of Word document</p>
                       </div>
                     </div>
@@ -936,11 +955,33 @@ export default function WorkxflowPage() {
                 {activeBundle.productions.length > 0 ? (
                   activeBundle.productions
                     .sort((a, b) => a.sortOrder - b.sortOrder)
-                    .map((production) => (
-                      <div key={production.id} className="space-y-2 pt-2 border-t border-white/10">
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">
-                          Productie {production.productionNumber}
-                        </p>
+                    .map((production, index) => (
+                      <div
+                        key={production.id}
+                        className="space-y-2 pt-2 border-t border-white/10 group relative"
+                        draggable
+                        onDragStart={() => handleDragStart(index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                      >
+                        {/* Header with drag handle and delete */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Icons.gripVertical size={12} />
+                            </span>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">
+                              Productie {production.productionNumber}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => deleteProduction(production.id)}
+                            className="p-1 rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                            title="Verwijderen"
+                          >
+                            <Icons.trash size={12} />
+                          </button>
+                        </div>
 
                         {/* Production sheet preview (yellow page with correct logo) */}
                         <div
@@ -950,14 +991,13 @@ export default function WorkxflowPage() {
                             background: '#f9ff85'
                           }}
                         >
-                          {/* Workx logo (top-left, flush) - bigger version on yellow */}
+                          {/* Workx logo (top-left, flush) - real image */}
                           <div className="absolute top-0 left-0">
-                            <div style={{ background: '#f9ff85' }}>
-                              <div className="px-2 py-1.5">
-                                <p className="text-[12px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
-                                <p className="text-[6px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
-                              </div>
-                            </div>
+                            <img
+                              src="/workx-logo.png"
+                              alt="Workx"
+                              className="h-6 w-auto"
+                            />
                           </div>
                           {/* Centered production text */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -970,13 +1010,13 @@ export default function WorkxflowPage() {
                           </div>
                           {/* Yellow indicator */}
                           <div className="absolute bottom-0 left-0 right-0 bg-yellow-600/40 p-1.5">
-                            <p className="text-[8px] text-yellow-900 text-center font-medium">Lade 2 • Geel papier met logo</p>
+                            <p className="text-[8px] text-yellow-900 text-center font-medium">Lade 2 • Geel papier</p>
                           </div>
                         </div>
 
                         {/* Production document thumbnail */}
                         {production.documentUrl ? (
-                          <div className="relative bg-white rounded-lg overflow-hidden shadow-md" style={{ aspectRatio: '210/297' }}>
+                          <div className="relative bg-white rounded-lg overflow-hidden shadow-md group/doc" style={{ aspectRatio: '210/297' }}>
                             {production.documentType === 'image' ? (
                               <img
                                 src={production.documentUrl}
