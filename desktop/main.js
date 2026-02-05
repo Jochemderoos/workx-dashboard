@@ -21,6 +21,8 @@ const defaultSettings = {
   selectedPrinter: '',
   tray1Name: 'Auto', // Briefpapier (processtuk + bijlagen)
   tray2Name: 'Manual', // Geel papier (productievellen)
+  colorMode: 'color', // 'color' or 'monochrome'
+  duplex: false, // double-sided printing
 }
 
 // Load settings
@@ -150,6 +152,16 @@ ipcMain.handle('print-document', async (event, options) => {
         printOptions.paperSource = tray === 1 ? settings.tray1Name : settings.tray2Name
       }
 
+      // Add color mode (monochrome = black/white)
+      if (settings.colorMode === 'monochrome') {
+        printOptions.monochrome = true
+      }
+
+      // Add duplex (double-sided) printing
+      if (settings.duplex) {
+        printOptions.duplex = 'longEdge' // or 'shortEdge' for flip on short edge
+      }
+
       await print.print(pdfPath, printOptions)
       return { success: true }
     } else {
@@ -161,6 +173,8 @@ ipcMain.handle('print-document', async (event, options) => {
             printBackground: true,
             deviceName: printerName || settings.selectedPrinter || undefined,
             copies: copies,
+            color: settings.colorMode !== 'monochrome',
+            duplexMode: settings.duplex ? 'longEdge' : 'simplex',
           },
           (success, errorType) => {
             if (success) {
@@ -239,6 +253,17 @@ ipcMain.handle('print-bundle', async (event, printData) => {
             printer: settings.selectedPrinter || undefined,
             paperSource: trayName,
           }
+
+          // Add color mode (monochrome = black/white)
+          if (settings.colorMode === 'monochrome') {
+            printOptions.monochrome = true
+          }
+
+          // Add duplex (double-sided) printing
+          if (settings.duplex) {
+            printOptions.duplex = 'longEdge'
+          }
+
           await print.print(pdfPath, printOptions)
           results.push({ job: job.name, success: true })
         } catch (err) {

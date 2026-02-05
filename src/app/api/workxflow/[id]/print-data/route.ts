@@ -104,9 +104,9 @@ export async function POST(
 
       // Print jobs organized by tray
       printJobs: [
-        // Job 1: Main document (dagvaarding) - Tray 1, NO logo (logo pre-printed on paper)
+        // Job 1: Main document (processtuk) - Tray 1, NO logo (logo pre-printed on paper)
         {
-          name: 'Dagvaarding',
+          name: 'Processtuk',
           tray: 1, // Normal paper tray
           copies: 1,
           documentUrl: mainDocumentPdf,
@@ -136,7 +136,7 @@ export async function POST(
 
       // Print order instructions
       printOrder: [
-        'Dagvaarding eerst printen op briefpapier (lade 1)',
+        'Processtuk eerst printen op briefpapier (lade 1)',
         'Dan productiebladen op geel papier (lade 2)',
         'Daarna de bijlagen per productie op normaal papier (lade 1)',
       ],
@@ -145,7 +145,7 @@ export async function POST(
       trayConfig: {
         1: {
           name: 'Normaal/Briefpapier',
-          description: 'Wit papier met Workx logo (voor dagvaarding en bijlagen)',
+          description: 'Wit papier met Workx logo (voor processtuk en bijlagen)',
           paperType: 'letterhead',
         },
         2: {

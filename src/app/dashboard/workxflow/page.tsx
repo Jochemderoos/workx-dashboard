@@ -46,6 +46,8 @@ export default function WorkxflowPage() {
     selectedPrinter: '',
     tray1Name: 'Auto',
     tray2Name: 'Manual',
+    colorMode: 'color' as 'color' | 'monochrome',
+    duplex: false,
   })
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([])
 
@@ -106,12 +108,12 @@ export default function WorkxflowPage() {
         setBundles(prev => [newBundle, ...prev])
         setActiveBundle(newBundle)
         setShowNewBundleForm(false)
-        toast.success('Bundle aangemaakt')
+        toast.success('Processtuk aangemaakt')
       } else {
-        toast.error('Kon bundle niet aanmaken')
+        toast.error('Kon processtuk niet aanmaken')
       }
     } catch (error) {
-      toast.error('Kon bundle niet aanmaken')
+      toast.error('Kon processtuk niet aanmaken')
     }
   }
 
@@ -318,7 +320,7 @@ export default function WorkxflowPage() {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${activeBundle.title.replace(/\s+/g, '-')}-bundle.pdf`
+        a.download = `${activeBundle.title.replace(/\s+/g, '-')}-processtuk.pdf`
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
@@ -375,7 +377,7 @@ export default function WorkxflowPage() {
   }
 
   const deleteBundle = async (bundleId: string) => {
-    if (!confirm('Weet je zeker dat je deze bundle wilt verwijderen?')) return
+    if (!confirm('Weet je zeker dat je dit processtuk wilt verwijderen?')) return
 
     try {
       const res = await fetch(`/api/workxflow/${bundleId}`, {
@@ -386,10 +388,10 @@ export default function WorkxflowPage() {
         if (activeBundle?.id === bundleId) {
           setActiveBundle(null)
         }
-        toast.success('Bundle verwijderd')
+        toast.success('Processtuk verwijderd')
       }
     } catch (error) {
-      toast.error('Kon bundle niet verwijderen')
+      toast.error('Kon processtuk niet verwijderen')
     }
   }
 
@@ -454,7 +456,7 @@ export default function WorkxflowPage() {
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90 transition-all"
           >
             <Icons.plus size={18} />
-            Nieuwe Bundle
+            Nieuw Processtuk
           </button>
         </div>
       </div>
@@ -490,17 +492,17 @@ export default function WorkxflowPage() {
         {/* Bundle list */}
         <div className="lg:col-span-1">
           <div className="card p-4">
-            <h2 className="font-medium text-white mb-4">Bundles</h2>
+            <h2 className="font-medium text-white mb-4">Processtukken</h2>
 
             {bundles.length === 0 ? (
               <div className="text-center py-8 border-2 border-dashed border-white/10 rounded-xl">
                 <Icons.file className="mx-auto mb-3 text-gray-600" size={32} />
-                <p className="text-gray-400 text-sm">Nog geen bundles</p>
+                <p className="text-gray-400 text-sm">Nog geen processtukken</p>
                 <button
                   onClick={() => setShowNewBundleForm(true)}
                   className="mt-3 text-workx-lime hover:underline text-sm"
                 >
-                  Maak je eerste bundle
+                  Maak je eerste processtuk
                 </button>
               </div>
             ) : (
@@ -742,16 +744,16 @@ export default function WorkxflowPage() {
           ) : (
             <div className="card p-8 text-center">
               <Icons.file className="mx-auto mb-4 text-gray-600" size={48} />
-              <h2 className="text-lg font-medium text-white mb-2">Selecteer een bundle</h2>
+              <h2 className="text-lg font-medium text-white mb-2">Selecteer een processtuk</h2>
               <p className="text-gray-400 text-sm mb-4">
-                Kies een bestaande bundle of maak een nieuwe aan
+                Kies een bestaand processtuk of maak een nieuwe aan
               </p>
               <button
                 onClick={() => setShowNewBundleForm(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90"
               >
                 <Icons.plus size={16} />
-                Nieuwe Bundle
+                Nieuw Processtuk
               </button>
             </div>
           )}
@@ -881,7 +883,7 @@ export default function WorkxflowPage() {
             ) : (
               <div className="text-center py-8 border-2 border-dashed border-white/10 rounded-lg">
                 <Icons.eye className="mx-auto mb-2 text-gray-600" size={24} />
-                <p className="text-xs text-gray-500">Selecteer een bundle<br />om preview te zien</p>
+                <p className="text-xs text-gray-500">Selecteer een processtuk<br />om preview te zien</p>
               </div>
             )}
           </div>
@@ -892,7 +894,7 @@ export default function WorkxflowPage() {
       {showNewBundleForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="card p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium text-white mb-4">Nieuwe Bundle</h3>
+            <h3 className="text-lg font-medium text-white mb-4">Nieuw Processtuk</h3>
             <form
               onSubmit={(e) => {
                 e.preventDefault()
@@ -1019,6 +1021,51 @@ export default function WorkxflowPage() {
                 <p className="text-xs text-gray-500 mt-1">
                   Dit is de lade waar het gele papier met logo in zit
                 </p>
+              </div>
+
+              {/* Color mode */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Kleurmodus</label>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="colorMode"
+                      value="color"
+                      checked={printerSettings.colorMode === 'color'}
+                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, colorMode: 'color' }))}
+                      className="w-4 h-4 text-workx-lime bg-white/10 border-white/20 focus:ring-workx-lime"
+                    />
+                    <span className="text-sm text-gray-300">Kleur</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="colorMode"
+                      value="monochrome"
+                      checked={printerSettings.colorMode === 'monochrome'}
+                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, colorMode: 'monochrome' }))}
+                      className="w-4 h-4 text-workx-lime bg-white/10 border-white/20 focus:ring-workx-lime"
+                    />
+                    <span className="text-sm text-gray-300">Zwart/wit</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Duplex */}
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={printerSettings.duplex}
+                    onChange={(e) => setPrinterSettings(prev => ({ ...prev, duplex: e.target.checked }))}
+                    className="w-4 h-4 rounded text-workx-lime bg-white/10 border-white/20 focus:ring-workx-lime"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-white">Dubbelzijdig printen</span>
+                    <p className="text-xs text-gray-500">Print op beide zijden van het papier</p>
+                  </div>
+                </label>
               </div>
 
               {/* Info box */}

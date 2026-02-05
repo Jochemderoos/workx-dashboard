@@ -2,11 +2,88 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { PDFDocument, PDFPage, rgb, StandardFonts, PDFFont } from 'pdf-lib'
 
 // Workx brand colors
 const WORKX_LIME = { r: 249/255, g: 255/255, b: 133/255 }
 const WORKX_DARK = { r: 30/255, g: 30/255, b: 30/255 }
+const WORKX_GRAY = { r: 61/255, g: 61/255, b: 61/255 }
+
+// Logo dimensions (scaled for PDF)
+const LOGO_WIDTH = 100
+const LOGO_HEIGHT = 45
+
+/**
+ * Draw Workx logo on a PDF page
+ * Position: top-left corner with small margin
+ */
+async function drawWorkxLogo(
+  page: PDFPage,
+  pdfDoc: PDFDocument,
+  x: number = 20,
+  y?: number
+) {
+  const pageHeight = page.getHeight()
+  const logoY = y ?? (pageHeight - LOGO_HEIGHT - 20)
+
+  // Load fonts
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const helveticaOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique)
+
+  // Dark gray background with rounded corners (approximated as rectangle)
+  page.drawRectangle({
+    x: x,
+    y: logoY,
+    width: LOGO_WIDTH,
+    height: LOGO_HEIGHT,
+    color: rgb(WORKX_GRAY.r, WORKX_GRAY.g, WORKX_GRAY.b),
+  })
+
+  // Yellow diagonal accent in top-left corner of logo
+  // Using a triangle approximation
+  const trianglePoints = [
+    { x: x, y: logoY + LOGO_HEIGHT },
+    { x: x + 37.5, y: logoY + LOGO_HEIGHT },
+    { x: x + 20, y: logoY + LOGO_HEIGHT - 19 },
+    { x: x, y: logoY + LOGO_HEIGHT - 19 },
+  ]
+
+  // Draw yellow accent as a polygon (using rectangle + clip approximation)
+  page.drawRectangle({
+    x: x,
+    y: logoY + LOGO_HEIGHT - 19,
+    width: 37.5,
+    height: 19,
+    color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
+  })
+
+  // Add diagonal cut effect with dark triangle
+  page.drawRectangle({
+    x: x + 20,
+    y: logoY + LOGO_HEIGHT - 19,
+    width: 20,
+    height: 19,
+    color: rgb(WORKX_GRAY.r, WORKX_GRAY.g, WORKX_GRAY.b),
+  })
+
+  // "Workx" text (italic)
+  page.drawText('Workx', {
+    x: x + 10,
+    y: logoY + 15,
+    size: 19,
+    font: helveticaOblique,
+    color: rgb(1, 1, 1),
+  })
+
+  // "ADVOCATEN" text
+  page.drawText('ADVOCATEN', {
+    x: x + 10,
+    y: logoY + 5,
+    size: 6.5,
+    font: helvetica,
+    color: rgb(1, 1, 1),
+  })
+}
 
 // POST - Generate PDF for bundle
 export async function POST(
@@ -48,17 +125,20 @@ export async function POST(
     // 1. Create production index / cover page
     const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
 
-    // Header
+    // Add Workx logo to cover page (top-left)
+    await drawWorkxLogo(indexPage, pdfDoc, 20, pageHeight - LOGO_HEIGHT - 20)
+
+    // Header (positioned below logo)
     indexPage.drawText('PRODUCTIE-OVERZICHT', {
       x: 50,
-      y: pageHeight - 80,
+      y: pageHeight - 100,
       size: 24,
       font: helveticaBold,
       color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
     })
 
-    // Bundle info
-    let y = pageHeight - 130
+    // Bundle info (positioned below header, accounting for logo)
+    let y = pageHeight - 150
     indexPage.drawText(bundle.title, {
       x: 50,
       y,
@@ -145,7 +225,7 @@ export async function POST(
       }
     }
 
-    // 2. Add main document if present
+    // 2. Add main document (processtuk) if present - WITH logo on each page
     if (bundle.mainDocumentUrl && bundle.mainDocumentType === 'pdf') {
       try {
         // Extract base64 data
@@ -154,7 +234,11 @@ export async function POST(
           const mainDocBytes = Buffer.from(base64Data, 'base64')
           const mainPdf = await PDFDocument.load(mainDocBytes)
           const mainPages = await pdfDoc.copyPages(mainPdf, mainPdf.getPageIndices())
-          mainPages.forEach(page => pdfDoc.addPage(page))
+          for (const page of mainPages) {
+            pdfDoc.addPage(page)
+            // Add Workx logo to each page of the processtuk (top-left)
+            await drawWorkxLogo(page, pdfDoc, 20)
+          }
         }
       } catch (err) {
         console.error('Error adding main document:', err)
@@ -163,7 +247,7 @@ export async function POST(
 
     // 3. Add productions with their sheets
     for (const production of bundle.productions) {
-      // Add production sheet (yellow page)
+      // Add production sheet (yellow page with logo)
       const sheetPage = pdfDoc.addPage([pageWidth, pageHeight])
 
       // Yellow background
@@ -174,6 +258,9 @@ export async function POST(
         height: pageHeight,
         color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
       })
+
+      // Add Workx logo to production sheet (top-left)
+      await drawWorkxLogo(sheetPage, pdfDoc, 20)
 
       // Production number - large centered text
       const productionText = `PRODUCTIE ${production.productionNumber}`
@@ -253,7 +340,7 @@ export async function POST(
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${bundle.title.replace(/\s+/g, '-')}-bundle.pdf"`,
+        'Content-Disposition': `attachment; filename="${bundle.title.replace(/\s+/g, '-')}-processtuk.pdf"`,
       },
     })
   } catch (error) {
