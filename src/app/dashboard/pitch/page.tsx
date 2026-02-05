@@ -1127,7 +1127,7 @@ export default function PitchPage() {
                 )}
 
                 {/* Bijlagen preview */}
-                {pitchInfo?.bijlagenSections.filter(s => selectedBijlagen.has(s.key)).length > 0 && (
+                {(pitchInfo?.bijlagenSections?.filter(s => selectedBijlagen.has(s.key))?.length ?? 0) > 0 && (
                   <div className="space-y-1 pt-2 border-t border-white/10">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Bijlagen</p>
                     {pitchInfo?.bijlagenSections.filter(s => selectedBijlagen.has(s.key)).map((section) => (
