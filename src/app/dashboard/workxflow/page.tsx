@@ -559,14 +559,15 @@ export default function WorkxflowPage() {
                     <button
                       onClick={generatePdf}
                       disabled={isGeneratingPdf}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-gray-300 hover:bg-white/15 text-sm"
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30 text-sm font-medium"
+                      title="Download complete PDF met processtuk, overzicht en alle producties"
                     >
                       {isGeneratingPdf ? (
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span className="w-4 h-4 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <Icons.download size={16} />
                       )}
-                      PDF
+                      Download Complete PDF
                     </button>
                     {isElectron && (
                       <button

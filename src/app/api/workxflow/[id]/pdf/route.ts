@@ -2,86 +2,57 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { PDFDocument, PDFPage, rgb, StandardFonts, PDFFont } from 'pdf-lib'
+import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib'
 
 // Workx brand colors
 const WORKX_LIME = { r: 249/255, g: 255/255, b: 133/255 }
 const WORKX_DARK = { r: 30/255, g: 30/255, b: 30/255 }
-const WORKX_GRAY = { r: 61/255, g: 61/255, b: 61/255 }
 
 // Logo dimensions (scaled for PDF)
-const LOGO_WIDTH = 100
-const LOGO_HEIGHT = 45
+const LOGO_WIDTH = 120
+const LOGO_HEIGHT = 50
 
 /**
  * Draw Workx logo on a PDF page
- * Position: top-left corner with small margin
+ * CORRECT STYLE: Yellow background with black text (like dashboard sidebar)
  */
 async function drawWorkxLogo(
   page: PDFPage,
   pdfDoc: PDFDocument,
-  x: number = 20,
+  x: number = 30,
   y?: number
 ) {
   const pageHeight = page.getHeight()
-  const logoY = y ?? (pageHeight - LOGO_HEIGHT - 20)
+  const logoY = y ?? (pageHeight - LOGO_HEIGHT - 30)
 
   // Load fonts
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
-  const helveticaOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique)
 
-  // Dark gray background with rounded corners (approximated as rectangle)
+  // Yellow background (the Workx brand color)
   page.drawRectangle({
     x: x,
     y: logoY,
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
-    color: rgb(WORKX_GRAY.r, WORKX_GRAY.g, WORKX_GRAY.b),
-  })
-
-  // Yellow diagonal accent in top-left corner of logo
-  // Using a triangle approximation
-  const trianglePoints = [
-    { x: x, y: logoY + LOGO_HEIGHT },
-    { x: x + 37.5, y: logoY + LOGO_HEIGHT },
-    { x: x + 20, y: logoY + LOGO_HEIGHT - 19 },
-    { x: x, y: logoY + LOGO_HEIGHT - 19 },
-  ]
-
-  // Draw yellow accent as a polygon (using rectangle + clip approximation)
-  page.drawRectangle({
-    x: x,
-    y: logoY + LOGO_HEIGHT - 19,
-    width: 37.5,
-    height: 19,
     color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
   })
 
-  // Add diagonal cut effect with dark triangle
-  page.drawRectangle({
-    x: x + 20,
-    y: logoY + LOGO_HEIGHT - 19,
-    width: 20,
-    height: 19,
-    color: rgb(WORKX_GRAY.r, WORKX_GRAY.g, WORKX_GRAY.b),
-  })
-
-  // "Workx" text (italic)
+  // "Workx" text in dark color
   page.drawText('Workx', {
-    x: x + 10,
-    y: logoY + 15,
-    size: 19,
-    font: helveticaOblique,
-    color: rgb(1, 1, 1),
+    x: x + 15,
+    y: logoY + 20,
+    size: 26,
+    font: helvetica,
+    color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
   })
 
-  // "ADVOCATEN" text
+  // "ADVOCATEN" text in dark color
   page.drawText('ADVOCATEN', {
-    x: x + 10,
-    y: logoY + 5,
-    size: 6.5,
+    x: x + 15,
+    y: logoY + 8,
+    size: 8,
     font: helvetica,
-    color: rgb(1, 1, 1),
+    color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
   })
 }
 
@@ -122,113 +93,11 @@ export async function POST(
     const pageWidth = 595.28
     const pageHeight = 841.89
 
-    // 1. Create production index / cover page
-    const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
-
-    // Add Workx logo to cover page (top-left)
-    await drawWorkxLogo(indexPage, pdfDoc, 20, pageHeight - LOGO_HEIGHT - 20)
-
-    // Header (positioned below logo)
-    indexPage.drawText('PRODUCTIE-OVERZICHT', {
-      x: 50,
-      y: pageHeight - 100,
-      size: 24,
-      font: helveticaBold,
-      color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-    })
-
-    // Bundle info (positioned below header, accounting for logo)
-    let y = pageHeight - 150
-    indexPage.drawText(bundle.title, {
-      x: 50,
-      y,
-      size: 16,
-      font: helveticaBold,
-      color: rgb(0, 0, 0),
-    })
-
-    y -= 25
-    if (bundle.caseNumber) {
-      indexPage.drawText(`Zaaknummer: ${bundle.caseNumber}`, {
-        x: 50,
-        y,
-        size: 11,
-        font: helvetica,
-        color: rgb(0.3, 0.3, 0.3),
-      })
-      y -= 18
-    }
-
-    if (bundle.clientName) {
-      indexPage.drawText(`Cliënt: ${bundle.clientName}`, {
-        x: 50,
-        y,
-        size: 11,
-        font: helvetica,
-        color: rgb(0.3, 0.3, 0.3),
-      })
-      y -= 18
-    }
-
-    // Date
-    indexPage.drawText(`Datum: ${new Date().toLocaleDateString('nl-NL')}`, {
-      x: 50,
-      y,
-      size: 11,
-      font: helvetica,
-      color: rgb(0.3, 0.3, 0.3),
-    })
-
-    // Production list
-    y -= 50
-    indexPage.drawText('Producties:', {
-      x: 50,
-      y,
-      size: 14,
-      font: helveticaBold,
-      color: rgb(0, 0, 0),
-    })
-
-    y -= 30
-    for (const production of bundle.productions) {
-      // Yellow highlight box
-      indexPage.drawRectangle({
-        x: 48,
-        y: y - 5,
-        width: 30,
-        height: 20,
-        color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
-      })
-
-      indexPage.drawText(String(production.productionNumber), {
-        x: 56,
-        y,
-        size: 12,
-        font: helveticaBold,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
-
-      indexPage.drawText(production.title, {
-        x: 90,
-        y,
-        size: 11,
-        font: helvetica,
-        color: rgb(0, 0, 0),
-      })
-
-      y -= 28
-
-      // Check if we need a new page
-      if (y < 100) {
-        // Add continuation on new page (simplified for now)
-        break
-      }
-    }
-
-    // 2. Add main document (processtuk) if present - WITH logo on each page
+    // ============================================
+    // 1. PROCESSTUK (main document) - FIRST
+    // ============================================
     if (bundle.mainDocumentUrl && bundle.mainDocumentType === 'pdf') {
       try {
-        // Extract base64 data
         const base64Data = bundle.mainDocumentUrl.split(',')[1]
         if (base64Data) {
           const mainDocBytes = Buffer.from(base64Data, 'base64')
@@ -237,7 +106,7 @@ export async function POST(
           for (const page of mainPages) {
             pdfDoc.addPage(page)
             // Add Workx logo to each page of the processtuk (top-left)
-            await drawWorkxLogo(page, pdfDoc, 20)
+            await drawWorkxLogo(page, pdfDoc, 30)
           }
         }
       } catch (err) {
@@ -245,7 +114,56 @@ export async function POST(
       }
     }
 
-    // 3. Add productions with their sheets
+    // ============================================
+    // 2. PRODUCTIE-OVERZICHT page (logo + list only)
+    // ============================================
+    const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
+
+    // Add Workx logo (top-left)
+    await drawWorkxLogo(indexPage, pdfDoc, 30, pageHeight - LOGO_HEIGHT - 30)
+
+    // Production list - starting below logo
+    let y = pageHeight - 120
+
+    for (const production of bundle.productions) {
+      // Yellow highlight box for production number
+      indexPage.drawRectangle({
+        x: 30,
+        y: y - 8,
+        width: 40,
+        height: 28,
+        color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
+      })
+
+      // Production number
+      indexPage.drawText(String(production.productionNumber), {
+        x: 42,
+        y: y,
+        size: 14,
+        font: helveticaBold,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
+
+      // Production title
+      indexPage.drawText(production.title, {
+        x: 85,
+        y: y,
+        size: 12,
+        font: helvetica,
+        color: rgb(0, 0, 0),
+      })
+
+      y -= 38
+
+      // Check if we need a new page
+      if (y < 80) {
+        break
+      }
+    }
+
+    // ============================================
+    // 3. PRODUCTIONS (sheet + documents for each)
+    // ============================================
     for (const production of bundle.productions) {
       // Add production sheet (yellow page with logo)
       const sheetPage = pdfDoc.addPage([pageWidth, pageHeight])
@@ -260,7 +178,32 @@ export async function POST(
       })
 
       // Add Workx logo to production sheet (top-left)
-      await drawWorkxLogo(sheetPage, pdfDoc, 20)
+      // On yellow background, use a subtle border effect
+      sheetPage.drawRectangle({
+        x: 28,
+        y: pageHeight - LOGO_HEIGHT - 32,
+        width: LOGO_WIDTH + 4,
+        height: LOGO_HEIGHT + 4,
+        borderColor: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+        borderWidth: 1,
+        color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
+      })
+
+      // Logo text on yellow page
+      sheetPage.drawText('Workx', {
+        x: 45,
+        y: pageHeight - LOGO_HEIGHT - 10,
+        size: 26,
+        font: helvetica,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
+      sheetPage.drawText('ADVOCATEN', {
+        x: 45,
+        y: pageHeight - LOGO_HEIGHT - 22,
+        size: 8,
+        font: helvetica,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
 
       // Production number - large centered text
       const productionText = `PRODUCTIE ${production.productionNumber}`
@@ -284,7 +227,7 @@ export async function POST(
         color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
       })
 
-      // Add production document if present
+      // Add production document if present (NO logo on attachments)
       if (production.documentUrl && production.documentType === 'pdf') {
         try {
           const base64Data = production.documentUrl.split(',')[1]
@@ -340,7 +283,7 @@ export async function POST(
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${bundle.title.replace(/\s+/g, '-')}-processtuk.pdf"`,
+        'Content-Disposition': `attachment; filename="${bundle.title.replace(/\s+/g, '-')}-compleet.pdf"`,
       },
     })
   } catch (error) {
