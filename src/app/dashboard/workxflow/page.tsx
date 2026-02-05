@@ -172,6 +172,8 @@ export default function WorkxflowPage() {
     }
   }
 
+  const [isConverting, setIsConverting] = useState(false)
+
   const addProduction = async (file?: File) => {
     if (!activeBundle) return
 
@@ -187,34 +189,61 @@ export default function WorkxflowPage() {
       // Read file as base64
       const reader = new FileReader()
       reader.onload = async (e) => {
-        production.documentUrl = e.target?.result as string
-        production.documentName = file.name
-        // Detect document type based on MIME type or file extension
+        let fileData = e.target?.result as string
+        let fileName = file.name
         let docType = 'other'
-        const fileName = file.name.toLowerCase()
-        if (file.type.includes('pdf') || fileName.endsWith('.pdf')) {
+        const lowerName = file.name.toLowerCase()
+
+        // Check if it's an Office file that needs conversion
+        const isOfficeFile = /\.(doc|docx|xls|xlsx|ppt|pptx)$/.test(lowerName)
+
+        if (isOfficeFile) {
+          // Convert to PDF using ConvertAPI
+          setIsConverting(true)
+          toast.loading('Bestand wordt geconverteerd naar PDF...', { id: 'converting' })
+
+          try {
+            const response = await fetch('/api/convert', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileData: fileData,
+                fileName: fileName,
+              }),
+            })
+
+            if (response.ok) {
+              const result = await response.json()
+              fileData = result.pdfData
+              fileName = result.pdfName
+              docType = 'pdf'
+              toast.success('Geconverteerd naar PDF!', { id: 'converting' })
+            } else {
+              const error = await response.json()
+              console.error('Conversion failed:', error)
+              toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting' })
+              // Keep original file type
+              if (/\.(doc|docx)$/.test(lowerName)) docType = 'docx'
+              else if (/\.(xls|xlsx)$/.test(lowerName)) docType = 'excel'
+              else if (/\.(ppt|pptx)$/.test(lowerName)) docType = 'powerpoint'
+            }
+          } catch (err) {
+            console.error('Conversion error:', err)
+            toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting' })
+            if (/\.(doc|docx)$/.test(lowerName)) docType = 'docx'
+            else if (/\.(xls|xlsx)$/.test(lowerName)) docType = 'excel'
+            else if (/\.(ppt|pptx)$/.test(lowerName)) docType = 'powerpoint'
+          } finally {
+            setIsConverting(false)
+          }
+        } else if (file.type.includes('pdf') || lowerName.endsWith('.pdf')) {
           docType = 'pdf'
-        } else if (file.type.includes('image') || /\.(jpg|jpeg|png|gif|webp)$/.test(fileName)) {
+        } else if (file.type.includes('image') || /\.(jpg|jpeg|png|gif|webp)$/.test(lowerName)) {
           docType = 'image'
-        } else if (file.type.includes('word') || /\.(doc|docx)$/.test(fileName)) {
-          docType = 'docx'
-          toast('💡 Tip: Upload Word bestanden als PDF voor preview', {
-            duration: 5000,
-            icon: '📄'
-          })
-        } else if (file.type.includes('excel') || file.type.includes('spreadsheet') || /\.(xls|xlsx)$/.test(fileName)) {
-          docType = 'excel'
-          toast('💡 Tip: Upload Excel bestanden als PDF voor preview', {
-            duration: 5000,
-            icon: '📊'
-          })
-        } else if (file.type.includes('powerpoint') || file.type.includes('presentation') || /\.(ppt|pptx)$/.test(fileName)) {
-          docType = 'powerpoint'
-          toast('💡 Tip: Upload PowerPoint bestanden als PDF voor preview', {
-            duration: 5000,
-            icon: '📽️'
-          })
         }
+
+        production.documentUrl = fileData
+        production.documentName = fileName
         production.documentType = docType
 
         await saveProduction(production)
