@@ -3,18 +3,41 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib'
+import * as fs from 'fs'
+import * as path from 'path'
 
 // Workx brand colors
 const WORKX_LIME = { r: 249/255, g: 255/255, b: 133/255 }
 const WORKX_DARK = { r: 30/255, g: 30/255, b: 30/255 }
 
 // Logo dimensions (scaled for PDF)
-const LOGO_WIDTH = 120
-const LOGO_HEIGHT = 50
+const LOGO_WIDTH = 100
+const LOGO_HEIGHT = 42
+
+// Cache for embedded logo
+let cachedLogoPage: Uint8Array | null = null
 
 /**
- * Draw Workx logo on a PDF page
- * CORRECT STYLE: Yellow background with black text (like dashboard sidebar)
+ * Load the official Workx logo PDF
+ */
+async function loadLogoPdf(): Promise<Uint8Array | null> {
+  if (cachedLogoPage) return cachedLogoPage
+
+  try {
+    // Try to load from public folder
+    const logoPath = path.join(process.cwd(), 'public', 'workx-logo.pdf')
+    if (fs.existsSync(logoPath)) {
+      cachedLogoPage = fs.readFileSync(logoPath)
+      return cachedLogoPage
+    }
+  } catch (err) {
+    console.error('Error loading logo PDF:', err)
+  }
+  return null
+}
+
+/**
+ * Draw Workx logo on a PDF page using the official logo PDF
  */
 async function drawWorkxLogo(
   page: PDFPage,
@@ -25,10 +48,33 @@ async function drawWorkxLogo(
   const pageHeight = page.getHeight()
   const logoY = y ?? (pageHeight - LOGO_HEIGHT - 30)
 
-  // Load fonts
+  // Try to embed the official logo
+  const logoBytes = await loadLogoPdf()
+
+  if (logoBytes) {
+    try {
+      const logoPdf = await PDFDocument.load(logoBytes)
+      const [embeddedPage] = await pdfDoc.embedPdf(logoPdf, [0])
+
+      // Get original dimensions and scale to fit
+      const { width: origWidth, height: origHeight } = embeddedPage
+      const scale = Math.min(LOGO_WIDTH / origWidth, LOGO_HEIGHT / origHeight)
+
+      page.drawPage(embeddedPage, {
+        x: x,
+        y: logoY,
+        width: origWidth * scale,
+        height: origHeight * scale,
+      })
+      return
+    } catch (err) {
+      console.error('Error embedding logo PDF:', err)
+    }
+  }
+
+  // Fallback to text-based logo if PDF fails
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-  // Yellow background (the Workx brand color)
   page.drawRectangle({
     x: x,
     y: logoY,
@@ -37,20 +83,18 @@ async function drawWorkxLogo(
     color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
   })
 
-  // "Workx" text in dark color
   page.drawText('Workx', {
-    x: x + 15,
-    y: logoY + 20,
-    size: 26,
+    x: x + 12,
+    y: logoY + 16,
+    size: 22,
     font: helvetica,
     color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
   })
 
-  // "ADVOCATEN" text in dark color
   page.drawText('ADVOCATEN', {
-    x: x + 15,
-    y: logoY + 8,
-    size: 8,
+    x: x + 12,
+    y: logoY + 6,
+    size: 7,
     font: helvetica,
     color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
   })
@@ -212,32 +256,7 @@ export async function POST(
       })
 
       // Add Workx logo to production sheet (top-left)
-      // On yellow background, use a subtle border effect
-      sheetPage.drawRectangle({
-        x: 28,
-        y: pageHeight - LOGO_HEIGHT - 32,
-        width: LOGO_WIDTH + 4,
-        height: LOGO_HEIGHT + 4,
-        borderColor: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-        borderWidth: 1,
-        color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
-      })
-
-      // Logo text on yellow page
-      sheetPage.drawText('Workx', {
-        x: 45,
-        y: pageHeight - LOGO_HEIGHT - 10,
-        size: 26,
-        font: helvetica,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
-      sheetPage.drawText('ADVOCATEN', {
-        x: 45,
-        y: pageHeight - LOGO_HEIGHT - 22,
-        size: 8,
-        font: helvetica,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
+      await drawWorkxLogo(sheetPage, pdfDoc, 30, pageHeight - LOGO_HEIGHT - 30)
 
       // Production number - large centered text
       const productionText = `PRODUCTIE ${production.productionNumber}`
@@ -377,4 +396,4 @@ export async function POST(
     return NextResponse.json({ error: 'Kon PDF niet genereren' }, { status: 500 })
   }
 }
-// Force redeploy do  5 feb 2026 19:42:28
+// Force redeploy with official logo - 5 feb 2026 20:15
