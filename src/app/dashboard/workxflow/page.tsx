@@ -50,6 +50,7 @@ export default function WorkxflowPage() {
     duplex: false,
   })
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([])
+  const [isConverting, setIsConverting] = useState(false)
 
   const mainDocInputRef = useRef<HTMLInputElement>(null)
   const productionInputRef = useRef<HTMLInputElement>(null)
@@ -171,8 +172,6 @@ export default function WorkxflowPage() {
       toast.error('Verwijderen mislukt')
     }
   }
-
-  const [isConverting, setIsConverting] = useState(false)
 
   const addProduction = async (file?: File) => {
     if (!activeBundle) return
