@@ -411,7 +411,7 @@ export default function WorkxflowPage() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-4 gap-6">
         {/* Bundle list */}
         <div className="lg:col-span-1">
           <div className="card p-4">
@@ -468,7 +468,7 @@ export default function WorkxflowPage() {
         {/* Active bundle editor */}
         <div className="lg:col-span-2">
           {activeBundle ? (
-            <div className="space-y-4">
+            <div className="space-y-4 h-full">
               {/* Bundle info */}
               <div className="card p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -552,22 +552,13 @@ export default function WorkxflowPage() {
                   <h3 className="font-medium text-white">
                     Producties ({activeBundle.productions.length})
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => addProduction()}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 text-gray-300 hover:bg-white/15 text-sm"
-                    >
-                      <Icons.plus size={14} />
-                      Lege productie
-                    </button>
-                    <button
-                      onClick={() => productionInputRef.current?.click()}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-workx-lime/20 text-workx-lime hover:bg-workx-lime/30 text-sm"
-                    >
-                      <Icons.upload size={14} />
-                      Upload
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => productionInputRef.current?.click()}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-workx-lime/20 text-workx-lime hover:bg-workx-lime/30 text-sm"
+                  >
+                    <Icons.upload size={14} />
+                    Upload productie
+                  </button>
                 </div>
 
                 <input
@@ -681,6 +672,136 @@ export default function WorkxflowPage() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Preview sidebar */}
+        <div className="lg:col-span-1">
+          <div className="card p-4 sticky top-4">
+            <h2 className="font-medium text-white mb-4 flex items-center gap-2">
+              <Icons.eye size={16} className="text-workx-lime" />
+              Document Preview
+            </h2>
+
+            {activeBundle ? (
+              <div className="space-y-1">
+                {/* Main document (dagvaarding) */}
+                {activeBundle.mainDocumentUrl ? (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <div className="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                      <Icons.file className="text-blue-400" size={14} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-blue-300 truncate">
+                        {activeBundle.mainDocumentName || 'Dagvaarding'}
+                      </p>
+                      <p className="text-[10px] text-blue-400/60">Lade 1 • Briefpapier</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 rounded-lg border border-dashed border-white/20">
+                    <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center flex-shrink-0">
+                      <Icons.file className="text-gray-600" size={14} />
+                    </div>
+                    <p className="text-xs text-gray-500">Geen dagvaarding geüpload</p>
+                  </div>
+                )}
+
+                {/* Productions with sheets */}
+                {activeBundle.productions.length > 0 ? (
+                  activeBundle.productions
+                    .sort((a, b) => a.sortOrder - b.sortOrder)
+                    .map((production) => (
+                      <div key={production.id} className="space-y-1">
+                        {/* Production sheet (yellow) */}
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                          <div className="w-8 h-8 rounded bg-yellow-500/30 flex items-center justify-center flex-shrink-0">
+                            <span className="text-yellow-300 font-bold text-xs">
+                              {production.productionNumber}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-yellow-300">
+                              PRODUCTIE {production.productionNumber}
+                            </p>
+                            <p className="text-[10px] text-yellow-400/60">Lade 2 • Geel papier</p>
+                          </div>
+                        </div>
+
+                        {/* Production document */}
+                        {production.documentUrl ? (
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/10 ml-4">
+                            <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center flex-shrink-0">
+                              <Icons.file className="text-gray-400" size={10} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] text-gray-400 truncate">
+                                {production.title || production.documentName}
+                              </p>
+                              <p className="text-[9px] text-gray-500">Lade 1 • Briefpapier</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-2 rounded-lg border border-dashed border-white/10 ml-4">
+                            <div className="w-6 h-6 rounded bg-white/5 flex items-center justify-center flex-shrink-0">
+                              <Icons.file className="text-gray-600" size={10} />
+                            </div>
+                            <p className="text-[10px] text-gray-600 truncate">
+                              {production.title || 'Geen document'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-center py-4 border-2 border-dashed border-white/10 rounded-lg">
+                    <p className="text-xs text-gray-500">Nog geen producties</p>
+                  </div>
+                )}
+
+                {/* Summary */}
+                <div className="mt-4 pt-3 border-t border-white/10">
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>Totaal pagina's:</span>
+                    <span className="text-white font-medium">
+                      {(activeBundle.mainDocumentUrl ? 1 : 0) +
+                       activeBundle.productions.length * 2}
+                      <span className="text-gray-500 font-normal ml-1">
+                        (geschat)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>Gele vellen:</span>
+                    <span className="text-yellow-400 font-medium">
+                      {activeBundle.productions.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="mt-4 pt-3 border-t border-white/10 space-y-2">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Legenda</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-blue-500/30 border border-blue-500/50" />
+                    <span className="text-[10px] text-gray-400">Dagvaarding (lade 1)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-yellow-500/30 border border-yellow-500/50" />
+                    <span className="text-[10px] text-gray-400">Productievel (lade 2, geel)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-white/10 border border-white/20" />
+                    <span className="text-[10px] text-gray-400">Bijlage (lade 1)</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed border-white/10 rounded-lg">
+                <Icons.eye className="mx-auto mb-2 text-gray-600" size={24} />
+                <p className="text-xs text-gray-500">Selecteer een bundle<br />om preview te zien</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
