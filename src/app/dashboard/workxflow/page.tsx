@@ -701,11 +701,11 @@ export default function WorkxflowPage() {
                               type="text"
                               value={production.title}
                               onChange={(e) => updateProduction(production.id, { title: e.target.value })}
-                              className="w-full bg-transparent text-sm text-white border-none outline-none focus:ring-0"
-                              placeholder="Titel productie..."
+                              className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 px-2 py-1 rounded text-sm text-white border border-transparent hover:border-white/20 focus:border-workx-lime/50 outline-none transition-all"
+                              placeholder="Klik om titel te bewerken..."
                             />
                             {production.documentName && (
-                              <p className="text-xs text-gray-500 truncate">{production.documentName}</p>
+                              <p className="text-xs text-gray-500 truncate mt-1 px-2">{production.documentName}</p>
                             )}
                           </div>
 
@@ -783,19 +783,29 @@ export default function WorkxflowPage() {
                           </div>
                         </div>
                       </div>
-                      {/* Document preview representation */}
-                      <div className="w-full h-full bg-white flex flex-col p-3 pt-10">
-                        <div className="flex-1 space-y-2">
-                          <div className="h-2 bg-gray-200 rounded w-3/4"></div>
-                          <div className="h-2 bg-gray-200 rounded w-full"></div>
-                          <div className="h-2 bg-gray-200 rounded w-5/6"></div>
-                          <div className="h-2 bg-gray-200 rounded w-full"></div>
-                          <div className="h-2 bg-gray-100 rounded w-2/3"></div>
-                          <div className="h-2 bg-gray-200 rounded w-full mt-3"></div>
-                          <div className="h-2 bg-gray-200 rounded w-4/5"></div>
-                          <div className="h-2 bg-gray-200 rounded w-full"></div>
+                      {/* Document preview */}
+                      {activeBundle.mainDocumentType === 'pdf' ? (
+                        <object
+                          data={activeBundle.mainDocumentUrl}
+                          type="application/pdf"
+                          className="w-full h-full"
+                        >
+                          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                            <div className="text-center p-2">
+                              <Icons.file className="mx-auto text-red-400 mb-1" size={24} />
+                              <p className="text-[8px] text-gray-600">PDF</p>
+                            </div>
+                          </div>
+                        </object>
+                      ) : (
+                        <div className="w-full h-full bg-blue-50 flex items-center justify-center">
+                          <div className="text-center p-2">
+                            <Icons.file className="mx-auto text-blue-400 mb-1" size={28} />
+                            <p className="text-[9px] text-blue-600 font-medium">Word Document</p>
+                            <p className="text-[7px] text-gray-500 mt-1">{activeBundle.mainDocumentName}</p>
+                          </div>
                         </div>
-                      </div>
+                      )}
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 to-blue-600/80 p-2">
                         <p className="text-[9px] text-white truncate font-medium">{activeBundle.mainDocumentName}</p>
                         <p className="text-[7px] text-blue-200">Lade 1 • Briefpapier met logo</p>
@@ -863,14 +873,25 @@ export default function WorkxflowPage() {
                                 alt={production.title}
                                 className="w-full h-full object-contain bg-gray-50"
                               />
+                            ) : production.documentType === 'pdf' ? (
+                              <object
+                                data={production.documentUrl}
+                                type="application/pdf"
+                                className="w-full h-full"
+                              >
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                  <div className="text-center p-2">
+                                    <Icons.file className="mx-auto text-red-400 mb-1" size={24} />
+                                    <p className="text-[8px] text-gray-600">PDF Preview</p>
+                                  </div>
+                                </div>
+                              </object>
                             ) : (
-                              <div className="w-full h-full bg-white flex flex-col p-3">
-                                <div className="flex-1 space-y-2">
-                                  <div className="h-2 bg-gray-200 rounded w-2/3"></div>
-                                  <div className="h-2 bg-gray-200 rounded w-full"></div>
-                                  <div className="h-2 bg-gray-200 rounded w-4/5"></div>
-                                  <div className="h-2 bg-gray-100 rounded w-full"></div>
-                                  <div className="h-2 bg-gray-200 rounded w-3/4"></div>
+                              <div className="w-full h-full bg-blue-50 flex items-center justify-center">
+                                <div className="text-center p-2">
+                                  <Icons.file className="mx-auto text-blue-400 mb-1" size={24} />
+                                  <p className="text-[8px] text-blue-600 font-medium">Word Document</p>
+                                  <p className="text-[7px] text-gray-500 mt-1">{production.documentName}</p>
                                 </div>
                               </div>
                             )}
