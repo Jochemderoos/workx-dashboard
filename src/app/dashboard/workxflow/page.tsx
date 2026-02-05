@@ -51,6 +51,7 @@ export default function WorkxflowPage() {
   })
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([])
   const [isConverting, setIsConverting] = useState(false)
+  const [includeLogoOnProcesstuk, setIncludeLogoOnProcesstuk] = useState(true)
 
   const mainDocInputRef = useRef<HTMLInputElement>(null)
   const productionInputRef = useRef<HTMLInputElement>(null)
@@ -409,6 +410,8 @@ export default function WorkxflowPage() {
     try {
       const res = await fetch(`/api/workxflow/${activeBundle.id}/pdf`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ includeLogoOnProcesstuk }),
       })
 
       if (res.ok) {
@@ -726,6 +729,19 @@ export default function WorkxflowPage() {
                     className="hidden"
                   />
                 </div>
+
+                {/* Logo option for processtuk */}
+                <div className="mt-3 flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeLogoOnProcesstuk}
+                      onChange={(e) => setIncludeLogoOnProcesstuk(e.target.checked)}
+                      className="w-4 h-4 rounded text-workx-lime bg-white/10 border-white/20 focus:ring-workx-lime"
+                    />
+                    <span className="text-sm text-gray-300">Logo toevoegen aan processtuk in PDF</span>
+                  </label>
+                </div>
               </div>
 
               {/* Productions */}
@@ -871,15 +887,17 @@ export default function WorkxflowPage() {
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Processtuk</p>
                   {activeBundle.mainDocumentUrl ? (
                     <div className="relative bg-white rounded-lg overflow-hidden shadow-lg" style={{ aspectRatio: '210/297' }}>
-                      {/* Workx logo overlay (top-left) - yellow style */}
-                      <div className="absolute top-2 left-2 z-10">
-                        <div className="rounded overflow-hidden" style={{ background: '#f9ff85' }}>
-                          <div className="px-1.5 py-1">
-                            <p className="text-[8px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
-                            <p className="text-[4px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
+                      {/* Workx logo overlay (top-right) - yellow style */}
+                      {includeLogoOnProcesstuk && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <div className="rounded overflow-hidden" style={{ background: '#f9ff85' }}>
+                            <div className="px-2 py-1.5">
+                              <p className="text-[10px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
+                              <p className="text-[5px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                       {/* Document preview */}
                       {activeBundle.mainDocumentType === 'pdf' ? (
                         <object
@@ -939,12 +957,12 @@ export default function WorkxflowPage() {
                             background: '#f9ff85'
                           }}
                         >
-                          {/* Workx logo (top-left) - smaller inset version on yellow */}
-                          <div className="absolute top-2 left-2">
+                          {/* Workx logo (top-right) - bigger version on yellow */}
+                          <div className="absolute top-2 right-2">
                             <div className="rounded overflow-hidden border border-[#1e1e1e]/20" style={{ background: '#f9ff85' }}>
-                              <div className="px-1.5 py-1">
-                                <p className="text-[8px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
-                                <p className="text-[4px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
+                              <div className="px-2 py-1.5">
+                                <p className="text-[10px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
+                                <p className="text-[5px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
                               </div>
                             </div>
                           </div>

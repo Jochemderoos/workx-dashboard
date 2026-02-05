@@ -10,9 +10,9 @@ import * as path from 'path'
 const WORKX_LIME = { r: 249/255, g: 255/255, b: 133/255 }
 const WORKX_DARK = { r: 30/255, g: 30/255, b: 30/255 }
 
-// Logo dimensions (scaled for PDF)
-const LOGO_WIDTH = 100
-const LOGO_HEIGHT = 42
+// Logo dimensions (scaled for PDF) - bigger size
+const LOGO_WIDTH = 140
+const LOGO_HEIGHT = 58
 
 // Cache for embedded logo
 let cachedLogoPage: Uint8Array | null = null
@@ -38,15 +38,18 @@ async function loadLogoPdf(): Promise<Uint8Array | null> {
 
 /**
  * Draw Workx logo on a PDF page using the official logo PDF
+ * Position: 'top-right' (default) or 'top-left'
  */
 async function drawWorkxLogo(
   page: PDFPage,
   pdfDoc: PDFDocument,
-  x: number = 30,
-  y?: number
+  position: 'top-right' | 'top-left' = 'top-right'
 ) {
+  const pageWidth = page.getWidth()
   const pageHeight = page.getHeight()
-  const logoY = y ?? (pageHeight - LOGO_HEIGHT - 30)
+  const margin = 30
+  const logoY = pageHeight - LOGO_HEIGHT - margin
+  const logoX = position === 'top-right' ? pageWidth - LOGO_WIDTH - margin : margin
 
   // Try to embed the official logo
   const logoBytes = await loadLogoPdf()
@@ -59,12 +62,17 @@ async function drawWorkxLogo(
       // Get original dimensions and scale to fit
       const { width: origWidth, height: origHeight } = embeddedPage
       const scale = Math.min(LOGO_WIDTH / origWidth, LOGO_HEIGHT / origHeight)
+      const scaledWidth = origWidth * scale
+      const scaledHeight = origHeight * scale
+
+      // Adjust X position for actual scaled width
+      const finalX = position === 'top-right' ? pageWidth - scaledWidth - margin : margin
 
       page.drawPage(embeddedPage, {
-        x: x,
+        x: finalX,
         y: logoY,
-        width: origWidth * scale,
-        height: origHeight * scale,
+        width: scaledWidth,
+        height: scaledHeight,
       })
       return
     } catch (err) {
@@ -76,7 +84,7 @@ async function drawWorkxLogo(
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
   page.drawRectangle({
-    x: x,
+    x: logoX,
     y: logoY,
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
@@ -84,17 +92,17 @@ async function drawWorkxLogo(
   })
 
   page.drawText('Workx', {
-    x: x + 12,
-    y: logoY + 16,
-    size: 22,
+    x: logoX + 15,
+    y: logoY + 22,
+    size: 28,
     font: helvetica,
     color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
   })
 
   page.drawText('ADVOCATEN', {
-    x: x + 12,
-    y: logoY + 6,
-    size: 7,
+    x: logoX + 15,
+    y: logoY + 8,
+    size: 9,
     font: helvetica,
     color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
   })
@@ -130,6 +138,17 @@ export async function POST(
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+    }
+
+    // Get options from request body (optional)
+    let includeLogoOnProcesstuk = true // default: include logo
+    try {
+      const body = await req.json()
+      if (typeof body.includeLogoOnProcesstuk === 'boolean') {
+        includeLogoOnProcesstuk = body.includeLogoOnProcesstuk
+      }
+    } catch {
+      // No body or invalid JSON, use defaults
     }
 
     const bundle = await prisma.workxflowBundle.findUnique({
@@ -172,8 +191,10 @@ export async function POST(
           const mainPages = await pdfDoc.copyPages(mainPdf, mainPdf.getPageIndices())
           for (const page of mainPages) {
             pdfDoc.addPage(page)
-            // Add Workx logo to each page of the processtuk (top-left)
-            await drawWorkxLogo(page, pdfDoc, 30)
+            // Add Workx logo to each page of the processtuk (top-right) - optional
+            if (includeLogoOnProcesstuk) {
+              await drawWorkxLogo(page, pdfDoc, 'top-right')
+            }
           }
         }
       } catch (err) {
@@ -187,8 +208,8 @@ export async function POST(
     if (bundle.productions.length > 0) {
       const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
 
-      // Add Workx logo (top-left)
-      await drawWorkxLogo(indexPage, pdfDoc, 30, pageHeight - LOGO_HEIGHT - 30)
+      // Add Workx logo (top-right)
+      await drawWorkxLogo(indexPage, pdfDoc, 'top-right')
 
       // Title "Productielijst"
       indexPage.drawText('Productielijst', {
@@ -255,8 +276,8 @@ export async function POST(
         color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
       })
 
-      // Add Workx logo to production sheet (top-left)
-      await drawWorkxLogo(sheetPage, pdfDoc, 30, pageHeight - LOGO_HEIGHT - 30)
+      // Add Workx logo to production sheet (top-right)
+      await drawWorkxLogo(sheetPage, pdfDoc, 'top-right')
 
       // Production number - large centered text
       const productionText = `PRODUCTIE ${production.productionNumber}`
@@ -396,4 +417,4 @@ export async function POST(
     return NextResponse.json({ error: 'Kon PDF niet genereren' }, { status: 500 })
   }
 }
-// Force redeploy with official logo - 5 feb 2026 20:15
+// Force redeploy - logo bigger, top-right, optional on processtuk - 5 feb 2026 20:35
