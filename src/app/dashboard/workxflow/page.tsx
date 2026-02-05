@@ -408,6 +408,24 @@ export default function WorkxflowPage() {
       </div>
 
 
+      {/* Desktop app info */}
+      {!isElectron && (
+        <div className="card p-4 border-blue-500/30 bg-blue-500/10">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+              <Icons.printer className="text-blue-400" size={20} />
+            </div>
+            <div>
+              <h3 className="font-medium text-white mb-1">Desktop App voor printen</h3>
+              <p className="text-sm text-gray-400">
+                Voor het printen naar specifieke printer-lades installeer de Workx Desktop app op de kantoor-computers.
+                De installer staat op: <code className="text-blue-300 bg-blue-500/20 px-1 rounded">C:\Users\quiri\workx-dashboard\desktop\dist\</code>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-4 gap-6">
         {/* Bundle list */}
         <div className="lg:col-span-1">
