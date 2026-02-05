@@ -121,19 +121,62 @@ export default function WorkxflowPage() {
   const uploadMainDocument = async (file: File) => {
     if (!activeBundle) return
 
-    // For now, store as base64 (in production, use proper file storage)
     const reader = new FileReader()
     reader.onload = async (e) => {
-      const dataUrl = e.target?.result as string
+      let fileData = e.target?.result as string
+      let fileName = file.name
+      let docType = 'other'
+      const lowerName = file.name.toLowerCase()
+
+      // Check if it's an Office file that needs conversion
+      const isOfficeFile = /\.(doc|docx|xls|xlsx|ppt|pptx)$/.test(lowerName)
+
+      if (isOfficeFile) {
+        // Convert to PDF using ConvertAPI
+        setIsConverting(true)
+        toast.loading('Processtuk wordt geconverteerd naar PDF...', { id: 'converting-main' })
+
+        try {
+          const response = await fetch('/api/convert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fileData: fileData,
+              fileName: fileName,
+            }),
+          })
+
+          if (response.ok) {
+            const result = await response.json()
+            fileData = result.pdfData
+            fileName = result.pdfName
+            docType = 'pdf'
+            toast.success('Geconverteerd naar PDF!', { id: 'converting-main' })
+          } else {
+            const error = await response.json()
+            console.error('Conversion failed:', error)
+            toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting-main' })
+            docType = 'docx'
+          }
+        } catch (err) {
+          console.error('Conversion error:', err)
+          toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting-main' })
+          docType = 'docx'
+        } finally {
+          setIsConverting(false)
+        }
+      } else if (file.type.includes('pdf') || lowerName.endsWith('.pdf')) {
+        docType = 'pdf'
+      }
 
       try {
         const res = await fetch(`/api/workxflow/${activeBundle.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            mainDocumentUrl: dataUrl,
-            mainDocumentName: file.name,
-            mainDocumentType: file.type.includes('pdf') ? 'pdf' : 'docx',
+            mainDocumentUrl: fileData,
+            mainDocumentName: fileName,
+            mainDocumentType: docType,
           }),
         })
         if (res.ok) {
