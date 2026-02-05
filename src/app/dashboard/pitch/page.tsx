@@ -161,7 +161,6 @@ export default function PitchPage() {
     'top-right': { x: 145, y: 15, label: 'Rechtsboven' },
     'bottom-left': { x: 0, y: 115, label: 'Linksonder' },
     'bottom-right': { x: 145, y: 115, label: 'Rechtsonder' },
-    'custom': { x: logoPosition.x, y: logoPosition.y, label: 'Aangepast' },
   }
 
   // Overlays state
@@ -511,6 +510,9 @@ export default function PitchPage() {
         previewUrl: dataUrl,
       }
       setImageOverlays(prev => [...prev, newOverlay])
+    }
+    reader.onerror = () => {
+      toast.error('Kon afbeelding niet laden')
     }
     reader.readAsDataURL(file)
   }
@@ -872,7 +874,7 @@ export default function PitchPage() {
                   {/* Position presets */}
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs text-gray-500">Positie:</span>
-                    {Object.entries(logoPresets).filter(([key]) => key !== 'custom').map(([key, preset]) => (
+                    {Object.entries(logoPresets).map(([key, preset]) => (
                       <button
                         key={key}
                         onClick={() => setLogoPosition({ preset: key, x: preset.x, y: preset.y })}

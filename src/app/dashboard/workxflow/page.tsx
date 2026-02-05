@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
@@ -362,6 +362,9 @@ export default function WorkxflowPage() {
   const reorderProductions = async (fromIndex: number, toIndex: number) => {
     if (!activeBundle) return
 
+    // Store original state for rollback
+    const originalProductions = [...activeBundle.productions]
+
     const newProductions = [...activeBundle.productions]
     const [moved] = newProductions.splice(fromIndex, 1)
     newProductions.splice(toIndex, 0, moved)
@@ -373,17 +376,22 @@ export default function WorkxflowPage() {
       productionNumber: i + 1,
     }))
 
+    // Optimistic UI update
     setActiveBundle(prev => prev ? { ...prev, productions: updated } : null)
 
-    // Save to server
+    // Save to server with rollback on error
     try {
-      await fetch(`/api/workxflow/${activeBundle.id}/reorder`, {
+      const res = await fetch(`/api/workxflow/${activeBundle.id}/reorder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productionIds: updated.map(p => p.id) }),
       })
+      if (!res.ok) throw new Error('Server error')
     } catch (error) {
       console.error('Error saving order:', error)
+      // Rollback to original state
+      setActiveBundle(prev => prev ? { ...prev, productions: originalProductions } : null)
+      toast.error('Kon volgorde niet opslaan')
     }
   }
 
