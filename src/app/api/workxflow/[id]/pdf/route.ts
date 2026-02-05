@@ -10,9 +10,9 @@ import * as path from 'path'
 const WORKX_LIME = { r: 249/255, g: 255/255, b: 133/255 }
 const WORKX_DARK = { r: 30/255, g: 30/255, b: 30/255 }
 
-// Logo dimensions (scaled for PDF) - bigger size
-const LOGO_WIDTH = 140
-const LOGO_HEIGHT = 58
+// Logo dimensions (scaled for PDF) - 150% bigger
+const LOGO_WIDTH = 210
+const LOGO_HEIGHT = 87
 
 // Cache for embedded logo
 let cachedLogoPage: Uint8Array | null = null
@@ -38,18 +38,15 @@ async function loadLogoPdf(): Promise<Uint8Array | null> {
 
 /**
  * Draw Workx logo on a PDF page using the official logo PDF
- * Position: 'top-right' (default) or 'top-left'
+ * Position: top-left, flush against top edge
  */
 async function drawWorkxLogo(
   page: PDFPage,
-  pdfDoc: PDFDocument,
-  position: 'top-right' | 'top-left' = 'top-right'
+  pdfDoc: PDFDocument
 ) {
-  const pageWidth = page.getWidth()
   const pageHeight = page.getHeight()
-  const margin = 30
-  const logoY = pageHeight - LOGO_HEIGHT - margin
-  const logoX = position === 'top-right' ? pageWidth - LOGO_WIDTH - margin : margin
+  const marginLeft = 0 // Flush left
+  const marginTop = 0  // Flush top
 
   // Try to embed the official logo
   const logoBytes = await loadLogoPdf()
@@ -65,11 +62,11 @@ async function drawWorkxLogo(
       const scaledWidth = origWidth * scale
       const scaledHeight = origHeight * scale
 
-      // Adjust X position for actual scaled width
-      const finalX = position === 'top-right' ? pageWidth - scaledWidth - margin : margin
+      // Position: top-left, flush against top
+      const logoY = pageHeight - scaledHeight - marginTop
 
       page.drawPage(embeddedPage, {
-        x: finalX,
+        x: marginLeft,
         y: logoY,
         width: scaledWidth,
         height: scaledHeight,
@@ -82,9 +79,10 @@ async function drawWorkxLogo(
 
   // Fallback to text-based logo if PDF fails
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const logoY = pageHeight - LOGO_HEIGHT - marginTop
 
   page.drawRectangle({
-    x: logoX,
+    x: marginLeft,
     y: logoY,
     width: LOGO_WIDTH,
     height: LOGO_HEIGHT,
@@ -92,17 +90,17 @@ async function drawWorkxLogo(
   })
 
   page.drawText('Workx', {
-    x: logoX + 15,
-    y: logoY + 22,
-    size: 28,
+    x: marginLeft + 20,
+    y: logoY + 35,
+    size: 42,
     font: helvetica,
     color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
   })
 
   page.drawText('ADVOCATEN', {
-    x: logoX + 15,
-    y: logoY + 8,
-    size: 9,
+    x: marginLeft + 20,
+    y: logoY + 12,
+    size: 14,
     font: helvetica,
     color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
   })
@@ -191,9 +189,9 @@ export async function POST(
           const mainPages = await pdfDoc.copyPages(mainPdf, mainPdf.getPageIndices())
           for (const page of mainPages) {
             pdfDoc.addPage(page)
-            // Add Workx logo to each page of the processtuk (top-right) - optional
+            // Add Workx logo to each page of the processtuk (top-left) - optional
             if (includeLogoOnProcesstuk) {
-              await drawWorkxLogo(page, pdfDoc, 'top-right')
+              await drawWorkxLogo(page, pdfDoc)
             }
           }
         }
@@ -208,8 +206,8 @@ export async function POST(
     if (bundle.productions.length > 0) {
       const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
 
-      // Add Workx logo (top-right)
-      await drawWorkxLogo(indexPage, pdfDoc, 'top-right')
+      // Add Workx logo (top-left)
+      await drawWorkxLogo(indexPage, pdfDoc)
 
       // Title "Productielijst"
       indexPage.drawText('Productielijst', {
@@ -276,8 +274,8 @@ export async function POST(
         color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
       })
 
-      // Add Workx logo to production sheet (top-right)
-      await drawWorkxLogo(sheetPage, pdfDoc, 'top-right')
+      // Add Workx logo to production sheet (top-left)
+      await drawWorkxLogo(sheetPage, pdfDoc)
 
       // Production number - large centered text
       const productionText = `PRODUCTIE ${production.productionNumber}`
@@ -417,4 +415,4 @@ export async function POST(
     return NextResponse.json({ error: 'Kon PDF niet genereren' }, { status: 500 })
   }
 }
-// Force redeploy - logo bigger, top-right, optional on processtuk - 5 feb 2026 20:35
+// Force redeploy - logo 150% bigger, top-left flush - 5 feb 2026 20:45

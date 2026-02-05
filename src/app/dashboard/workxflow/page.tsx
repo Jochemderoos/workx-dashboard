@@ -887,13 +887,13 @@ export default function WorkxflowPage() {
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Processtuk</p>
                   {activeBundle.mainDocumentUrl ? (
                     <div className="relative bg-white rounded-lg overflow-hidden shadow-lg" style={{ aspectRatio: '210/297' }}>
-                      {/* Workx logo overlay (top-right) - yellow style */}
+                      {/* Workx logo overlay (top-left, flush) - yellow style */}
                       {includeLogoOnProcesstuk && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <div className="rounded overflow-hidden" style={{ background: '#f9ff85' }}>
+                        <div className="absolute top-0 left-0 z-10">
+                          <div style={{ background: '#f9ff85' }}>
                             <div className="px-2 py-1.5">
-                              <p className="text-[10px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
-                              <p className="text-[5px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
+                              <p className="text-[12px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
+                              <p className="text-[6px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
                             </div>
                           </div>
                         </div>
@@ -957,12 +957,12 @@ export default function WorkxflowPage() {
                             background: '#f9ff85'
                           }}
                         >
-                          {/* Workx logo (top-right) - bigger version on yellow */}
-                          <div className="absolute top-2 right-2">
-                            <div className="rounded overflow-hidden border border-[#1e1e1e]/20" style={{ background: '#f9ff85' }}>
+                          {/* Workx logo (top-left, flush) - bigger version on yellow */}
+                          <div className="absolute top-0 left-0">
+                            <div style={{ background: '#f9ff85' }}>
                               <div className="px-2 py-1.5">
-                                <p className="text-[10px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
-                                <p className="text-[5px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
+                                <p className="text-[12px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
+                                <p className="text-[6px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
                               </div>
                             </div>
                           </div>
