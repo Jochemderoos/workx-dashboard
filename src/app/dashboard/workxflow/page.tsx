@@ -752,10 +752,10 @@ export default function WorkxflowPage() {
                   </h3>
                   <button
                     onClick={() => productionInputRef.current?.click()}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-workx-lime/20 text-workx-lime hover:bg-workx-lime/30 text-sm"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30 text-sm font-medium"
                   >
-                    <Icons.upload size={14} />
-                    Upload productie
+                    <Icons.upload size={16} />
+                    Upload Productie
                   </button>
                 </div>
 
@@ -845,13 +845,6 @@ export default function WorkxflowPage() {
                   </div>
                 )}
 
-                {/* Info about printing */}
-                <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                  <p className="text-xs text-yellow-400">
-                    <strong>Print info:</strong> Productiesheets worden automatisch gegenereerd met
-                    "PRODUCTIE [nummer]" en worden geprint op geel papier met Workx logo (lade 2).
-                  </p>
-                </div>
               </div>
             </div>
           ) : (
