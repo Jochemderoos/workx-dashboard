@@ -19,10 +19,70 @@ interface PDFOptions {
   subject?: string
 }
 
-// Draw the Workx logo on PDF - centered text, matching dashboard style
-export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  const height = width * 0.5
-  const cornerRadius = 4
+// Cache for logo image
+let cachedLogoDataUrl: string | null = null
+
+/**
+ * Load the Workx logo image and convert to base64 data URL
+ * This is cached for performance
+ */
+export async function loadWorkxLogo(): Promise<string | null> {
+  if (cachedLogoDataUrl) return cachedLogoDataUrl
+
+  try {
+    const response = await fetch('/workx-logo.png')
+    if (!response.ok) return null
+
+    const blob = await response.blob()
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        cachedLogoDataUrl = reader.result as string
+        resolve(cachedLogoDataUrl)
+      }
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(blob)
+    })
+  } catch (error) {
+    console.error('Error loading Workx logo:', error)
+    return null
+  }
+}
+
+/**
+ * Draw the Workx logo on PDF
+ * Position: flush top-left by default (x=0, y=0)
+ * Size: Based on official branding (210x87 points at 150%, scaled for jsPDF)
+ *
+ * @param doc - jsPDF document
+ * @param x - X position (default: 0 for flush left)
+ * @param y - Y position (default: 0 for flush top)
+ * @param width - Logo width in mm (default: 55 which is ~74pt scaled for A4)
+ * @param logoDataUrl - Optional pre-loaded logo data URL (for performance)
+ */
+export function drawWorkxLogo(
+  doc: jsPDF,
+  x: number = 0,
+  y: number = 0,
+  width: number = 55,
+  logoDataUrl?: string | null
+) {
+  const height = width * 0.414 // Maintain logo aspect ratio (~210:87)
+
+  // Try to use the actual logo image first
+  const dataUrl = logoDataUrl || cachedLogoDataUrl
+  if (dataUrl) {
+    try {
+      doc.addImage(dataUrl, 'PNG', x, y, width, height)
+      return
+    } catch (error) {
+      console.error('Error adding logo image to PDF:', error)
+      // Fall through to text-based fallback
+    }
+  }
+
+  // Fallback: Draw text-based logo
+  const cornerRadius = 2
 
   // Yellow background (#f9ff85)
   doc.setFillColor(249, 255, 133)
@@ -33,11 +93,11 @@ export function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 
   // "Workx" text - large, bold, centered
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(width * 0.48)
+  doc.setFontSize(width * 0.4)
   doc.text('Workx', centerX, y + height * 0.55, { align: 'center' })
 
-  // "ADVOCATEN" text - closer and bigger
-  doc.setFontSize(width * 0.14)
+  // "ADVOCATEN" text
+  doc.setFontSize(width * 0.11)
   doc.setFont('helvetica', 'normal')
   doc.text('A D V O C A T E N', centerX, y + height * 0.82, { align: 'center' })
 }

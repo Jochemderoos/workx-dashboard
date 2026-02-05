@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { formatDateForAPI } from '@/lib/date-utils'
+import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 
 interface Employee {
   id: string
@@ -95,24 +96,32 @@ export default function AfspiegelingPage() {
     toast.success('Werknemer toegevoegd')
   }
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
     if (!result) return
+
+    // Pre-load the logo image
+    const logoDataUrl = await loadWorkxLogo()
+
     const doc = new jsPDF()
 
-    // Header
-    doc.setFillColor(249, 255, 133)
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 40, 'F')
+    // Draw official Workx logo (flush top-left)
+    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
+
+    // Title next to logo
     doc.setTextColor(30, 30, 30)
-    doc.setFontSize(22)
+    doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.text('Workx Advocaten', 20, 25)
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Afspiegelingsberekening', 20, 35)
+    doc.text('Afspiegelingsberekening', 60, 15)
+
+    // Tagline
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(150, 150, 150)
+    doc.text('Gemaakt met de Workx App', 60, 22)
 
     // Stats
     doc.setTextColor(60, 60, 60)
-    let y = 55
+    let y = 40
     doc.setFontSize(11)
     doc.text(`Totaal werknemers: ${result.total}`, 20, y)
     doc.text(`Te ontslaan: ${result.count} (${result.percentage.toFixed(1)}%)`, 20, y + 8)

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { jsPDF } from 'jspdf'
+import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 
 interface ExpenseItem {
   id?: string
@@ -33,26 +34,6 @@ interface ExpenseDeclaration {
 
 interface ExpenseDeclarationFormProps {
   onClose: () => void
-}
-
-// Draw the Workx logo on PDF
-function drawWorkxLogo(doc: jsPDF, x: number, y: number, width: number = 50) {
-  const height = width * 0.5
-  const cornerRadius = 4
-
-  doc.setFillColor(249, 255, 133)
-  doc.roundedRect(x, y, width, height, cornerRadius, cornerRadius, 'F')
-
-  const centerX = x + width / 2
-
-  doc.setTextColor(30, 30, 30)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(width * 0.48)
-  doc.text('Workx', centerX, y + height * 0.55, { align: 'center' })
-
-  doc.setFontSize(width * 0.14)
-  doc.setFont('helvetica', 'normal')
-  doc.text('A D V O C A T E N', centerX, y + height * 0.82, { align: 'center' })
 }
 
 export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFormProps) {
@@ -374,6 +355,9 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     setIsGeneratingPdf(true)
 
     try {
+      // Pre-load the logo image
+      const logoDataUrl = await loadWorkxLogo()
+
       const doc = new jsPDF()
       const pageWidth = doc.internal.pageSize.getWidth()
       const pageHeight = doc.internal.pageSize.getHeight()
@@ -383,9 +367,9 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
 
       // === HEADER ===
       if (!isHolding) {
-        // Workx logo for employee declarations
-        drawWorkxLogo(doc, 15, 15, 55)
-        y = 50
+        // Workx logo for employee declarations (flush top-left)
+        drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
+        y = 30
       } else {
         // Holding header (no Workx logo)
         doc.setFontSize(22)

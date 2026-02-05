@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { jsPDF } from 'jspdf'
 import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
-import { drawWorkxLogo } from '@/lib/pdf'
+import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 
 interface Calculation {
   id: string
@@ -142,31 +142,34 @@ export default function BonusPage() {
     setShowForm(true)
   }
 
-  const downloadPDF = (calc: Calculation) => {
+  const downloadPDF = async (calc: Calculation) => {
+    // Pre-load the logo image
+    const logoDataUrl = await loadWorkxLogo()
+
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 
-    // Draw authentic Workx logo
-    drawWorkxLogo(doc, 15, 15, 55)
+    // Draw official Workx logo (flush top-left)
+    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
 
     // Title next to logo
     doc.setTextColor(51, 51, 51)
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.text('Bonus Berekening', 80, 30)
+    doc.text('Bonus Berekening', 60, 15)
 
     // Date
     doc.setTextColor(100, 100, 100)
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     const date = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
-    doc.text(date, 80, 38)
+    doc.text(date, 60, 22)
 
     // Tagline
     doc.setTextColor(150, 150, 150)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
-    doc.text('Gemaakt met de Workx App', 15, 50)
+    doc.text('Gemaakt met de Workx App', 60, 28)
 
     // Divider
     doc.setDrawColor(220, 220, 220)
@@ -265,37 +268,40 @@ export default function BonusPage() {
   }
 
   // Download PDF with all bonuses that need to be paid
-  const downloadBonusOverviewPDF = () => {
+  const downloadBonusOverviewPDF = async () => {
     const bonusesToPay = calculations.filter(c => c.invoicePaid && !c.bonusPaid)
     if (bonusesToPay.length === 0) {
       toast.error('Geen bonussen om uit te betalen')
       return
     }
 
+    // Pre-load the logo image
+    const logoDataUrl = await loadWorkxLogo()
+
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 
-    // Draw authentic Workx logo
-    drawWorkxLogo(doc, 15, 15, 55)
+    // Draw official Workx logo (flush top-left)
+    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
 
     // Title
     doc.setTextColor(51, 51, 51)
     doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    doc.text('Overzicht Te Betalen Bonussen', 80, 28)
+    doc.text('Overzicht Te Betalen Bonussen', 60, 15)
 
     // Date
     doc.setTextColor(100, 100, 100)
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     const dateStr = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
-    doc.text(dateStr, 80, 36)
+    doc.text(dateStr, 60, 22)
 
     // Tagline
     doc.setTextColor(150, 150, 150)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
-    doc.text('Gemaakt met de Workx App', 15, 50)
+    doc.text('Gemaakt met de Workx App', 60, 28)
 
     // Divider
     doc.setDrawColor(220, 220, 220)

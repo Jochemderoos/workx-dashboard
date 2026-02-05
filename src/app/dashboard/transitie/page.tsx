@@ -8,6 +8,7 @@ import DatePicker from '@/components/ui/DatePicker'
 import { formatDateForAPI } from '@/lib/date-utils'
 import {
   drawWorkxLogo,
+  loadWorkxLogo,
   createPDFHeader,
   createPDFFooter,
   createSectionTitle,
@@ -339,8 +340,11 @@ export default function TransitiePage() {
     return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
     if (!result) return
+
+    // Pre-load the logo image
+    const logoDataUrl = await loadWorkxLogo()
 
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
@@ -349,12 +353,13 @@ export default function TransitiePage() {
     const contentWidth = pageWidth - margin * 2
 
     // === HEADER SECTIE ===
-    drawWorkxLogo(doc, margin, 15, 50)
+    // Draw official Workx logo (flush top-left)
+    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
 
     // Header info rechts van logo
-    const infoX = 80
-    const infoValueX = 115
-    let hy = 20
+    const infoX = 60
+    const infoValueX = 95
+    let hy = 10
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(120, 120, 120)

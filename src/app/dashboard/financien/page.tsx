@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import jsPDF from 'jspdf'
-import { drawWorkxLogo } from '@/lib/pdf'
+import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
 
 // Get dynamic years (current year and 2 previous years)
@@ -600,7 +600,10 @@ export default function FinancienPage() {
   }
 
   // PDF Export
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
+    // Pre-load the logo image
+    const logoDataUrl = await loadWorkxLogo()
+
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 
@@ -610,14 +613,14 @@ export default function FinancienPage() {
     const col3 = 135   // 2025
     const col4 = 175   // Verschil
 
-    // Draw authentic Workx logo
-    drawWorkxLogo(doc, 15, 15, 55)
+    // Draw official Workx logo (flush top-left)
+    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
 
     // Title
     doc.setTextColor(51, 51, 51)
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.text('Financieel Overzicht', 80, 28)
+    doc.text('Financieel Overzicht', 60, 15)
 
     // Date
     doc.setTextColor(100, 100, 100)

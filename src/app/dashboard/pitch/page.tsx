@@ -6,13 +6,20 @@ import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
 import dynamic from 'next/dynamic'
 
-// Dynamically import PDF editor to avoid SSR issues
+// Dynamically import PDF components to avoid SSR issues
 const PdfEditor = dynamic(() => import('@/components/pitch/PdfEditor'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center py-12">
       <span className="w-6 h-6 border-2 border-workx-lime border-t-transparent rounded-full animate-spin" />
     </div>
+  ),
+})
+
+const PitchThumbnail = dynamic(() => import('@/components/pitch/PitchThumbnail'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-gray-800 rounded-lg animate-pulse" style={{ width: 120, height: 85 }} />
   ),
 })
 
@@ -144,8 +151,9 @@ export default function PitchPage() {
   const [logoPosition, setLogoPosition] = useState<{ preset: string; x: number; y: number }>({
     preset: 'bottom-left',  // Default: links onder
     x: 15,   // mm from left
-    y: 125,  // mm from top (A5 landscape is ~148mm high, so 125mm is near bottom)
+    y: 115,  // mm from top (A5 landscape is ~148mm high, so 115mm is near bottom)
   })
+  const [logoSize, setLogoSize] = useState(100) // percentage, 100 = default size (50x30mm)
 
   // Logo position presets (A5 landscape: ~210mm x 148mm)
   const logoPresets: Record<string, { x: number; y: number; label: string }> = {
@@ -1076,25 +1084,54 @@ export default function PitchPage() {
               </h2>
 
               <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
-                {/* Intro sections preview */}
-                {pitchInfo?.introSections.filter(s => selectedIntro.has(s.key)).map((section, idx) => (
+                {/* Cover page with logo position */}
+                {selectedIntro.has('cover') && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Cover</p>
+                    <div className="relative">
+                      <PitchThumbnail
+                        pageNumber={1}
+                        language={language}
+                        width={140}
+                        label="Cover"
+                        type="intro"
+                        showLogo={!!clientLogo}
+                        logoPosition={logoPosition}
+                        logoSize={logoSize}
+                      />
+                      {/* Logo position overlay on cover */}
+                      {clientLogo && (
+                        <div
+                          className="absolute border-2 border-dashed border-orange-400 bg-orange-400/30 rounded flex items-center justify-center pointer-events-none"
+                          style={{
+                            left: `${(logoPosition.x / 210) * 100}%`,
+                            top: `${(logoPosition.y / 148) * 100}%`,
+                            width: `${(50 * logoSize / 100 / 210) * 100}%`,
+                            height: `${(30 * logoSize / 100 / 148) * 100}%`,
+                          }}
+                        >
+                          <img src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain opacity-80" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Intro sections preview (excluding cover) */}
+                {pitchInfo?.introSections.filter(s => selectedIntro.has(s.key) && s.key !== 'cover').map((section) => (
                   <div key={section.key} className="space-y-1">
-                    {idx === 0 && (
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Intro & Diensten</p>
-                    )}
-                    <div
-                      className="relative rounded-lg overflow-hidden shadow-md"
-                      style={{ aspectRatio: '297/210', background: 'linear-gradient(135deg, #1a365d 0%, #2d3748 100%)' }}
-                    >
-                      {/* Workx style header */}
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-workx-lime" />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
-                        <p className="text-[9px] text-white/80 font-medium text-center line-clamp-2">{section.label}</p>
-                        <p className="text-[7px] text-white/50 mt-1">{section.pageCount} pagina{section.pageCount > 1 ? "'s" : ""}</p>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-blue-600/80 p-1">
-                        <p className="text-[7px] text-white text-center">Intro</p>
-                      </div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">{section.label}</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {section.pages.map((pageNum, idx) => (
+                        <PitchThumbnail
+                          key={`${section.key}-${pageNum}`}
+                          pageNumber={pageNum}
+                          language={language}
+                          width={68}
+                          label={section.pages.length > 1 ? `${idx + 1}/${section.pages.length}` : undefined}
+                          type="intro"
+                        />
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -1104,24 +1141,31 @@ export default function PitchPage() {
                   <div className="space-y-1 pt-2 border-t border-white/10">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Team CV's ({selectedTeam.size})</p>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {Array.from(selectedTeam).map((name) => (
-                        <div
-                          key={name}
-                          className="relative rounded-lg overflow-hidden shadow-md"
-                          style={{ aspectRatio: '297/210', background: 'linear-gradient(135deg, #065f46 0%, #064e3b 100%)' }}
-                        >
-                          <div className="absolute top-0 left-0 right-0 h-0.5 bg-workx-lime" />
-                          <div className="absolute inset-0 flex flex-col items-center justify-center p-1">
-                            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center mb-1">
-                              <Icons.user size={10} className="text-white/70" />
+                      {Array.from(selectedTeam).map((name) => {
+                        const cvPage = (pitchInfo as any)?.teamMembers?.indexOf(name) !== -1
+                          ? 13 + (pitchInfo?.teamMembers?.indexOf(name) || 0)
+                          : undefined
+                        return cvPage ? (
+                          <PitchThumbnail
+                            key={name}
+                            pageNumber={cvPage}
+                            language={language}
+                            width={68}
+                            label={name.split(' ')[0]}
+                            type="cv"
+                          />
+                        ) : (
+                          <div
+                            key={name}
+                            className="relative rounded-lg overflow-hidden shadow-md bg-green-900/50 border border-green-500/30"
+                            style={{ width: 68, height: 48 }}
+                          >
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <p className="text-[7px] text-white/70 text-center px-1">{name.split(' ')[0]}</p>
                             </div>
-                            <p className="text-[7px] text-white/90 font-medium text-center line-clamp-2 px-1">{name}</p>
                           </div>
-                          <div className="absolute bottom-0 left-0 right-0 bg-green-600/80 p-0.5">
-                            <p className="text-[6px] text-white text-center">CV</p>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -1131,19 +1175,17 @@ export default function PitchPage() {
                   <div className="space-y-1 pt-2 border-t border-white/10">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Bijlagen</p>
                     {pitchInfo?.bijlagenSections.filter(s => selectedBijlagen.has(s.key)).map((section) => (
-                      <div
-                        key={section.key}
-                        className="relative rounded-lg overflow-hidden shadow-md"
-                        style={{ aspectRatio: '297/210', background: 'linear-gradient(135deg, #5b21b6 0%, #4c1d95 100%)' }}
-                      >
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-workx-lime" />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
-                          <p className="text-[9px] text-white/80 font-medium text-center line-clamp-2">{section.label}</p>
-                          <p className="text-[7px] text-white/50 mt-1">{section.pageCount} pagina{section.pageCount > 1 ? "'s" : ""}</p>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-purple-600/80 p-1">
-                          <p className="text-[7px] text-white text-center">Bijlage</p>
-                        </div>
+                      <div key={section.key} className="grid grid-cols-2 gap-1">
+                        {section.pages.map((pageNum, idx) => (
+                          <PitchThumbnail
+                            key={`${section.key}-${pageNum}`}
+                            pageNumber={pageNum}
+                            language={language}
+                            width={68}
+                            label={section.pages.length > 1 ? `${section.label} ${idx + 1}` : section.label}
+                            type="bijlage"
+                          />
+                        ))}
                       </div>
                     ))}
                   </div>
@@ -1157,16 +1199,70 @@ export default function PitchPage() {
                   </div>
                 )}
 
-                {/* Client logo indicator */}
+                {/* Client logo controls */}
                 {clientLogo && (
-                  <div className="pt-2 border-t border-white/10">
+                  <div className="pt-2 border-t border-white/10 space-y-2">
                     <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
-                      <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center overflow-hidden">
+                      <div className="w-10 h-10 rounded bg-white flex items-center justify-center overflow-hidden">
                         <img src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-orange-400 font-medium">Klant logo</p>
+                        <p className="text-[10px] text-orange-400 font-medium">Klant logo op cover</p>
                         <p className="text-[8px] text-gray-500 truncate">{logoPresets[logoPosition.preset]?.label || 'Aangepast'}</p>
+                      </div>
+                      <button
+                        onClick={() => setClientLogo(null)}
+                        className="p-1 text-gray-500 hover:text-red-400"
+                      >
+                        <Icons.x size={14} />
+                      </button>
+                    </div>
+
+                    {/* Logo size slider */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400">Grootte</span>
+                        <span className="text-[10px] text-orange-400">{logoSize}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="50"
+                        max="200"
+                        value={logoSize}
+                        onChange={(e) => setLogoSize(parseInt(e.target.value))}
+                        className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-orange-500"
+                      />
+                    </div>
+
+                    {/* Position sliders */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-400">X positie</span>
+                          <span className="text-[10px] text-gray-500">{logoPosition.x}mm</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="5"
+                          max="160"
+                          value={logoPosition.x}
+                          onChange={(e) => setLogoPosition(prev => ({ ...prev, preset: 'custom', x: parseInt(e.target.value) }))}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-orange-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-400">Y positie</span>
+                          <span className="text-[10px] text-gray-500">{logoPosition.y}mm</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="5"
+                          max="130"
+                          value={logoPosition.y}
+                          onChange={(e) => setLogoPosition(prev => ({ ...prev, preset: 'custom', y: parseInt(e.target.value) }))}
+                          className="w-full h-1.5 rounded-full appearance-none bg-white/10 accent-orange-500"
+                        />
                       </div>
                     </div>
                   </div>
