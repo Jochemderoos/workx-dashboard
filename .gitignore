@@ -42,3 +42,5 @@ prisma/*.db-journal
 
 .vercel
 .env*.local
+desktop/dist/
+desktop/node_modules/
