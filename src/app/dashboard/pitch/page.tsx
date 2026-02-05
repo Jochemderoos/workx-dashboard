@@ -150,16 +150,16 @@ export default function PitchPage() {
   const [clientLogo, setClientLogo] = useState<{ dataUrl: string; name: string } | null>(null)
   const [logoPosition, setLogoPosition] = useState<{ preset: string; x: number; y: number }>({
     preset: 'bottom-left',  // Default: links onder
-    x: 15,   // mm from left
+    x: 0,    // mm from left (flush to edge)
     y: 115,  // mm from top (A5 landscape is ~148mm high, so 115mm is near bottom)
   })
   const [logoSize, setLogoSize] = useState(100) // percentage, 100 = default size (50x30mm)
 
   // Logo position presets (A5 landscape: ~210mm x 148mm)
   const logoPresets: Record<string, { x: number; y: number; label: string }> = {
-    'top-left': { x: 15, y: 15, label: 'Linksboven' },
+    'top-left': { x: 0, y: 15, label: 'Linksboven' },
     'top-right': { x: 145, y: 15, label: 'Rechtsboven' },
-    'bottom-left': { x: 15, y: 115, label: 'Linksonder' },
+    'bottom-left': { x: 0, y: 115, label: 'Linksonder' },
     'bottom-right': { x: 145, y: 115, label: 'Rechtsonder' },
     'custom': { x: logoPosition.x, y: logoPosition.y, label: 'Aangepast' },
   }
@@ -366,7 +366,7 @@ export default function PitchPage() {
 
   // Load preview when switching to preview tab
   useEffect(() => {
-    if (activeTab === 'preview' && selectedTeam.size > 0) {
+    if (activeTab === 'preview' && (selectedIntro.size > 0 || selectedTeam.size > 0 || selectedBijlagen.size > 0)) {
       fetchPagePreview()
     }
   }, [activeTab, selectedTeam, selectedIntro, selectedBijlagen])
@@ -551,11 +551,11 @@ export default function PitchPage() {
   }
 
   const handleGenerate = async () => {
-    // Check if we have pages (either from preview or from selections)
-    const hasPages = previewPages.length > 0 || selectedTeam.size > 0
+    // Check if we have pages (either from preview or from any selections)
+    const hasPages = previewPages.length > 0 || selectedIntro.size > 0 || selectedTeam.size > 0 || selectedBijlagen.size > 0
 
     if (!hasPages) {
-      toast.error('Selecteer minimaal 1 teamlid')
+      toast.error('Selecteer minimaal 1 onderdeel')
       return
     }
 
@@ -685,9 +685,9 @@ export default function PitchPage() {
           </button>
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || (selectedTeam.size === 0 && previewPages.length === 0)}
+            disabled={isGenerating || pageStats.total === 0}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
-              selectedTeam.size > 0 || previewPages.length > 0
+              pageStats.total > 0 || previewPages.length > 0
                 ? 'bg-workx-lime text-workx-dark hover:bg-workx-lime/90'
                 : 'bg-white/10 text-gray-500 cursor-not-allowed'
             }`}
@@ -763,16 +763,16 @@ export default function PitchPage() {
         </button>
         <button
           onClick={() => {
-            if (selectedTeam.size > 0) {
+            if (pageStats.total > 0) {
               setActiveTab('preview')
               fetchPagePreview()
             }
           }}
-          disabled={selectedTeam.size === 0}
+          disabled={pageStats.total === 0}
           className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-all whitespace-nowrap ${
             activeTab === 'preview'
               ? 'bg-workx-lime/20 text-workx-lime border-b-2 border-workx-lime'
-              : selectedTeam.size > 0
+              : pageStats.total > 0
                 ? 'text-gray-400 hover:text-white hover:bg-white/5'
                 : 'text-gray-600 cursor-not-allowed opacity-50'
           }`}
@@ -799,8 +799,8 @@ export default function PitchPage() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Go to Volgorde button - visible when on select tab and team selected */}
-        {activeTab === 'select' && selectedTeam.size > 0 && (
+        {/* Go to Volgorde button - visible when on select tab and has selections */}
+        {activeTab === 'select' && pageStats.total > 0 && (
           <button
             onClick={() => {
               setActiveTab('preview')
@@ -902,7 +902,7 @@ export default function PitchPage() {
                         <span className="text-xs text-gray-500 w-6">X:</span>
                         <input
                           type="range"
-                          min="5"
+                          min="0"
                           max="160"
                           value={logoPosition.x}
                           onChange={(e) => setLogoPosition(prev => ({ ...prev, x: parseInt(e.target.value) }))}
@@ -1019,9 +1019,6 @@ export default function PitchPage() {
               ))}
             </div>
 
-            {selectedTeam.size === 0 && (
-              <p className="text-center text-xs text-amber-400 mt-3">Selecteer minimaal 1 teamlid</p>
-            )}
           </div>
 
           {/* Bijlagen sections */}
@@ -1121,14 +1118,14 @@ export default function PitchPage() {
                 {pitchInfo?.introSections.filter(s => selectedIntro.has(s.key) && s.key !== 'cover').map((section) => (
                   <div key={section.key} className="space-y-1">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">{section.label}</p>
-                    <div className="grid grid-cols-2 gap-1">
+                    <div className="space-y-2">
                       {section.pages.map((pageNum, idx) => (
                         <PitchThumbnail
                           key={`${section.key}-${pageNum}`}
                           pageNumber={pageNum}
                           language={language}
-                          width={68}
-                          label={section.pages.length > 1 ? `${idx + 1}/${section.pages.length}` : undefined}
+                          width={140}
+                          label={section.pages.length > 1 ? `${section.label} (${idx + 1}/${section.pages.length})` : section.label}
                           type="intro"
                         />
                       ))}
@@ -1140,7 +1137,7 @@ export default function PitchPage() {
                 {Array.from(selectedTeam).length > 0 && (
                   <div className="space-y-1 pt-2 border-t border-white/10">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Team CV's ({selectedTeam.size})</p>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="space-y-2">
                       {Array.from(selectedTeam).map((name) => {
                         const cvPage = (pitchInfo as any)?.teamMembers?.indexOf(name) !== -1
                           ? 13 + (pitchInfo?.teamMembers?.indexOf(name) || 0)
@@ -1150,18 +1147,18 @@ export default function PitchPage() {
                             key={name}
                             pageNumber={cvPage}
                             language={language}
-                            width={68}
-                            label={name.split(' ')[0]}
+                            width={140}
+                            label={name}
                             type="cv"
                           />
                         ) : (
                           <div
                             key={name}
                             className="relative rounded-lg overflow-hidden shadow-md bg-green-900/50 border border-green-500/30"
-                            style={{ width: 68, height: 48 }}
+                            style={{ width: 140, height: 99 }}
                           >
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <p className="text-[7px] text-white/70 text-center px-1">{name.split(' ')[0]}</p>
+                              <p className="text-xs text-white/70 text-center px-1">{name}</p>
                             </div>
                           </div>
                         )
@@ -1175,13 +1172,13 @@ export default function PitchPage() {
                   <div className="space-y-1 pt-2 border-t border-white/10">
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Bijlagen</p>
                     {pitchInfo?.bijlagenSections.filter(s => selectedBijlagen.has(s.key)).map((section) => (
-                      <div key={section.key} className="grid grid-cols-2 gap-1">
+                      <div key={section.key} className="space-y-2">
                         {section.pages.map((pageNum, idx) => (
                           <PitchThumbnail
                             key={`${section.key}-${pageNum}`}
                             pageNumber={pageNum}
                             language={language}
-                            width={68}
+                            width={140}
                             label={section.pages.length > 1 ? `${section.label} ${idx + 1}` : section.label}
                             type="bijlage"
                           />
@@ -1243,7 +1240,7 @@ export default function PitchPage() {
                         </div>
                         <input
                           type="range"
-                          min="5"
+                          min="0"
                           max="160"
                           value={logoPosition.x}
                           onChange={(e) => setLogoPosition(prev => ({ ...prev, preset: 'custom', x: parseInt(e.target.value) }))}
@@ -1841,9 +1838,9 @@ export default function PitchPage() {
         </button>
         <button
           onClick={handleGenerate}
-          disabled={isGenerating || selectedTeam.size === 0}
+          disabled={isGenerating || pageStats.total === 0}
           className={`flex items-center justify-center gap-2 p-4 rounded-xl font-medium transition-all flex-[3] ${
-            selectedTeam.size > 0
+            pageStats.total > 0
               ? 'bg-workx-lime text-workx-dark'
               : 'bg-white/10 text-gray-500 cursor-not-allowed'
           }`}
