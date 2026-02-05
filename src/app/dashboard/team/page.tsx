@@ -469,11 +469,13 @@ export default function TeamPage() {
     }
   }
 
-  // Experience year upgrade
+  // Experience year upgrade (salaries are per March 1, so next increase is March next year)
+  const upgradeYear = currentYear + 1
+
   const fetchExperienceUpgradePreview = async () => {
     setIsLoadingExperiencePreview(true)
     try {
-      const res = await fetch(`/api/cron/yearly-upgrade?year=${currentYear}`)
+      const res = await fetch(`/api/cron/yearly-upgrade?year=${upgradeYear}`)
       if (!res.ok) throw new Error('Kon preview niet laden')
       const data = await res.json()
       setExperienceUpgradePreview(data)
@@ -492,7 +494,7 @@ export default function TeamPage() {
       const res = await fetch('/api/cron/yearly-upgrade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: currentYear })
+        body: JSON.stringify({ year: upgradeYear })
       })
 
       if (!res.ok) {
@@ -511,11 +513,11 @@ export default function TeamPage() {
     }
   }
 
-  // Hourly rate upgrade
+  // Hourly rate upgrade (per January 1 of next year)
   const fetchHourlyRateUpgradePreview = async () => {
     setIsLoadingHourlyRatePreview(true)
     try {
-      const res = await fetch(`/api/financien/hourly-rate-upgrade?year=${currentYear}&increase=${hourlyRateIncrease}`)
+      const res = await fetch(`/api/financien/hourly-rate-upgrade?year=${upgradeYear}&increase=${hourlyRateIncrease}`)
       if (!res.ok) throw new Error('Kon preview niet laden')
       const data = await res.json()
       setHourlyRateUpgradePreview(data)
@@ -534,7 +536,7 @@ export default function TeamPage() {
       const res = await fetch('/api/financien/hourly-rate-upgrade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: currentYear, defaultIncrease: hourlyRateIncrease })
+        body: JSON.stringify({ year: upgradeYear, defaultIncrease: hourlyRateIncrease })
       })
 
       if (!res.ok) {
@@ -1654,7 +1656,7 @@ export default function TeamPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-white">Ervaringsjaar Ophoging</h2>
-                  <p className="text-sm text-gray-400">Ingangsdatum: 1 maart {currentYear}</p>
+                  <p className="text-sm text-gray-400">Ingangsdatum: 1 maart {upgradeYear}</p>
                 </div>
               </div>
               <button
@@ -1677,7 +1679,7 @@ export default function TeamPage() {
                   </div>
                   <h3 className="text-lg font-medium text-white mb-2">Al uitgevoerd</h3>
                   <p className="text-gray-400 text-sm">
-                    De ervaringsjaar ophoging voor {currentYear} is al uitgevoerd op{' '}
+                    De ervaringsjaar ophoging voor {upgradeYear} is al uitgevoerd op{' '}
                     {experienceUpgradePreview.processedAt && new Date(experienceUpgradePreview.processedAt).toLocaleDateString('nl-NL')}
                   </p>
                 </div>
@@ -1763,7 +1765,7 @@ export default function TeamPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-white">Uurtarief Verhoging</h2>
-                  <p className="text-sm text-gray-400">Ingangsdatum: 1 januari {currentYear}</p>
+                  <p className="text-sm text-gray-400">Ingangsdatum: 1 januari {upgradeYear}</p>
                 </div>
               </div>
               <button
@@ -1786,7 +1788,7 @@ export default function TeamPage() {
                   </div>
                   <h3 className="text-lg font-medium text-white mb-2">Al uitgevoerd</h3>
                   <p className="text-gray-400 text-sm">
-                    De uurtarief verhoging voor {currentYear} is al uitgevoerd op{' '}
+                    De uurtarief verhoging voor {upgradeYear} is al uitgevoerd op{' '}
                     {hourlyRateUpgradePreview.processedAt && new Date(hourlyRateUpgradePreview.processedAt).toLocaleDateString('nl-NL')}
                   </p>
                 </div>
