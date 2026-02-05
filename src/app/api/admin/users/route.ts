@@ -238,7 +238,21 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    const { userId, isActive, role } = await req.json()
+    const body = await req.json()
+    const {
+      userId,
+      isActive,
+      role,
+      // Profile fields that can now be edited
+      name,
+      email,
+      department,
+      phoneNumber,
+      birthDate,
+      startDate,
+      werkdagen,
+      avatarUrl,
+    } = body
 
     if (!userId) {
       return NextResponse.json(
@@ -250,12 +264,36 @@ export async function PATCH(req: NextRequest) {
     // Get current user data for audit log
     const oldUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true, role: true, isActive: true }
+      select: {
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        department: true,
+        phoneNumber: true,
+        birthDate: true,
+        startDate: true,
+        werkdagen: true,
+        avatarUrl: true,
+      }
     })
 
-    const updateData: { isActive?: boolean; role?: string } = {}
+    if (!oldUser) {
+      return NextResponse.json({ error: 'Gebruiker niet gevonden' }, { status: 404 })
+    }
+
+    // Build update data with all editable fields
+    const updateData: Record<string, any> = {}
     if (typeof isActive === 'boolean') updateData.isActive = isActive
-    if (role) updateData.role = role
+    if (role !== undefined) updateData.role = role
+    if (name !== undefined) updateData.name = name
+    if (email !== undefined) updateData.email = email
+    if (department !== undefined) updateData.department = department || null
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber || null
+    if (birthDate !== undefined) updateData.birthDate = birthDate || null
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null
+    if (werkdagen !== undefined) updateData.werkdagen = werkdagen || '1,2,3,4,5'
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl || null
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -266,26 +304,47 @@ export async function PATCH(req: NextRequest) {
         name: true,
         role: true,
         isActive: true,
+        department: true,
+        phoneNumber: true,
+        birthDate: true,
+        startDate: true,
+        werkdagen: true,
+        avatarUrl: true,
       }
     })
 
-    // Audit log
+    // Audit log - build change description
     const changes: string[] = []
-    if (typeof isActive === 'boolean' && oldUser?.isActive !== isActive) {
+    if (typeof isActive === 'boolean' && oldUser.isActive !== isActive) {
       changes.push(isActive ? 'geactiveerd' : 'gedeactiveerd')
     }
-    if (role && oldUser?.role !== role) {
+    if (role && oldUser.role !== role) {
       changes.push(`rol gewijzigd naar ${role}`)
+    }
+    if (name && oldUser.name !== name) {
+      changes.push(`naam gewijzigd naar ${name}`)
+    }
+    if (email && oldUser.email !== email) {
+      changes.push(`email gewijzigd naar ${email}`)
+    }
+    if (department !== undefined && oldUser.department !== department) {
+      changes.push(`afdeling gewijzigd`)
+    }
+    if (phoneNumber !== undefined && oldUser.phoneNumber !== phoneNumber) {
+      changes.push(`telefoonnummer gewijzigd`)
+    }
+    if (birthDate !== undefined && oldUser.birthDate !== birthDate) {
+      changes.push(`geboortedatum gewijzigd`)
     }
 
     await logAuditAction({
       userId: session.user.id,
-      action: role && oldUser?.role !== role ? 'ROLE_CHANGE' : 'UPDATE',
+      action: role && oldUser.role !== role ? 'ROLE_CHANGE' : 'UPDATE',
       entityType: 'User',
       entityId: userId,
-      description: `Gebruiker ${updatedUser.name} bijgewerkt: ${changes.join(', ')}`,
+      description: `Gebruiker ${updatedUser.name} bijgewerkt: ${changes.length > 0 ? changes.join(', ') : 'geen wijzigingen'}`,
       oldValue: oldUser,
-      newValue: { role: updatedUser.role, isActive: updatedUser.isActive },
+      newValue: updateData,
       ipAddress: getIpFromRequest(req),
       userAgent: getUserAgentFromRequest(req),
     })

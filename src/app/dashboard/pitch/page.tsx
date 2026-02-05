@@ -30,6 +30,22 @@ interface PitchInfo {
   introSections: Section[]
   bijlagenSections: Section[]
   availableLanguages: string[]
+  isManager?: boolean
+  usingDatabase?: boolean
+}
+
+interface PitchDocument {
+  id: string
+  type: 'cv' | 'intro' | 'bijlage'
+  name: string
+  label: string
+  description?: string
+  teamMemberName?: string
+  sourceType: 'base' | 'upload'
+  basePages?: string
+  uploadUrl?: string
+  sortOrder: number
+  isActive: boolean
 }
 
 interface PagePreview {
@@ -104,7 +120,14 @@ export default function PitchPage() {
   const [showEditor, setShowEditor] = useState(false)
   const [editorMode, setEditorMode] = useState<'view' | 'text' | 'whiteout'>('view')
   const [currentEditorPage, setCurrentEditorPage] = useState(1)
-  const [activeTab, setActiveTab] = useState<'select' | 'preview' | 'images'>('select')
+  const [activeTab, setActiveTab] = useState<'select' | 'preview' | 'images' | 'admin'>('select')
+  const [isManager, setIsManager] = useState(false)
+  const [usingDatabase, setUsingDatabase] = useState(false)
+  const [documents, setDocuments] = useState<PitchDocument[]>([])
+  const [isSeeding, setIsSeeding] = useState(false)
+  const [editingDoc, setEditingDoc] = useState<PitchDocument | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newDocType, setNewDocType] = useState<'cv' | 'intro' | 'bijlage'>('cv')
 
   // Selection state
   const [selectedIntro, setSelectedIntro] = useState<Set<string>>(new Set())
@@ -149,6 +172,8 @@ export default function PitchPage() {
       if (res.ok) {
         const data: PitchInfo = await res.json()
         setPitchInfo(data)
+        setIsManager(data.isManager || false)
+        setUsingDatabase(data.usingDatabase || false)
         // Default: select all intro sections
         setSelectedIntro(new Set(data.introSections.map(s => s.key)))
       } else {
@@ -161,6 +186,110 @@ export default function PitchPage() {
       setIsLoading(false)
     }
   }
+
+  const fetchDocuments = async () => {
+    try {
+      const res = await fetch('/api/pitch/documents?includeInactive=true')
+      if (res.ok) {
+        const data = await res.json()
+        setDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error)
+    }
+  }
+
+  const seedDocuments = async () => {
+    setIsSeeding(true)
+    try {
+      const res = await fetch('/api/pitch/documents', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'seed' }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        toast.success(data.message)
+        fetchDocuments()
+        fetchPitchInfo()
+      } else {
+        const error = await res.json()
+        toast.error(error.error || 'Kon documenten niet migreren')
+      }
+    } catch (error) {
+      toast.error('Kon documenten niet migreren')
+    } finally {
+      setIsSeeding(false)
+    }
+  }
+
+  const updateDocument = async (id: string, updates: Partial<PitchDocument>) => {
+    try {
+      const res = await fetch(`/api/pitch/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (res.ok) {
+        toast.success('Document bijgewerkt')
+        fetchDocuments()
+        fetchPitchInfo()
+        setEditingDoc(null)
+      } else {
+        const error = await res.json()
+        toast.error(error.error || 'Kon document niet bijwerken')
+      }
+    } catch (error) {
+      toast.error('Kon document niet bijwerken')
+    }
+  }
+
+  const deleteDocument = async (id: string) => {
+    if (!confirm('Weet je zeker dat je dit document wilt verwijderen?')) return
+    try {
+      const res = await fetch(`/api/pitch/documents/${id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        toast.success('Document verwijderd')
+        fetchDocuments()
+        fetchPitchInfo()
+      } else {
+        const error = await res.json()
+        toast.error(error.error || 'Kon document niet verwijderen')
+      }
+    } catch (error) {
+      toast.error('Kon document niet verwijderen')
+    }
+  }
+
+  const createDocument = async (doc: Omit<PitchDocument, 'id'>) => {
+    try {
+      const res = await fetch('/api/pitch/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(doc),
+      })
+      if (res.ok) {
+        toast.success('Document toegevoegd')
+        fetchDocuments()
+        fetchPitchInfo()
+        setShowAddForm(false)
+      } else {
+        const error = await res.json()
+        toast.error(error.error || 'Kon document niet toevoegen')
+      }
+    } catch (error) {
+      toast.error('Kon document niet toevoegen')
+    }
+  }
+
+  // Load documents when switching to admin tab
+  useEffect(() => {
+    if (activeTab === 'admin' && isManager) {
+      fetchDocuments()
+    }
+  }, [activeTab, isManager])
 
   // Toggle functions
   const toggleIntro = (key: string) => {
@@ -644,6 +773,21 @@ export default function PitchPage() {
           2. Volgorde & Download
         </button>
 
+        {/* Admin tab - only for managers */}
+        {isManager && (
+          <button
+            onClick={() => setActiveTab('admin')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-all whitespace-nowrap ${
+              activeTab === 'admin'
+                ? 'bg-orange-500/20 text-orange-400 border-b-2 border-orange-400'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Icons.settings size={16} />
+            Beheer
+          </button>
+        )}
+
         {/* Spacer */}
         <div className="flex-1" />
 
@@ -1046,6 +1190,413 @@ export default function PitchPage() {
                   </>
                 )}
               </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Admin tab */}
+      {activeTab === 'admin' && isManager && (
+        <div className="space-y-6">
+          {/* Migration banner */}
+          {!usingDatabase && (
+            <div className="card p-4 border-orange-500/30 bg-orange-500/10">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                  <Icons.info className="text-orange-400" size={20} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-white mb-1">Documenten migreren naar database</h3>
+                  <p className="text-sm text-gray-400 mb-3">
+                    De pitch documenten worden momenteel uit hardcoded waarden geladen.
+                    Klik op de knop om ze naar de database te migreren, zodat je ze via deze interface kunt beheren.
+                  </p>
+                  <button
+                    onClick={seedDocuments}
+                    disabled={isSeeding}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white font-medium text-sm hover:bg-orange-600 disabled:opacity-50"
+                  >
+                    {isSeeding ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Migreren...
+                      </>
+                    ) : (
+                      <>
+                        <Icons.database size={16} />
+                        Migreer naar database
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Document sections */}
+          {usingDatabase && (
+            <div className="space-y-6">
+              {/* CVs */}
+              <div className="card p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                      <Icons.users className="text-green-400" size={14} />
+                    </div>
+                    <h2 className="font-medium text-white">Team CV's</h2>
+                    <span className="text-xs text-gray-500">({documents.filter(d => d.type === 'cv').length})</span>
+                  </div>
+                  <button
+                    onClick={() => { setNewDocType('cv'); setShowAddForm(true) }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-sm hover:bg-green-500/20"
+                  >
+                    <Icons.plus size={14} />
+                    CV Toevoegen
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {documents.filter(d => d.type === 'cv').map((doc) => (
+                    <div
+                      key={doc.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                        doc.isActive ? 'border-white/10 bg-white/5' : 'border-red-500/30 bg-red-500/5 opacity-50'
+                      }`}
+                    >
+                      <span className="text-sm text-white flex-1">{doc.label}</span>
+                      <span className="text-xs text-gray-500">Pagina {doc.basePages}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => updateDocument(doc.id, { isActive: !doc.isActive })}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            doc.isActive ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-500 hover:bg-white/10'
+                          }`}
+                          title={doc.isActive ? 'Deactiveren' : 'Activeren'}
+                        >
+                          {doc.isActive ? <Icons.check size={14} /> : <Icons.x size={14} />}
+                        </button>
+                        <button
+                          onClick={() => setEditingDoc(doc)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+                        >
+                          <Icons.edit size={14} />
+                        </button>
+                        <button
+                          onClick={() => deleteDocument(doc.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                        >
+                          <Icons.trash size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Intro sections */}
+              <div className="card p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <Icons.file className="text-blue-400" size={14} />
+                    </div>
+                    <h2 className="font-medium text-white">Intro Secties</h2>
+                    <span className="text-xs text-gray-500">({documents.filter(d => d.type === 'intro').length})</span>
+                  </div>
+                  <button
+                    onClick={() => { setNewDocType('intro'); setShowAddForm(true) }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 text-sm hover:bg-blue-500/20"
+                  >
+                    <Icons.plus size={14} />
+                    Sectie Toevoegen
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {documents.filter(d => d.type === 'intro').map((doc) => (
+                    <div
+                      key={doc.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                        doc.isActive ? 'border-white/10 bg-white/5' : 'border-red-500/30 bg-red-500/5 opacity-50'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <span className="text-sm text-white">{doc.label}</span>
+                        {doc.description && <p className="text-xs text-gray-500">{doc.description}</p>}
+                      </div>
+                      <span className="text-xs text-gray-500">Pagina's {doc.basePages}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => updateDocument(doc.id, { isActive: !doc.isActive })}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            doc.isActive ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-500 hover:bg-white/10'
+                          }`}
+                        >
+                          {doc.isActive ? <Icons.check size={14} /> : <Icons.x size={14} />}
+                        </button>
+                        <button
+                          onClick={() => setEditingDoc(doc)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+                        >
+                          <Icons.edit size={14} />
+                        </button>
+                        <button
+                          onClick={() => deleteDocument(doc.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                        >
+                          <Icons.trash size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bijlagen sections */}
+              <div className="card p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                      <Icons.file className="text-purple-400" size={14} />
+                    </div>
+                    <h2 className="font-medium text-white">Bijlagen</h2>
+                    <span className="text-xs text-gray-500">({documents.filter(d => d.type === 'bijlage').length})</span>
+                  </div>
+                  <button
+                    onClick={() => { setNewDocType('bijlage'); setShowAddForm(true) }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 text-sm hover:bg-purple-500/20"
+                  >
+                    <Icons.plus size={14} />
+                    Bijlage Toevoegen
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {documents.filter(d => d.type === 'bijlage').map((doc) => (
+                    <div
+                      key={doc.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                        doc.isActive ? 'border-white/10 bg-white/5' : 'border-red-500/30 bg-red-500/5 opacity-50'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <span className="text-sm text-white">{doc.label}</span>
+                        {doc.description && <p className="text-xs text-gray-500">{doc.description}</p>}
+                      </div>
+                      <span className="text-xs text-gray-500">Pagina's {doc.basePages}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => updateDocument(doc.id, { isActive: !doc.isActive })}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            doc.isActive ? 'text-green-400 hover:bg-green-500/10' : 'text-gray-500 hover:bg-white/10'
+                          }`}
+                        >
+                          {doc.isActive ? <Icons.check size={14} /> : <Icons.x size={14} />}
+                        </button>
+                        <button
+                          onClick={() => setEditingDoc(doc)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+                        >
+                          <Icons.edit size={14} />
+                        </button>
+                        <button
+                          onClick={() => deleteDocument(doc.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                        >
+                          <Icons.trash size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Help info */}
+              <div className="card p-4 border-blue-500/20 bg-blue-500/5">
+                <div className="flex items-start gap-3">
+                  <Icons.info className="text-blue-400 mt-0.5" size={18} />
+                  <div>
+                    <h3 className="font-medium text-white mb-1">Hoe werkt dit?</h3>
+                    <p className="text-sm text-gray-400">
+                      De Pitch Document Maker extraheert pagina's uit de base PDF (pitch-base-nl.pdf in /data/pitch/).
+                      Elke entry hierboven verwijst naar specifieke paginanummers in die PDF.
+                    </p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      Om een nieuw CV of bijlage toe te voegen: voeg eerst de pagina toe aan de base PDF,
+                      en maak dan hier een entry met het juiste paginanummer.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit modal */}
+          {editingDoc && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+              <div className="card p-6 max-w-md w-full">
+                <h3 className="text-lg font-medium text-white mb-4">Document Bewerken</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Label (naam)</label>
+                    <input
+                      type="text"
+                      value={editingDoc.label}
+                      onChange={(e) => setEditingDoc({ ...editingDoc, label: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                    />
+                  </div>
+                  {editingDoc.type === 'cv' && (
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Team Member Naam</label>
+                      <input
+                        type="text"
+                        value={editingDoc.teamMemberName || ''}
+                        onChange={(e) => setEditingDoc({ ...editingDoc, teamMemberName: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Beschrijving (optioneel)</label>
+                    <input
+                      type="text"
+                      value={editingDoc.description || ''}
+                      onChange={(e) => setEditingDoc({ ...editingDoc, description: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Pagina nummer(s)</label>
+                    <input
+                      type="text"
+                      value={editingDoc.basePages || ''}
+                      onChange={(e) => setEditingDoc({ ...editingDoc, basePages: e.target.value })}
+                      placeholder="bijv. 13 of 2,3"
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Eén nummer of meerdere gescheiden door komma's</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Volgorde</label>
+                    <input
+                      type="number"
+                      value={editingDoc.sortOrder}
+                      onChange={(e) => setEditingDoc({ ...editingDoc, sortOrder: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button
+                    onClick={() => setEditingDoc(null)}
+                    className="px-4 py-2 rounded-lg bg-white/10 text-gray-300 hover:bg-white/15"
+                  >
+                    Annuleren
+                  </button>
+                  <button
+                    onClick={() => updateDocument(editingDoc.id, {
+                      label: editingDoc.label,
+                      description: editingDoc.description,
+                      teamMemberName: editingDoc.teamMemberName,
+                      basePages: editingDoc.basePages,
+                      sortOrder: editingDoc.sortOrder,
+                    })}
+                    className="px-4 py-2 rounded-lg bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90"
+                  >
+                    Opslaan
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add modal */}
+          {showAddForm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+              <div className="card p-6 max-w-md w-full">
+                <h3 className="text-lg font-medium text-white mb-4">
+                  {newDocType === 'cv' ? 'Nieuw CV' : newDocType === 'intro' ? 'Nieuwe Intro Sectie' : 'Nieuwe Bijlage'} Toevoegen
+                </h3>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const form = e.target as HTMLFormElement
+                    const formData = new FormData(form)
+                    const label = formData.get('label') as string
+                    const name = label.toLowerCase().replace(/\s+/g, '-')
+                    createDocument({
+                      type: newDocType,
+                      name,
+                      label,
+                      description: formData.get('description') as string || undefined,
+                      teamMemberName: newDocType === 'cv' ? label : undefined,
+                      sourceType: 'base',
+                      basePages: formData.get('basePages') as string,
+                      sortOrder: parseInt(formData.get('sortOrder') as string) || 0,
+                      isActive: true,
+                    })
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">
+                      {newDocType === 'cv' ? 'Naam teamlid' : 'Label'}
+                    </label>
+                    <input
+                      type="text"
+                      name="label"
+                      required
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                      placeholder={newDocType === 'cv' ? 'bijv. Jan Janssen' : 'bijv. Over Workx'}
+                    />
+                  </div>
+                  {newDocType !== 'cv' && (
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Beschrijving (optioneel)</label>
+                      <input
+                        type="text"
+                        name="description"
+                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Pagina nummer(s) in base PDF</label>
+                    <input
+                      type="text"
+                      name="basePages"
+                      required
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                      placeholder="bijv. 28 of 28,29"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Paginanummer(s) in pitch-base-nl.pdf
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Volgorde</label>
+                    <input
+                      type="number"
+                      name="sortOrder"
+                      defaultValue={documents.filter(d => d.type === newDocType).length}
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddForm(false)}
+                      className="px-4 py-2 rounded-lg bg-white/10 text-gray-300 hover:bg-white/15"
+                    >
+                      Annuleren
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-lg bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90"
+                    >
+                      Toevoegen
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
         </div>

@@ -785,6 +785,7 @@ model ExpenseDeclaration {
   // Persoonlijke gegevens
   employeeName  String
   bankAccount   String   // IBAN
+  holdingName   String?  // Naam Holding BV (voor partners)
 
   // Status
   status        String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, PAID
@@ -831,4 +832,116 @@ model ExpenseItem {
   declaration   ExpenseDeclaration @relation(fields: [declarationId], references: [id], onDelete: Cascade)
 
   @@index([declarationId])
+}
+
+// ==================== APP SETTINGS ====================
+
+// Configureerbare instellingen voor de app
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique  // bijv. "kilometerRate"
+  value     String            // JSON-encoded value
+  label     String?           // Beschrijving voor UI
+  updatedAt DateTime @updatedAt
+  updatedBy String?           // User ID who last updated
+}
+
+// ==================== WORKXFLOW - DOCUMENT ASSEMBLY ====================
+
+// Workxflow document bundle - dagvaarding met producties
+model WorkxflowBundle {
+  id              String   @id @default(cuid())
+
+  // Metadata
+  title           String   // Naam van de bundel (bijv. "Dagvaarding Janssen")
+  caseNumber      String?  // Zaaknummer
+  clientName      String?  // Cliëntnaam
+
+  // Hoofddocument (dagvaarding)
+  mainDocumentUrl   String?  // URL naar geüploade dagvaarding
+  mainDocumentName  String?  // Originele bestandsnaam
+  mainDocumentType  String?  // pdf, docx
+
+  // Status
+  status          String   @default("DRAFT") // DRAFT, READY, PRINTED
+
+  // Timestamps
+  createdById     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Producties
+  productions     WorkxflowProduction[]
+
+  @@index([createdById])
+  @@index([status])
+}
+
+// Individuele productie in een bundle
+model WorkxflowProduction {
+  id              String   @id @default(cuid())
+  bundleId        String
+
+  // Productie info
+  productionNumber Int     // Productienummer (1, 2, 3, etc.)
+  title           String   // Titel/beschrijving van de productie
+
+  // Document
+  documentUrl     String?  // URL naar geüploade document
+  documentName    String?  // Originele bestandsnaam
+  documentType    String?  // pdf, docx, jpg, png
+  pageCount       Int      @default(1) // Aantal pagina's
+
+  // Volgorde
+  sortOrder       Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bundle          WorkxflowBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@index([bundleId, sortOrder])
+}
+
+// ==================== PITCH DOCUMENTEN ====================
+
+// Pitch documenten - CVs, intro secties, bijlagen voor de pitch maker
+model PitchDocument {
+  id          String   @id @default(cuid())
+
+  // Type document
+  type        String   // "cv" | "intro" | "bijlage"
+
+  // Metadata
+  name        String   // Unieke naam/key (bijv. "bas-den-ridder", "over-workx")
+  label       String   // Display naam (bijv. "Bas den Ridder", "Over Workx")
+  description String?  // Beschrijving voor UI
+
+  // Voor CVs: koppeling aan team member naam
+  teamMemberName String?  // Naam zoals in User tabel
+
+  // PDF bron - ofwel uit base PDF, ofwel eigen upload
+  sourceType  String   @default("base")  // "base" | "upload"
+
+  // Voor base PDF: pagina nummers (1-indexed, comma-separated bijv. "2,3")
+  basePages   String?
+
+  // Voor uploads: URL naar opgeslagen PDF
+  uploadUrl   String?
+  uploadName  String?  // Originele bestandsnaam
+
+  // Volgorde en status
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  // Taal (voor toekomstige meertaligheid)
+  language    String   @default("nl")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?  // User ID who last updated
+
+  @@unique([type, name, language])
+  @@index([type, isActive])
+  @@index([language])
 }

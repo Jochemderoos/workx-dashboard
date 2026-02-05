@@ -1232,7 +1232,7 @@ export default function TeamPage() {
                                 <label className="block text-sm text-gray-400 mb-2">Totaal uren</label>
                                 <input
                                   type="number"
-                                  value={leaveForm.betaaldTotaalUren}
+                                  value={leaveForm.betaaldTotaalUren || ''}
                                   onChange={e => setLeaveForm({ ...leaveForm, betaaldTotaalUren: parseFloat(e.target.value) || 0 })}
                                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
                                 />
@@ -1241,7 +1241,7 @@ export default function TeamPage() {
                                 <label className="block text-sm text-gray-400 mb-2">Opgenomen uren</label>
                                 <input
                                   type="number"
-                                  value={leaveForm.betaaldOpgenomenUren}
+                                  value={leaveForm.betaaldOpgenomenUren || ''}
                                   onChange={e => setLeaveForm({ ...leaveForm, betaaldOpgenomenUren: parseFloat(e.target.value) || 0 })}
                                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500/30"
                                 />
@@ -1266,7 +1266,7 @@ export default function TeamPage() {
                                 <label className="block text-sm text-gray-400 mb-2">Totaal dagen</label>
                                 <input
                                   type="number"
-                                  value={leaveForm.onbetaaldTotaalDagen}
+                                  value={leaveForm.onbetaaldTotaalDagen || ''}
                                   onChange={e => setLeaveForm({ ...leaveForm, onbetaaldTotaalDagen: parseFloat(e.target.value) || 0 })}
                                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30"
                                 />
@@ -1275,7 +1275,7 @@ export default function TeamPage() {
                                 <label className="block text-sm text-gray-400 mb-2">Opgenomen dagen</label>
                                 <input
                                   type="number"
-                                  value={leaveForm.onbetaaldOpgenomenDagen}
+                                  value={leaveForm.onbetaaldOpgenomenDagen || ''}
                                   onChange={e => setLeaveForm({ ...leaveForm, onbetaaldOpgenomenDagen: parseFloat(e.target.value) || 0 })}
                                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-gray-500/30"
                                 />
@@ -1798,7 +1798,7 @@ export default function TeamPage() {
                     <div className="flex gap-3">
                       <input
                         type="number"
-                        value={hourlyRateIncrease}
+                        value={hourlyRateIncrease || ''}
                         onChange={e => setHourlyRateIncrease(parseFloat(e.target.value) || 0)}
                         className="w-32 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-green-500/30"
                       />

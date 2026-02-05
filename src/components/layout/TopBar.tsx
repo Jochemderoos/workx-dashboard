@@ -22,12 +22,13 @@ const navigationItems = [
   { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', keywords: ['kantoor', 'werkplek', 'aanmelden', 'plek'] },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', keywords: ['events', 'afspraken', 'kalender', 'planning'] },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', keywords: ['vakantie', 'vrij', 'verlof', 'afwezig'] },
-  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', keywords: ['taken', 'zaken', 'projecten', 'dossiers'] },
+  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', keywords: ['taken', 'zaken', 'projecten', 'dossiers'], roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financiën', keywords: ['geld', 'salaris', 'budget', 'kosten'] },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus Calculator', keywords: ['bonus', 'berekenen', 'omzet', 'provisie'] },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', keywords: ['ontslag', 'vergoeding', 'berekenen'] },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', keywords: ['reorganisatie', 'ontslag', 'selectie'] },
   { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', keywords: ['pitch', 'pdf', 'document', 'cv', 'team'] },
+  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', keywords: ['dagvaarding', 'producties', 'printen', 'rechtbank', 'document'] },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', keywords: ['collega', 'medewerkers', 'mensen'] },
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', keywords: ['handboek', 'regels', 'hr', 'documenten', 'beleid', 'the way it workx'] },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', keywords: ['idee', 'bug', 'suggestie', 'melding'] },
@@ -40,12 +41,13 @@ const mobileMenuItems = [
   { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof' },
-  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk' },
+  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financiën' },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus' },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitie' },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling' },
   { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker' },
+  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow' },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team' },
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs' },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback' },
@@ -154,20 +156,22 @@ export default function TopBar({ user }: TopBarProps) {
     const query = searchQuery.toLowerCase().trim()
     const results: SearchResult[] = []
 
-    // Search navigation items
-    navigationItems.forEach(item => {
-      const matchesLabel = item.label.toLowerCase().includes(query)
-      const matchesKeywords = item.keywords.some(kw => kw.includes(query))
-      if (matchesLabel || matchesKeywords) {
-        results.push({
-          type: 'navigation',
-          label: item.label,
-          description: 'Pagina',
-          href: item.href,
-          icon: item.icon,
-        })
-      }
-    })
+    // Search navigation items (filter by role)
+    navigationItems
+      .filter(item => !item.roles || item.roles.includes(user.role))
+      .forEach(item => {
+        const matchesLabel = item.label.toLowerCase().includes(query)
+        const matchesKeywords = item.keywords.some(kw => kw.includes(query))
+        if (matchesLabel || matchesKeywords) {
+          results.push({
+            type: 'navigation',
+            label: item.label,
+            description: 'Pagina',
+            href: item.href,
+            icon: item.icon,
+          })
+        }
+      })
 
     // Search team members
     teamMembers.forEach(member => {
@@ -200,22 +204,24 @@ export default function TopBar({ user }: TopBarProps) {
       }
     })
 
-    // Search work items
-    workItems.forEach(item => {
-      if (item.title?.toLowerCase().includes(query) ||
-          item.clientName?.toLowerCase().includes(query)) {
-        results.push({
-          type: 'work',
-          label: item.title,
-          description: item.clientName || 'Zaak',
-          href: '/dashboard/werk',
-          icon: Icons.briefcase,
-        })
-      }
-    })
+    // Search work items (only for PARTNER/ADMIN)
+    if (user.role === 'PARTNER' || user.role === 'ADMIN') {
+      workItems.forEach(item => {
+        if (item.title?.toLowerCase().includes(query) ||
+            item.clientName?.toLowerCase().includes(query)) {
+          results.push({
+            type: 'work',
+            label: item.title,
+            description: item.clientName || 'Zaak',
+            href: '/dashboard/werk',
+            icon: Icons.briefcase,
+          })
+        }
+      })
+    }
 
     return results.slice(0, 8) // Limit to 8 results
-  }, [searchQuery, teamMembers, events, workItems])
+  }, [searchQuery, teamMembers, events, workItems, user.role])
 
   // Reset selected index when results change
   useEffect(() => {
@@ -399,6 +405,26 @@ export default function TopBar({ user }: TopBarProps) {
           </Link>
         )}
 
+        {/* Command Palette trigger */}
+        <button
+          onClick={() => {
+            const event = new KeyboardEvent('keydown', {
+              key: 'k',
+              metaKey: true,
+              ctrlKey: true,
+              bubbles: true,
+            })
+            document.dispatchEvent(event)
+          }}
+          className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-workx-lime/30 hover:bg-white/10 transition-all group"
+          title="Command Palette"
+        >
+          <Icons.command size={14} className="text-white/40 group-hover:text-workx-lime transition-colors" />
+          <kbd className="text-[10px] text-white/30 group-hover:text-white/50 transition-colors">
+            <span className="mr-0.5">⌘</span>K
+          </kbd>
+        </button>
+
         {/* Date pill */}
         <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-workx-lime/30 hover:bg-white/10 transition-all cursor-default group icon-calendar-hover">
           <span className="icon-animated">
@@ -431,7 +457,9 @@ export default function TopBar({ user }: TopBarProps) {
 
               {/* Navigation items */}
               <nav className="p-2 max-h-[60vh] overflow-y-auto">
-                {mobileMenuItems.map((item) => {
+                {mobileMenuItems
+                .filter((item) => !item.roles || item.roles.includes(user.role))
+                .map((item) => {
                   const Icon = item.icon
                   const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
                   const badge = 'badge' in item ? item.badge : null

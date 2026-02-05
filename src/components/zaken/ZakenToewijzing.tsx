@@ -443,7 +443,7 @@ export default function ZakenToewijzing({ isPartner }: ZakenToewijzingProps) {
                   Medewerkers laden...
                 </div>
               ) : form.assignmentMode === 'direct' ? (
-                /* Direct Assignment Dropdown */
+                /* Direct Assignment Dropdown - ALL employees */
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Toewijzen aan *</label>
                   <select
@@ -452,55 +452,97 @@ export default function ZakenToewijzing({ isPartner }: ZakenToewijzingProps) {
                     className="input-field"
                   >
                     <option value="">Selecteer medewerker...</option>
+                    {/* Employees meeting experience requirement */}
                     {employees
                       .filter(e => e.experienceYear && e.experienceYear >= form.minimumExperienceYear)
+                      .sort((a, b) => a.name.localeCompare(b.name))
                       .map((emp) => (
                         <option key={emp.id} value={emp.id} disabled={!emp.isAvailable}>
                           {emp.name} {!emp.isAvailable && `(${emp.unavailableReason})`}
                         </option>
                       ))}
+                    {/* Divider if there are employees below experience requirement */}
+                    {employees.some(e => !e.experienceYear || e.experienceYear < form.minimumExperienceYear) && (
+                      <option disabled>── Onder ervaringseis ──</option>
+                    )}
+                    {/* Employees below experience requirement */}
+                    {employees
+                      .filter(e => !e.experienceYear || e.experienceYear < form.minimumExperienceYear)
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((emp) => (
+                        <option key={emp.id} value={emp.id} disabled={!emp.isAvailable}>
+                          {emp.name} (jr {emp.experienceYear || '?'}) {!emp.isAvailable && `- ${emp.unavailableReason}`}
+                        </option>
+                      ))}
                   </select>
-                  {employees.filter(e => e.experienceYear && e.experienceYear >= form.minimumExperienceYear).length === 0 && (
+                  {employees.length === 0 && (
                     <p className="text-xs text-amber-400 mt-1">
-                      Geen medewerkers met voldoende ervaring (min. jaar {form.minimumExperienceYear})
+                      Geen medewerkers beschikbaar
                     </p>
                   )}
                 </div>
               ) : (
-                /* Exclude from Queue */
+                /* Exclude from Queue - Multi-select dropdown */
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Uitsluiten van queue (optioneel)</label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {employees
-                      .filter(e => e.experienceYear && e.experienceYear >= form.minimumExperienceYear)
-                      .map((emp) => (
-                        <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={form.excludedUserIds.includes(emp.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setForm({ ...form, excludedUserIds: [...form.excludedUserIds, emp.id] })
-                              } else {
-                                setForm({ ...form, excludedUserIds: form.excludedUserIds.filter(id => id !== emp.id) })
-                              }
-                            }}
-                            className="w-4 h-4 rounded border-white/20 bg-white/5 text-workx-lime focus:ring-workx-lime/50"
-                          />
-                          <span className={`text-sm ${!emp.isAvailable ? 'text-gray-500' : 'text-gray-300'}`}>
-                            {emp.name}
-                            {!emp.isAvailable && (
-                              <span className="text-xs text-amber-400 ml-1">({emp.unavailableReason})</span>
-                            )}
-                          </span>
-                        </label>
-                      ))}
-                  </div>
+
+                  {/* Selected exclusions as tags */}
                   {form.excludedUserIds.length > 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      {form.excludedUserIds.length} medewerker(s) uitgesloten
-                    </p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {form.excludedUserIds.map(id => {
+                        const emp = employees.find(e => e.id === id)
+                        return emp ? (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400"
+                          >
+                            {emp.name}
+                            <button
+                              type="button"
+                              onClick={() => setForm({ ...form, excludedUserIds: form.excludedUserIds.filter(uid => uid !== id) })}
+                              className="hover:text-red-300 transition-colors"
+                            >
+                              <Icons.x size={14} />
+                            </button>
+                          </span>
+                        ) : null
+                      })}
+                    </div>
                   )}
+
+                  {/* Dropdown to add exclusions */}
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value && !form.excludedUserIds.includes(e.target.value)) {
+                        setForm({ ...form, excludedUserIds: [...form.excludedUserIds, e.target.value] })
+                      }
+                    }}
+                    className="input-field"
+                  >
+                    <option value="">+ Medewerker uitsluiten...</option>
+                    {/* All employees, sorted by name */}
+                    {employees
+                      .filter(e => !form.excludedUserIds.includes(e.id))
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((emp) => {
+                        const meetsExperience = emp.experienceYear && emp.experienceYear >= form.minimumExperienceYear
+                        return (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name}
+                            {!meetsExperience && ` (jr ${emp.experienceYear || '?'})`}
+                            {!emp.isAvailable && ` - ${emp.unavailableReason}`}
+                          </option>
+                        )
+                      })}
+                  </select>
+
+                  <p className="text-xs text-gray-500 mt-2">
+                    {form.excludedUserIds.length === 0
+                      ? 'Alle medewerkers komen in aanmerking voor de queue'
+                      : `${form.excludedUserIds.length} medewerker(s) uitgesloten van queue`
+                    }
+                  </p>
                 </div>
               )}
             </div>

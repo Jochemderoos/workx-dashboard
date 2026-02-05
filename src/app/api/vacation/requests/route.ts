@@ -3,6 +3,22 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+/**
+ * Parse a date string to a Date object, ensuring we get the correct local date
+ * regardless of timezone. This handles both ISO strings and date-only strings.
+ */
+function parseLocalDate(dateStr: string | Date): Date {
+  if (dateStr instanceof Date) {
+    return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate())
+  }
+  if (dateStr.includes('T')) {
+    const date = new Date(dateStr)
+    return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  }
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -102,9 +118,9 @@ export async function POST(req: NextRequest) {
       targetUserId = requestedUserId
     }
 
-    // Calculate days if not provided
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    // Calculate days if not provided - use parseLocalDate to avoid timezone issues
+    const start = parseLocalDate(startDate)
+    const end = parseLocalDate(endDate)
     const calculatedDays = days || Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
     // Check available days (skip for admin when creating for others)
@@ -135,8 +151,8 @@ export async function POST(req: NextRequest) {
     const request = await prisma.vacationRequest.create({
       data: {
         userId: targetUserId,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: start,
+        endDate: end,
         days: calculatedDays,
         reason,
         status,

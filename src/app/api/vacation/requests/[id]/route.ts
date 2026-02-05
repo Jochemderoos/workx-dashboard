@@ -3,6 +3,22 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+/**
+ * Parse a date string to a Date object, ensuring we get the correct local date
+ * regardless of timezone.
+ */
+function parseLocalDate(dateStr: string | Date): Date {
+  if (dateStr instanceof Date) {
+    return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate())
+  }
+  if (dateStr.includes('T')) {
+    const date = new Date(dateStr)
+    return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  }
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 // PATCH - Approve/reject or edit a vacation request
 export async function PATCH(
   req: NextRequest,
@@ -89,14 +105,14 @@ export async function PATCH(
 
     // Handle date/reason updates
     const updateData: any = {}
-    if (startDate) updateData.startDate = new Date(startDate)
-    if (endDate) updateData.endDate = new Date(endDate)
+    if (startDate) updateData.startDate = parseLocalDate(startDate)
+    if (endDate) updateData.endDate = parseLocalDate(endDate)
     if (reason !== undefined) updateData.reason = reason
 
     // Recalculate days if dates changed
     if (startDate || endDate) {
-      const newStart = startDate ? new Date(startDate) : request.startDate
-      const newEnd = endDate ? new Date(endDate) : request.endDate
+      const newStart = startDate ? parseLocalDate(startDate) : request.startDate
+      const newEnd = endDate ? parseLocalDate(endDate) : request.endDate
       const newDays = Math.ceil((newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
       // If approved, adjust vacation balance

@@ -46,6 +46,7 @@ function WorkxLogoSmall() {
 interface TeamBirthday {
   name: string
   birthDate: string // MM-DD format
+  avatarUrl?: string | null
 }
 
 // Team photos en advocaten lijst komen nu uit @/lib/team-photos
@@ -554,6 +555,8 @@ export default function DashboardHome() {
     isLoading: true,
   })
   const [teamBirthdays, setTeamBirthdays] = useState<TeamBirthday[]>([])
+  const [showBirthdayPopup, setShowBirthdayPopup] = useState(false)
+  const [birthdayAudioRef, setBirthdayAudioRef] = useState<HTMLAudioElement | null>(null)
 
   // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
   const fetchDashboardSummary = async () => {
@@ -600,7 +603,8 @@ export default function DashboardHome() {
               // birthDate is stored as MM-DD string directly
               return {
                 name: u.name,
-                birthDate: u.birthDate // Already in MM-DD format
+                birthDate: u.birthDate, // Already in MM-DD format
+                avatarUrl: u.avatarUrl
               }
             })
           setTeamBirthdays(formattedBirthdays)
@@ -1761,110 +1765,280 @@ export default function DashboardHome() {
         )}
 
         {/* Birthday Card - GROOTS on birthday, normal otherwise */}
-        <Link
-          href="/dashboard/agenda"
-          className={`card p-4 relative overflow-hidden group transition-all ${
-            birthdayToday
-              ? 'ring-4 ring-pink-500/50 bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-yellow-500/20 animate-pulse'
-              : 'hover:border-pink-500/30'
-          }`}
+        <div
+          className="relative"
+          onMouseEnter={() => {
+            if (nextBirthday[0]) {
+              setShowBirthdayPopup(true)
+              // Play happy birthday melody using Web Audio API
+              try {
+                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+                // Happy Birthday melody notes (simplified)
+                const melody = [
+                  { note: 264, duration: 0.25 }, // C
+                  { note: 264, duration: 0.25 }, // C
+                  { note: 297, duration: 0.5 },  // D
+                  { note: 264, duration: 0.5 },  // C
+                  { note: 352, duration: 0.5 },  // F
+                  { note: 330, duration: 1 },    // E
+                  { note: 264, duration: 0.25 }, // C
+                  { note: 264, duration: 0.25 }, // C
+                  { note: 297, duration: 0.5 },  // D
+                  { note: 264, duration: 0.5 },  // C
+                  { note: 396, duration: 0.5 },  // G
+                  { note: 352, duration: 1 },    // F
+                ]
+                let time = audioContext.currentTime
+                melody.forEach(({ note, duration }) => {
+                  const oscillator = audioContext.createOscillator()
+                  const gainNode = audioContext.createGain()
+                  oscillator.connect(gainNode)
+                  gainNode.connect(audioContext.destination)
+                  oscillator.frequency.value = note
+                  oscillator.type = 'sine'
+                  gainNode.gain.setValueAtTime(0.15, time)
+                  gainNode.gain.exponentialRampToValueAtTime(0.01, time + duration * 0.9)
+                  oscillator.start(time)
+                  oscillator.stop(time + duration)
+                  time += duration
+                })
+                setBirthdayAudioRef(audioContext as any)
+              } catch (e) {
+                console.log('Audio not supported')
+              }
+              // Auto-hide after 6 seconds
+              setTimeout(() => {
+                setShowBirthdayPopup(false)
+              }, 6000)
+            }
+          }}
+          onMouseLeave={() => {
+            setShowBirthdayPopup(false)
+            if (birthdayAudioRef) {
+              try {
+                (birthdayAudioRef as any).close?.()
+              } catch (e) {}
+            }
+          }}
         >
-          {/* Glowing orbs */}
-          <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all duration-700 ${
-            birthdayToday ? 'bg-pink-500/30 scale-150' : 'bg-pink-500/5 group-hover:bg-pink-500/20 group-hover:scale-150'
-          }`} />
-          <div className={`absolute bottom-0 left-0 w-32 h-32 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 transition-all duration-700 ${
-            birthdayToday ? 'bg-purple-500/30 scale-125' : 'bg-purple-500/5 group-hover:bg-purple-500/15 group-hover:scale-125'
-          }`} />
-
-          <div className="relative">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform ${
-                  birthdayToday ? 'bg-gradient-to-br from-pink-500/40 to-purple-500/30 scale-125 animate-bounce' : 'bg-gradient-to-br from-pink-500/20 to-purple-500/10 group-hover:scale-110'
-                }`}>
-                  <span className={`${birthdayToday ? 'text-3xl' : 'text-xl group-hover:animate-bounce'}`}>🎂</span>
+          {/* FUN BIRTHDAY POPUP */}
+          {showBirthdayPopup && nextBirthday[0] && (
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 -translate-y-full z-50 pointer-events-none">
+              <div className="relative animate-birthday-popup">
+                {/* Confetti particles */}
+                <div className="absolute inset-0 -inset-x-8 -top-12">
+                  {[...Array(20)].map((_, i) => (
+                    <span
+                      key={i}
+                      className="confetti-particle"
+                      style={{
+                        left: `${10 + Math.random() * 80}%`,
+                        animationDelay: `${Math.random() * 0.5}s`,
+                        backgroundColor: ['#FF1493', '#FFD700', '#00CED1', '#FF6B6B', '#9400D3', '#32CD32'][Math.floor(Math.random() * 6)],
+                      }}
+                    />
+                  ))}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-white">Verjaardagen</p>
-                  <p className="text-xs text-gray-400">
-                    {birthdayToday ? '🎉 VANDAAG JARIG!' : 'Binnenkort jarig'}
-                  </p>
+
+                {/* The head with party hat */}
+                <div className="relative">
+                  {/* Party hat - positioned on head */}
+                  <div className="absolute -top-6 left-1/2 -translate-x-[74%] z-10">
+                    <svg width="50" height="45" viewBox="0 0 50 45" fill="none" className="animate-wobble">
+                      {/* Hat cone */}
+                      <path d="M25 2L42 38H8L25 2Z" fill="url(#partyHat2)" />
+                      {/* Pom pom on top */}
+                      <circle cx="25" cy="4" r="5" fill="#FFD700" />
+                      {/* Hat rim */}
+                      <ellipse cx="25" cy="40" rx="18" ry="4" fill="#FF69B4" />
+                      {/* Decorative dots on hat */}
+                      <circle cx="18" cy="25" r="2" fill="#FFD700" />
+                      <circle cx="25" cy="18" r="2" fill="#00CED1" />
+                      <circle cx="32" cy="28" r="2" fill="#FFD700" />
+                      <circle cx="22" cy="32" r="1.5" fill="#FF69B4" />
+                      <circle cx="30" cy="22" r="1.5" fill="#32CD32" />
+                      <defs>
+                        <linearGradient id="partyHat2" x1="25" y1="2" x2="25" y2="38">
+                          <stop stopColor="#FF1493" />
+                          <stop offset="0.5" stopColor="#9400D3" />
+                          <stop offset="1" stopColor="#4169E1" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+
+                  {/* Profile image as head */}
+                  <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-pink-500 shadow-2xl shadow-pink-500/50 animate-wobble bg-gradient-to-br from-pink-500 to-purple-500">
+                    {getPhotoUrl(nextBirthday[0].name, nextBirthday[0].avatarUrl) ? (
+                      <img
+                        src={getPhotoUrl(nextBirthday[0].name, nextBirthday[0].avatarUrl)!}
+                        alt={nextBirthday[0].name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-4xl">
+                        🎂
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Name banner */}
+                <div className="mt-2 px-4 py-1 bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 rounded-full text-white text-sm font-bold text-center whitespace-nowrap shadow-lg animate-pulse">
+                  🎉 {nextBirthday[0].name.split(' ')[0]}! 🎉
                 </div>
               </div>
-              <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
-            </div>
 
-            {/* Featured birthday - First person */}
-            {nextBirthday[0] && (
-              <div className={`mb-3 p-3 -mx-1 rounded-xl border transition-all ${
-                birthdayToday
-                  ? 'bg-gradient-to-r from-pink-500/30 via-purple-500/20 to-yellow-500/20 border-pink-500/50'
-                  : 'bg-gradient-to-r from-pink-500/15 via-purple-500/10 to-pink-500/5 border-pink-500/20 group-hover:border-pink-500/40 group-hover:from-pink-500/20'
-              }`}>
+              {/* CSS for animations */}
+              <style jsx>{`
+                @keyframes birthday-popup {
+                  0% { transform: translateY(20px) scale(0); opacity: 0; }
+                  50% { transform: translateY(-10px) scale(1.1); }
+                  100% { transform: translateY(0) scale(1); opacity: 1; }
+                }
+                @keyframes wobble {
+                  0%, 100% { transform: rotate(-3deg); }
+                  50% { transform: rotate(3deg); }
+                }
+                @keyframes confetti-fall {
+                  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+                  100% { transform: translateY(120px) rotate(720deg); opacity: 0; }
+                }
+                .animate-birthday-popup {
+                  animation: birthday-popup 0.5s ease-out forwards;
+                }
+                .animate-wobble {
+                  animation: wobble 0.4s ease-in-out infinite;
+                }
+                .confetti-particle {
+                  position: absolute;
+                  width: 8px;
+                  height: 8px;
+                  border-radius: 2px;
+                  animation: confetti-fall 2s ease-out infinite;
+                }
+              `}</style>
+            </div>
+          )}
+
+          <Link
+            href="/dashboard/agenda"
+            className={`card p-4 relative overflow-hidden group transition-all block ${
+              birthdayToday
+                ? 'ring-4 ring-pink-500/50 bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-yellow-500/20 animate-pulse'
+                : 'hover:border-pink-500/30'
+            }`}
+          >
+            {/* Glowing orbs */}
+            <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all duration-700 ${
+              birthdayToday ? 'bg-pink-500/30 scale-150' : 'bg-pink-500/5 group-hover:bg-pink-500/20 group-hover:scale-150'
+            }`} />
+            <div className={`absolute bottom-0 left-0 w-32 h-32 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 transition-all duration-700 ${
+              birthdayToday ? 'bg-purple-500/30 scale-125' : 'bg-purple-500/5 group-hover:bg-purple-500/15 group-hover:scale-125'
+            }`} />
+
+            <div className="relative">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`rounded-xl flex items-center justify-center shadow-lg ${
-                    birthdayToday ? 'w-16 h-16 text-4xl shadow-pink-500/30 animate-bounce' : 'w-12 h-12 text-2xl shadow-pink-500/10'
-                  } bg-gradient-to-br from-pink-500/30 to-purple-500/20`}>
-                    🎉
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform ${
+                    birthdayToday ? 'bg-gradient-to-br from-pink-500/40 to-purple-500/30 scale-125 animate-bounce' : 'bg-gradient-to-br from-pink-500/20 to-purple-500/10 group-hover:scale-110'
+                  }`}>
+                    <span className={`${birthdayToday ? 'text-3xl' : 'text-xl group-hover:animate-bounce'}`}>🎂</span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`font-semibold text-white ${birthdayToday ? 'text-lg' : ''}`}>{nextBirthday[0].name}</span>
-                      {nextBirthday[0].daysUntil === 0 && (
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-pink-500 text-white animate-pulse shadow-lg shadow-pink-500/50">
-                          🥳 VANDAAG JARIG!
-                        </span>
-                      )}
-                      {nextBirthday[0].daysUntil === 1 && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500 text-white">
-                          MORGEN
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-pink-400">
-                        {nextBirthday[0].date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
-                      </span>
-                    </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Verjaardagen</p>
+                    <p className="text-xs text-gray-400">
+                      {birthdayToday ? '🎉 VANDAAG JARIG!' : 'Binnenkort jarig'}
+                    </p>
                   </div>
-                  {!birthdayToday && (
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-pink-400">{nextBirthday[0].daysUntil}</p>
-                      <p className="text-xs text-gray-400">{nextBirthday[0].daysUntil === 1 ? 'dag' : 'dagen'}</p>
-                    </div>
-                  )}
                 </div>
+                <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-pink-400 group-hover:translate-x-1 transition-all" />
               </div>
-            )}
 
-            {/* Other upcoming birthdays */}
-            <div className="space-y-2">
-              {nextBirthday.slice(1).map((person) => (
-                <div
-                  key={person.name}
-                  className="flex items-center justify-between py-1.5 px-2 -mx-1 rounded-lg hover:bg-white/5 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-pink-500/10 flex items-center justify-center text-sm">
-                      🎂
+              {/* Featured birthday - First person */}
+              {nextBirthday[0] && (
+                <div className={`mb-3 p-3 -mx-1 rounded-xl border transition-all ${
+                  birthdayToday
+                    ? 'bg-gradient-to-r from-pink-500/30 via-purple-500/20 to-yellow-500/20 border-pink-500/50'
+                    : 'bg-gradient-to-r from-pink-500/15 via-purple-500/10 to-pink-500/5 border-pink-500/20 group-hover:border-pink-500/40 group-hover:from-pink-500/20'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    {/* Show profile image if available */}
+                    <div className={`rounded-xl flex items-center justify-center shadow-lg overflow-hidden ${
+                      birthdayToday ? 'w-16 h-16 shadow-pink-500/30 animate-bounce' : 'w-12 h-12 shadow-pink-500/10'
+                    } bg-gradient-to-br from-pink-500/30 to-purple-500/20`}>
+                      {getPhotoUrl(nextBirthday[0].name, nextBirthday[0].avatarUrl) ? (
+                        <img
+                          src={getPhotoUrl(nextBirthday[0].name, nextBirthday[0].avatarUrl)!}
+                          alt={nextBirthday[0].name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className={`${birthdayToday ? 'text-4xl' : 'text-2xl'}`}>🎉</span>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-sm text-white/70">{person.name.split(' ')[0]}</span>
-                      <span className="text-xs text-gray-500 ml-2">
-                        {person.date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
-                      </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-semibold text-white ${birthdayToday ? 'text-lg' : ''}`}>{nextBirthday[0].name}</span>
+                        {nextBirthday[0].daysUntil === 0 && (
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-pink-500 text-white animate-pulse shadow-lg shadow-pink-500/50">
+                            🥳 VANDAAG JARIG!
+                          </span>
+                        )}
+                        {nextBirthday[0].daysUntil === 1 && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500 text-white">
+                            MORGEN
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-pink-400">
+                          {nextBirthday[0].date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </span>
+                      </div>
                     </div>
+                    {!birthdayToday && (
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-pink-400">{nextBirthday[0].daysUntil}</p>
+                        <p className="text-xs text-gray-400">{nextBirthday[0].daysUntil === 1 ? 'dag' : 'dagen'}</p>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-xs text-gray-400">
-                    {person.daysUntil}d
-                  </span>
                 </div>
-              ))}
+              )}
+
+              {/* Other upcoming birthdays */}
+              <div className="space-y-2">
+                {nextBirthday.slice(1).map((person) => (
+                  <div
+                    key={person.name}
+                    className="flex items-center justify-between py-1.5 px-2 -mx-1 rounded-lg hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-pink-500/10 flex items-center justify-center text-sm overflow-hidden">
+                        {getPhotoUrl(person.name, person.avatarUrl) ? (
+                          <img src={getPhotoUrl(person.name, person.avatarUrl)!} alt={person.name} className="w-full h-full object-cover" />
+                        ) : (
+                          '🎂'
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-sm text-white/70">{person.name.split(' ')[0]}</span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {person.date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {person.daysUntil}d
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        </div>
       </div>
 
       {/* Bottom section with Widget and Stats */}

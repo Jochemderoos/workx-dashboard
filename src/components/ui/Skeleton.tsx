@@ -8,9 +8,9 @@ function SkeletonBase({ className = '', style }: { className?: string; style?: R
     <div
       className={`relative overflow-hidden bg-white/5 ${className}`}
       style={{
-        background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 100%)',
+        background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(249,255,133,0.06) 50%, rgba(255,255,255,0.03) 75%)',
         backgroundSize: '200% 100%',
-        animation: 'shimmer 1.5s ease-in-out infinite',
+        animation: 'shimmer 2s ease-in-out infinite',
         ...style,
       }}
     />

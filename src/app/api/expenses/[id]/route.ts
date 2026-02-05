@@ -76,7 +76,7 @@ export async function PUT(
     }
 
     const body = await req.json()
-    const { employeeName, bankAccount, items, note, action } = body
+    const { employeeName, bankAccount, items, note, action, holdingName } = body
 
     // Handle manager actions
     if (isManager && action) {
@@ -141,6 +141,7 @@ export async function PUT(
       data: {
         employeeName: employeeName || declaration.employeeName,
         bankAccount: bankAccount || declaration.bankAccount,
+        holdingName: holdingName !== undefined ? (holdingName || null) : declaration.holdingName,
         totalAmount,
         note,
         status: body.submit ? 'SUBMITTED' : declaration.status,

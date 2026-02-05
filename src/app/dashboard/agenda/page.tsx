@@ -105,7 +105,12 @@ export default function AgendaPage() {
         const transformed = data.map((u: any) => ({
           ...u,
           birthDate: u.birthDate
-            ? `${String(new Date(u.birthDate).getMonth() + 1).padStart(2, '0')}-${String(new Date(u.birthDate).getDate()).padStart(2, '0')}`
+            ? (() => {
+                // Parse date string safely to avoid timezone shift
+                // "1985-12-25" should stay Dec 25, not shift to Dec 24 in CET
+                const [year, month, day] = u.birthDate.split('T')[0].split('-').map(Number)
+                return `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+              })()
             : null
         }))
         setTeamBirthdays(transformed)

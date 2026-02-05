@@ -82,7 +82,7 @@ export default function WerkOverzichtPage() {
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
-  const [pageMode, setPageMode] = useState<'zaken' | 'toewijzing' | 'werkdruk' | 'urenoverzicht'>('zaken') // Default to zaken for everyone
+  const [pageMode, setPageMode] = useState<'toewijzing' | 'werkdruk' | 'urenoverzicht'>('toewijzing') // Default to toewijzing (zaken overzicht)
 
   // Monthly hours state
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
@@ -308,7 +308,7 @@ export default function WerkOverzichtPage() {
         const isManager = user.role === 'PARTNER' || user.role === 'ADMIN'
         setCanEditWorkload(isManager)
         // Als manager, default naar werkdruk tab
-        if (isManager && pageMode === 'zaken') {
+        if (isManager && pageMode === 'toewijzing') {
           setPageMode('werkdruk')
         }
       }
@@ -518,24 +518,17 @@ export default function WerkOverzichtPage() {
                 <span>Werkdruk</span>
               </button>
             )}
-            <button
-              onClick={() => setPageMode('zaken')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                pageMode === 'zaken' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icons.briefcase size={14} className="sm:w-4 sm:h-4" />
-              <span>Zaken</span>
-            </button>
-            <button
-              onClick={() => setPageMode('toewijzing')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                pageMode === 'toewijzing' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icons.send size={14} className="sm:w-4 sm:h-4" />
-              <span>Toewijzing</span>
-            </button>
+            {canEditWorkload && (
+              <button
+                onClick={() => setPageMode('toewijzing')}
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  pageMode === 'toewijzing' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icons.briefcase size={14} className="sm:w-4 sm:h-4" />
+                <span>Zaken</span>
+              </button>
+            )}
             {canEditWorkload && (
               <button
                 onClick={() => setPageMode('urenoverzicht')}
@@ -548,7 +541,8 @@ export default function WerkOverzichtPage() {
               </button>
             )}
           </div>
-          {pageMode === 'zaken' && (
+          {/* Nieuw item knop verwijderd - gebruik Toewijzing tab voor nieuwe zaken */}
+          {false && (
             <Popover.Root open={showForm} onOpenChange={(open) => { if (!open) resetForm(); else setShowForm(true) }}>
               <Popover.Trigger asChild>
                 <button className="btn-primary flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2.5 text-xs sm:text-sm">
@@ -743,7 +737,7 @@ export default function WerkOverzichtPage() {
                       {editingItem && (
                         <button
                           type="button"
-                          onClick={() => handleDelete(editingItem.id)}
+                          onClick={() => editingItem && handleDelete(editingItem.id)}
                           className="px-4 py-2.5 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors"
                         >
                           <Icons.trash size={16} />
@@ -1403,8 +1397,8 @@ export default function WerkOverzichtPage() {
         </div>
       )}
 
-      {/* ZAKEN MODE */}
-      {pageMode === 'zaken' && (
+      {/* OUDE ZAKEN MODE VERWIJDERD - nu via ZakenToewijzing */}
+      {false && (
         <>
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1727,9 +1721,18 @@ export default function WerkOverzichtPage() {
         </>
       )}
 
-      {/* TOEWIJZING MODE */}
-      {pageMode === 'toewijzing' && (
+      {/* TOEWIJZING MODE - alleen voor partners/admin */}
+      {pageMode === 'toewijzing' && canEditWorkload && (
         <ZakenToewijzing isPartner={canEditWorkload} />
+      )}
+
+      {/* Melding voor niet-gemachtigde gebruikers */}
+      {!canEditWorkload && (
+        <div className="card p-8 text-center">
+          <Icons.lock className="mx-auto text-gray-600 mb-3" size={40} />
+          <p className="text-gray-400">Deze pagina is alleen toegankelijk voor partners</p>
+          <p className="text-gray-500 text-sm mt-1">Neem contact op met een partner voor werkgerelateerde vragen</p>
+        </div>
       )}
 
     </div>

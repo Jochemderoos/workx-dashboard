@@ -58,8 +58,10 @@ body {
 ::selection { background: rgba(249, 255, 133, 0.3); color: white; }
 
 *:focus-visible {
-  outline: 1px solid var(--workx-lime);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(30, 30, 30, 1),
+    0 0 0 4px rgba(249, 255, 133, 0.5);
 }
 
 /* ==================== PREMIUM DESIGN SYSTEM ==================== */
@@ -70,7 +72,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
   backdrop-filter: blur(10px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
@@ -86,11 +88,12 @@ body {
 }
 
 .card:hover {
-  border-color: rgba(249, 255, 133, 0.15);
-  transform: translateY(-2px);
+  border-color: rgba(249, 255, 133, 0.12);
+  transform: translateY(-3px);
   box-shadow:
-    0 20px 40px -15px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(249, 255, 133, 0.05);
+    0 20px 40px -15px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(249, 255, 133, 0.05),
+    0 0 60px -20px rgba(249, 255, 133, 0.15);
 }
 
 /* Accent card with glow */
@@ -205,7 +208,8 @@ body {
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.97);
+  transition: transform 0.1s ease;
 }
 
 .btn-secondary {
@@ -229,6 +233,11 @@ body {
 
 .btn-secondary:hover::before {
   opacity: 1;
+}
+
+.btn-secondary:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
 }
 
 /* ==================== INPUTS ==================== */
@@ -417,9 +426,14 @@ body {
 
 /* Loading shimmer */
 .shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(249, 255, 133, 0.06) 50%,
+    rgba(255, 255, 255, 0.03) 75%
+  );
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 2s ease-in-out infinite;
 }
 
 /* Stagger children animations */
@@ -3021,4 +3035,73 @@ textarea::-webkit-scrollbar-thumb:hover {
 .card-stack::after {
   transform: translateY(8px) scale(0.96);
   opacity: 0.3;
+}
+
+/* ==================== SILICON VALLEY POLISH ==================== */
+
+/* Gradient glow utility - subtle top accent line */
+.gradient-glow {
+  position: relative;
+}
+
+.gradient-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(249, 255, 133, 0.3),
+    transparent
+  );
+}
+
+/* CSS tooltip with glassmorphism */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  padding: 6px 12px;
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 1000;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Command palette overlay */
+.command-palette-overlay {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.command-palette {
+  background: linear-gradient(135deg, rgba(35, 35, 35, 0.98) 0%, rgba(25, 25, 25, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 100px -20px rgba(249, 255, 133, 0.1);
+  backdrop-filter: blur(20px);
 }

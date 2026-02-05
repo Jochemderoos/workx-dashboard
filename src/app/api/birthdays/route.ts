@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
       select: {
         name: true,
         birthDate: true,
+        avatarUrl: true,
       },
       orderBy: { name: 'asc' }
     })
