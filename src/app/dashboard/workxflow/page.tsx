@@ -410,18 +410,26 @@ export default function WorkxflowPage() {
 
       {/* Desktop app info */}
       {!isElectron && (
-        <div className="card p-4 border-blue-500/30 bg-blue-500/10">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-              <Icons.printer className="text-blue-400" size={20} />
+        <div className="card p-4 border-green-500/30 bg-green-500/10">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-start gap-3 flex-1">
+              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <Icons.printer className="text-green-400" size={20} />
+              </div>
+              <div>
+                <h3 className="font-medium text-white mb-1">Desktop App voor printen</h3>
+                <p className="text-sm text-gray-400">
+                  Voor het printen naar specifieke printer-lades (processtuk op briefpapier, productiesheets op geel papier).
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-medium text-white mb-1">Desktop App voor printen</h3>
-              <p className="text-sm text-gray-400">
-                Voor het printen naar specifieke printer-lades installeer de Workx Desktop app op de kantoor-computers.
-                De installer staat op: <code className="text-blue-300 bg-blue-500/20 px-1 rounded">C:\Users\quiri\workx-dashboard\desktop\dist\</code>
-              </p>
-            </div>
+            <a
+              href="https://github.com/Jochemderoos/workx-dashboard/releases/download/v1.0.0/WorkxDesktop-Setup.exe"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-500 text-white font-medium hover:bg-green-600 transition-colors whitespace-nowrap"
+            >
+              <Icons.download size={18} />
+              Download voor Windows
+            </a>
           </div>
         </div>
       )}
