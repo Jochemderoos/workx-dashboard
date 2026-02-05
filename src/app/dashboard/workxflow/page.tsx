@@ -407,32 +407,6 @@ export default function WorkxflowPage() {
         </button>
       </div>
 
-      {/* Electron notice - show download option when not in desktop app */}
-      {!isElectron && (
-        <div className="card p-4 border-green-500/30 bg-green-500/10">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex items-start gap-3 flex-1">
-              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                <Icons.download className="text-green-400" size={20} />
-              </div>
-              <div>
-                <h3 className="font-medium text-white mb-1">Workx Desktop voor printen</h3>
-                <p className="text-sm text-gray-400">
-                  Voor het printen naar specifieke printer-lades (dagvaarding op briefpapier, productiesheets op geel papier)
-                  installeer de Workx Desktop app.
-                </p>
-              </div>
-            </div>
-            <a
-              href="https://github.com/Jochemderoos/workx-dashboard/releases/latest/download/WorkxDesktop-Setup.exe"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-500 text-white font-medium hover:bg-green-600 transition-colors whitespace-nowrap"
-            >
-              <Icons.download size={18} />
-              Download voor Windows
-            </a>
-          </div>
-        </div>
-      )}
 
       <div className="grid lg:grid-cols-4 gap-6">
         {/* Bundle list */}
