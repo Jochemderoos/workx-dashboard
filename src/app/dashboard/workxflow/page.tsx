@@ -424,7 +424,7 @@ export default function WorkxflowPage() {
               </div>
             </div>
             <a
-              href="https://github.com/Jochemderoos/workx-dashboard/releases/download/v1.0.0/WorkxDesktop-Setup.exe"
+              href="https://github.com/Jochemderoos/workx-dashboard/releases/download/v1.0.0/Workx.Desktop.Setup.1.0.0.exe"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-500 text-white font-medium hover:bg-green-600 transition-colors whitespace-nowrap"
             >
               <Icons.download size={18} />
