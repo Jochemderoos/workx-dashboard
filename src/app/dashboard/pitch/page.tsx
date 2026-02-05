@@ -364,12 +364,14 @@ export default function PitchPage() {
     }
   }
 
-  // Load preview when switching to preview tab
+  // Auto-update preview pages when selections change
   useEffect(() => {
-    if (activeTab === 'preview' && (selectedIntro.size > 0 || selectedTeam.size > 0 || selectedBijlagen.size > 0)) {
+    if (selectedIntro.size > 0 || selectedTeam.size > 0 || selectedBijlagen.size > 0) {
       fetchPagePreview()
+    } else {
+      setPreviewPages([])
     }
-  }, [activeTab, selectedTeam, selectedIntro, selectedBijlagen])
+  }, [selectedTeam, selectedIntro, selectedBijlagen])
 
   // Drag and drop handlers for reordering
   const handleDragStart = (index: number) => {
@@ -1080,116 +1082,66 @@ export default function PitchPage() {
                 Live Preview
               </h2>
 
-              <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
-                {/* Cover page with logo position */}
-                {selectedIntro.has('cover') && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Cover</p>
-                    <div className="relative">
-                      <PitchThumbnail
-                        pageNumber={1}
-                        language={language}
-                        width={140}
-                        label="Cover"
-                        type="intro"
-                        showLogo={!!clientLogo}
-                        logoPosition={logoPosition}
-                        logoSize={logoSize}
-                      />
-                      {/* Logo position overlay on cover */}
-                      {clientLogo && (
-                        <div
-                          className="absolute border-2 border-dashed border-orange-400 bg-orange-400/30 rounded flex items-center justify-center pointer-events-none"
-                          style={{
-                            left: `${(logoPosition.x / 210) * 100}%`,
-                            top: `${(logoPosition.y / 148) * 100}%`,
-                            width: `${(50 * logoSize / 100 / 210) * 100}%`,
-                            height: `${(30 * logoSize / 100 / 148) * 100}%`,
-                          }}
-                        >
-                          <img src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain opacity-80" />
+              <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
+                {/* Draggable page previews */}
+                {previewPages.length > 0 ? (
+                  <>
+                    <p className="text-[10px] text-gray-500 mb-2">Sleep om volgorde te wijzigen</p>
+                    {previewPages.map((page, index) => (
+                      <div
+                        key={`${page.originalPage}-${index}`}
+                        draggable
+                        onDragStart={() => handleDragStart(index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                        className={`relative group cursor-grab active:cursor-grabbing transition-all ${
+                          draggedIndex === index ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        {/* Page number badge */}
+                        <div className="absolute -left-1 -top-1 z-10 w-5 h-5 rounded-full bg-workx-dark border border-white/20 flex items-center justify-center">
+                          <span className="text-[9px] text-white font-medium">{index + 1}</span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
-                {/* Intro sections preview (excluding cover) */}
-                {pitchInfo?.introSections.filter(s => selectedIntro.has(s.key) && s.key !== 'cover').map((section) => (
-                  <div key={section.key} className="space-y-1">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">{section.label}</p>
-                    <div className="space-y-2">
-                      {section.pages.map((pageNum, idx) => (
-                        <PitchThumbnail
-                          key={`${section.key}-${pageNum}`}
-                          pageNumber={pageNum}
-                          language={language}
-                          width={140}
-                          label={section.pages.length > 1 ? `${section.label} (${idx + 1}/${section.pages.length})` : section.label}
-                          type="intro"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                        {/* Delete button */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removePage(index); }}
+                          className="absolute -right-1 -top-1 z-10 w-5 h-5 rounded-full bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-500"
+                        >
+                          <Icons.x size={10} />
+                        </button>
 
-                {/* Team CVs preview */}
-                {Array.from(selectedTeam).length > 0 && (
-                  <div className="space-y-1 pt-2 border-t border-white/10">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Team CV's ({selectedTeam.size})</p>
-                    <div className="space-y-2">
-                      {Array.from(selectedTeam).map((name) => {
-                        const cvPage = (pitchInfo as any)?.teamMembers?.indexOf(name) !== -1
-                          ? 13 + (pitchInfo?.teamMembers?.indexOf(name) || 0)
-                          : undefined
-                        return cvPage ? (
+                        {/* Thumbnail with logo overlay for cover */}
+                        <div className="relative">
                           <PitchThumbnail
-                            key={name}
-                            pageNumber={cvPage}
+                            pageNumber={page.originalPage}
                             language={language}
                             width={140}
-                            label={name}
-                            type="cv"
+                            label={page.label}
+                            type={page.type}
+                            showLogo={!!clientLogo && page.originalPage === 1}
+                            logoPosition={logoPosition}
+                            logoSize={logoSize}
                           />
-                        ) : (
-                          <div
-                            key={name}
-                            className="relative rounded-lg overflow-hidden shadow-md bg-green-900/50 border border-green-500/30"
-                            style={{ width: 140, height: 99 }}
-                          >
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <p className="text-xs text-white/70 text-center px-1">{name}</p>
+                          {/* Logo position overlay on cover */}
+                          {clientLogo && page.originalPage === 1 && (
+                            <div
+                              className="absolute border-2 border-dashed border-orange-400 bg-orange-400/30 rounded flex items-center justify-center pointer-events-none"
+                              style={{
+                                left: `${(logoPosition.x / 210) * 100}%`,
+                                top: `${(logoPosition.y / 148) * 100}%`,
+                                width: `${(50 * logoSize / 100 / 210) * 100}%`,
+                                height: `${(30 * logoSize / 100 / 148) * 100}%`,
+                              }}
+                            >
+                              <img src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain opacity-80" />
                             </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Bijlagen preview */}
-                {(pitchInfo?.bijlagenSections?.filter(s => selectedBijlagen.has(s.key))?.length ?? 0) > 0 && (
-                  <div className="space-y-1 pt-2 border-t border-white/10">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Bijlagen</p>
-                    {pitchInfo?.bijlagenSections.filter(s => selectedBijlagen.has(s.key)).map((section) => (
-                      <div key={section.key} className="space-y-2">
-                        {section.pages.map((pageNum, idx) => (
-                          <PitchThumbnail
-                            key={`${section.key}-${pageNum}`}
-                            pageNumber={pageNum}
-                            language={language}
-                            width={140}
-                            label={section.pages.length > 1 ? `${section.label} ${idx + 1}` : section.label}
-                            type="bijlage"
-                          />
-                        ))}
+                          )}
+                        </div>
                       </div>
                     ))}
-                  </div>
-                )}
-
-                {/* Empty state */}
-                {selectedIntro.size === 0 && selectedTeam.size === 0 && selectedBijlagen.size === 0 && (
+                  </>
+                ) : (
                   <div className="text-center py-8 border-2 border-dashed border-white/10 rounded-lg">
                     <Icons.eye className="mx-auto mb-2 text-gray-600" size={24} />
                     <p className="text-xs text-gray-500">Selecteer onderdelen<br />om preview te zien</p>
