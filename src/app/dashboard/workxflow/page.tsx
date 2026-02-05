@@ -761,50 +761,52 @@ export default function WorkxflowPage() {
 
         {/* Live Preview sidebar */}
         <div className="lg:col-span-1">
-          <div className="card p-4 sticky top-4 max-h-[calc(100vh-120px)] overflow-y-auto">
+          <div className="card p-4">
             <h2 className="font-medium text-white mb-4 flex items-center gap-2">
               <Icons.eye size={16} className="text-workx-lime" />
               Live Preview
             </h2>
 
             {activeBundle ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {/* Main document (processtuk) with logo preview */}
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Processtuk</p>
                   {activeBundle.mainDocumentUrl ? (
                     <div className="relative bg-white rounded-lg overflow-hidden shadow-lg" style={{ aspectRatio: '210/297' }}>
-                      {/* Workx logo overlay (top-left) */}
+                      {/* Workx logo overlay (top-left) - yellow style */}
                       <div className="absolute top-2 left-2 z-10">
-                        <div className="bg-[#3d3d3d] rounded px-1.5 py-0.5 flex items-center gap-1">
-                          <div className="w-3 h-3 bg-workx-lime" style={{ clipPath: 'polygon(0 0, 100% 0, 50% 100%, 0 100%)' }} />
-                          <span className="text-[6px] text-white italic font-medium">Workx</span>
-                        </div>
-                      </div>
-                      {/* PDF thumbnail */}
-                      {activeBundle.mainDocumentType === 'pdf' ? (
-                        <iframe
-                          src={activeBundle.mainDocumentUrl}
-                          className="w-full h-full border-0 pointer-events-none"
-                          title="Processtuk preview"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <div className="text-center">
-                            <Icons.file className="mx-auto text-gray-400" size={24} />
-                            <p className="text-[8px] text-gray-500 mt-1">{activeBundle.mainDocumentName}</p>
+                        <div className="rounded overflow-hidden" style={{ background: '#f9ff85' }}>
+                          <div className="px-1.5 py-1">
+                            <p className="text-[8px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
+                            <p className="text-[4px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
                           </div>
                         </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-500/80 to-transparent p-1">
-                        <p className="text-[8px] text-white truncate">{activeBundle.mainDocumentName}</p>
+                      </div>
+                      {/* Document preview representation */}
+                      <div className="w-full h-full bg-white flex flex-col p-3 pt-10">
+                        <div className="flex-1 space-y-2">
+                          <div className="h-2 bg-gray-200 rounded w-3/4"></div>
+                          <div className="h-2 bg-gray-200 rounded w-full"></div>
+                          <div className="h-2 bg-gray-200 rounded w-5/6"></div>
+                          <div className="h-2 bg-gray-200 rounded w-full"></div>
+                          <div className="h-2 bg-gray-100 rounded w-2/3"></div>
+                          <div className="h-2 bg-gray-200 rounded w-full mt-3"></div>
+                          <div className="h-2 bg-gray-200 rounded w-4/5"></div>
+                          <div className="h-2 bg-gray-200 rounded w-full"></div>
+                        </div>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 to-blue-600/80 p-2">
+                        <p className="text-[9px] text-white truncate font-medium">{activeBundle.mainDocumentName}</p>
+                        <p className="text-[7px] text-blue-200">Lade 1 • Briefpapier met logo</p>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-white/5 rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center" style={{ aspectRatio: '210/297' }}>
-                      <div className="text-center p-2">
-                        <Icons.upload className="mx-auto text-gray-600" size={20} />
-                        <p className="text-[9px] text-gray-500 mt-1">Upload processtuk</p>
+                    <div className="bg-white/5 rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center p-6" style={{ aspectRatio: '210/297' }}>
+                      <div className="text-center">
+                        <Icons.upload className="mx-auto text-gray-600 mb-2" size={24} />
+                        <p className="text-xs text-gray-500">Upload processtuk</p>
+                        <p className="text-[9px] text-gray-600 mt-1">PDF of Word document</p>
                       </div>
                     </div>
                   )}
@@ -815,73 +817,73 @@ export default function WorkxflowPage() {
                   activeBundle.productions
                     .sort((a, b) => a.sortOrder - b.sortOrder)
                     .map((production) => (
-                      <div key={production.id} className="space-y-2">
+                      <div key={production.id} className="space-y-2 pt-2 border-t border-white/10">
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">
                           Productie {production.productionNumber}
                         </p>
 
-                        {/* Production sheet preview (yellow page) */}
+                        {/* Production sheet preview (yellow page with correct logo) */}
                         <div
                           className="relative rounded-lg overflow-hidden shadow-lg"
                           style={{
                             aspectRatio: '210/297',
-                            background: 'linear-gradient(135deg, #f9ff85 0%, #e8ef70 100%)'
+                            background: '#f9ff85'
                           }}
                         >
-                          {/* Workx logo (top-left) */}
+                          {/* Workx logo (top-left) - smaller inset version on yellow */}
                           <div className="absolute top-2 left-2">
-                            <div className="bg-[#3d3d3d] rounded px-1.5 py-0.5 flex items-center gap-1">
-                              <div className="w-3 h-3 bg-workx-lime" style={{ clipPath: 'polygon(0 0, 100% 0, 50% 100%, 0 100%)' }} />
-                              <span className="text-[6px] text-white italic font-medium">Workx</span>
+                            <div className="rounded overflow-hidden border border-[#1e1e1e]/20" style={{ background: '#f9ff85' }}>
+                              <div className="px-1.5 py-1">
+                                <p className="text-[8px] font-normal text-[#1e1e1e]" style={{ fontFamily: 'system-ui' }}>Workx</p>
+                                <p className="text-[4px] uppercase tracking-wider text-[#1e1e1e]" style={{ letterSpacing: '1px' }}>ADVOCATEN</p>
+                              </div>
                             </div>
                           </div>
                           {/* Centered production text */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <p className="text-[#1e1e1e] font-bold text-sm tracking-wide">
+                            <p className="text-[#1e1e1e] font-bold text-base tracking-wide">
                               PRODUCTIE {production.productionNumber}
                             </p>
-                            <p className="text-[#1e1e1e]/70 text-[8px] mt-1 px-2 text-center truncate max-w-full">
+                            <p className="text-[#1e1e1e]/60 text-[9px] mt-2 px-4 text-center line-clamp-2">
                               {production.title}
                             </p>
                           </div>
                           {/* Yellow indicator */}
-                          <div className="absolute bottom-0 left-0 right-0 bg-yellow-600/30 p-1">
-                            <p className="text-[7px] text-yellow-900 text-center">Lade 2 • Geel papier</p>
+                          <div className="absolute bottom-0 left-0 right-0 bg-yellow-600/40 p-1.5">
+                            <p className="text-[8px] text-yellow-900 text-center font-medium">Lade 2 • Geel papier met logo</p>
                           </div>
                         </div>
 
                         {/* Production document thumbnail */}
                         {production.documentUrl ? (
-                          <div className="relative bg-white rounded-lg overflow-hidden shadow-md ml-4" style={{ aspectRatio: '210/297' }}>
-                            {production.documentType === 'pdf' ? (
-                              <iframe
-                                src={production.documentUrl}
-                                className="w-full h-full border-0 pointer-events-none"
-                                title={`Productie ${production.productionNumber} preview`}
-                              />
-                            ) : production.documentType === 'image' ? (
+                          <div className="relative bg-white rounded-lg overflow-hidden shadow-md" style={{ aspectRatio: '210/297' }}>
+                            {production.documentType === 'image' ? (
                               <img
                                 src={production.documentUrl}
                                 alt={production.title}
-                                className="w-full h-full object-contain bg-gray-100"
+                                className="w-full h-full object-contain bg-gray-50"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                <div className="text-center">
-                                  <Icons.file className="mx-auto text-gray-400" size={20} />
-                                  <p className="text-[7px] text-gray-500 mt-1">{production.documentName}</p>
+                              <div className="w-full h-full bg-white flex flex-col p-3">
+                                <div className="flex-1 space-y-2">
+                                  <div className="h-2 bg-gray-200 rounded w-2/3"></div>
+                                  <div className="h-2 bg-gray-200 rounded w-full"></div>
+                                  <div className="h-2 bg-gray-200 rounded w-4/5"></div>
+                                  <div className="h-2 bg-gray-100 rounded w-full"></div>
+                                  <div className="h-2 bg-gray-200 rounded w-3/4"></div>
                                 </div>
                               </div>
                             )}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-800/80 to-transparent p-1">
-                              <p className="text-[7px] text-white truncate">{production.documentName || production.title}</p>
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-700 to-gray-700/80 p-1.5">
+                              <p className="text-[8px] text-white truncate font-medium">{production.documentName || production.title}</p>
+                              <p className="text-[7px] text-gray-300">Lade 1 • Blanco papier</p>
                             </div>
                           </div>
                         ) : (
-                          <div className="bg-white/5 rounded-lg border-2 border-dashed border-white/10 flex items-center justify-center ml-4" style={{ aspectRatio: '210/297' }}>
-                            <div className="text-center p-2">
-                              <Icons.file className="mx-auto text-gray-600" size={16} />
-                              <p className="text-[8px] text-gray-500 mt-1">Geen bijlage</p>
+                          <div className="bg-white/5 rounded-lg border-2 border-dashed border-white/10 flex items-center justify-center p-4" style={{ aspectRatio: '210/297' }}>
+                            <div className="text-center">
+                              <Icons.file className="mx-auto text-gray-600 mb-1" size={20} />
+                              <p className="text-[9px] text-gray-500">Geen bijlage</p>
                             </div>
                           </div>
                         )}
@@ -889,26 +891,24 @@ export default function WorkxflowPage() {
                     ))
                 ) : (
                   <div className="text-center py-6 border-2 border-dashed border-white/10 rounded-lg">
-                    <Icons.layers className="mx-auto text-gray-600" size={24} />
-                    <p className="text-xs text-gray-500 mt-2">Nog geen producties</p>
-                    <p className="text-[10px] text-gray-600">Upload producties om preview te zien</p>
+                    <Icons.layers className="mx-auto text-gray-600 mb-2" size={28} />
+                    <p className="text-sm text-gray-500">Nog geen producties</p>
+                    <p className="text-[10px] text-gray-600 mt-1">Upload producties om preview te zien</p>
                   </div>
                 )}
 
                 {/* Summary */}
-                <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="pt-3 border-t border-white/10">
                   <div className="flex justify-between text-xs text-gray-400">
-                    <span>Totaal pagina's:</span>
+                    <span>Totaal documenten:</span>
                     <span className="text-white font-medium">
                       {(activeBundle.mainDocumentUrl ? 1 : 0) +
-                       activeBundle.productions.length * 2}
-                      <span className="text-gray-500 font-normal ml-1">
-                        (geschat)
-                      </span>
+                       activeBundle.productions.length +
+                       activeBundle.productions.filter(p => p.documentUrl).length}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>Gele vellen:</span>
+                    <span>Gele productievellen:</span>
                     <span className="text-yellow-400 font-medium">
                       {activeBundle.productions.length}
                     </span>
