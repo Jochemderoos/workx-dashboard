@@ -10,6 +10,9 @@ import { formatDateForAPI, parseDateFromAPI } from '@/lib/date-utils'
 import toast from 'react-hot-toast'
 import SpotlightCard from '@/components/ui/SpotlightCard'
 import AnimatedNumber from '@/components/ui/AnimatedNumber'
+import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
+import MagneticButton from '@/components/ui/MagneticButton'
+import Sparkline from '@/components/ui/Sparkline'
 
 // Logo Component - uses actual Workx logo
 function WorkxLogoSmall() {
@@ -1446,7 +1449,7 @@ export default function DashboardHome() {
 
           <div className="hidden lg:flex items-start gap-8">
             {/* Weather Widget */}
-            <div className="text-center bg-white/5 rounded-xl p-4 min-w-[120px]">
+            <div className="text-center liquid-glass-sm p-4 min-w-[120px]">
               {weather.isLoading ? (
                 <div className="animate-pulse">
                   <div className="w-12 h-12 bg-white/10 rounded-full mx-auto mb-2" />
@@ -1493,9 +1496,9 @@ export default function DashboardHome() {
       </div>
 
       {/* Quick Links Grid + Appjeplekje (Desktop) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <ScrollReveal direction="up" distance={40} duration={0.5} staggerChildren={0.08} className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Quick Links - Takes 3 columns on desktop */}
-        <div className="lg:col-span-3">
+        <ScrollRevealItem className="lg:col-span-3">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-white">Snelle toegang</h2>
             <span className="text-xs text-gray-500">{quickLinks.length} tools</span>
@@ -1524,10 +1527,10 @@ export default function DashboardHome() {
             </SpotlightCard>
           ))}
           </div>
-        </div>
+        </ScrollRevealItem>
 
         {/* Desktop Appjeplekje Widget - Only visible on desktop, now 2 columns wide */}
-        <div className="hidden lg:block lg:col-span-2">
+        <ScrollRevealItem className="hidden lg:block lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-white">Kantoor</h2>
           </div>
@@ -1539,8 +1542,8 @@ export default function DashboardHome() {
             onToggleToday={toggleOfficeAttendance}
             onToggleTomorrow={toggleTomorrowAttendance}
           />
-        </div>
-      </div>
+        </ScrollRevealItem>
+      </ScrollReveal>
 
       {/* NEWSLETTER WIDGETS */}
       {/* Employee reminder widget - shown when user has PENDING assignments */}
@@ -2457,8 +2460,9 @@ export default function DashboardHome() {
       </div>
 
       {/* Bottom section with Widget and Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <ScrollReveal direction="up" distance={35} duration={0.5} staggerChildren={0.1} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Dynamic Widget based on role */}
+        <ScrollRevealItem>
         {isAdmin ? (
           /* Werkdruk Widget for Partners/Hanna */
           <SpotlightCard as={Link} href="/dashboard/werk" className="card p-5 overflow-hidden group hover:border-workx-lime/30 transition-all" maxTilt={8}>
@@ -2519,12 +2523,14 @@ export default function DashboardHome() {
             </div>
           </SpotlightCard>
         )}
+        </ScrollRevealItem>
 
         {/* Stats - Right side - All clickable */}
         {[
-          { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Open zaken', numValue: workItems.length, color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover' },
-          { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Events deze week', numValue: events.length, color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover' },
+          { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Open zaken', numValue: workItems.length, color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover', sparkData: [3, 5, 4, 7, 6, 8, 5, 9, 7, 6] },
+          { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Events deze week', numValue: events.length, color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover', sparkData: [2, 4, 3, 5, 7, 4, 6, 3, 5, 4] },
         ].map((stat, index) => (
+          <ScrollRevealItem key={stat.label}>
           <SpotlightCard
             key={stat.label}
             as={Link}
@@ -2539,19 +2545,32 @@ export default function DashboardHome() {
                 <stat.icon className={stat.color} size={18} />
               </div>
             </div>
-            <div className="relative text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">
-              <AnimatedNumber value={stat.numValue} stiffness={60} damping={15} />
+            <div className="relative flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">
+                  <AnimatedNumber value={stat.numValue} stiffness={60} damping={15} />
+                </div>
+                <p className="text-sm text-gray-400">{stat.label}</p>
+              </div>
+              <Sparkline
+                data={stat.sparkData}
+                width={80}
+                height={32}
+                color={stat.color === 'text-blue-400' ? '#60a5fa' : '#c084fc'}
+                strokeWidth={1.5}
+                duration={1.2}
+              />
             </div>
-            <p className="relative text-sm text-gray-400">{stat.label}</p>
           </SpotlightCard>
+          </ScrollRevealItem>
         ))}
-      </div>
+      </ScrollReveal>
 
       {/* Quick Actions */}
-      <div>
-        <div className="card p-5 relative overflow-hidden">
+      <ScrollReveal direction="up" distance={30} duration={0.5}>
+        <div className="card p-5 relative overflow-hidden liquid-glass">
           <div className="absolute top-0 right-0 w-40 h-40 bg-workx-lime/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="relative">
+          <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
                 <Icons.zap className="text-workx-lime" size={18} />
@@ -2568,22 +2587,24 @@ export default function DashboardHome() {
                 { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Event toevoegen', color: 'text-blue-400', bg: 'bg-blue-500/10 hover:bg-blue-500/20' },
                 { href: '/dashboard/chat', icon: Icons.chat, label: 'Chat openen', color: 'text-green-400', bg: 'bg-green-500/10 hover:bg-green-500/20' },
               ].map((action) => (
-                <Link
+                <MagneticButton
                   key={action.label}
+                  as={Link}
                   href={action.href}
                   className={`flex items-center gap-3 p-3 rounded-xl ${action.bg} transition-all group`}
+                  strength={0.25}
+                  radius={120}
                 >
                   <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <action.icon size={16} className={action.color} />
                   </div>
                   <span className="text-sm text-white/80 group-hover:text-white transition-colors">{action.label}</span>
-                </Link>
+                </MagneticButton>
               ))}
             </div>
           </div>
         </div>
-
-      </div>
+      </ScrollReveal>
     </div>
   )
 }
