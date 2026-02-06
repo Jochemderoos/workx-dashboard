@@ -23,13 +23,27 @@ interface PDFOptions {
 let cachedLogoDataUrl: string | null = null
 
 /**
- * Load the Workx logo image and convert to base64 data URL
- * This is cached for performance
+ * Load the Workx logo as a high-resolution PNG data URL.
+ * Renders the vector logo PDF (workx-logo.pdf) via pdfjs at 4x scale for crisp print quality.
+ * Falls back to the low-res PNG if PDF rendering fails.
+ * Result is cached for performance.
  */
 export async function loadWorkxLogo(): Promise<string | null> {
   if (cachedLogoDataUrl) return cachedLogoDataUrl
 
   try {
+    // Try rendering the vector PDF at high resolution via pdfjs
+    const hiRes = await renderLogoPdfToCanvas()
+    if (hiRes) {
+      cachedLogoDataUrl = hiRes
+      return cachedLogoDataUrl
+    }
+  } catch (error) {
+    console.error('Error rendering logo PDF:', error)
+  }
+
+  try {
+    // Fallback: use the low-res PNG
     const response = await fetch('/workx-logo.png')
     if (!response.ok) return null
 
@@ -45,6 +59,47 @@ export async function loadWorkxLogo(): Promise<string | null> {
     })
   } catch (error) {
     console.error('Error loading Workx logo:', error)
+    return null
+  }
+}
+
+/**
+ * Render the logo PDF to a high-resolution canvas using pdfjs-dist.
+ * Returns a PNG data URL at 4x scale (~300 DPI print quality).
+ */
+async function renderLogoPdfToCanvas(): Promise<string | null> {
+  try {
+    const pdfjsLib = await import('pdfjs-dist')
+
+    // Set worker source
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+    }
+
+    const response = await fetch('/workx-logo.pdf')
+    if (!response.ok) return null
+
+    const arrayBuffer = await response.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    const page = await pdf.getPage(1)
+
+    // Render at 4x scale for high-resolution output
+    const scale = 4
+    const viewport = page.getViewport({ scale })
+
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+
+    // White background (PDF may have transparency)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    await page.render({ canvas, canvasContext: ctx, viewport }).promise
+    return canvas.toDataURL('image/png')
+  } catch {
     return null
   }
 }
