@@ -136,6 +136,7 @@ export default function VakantiesPage() {
   const [isSubmittingPeriod, setIsSubmittingPeriod] = useState(false)
   const [showPeriodsPopover, setShowPeriodsPopover] = useState<string | null>(null) // userId for which popover is open
   const [showWorkdaysCalculator, setShowWorkdaysCalculator] = useState(false)
+  const [showPeriodModal, setShowPeriodModal] = useState(false) // standalone period edit modal
 
   // Balance editing state
   const [editingBalance, setEditingBalance] = useState<string | null>(null)
@@ -277,6 +278,8 @@ export default function VakantiesPage() {
     setReason(vacation.reason || '')
     setEditingId(vacation.id)
     setShowForm(true)
+    // Scroll to top so the form popover is visible
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // Balance management
@@ -1670,14 +1673,34 @@ export default function VakantiesPage() {
                         {myVacationPeriods.length > 0 ? (
                           <div className="space-y-3">
                             {myVacationPeriods.map((period) => (
-                              <div key={period.id} className="p-3 bg-white/5 rounded-xl border border-white/10">
+                              <div key={period.id} className="p-3 bg-white/5 rounded-xl border border-white/10 group/period">
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-white font-medium">
                                     {new Date(period.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                                     {' - '}
                                     {new Date(period.endDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
                                   </span>
-                                  <span className="text-workx-lime font-semibold">{period.days}d</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-workx-lime font-semibold mr-1">{period.days}d</span>
+                                    <button
+                                      onClick={() => {
+                                        setEditingPeriod(period)
+                                        setPeriodFormUserId(period.userId)
+                                        setShowPeriodModal(true)
+                                      }}
+                                      className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                      title="Bewerken"
+                                    >
+                                      <Icons.edit size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePeriod(period.id)}
+                                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                      title="Verwijderen"
+                                    >
+                                      <Icons.trash size={14} />
+                                    </button>
+                                  </div>
                                 </div>
                                 {period.note && (
                                   <p className="text-sm text-gray-400">{period.note}</p>
@@ -2118,16 +2141,16 @@ export default function VakantiesPage() {
                             </div>
                           </div>
                           {canEdit && (
-                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-2 flex-shrink-0">
                               <button
                                 onClick={() => handleEdit(v)}
-                                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                                className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                               >
                                 <Icons.edit size={16} />
                               </button>
                               <button
                                 onClick={() => handleDelete(v.id)}
-                                className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                               >
                                 <Icons.trash size={16} />
                               </button>
@@ -2141,6 +2164,53 @@ export default function VakantiesPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Standalone Period Edit Modal */}
+      {showPeriodModal && editingPeriod && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => { setShowPeriodModal(false); setEditingPeriod(null) }}
+        >
+          <div
+            className="w-full max-w-md bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[calc(100vh-32px)] overflow-y-auto animate-modal-in"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.edit className="text-workx-lime" size={18} />
+                </div>
+                <h3 className="font-semibold text-white">Periode bewerken</h3>
+              </div>
+              <button
+                onClick={() => { setShowPeriodModal(false); setEditingPeriod(null) }}
+                className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Icons.x size={18} />
+              </button>
+            </div>
+            <div className="p-5">
+              <VacationPeriodForm
+                initialData={{
+                  startDate: new Date(editingPeriod.startDate),
+                  endDate: new Date(editingPeriod.endDate),
+                  werkdagen: parseWerkdagen(editingPeriod.werkdagen),
+                  note: editingPeriod.note || '',
+                }}
+                onSubmit={async (data) => {
+                  await handleSubmitPeriod(data)
+                  setShowPeriodModal(false)
+                  // Refresh myVacationPeriods
+                  fetchData()
+                }}
+                onCancel={() => { setShowPeriodModal(false); setEditingPeriod(null) }}
+                isSubmitting={isSubmittingPeriod}
+                submitLabel="Bijwerken"
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Day Detail Modal */}
