@@ -308,6 +308,10 @@ export default function WerkOverzichtPage() {
         const user = await res.json()
         const isManager = user.role === 'PARTNER' || user.role === 'ADMIN'
         setCanEditWorkload(isManager)
+        // Partners en Admin zien werkdruk als default
+        if (isManager) {
+          setPageMode('werkdruk')
+        }
       }
     } catch (error) {
       console.error('Kon gebruiker niet laden')

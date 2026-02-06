@@ -395,7 +395,7 @@ export default function AppjeplekjePage() {
                   day.date === selectedDate
                     ? 'bg-workx-lime/20 border-2 border-workx-lime/50 ring-2 ring-workx-lime/20'
                     : isSelfInWeekDay
-                      ? 'bg-workx-lime/10 border-2 border-workx-lime/40 shadow-[0_0_15px_rgba(249,255,133,0.15)]'
+                      ? 'bg-emerald-500/10 border-2 border-emerald-400/50 shadow-[0_0_15px_rgba(52,211,153,0.2)]'
                       : day.isToday
                         ? 'bg-white/10 border-2 border-workx-lime/40'
                         : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
@@ -421,20 +421,20 @@ export default function AppjeplekjePage() {
                       const firstName = attendee.name.split(' ')[0]
                       const isSelf = attendanceData?.currentUserId && attendee.userId === attendanceData.currentUserId
                       return (
-                        <div key={attendee.id} className={`flex items-center gap-2 rounded-lg px-1.5 py-1 -mx-1.5 transition-all ${isSelf ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''}`}>
+                        <div key={attendee.id} className={`flex items-center gap-2 rounded-lg px-1.5 py-1 -mx-1.5 transition-all ${isSelf ? 'bg-emerald-500/10 ring-1 ring-emerald-400/30' : ''}`}>
                           {photoUrl ? (
                             <img
                               src={photoUrl}
                               alt={attendee.name}
-                              className={`w-7 h-7 rounded-full object-cover flex-shrink-0 ${isSelf ? 'ring-2 ring-workx-lime/50 shadow-[0_0_6px_rgba(249,255,133,0.3)]' : ''}`}
+                              className={`w-7 h-7 rounded-full object-cover flex-shrink-0 ${isSelf ? 'ring-2 ring-emerald-400/60 shadow-[0_0_6px_rgba(52,211,153,0.3)]' : ''}`}
                             />
                           ) : (
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${isSelf ? 'bg-workx-lime/30 text-workx-lime ring-2 ring-workx-lime/50' : 'bg-white/20 text-white/80'}`}>
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${isSelf ? 'bg-emerald-500/30 text-emerald-400 ring-2 ring-emerald-400/50' : 'bg-white/20 text-white/80'}`}>
                               {attendee.name.charAt(0)}
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <span className={`text-sm truncate block ${isSelf ? 'text-workx-lime font-medium' : 'text-white/90'}`}>{firstName}{isSelf ? ' (jij)' : ''}</span>
+                            <span className={`text-sm truncate block ${isSelf ? 'text-emerald-400 font-medium' : 'text-white/90'}`}>{firstName}{isSelf ? ' (jij)' : ''}</span>
                             {attendee.timeSlot && attendee.timeSlot !== 'FULL_DAY' && (
                               <span className="text-[10px] text-white/40">
                                 {attendee.timeSlot === 'MORNING' ? 'ochtend' : 'middag'}
@@ -527,7 +527,7 @@ export default function AppjeplekjePage() {
                       ${past && !weekend ? 'text-white/30 cursor-not-allowed' : ''}
                       ${isCurrentDay && !isSelectedDay && !isSelfRegistered ? 'bg-workx-lime/20 text-workx-lime ring-1 sm:ring-2 ring-workx-lime/40' : ''}
                       ${isSelectedDay ? 'bg-workx-lime text-black font-bold' : ''}
-                      ${isSelfRegistered && !isSelectedDay ? 'bg-workx-lime/20 text-workx-lime ring-2 ring-workx-lime/60 shadow-[0_0_12px_rgba(249,255,133,0.3)]' : ''}
+                      ${isSelfRegistered && !isSelectedDay ? 'bg-emerald-500/15 text-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_12px_rgba(52,211,153,0.3)]' : ''}
                       ${onlyOthers && !isSelectedDay && !isCurrentDay ? 'bg-white/5 ring-1 ring-white/15 shadow-[0_0_6px_rgba(255,255,255,0.05)]' : ''}
                       ${!weekend && !past && !isSelectedDay && !hasAttendees && dayInfo.isCurrentMonth ? 'hover:bg-white/10 text-white cursor-pointer' : ''}
                       ${hasAttendees && !isSelectedDay ? 'hover:brightness-125 cursor-pointer' : ''}
@@ -547,7 +547,7 @@ export default function AppjeplekjePage() {
                               alt={a.name}
                               className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full object-cover border-2 ${
                                 isSelectedDay ? 'border-black/30' :
-                                isSelf ? 'border-workx-lime/70 shadow-[0_0_4px_rgba(249,255,133,0.4)]' :
+                                isSelf ? 'border-emerald-400/70 shadow-[0_0_4px_rgba(52,211,153,0.4)]' :
                                 'border-workx-dark'
                               }`}
                               title={a.name}
@@ -557,7 +557,7 @@ export default function AppjeplekjePage() {
                               key={i}
                               className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center text-[7px] font-bold border-2 ${
                                 isSelectedDay ? 'bg-black/20 text-black border-black/30' :
-                                isSelf ? 'bg-workx-lime/40 text-workx-lime border-workx-lime/70' :
+                                isSelf ? 'bg-emerald-500/40 text-emerald-400 border-emerald-400/70' :
                                 'bg-white/10 text-white/60 border-workx-dark'
                               }`}
                               title={a.name}
@@ -581,7 +581,7 @@ export default function AppjeplekjePage() {
             {/* Legend */}
             <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5 flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-xs text-gray-400">
               <span className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-workx-lime/20 ring-2 ring-workx-lime/60 shadow-[0_0_8px_rgba(249,255,133,0.3)]"></div>
+                <div className="w-3 h-3 rounded bg-emerald-500/15 ring-2 ring-emerald-400/60 shadow-[0_0_8px_rgba(52,211,153,0.3)]"></div>
                 Jij aangemeld
               </span>
               <span className="flex items-center gap-1.5">

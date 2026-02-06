@@ -53,18 +53,17 @@ export default function WieDoetWat({ canEdit }: WieDoetWatProps) {
 
   const fetchData = async () => {
     try {
-      const [respRes, teamRes] = await Promise.all([
-        fetch('/api/responsibilities'),
-        fetch('/api/team'),
-      ])
-      if (respRes.ok) setResponsibilities(await respRes.json())
-      if (teamRes.ok) {
-        const data = await teamRes.json()
-        const members = (Array.isArray(data) ? data : data.users || [])
-          .filter((u: any) => u.isActive !== false)
-          .map((u: any) => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl }))
-          .sort((a: TeamMember, b: TeamMember) => a.name.localeCompare(b.name))
-        setTeamMembers(members)
+      const res = await fetch('/api/responsibilities')
+      if (res.ok) {
+        const data = await res.json()
+        setResponsibilities(data.responsibilities || [])
+        setTeamMembers(
+          (data.teamMembers || []).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            avatarUrl: u.avatarUrl,
+          }))
+        )
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -220,7 +219,7 @@ export default function WieDoetWat({ canEdit }: WieDoetWatProps) {
                     <Icons.chevronDown size={14} className="ml-auto text-gray-400" />
                   </button>
                   {showEditDropdown && (
-                    <div className="absolute z-50 mt-1 w-full bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
+                    <div className="absolute z-50 bottom-full mb-1 w-full bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
                       {teamMembers.map(m => (
                         <button
                           key={m.id}
@@ -340,7 +339,7 @@ export default function WieDoetWat({ canEdit }: WieDoetWatProps) {
               </button>
 
               {showDropdown && (
-                <div className="absolute z-50 mt-2 w-full bg-workx-dark/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl shadow-black/50 max-h-72 overflow-y-auto">
+                <div className="absolute z-50 bottom-full mb-2 w-full bg-workx-dark/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl shadow-black/50 max-h-[50vh] overflow-y-auto">
                   {teamMembers.map(m => {
                     const photoUrl = getPhotoUrl(m.name, m.avatarUrl)
                     return (

@@ -252,7 +252,11 @@ function AppjeplekjeWidget({
   return (
     <Link
       href="/dashboard/appjeplekje"
-      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/20 border-2 border-cyan-500/30 hover:border-cyan-400/50 p-4 group transition-all block shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/20"
+      className={`relative overflow-hidden rounded-2xl p-4 group transition-all block shadow-lg ${
+        data.isCurrentUserAttending
+          ? 'bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-cyan-500/10 border-2 border-emerald-400/50 hover:border-emerald-400/60 shadow-emerald-500/15 hover:shadow-emerald-500/25'
+          : 'bg-gradient-to-br from-cyan-500/20 via-blue-500/10 to-purple-500/20 border-2 border-cyan-500/30 hover:border-cyan-400/50 shadow-cyan-500/10 hover:shadow-cyan-500/20'
+      }`}
     >
       {/* Decorative glow */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-400/30 transition-colors" />

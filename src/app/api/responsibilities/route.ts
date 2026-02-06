@@ -11,20 +11,31 @@ export async function GET() {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const responsibilities = await prisma.responsibility.findMany({
-      include: {
-        responsible: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
+    const [responsibilities, teamMembers] = await Promise.all([
+      prisma.responsibility.findMany({
+        include: {
+          responsible: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
           },
         },
-      },
-      orderBy: { sortOrder: 'asc' },
-    })
+        orderBy: { sortOrder: 'asc' },
+      }),
+      prisma.user.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+        },
+        orderBy: { name: 'asc' },
+      }),
+    ])
 
-    return NextResponse.json(responsibilities)
+    return NextResponse.json({ responsibilities, teamMembers })
   } catch (error) {
     console.error('Error fetching responsibilities:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
