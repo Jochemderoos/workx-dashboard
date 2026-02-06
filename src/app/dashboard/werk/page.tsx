@@ -9,6 +9,11 @@ import { formatDateForAPI } from '@/lib/date-utils'
 import { TEAM_PHOTOS, ADVOCATEN, getPhotoUrl } from '@/lib/team-photos'
 import ZakenToewijzing from '@/components/zaken/ZakenToewijzing'
 import WieDoetWat from '@/components/werk/WieDoetWat'
+import SpotlightCard from '@/components/ui/SpotlightCard'
+import AnimatedNumber from '@/components/ui/AnimatedNumber'
+import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
+import MagneticButton from '@/components/ui/MagneticButton'
+import TextReveal from '@/components/ui/TextReveal'
 
 interface WorkItem {
   id: string
@@ -505,52 +510,60 @@ export default function WerkOverzichtPage() {
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/10 flex items-center justify-center">
             <Icons.briefcase className="text-blue-400" size={18} />
           </div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-white">Werk</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-white"><TextReveal>Werk</TextReveal></h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {/* Mode Toggle */}
           <div className="flex gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-white/5 rounded-lg sm:rounded-xl">
-            <button
-              onClick={() => setPageMode('wie-doet-wat')}
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                pageMode === 'wie-doet-wat' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icons.users size={14} className="sm:w-4 sm:h-4" />
-              <span>Wie doet Wat</span>
-            </button>
-            {canEditWorkload && (
+            <MagneticButton strength={0.2} radius={100}>
               <button
-                onClick={() => setPageMode('werkdruk')}
+                onClick={() => setPageMode('wie-doet-wat')}
                 className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  pageMode === 'werkdruk' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  pageMode === 'wie-doet-wat' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icons.activity size={14} className="sm:w-4 sm:h-4" />
-                <span>Werkdruk</span>
+                <Icons.users size={14} className="sm:w-4 sm:h-4" />
+                <span>Wie doet Wat</span>
               </button>
+            </MagneticButton>
+            {canEditWorkload && (
+              <MagneticButton strength={0.2} radius={100}>
+                <button
+                  onClick={() => setPageMode('werkdruk')}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    pageMode === 'werkdruk' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icons.activity size={14} className="sm:w-4 sm:h-4" />
+                  <span>Werkdruk</span>
+                </button>
+              </MagneticButton>
             )}
             {canEditWorkload && (
-              <button
-                onClick={() => setPageMode('toewijzing')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  pageMode === 'toewijzing' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icons.briefcase size={14} className="sm:w-4 sm:h-4" />
-                <span>Zaken</span>
-              </button>
+              <MagneticButton strength={0.2} radius={100}>
+                <button
+                  onClick={() => setPageMode('toewijzing')}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    pageMode === 'toewijzing' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icons.briefcase size={14} className="sm:w-4 sm:h-4" />
+                  <span>Zaken</span>
+                </button>
+              </MagneticButton>
             )}
             {canEditWorkload && (
-              <button
-                onClick={() => setPageMode('urenoverzicht')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  pageMode === 'urenoverzicht' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icons.clock size={14} className="sm:w-4 sm:h-4" />
-                <span>Uren</span>
-              </button>
+              <MagneticButton strength={0.2} radius={100}>
+                <button
+                  onClick={() => setPageMode('urenoverzicht')}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    pageMode === 'urenoverzicht' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icons.clock size={14} className="sm:w-4 sm:h-4" />
+                  <span>Uren</span>
+                </button>
+              </MagneticButton>
             )}
           </div>
           {/* Nieuw item knop verwijderd - gebruik Toewijzing tab voor nieuwe zaken */}
@@ -868,7 +881,7 @@ export default function WerkOverzichtPage() {
                 <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
                   <Icons.activity className="text-workx-lime" size={16} />
                 </div>
-                <h2 className="font-medium text-white text-sm sm:text-base">Werkdruk overzicht</h2>
+                <h2 className="font-medium text-white text-sm sm:text-base"><TextReveal>Werkdruk overzicht</TextReveal></h2>
                 {/* History Navigation */}
                 <div className="flex items-center gap-1 ml-2">
                   <button
@@ -934,14 +947,15 @@ export default function WerkOverzichtPage() {
             </div>
 
             {/* Table body */}
+            <ScrollReveal staggerChildren={0.05}>
             <div className="divide-y divide-white/5">
               {ADVOCATEN.map((person) => {
                 const photoUrl = TEAM_PHOTOS[person]
                 const firstName = person.split(' ')[0]
 
                 return (
+                  <ScrollRevealItem key={person}>
                   <div
-                    key={person}
                     className="grid gap-1 sm:gap-4 px-2 sm:px-5 py-2 sm:py-4 items-center hover:bg-white/[0.02] transition-colors"
                     style={{ gridTemplateColumns: 'minmax(100px, 1fr) repeat(3, minmax(50px, 80px))' }}
                   >
@@ -1011,9 +1025,11 @@ export default function WerkOverzichtPage() {
                       )
                     })}
                   </div>
+                  </ScrollRevealItem>
                 )
               })}
               </div>
+            </ScrollReveal>
             </div>
             </div>
           </div>
@@ -1139,44 +1155,50 @@ export default function WerkOverzichtPage() {
           </div>
 
           {/* Stats Cards - alleen factureerbaar */}
+          <ScrollReveal staggerChildren={0.1}>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="card p-5 relative overflow-hidden group">
+            <ScrollRevealItem>
+            <SpotlightCard className="card p-5 relative overflow-hidden group" spotlightColor="rgba(59, 130, 246, 0.08)">
               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
               <div className="relative">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
                   <Icons.users className="text-blue-400" size={18} />
                 </div>
-                <p className="text-2xl font-semibold text-white">{monthlyHoursData.employees.length}</p>
+                <p className="text-2xl font-semibold text-white"><AnimatedNumber value={monthlyHoursData.employees.length} /></p>
                 <p className="text-sm text-gray-400">Medewerkers</p>
               </div>
-            </div>
+            </SpotlightCard>
+            </ScrollRevealItem>
 
-            <div className="card p-5 relative overflow-hidden group">
+            <ScrollRevealItem>
+            <SpotlightCard className="card p-5 relative overflow-hidden group" spotlightColor="rgba(249, 255, 133, 0.08)">
               <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
               <div className="relative">
                 <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center mb-3">
                   <Icons.clock className="text-workx-lime" size={18} />
                 </div>
-                <p className="text-2xl font-semibold text-workx-lime">{monthlyHoursData.grandTotal.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <p className="text-2xl font-semibold text-workx-lime"><AnimatedNumber value={Math.round(monthlyHoursData.grandTotal.billable)} /></p>
                 <p className="text-sm text-gray-400">Totaal factureerbaar</p>
               </div>
-            </div>
+            </SpotlightCard>
+            </ScrollRevealItem>
 
-            <div className="card p-5 relative overflow-hidden group">
+            <ScrollRevealItem>
+            <SpotlightCard className="card p-5 relative overflow-hidden group" spotlightColor="rgba(34, 197, 94, 0.08)">
               <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-500/10 transition-colors" />
               <div className="relative">
                 <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-3">
                   <Icons.trendingUp className="text-green-400" size={18} />
                 </div>
                 <p className="text-2xl font-semibold text-green-400">
-                  {monthlyHoursData.employees.length > 0
-                    ? (monthlyHoursData.grandTotal.billable / monthlyHoursData.employees.length).toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-                    : 0}
+                  <AnimatedNumber value={monthlyHoursData.employees.length > 0 ? Math.round(monthlyHoursData.grandTotal.billable / monthlyHoursData.employees.length) : 0} />
                 </p>
                 <p className="text-sm text-gray-400">Gem. per medewerker</p>
               </div>
-            </div>
+            </SpotlightCard>
+            </ScrollRevealItem>
           </div>
+          </ScrollReveal>
 
           {/* Cumulative Hours Chart */}
           {monthlyHoursData.employees.length > 0 && (

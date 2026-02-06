@@ -15,7 +15,7 @@ interface MagneticButtonProps {
   /** Spring damping - default 15 */
   damping?: number
   /** onClick handler */
-  onClick?: () => void
+  onClick?: (e?: React.MouseEvent) => void
   /** Render as different element */
   as?: any
   [key: string]: any

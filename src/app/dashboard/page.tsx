@@ -1699,9 +1699,9 @@ export default function DashboardHome() {
               </Link>
             </div>
 
-            {/* Article list */}
+            {/* Article list - show max 3 */}
             <div className="space-y-2">
-              {pendingOverviewArticles.map((article) => {
+              {pendingOverviewArticles.slice(0, 3).map((article) => {
                 const urgency = getDeadlineUrgency(article.deadline)
                 const daysLeft = Math.ceil((new Date(article.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                 const isOverdue = daysLeft < 0
@@ -1773,6 +1773,12 @@ export default function DashboardHome() {
                   </div>
                 )
               })}
+              {pendingOverviewArticles.length > 3 && (
+                <Link href="/dashboard/werk" className="flex items-center justify-center gap-1 py-2 text-xs text-workx-lime hover:text-workx-lime/80 transition-colors">
+                  +{pendingOverviewArticles.length - 3} meer bekijken
+                  <Icons.arrowRight size={12} />
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -2484,8 +2490,11 @@ export default function DashboardHome() {
         <ScrollRevealItem>
         {isAdmin ? (
           /* Werkdruk Widget for Partners/Hanna */
-          <SpotlightCard as={Link} href="/dashboard/werk" className="card p-5 overflow-hidden group hover:border-workx-lime/30 transition-all" maxTilt={8}>
+          <SpotlightCard as={Link} href="/dashboard/werk" className="card p-5 overflow-hidden group hover:border-blue-500/30 transition-all" maxTilt={8}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
+            {/* Blue light streak */}
+            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
+            <div className="absolute bottom-0 left-[10%] right-[10%] h-[6px] bg-gradient-to-r from-transparent via-blue-400/20 to-transparent blur-sm" />
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -2626,7 +2635,7 @@ export default function DashboardHome() {
 
       {/* Quick Actions */}
       <ScrollReveal direction="up" distance={30} duration={0.5}>
-        <div className="card p-5 relative overflow-hidden liquid-glass noise-overlay">
+        <div className="card p-5 relative overflow-hidden noise-overlay">
           <div className="absolute top-0 right-0 w-40 h-40 bg-workx-lime/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4">

@@ -69,32 +69,36 @@ export default function SpotlightCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
-        transform: isHovered && tilt ? tiltTransform : 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+        // No transform in default state to prevent GPU layer artifacts
+        // Only apply perspective transform on hover
+        transform: isHovered && tilt ? tiltTransform : undefined,
         transition: isHovered ? 'transform 0.1s ease-out' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        willChange: isHovered ? 'transform' : 'auto',
       }}
       {...props}
     >
-      {/* Spotlight radial gradient overlay */}
-      <div
-        className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] transition-opacity duration-300"
-        style={{
-          opacity: isHovered ? 1 : 0,
-          background: `radial-gradient(${spotlightSize}px circle at ${spotlightPos.x}px ${spotlightPos.y}px, ${spotlightColor}, transparent 70%)`,
-        }}
-      />
-      {/* Spotlight border glow */}
-      <div
-        className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] transition-opacity duration-300"
-        style={{
-          opacity: isHovered ? 1 : 0,
-          background: `radial-gradient(${spotlightSize * 0.6}px circle at ${spotlightPos.x}px ${spotlightPos.y}px, rgba(249, 255, 133, 0.12), transparent 70%)`,
-          mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-          maskComposite: 'exclude',
-          WebkitMaskComposite: 'xor',
-          padding: '1px',
-        }}
-      />
+      {/* Only render overlays when hovered to prevent GPU compositor artifacts */}
+      {isHovered && (
+        <>
+          {/* Spotlight radial gradient overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
+            style={{
+              background: `radial-gradient(${spotlightSize}px circle at ${spotlightPos.x}px ${spotlightPos.y}px, ${spotlightColor}, transparent 70%)`,
+            }}
+          />
+          {/* Spotlight border glow */}
+          <div
+            className="pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
+            style={{
+              background: `radial-gradient(${spotlightSize * 0.6}px circle at ${spotlightPos.x}px ${spotlightPos.y}px, rgba(249, 255, 133, 0.12), transparent 70%)`,
+              mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+              maskComposite: 'exclude',
+              WebkitMaskComposite: 'xor',
+              padding: '1px',
+            }}
+          />
+        </>
+      )}
       {children}
     </Component>
   )

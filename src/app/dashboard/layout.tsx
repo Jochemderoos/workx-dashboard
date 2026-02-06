@@ -30,8 +30,8 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen bg-workx-dark overflow-hidden">
 
-      {/* Floating doves from workxin.nl (hidden on mobile) */}
-      <div className="pigeon pigeon-1 hidden md:block">
+      {/* Floating doves from workxin.nl (hidden on mobile) - no animation to prevent GPU artifacts */}
+      <div className="fixed top-[10%] right-[4%] pointer-events-none z-[1] hidden md:block">
         <Image
           src="/pigeons.svg"
           alt=""
@@ -41,7 +41,7 @@ export default async function DashboardLayout({
           priority={false}
         />
       </div>
-      <div className="pigeon pigeon-2 hidden md:block" style={{ transform: 'scaleX(-1)' }}>
+      <div className="fixed top-[20%] left-[2%] pointer-events-none z-[1] hidden md:block" style={{ transform: 'scaleX(-1)' }}>
         <Image
           src="/pigeons.svg"
           alt=""
@@ -52,9 +52,9 @@ export default async function DashboardLayout({
         />
       </div>
 
-      {/* Ambient glow effects (smaller on mobile) */}
-      <div className="fixed top-0 right-0 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-workx-lime/5 rounded-full blur-[100px] md:blur-[150px] pointer-events-none" />
-      <div className="fixed bottom-0 left-1/4 w-[200px] md:w-[400px] h-[200px] md:h-[400px] bg-workx-lime/3 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
+      {/* Ambient glow effects - using radial-gradient instead of blur filter to prevent rendering artifacts */}
+      <div className="fixed top-0 right-0 w-[600px] md:w-[1000px] h-[600px] md:h-[1000px] pointer-events-none" style={{ background: 'radial-gradient(circle at center, rgba(249, 255, 133, 0.04) 0%, transparent 60%)', transform: 'translate(30%, -30%)' }} />
+      <div className="fixed bottom-0 left-1/4 w-[400px] md:w-[800px] h-[400px] md:h-[800px] pointer-events-none" style={{ background: 'radial-gradient(circle at center, rgba(249, 255, 133, 0.025) 0%, transparent 60%)', transform: 'translate(-10%, 30%)' }} />
 
       {/* Sidebar - hidden on mobile */}
       <div className="hidden md:flex h-full">

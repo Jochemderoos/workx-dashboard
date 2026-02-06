@@ -276,7 +276,7 @@ export default function TopBar({ user }: TopBarProps) {
   }
 
   return (
-    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-[100] backdrop-blur-sm bg-workx-dark/30">
+    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-[100] bg-workx-dark/95">
       {/* Mobile: Hamburger Menu + Home Button */}
       <div className="md:hidden flex items-center gap-1">
         <button

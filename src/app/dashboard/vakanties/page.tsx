@@ -12,6 +12,10 @@ import WorkdaysCalculator from '@/components/vacation/WorkdaysCalculator'
 import { werkdagenToString, parseWerkdagen, DEFAULT_WERKDAGEN } from '@/lib/vacation-utils'
 import { SCHOOL_HOLIDAYS, COLORS, getColorForUser, type SchoolHoliday } from '@/lib/config'
 import { formatDateForAPI } from '@/lib/date-utils'
+import SpotlightCard from '@/components/ui/SpotlightCard'
+import AnimatedNumber from '@/components/ui/AnimatedNumber'
+import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
+import TextReveal from '@/components/ui/TextReveal'
 
 interface VacationRequest {
   id: string
@@ -625,7 +629,7 @@ export default function VakantiesPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/10 flex items-center justify-center">
               <Icons.sun className="text-yellow-400" size={20} />
             </div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-white">Vakanties & Verlof</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-white"><TextReveal>{"Vakanties & Verlof"}</TextReveal></h1>
           </div>
           <p className="text-gray-400 text-sm sm:text-base">
             {pageMode === 'overzicht' ? 'Overzicht vakanties en ouderschapsverlof' : 'Beheer vakantiedagen en verlof per medewerker'}
@@ -815,48 +819,57 @@ export default function VakantiesPage() {
       {pageMode === 'beheer' && isAdmin && (
         <div className="space-y-6">
           {/* Stats cards */}
+          <ScrollReveal staggerChildren={0.1}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="card p-5 relative overflow-hidden group">
+            <ScrollRevealItem>
+            <SpotlightCard className="card p-5 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
               <div className="relative">
                 <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center mb-3">
                   <Icons.users className="text-workx-lime" size={18} />
                 </div>
-                <p className="text-3xl font-semibold text-white">{vacationBalances.filter(b => !b.isPartner).length}</p>
+                <p className="text-3xl font-semibold text-white"><AnimatedNumber value={vacationBalances.filter(b => !b.isPartner).length} /></p>
                 <p className="text-sm text-gray-400">Medewerkers</p>
               </div>
-            </div>
+            </SpotlightCard>
+            </ScrollRevealItem>
 
-            <div className="card p-5 relative overflow-hidden group">
+            <ScrollRevealItem>
+            <SpotlightCard className="card p-5 relative overflow-hidden group" spotlightColor="rgba(96, 165, 250, 0.08)">
               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/10 transition-colors" />
               <div className="relative">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
                   <Icons.sun className="text-blue-400" size={18} />
                 </div>
                 <p className="text-3xl font-semibold text-white">
-                  {vacationBalances.filter(b => !b.isPartner).reduce((sum, b) => sum + calculateResterend(b), 0).toFixed(1)}
+                  <AnimatedNumber value={vacationBalances.filter(b => !b.isPartner).reduce((sum, b) => sum + calculateResterend(b), 0)} decimals={1} />
                 </p>
                 <p className="text-sm text-gray-400">Totaal resterend (team)</p>
               </div>
-            </div>
+            </SpotlightCard>
+            </ScrollRevealItem>
 
-            <div className="card p-5 relative overflow-hidden group">
+            <ScrollRevealItem>
+            <SpotlightCard className="card p-5 relative overflow-hidden group" spotlightColor="rgba(168, 85, 247, 0.08)">
               <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
               <div className="relative">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mb-3">
                   <Icons.calendar className="text-purple-400" size={18} />
                 </div>
                 <p className="text-3xl font-semibold text-white">
-                  {vacationBalances.filter(b => !b.isPartner).reduce((sum, b) => sum + b.opgenomenLopendJaar, 0)}
+                  <AnimatedNumber value={vacationBalances.filter(b => !b.isPartner).reduce((sum, b) => sum + b.opgenomenLopendJaar, 0)} />
                 </p>
                 <p className="text-sm text-gray-400">Opgenomen dit jaar (team)</p>
               </div>
-            </div>
+            </SpotlightCard>
+            </ScrollRevealItem>
           </div>
+          </ScrollReveal>
 
           {/* Edit form moved to inline in table */}
 
           {/* Balances Table */}
+          <ScrollReveal direction="up" delay={0.2}>
           <div className="card overflow-hidden">
             <div className="p-4 sm:p-5 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1262,8 +1275,10 @@ export default function VakantiesPage() {
             </div>
             </div>
           </div>
+          </ScrollReveal>
 
           {/* Parental Leave Management Section */}
+          <ScrollReveal direction="up" delay={0.3}>
           <div className="card overflow-hidden">
             <div className="p-4 sm:p-5 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1583,6 +1598,7 @@ export default function VakantiesPage() {
               </div>
             )}
           </div>
+          </ScrollReveal>
 
           {/* Info card */}
           <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">

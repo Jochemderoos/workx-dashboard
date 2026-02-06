@@ -6,6 +6,11 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { formatDateForAPI } from '@/lib/date-utils'
+import SpotlightCard from '@/components/ui/SpotlightCard'
+import AnimatedNumber from '@/components/ui/AnimatedNumber'
+import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
+import MagneticButton from '@/components/ui/MagneticButton'
+import TextReveal from '@/components/ui/TextReveal'
 
 interface TrainingSession {
   id: string
@@ -593,7 +598,7 @@ export default function OpleidingenPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Opleidingen</h1>
+          <h1 className="text-2xl font-semibold text-white"><TextReveal>Opleidingen</TextReveal></h1>
           <p className="text-gray-400 text-sm mt-1">Beheer opleidingen en certificaten</p>
         </div>
 
@@ -647,16 +652,17 @@ export default function OpleidingenPage() {
 
       {/* WORKX OPLEIDING TAB */}
       {activeTab === 'workx' && (
+        <ScrollReveal direction="up" distance={20} duration={0.5}>
         <div className="space-y-4">
           {/* Add session button */}
           <div className="flex justify-end">
-            <button
+            <MagneticButton
               onClick={() => setShowSessionForm(true)}
               className="btn-primary flex items-center gap-2"
             >
               <Icons.plus size={16} />
               Sessie toevoegen
-            </button>
+            </MagneticButton>
           </div>
 
           {/* Session form */}
@@ -784,7 +790,7 @@ export default function OpleidingenPage() {
           ) : (
             <div className="space-y-3">
               {sessions.map((session) => (
-                <div key={session.id} className="card p-4 hover:bg-white/[0.02] transition-colors group">
+                <SpotlightCard key={session.id} className="card p-4 hover:bg-white/[0.02] transition-colors group">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -825,19 +831,21 @@ export default function OpleidingenPage() {
                       <Icons.trash size={16} />
                     </button>
                   </div>
-                </div>
+                </SpotlightCard>
               ))}
             </div>
           )}
         </div>
+        </ScrollReveal>
       )}
 
       {/* CERTIFICATEN TAB */}
       {activeTab === 'certificaten' && (
+        <ScrollReveal direction="up" distance={20} duration={0.5}>
         <div className="space-y-4">
           {/* Points progress */}
           {pointsSummary && (
-            <div className="card p-5">
+            <SpotlightCard className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="font-medium text-white">PO-punten {selectedYear}</h3>
@@ -845,13 +853,13 @@ export default function OpleidingenPage() {
                     {pointsSummary.isComplete ? (
                       <span className="text-green-400">✓ Voldaan aan jaarlijkse verplichting</span>
                     ) : (
-                      <span>Nog {pointsSummary.remainingPoints} punten nodig</span>
+                      <span>Nog <AnimatedNumber value={pointsSummary.remainingPoints} /> punten nodig</span>
                     )}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold text-workx-lime">{pointsSummary.totalPoints}</p>
-                  <p className="text-sm text-gray-400">van {pointsSummary.requiredPoints} punten</p>
+                  <p className="text-3xl font-bold text-workx-lime"><AnimatedNumber value={pointsSummary.totalPoints} /></p>
+                  <p className="text-sm text-gray-400">van <AnimatedNumber value={pointsSummary.requiredPoints} /> punten</p>
                 </div>
               </div>
 
@@ -868,7 +876,7 @@ export default function OpleidingenPage() {
                   }}
                 />
               </div>
-            </div>
+            </SpotlightCard>
           )}
 
           {/* Action buttons */}
@@ -926,13 +934,13 @@ export default function OpleidingenPage() {
                   </button>
                 </>
               )}
-              <button
+              <MagneticButton
                 onClick={() => setShowCertificateForm(true)}
                 className="btn-primary flex items-center gap-2"
               >
                 <Icons.plus size={16} />
                 Certificaat toevoegen
-              </button>
+              </MagneticButton>
             </div>
           </div>
 
@@ -1095,7 +1103,7 @@ export default function OpleidingenPage() {
           ) : (
             <div className="space-y-3">
               {pointsSummary.certificates.map((cert) => (
-                <div
+                <SpotlightCard
                   key={cert.id}
                   className={`card p-4 transition-colors group cursor-pointer ${
                     selectedCertificates.has(cert.id)
@@ -1167,11 +1175,12 @@ export default function OpleidingenPage() {
                       </button>
                     </div>
                   </div>
-                </div>
+                </SpotlightCard>
               ))}
             </div>
           )}
         </div>
+        </ScrollReveal>
       )}
     </div>
   )

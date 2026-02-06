@@ -9,6 +9,12 @@ import DatePicker from '@/components/ui/DatePicker'
 import TimePicker from '@/components/ui/TimePicker'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatDateForAPI, formatDateTimeForAPI } from '@/lib/date-utils'
+import SpotlightCard from '@/components/ui/SpotlightCard'
+import AnimatedNumber from '@/components/ui/AnimatedNumber'
+import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
+import MagneticButton from '@/components/ui/MagneticButton'
+import TextReveal from '@/components/ui/TextReveal'
+import { FadeReveal } from '@/components/ui/TextReveal'
 
 interface CalendarEvent {
   id: string
@@ -352,7 +358,7 @@ export default function AgendaPage() {
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 flex items-center justify-center">
               <Icons.calendar className="text-purple-400" size={18} />
             </div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-white">Agenda</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-white"><TextReveal>Agenda</TextReveal></h1>
           </div>
           <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Gedeelde team kalender, events en verjaardagen</p>
         </div>
@@ -361,16 +367,16 @@ export default function AgendaPage() {
             <span className="text-sm sm:text-base">🏢</span>
             <span className="hidden xs:inline">Vergaderruimte</span>
           </button>
-          <button onClick={(e) => { setModalClickY(e.clientY); handleAddEvent() }} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base px-2.5 sm:px-4 py-2 sm:py-2.5">
+          <MagneticButton as="button" onClick={(e?: React.MouseEvent) => { if (e) setModalClickY(e.clientY); handleAddEvent() }} className="btn-primary flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base px-2.5 sm:px-4 py-2 sm:py-2.5">
             <Icons.plus size={14} className="sm:w-4 sm:h-4" />
             <span className="hidden xs:inline">Nieuw</span>
-          </button>
+          </MagneticButton>
         </div>
       </div>
 
       {/* Next Birthday Card */}
       {nextBirthday && (
-        <div className="card p-5 border-pink-500/20 relative overflow-hidden">
+        <SpotlightCard className="card p-5 border-pink-500/20 relative overflow-hidden" spotlightColor="rgba(236, 72, 153, 0.08)">
           <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
           <div className="relative flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500/20 to-pink-600/10 flex items-center justify-center">
@@ -399,11 +405,11 @@ export default function AgendaPage() {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-pink-400">{nextBirthday.daysUntil}</p>
+              <AnimatedNumber value={nextBirthday.daysUntil} className="text-3xl font-bold text-pink-400" />
               <p className="text-xs text-gray-400">{nextBirthday.daysUntil === 1 ? 'dag' : 'dagen'}</p>
             </div>
           </div>
-        </div>
+        </SpotlightCard>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -858,56 +864,56 @@ export default function AgendaPage() {
                     {getEventsForDate(selectedDate).map((event, index) => {
                       const IconComponent = categoryConfig[event.category]?.icon || Icons.calendar
                       return (
-                        <div
-                          key={event.id}
-                          onClick={() => handleEdit(event)}
-                          className="p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border border-white/5 hover:border-white/10"
-                          style={{ animationDelay: `${index * 50}ms` }}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                                style={{ backgroundColor: event.color + '20' }}
+                        <FadeReveal key={event.id} delay={index * 0.05}>
+                          <div
+                            onClick={() => handleEdit(event)}
+                            className="p-4 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-all group border border-white/5 hover:border-white/10"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                  style={{ backgroundColor: event.color + '20' }}
+                                >
+                                  <IconComponent size={18} style={{ color: event.color }} />
+                                </div>
+                                <div>
+                                  <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
+                                    {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
+                                  </span>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {isRoomBooking(event) ? 'Vergaderruimte gereserveerd' : categoryConfig[event.category]?.label}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
+                                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                               >
-                                <IconComponent size={18} style={{ color: event.color }} />
-                              </div>
-                              <div>
-                                <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
-                                  {isRoomBooking(event) ? formatRoomBookingTitle(event) : event.title}
-                                </span>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  {isRoomBooking(event) ? 'Vergaderruimte gereserveerd' : categoryConfig[event.category]?.label}
-                                </p>
-                              </div>
+                                <Icons.trash size={14} />
+                              </button>
                             </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
-                              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                            >
-                              <Icons.trash size={14} />
-                            </button>
+                            <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-3">
+                              {!event.isAllDay ? (
+                                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                                  <Icons.clock size={12} />
+                                  {formatTime(event.startTime)} - {formatTime(event.endTime)}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                                  <Icons.sun size={12} />
+                                  Hele dag
+                                </p>
+                              )}
+                              {event.location && (
+                                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                                  <Icons.mapPin size={12} />
+                                  {event.location}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-3">
-                            {!event.isAllDay ? (
-                              <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                                <Icons.clock size={12} />
-                                {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                                <Icons.sun size={12} />
-                                Hele dag
-                              </p>
-                            )}
-                            {event.location && (
-                              <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                                <Icons.mapPin size={12} />
-                                {event.location}
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                        </FadeReveal>
                       )
                     })}
                     <button
