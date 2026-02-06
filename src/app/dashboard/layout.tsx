@@ -30,31 +30,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen bg-workx-dark overflow-hidden">
 
-      {/* Floating doves from workxin.nl (hidden on mobile) - no animation to prevent GPU artifacts */}
-      <div className="fixed top-[10%] right-[4%] pointer-events-none z-[1] hidden md:block">
-        <Image
-          src="/pigeons.svg"
-          alt=""
-          width={180}
-          height={140}
-          className="opacity-[0.07] hover:opacity-[0.12] transition-opacity duration-700"
-          priority={false}
-        />
-      </div>
-      <div className="fixed top-[20%] left-[2%] pointer-events-none z-[1] hidden md:block" style={{ transform: 'scaleX(-1)' }}>
-        <Image
-          src="/pigeons.svg"
-          alt=""
-          width={140}
-          height={110}
-          className="opacity-[0.05] hover:opacity-[0.1] transition-opacity duration-700"
-          priority={false}
-        />
-      </div>
-
-      {/* Ambient glow effects - using radial-gradient instead of blur filter to prevent rendering artifacts */}
-      <div className="fixed top-0 right-0 w-[600px] md:w-[1000px] h-[600px] md:h-[1000px] pointer-events-none" style={{ background: 'radial-gradient(circle at center, rgba(249, 255, 133, 0.04) 0%, transparent 60%)', transform: 'translate(30%, -30%)' }} />
-      <div className="fixed bottom-0 left-1/4 w-[400px] md:w-[800px] h-[400px] md:h-[800px] pointer-events-none" style={{ background: 'radial-gradient(circle at center, rgba(249, 255, 133, 0.025) 0%, transparent 60%)', transform: 'translate(-10%, 30%)' }} />
+      {/* Decorative elements temporarily removed to debug transparent bar artifacts */}
 
       {/* Sidebar - hidden on mobile */}
       <div className="hidden md:flex h-full">
