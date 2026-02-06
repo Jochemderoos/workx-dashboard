@@ -687,6 +687,7 @@ export default function DashboardHome() {
   const [newsletterReminders, setNewsletterReminders] = useState<NewsletterAssignment[]>([])
   const [newsletterOverview, setNewsletterOverview] = useState<NewsletterAssignment[] | null>(null)
   const [isNewsletterManager, setIsNewsletterManager] = useState(false)
+  const [nextTraining, setNextTraining] = useState<{ id: string; title: string; speaker: string; date: string; startTime: string | null; location: string | null; points: number } | null>(null)
   // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
   const fetchDashboardSummary = async () => {
     try {
@@ -760,6 +761,11 @@ export default function DashboardHome() {
         }
         if (data.isNewsletterManager !== undefined) {
           setIsNewsletterManager(data.isNewsletterManager)
+        }
+
+        // Set next training session
+        if (data.nextTraining) {
+          setNextTraining(data.nextTraining)
         }
       }
     } catch (error) {
@@ -2538,45 +2544,84 @@ export default function DashboardHome() {
         )}
         </ScrollRevealItem>
 
-        {/* Stats - Right side - All clickable */}
-        {[
-          { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Open zaken', numValue: workItems.length, color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover', sparkData: [3, 5, 4, 7, 6, 8, 5, 9, 7, 6] },
-          { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Events deze week', numValue: events.length, color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover', sparkData: [2, 4, 3, 5, 7, 4, 6, 3, 5, 4] },
-        ].map((stat, index) => (
-          <ScrollRevealItem key={stat.label}>
+        {/* Eerstvolgende Opleiding */}
+        <ScrollRevealItem>
           <SpotlightCard
-            key={stat.label}
             as={Link}
-            href={stat.href}
-            className={`card p-5 group hover:border-white/10 transition-all overflow-hidden ${stat.iconAnim}`}
+            href="/dashboard/opleidingen"
+            className="card p-5 group hover:border-white/10 transition-all overflow-hidden"
             maxTilt={10}
             spotlightSize={250}
           >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative flex items-center gap-3 mb-3">
-              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center group-hover:scale-110 transition-transform icon-animated`}>
-                <stat.icon className={stat.color} size={18} />
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icons.graduationCap className="text-blue-400" size={18} />
+              </div>
+            </div>
+            <div className="relative">
+              {nextTraining ? (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-2xl font-semibold text-white group-hover:text-workx-lime transition-colors">
+                      <AnimatedNumber value={Math.max(0, Math.ceil((new Date(nextTraining.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} stiffness={60} damping={15} />
+                      <span className="text-sm font-normal text-gray-400 ml-1">dagen</span>
+                    </div>
+                    <Sparkline
+                      data={[2, 4, 3, 6, 5, 8, 4, 7, 6, 9]}
+                      width={80}
+                      height={32}
+                      color="#60a5fa"
+                      strokeWidth={1.5}
+                      duration={1.2}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-400">Eerstvolgende opleiding</p>
+                  <p className="text-xs text-blue-400/80 mt-1 truncate">{nextTraining.title}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-400 mb-1">Geen komende opleiding</p>
+                  <p className="text-xs text-gray-500">Bekijk het opleidingsoverzicht</p>
+                </>
+              )}
+            </div>
+          </SpotlightCard>
+        </ScrollRevealItem>
+
+        {/* Events deze week */}
+        <ScrollRevealItem>
+          <SpotlightCard
+            as={Link}
+            href="/dashboard/agenda"
+            className="card p-5 group hover:border-white/10 transition-all overflow-hidden"
+            maxTilt={10}
+            spotlightSize={250}
+          >
+            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icons.calendar className="text-purple-400" size={18} />
               </div>
             </div>
             <div className="relative flex items-center justify-between">
               <div>
                 <div className="text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">
-                  <AnimatedNumber value={stat.numValue} stiffness={60} damping={15} />
+                  <AnimatedNumber value={events.length} stiffness={60} damping={15} />
                 </div>
-                <p className="text-sm text-gray-400">{stat.label}</p>
+                <p className="text-sm text-gray-400">Events deze week</p>
               </div>
               <Sparkline
-                data={stat.sparkData}
+                data={[2, 4, 3, 5, 7, 4, 6, 3, 5, 4]}
                 width={80}
                 height={32}
-                color={stat.color === 'text-blue-400' ? '#60a5fa' : '#c084fc'}
+                color="#c084fc"
                 strokeWidth={1.5}
                 duration={1.2}
               />
             </div>
           </SpotlightCard>
-          </ScrollRevealItem>
-        ))}
+        </ScrollRevealItem>
       </ScrollReveal>
 
       {/* Quick Actions */}

@@ -40,6 +40,7 @@ export async function GET() {
       newsletterReminders,
       allNewsletterAssignments,
       isNewsletterResponsible,
+      nextTraining,
     ] = await Promise.all([
       // 1. Calendar Events - upcoming events (fetch more to allow social event prioritization)
       prisma.calendarEvent.findMany({
@@ -245,6 +246,23 @@ export async function GET() {
           task: { contains: 'nieuwsbrief', mode: 'insensitive' },
         },
       }),
+
+      // 14. Next Training Session - first upcoming training
+      prisma.trainingSession.findFirst({
+        where: {
+          date: { gte: now },
+        },
+        orderBy: { date: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          speaker: true,
+          date: true,
+          startTime: true,
+          location: true,
+          points: true,
+        },
+      }),
     ])
 
     // Calculate vacation balance totals for easier frontend use
@@ -374,6 +392,7 @@ export async function GET() {
         currentUser?.role === 'PARTNER' ||
         currentUser?.role === 'ADMIN'
       ),
+      nextTraining,
       // Meta information
       fetchedAt: now.toISOString(),
     }, {

@@ -71,7 +71,6 @@ export default function SpotlightCard({
       style={{
         transform: isHovered && tilt ? tiltTransform : 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
         transition: isHovered ? 'transform 0.1s ease-out' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        transformStyle: 'preserve-3d' as const,
         willChange: isHovered ? 'transform' : 'auto',
       }}
       {...props}
