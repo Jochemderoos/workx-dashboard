@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: 'Workx',
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.png',
     apple: '/apple-touch-icon.png',
   },
 }

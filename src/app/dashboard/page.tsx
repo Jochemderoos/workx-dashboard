@@ -8,37 +8,10 @@ import { TEAM_PHOTOS, ALL_TEAM_MEMBERS, getPhotoUrl } from '@/lib/team-photos'
 import { LUSTRUM_CONFIG, MALLORCA_FACTS, getCountdown } from '@/lib/lustrum-data'
 import { formatDateForAPI, parseDateFromAPI } from '@/lib/date-utils'
 
-// Inline Logo Component - yellow background with black text
+// Logo Component - uses actual Workx logo
 function WorkxLogoSmall() {
   return (
-    <div className="inline-block rounded-lg overflow-hidden" style={{ background: '#f9ff85' }}>
-      <div className="relative flex flex-col justify-center px-4 py-3" style={{ width: 120 }}>
-        <span
-          className="leading-none"
-          style={{
-            fontSize: '28px',
-            fontWeight: 400,
-            color: '#1e1e1e',
-            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
-          }}
-        >
-          Workx
-        </span>
-        <span
-          className="uppercase"
-          style={{
-            fontSize: '8px',
-            letterSpacing: '2px',
-            marginTop: '2px',
-            fontWeight: 500,
-            color: '#1e1e1e',
-            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
-          }}
-        >
-          ADVOCATEN
-        </span>
-      </div>
-    </div>
+    <img src="/workx-logo.png" alt="Workx Advocaten" className="h-14 w-auto" draggable={false} />
   )
 }
 
@@ -129,6 +102,19 @@ interface FeedbackItem {
 interface CurrentUser {
   name: string
   role: string
+}
+
+// Newsletter assignment interface
+interface NewsletterAssignment {
+  id: string
+  assigneeId: string
+  deadline: string
+  topic: string | null
+  status: 'PENDING' | 'SUBMITTED'
+  reminderPushedAt: string | null
+  reminderDismissed: boolean
+  assignee: { id: string; name: string; avatarUrl?: string | null }
+  createdBy: { id: string; name: string }
 }
 
 // Office attendance interface
@@ -561,6 +547,9 @@ export default function DashboardHome() {
   const [teamBirthdays, setTeamBirthdays] = useState<TeamBirthday[]>([])
   const [showBirthdayPopup, setShowBirthdayPopup] = useState(false)
   const [birthdayAudioRef, setBirthdayAudioRef] = useState<HTMLAudioElement | null>(null)
+  const [newsletterReminders, setNewsletterReminders] = useState<NewsletterAssignment[]>([])
+  const [newsletterOverview, setNewsletterOverview] = useState<NewsletterAssignment[] | null>(null)
+  const [isNewsletterManager, setIsNewsletterManager] = useState(false)
 
   // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
   const fetchDashboardSummary = async () => {
@@ -624,6 +613,17 @@ export default function DashboardHome() {
             submittedBy: f.submittedByName,
             createdAt: f.createdAt,
           })))
+        }
+
+        // Set newsletter data
+        if (data.newsletterReminders) {
+          setNewsletterReminders(data.newsletterReminders)
+        }
+        if (data.newsletterOverview !== undefined) {
+          setNewsletterOverview(data.newsletterOverview)
+        }
+        if (data.isNewsletterManager !== undefined) {
+          setIsNewsletterManager(data.isNewsletterManager)
         }
       }
     } catch (error) {
@@ -1101,6 +1101,77 @@ export default function DashboardHome() {
     OTHER: { icon: Icons.chat, color: 'text-purple-400', bg: 'bg-purple-500/10' },
   }
 
+  // Newsletter helper functions
+  const dismissNewsletterReminder = async (assignmentId: string) => {
+    try {
+      const res = await fetch('/api/newsletter-assignments/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignmentId }),
+      })
+      if (res.ok) {
+        setNewsletterReminders(prev => prev.filter(r => r.id !== assignmentId))
+      }
+    } catch (e) {
+      console.error('Error dismissing reminder:', e)
+    }
+  }
+
+  const markArticleSubmitted = async (assignmentId: string) => {
+    try {
+      const res = await fetch('/api/newsletter-assignments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: assignmentId, status: 'SUBMITTED' }),
+      })
+      if (res.ok) {
+        // Remove from reminders
+        setNewsletterReminders(prev => prev.filter(r => r.id !== assignmentId))
+        // Update overview if present
+        if (newsletterOverview) {
+          setNewsletterOverview(prev => prev ? prev.map(a =>
+            a.id === assignmentId ? { ...a, status: 'SUBMITTED' } : a
+          ) : null)
+        }
+      }
+    } catch (e) {
+      console.error('Error updating article status:', e)
+    }
+  }
+
+  const pushNewsletterReminder = async (assignmentId: string) => {
+    try {
+      const res = await fetch('/api/newsletter-assignments/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignmentId }),
+      })
+      if (res.ok) {
+        // Update overview
+        if (newsletterOverview) {
+          setNewsletterOverview(prev => prev ? prev.map(a =>
+            a.id === assignmentId ? { ...a, reminderPushedAt: new Date().toISOString(), reminderDismissed: false } : a
+          ) : null)
+        }
+      }
+    } catch (e) {
+      console.error('Error pushing reminder:', e)
+    }
+  }
+
+  // Calculate urgency level for newsletter deadline
+  const getDeadlineUrgency = (deadline: string): 'normal' | 'warning' | 'urgent' => {
+    const now = new Date()
+    const dl = new Date(deadline)
+    const daysLeft = Math.ceil((dl.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    if (daysLeft <= 7) return 'urgent'
+    if (daysLeft <= 14) return 'warning'
+    return 'normal'
+  }
+
+  // Filter PENDING assignments for the overview widget
+  const pendingOverviewArticles = newsletterOverview?.filter(a => a.status === 'PENDING') || []
+
   return (
     <div className="space-y-8 fade-in">
       {/* LUSTRUM COUNTDOWN MILESTONE POPUP */}
@@ -1329,6 +1400,220 @@ export default function DashboardHome() {
           />
         </div>
       </div>
+
+      {/* NEWSLETTER WIDGETS */}
+      {/* Employee reminder widget - shown when user has PENDING assignments */}
+      {newsletterReminders.length > 0 && (
+        <div className="space-y-3">
+          {newsletterReminders.map((assignment) => {
+            const urgency = getDeadlineUrgency(assignment.deadline)
+            const daysLeft = Math.ceil((new Date(assignment.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+            const isOverdue = daysLeft < 0
+
+            return (
+              <div
+                key={assignment.id}
+                className={`relative overflow-hidden rounded-2xl p-5 transition-all ${
+                  urgency === 'urgent' || isOverdue
+                    ? 'bg-gradient-to-br from-red-500/20 via-red-500/10 to-orange-500/10 border-2 border-red-500/50 shadow-lg shadow-red-500/20 animate-pulse-slow'
+                    : urgency === 'warning'
+                    ? 'bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-yellow-500/10 border-2 border-amber-500/40 shadow-lg shadow-amber-500/15'
+                    : 'bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-indigo-500/10 border border-blue-500/30'
+                }`}
+              >
+                {/* Animated glow for urgent items */}
+                {(urgency === 'urgent' || isOverdue) && (
+                  <>
+                    <div className="absolute top-0 left-0 w-40 h-40 bg-red-500/20 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2 animate-pulse" />
+                    <div className="absolute bottom-0 right-0 w-32 h-32 bg-orange-500/15 rounded-full blur-3xl translate-y-1/2 translate-x-1/2 animate-pulse" style={{ animationDelay: '1s' }} />
+                  </>
+                )}
+                {urgency === 'warning' && (
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                )}
+
+                <div className="relative flex items-start gap-4">
+                  {/* Icon with urgency indicator */}
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    urgency === 'urgent' || isOverdue
+                      ? 'bg-red-500/20 ring-2 ring-red-500/40'
+                      : urgency === 'warning'
+                      ? 'bg-amber-500/20 ring-2 ring-amber-500/30'
+                      : 'bg-blue-500/15'
+                  }`}>
+                    <Icons.fileText size={22} className={
+                      urgency === 'urgent' || isOverdue ? 'text-red-400' : urgency === 'warning' ? 'text-amber-400' : 'text-blue-400'
+                    } />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className={`font-semibold ${
+                        urgency === 'urgent' || isOverdue ? 'text-red-300' : urgency === 'warning' ? 'text-amber-300' : 'text-white'
+                      }`}>
+                        Nieuwsbrief artikel
+                      </h3>
+                      {(urgency === 'urgent' || isOverdue) && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/30 text-red-300 animate-pulse">
+                          {isOverdue ? 'VERLOPEN' : 'DRINGEND'}
+                        </span>
+                      )}
+                      {urgency === 'warning' && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300">
+                          Binnenkort
+                        </span>
+                      )}
+                    </div>
+
+                    {assignment.topic && (
+                      <p className="text-sm text-white/80 mb-2">{assignment.topic}</p>
+                    )}
+
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className={`flex items-center gap-1 ${
+                        urgency === 'urgent' || isOverdue ? 'text-red-400' : urgency === 'warning' ? 'text-amber-400' : 'text-gray-400'
+                      }`}>
+                        <Icons.clock size={12} />
+                        Deadline: {new Date(assignment.deadline).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}
+                      </span>
+                      <span className={`font-medium ${
+                        isOverdue ? 'text-red-400' : urgency === 'urgent' ? 'text-red-300' : urgency === 'warning' ? 'text-amber-300' : 'text-gray-400'
+                      }`}>
+                        {isOverdue ? `${Math.abs(daysLeft)} dagen te laat` : `Nog ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dagen'}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => markArticleSubmitted(assignment.id)}
+                      className="px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors flex items-center gap-1"
+                      title="Markeer als ingeleverd"
+                    >
+                      <Icons.check size={14} />
+                      <span className="hidden sm:inline">Ingeleverd</span>
+                    </button>
+                    <button
+                      onClick={() => dismissNewsletterReminder(assignment.id)}
+                      className="p-2 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-colors"
+                      title="Herinnering sluiten"
+                    >
+                      <Icons.x size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Newsletter Manager Overview Widget - for Erika, partners, admins */}
+      {isNewsletterManager && pendingOverviewArticles.length > 0 && (
+        <div className="relative overflow-hidden rounded-2xl border border-workx-lime/20 bg-gradient-to-br from-workx-lime/5 via-transparent to-emerald-500/5 p-5 shadow-lg shadow-workx-lime/5">
+          {/* Subtle glow */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+          <div className="relative">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.fileText className="text-workx-lime" size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Nieuwsbrief Overzicht</h2>
+                  <p className="text-xs text-gray-400">
+                    {pendingOverviewArticles.length} {pendingOverviewArticles.length === 1 ? 'artikel' : 'artikelen'} openstaand
+                  </p>
+                </div>
+              </div>
+              <Link href="/dashboard/werk" className="text-sm text-workx-lime hover:underline flex items-center gap-1">
+                Beheren
+                <Icons.arrowRight size={14} />
+              </Link>
+            </div>
+
+            {/* Article list */}
+            <div className="space-y-2">
+              {pendingOverviewArticles.map((article) => {
+                const urgency = getDeadlineUrgency(article.deadline)
+                const daysLeft = Math.ceil((new Date(article.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                const isOverdue = daysLeft < 0
+                const photoUrl = getPhotoUrl(article.assignee.name, article.assignee.avatarUrl)
+
+                return (
+                  <div
+                    key={article.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                      urgency === 'urgent' || isOverdue
+                        ? 'bg-red-500/10 border border-red-500/20'
+                        : urgency === 'warning'
+                        ? 'bg-amber-500/5 border border-amber-500/15'
+                        : 'bg-white/[0.03] border border-white/5'
+                    }`}
+                  >
+                    {/* Avatar */}
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10">
+                      {photoUrl ? (
+                        <img src={photoUrl} alt={article.assignee.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">
+                          {article.assignee.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white truncate">{article.assignee.name.split(' ')[0]}</span>
+                        {article.topic && (
+                          <span className="text-xs text-gray-400 truncate hidden sm:inline">- {article.topic}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs mt-0.5">
+                        <span className={
+                          isOverdue ? 'text-red-400 font-medium' : urgency === 'urgent' ? 'text-red-300' : urgency === 'warning' ? 'text-amber-400' : 'text-gray-400'
+                        }>
+                          {isOverdue ? `${Math.abs(daysLeft)}d te laat` : `${daysLeft}d`}
+                        </span>
+                        <span className="text-gray-500">
+                          {new Date(article.deadline).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => pushNewsletterReminder(article.id)}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          article.reminderPushedAt && !article.reminderDismissed
+                            ? 'text-amber-400 bg-amber-500/10'
+                            : 'text-gray-500 hover:text-amber-400 hover:bg-amber-500/10'
+                        }`}
+                        title={article.reminderPushedAt && !article.reminderDismissed ? 'Herinnering verstuurd' : 'Herinnering sturen'}
+                      >
+                        <Icons.bell size={14} />
+                      </button>
+                      <button
+                        onClick={() => markArticleSubmitted(article.id)}
+                        className="p-1.5 rounded-lg text-gray-500 hover:text-green-400 hover:bg-green-500/10 transition-colors"
+                        title="Markeer als ingeleverd"
+                      >
+                        <Icons.check size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

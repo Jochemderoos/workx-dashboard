@@ -68,7 +68,6 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
 
   // Newsletter assignment state
   const [newsletterAssignments, setNewsletterAssignments] = useState<NewsletterAssignment[]>([])
-  const [showNewsletterPanel, setShowNewsletterPanel] = useState(false)
   const [nlAssigneeId, setNlAssigneeId] = useState('')
   const [nlDeadline, setNlDeadline] = useState('')
   const [nlTopic, setNlTopic] = useState('')
@@ -255,6 +254,24 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
     }
   }
 
+  const handleSendReminder = async (assignmentId: string, assigneeName: string) => {
+    try {
+      const res = await fetch('/api/newsletter-assignments/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignmentId }),
+      })
+      if (res.ok) {
+        toast.success(`Herinnering verstuurd naar ${assigneeName}`)
+      } else {
+        const err = await res.json()
+        toast.error(err.error || 'Kon herinnering niet versturen')
+      }
+    } catch {
+      toast.error('Er ging iets mis')
+    }
+  }
+
   const formatDeadline = (dateStr: string) => {
     const d = new Date(dateStr)
     return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -395,17 +412,6 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                     </p>
                   </div>
 
-                  {/* Newsletter expand button */}
-                  {isNewsletterItem(r) && (
-                    <button
-                      onClick={() => setShowNewsletterPanel(!showNewsletterPanel)}
-                      className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-workx-lime transition-colors flex-shrink-0"
-                      title="Artikelen planning"
-                    >
-                      {showNewsletterPanel ? <Icons.chevronUp size={18} /> : <Icons.chevronDown size={18} />}
-                    </button>
-                  )}
-
                   {/* Actions */}
                   {canEdit && (
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
@@ -429,247 +435,264 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
               )}
             </div>
 
-            {/* Newsletter Assignments Panel - collapsible under nieuwsbrief item */}
-            {isNewsletterItem(r) && showNewsletterPanel && (
-              <div className="mt-2 ml-4 sm:ml-8 space-y-3">
-                {/* Header card with stats */}
-                <div className="card relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-workx-lime/8 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                  <div className="relative p-5 sm:p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center">
-                          <Icons.fileText size={18} className="text-workx-lime" />
-                        </div>
-                        <div>
-                          <h4 className="text-base font-semibold text-white">Artikelen Planning</h4>
-                          <p className="text-xs text-gray-400">Overzicht nieuwsbrief artikelen</p>
-                        </div>
-                      </div>
-                      {newsletterAssignments.length > 0 && (
-                        <div className="flex gap-3">
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-workx-lime">{newsletterAssignments.filter(a => a.status === 'SUBMITTED').length}</p>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Ingeleverd</p>
-                          </div>
-                          <div className="w-px bg-white/10" />
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-yellow-400">{newsletterAssignments.filter(a => a.status === 'PENDING').length}</p>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Open</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Newsletter Articles - Standalone Section */}
+      <div className="card relative overflow-hidden border-workx-lime/20 shadow-[0_0_30px_rgba(249,255,133,0.15)]">
+        {/* Background glow effects */}
+        <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-workx-lime/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-workx-lime/5 to-transparent rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+
+        <div className="relative">
+          {/* Header with stats */}
+          <div className="p-6 sm:p-8 border-b border-workx-lime/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center">
+                  <Icons.fileText size={22} className="text-workx-lime" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-white">Nieuwsbrief Artikelen</h3>
+                  <p className="text-sm text-gray-400">Overzicht en planning van alle artikelen</p>
+                </div>
+              </div>
+              {newsletterAssignments.length > 0 && (
+                <div className="flex gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-workx-lime">{newsletterAssignments.filter(a => a.status === 'SUBMITTED').length}</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Ingeleverd</p>
+                  </div>
+                  <div className="w-px bg-white/10" />
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-yellow-400">{newsletterAssignments.filter(a => a.status === 'PENDING').length}</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Open</p>
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
 
-                {/* Assignments overview list */}
-                {newsletterAssignments.length > 0 ? (
-                  <div className="space-y-2">
-                    {newsletterAssignments.map((a) => {
-                      const overdue = a.status === 'PENDING' && isOverdue(a.deadline)
-                      const submitted = a.status === 'SUBMITTED'
-                      return (
-                        <div key={a.id} className={`card relative overflow-hidden transition-all hover:border-white/20 ${submitted ? 'border-green-500/20' : overdue ? 'border-red-500/20' : ''}`}>
-                          {/* Subtle left accent */}
-                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${submitted ? 'bg-green-500' : overdue ? 'bg-red-500' : 'bg-workx-lime/40'}`} />
+          {/* Assignments list */}
+          <div className="p-6 sm:p-8">
+            {newsletterAssignments.length > 0 ? (
+              <div className="space-y-3">
+                {newsletterAssignments.map((a) => {
+                  const overdue = a.status === 'PENDING' && isOverdue(a.deadline)
+                  const submitted = a.status === 'SUBMITTED'
+                  return (
+                    <div key={a.id} className={`card relative overflow-hidden transition-all hover:border-white/20 ${submitted ? 'border-green-500/20' : overdue ? 'border-red-500/20' : ''}`}>
+                      {/* Subtle left accent */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${submitted ? 'bg-green-500' : overdue ? 'bg-red-500' : 'bg-workx-lime/40'}`} />
 
-                          <div className="relative p-4 sm:p-5 pl-5 sm:pl-6">
-                            <div className="flex items-start gap-3">
-                              {/* Assignee photo */}
-                              <div className="flex-shrink-0 mt-0.5">
-                                {getPhotoUrl(a.assignee.name, a.assignee.avatarUrl) ? (
-                                  <img src={getPhotoUrl(a.assignee.name, a.assignee.avatarUrl)!} alt="" className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10" />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-sm font-bold text-workx-lime ring-2 ring-white/10">
-                                    {a.assignee.name.charAt(0)}
-                                  </div>
-                                )}
+                      <div className="relative p-4 sm:p-5 pl-5 sm:pl-6">
+                        <div className="flex items-start gap-3">
+                          {/* Assignee photo */}
+                          <div className="flex-shrink-0 mt-0.5">
+                            {getPhotoUrl(a.assignee.name, a.assignee.avatarUrl) ? (
+                              <img src={getPhotoUrl(a.assignee.name, a.assignee.avatarUrl)!} alt="" className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-sm font-bold text-workx-lime ring-2 ring-white/10">
+                                {a.assignee.name.charAt(0)}
                               </div>
+                            )}
+                          </div>
 
-                              {/* Content */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="text-sm font-semibold text-white">{a.assignee.name}</p>
-                                  {/* Status badge */}
-                                  {canEditNewsletter ? (
-                                    <button
-                                      onClick={() => handleToggleNewsletterStatus(a.id, a.status)}
-                                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer hover:scale-105 ${
-                                        submitted
-                                          ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                                          : overdue
-                                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                                            : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
-                                      }`}
-                                      title="Klik om status te wijzigen"
-                                    >
-                                      {submitted ? 'Ingeleverd' : 'Open'}
-                                    </button>
-                                  ) : (
-                                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium ${
-                                      submitted
-                                        ? 'bg-green-500/20 text-green-400'
-                                        : overdue
-                                          ? 'bg-red-500/20 text-red-400'
-                                          : 'bg-yellow-500/20 text-yellow-400'
-                                    }`}>
-                                      {submitted ? 'Ingeleverd' : 'Open'}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Topic */}
-                                {a.topic && (
-                                  <p className="text-sm text-gray-300 mb-1.5">{a.topic}</p>
-                                )}
-
-                                {/* Deadline */}
-                                <div className={`flex items-center gap-1.5 text-xs ${overdue ? 'text-red-400' : submitted ? 'text-green-400/70' : 'text-gray-400'}`}>
-                                  <Icons.calendar size={12} />
-                                  <span>Deadline: {formatDeadline(a.deadline)}</span>
-                                  {overdue && !submitted && (
-                                    <span className="ml-1 text-red-400 font-medium">(te laat)</span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Delete button */}
-                              {canEditNewsletter && (
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-semibold text-white">{a.assignee.name}</p>
+                              {/* Status badge */}
+                              {canEditNewsletter ? (
                                 <button
-                                  onClick={() => { setNlDeleteId(a.id); setShowNlDeleteConfirm(true) }}
-                                  className="p-2 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors flex-shrink-0"
-                                  title="Verwijderen"
+                                  onClick={() => handleToggleNewsletterStatus(a.id, a.status)}
+                                  className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium transition-all cursor-pointer hover:scale-105 ${
+                                    submitted
+                                      ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                      : overdue
+                                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                        : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                                  }`}
+                                  title="Klik om status te wijzigen"
                                 >
-                                  <Icons.trash size={14} />
+                                  {submitted ? 'Ingeleverd' : 'Open'}
                                 </button>
+                              ) : (
+                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium ${
+                                  submitted
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : overdue
+                                      ? 'bg-red-500/20 text-red-400'
+                                      : 'bg-yellow-500/20 text-yellow-400'
+                                }`}>
+                                  {submitted ? 'Ingeleverd' : 'Open'}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Topic */}
+                            {a.topic && (
+                              <p className="text-sm text-gray-300 mb-1.5">{a.topic}</p>
+                            )}
+
+                            {/* Deadline */}
+                            <div className={`flex items-center gap-1.5 text-xs ${overdue ? 'text-red-400' : submitted ? 'text-green-400/70' : 'text-gray-400'}`}>
+                              <Icons.calendar size={12} />
+                              <span>Deadline: {formatDeadline(a.deadline)}</span>
+                              {overdue && !submitted && (
+                                <span className="ml-1 text-red-400 font-medium">(te laat)</span>
                               )}
                             </div>
                           </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="card p-8 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3">
-                      <Icons.fileText size={24} className="text-gray-500" />
-                    </div>
-                    <p className="text-sm text-gray-400">Nog geen artikelen ingepland</p>
-                    {canEditNewsletter && (
-                      <p className="text-xs text-gray-500 mt-1">Gebruik het formulier hieronder om artikelen in te plannen</p>
-                    )}
-                  </div>
-                )}
 
-                {/* Add form - only for newsletter responsible / PARTNER / ADMIN */}
-                {canEditNewsletter && (
-                  <div className="card overflow-hidden">
-                    <div className="p-4 sm:p-5 border-b border-white/10 bg-white/[0.02]">
-                      <h5 className="text-sm font-semibold text-white flex items-center gap-2">
-                        <Icons.plus size={14} className="text-workx-lime" />
-                        Nieuw artikel inplannen
-                      </h5>
-                    </div>
-
-                    <div className="p-4 sm:p-5 space-y-4">
-                      {/* Onderwerp (topic) - prominent field */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-1.5">Onderwerp artikel</label>
-                        <input
-                          type="text"
-                          value={nlTopic}
-                          onChange={(e) => setNlTopic(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/30 transition-colors"
-                          placeholder="Bijv. Kantoorupdate, Interview nieuwe collega, Juridisch artikel..."
-                        />
-                      </div>
-
-                      {/* Teamlid dropdown */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-1.5">Wie schrijft het artikel?</label>
-                        <div className="relative">
-                          <button
-                            onClick={() => setShowNlDropdown(!showNlDropdown)}
-                            className="w-full flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-left hover:border-white/20 transition-colors"
-                          >
-                            {nlSelectedMember ? (
-                              <>
-                                {getPhotoUrl(nlSelectedMember.name, nlSelectedMember.avatarUrl) ? (
-                                  <img src={getPhotoUrl(nlSelectedMember.name, nlSelectedMember.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-workx-lime/30" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">{nlSelectedMember.name.charAt(0)}</div>
-                                )}
-                                <span className="text-white font-medium">{nlSelectedMember.name}</span>
-                              </>
-                            ) : (
-                              <>
-                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                                  <Icons.users size={14} className="text-gray-500" />
-                                </div>
-                                <span className="text-gray-500">Kies een teamlid...</span>
-                              </>
-                            )}
-                            <Icons.chevronDown size={16} className="ml-auto text-gray-400" />
-                          </button>
-                          {showNlDropdown && (
-                            <div className="absolute z-50 bottom-full mb-2 w-full bg-workx-dark/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl shadow-black/50 max-h-[40vh] overflow-y-auto">
-                              {teamMembers.map(m => (
+                          {/* Action buttons */}
+                          {canEditNewsletter && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {/* Reminder button - only for PENDING */}
+                              {a.status === 'PENDING' && (
                                 <button
-                                  key={m.id}
-                                  onClick={() => { setNlAssigneeId(m.id); setShowNlDropdown(false) }}
-                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
+                                  onClick={() => handleSendReminder(a.id, a.assignee.name)}
+                                  className="p-2 rounded-lg hover:bg-yellow-500/10 text-gray-500 hover:text-yellow-400 transition-colors"
+                                  title="Herinnering sturen"
                                 >
-                                  {getPhotoUrl(m.name, m.avatarUrl) ? (
-                                    <img src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover" />
-                                  ) : (
-                                    <div className="w-8 h-8 rounded-full bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">{m.name.charAt(0)}</div>
-                                  )}
-                                  <span className="text-white text-sm font-medium">{m.name}</span>
-                                  {m.id === nlAssigneeId && <Icons.check size={14} className="ml-auto text-workx-lime" />}
+                                  <Icons.bell size={14} />
                                 </button>
-                              ))}
+                              )}
+                              {/* Delete button */}
+                              <button
+                                onClick={() => { setNlDeleteId(a.id); setShowNlDeleteConfirm(true) }}
+                                className="p-2 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+                                title="Verwijderen"
+                              >
+                                <Icons.trash size={14} />
+                              </button>
                             </div>
                           )}
                         </div>
                       </div>
-
-                      {/* Deadline - fancy DatePicker */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-1.5">Deadline</label>
-                        <DatePicker
-                          selected={nlDeadline ? new Date(nlDeadline + 'T12:00:00') : null}
-                          onChange={(date) => {
-                            if (date) {
-                              const y = date.getFullYear()
-                              const m = String(date.getMonth() + 1).padStart(2, '0')
-                              const d = String(date.getDate()).padStart(2, '0')
-                              setNlDeadline(`${y}-${m}-${d}`)
-                            } else {
-                              setNlDeadline('')
-                            }
-                          }}
-                          placeholder="Kies een deadline..."
-                          minDate={new Date()}
-                          isClearable
-                        />
-                      </div>
-
-                      <button
-                        onClick={handleAddNewsletterAssignment}
-                        disabled={!nlAssigneeId || !nlDeadline}
-                        className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        <Icons.plus size={16} />
-                        Artikel inplannen
-                      </button>
                     </div>
-                  </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3">
+                  <Icons.fileText size={24} className="text-gray-500" />
+                </div>
+                <p className="text-sm text-gray-400">Nog geen artikelen ingepland</p>
+                {canEditNewsletter && (
+                  <p className="text-xs text-gray-500 mt-1">Gebruik het formulier hieronder om artikelen in te plannen</p>
                 )}
               </div>
             )}
           </div>
-        ))}
+
+          {/* Add form - only for newsletter responsible / PARTNER / ADMIN */}
+          {canEditNewsletter && (
+            <div className="border-t border-workx-lime/10">
+              <div className="p-4 sm:p-5 border-b border-white/10 bg-white/[0.02]">
+                <h5 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Icons.plus size={14} className="text-workx-lime" />
+                  Nieuw artikel inplannen
+                </h5>
+              </div>
+
+              <div className="p-6 sm:p-8 space-y-4">
+                {/* Onderwerp (topic) - prominent field */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Onderwerp artikel</label>
+                  <input
+                    type="text"
+                    value={nlTopic}
+                    onChange={(e) => setNlTopic(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/30 transition-colors"
+                    placeholder="Bijv. Kantoorupdate, Interview nieuwe collega, Juridisch artikel..."
+                  />
+                </div>
+
+                {/* Teamlid dropdown */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Wie schrijft het artikel?</label>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowNlDropdown(!showNlDropdown)}
+                      className="w-full flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-left hover:border-white/20 transition-colors"
+                    >
+                      {nlSelectedMember ? (
+                        <>
+                          {getPhotoUrl(nlSelectedMember.name, nlSelectedMember.avatarUrl) ? (
+                            <img src={getPhotoUrl(nlSelectedMember.name, nlSelectedMember.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-workx-lime/30" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">{nlSelectedMember.name.charAt(0)}</div>
+                          )}
+                          <span className="text-white font-medium">{nlSelectedMember.name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                            <Icons.users size={14} className="text-gray-500" />
+                          </div>
+                          <span className="text-gray-500">Kies een teamlid...</span>
+                        </>
+                      )}
+                      <Icons.chevronDown size={16} className="ml-auto text-gray-400" />
+                    </button>
+                    {showNlDropdown && (
+                      <div className="absolute z-50 bottom-full mb-2 w-full bg-workx-dark/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl shadow-black/50 max-h-[40vh] overflow-y-auto">
+                        {teamMembers.map(m => (
+                          <button
+                            key={m.id}
+                            onClick={() => { setNlAssigneeId(m.id); setShowNlDropdown(false) }}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
+                          >
+                            {getPhotoUrl(m.name, m.avatarUrl) ? (
+                              <img src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">{m.name.charAt(0)}</div>
+                            )}
+                            <span className="text-white text-sm font-medium">{m.name}</span>
+                            {m.id === nlAssigneeId && <Icons.check size={14} className="ml-auto text-workx-lime" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Deadline - fancy DatePicker */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Deadline</label>
+                  <DatePicker
+                    selected={nlDeadline ? new Date(nlDeadline + 'T12:00:00') : null}
+                    onChange={(date) => {
+                      if (date) {
+                        const y = date.getFullYear()
+                        const m = String(date.getMonth() + 1).padStart(2, '0')
+                        const d = String(date.getDate()).padStart(2, '0')
+                        setNlDeadline(`${y}-${m}-${d}`)
+                      } else {
+                        setNlDeadline('')
+                      }
+                    }}
+                    placeholder="Kies een deadline..."
+                    minDate={new Date()}
+                    isClearable
+                  />
+                </div>
+
+                <button
+                  onClick={handleAddNewsletterAssignment}
+                  disabled={!nlAssigneeId || !nlDeadline}
+                  className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Icons.plus size={16} />
+                  Artikel inplannen
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Add new responsibility - only for PARTNER/ADMIN */}

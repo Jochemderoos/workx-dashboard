@@ -37,6 +37,9 @@ export async function GET() {
       parentalLeave,
       currentUser,
       birthdays,
+      newsletterReminders,
+      allNewsletterAssignments,
+      isNewsletterResponsible,
     ] = await Promise.all([
       // 1. Calendar Events - upcoming events (fetch more to allow social event prioritization)
       prisma.calendarEvent.findMany({
@@ -208,6 +211,40 @@ export async function GET() {
         },
         orderBy: { name: 'asc' },
       }),
+
+      // 11. Newsletter Reminders - articles assigned to current user
+      // Show if: deadline within 2 weeks, or reminder was manually pushed (and not dismissed)
+      prisma.newsletterAssignment.findMany({
+        where: {
+          assigneeId: userId,
+          status: 'PENDING',
+          OR: [
+            { deadline: { lte: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000) } },
+            { reminderPushedAt: { not: null }, reminderDismissed: false },
+          ],
+        },
+        include: {
+          createdBy: { select: { id: true, name: true } },
+        },
+        orderBy: { deadline: 'asc' },
+      }),
+
+      // 12. Newsletter Overview - ALL assignments for newsletter manager / partners / admins
+      prisma.newsletterAssignment.findMany({
+        include: {
+          assignee: { select: { id: true, name: true, avatarUrl: true } },
+          createdBy: { select: { id: true, name: true } },
+        },
+        orderBy: { deadline: 'asc' },
+      }),
+
+      // 13. Check if current user is newsletter responsible
+      prisma.responsibility.findFirst({
+        where: {
+          responsibleId: userId,
+          task: { contains: 'nieuwsbrief', mode: 'insensitive' },
+        },
+      }),
     ])
 
     // Calculate vacation balance totals for easier frontend use
@@ -325,6 +362,18 @@ export async function GET() {
       parentalLeave,
       currentUser,
       birthdays,
+      newsletterReminders,
+      // Newsletter overview for managers (Erika, partners, admins)
+      newsletterOverview: (
+        isNewsletterResponsible ||
+        currentUser?.role === 'PARTNER' ||
+        currentUser?.role === 'ADMIN'
+      ) ? allNewsletterAssignments : null,
+      isNewsletterManager: !!(
+        isNewsletterResponsible ||
+        currentUser?.role === 'PARTNER' ||
+        currentUser?.role === 'ADMIN'
+      ),
       // Meta information
       fetchedAt: now.toISOString(),
     }, {

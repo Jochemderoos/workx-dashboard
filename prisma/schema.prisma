@@ -1020,14 +1020,19 @@ model Responsibility {
 
 // Nieuwsbrief artikelen planning - onder Wie doet Wat
 model NewsletterAssignment {
-  id          String   @id @default(cuid())
-  assigneeId  String   // Wie moet het artikel schrijven
-  deadline    DateTime // Wanneer moet het ingeleverd zijn
-  topic       String?  // Optioneel: onderwerp van het artikel
-  status      String   @default("PENDING") // PENDING | SUBMITTED
+  id          String    @id @default(cuid())
+  assigneeId  String    // Wie moet het artikel schrijven
+  deadline    DateTime  // Wanneer moet het ingeleverd zijn
+  topic       String?   // Optioneel: onderwerp van het artikel
+  status      String    @default("PENDING") // PENDING | SUBMITTED
   createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Reminder systeem
+  reminderPushedAt  DateTime? // Wanneer is er handmatig een reminder gepusht?
+  reminderPushedBy  String?   // Door wie?
+  reminderDismissed Boolean   @default(false) // Heeft de gebruiker de reminder weggeklikt?
 
   assignee    User     @relation("NewsletterAssignee", fields: [assigneeId], references: [id], onDelete: Cascade)
   createdBy   User     @relation("NewsletterCreator", fields: [createdById], references: [id], onDelete: Cascade)
