@@ -79,8 +79,8 @@ interface ParentalLeave {
   onbetaaldOpgenomenDagen: number
   onbetaaldVerlofDetails: string | null
   uwvAangevraagd: boolean
-  uwvGoedgekeurd: boolean
-  notities: string | null
+  uwvDetails: string | null
+  note: string | null
 }
 
 interface SickDaysTotals {

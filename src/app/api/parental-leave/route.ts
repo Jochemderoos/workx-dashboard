@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         betaaldTotaalUren,
         betaaldOpgenomenUren,
         betaaldVerlofDetails: leaveData.betaaldVerlofDetails || null,
-        betaaldVerlofEinddatum: leaveData.eindDatum ? new Date(leaveData.eindDatum) : leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null,
+        betaaldVerlofEinddatum: leaveData.startDatum ? new Date(leaveData.startDatum) : leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null,
         onbetaaldTotaalDagen,
         onbetaaldOpgenomenDagen,
         onbetaaldVerlofDetails: leaveData.onbetaaldVerlofDetails || null,
@@ -165,11 +165,15 @@ export async function PATCH(request: NextRequest) {
     if (leaveData.betaaldOpgenomenWeken != null) updateData.betaaldOpgenomenUren = leaveData.betaaldOpgenomenWeken * 36
     else if (leaveData.betaaldOpgenomenUren !== undefined) updateData.betaaldOpgenomenUren = leaveData.betaaldOpgenomenUren
     if (leaveData.betaaldVerlofDetails !== undefined) updateData.betaaldVerlofDetails = leaveData.betaaldVerlofDetails
-    if (leaveData.eindDatum !== undefined) {
-      updateData.betaaldVerlofEinddatum = leaveData.eindDatum ? new Date(leaveData.eindDatum) : null
-      updateData.onbetaaldVerlofEinddatum = leaveData.eindDatum ? new Date(leaveData.eindDatum) : null
+    if (leaveData.startDatum !== undefined) {
+      updateData.betaaldVerlofEinddatum = leaveData.startDatum ? new Date(leaveData.startDatum) : null
     } else if (leaveData.betaaldVerlofEinddatum !== undefined) {
       updateData.betaaldVerlofEinddatum = leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null
+    }
+    if (leaveData.eindDatum !== undefined) {
+      updateData.onbetaaldVerlofEinddatum = leaveData.eindDatum ? new Date(leaveData.eindDatum) : null
+    } else if (leaveData.onbetaaldVerlofEinddatum !== undefined) {
+      updateData.onbetaaldVerlofEinddatum = leaveData.onbetaaldVerlofEinddatum ? new Date(leaveData.onbetaaldVerlofEinddatum) : null
     }
     if (leaveData.onbetaaldTotaalWeken != null) updateData.onbetaaldTotaalDagen = leaveData.onbetaaldTotaalWeken * 5
     else if (leaveData.onbetaaldTotaalDagen !== undefined) updateData.onbetaaldTotaalDagen = leaveData.onbetaaldTotaalDagen

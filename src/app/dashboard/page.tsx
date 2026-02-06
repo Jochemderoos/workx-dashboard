@@ -291,7 +291,6 @@ interface ParentalLeaveData {
   kindGeboorteDatum: string | null
   startDatum: string | null
   eindDatum: string | null
-  inzetPerWeek: number | null
   note: string | null
 }
 

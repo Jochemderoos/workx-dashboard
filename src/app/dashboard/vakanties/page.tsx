@@ -59,7 +59,6 @@ interface ParentalLeave {
   kindGeboorteDatum: string | null
   startDatum: string | null
   eindDatum: string | null
-  inzetPerWeek: number | null
   note: string | null
   user?: {
     id: string
@@ -113,7 +112,6 @@ export default function VakantiesPage() {
     kindGeboorteDatum: Date | null
     startDatum: Date | null
     eindDatum: Date | null
-    inzetPerWeek: number
     note: string
   }>({
     userId: '',
@@ -125,7 +123,6 @@ export default function VakantiesPage() {
     kindGeboorteDatum: null,
     startDatum: null,
     eindDatum: null,
-    inzetPerWeek: 0,
     note: '',
   })
 
@@ -458,7 +455,6 @@ export default function VakantiesPage() {
       kindGeboorteDatum: null,
       startDatum: null,
       eindDatum: null,
-      inzetPerWeek: 0,
       note: '',
     })
     setEditingParentalLeave(null)
@@ -476,7 +472,6 @@ export default function VakantiesPage() {
       kindGeboorteDatum: leave.kindGeboorteDatum ? new Date(leave.kindGeboorteDatum) : null,
       startDatum: leave.startDatum ? new Date(leave.startDatum) : null,
       eindDatum: leave.eindDatum ? new Date(leave.eindDatum) : null,
-      inzetPerWeek: leave.inzetPerWeek || 0,
       note: leave.note || '',
     })
     setEditingParentalLeave(leave)
@@ -515,11 +510,11 @@ export default function VakantiesPage() {
     }
   }
 
-  const handleDeleteParentalLeave = async (userId: string) => {
+  const handleDeleteParentalLeave = async (leaveId: string) => {
     if (!confirm('Weet je zeker dat je dit ouderschapsverlof wilt verwijderen?')) return
 
     try {
-      const res = await fetch(`/api/parental-leave?userId=${userId}`, {
+      const res = await fetch(`/api/parental-leave?id=${leaveId}`, {
         method: 'DELETE',
       })
 
@@ -1491,18 +1486,6 @@ export default function VakantiesPage() {
                           />
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Uren per week</label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          value={parentalLeaveForm.inzetPerWeek || ''}
-                          onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, inzetPerWeek: parseFloat(e.target.value) || 0 })}
-                          className="input-field w-32"
-                          placeholder="8"
-                        />
-                      </div>
-
                       {/* Notitie */}
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
@@ -1585,7 +1568,7 @@ export default function VakantiesPage() {
                             <Icons.edit size={16} />
                           </button>
                           <button
-                            onClick={() => handleDeleteParentalLeave(leave.userId)}
+                            onClick={() => handleDeleteParentalLeave(leave.id)}
                             className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                           >
                             <Icons.trash size={16} />

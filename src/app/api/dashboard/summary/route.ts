@@ -4,6 +4,23 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { OFFICE_CONFIG, getDefaultVacationDays } from '@/lib/config'
 
+// Transform DB parental leave (uren/dagen) to frontend format (weken)
+function transformParentalLeaveForFrontend(leave: any) {
+  return {
+    id: leave.id,
+    userId: leave.userId,
+    betaaldTotaalWeken: Math.round((leave.betaaldTotaalUren / 36) * 10) / 10,
+    betaaldOpgenomenWeken: Math.round((leave.betaaldOpgenomenUren / 36) * 10) / 10,
+    onbetaaldTotaalWeken: Math.round((leave.onbetaaldTotaalDagen / 5) * 10) / 10,
+    onbetaaldOpgenomenWeken: Math.round((leave.onbetaaldOpgenomenDagen / 5) * 10) / 10,
+    kindNaam: leave.kindNaam,
+    kindGeboorteDatum: leave.kindGeboorteDatum,
+    startDatum: leave.betaaldVerlofEinddatum,
+    eindDatum: leave.onbetaaldVerlofEinddatum,
+    note: leave.note,
+  }
+}
+
 // GET - Fetch all dashboard data in one bundled API call
 export async function GET() {
   try {
@@ -63,7 +80,7 @@ export async function GET() {
       prisma.workItem.findMany({
         where: {
           assigneeId: userId,
-          status: { notIn: ['DONE', 'CANCELLED'] }, // Active items (not completed or cancelled)
+          status: { notIn: ['DONE', 'COMPLETED', 'CANCELLED'] }, // Active items (not completed or cancelled)
         },
         include: {
           assignee: {
@@ -377,7 +394,7 @@ export async function GET() {
       officeAttendance: officeAttendanceFormatted,
       tomorrowAttendance: tomorrowAttendanceFormatted,
       vacationBalance: vacationBalanceFormatted,
-      parentalLeave,
+      parentalLeave: (parentalLeave as any[]).map(transformParentalLeaveForFrontend),
       currentUser,
       birthdays,
       newsletterReminders,
