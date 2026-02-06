@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         icon: icon || '📄',
         content,
         sortOrder: sortOrder || 0,
-        updatedById: user.id,
+        updatedById: session.user.id,
       },
       create: {
         documentId,
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         icon: icon || '📄',
         content,
         sortOrder: sortOrder || 0,
-        updatedById: user.id,
+        updatedById: session.user.id,
       }
     })
 

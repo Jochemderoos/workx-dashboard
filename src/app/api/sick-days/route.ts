@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         endDate: end,
         workDays,
         note: note || null,
-        createdById: currentUser.id,
+        createdById: session.user.id,
       },
       include: {
         user: {
