@@ -48,6 +48,7 @@ export default function AfspiegelingPage() {
   const getAge = (birth: string) => {
     const today = new Date()
     const b = new Date(birth)
+    if (isNaN(b.getTime())) return 0
     let age = today.getFullYear() - b.getFullYear()
     if (today.getMonth() < b.getMonth() || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate())) age--
     return age

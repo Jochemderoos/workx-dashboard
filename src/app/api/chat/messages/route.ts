@@ -19,6 +19,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Channel ID is verplicht' }, { status: 400 })
     }
 
+    // Verify channel exists and user has access
+    const channel = await prisma.chatChannel.findUnique({
+      where: { id: channelId },
+      select: { isPrivate: true }
+    })
+    if (!channel) {
+      return NextResponse.json({ error: 'Kanaal niet gevonden' }, { status: 404 })
+    }
+    if (channel.isPrivate) {
+      const membership = await prisma.channelMember.findUnique({
+        where: { userId_channelId: { userId: session.user.id, channelId } }
+      })
+      if (!membership) {
+        return NextResponse.json({ error: 'Geen toegang tot dit kanaal' }, { status: 403 })
+      }
+    }
+
     const messages = await prisma.chatMessage.findMany({
       where: { channelId },
       include: {

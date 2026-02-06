@@ -32,8 +32,12 @@ export async function POST(req: NextRequest) {
 
     const { invoiceAmount, bonusPercentage, invoicePaid, bonusPaid, invoiceNumber, clientName, description } = await req.json()
 
-    if (!invoiceAmount || !bonusPercentage) {
+    if (invoiceAmount == null || bonusPercentage == null) {
       return NextResponse.json({ error: 'Invoice amount and bonus percentage are required' }, { status: 400 })
+    }
+
+    if (typeof invoiceAmount !== 'number' || typeof bonusPercentage !== 'number' || invoiceAmount < 0 || bonusPercentage < 0 || bonusPercentage > 100) {
+      return NextResponse.json({ error: 'Ongeldige waarden' }, { status: 400 })
     }
 
     const bonusAmount = invoiceAmount * (bonusPercentage / 100)

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     const workItems = await prisma.workItem.findMany({
       where: {
-        ...(status && { status: status as any }),
+        ...(status && { status }),
         ...(assigneeId && { assigneeId }),
       },
       include: {

@@ -24,7 +24,7 @@ export default async function DashboardLayout({
     id: session.user.id || 'unknown',
     name: session.user.name || 'Gebruiker',
     email: session.user.email || '',
-    role: (session.user as any).role || 'EMPLOYEE'
+    role: session.user.role || 'EMPLOYEE'
   }
 
   return (

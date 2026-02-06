@@ -29,8 +29,7 @@ export async function GET(request: Request) {
     }
 
     // Alleen Partners en Admin mogen ziektedagen zien
-    const user = session.user as any
-    if (user.role !== 'PARTNER' && user.role !== 'ADMIN') {
+    if (session.user.role !== 'PARTNER' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
@@ -97,8 +96,7 @@ export async function POST(request: Request) {
     }
 
     // Alleen Partners en Admin mogen ziektedagen bijwerken
-    const currentUser = session.user as any
-    if (currentUser.role !== 'PARTNER' && currentUser.role !== 'ADMIN') {
+    if (session.user.role !== 'PARTNER' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
@@ -158,8 +156,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
     }
 
-    const currentUser = session.user as any
-    if (currentUser.role !== 'PARTNER' && currentUser.role !== 'ADMIN') {
+    if (session.user.role !== 'PARTNER' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 

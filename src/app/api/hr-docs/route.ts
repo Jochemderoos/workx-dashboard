@@ -35,8 +35,7 @@ export async function POST(request: Request) {
     }
 
     // Alleen Partners en Admin mogen bewerken
-    const user = session.user as any
-    if (user.role !== 'PARTNER' && user.role !== 'ADMIN') {
+    if (session.user.role !== 'PARTNER' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
@@ -88,8 +87,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
     }
 
-    const user = session.user as any
-    if (user.role !== 'PARTNER' && user.role !== 'ADMIN') {
+    if (session.user.role !== 'PARTNER' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 

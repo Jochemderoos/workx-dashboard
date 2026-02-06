@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-const CONVERTAPI_SECRET = process.env.CONVERTAPI_SECRET || 'ObmpSzk5RFTd78V9YEdya9IWhVEOBKqT'
+const CONVERTAPI_SECRET = process.env.CONVERTAPI_SECRET
 
 /**
  * Convert Office documents (docx, xlsx, pptx) to PDF using ConvertAPI
@@ -15,6 +15,10 @@ export async function POST(req: NextRequest) {
     }
 
     const { fileData, fileName } = await req.json()
+
+    if (!CONVERTAPI_SECRET) {
+      return NextResponse.json({ error: 'ConvertAPI niet geconfigureerd' }, { status: 500 })
+    }
 
     if (!fileData || !fileName) {
       return NextResponse.json({ error: 'Geen bestand' }, { status: 400 })
@@ -42,10 +46,6 @@ export async function POST(req: NextRequest) {
     // Call ConvertAPI
     const convertApiUrl = `https://v2.convertapi.com/convert/${sourceFormat}/to/pdf`
 
-    console.log('Calling ConvertAPI:', convertApiUrl)
-    console.log('File name:', fileName)
-    console.log('Base64 data length:', base64Data.length)
-
     const response = await fetch(convertApiUrl, {
       method: 'POST',
       headers: {
@@ -72,27 +72,22 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await response.json()
-    console.log('ConvertAPI result keys:', Object.keys(result))
 
     // Get the converted PDF
     if (result.Files && result.Files.length > 0) {
       const pdfFile = result.Files[0]
-      console.log('PDF file keys:', Object.keys(pdfFile))
 
       let pdfBase64 = ''
 
       // Check if FileData is directly available
       if (pdfFile.FileData) {
         pdfBase64 = pdfFile.FileData
-        console.log('Got FileData directly, length:', pdfBase64.length)
       }
       // Otherwise download from URL
       else if (pdfFile.Url) {
-        console.log('Downloading from URL:', pdfFile.Url)
         const pdfResponse = await fetch(pdfFile.Url)
         const pdfBuffer = await pdfResponse.arrayBuffer()
         pdfBase64 = Buffer.from(pdfBuffer).toString('base64')
-        console.log('Downloaded PDF, base64 length:', pdfBase64.length)
       }
 
       if (pdfBase64) {
@@ -107,8 +102,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.error('No PDF in result:', JSON.stringify(result).substring(0, 500))
-    return NextResponse.json({ error: 'Geen PDF ontvangen', result: result }, { status: 500 })
+    console.error('No PDF in result')
+    return NextResponse.json({ error: 'Geen PDF ontvangen' }, { status: 500 })
   } catch (error) {
     console.error('Conversion error:', error)
     return NextResponse.json({ error: 'Conversie mislukt', details: String(error) }, { status: 500 })

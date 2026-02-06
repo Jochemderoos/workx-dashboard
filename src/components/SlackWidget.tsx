@@ -64,6 +64,7 @@ export function SlackWidget({ currentUserName }: SlackWidgetProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Fetch channels on mount
   useEffect(() => {
@@ -76,7 +77,10 @@ export function SlackWidget({ currentUserName }: SlackWidgetProps) {
       fetchMessages(selectedChannel.id)
       // Poll for new messages every 10 seconds
       const interval = setInterval(() => fetchMessages(selectedChannel.id), 10000)
-      return () => clearInterval(interval)
+      return () => {
+        clearInterval(interval)
+        abortControllerRef.current?.abort()
+      }
     }
   }, [selectedChannel])
 
@@ -104,11 +108,17 @@ export function SlackWidget({ currentUserName }: SlackWidgetProps) {
 
   const fetchMessages = async (channelId: string) => {
     try {
-      const res = await fetch(`/api/slack/channels?channelId=${channelId}&limit=50`)
+      abortControllerRef.current?.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+      const res = await fetch(`/api/slack/channels?channelId=${channelId}&limit=50`, {
+        signal: controller.signal,
+      })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setMessages(data.messages || [])
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       console.error('Error fetching messages:', err)
     }
   }

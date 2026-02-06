@@ -1,21 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// Health check endpoint - no auth required
-// Use this to verify database connection and basic stats
+// Health check endpoint - basic connectivity check only
 export async function GET() {
   const startTime = Date.now()
 
   try {
-    // Check database connection and get basic stats
-    const [userCount, activeUsers, lastUser] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.user.findFirst({
-        orderBy: { updatedAt: 'desc' },
-        select: { name: true, updatedAt: true }
-      })
-    ])
+    // Simple database ping - no sensitive data
+    await prisma.$queryRaw`SELECT 1`
 
     const dbLatency = Date.now() - startTime
 
@@ -25,14 +17,6 @@ export async function GET() {
       database: {
         connected: true,
         latency: `${dbLatency}ms`,
-        users: {
-          total: userCount,
-          active: activeUsers
-        },
-        lastActivity: lastUser ? {
-          user: lastUser.name,
-          at: lastUser.updatedAt
-        } : null
       },
       version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'local'
     })
@@ -44,7 +28,6 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       database: {
         connected: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
       }
     }, { status: 503 })
   }

@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { slack } from '@/lib/slack'
 
-// Debug endpoint to see raw Slack data
+// Debug endpoint to see raw Slack data - ADMIN/PARTNER only
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: session.user.email! }, select: { role: true } })
+    if (!user || !['PARTNER', 'ADMIN'].includes(user.role)) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     // Get raw channel list (public + private)
@@ -34,7 +40,6 @@ export async function GET() {
     console.error('Slack debug error:', error)
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Unknown error',
-      errorDetails: error,
     }, { status: 500 })
   }
 }
