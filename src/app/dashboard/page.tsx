@@ -2489,7 +2489,8 @@ export default function DashboardHome() {
         {/* Dynamic Widget based on role */}
         {isAdmin ? (
           /* Werkdruk Widget for Partners/Hanna */
-          <Link href="/dashboard/werk" className="card p-5 block relative group hover:border-blue-500/30 transition-all">
+          <Link href="/dashboard/werk" className="card p-5 block relative overflow-hidden group hover:border-blue-500/30 transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
             {/* Blue light streak */}
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
             <div className="absolute bottom-0 left-[5%] right-[5%] h-[10px] bg-gradient-to-r from-transparent via-blue-400/15 to-transparent" />
@@ -2526,7 +2527,8 @@ export default function DashboardHome() {
           </Link>
         ) : (
           /* Feedback Widget for Employees */
-          <Link href="/dashboard/feedback" className="card p-5 block relative group hover:border-purple-500/30 transition-all">
+          <Link href="/dashboard/feedback" className="card p-5 block relative overflow-hidden group hover:border-purple-500/30 transition-all">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
@@ -2546,7 +2548,8 @@ export default function DashboardHome() {
         )}
 
         {/* Eerstvolgende Opleiding */}
-        <Link href="/dashboard/opleidingen" className="card p-5 block relative group hover:border-white/10 transition-all">
+        <Link href="/dashboard/opleidingen" className="card p-5 block relative overflow-hidden group hover:border-white/10 transition-all">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Icons.graduationCap className="text-blue-400" size={18} />
@@ -2582,7 +2585,8 @@ export default function DashboardHome() {
         </Link>
 
         {/* Events deze week */}
-        <Link href="/dashboard/agenda" className="card p-5 block relative group hover:border-white/10 transition-all">
+        <Link href="/dashboard/agenda" className="card p-5 block relative overflow-hidden group hover:border-white/10 transition-all">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Icons.calendar className="text-purple-400" size={18} />
