@@ -1,37 +1,37 @@
-<svg width="200" height="90" viewBox="0 0 200 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Dark gray background with rounded corners -->
-  <rect width="200" height="90" rx="8" fill="#3d3d3d"/>
-
-  <!-- Yellow diagonal accent bar in top-left corner -->
+<svg width="400" height="280" viewBox="0 0 400 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Yellow post-it note shape -->
   <defs>
-    <clipPath id="logoClipMain">
-      <rect width="200" height="90" rx="8"/>
-    </clipPath>
+    <linearGradient id="foldGrad" x1="340" y1="0" x2="400" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f9ff85"/>
+      <stop offset="50%" stop-color="#e0e0d0"/>
+      <stop offset="100%" stop-color="#c8c8b8"/>
+    </linearGradient>
   </defs>
-  <g clip-path="url(#logoClipMain)">
-    <polygon points="0,0 75,0 40,38 0,38" fill="#f9ff85"/>
-  </g>
 
-  <!-- Workx text - using web-safe system font with italic -->
+  <!-- Main yellow area -->
+  <polygon points="0,0 340,0 340,0 400,60 400,280 0,280" fill="#f9ff85"/>
+
+  <!-- Folded corner -->
+  <polygon points="340,0 400,60 340,60" fill="url(#foldGrad)"/>
+
+  <!-- Workx text -->
   <text
-    x="20"
-    y="54"
-    fill="#ffffff"
-    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif"
-    font-size="38"
-    font-weight="400"
-    font-style="italic"
-    letter-spacing="-1"
+    x="30"
+    y="160"
+    fill="#1e1e1e"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-size="110"
+    font-weight="600"
+    letter-spacing="-2"
   >Workx</text>
 
-  <!-- ADVOCATEN text - spaced uppercase -->
+  <!-- Advocaten text -->
   <text
-    x="20"
-    y="74"
-    fill="#ffffff"
-    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif"
-    font-size="13"
-    font-weight="500"
-    letter-spacing="2.5"
-  >ADVOCATEN</text>
+    x="175"
+    y="210"
+    fill="#1e1e1e"
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-size="42"
+    font-weight="400"
+  >Advocaten</text>
 </svg>

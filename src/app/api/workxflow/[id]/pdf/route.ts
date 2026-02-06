@@ -18,10 +18,11 @@ const LOGO_HEIGHT = 87
 let cachedLogoPage: Uint8Array | null = null
 
 /**
- * Load the official Workx logo PDF
+ * Load the official Workx logo PDF (always reload to pick up new logos)
  */
 async function loadLogoPdf(): Promise<Uint8Array | null> {
-  if (cachedLogoPage) return cachedLogoPage
+  // Always reload to ensure latest logo is used
+  cachedLogoPage = null
 
   try {
     // Try to load from public folder
@@ -203,14 +204,17 @@ export async function POST(
     // ============================================
     // 2. PRODUCTIELIJST page (logo + title + list)
     // ============================================
-    if (bundle.productions.length > 0) {
+    const productionLabel = bundle.productionLabel || 'PRODUCTIE'
+    const listTitle = productionLabel === 'BIJLAGE' ? 'Bijlagenlijst' : 'Productielijst'
+
+    if (bundle.productions.length > 0 && bundle.includeProductielijst) {
       const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
 
       // Add Workx logo (top-left)
       await drawWorkxLogo(indexPage, pdfDoc)
 
-      // Title "Productielijst"
-      indexPage.drawText('Productielijst', {
+      // Title
+      indexPage.drawText(listTitle, {
         x: 30,
         y: pageHeight - 110,
         size: 28,
@@ -223,17 +227,19 @@ export async function POST(
 
       for (const production of bundle.productions) {
         // Yellow highlight box for production number
+        const numText = String(production.productionNumber)
+        const numWidth = Math.max(40, helveticaBold.widthOfTextAtSize(numText, 14) + 16)
         indexPage.drawRectangle({
           x: 30,
           y: y - 8,
-          width: 40,
+          width: numWidth,
           height: 28,
           color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
         })
 
         // Production number
-        indexPage.drawText(String(production.productionNumber), {
-          x: 42,
+        indexPage.drawText(numText, {
+          x: 38,
           y: y,
           size: 14,
           font: helveticaBold,
@@ -242,7 +248,7 @@ export async function POST(
 
         // Production title
         indexPage.drawText(production.title, {
-          x: 85,
+          x: 30 + numWidth + 15,
           y: y,
           size: 12,
           font: helvetica,
@@ -278,7 +284,7 @@ export async function POST(
       await drawWorkxLogo(sheetPage, pdfDoc)
 
       // Production number - large centered text
-      const productionText = `PRODUCTIE ${production.productionNumber}`
+      const productionText = `${productionLabel} ${production.productionNumber}`
       const textWidth = helveticaBold.widthOfTextAtSize(productionText, 48)
 
       sheetPage.drawText(productionText, {

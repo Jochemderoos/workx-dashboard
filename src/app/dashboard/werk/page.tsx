@@ -105,6 +105,7 @@ export default function WerkOverzichtPage() {
   const [workloadEntries, setWorkloadEntries] = useState<WorkloadEntry[]>([])
   const [editingWorkload, setEditingWorkload] = useState<{ person: string; date: string } | null>(null)
   const [canEditWorkload, setCanEditWorkload] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [uploadDate, setUploadDate] = useState<Date | null>(new Date())
   const [isUploading, setIsUploading] = useState(false)
@@ -308,6 +309,7 @@ export default function WerkOverzichtPage() {
         const user = await res.json()
         const isManager = user.role === 'PARTNER' || user.role === 'ADMIN'
         setCanEditWorkload(isManager)
+        setCurrentUserId(user.id)
         // Partners en Admin zien werkdruk als default
         if (isManager) {
           setPageMode('werkdruk')
@@ -1738,7 +1740,7 @@ export default function WerkOverzichtPage() {
 
       {/* WIE DOET WAT - zichtbaar voor iedereen */}
       {pageMode === 'wie-doet-wat' && (
-        <WieDoetWat canEdit={canEditWorkload} />
+        <WieDoetWat canEdit={canEditWorkload} currentUserId={currentUserId} />
       )}
 
     </div>

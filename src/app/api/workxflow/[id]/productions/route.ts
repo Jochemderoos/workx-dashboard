@@ -46,7 +46,7 @@ export async function POST(
         documentName,
         documentType,
         pageCount,
-        sortOrder: sortOrder ?? productionNumber - 1,
+        sortOrder: sortOrder ?? 0,
       },
     })
 

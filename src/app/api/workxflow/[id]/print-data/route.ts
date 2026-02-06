@@ -67,7 +67,8 @@ export async function POST(
       // NO background color - the paper is already yellow with logo
       // Just add the text "PRODUCTIE X" centered
 
-      const productionText = `PRODUCTIE ${production.productionNumber}`
+      const label = bundle.productionLabel || 'PRODUCTIE'
+      const productionText = `${label} ${production.productionNumber}`
       const textWidth = helveticaBold.widthOfTextAtSize(productionText, 48)
 
       sheetPage.drawText(productionText, {
@@ -84,7 +85,7 @@ export async function POST(
 
     // 3. Production documents (Tray 1 - normal paper)
     const productionDocuments: Array<{
-      productionNumber: number
+      productionNumber: string
       title: string
       documentUrl: string | null
       documentType: string | null
@@ -125,12 +126,12 @@ export async function POST(
         // Job 3+: Individual production documents - Tray 1, normal paper
         ...productionDocuments
           .filter(p => p.documentUrl)
-          .map((p, index) => ({
-            name: `Productie ${p.productionNumber}: ${p.title}`,
+          .map((p) => ({
+            name: `${bundle.productionLabel === 'BIJLAGE' ? 'Bijlage' : 'Productie'} ${p.productionNumber}: ${p.title}`,
             tray: 1, // Normal paper tray
             copies: 1,
             documentUrl: p.documentUrl,
-            description: `Bijlage productie ${p.productionNumber}`,
+            description: `Bijlage ${bundle.productionLabel === 'BIJLAGE' ? 'bijlage' : 'productie'} ${p.productionNumber}`,
           })),
       ],
 

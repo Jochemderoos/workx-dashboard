@@ -79,6 +79,10 @@ model User {
   // Wie doet Wat
   responsibilities  Responsibility[]  @relation("ResponsibleUser")
 
+  // Nieuwsbrief artikelen planning
+  newsletterAssignments  NewsletterAssignment[] @relation("NewsletterAssignee")
+  newsletterCreated      NewsletterAssignment[] @relation("NewsletterCreator")
+
   @@index([isActive])
   @@index([role])
 }
@@ -877,6 +881,10 @@ model WorkxflowBundle {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // Instellingen
+  productionLabel      String   @default("PRODUCTIE") // PRODUCTIE | BIJLAGE
+  includeProductielijst Boolean  @default(true) // Productielijst opnemen in PDF
+
   // Producties
   productions     WorkxflowProduction[]
 
@@ -890,7 +898,7 @@ model WorkxflowProduction {
   bundleId        String
 
   // Productie info
-  productionNumber Int     // Productienummer (1, 2, 3, etc.)
+  productionNumber String  // Productienummer (1, 2, 1a, 1b, etc.)
   title           String   // Titel/beschrijving van de productie
 
   // Document
@@ -967,4 +975,22 @@ model Responsibility {
   responsible     User     @relation("ResponsibleUser", fields: [responsibleId], references: [id], onDelete: Cascade)
 
   @@index([responsibleId])
+}
+
+// Nieuwsbrief artikelen planning - onder Wie doet Wat
+model NewsletterAssignment {
+  id          String   @id @default(cuid())
+  assigneeId  String   // Wie moet het artikel schrijven
+  deadline    DateTime // Wanneer moet het ingeleverd zijn
+  topic       String?  // Optioneel: onderwerp van het artikel
+  status      String   @default("PENDING") // PENDING | SUBMITTED
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignee    User     @relation("NewsletterAssignee", fields: [assigneeId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("NewsletterCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([assigneeId])
+  @@index([deadline])
 }

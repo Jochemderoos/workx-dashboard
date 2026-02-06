@@ -1,13 +1,33 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
 
+// Debounce hook
+function useDebounceCallback<T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+) {
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const debouncedFn = useCallback((...args: Parameters<T>) => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => callback(...args), delay)
+  }, [callback, delay])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [])
+
+  return debouncedFn
+}
+
 interface Production {
   id: string
-  productionNumber: number
+  productionNumber: string
   title: string
   documentUrl?: string
   documentName?: string
@@ -27,6 +47,8 @@ interface Bundle {
   mainDocumentName?: string
   mainDocumentType?: string
   status: string
+  productionLabel: string // PRODUCTIE | BIJLAGE
+  includeProductielijst: boolean
   productions: Production[]
   createdAt: string
 }
@@ -221,9 +243,10 @@ export default function WorkxflowPage() {
     if (!activeBundle) return
 
     const nextNumber = activeBundle.productions.length + 1
+    const label = activeBundle.productionLabel === 'BIJLAGE' ? 'Bijlage' : 'Productie'
     const production: Partial<Production> = {
-      productionNumber: nextNumber,
-      title: file ? file.name.replace(/\.[^/.]+$/, '') : `Productie ${nextNumber}`,
+      productionNumber: String(nextNumber),
+      title: file ? file.name.replace(/\.[^/.]+$/, '') : `${label} ${nextNumber}`,
       sortOrder: nextNumber - 1,
       pageCount: 1,
     }
@@ -319,11 +342,12 @@ export default function WorkxflowPage() {
     }
   }
 
-  const updateProduction = async (productionId: string, updates: Partial<Production>) => {
-    if (!activeBundle) return
+  // Local edit state for debounced fields (title, productionNumber)
+  const [localEdits, setLocalEdits] = useState<Record<string, { title?: string; productionNumber?: string }>>({})
 
+  const updateProductionServer = useCallback(async (bundleId: string, productionId: string, updates: Partial<Production>) => {
     try {
-      const res = await fetch(`/api/workxflow/${activeBundle.id}/productions/${productionId}`, {
+      const res = await fetch(`/api/workxflow/${bundleId}/productions/${productionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -338,6 +362,25 @@ export default function WorkxflowPage() {
     } catch (error) {
       toast.error('Kon productie niet bijwerken')
     }
+  }, [])
+
+  const debouncedUpdateProduction = useDebounceCallback(updateProductionServer, 500)
+
+  // For title and productionNumber: update local state immediately, debounce server call
+  const updateProductionField = (productionId: string, field: 'title' | 'productionNumber', value: string) => {
+    setLocalEdits(prev => ({
+      ...prev,
+      [productionId]: { ...prev[productionId], [field]: value },
+    }))
+    if (activeBundle) {
+      debouncedUpdateProduction(activeBundle.id, productionId, { [field]: value })
+    }
+  }
+
+  // For non-debounced updates (like file uploads)
+  const updateProduction = async (productionId: string, updates: Partial<Production>) => {
+    if (!activeBundle) return
+    await updateProductionServer(activeBundle.id, productionId, updates)
   }
 
   const deleteProduction = async (productionId: string) => {
@@ -373,7 +416,7 @@ export default function WorkxflowPage() {
     const updated = newProductions.map((p, i) => ({
       ...p,
       sortOrder: i,
-      productionNumber: i + 1,
+      productionNumber: String(i + 1),
     }))
 
     // Optimistic UI update
@@ -632,7 +675,7 @@ export default function WorkxflowPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{bundle.title}</p>
                       <p className="text-xs text-gray-500">
-                        {bundle.productions.length} producties
+                        {bundle.productions.length} {bundle.productionLabel === 'BIJLAGE' ? 'bijlagen' : 'producties'}
                         {bundle.caseNumber && ` • ${bundle.caseNumber}`}
                       </p>
                     </div>
@@ -674,7 +717,7 @@ export default function WorkxflowPage() {
                       ) : (
                         <Icons.download size={16} />
                       )}
-                      Download Complete PDF
+                      Download Volledige PDF
                     </button>
                     {isElectron && (
                       <button
@@ -738,8 +781,8 @@ export default function WorkxflowPage() {
                   />
                 </div>
 
-                {/* Logo option for processtuk */}
-                <div className="mt-3 flex items-center gap-3">
+                {/* PDF opties */}
+                <div className="mt-3 space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -749,6 +792,43 @@ export default function WorkxflowPage() {
                     />
                     <span className="text-sm text-gray-300">Logo toevoegen aan processtuk in PDF</span>
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={activeBundle.includeProductielijst}
+                      onChange={async (e) => {
+                        const val = e.target.checked
+                        setActiveBundle(prev => prev ? { ...prev, includeProductielijst: val } : null)
+                        await fetch(`/api/workxflow/${activeBundle.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ includeProductielijst: val }),
+                        })
+                      }}
+                      className="w-4 h-4 rounded text-workx-lime bg-white/10 border-white/20 focus:ring-workx-lime"
+                    />
+                    <span className="text-sm text-gray-300">Productielijst opnemen in PDF</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">Naamgeving:</span>
+                    <select
+                      value={activeBundle.productionLabel}
+                      onChange={async (e) => {
+                        const val = e.target.value
+                        setActiveBundle(prev => prev ? { ...prev, productionLabel: val } : null)
+                        setBundles(prev => prev.map(b => b.id === activeBundle.id ? { ...b, productionLabel: val } : b))
+                        await fetch(`/api/workxflow/${activeBundle.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ productionLabel: val }),
+                        })
+                      }}
+                      className="px-2 py-1 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
+                    >
+                      <option value="PRODUCTIE">Producties</option>
+                      <option value="BIJLAGE">Bijlagen</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -756,14 +836,14 @@ export default function WorkxflowPage() {
               <div className="card p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium text-white">
-                    Producties ({activeBundle.productions.length})
+                    {activeBundle.productionLabel === 'BIJLAGE' ? 'Bijlagen' : 'Producties'} ({activeBundle.productions.length})
                   </h3>
                   <button
                     onClick={() => productionInputRef.current?.click()}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30 text-sm font-medium"
                   >
                     <Icons.upload size={16} />
-                    Upload Productie
+                    Upload {activeBundle.productionLabel === 'BIJLAGE' ? 'Bijlage' : 'Productie'}
                   </button>
                 </div>
 
@@ -820,8 +900,8 @@ export default function WorkxflowPage() {
                           <div className="flex-1 min-w-0">
                             <input
                               type="text"
-                              value={production.title}
-                              onChange={(e) => updateProduction(production.id, { title: e.target.value })}
+                              value={localEdits[production.id]?.title ?? production.title}
+                              onChange={(e) => updateProductionField(production.id, 'title', e.target.value)}
                               className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 px-2 py-1 rounded text-sm text-white border border-transparent hover:border-white/20 focus:border-workx-lime/50 outline-none transition-all"
                               placeholder="Klik om titel te bewerken..."
                             />
@@ -832,14 +912,12 @@ export default function WorkxflowPage() {
 
                           <div className="flex items-center gap-1">
                             <input
-                              type="number"
-                              min="1"
-                              value={production.productionNumber}
-                              onChange={(e) => updateProduction(production.id, {
-                                productionNumber: parseInt(e.target.value) || 1
-                              })}
-                              className="w-12 px-2 py-1 rounded bg-white/10 text-center text-xs text-gray-300 border border-white/10"
-                              title="Productienummer"
+                              type="text"
+                              value={localEdits[production.id]?.productionNumber ?? production.productionNumber}
+                              onChange={(e) => updateProductionField(production.id, 'productionNumber', e.target.value)}
+                              className="w-14 px-2 py-1 rounded bg-white/10 text-center text-xs text-gray-300 border border-white/10"
+                              title="Nummer (bijv. 1, 1a, 1b)"
+                              placeholder="Nr"
                             />
                             <button
                               onClick={() => deleteProduction(production.id)}
@@ -878,7 +956,7 @@ export default function WorkxflowPage() {
           <div className="card p-4">
             <h2 className="font-medium text-white mb-4 flex items-center gap-2">
               <Icons.eye size={16} className="text-workx-lime" />
-              Live Preview
+              Voorbeeld
             </h2>
 
             {activeBundle ? (
@@ -972,7 +1050,7 @@ export default function WorkxflowPage() {
                               <Icons.gripVertical size={12} />
                             </span>
                             <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">
-                              Productie {production.productionNumber}
+                              {activeBundle.productionLabel === 'BIJLAGE' ? 'Bijlage' : 'Productie'} {production.productionNumber}
                             </p>
                           </div>
                           <button
@@ -1003,7 +1081,7 @@ export default function WorkxflowPage() {
                           {/* Centered production text */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
                             <p className="text-[#1e1e1e] font-bold text-base tracking-wide">
-                              PRODUCTIE {production.productionNumber}
+                              {activeBundle.productionLabel === 'BIJLAGE' ? 'BIJLAGE' : 'PRODUCTIE'} {production.productionNumber}
                             </p>
                             <p className="text-[#1e1e1e]/60 text-[9px] mt-2 px-4 text-center line-clamp-2">
                               {production.title}
@@ -1028,7 +1106,7 @@ export default function WorkxflowPage() {
                               <iframe
                                 src={production.documentUrl}
                                 className="w-full h-full border-0"
-                                title={`Productie ${production.productionNumber} preview`}
+                                title={`${activeBundle.productionLabel === 'BIJLAGE' ? 'Bijlage' : 'Productie'} ${production.productionNumber}`}
                               />
                             ) : production.documentType === 'excel' ? (
                               <div className="w-full h-full bg-green-50 flex items-center justify-center">
@@ -1095,7 +1173,7 @@ export default function WorkxflowPage() {
                     </span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>Gele productievellen:</span>
+                    <span>Gele {activeBundle.productionLabel === 'BIJLAGE' ? 'bijlagevellen' : 'productievellen'}:</span>
                     <span className="text-yellow-400 font-medium">
                       {activeBundle.productions.length}
                     </span>

@@ -70,6 +70,8 @@ export async function PATCH(
       mainDocumentName,
       mainDocumentType,
       status,
+      productionLabel,
+      includeProductielijst,
     } = body
 
     const updated = await prisma.workxflowBundle.update({
@@ -82,6 +84,8 @@ export async function PATCH(
         ...(mainDocumentName !== undefined && { mainDocumentName }),
         ...(mainDocumentType !== undefined && { mainDocumentType }),
         ...(status !== undefined && { status }),
+        ...(productionLabel !== undefined && { productionLabel }),
+        ...(includeProductielijst !== undefined && { includeProductielijst }),
       },
       include: {
         productions: {

@@ -39,7 +39,7 @@ export async function POST(
         where: { id },
         data: {
           sortOrder: index,
-          productionNumber: index + 1,
+          productionNumber: String(index + 1),
         },
       })
     )
