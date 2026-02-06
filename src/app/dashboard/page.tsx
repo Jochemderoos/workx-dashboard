@@ -2490,6 +2490,9 @@ export default function DashboardHome() {
         {isAdmin ? (
           /* Werkdruk Widget for Partners/Hanna */
           <Link href="/dashboard/werk" className="card p-5 block relative group hover:border-blue-500/30 transition-all">
+            {/* Blue light streak */}
+            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
+            <div className="absolute bottom-0 left-[5%] right-[5%] h-[10px] bg-gradient-to-r from-transparent via-blue-400/15 to-transparent" />
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
