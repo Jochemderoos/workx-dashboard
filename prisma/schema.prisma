@@ -100,6 +100,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -108,6 +109,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -227,6 +230,7 @@ model VacationPeriod {
 
   @@index([userId, year])
   @@index([balanceId])
+  @@index([endDate])
 }
 
 // Ouderschapsverlof tracking - ondersteunt meerdere kinderen per medewerker
@@ -368,7 +372,7 @@ model Feedback {
 
   submittedBy User @relation(fields: [submittedById], references: [id], onDelete: Cascade)
 
-  @@index([processed])
+  @@index([processed, createdAt])
 }
 
 // ==================== GEDEELDE AGENDA ====================
