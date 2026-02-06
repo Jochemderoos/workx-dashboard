@@ -75,6 +75,20 @@ export async function POST(request: NextRequest) {
     })
     const nextChildNumber = existingLeaves.length > 0 ? existingLeaves[0].childNumber + 1 : 1
 
+    // Support frontend weken format: convert to uren/dagen for DB
+    const betaaldTotaalUren = leaveData.betaaldTotaalWeken != null
+      ? leaveData.betaaldTotaalWeken * 36
+      : leaveData.betaaldTotaalUren ?? 324
+    const betaaldOpgenomenUren = leaveData.betaaldOpgenomenWeken != null
+      ? leaveData.betaaldOpgenomenWeken * 36
+      : leaveData.betaaldOpgenomenUren ?? 0
+    const onbetaaldTotaalDagen = leaveData.onbetaaldTotaalWeken != null
+      ? leaveData.onbetaaldTotaalWeken * 5
+      : leaveData.onbetaaldTotaalDagen ?? 85
+    const onbetaaldOpgenomenDagen = leaveData.onbetaaldOpgenomenWeken != null
+      ? leaveData.onbetaaldOpgenomenWeken * 5
+      : leaveData.onbetaaldOpgenomenDagen ?? 0
+
     const leave = await prisma.parentalLeave.create({
       data: {
         userId,
@@ -86,14 +100,14 @@ export async function POST(request: NextRequest) {
         zwangerschapsverlofStatus: leaveData.zwangerschapsverlofStatus || null,
         geboorteverlofPartner: leaveData.geboorteverlofPartner || null,
         aanvullendVerlofPartner: leaveData.aanvullendVerlofPartner || null,
-        betaaldTotaalUren: leaveData.betaaldTotaalUren ?? 324,
-        betaaldOpgenomenUren: leaveData.betaaldOpgenomenUren ?? 0,
+        betaaldTotaalUren,
+        betaaldOpgenomenUren,
         betaaldVerlofDetails: leaveData.betaaldVerlofDetails || null,
-        betaaldVerlofEinddatum: leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null,
-        onbetaaldTotaalDagen: leaveData.onbetaaldTotaalDagen ?? 85,
-        onbetaaldOpgenomenDagen: leaveData.onbetaaldOpgenomenDagen ?? 0,
+        betaaldVerlofEinddatum: leaveData.eindDatum ? new Date(leaveData.eindDatum) : leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null,
+        onbetaaldTotaalDagen,
+        onbetaaldOpgenomenDagen,
         onbetaaldVerlofDetails: leaveData.onbetaaldVerlofDetails || null,
-        onbetaaldVerlofEinddatum: leaveData.onbetaaldVerlofEinddatum ? new Date(leaveData.onbetaaldVerlofEinddatum) : null,
+        onbetaaldVerlofEinddatum: leaveData.eindDatum ? new Date(leaveData.eindDatum) : leaveData.onbetaaldVerlofEinddatum ? new Date(leaveData.onbetaaldVerlofEinddatum) : null,
         uwvAangevraagd: leaveData.uwvAangevraagd ?? false,
         uwvDetails: leaveData.uwvDetails || null,
         note: leaveData.note || null,
@@ -145,12 +159,22 @@ export async function PATCH(request: NextRequest) {
     if (leaveData.zwangerschapsverlofStatus !== undefined) updateData.zwangerschapsverlofStatus = leaveData.zwangerschapsverlofStatus
     if (leaveData.geboorteverlofPartner !== undefined) updateData.geboorteverlofPartner = leaveData.geboorteverlofPartner
     if (leaveData.aanvullendVerlofPartner !== undefined) updateData.aanvullendVerlofPartner = leaveData.aanvullendVerlofPartner
-    if (leaveData.betaaldTotaalUren !== undefined) updateData.betaaldTotaalUren = leaveData.betaaldTotaalUren
-    if (leaveData.betaaldOpgenomenUren !== undefined) updateData.betaaldOpgenomenUren = leaveData.betaaldOpgenomenUren
+    // Support weken format from frontend
+    if (leaveData.betaaldTotaalWeken != null) updateData.betaaldTotaalUren = leaveData.betaaldTotaalWeken * 36
+    else if (leaveData.betaaldTotaalUren !== undefined) updateData.betaaldTotaalUren = leaveData.betaaldTotaalUren
+    if (leaveData.betaaldOpgenomenWeken != null) updateData.betaaldOpgenomenUren = leaveData.betaaldOpgenomenWeken * 36
+    else if (leaveData.betaaldOpgenomenUren !== undefined) updateData.betaaldOpgenomenUren = leaveData.betaaldOpgenomenUren
     if (leaveData.betaaldVerlofDetails !== undefined) updateData.betaaldVerlofDetails = leaveData.betaaldVerlofDetails
-    if (leaveData.betaaldVerlofEinddatum !== undefined) updateData.betaaldVerlofEinddatum = leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null
-    if (leaveData.onbetaaldTotaalDagen !== undefined) updateData.onbetaaldTotaalDagen = leaveData.onbetaaldTotaalDagen
-    if (leaveData.onbetaaldOpgenomenDagen !== undefined) updateData.onbetaaldOpgenomenDagen = leaveData.onbetaaldOpgenomenDagen
+    if (leaveData.eindDatum !== undefined) {
+      updateData.betaaldVerlofEinddatum = leaveData.eindDatum ? new Date(leaveData.eindDatum) : null
+      updateData.onbetaaldVerlofEinddatum = leaveData.eindDatum ? new Date(leaveData.eindDatum) : null
+    } else if (leaveData.betaaldVerlofEinddatum !== undefined) {
+      updateData.betaaldVerlofEinddatum = leaveData.betaaldVerlofEinddatum ? new Date(leaveData.betaaldVerlofEinddatum) : null
+    }
+    if (leaveData.onbetaaldTotaalWeken != null) updateData.onbetaaldTotaalDagen = leaveData.onbetaaldTotaalWeken * 5
+    else if (leaveData.onbetaaldTotaalDagen !== undefined) updateData.onbetaaldTotaalDagen = leaveData.onbetaaldTotaalDagen
+    if (leaveData.onbetaaldOpgenomenWeken != null) updateData.onbetaaldOpgenomenDagen = leaveData.onbetaaldOpgenomenWeken * 5
+    else if (leaveData.onbetaaldOpgenomenDagen !== undefined) updateData.onbetaaldOpgenomenDagen = leaveData.onbetaaldOpgenomenDagen
     if (leaveData.onbetaaldVerlofDetails !== undefined) updateData.onbetaaldVerlofDetails = leaveData.onbetaaldVerlofDetails
     if (leaveData.onbetaaldVerlofEinddatum !== undefined) updateData.onbetaaldVerlofEinddatum = leaveData.onbetaaldVerlofEinddatum ? new Date(leaveData.onbetaaldVerlofEinddatum) : null
     if (leaveData.uwvAangevraagd !== undefined) updateData.uwvAangevraagd = leaveData.uwvAangevraagd
@@ -192,14 +216,17 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const userId = searchParams.get('userId')
 
-    if (!id) {
-      return NextResponse.json({ error: 'ID is verplicht' }, { status: 400 })
+    if (!id && !userId) {
+      return NextResponse.json({ error: 'ID of userId is verplicht' }, { status: 400 })
     }
 
-    await prisma.parentalLeave.delete({
-      where: { id }
-    })
+    if (id) {
+      await prisma.parentalLeave.delete({ where: { id } })
+    } else if (userId) {
+      await prisma.parentalLeave.deleteMany({ where: { userId } })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

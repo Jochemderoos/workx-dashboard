@@ -4,6 +4,24 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getDefaultVacationDays } from '@/lib/config'
 
+// Transform DB parental leave (uren/dagen) to frontend format (weken)
+function transformParentalLeaveForFrontend(leave: any) {
+  return {
+    id: leave.id,
+    userId: leave.userId,
+    betaaldTotaalWeken: Math.round((leave.betaaldTotaalUren / 36) * 10) / 10,
+    betaaldOpgenomenWeken: Math.round((leave.betaaldOpgenomenUren / 36) * 10) / 10,
+    onbetaaldTotaalWeken: Math.round((leave.onbetaaldTotaalDagen / 5) * 10) / 10,
+    onbetaaldOpgenomenWeken: Math.round((leave.onbetaaldOpgenomenDagen / 5) * 10) / 10,
+    kindNaam: leave.kindNaam,
+    kindGeboorteDatum: leave.kindGeboorteDatum,
+    startDatum: leave.betaaldVerlofEinddatum,
+    eindDatum: leave.onbetaaldVerlofEinddatum,
+    note: leave.note,
+    user: leave.user,
+  }
+}
+
 // GET - Fetch all vacation page data in one bundled API call
 export async function GET() {
   try {
@@ -196,8 +214,8 @@ export async function GET() {
       vacations,
       teamMembers,
       vacationBalances: formattedBalances,
-      allParentalLeaves,
-      myParentalLeave: myParentalLeave.length > 0 ? myParentalLeave[0] : null,
+      allParentalLeaves: (allParentalLeaves as any[]).map(transformParentalLeaveForFrontend),
+      myParentalLeave: myParentalLeave.length > 0 ? transformParentalLeaveForFrontend(myParentalLeave[0] as any) : null,
       myVacationBalance: isPartner ? null : myVacationBalanceFormatted,
       vacationPeriods,
       myVacationPeriods,
