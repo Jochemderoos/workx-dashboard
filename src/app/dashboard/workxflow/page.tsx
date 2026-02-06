@@ -916,18 +916,11 @@ export default function WorkxflowPage() {
                       )}
                       {/* Document preview */}
                       {activeBundle.mainDocumentType === 'pdf' ? (
-                        <object
-                          data={activeBundle.mainDocumentUrl}
-                          type="application/pdf"
-                          className="w-full h-full pointer-events-none"
-                        >
-                          <div className="w-full h-full bg-red-50 flex items-center justify-center">
-                            <div className="text-center p-2">
-                              <Icons.file className="mx-auto text-red-500 mb-1" size={28} />
-                              <p className="text-[9px] text-red-600 font-medium">PDF</p>
-                            </div>
-                          </div>
-                        </object>
+                        <iframe
+                          src={activeBundle.mainDocumentUrl}
+                          className="w-full h-full pointer-events-none border-0"
+                          title="Processtuk preview"
+                        />
                       ) : (
                         <div className="w-full h-full bg-blue-50 flex items-center justify-center">
                           <div className="text-center p-2">
@@ -1032,18 +1025,11 @@ export default function WorkxflowPage() {
                                 className="w-full h-full object-contain bg-gray-50"
                               />
                             ) : production.documentType === 'pdf' ? (
-                              <object
-                                data={production.documentUrl}
-                                type="application/pdf"
-                                className="w-full h-full"
-                              >
-                                <div className="w-full h-full bg-red-50 flex items-center justify-center">
-                                  <div className="text-center p-2">
-                                    <Icons.file className="mx-auto text-red-500 mb-1" size={28} />
-                                    <p className="text-[9px] text-red-600 font-medium">PDF</p>
-                                  </div>
-                                </div>
-                              </object>
+                              <iframe
+                                src={production.documentUrl}
+                                className="w-full h-full border-0"
+                                title={`Productie ${production.productionNumber} preview`}
+                              />
                             ) : production.documentType === 'excel' ? (
                               <div className="w-full h-full bg-green-50 flex items-center justify-center">
                                 <div className="text-center p-2">
