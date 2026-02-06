@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import VacationPeriodList, { VacationPeriod } from '@/components/vacation/VacationPeriodList'
 
 interface ParentalLeave {
   id: string
@@ -193,6 +194,11 @@ export default function TeamPage() {
     note: ''
   })
 
+  // Vacation periods state (for expanding in team cards)
+  const [expandedVacationEmployee, setExpandedVacationEmployee] = useState<string | null>(null)
+  const [vacationPeriods, setVacationPeriods] = useState<Record<string, VacationPeriod[]>>({})
+  const [isLoadingVacationPeriods, setIsLoadingVacationPeriods] = useState<string | null>(null)
+
   // Check permissions
   const isManager = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER'
   const currentUserId = session?.user?.id
@@ -228,6 +234,26 @@ export default function TeamPage() {
       if (res.ok) setSickDaysData(await res.json())
     } catch (error) {
       console.error('Error fetching sick days:', error)
+    }
+  }
+
+  const fetchVacationPeriods = async (employeeId: string) => {
+    if (vacationPeriods[employeeId]) {
+      setExpandedVacationEmployee(expandedVacationEmployee === employeeId ? null : employeeId)
+      return
+    }
+    setIsLoadingVacationPeriods(employeeId)
+    setExpandedVacationEmployee(employeeId)
+    try {
+      const res = await fetch(`/api/vacation/periods?userId=${employeeId}&year=${currentYear}`)
+      if (res.ok) {
+        const periods = await res.json()
+        setVacationPeriods(prev => ({ ...prev, [employeeId]: periods }))
+      }
+    } catch (error) {
+      console.error('Error fetching vacation periods:', error)
+    } finally {
+      setIsLoadingVacationPeriods(null)
     }
   }
 
@@ -728,33 +754,70 @@ export default function TeamPage() {
           {/* Vacation Section - only when showFullInfo */}
           {showFullInfo && employee.vacationBalance && (
             <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Icons.sun size={14} className="text-green-400" />
-                  <span className="text-gray-400 text-sm">Vakantiedagen {currentYear}</span>
-                </div>
-                {hasParentalLeave && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
-                )}
-              </div>
-              <div className="flex justify-between items-start">
-                <div>
-                  <span className="text-2xl font-bold text-green-400">
-                    {(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht - employee.vacationBalance.opgenomenLopendJaar).toFixed(1)}
-                  </span>
-                  <span className="text-gray-400 text-sm block">dagen over</span>
-                </div>
-                <div className="text-right space-y-1">
-                  <div className="text-sm">
-                    <span className="text-gray-500">Totaal: </span>
-                    <span className="text-gray-300">{(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht).toFixed(1)}</span>
+              <button
+                onClick={() => isManager ? fetchVacationPeriods(employee.id) : null}
+                className={`w-full text-left ${isManager ? 'cursor-pointer group/vac' : ''}`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Icons.sun size={14} className="text-green-400" />
+                    <span className="text-gray-400 text-sm">Vakantiedagen {currentYear}</span>
                   </div>
-                  <div className="text-sm">
-                    <span className="text-gray-500">Opgenomen: </span>
-                    <span className="text-gray-300">{employee.vacationBalance.opgenomenLopendJaar.toFixed(1)}</span>
+                  <div className="flex items-center gap-2">
+                    {hasParentalLeave && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
+                    )}
+                    {isManager && (
+                      <Icons.chevronDown
+                        size={14}
+                        className={`text-gray-500 group-hover/vac:text-green-400 transition-all ${
+                          expandedVacationEmployee === employee.id ? 'rotate-180 text-green-400' : ''
+                        }`}
+                      />
+                    )}
                   </div>
                 </div>
-              </div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-2xl font-bold text-green-400">
+                      {(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht - employee.vacationBalance.opgenomenLopendJaar).toFixed(1)}
+                    </span>
+                    <span className="text-gray-400 text-sm block">dagen over</span>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <div className="text-sm">
+                      <span className="text-gray-500">Totaal: </span>
+                      <span className="text-gray-300">{(employee.vacationBalance.opbouwLopendJaar + employee.vacationBalance.overgedragenVorigJaar + employee.vacationBalance.bijgekocht).toFixed(1)}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-500">Opgenomen: </span>
+                      <span className="text-gray-300">{employee.vacationBalance.opgenomenLopendJaar.toFixed(1)}</span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              {/* Expanded vacation periods */}
+              {expandedVacationEmployee === employee.id && (
+                <div className="mt-3 pt-3 border-t border-white/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icons.calendar size={12} className="text-green-400" />
+                    <span className="text-xs text-green-400 font-medium">Opgenomen periodes</span>
+                  </div>
+                  {isLoadingVacationPeriods === employee.id ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400" />
+                    </div>
+                  ) : vacationPeriods[employee.id]?.length ? (
+                    <VacationPeriodList
+                      periods={vacationPeriods[employee.id]}
+                      compact
+                    />
+                  ) : (
+                    <p className="text-gray-500 text-xs text-center py-3">Geen periodes ingevoerd</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
