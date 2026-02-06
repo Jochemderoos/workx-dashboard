@@ -21,6 +21,11 @@ export async function GET(request: Request) {
 
     // Range query: return attendance for multiple dates (for calendar view)
     if (startDateParam && endDateParam) {
+      const currentUser = await prisma.user.findUnique({
+        where: { email: session.user.email! },
+        select: { id: true },
+      })
+
       const attendances = await prisma.officeAttendance.findMany({
         where: {
           date: { gte: startDateParam, lte: endDateParam },
@@ -38,17 +43,18 @@ export async function GET(request: Request) {
       })
 
       // Group by date
-      const byDate: Record<string, { name: string; avatarUrl: string | null; timeSlot: string }[]> = {}
+      const byDate: Record<string, { userId: string; name: string; avatarUrl: string | null; timeSlot: string }[]> = {}
       for (const a of attendances) {
         if (!byDate[a.date]) byDate[a.date] = []
         byDate[a.date].push({
+          userId: a.user.id,
           name: a.user.name,
           avatarUrl: a.user.avatarUrl,
           timeSlot: a.timeSlot || 'FULL_DAY',
         })
       }
 
-      return NextResponse.json({ byDate })
+      return NextResponse.json({ byDate, currentUserId: currentUser?.id })
     }
 
     // Gebruik vandaag als geen datum is meegegeven

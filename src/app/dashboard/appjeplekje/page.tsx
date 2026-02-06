@@ -58,7 +58,8 @@ export default function AppjeplekjePage() {
   const [isLoadingWeek, setIsLoadingWeek] = useState(true)
 
   // Month attendance data for calendar glow + photos
-  const [monthAttendance, setMonthAttendance] = useState<Record<string, { name: string; avatarUrl: string | null; timeSlot: string }[]>>({})
+  const [monthAttendance, setMonthAttendance] = useState<Record<string, { userId: string; name: string; avatarUrl: string | null; timeSlot: string }[]>>({})
+  const [calendarCurrentUserId, setCalendarCurrentUserId] = useState<string | null>(null)
 
   // Fetch month attendance when calendar month changes
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function AppjeplekjePage() {
         if (res.ok) {
           const data = await res.json()
           setMonthAttendance(data.byDate || {})
+          if (data.currentUserId) setCalendarCurrentUserId(data.currentUserId)
         }
       } catch { /* ignore */ }
     }
@@ -413,21 +415,22 @@ export default function AppjeplekjePage() {
                     {day.attendees.map((attendee) => {
                       const photoUrl = getPhotoUrl(attendee.name)
                       const firstName = attendee.name.split(' ')[0]
+                      const isSelf = attendanceData?.currentUserId && attendee.userId === attendanceData.currentUserId
                       return (
-                        <div key={attendee.id} className="flex items-center gap-2">
+                        <div key={attendee.id} className={`flex items-center gap-2 rounded-lg px-1.5 py-1 -mx-1.5 transition-all ${isSelf ? 'bg-workx-lime/10 ring-1 ring-workx-lime/30' : ''}`}>
                           {photoUrl ? (
                             <img
                               src={photoUrl}
                               alt={attendee.name}
-                              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                              className={`w-7 h-7 rounded-full object-cover flex-shrink-0 ${isSelf ? 'ring-2 ring-workx-lime/50 shadow-[0_0_6px_rgba(249,255,133,0.3)]' : ''}`}
                             />
                           ) : (
-                            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-medium text-white/80 flex-shrink-0">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${isSelf ? 'bg-workx-lime/30 text-workx-lime ring-2 ring-workx-lime/50' : 'bg-white/20 text-white/80'}`}>
                               {attendee.name.charAt(0)}
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <span className="text-sm text-white/90 truncate block">{firstName}</span>
+                            <span className={`text-sm truncate block ${isSelf ? 'text-workx-lime font-medium' : 'text-white/90'}`}>{firstName}{isSelf ? ' (jij)' : ''}</span>
                             {attendee.timeSlot && attendee.timeSlot !== 'FULL_DAY' && (
                               <span className="text-[10px] text-white/40">
                                 {attendee.timeSlot === 'MORNING' ? 'ochtend' : 'middag'}
@@ -501,6 +504,8 @@ export default function AppjeplekjePage() {
                 const past = isPast(dayInfo.date) && !isCurrentDay
                 const dayAttendees = monthAttendance[dateStr] || []
                 const hasAttendees = dayAttendees.length > 0 && dayInfo.isCurrentMonth
+                const isSelfRegistered = hasAttendees && calendarCurrentUserId && dayAttendees.some(a => a.userId === calendarCurrentUserId)
+                const onlyOthers = hasAttendees && !isSelfRegistered
 
                 return (
                   <button
@@ -516,11 +521,12 @@ export default function AppjeplekjePage() {
                       ${!dayInfo.isCurrentMonth ? 'text-white/20' : ''}
                       ${weekend ? 'text-white/20 cursor-not-allowed' : ''}
                       ${past && !weekend ? 'text-white/30 cursor-not-allowed' : ''}
-                      ${isCurrentDay && !isSelectedDay ? 'bg-workx-lime/20 text-workx-lime ring-1 sm:ring-2 ring-workx-lime/40' : ''}
+                      ${isCurrentDay && !isSelectedDay && !isSelfRegistered ? 'bg-workx-lime/20 text-workx-lime ring-1 sm:ring-2 ring-workx-lime/40' : ''}
                       ${isSelectedDay ? 'bg-workx-lime text-black font-bold' : ''}
-                      ${hasAttendees && !isSelectedDay && !isCurrentDay ? 'bg-workx-lime/5 ring-1 ring-workx-lime/20 shadow-[0_0_8px_rgba(249,255,133,0.15)]' : ''}
+                      ${isSelfRegistered && !isSelectedDay ? 'bg-workx-lime/20 text-workx-lime ring-2 ring-workx-lime/60 shadow-[0_0_12px_rgba(249,255,133,0.3)]' : ''}
+                      ${onlyOthers && !isSelectedDay && !isCurrentDay ? 'bg-white/5 ring-1 ring-white/15 shadow-[0_0_6px_rgba(255,255,255,0.05)]' : ''}
                       ${!weekend && !past && !isSelectedDay && !hasAttendees && dayInfo.isCurrentMonth ? 'hover:bg-white/10 text-white cursor-pointer' : ''}
-                      ${hasAttendees && !isSelectedDay && !isCurrentDay ? 'hover:bg-workx-lime/15 cursor-pointer' : ''}
+                      ${hasAttendees && !isSelectedDay ? 'hover:brightness-125 cursor-pointer' : ''}
                     `}
                   >
                     <span>{dayInfo.date.getDate()}</span>
@@ -529,18 +535,27 @@ export default function AppjeplekjePage() {
                       <div className="flex -space-x-1 mt-0.5">
                         {dayAttendees.slice(0, 3).map((a, i) => {
                           const photoUrl = getPhotoUrl(a.name, a.avatarUrl)
+                          const isSelf = calendarCurrentUserId && a.userId === calendarCurrentUserId
                           return photoUrl ? (
                             <img
                               key={i}
                               src={photoUrl}
                               alt={a.name}
-                              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full object-cover border ${isSelectedDay ? 'border-black/30' : 'border-workx-dark'}`}
+                              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full object-cover border-2 ${
+                                isSelectedDay ? 'border-black/30' :
+                                isSelf ? 'border-workx-lime/70 shadow-[0_0_4px_rgba(249,255,133,0.4)]' :
+                                'border-workx-dark'
+                              }`}
                               title={a.name}
                             />
                           ) : (
                             <div
                               key={i}
-                              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center text-[7px] font-bold border ${isSelectedDay ? 'bg-black/20 text-black border-black/30' : 'bg-workx-lime/30 text-workx-lime border-workx-dark'}`}
+                              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center text-[7px] font-bold border-2 ${
+                                isSelectedDay ? 'bg-black/20 text-black border-black/30' :
+                                isSelf ? 'bg-workx-lime/40 text-workx-lime border-workx-lime/70' :
+                                'bg-white/10 text-white/60 border-workx-dark'
+                              }`}
                               title={a.name}
                             >
                               {a.name.charAt(0)}
@@ -562,16 +577,16 @@ export default function AppjeplekjePage() {
             {/* Legend */}
             <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5 flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-xs text-gray-400">
               <span className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-workx-lime/20 ring-1 ring-workx-lime/40"></div>
-                Vandaag
+                <div className="w-3 h-3 rounded bg-workx-lime/20 ring-2 ring-workx-lime/60 shadow-[0_0_8px_rgba(249,255,133,0.3)]"></div>
+                Jij aangemeld
+              </span>
+              <span className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-white/5 ring-1 ring-white/15"></div>
+                Anderen aangemeld
               </span>
               <span className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded bg-workx-lime"></div>
                 Geselecteerd
-              </span>
-              <span className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded bg-workx-lime/5 ring-1 ring-workx-lime/20 shadow-[0_0_6px_rgba(249,255,133,0.15)]"></div>
-                Ingeschreven
               </span>
             </div>
           </div>
