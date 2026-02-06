@@ -101,15 +101,21 @@ export default function AgendaPage() {
     fetch('/api/birthdays')
       .then(res => res.ok ? res.json() : [])
       .then(data => {
-        // Transform birthDate from ISO format to MM-DD format
+        // birthDate is stored as String in MM-DD format (e.g. "02-06")
+        // But some legacy entries might be ISO format (e.g. "1985-12-25T00:00:00.000Z")
         const transformed = data.map((u: any) => ({
           ...u,
           birthDate: u.birthDate
             ? (() => {
-                // Parse date string safely to avoid timezone shift
-                // "1985-12-25" should stay Dec 25, not shift to Dec 24 in CET
-                const [year, month, day] = u.birthDate.split('T')[0].split('-').map(Number)
-                return `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                const raw = u.birthDate
+                // Already MM-DD format (e.g. "02-06")
+                if (/^\d{2}-\d{2}$/.test(raw)) return raw
+                // ISO or YYYY-MM-DD format
+                const parts = raw.split('T')[0].split('-').map(Number)
+                if (parts.length === 3) {
+                  return `${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`
+                }
+                return null
               })()
             : null
         }))
