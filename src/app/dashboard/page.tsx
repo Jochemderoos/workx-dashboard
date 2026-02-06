@@ -631,20 +631,23 @@ export default function DashboardHome() {
   const nextBirthday = useMemo(() => {
     if (teamBirthdays.length === 0) return []
 
-    const today = new Date()
+    // Use midnight today for fair date comparison (avoids time-of-day issues)
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const currentYear = today.getFullYear()
 
     const upcomingBirthdays = teamBirthdays.map(member => {
       const [month, day] = member.birthDate.split('-').map(Number)
       let birthdayThisYear = new Date(currentYear, month - 1, day)
 
+      const isToday = birthdayThisYear.getTime() === today.getTime()
+
       if (birthdayThisYear < today) {
         birthdayThisYear = new Date(currentYear + 1, month - 1, day)
       }
 
-      const daysUntil = Math.ceil((birthdayThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-      const isToday = birthdayThisYear.toDateString() === today.toDateString()
-      return { ...member, date: birthdayThisYear, daysUntil, isToday }
+      const daysUntil = isToday ? 0 : Math.ceil((birthdayThisYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      return { ...member, date: isToday ? new Date(currentYear, month - 1, day) : birthdayThisYear, daysUntil, isToday }
     }).sort((a, b) => a.daysUntil - b.daysUntil)
 
     return upcomingBirthdays.slice(0, 3) // Return top 3
