@@ -143,7 +143,7 @@ export const CACHE_CONFIG = {
   TEAM_DATA: 3600,        // 1 hour
   BIRTHDAYS: 3600,        // 1 hour
   CALENDAR: 60,           // 1 minute
-  DASHBOARD_SUMMARY: 30,  // 30 seconds
+  DASHBOARD_SUMMARY: 60,  // 1 minute
   LUSTRUM: 300,           // 5 minutes
 
   /** Slack user cache TTL in ms */

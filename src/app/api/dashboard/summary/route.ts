@@ -329,7 +329,7 @@ export async function GET() {
       fetchedAt: now.toISOString(),
     }, {
       headers: {
-        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60'
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120'
       }
     })
   } catch (error) {
