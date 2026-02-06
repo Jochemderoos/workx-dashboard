@@ -6,37 +6,15 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 
-// Inline Logo Component - yellow background with black text
+// Official Workx logo
 function WorkxLogoBox() {
   return (
-    <div className="inline-block rounded-lg overflow-hidden" style={{ background: '#f9ff85' }}>
-      <div className="relative flex flex-col justify-center px-6 py-5" style={{ width: 180 }}>
-        <span
-          className="leading-none"
-          style={{
-            fontSize: '42px',
-            fontWeight: 400,
-            color: '#1e1e1e',
-            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
-          }}
-        >
-          Workx
-        </span>
-        <span
-          className="uppercase"
-          style={{
-            fontSize: '12px',
-            letterSpacing: '3px',
-            marginTop: '4px',
-            fontWeight: 500,
-            color: '#1e1e1e',
-            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
-          }}
-        >
-          ADVOCATEN
-        </span>
-      </div>
-    </div>
+    <img
+      src="/workx-logo.png"
+      alt="Workx Advocaten"
+      className="h-20 w-auto mx-auto"
+      draggable={false}
+    />
   )
 }
 

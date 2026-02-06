@@ -38,6 +38,20 @@ interface Production {
   previewUrl?: string // For local preview
 }
 
+interface BundleLock {
+  id: string
+  lockedById: string
+  lockedBy: { id: string; name: string }
+  expiresAt: string
+}
+
+interface BundleAccessEntry {
+  id: string
+  userId: string
+  accessLevel: string
+  user: { id: string; name: string; avatarUrl: string | null }
+}
+
 interface Bundle {
   id: string
   title: string
@@ -51,6 +65,10 @@ interface Bundle {
   includeProductielijst: boolean
   productions: Production[]
   createdAt: string
+  isOwner?: boolean
+  accessLevel?: string
+  lock?: BundleLock | null
+  access?: BundleAccessEntry[]
 }
 
 export default function WorkxflowPage() {
@@ -74,6 +92,11 @@ export default function WorkxflowPage() {
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([])
   const [isConverting, setIsConverting] = useState(false)
   const [includeLogoOnProcesstuk, setIncludeLogoOnProcesstuk] = useState(true)
+
+  // Sharing & locking state
+  const [showSharePanel, setShowSharePanel] = useState(false)
+  const [shareTeamMembers, setShareTeamMembers] = useState<Array<{ id: string; name: string; avatarUrl: string | null }>>([])
+  const [lockRefreshTimer, setLockRefreshTimer] = useState<NodeJS.Timeout | null>(null)
 
   const mainDocInputRef = useRef<HTMLInputElement>(null)
   const productionInputRef = useRef<HTMLInputElement>(null)
@@ -117,6 +140,124 @@ export default function WorkxflowPage() {
       console.error('Error fetching bundles:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Lock management - acquire lock when opening a bundle for editing
+  const acquireLock = async (bundleId: string) => {
+    try {
+      const res = await fetch(`/api/workxflow/${bundleId}/lock`, { method: 'POST' })
+      if (res.status === 423) {
+        const data = await res.json()
+        toast.error(data.error || 'Bundle is vergrendeld')
+        return false
+      }
+      return res.ok
+    } catch {
+      return true // Allow editing if lock service fails
+    }
+  }
+
+  const releaseLock = async (bundleId: string) => {
+    try {
+      await fetch(`/api/workxflow/${bundleId}/lock`, { method: 'DELETE' })
+    } catch { /* ignore */ }
+  }
+
+  // Auto-refresh lock every 2 minutes while editing
+  useEffect(() => {
+    if (activeBundle) {
+      const timer = setInterval(() => {
+        acquireLock(activeBundle.id) // Refresh lock
+      }, 2 * 60 * 1000)
+      setLockRefreshTimer(timer)
+
+      return () => clearInterval(timer)
+    } else if (lockRefreshTimer) {
+      clearInterval(lockRefreshTimer)
+      setLockRefreshTimer(null)
+    }
+  }, [activeBundle?.id])
+
+  // Release lock when switching bundles or leaving page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (activeBundle) {
+        // Use sendBeacon for reliable delivery on page close
+        navigator.sendBeacon(`/api/workxflow/${activeBundle.id}/lock?_method=DELETE`, '')
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [activeBundle?.id])
+
+  const selectBundle = async (bundle: Bundle) => {
+    // Release lock on previous bundle
+    if (activeBundle && activeBundle.id !== bundle.id) {
+      await releaseLock(activeBundle.id)
+    }
+
+    // Acquire lock on new bundle
+    const locked = await acquireLock(bundle.id)
+    if (!locked) return // Don't switch if locked by someone else
+
+    setActiveBundle(bundle)
+    setShowSharePanel(false)
+  }
+
+  // Sharing functions
+  const loadTeamMembers = async () => {
+    try {
+      const res = await fetch('/api/responsibilities')
+      if (res.ok) {
+        const data = await res.json()
+        setShareTeamMembers(
+          (data.teamMembers || []).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            avatarUrl: u.avatarUrl,
+          }))
+        )
+      }
+    } catch { /* ignore */ }
+  }
+
+  const shareBundle = async (userId: string) => {
+    if (!activeBundle) return
+    try {
+      const res = await fetch(`/api/workxflow/${activeBundle.id}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, accessLevel: 'EDITOR' }),
+      })
+      if (res.ok) {
+        const access = await res.json()
+        setActiveBundle(prev => prev ? {
+          ...prev,
+          access: [...(prev.access || []), access],
+        } : null)
+        toast.success('Bundle gedeeld')
+      }
+    } catch {
+      toast.error('Kon niet delen')
+    }
+  }
+
+  const removeShare = async (userId: string) => {
+    if (!activeBundle) return
+    try {
+      const res = await fetch(`/api/workxflow/${activeBundle.id}/share?userId=${userId}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setActiveBundle(prev => prev ? {
+          ...prev,
+          access: (prev.access || []).filter(a => a.userId !== userId),
+        } : null)
+        toast.success('Toegang verwijderd')
+      }
+    } catch {
+      toast.error('Kon toegang niet verwijderen')
     }
   }
 
@@ -454,7 +595,7 @@ export default function WorkxflowPage() {
     setDraggedIndex(null)
   }
 
-  const generatePdf = async () => {
+  const generatePdf = async (split = false) => {
     if (!activeBundle) return
     setIsGeneratingPdf(true)
 
@@ -462,20 +603,46 @@ export default function WorkxflowPage() {
       const res = await fetch(`/api/workxflow/${activeBundle.id}/pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ includeLogoOnProcesstuk }),
+        body: JSON.stringify({ includeLogoOnProcesstuk, split, maxSizeMB: 20 }),
       })
 
       if (res.ok) {
-        const blob = await res.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${activeBundle.title.replace(/\s+/g, '-')}-processtuk.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-        toast.success('PDF gedownload')
+        const contentType = res.headers.get('content-type') || ''
+
+        if (contentType.includes('application/json')) {
+          // Split mode: multiple PDFs returned as JSON
+          const data = await res.json()
+          if (data.split && data.parts) {
+            for (const part of data.parts) {
+              const base64Data = part.data.split(',')[1]
+              const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
+              const blob = new Blob([bytes], { type: 'application/pdf' })
+              const url = window.URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = part.name
+              document.body.appendChild(a)
+              a.click()
+              window.URL.revokeObjectURL(url)
+              document.body.removeChild(a)
+              // Small delay between downloads
+              await new Promise(r => setTimeout(r, 500))
+            }
+            toast.success(`${data.parts.length} PDF-delen gedownload (totaal ${data.totalSizeMB} MB)`)
+          }
+        } else {
+          // Single PDF
+          const blob = await res.blob()
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${activeBundle.title.replace(/\s+/g, '-')}-compleet.pdf`
+          document.body.appendChild(a)
+          a.click()
+          window.URL.revokeObjectURL(url)
+          document.body.removeChild(a)
+          toast.success('PDF gedownload')
+        }
       } else {
         toast.error('Kon PDF niet genereren')
       }
@@ -660,7 +827,7 @@ export default function WorkxflowPage() {
                 {bundles.map((bundle) => (
                   <button
                     key={bundle.id}
-                    onClick={() => setActiveBundle(bundle)}
+                    onClick={() => selectBundle(bundle)}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
                       activeBundle?.id === bundle.id
                         ? 'border-workx-lime/50 bg-workx-lime/10'
@@ -668,23 +835,37 @@ export default function WorkxflowPage() {
                     }`}
                   >
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      bundle.status === 'PRINTED' ? 'bg-green-500/20' : 'bg-white/10'
+                      bundle.status === 'PRINTED' ? 'bg-green-500/20' : bundle.lock ? 'bg-yellow-500/20' : 'bg-white/10'
                     }`}>
-                      <Icons.file className={bundle.status === 'PRINTED' ? 'text-green-400' : 'text-gray-400'} size={18} />
+                      {bundle.lock && bundle.lock.lockedBy?.id !== session?.user?.id ? (
+                        <Icons.lock className="text-yellow-400" size={18} />
+                      ) : (
+                        <Icons.file className={bundle.status === 'PRINTED' ? 'text-green-400' : 'text-gray-400'} size={18} />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{bundle.title}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-white truncate">{bundle.title}</p>
+                        {bundle.isOwner === false && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex-shrink-0">Gedeeld</span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500">
                         {bundle.productions.length} {bundle.productionLabel === 'BIJLAGE' ? 'bijlagen' : 'producties'}
                         {bundle.caseNumber && ` • ${bundle.caseNumber}`}
+                        {bundle.lock && bundle.lock.lockedBy?.id !== session?.user?.id && (
+                          <span className="text-yellow-400"> • {bundle.lock.lockedBy.name} bewerkt</span>
+                        )}
                       </p>
                     </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteBundle(bundle.id) }}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                    >
-                      <Icons.trash size={14} />
-                    </button>
+                    {(bundle.isOwner !== false) && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteBundle(bundle.id) }}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                      >
+                        <Icons.trash size={14} />
+                      </button>
+                    )}
                   </button>
                 ))}
               </div>
@@ -700,14 +881,41 @@ export default function WorkxflowPage() {
               <div className="card p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="font-medium text-white">{activeBundle.title}</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-medium text-white">{activeBundle.title}</h2>
+                      {activeBundle.access && activeBundle.access.length > 0 && (
+                        <div className="flex -space-x-1.5">
+                          {activeBundle.access.slice(0, 3).map(a => (
+                            <div key={a.userId} className="w-6 h-6 rounded-full bg-blue-500/30 border-2 border-workx-dark flex items-center justify-center text-[9px] font-bold text-blue-300" title={a.user.name}>
+                              {a.user.name.charAt(0)}
+                            </div>
+                          ))}
+                          {activeBundle.access.length > 3 && (
+                            <div className="w-6 h-6 rounded-full bg-white/10 border-2 border-workx-dark flex items-center justify-center text-[9px] text-gray-400">
+                              +{activeBundle.access.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     {activeBundle.caseNumber && (
                       <p className="text-sm text-gray-400">Zaak: {activeBundle.caseNumber}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Share button - owner only */}
+                    {activeBundle.isOwner !== false && (
+                      <button
+                        onClick={() => { setShowSharePanel(!showSharePanel); if (!showSharePanel) loadTeamMembers() }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 border border-blue-500/20 text-sm"
+                        title="Deel met collega's"
+                      >
+                        <Icons.users size={14} />
+                        Delen
+                      </button>
+                    )}
                     <button
-                      onClick={generatePdf}
+                      onClick={() => generatePdf(false)}
                       disabled={isGeneratingPdf}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30 text-sm font-medium"
                       title="Download complete PDF met processtuk, overzicht en alle producties"
@@ -717,7 +925,16 @@ export default function WorkxflowPage() {
                       ) : (
                         <Icons.download size={16} />
                       )}
-                      Download Volledige PDF
+                      Volledige PDF
+                    </button>
+                    <button
+                      onClick={() => generatePdf(true)}
+                      disabled={isGeneratingPdf}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 text-sm"
+                      title="Download PDF in delen (max 20 MB per bestand)"
+                    >
+                      <Icons.layers size={16} />
+                      In Delen
                     </button>
                     {isElectron && (
                       <button
@@ -735,6 +952,53 @@ export default function WorkxflowPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Share panel */}
+                {showSharePanel && activeBundle.isOwner !== false && (
+                  <div className="mt-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+                    <h4 className="text-sm font-medium text-blue-300 mb-3 flex items-center gap-2">
+                      <Icons.users size={14} />
+                      Delen met collega&apos;s
+                    </h4>
+
+                    {/* Current shares */}
+                    {activeBundle.access && activeBundle.access.length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {activeBundle.access.map(a => (
+                          <div key={a.id} className="flex items-center gap-2 text-sm">
+                            <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-300">
+                              {a.user.name.charAt(0)}
+                            </div>
+                            <span className="text-white flex-1">{a.user.name}</span>
+                            <span className="text-xs text-gray-500">{a.accessLevel === 'EDITOR' ? 'Bewerker' : 'Kijker'}</span>
+                            <button
+                              onClick={() => removeShare(a.userId)}
+                              className="p-1 rounded hover:bg-red-500/10 text-gray-500 hover:text-red-400"
+                            >
+                              <Icons.x size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add new share */}
+                    <div className="flex flex-wrap gap-2">
+                      {shareTeamMembers
+                        .filter(m => m.id !== session?.user?.id && !(activeBundle.access || []).some(a => a.userId === m.id))
+                        .map(m => (
+                          <button
+                            key={m.id}
+                            onClick={() => shareBundle(m.id)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-300 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-300 transition-all"
+                          >
+                            <Icons.plus size={12} />
+                            {m.name}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Main document upload */}
                 <div className="border-2 border-dashed border-white/10 rounded-xl p-4">

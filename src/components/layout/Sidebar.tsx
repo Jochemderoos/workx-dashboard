@@ -14,37 +14,15 @@ interface SidebarProps {
   }
 }
 
-// Inline Logo Component - yellow background with black text
+// Official Workx logo
 function WorkxLogoBox() {
   return (
-    <div className="inline-block rounded-lg overflow-hidden" style={{ background: '#f9ff85' }}>
-      <div className="relative flex flex-col justify-center px-5 py-4" style={{ width: 150 }}>
-        <span
-          className="leading-none"
-          style={{
-            fontSize: '34px',
-            fontWeight: 400,
-            color: '#1e1e1e',
-            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
-          }}
-        >
-          Workx
-        </span>
-        <span
-          className="uppercase"
-          style={{
-            fontSize: '10px',
-            letterSpacing: '2.5px',
-            marginTop: '3px',
-            fontWeight: 500,
-            color: '#1e1e1e',
-            fontFamily: "'PP Neue Montreal', system-ui, -apple-system, sans-serif"
-          }}
-        >
-          ADVOCATEN
-        </span>
-      </div>
-    </div>
+    <img
+      src="/workx-logo.png"
+      alt="Workx Advocaten"
+      className="h-14 w-auto"
+      draggable={false}
+    />
   )
 }
 

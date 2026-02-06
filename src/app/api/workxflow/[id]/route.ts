@@ -3,6 +3,26 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+/**
+ * Check of een gebruiker toegang heeft tot een bundle.
+ * Returns 'OWNER' | 'EDITOR' | 'VIEWER' | null
+ */
+async function checkBundleAccess(bundleId: string, userId: string): Promise<string | null> {
+  const bundle = await prisma.workxflowBundle.findUnique({
+    where: { id: bundleId },
+    select: { createdById: true },
+  })
+
+  if (!bundle) return null
+  if (bundle.createdById === userId) return 'OWNER'
+
+  const access = await prisma.bundleAccess.findUnique({
+    where: { bundleId_userId: { bundleId, userId } },
+  })
+
+  return access?.accessLevel || null
+}
+
 // GET - Fetch single bundle
 export async function GET(
   req: NextRequest,
@@ -14,11 +34,22 @@ export async function GET(
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
+    const accessLevel = await checkBundleAccess(params.id, session.user.id)
+    if (!accessLevel) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    }
+
     const bundle = await prisma.workxflowBundle.findUnique({
       where: { id: params.id },
       include: {
         productions: {
           orderBy: { sortOrder: 'asc' },
+        },
+        lock: {
+          include: { lockedBy: { select: { id: true, name: true } } },
+        },
+        access: {
+          include: { user: { select: { id: true, name: true, avatarUrl: true } } },
         },
       },
     })
@@ -27,11 +58,7 @@ export async function GET(
       return NextResponse.json({ error: 'Bundle niet gevonden' }, { status: 404 })
     }
 
-    if (bundle.createdById !== session.user.id) {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
-    }
-
-    return NextResponse.json(bundle)
+    return NextResponse.json({ ...bundle, accessLevel })
   } catch (error) {
     console.error('Error fetching bundle:', error)
     return NextResponse.json({ error: 'Kon bundle niet ophalen' }, { status: 500 })
@@ -49,16 +76,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const bundle = await prisma.workxflowBundle.findUnique({
-      where: { id: params.id },
-    })
-
-    if (!bundle) {
-      return NextResponse.json({ error: 'Bundle niet gevonden' }, { status: 404 })
+    const accessLevel = await checkBundleAccess(params.id, session.user.id)
+    if (!accessLevel || accessLevel === 'VIEWER') {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
-    if (bundle.createdById !== session.user.id) {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    // Check lock - only allow edit if no lock or user holds the lock
+    const existingLock = await prisma.bundleLock.findUnique({
+      where: { bundleId: params.id },
+    })
+
+    if (existingLock && existingLock.lockedById !== session.user.id && new Date(existingLock.expiresAt) > new Date()) {
+      return NextResponse.json({
+        error: 'Deze bundle wordt momenteel bewerkt door iemand anders',
+        lockedBy: existingLock.lockedById,
+      }, { status: 423 }) // 423 Locked
     }
 
     const body = await req.json()
@@ -94,6 +126,17 @@ export async function PATCH(
       },
     })
 
+    // Refresh lock timer on edit
+    if (existingLock && existingLock.lockedById === session.user.id) {
+      await prisma.bundleLock.update({
+        where: { bundleId: params.id },
+        data: {
+          lastActivityAt: new Date(),
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 min
+        },
+      })
+    }
+
     return NextResponse.json(updated)
   } catch (error) {
     console.error('Error updating bundle:', error)
@@ -101,7 +144,7 @@ export async function PATCH(
   }
 }
 
-// DELETE - Delete bundle
+// DELETE - Delete bundle (owner only)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -112,16 +155,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const bundle = await prisma.workxflowBundle.findUnique({
-      where: { id: params.id },
-    })
-
-    if (!bundle) {
-      return NextResponse.json({ error: 'Bundle niet gevonden' }, { status: 404 })
-    }
-
-    if (bundle.createdById !== session.user.id) {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    const accessLevel = await checkBundleAccess(params.id, session.user.id)
+    if (accessLevel !== 'OWNER') {
+      return NextResponse.json({ error: 'Alleen de eigenaar kan een bundle verwijderen' }, { status: 403 })
     }
 
     await prisma.workxflowBundle.delete({

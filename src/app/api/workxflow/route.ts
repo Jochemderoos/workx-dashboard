@@ -11,17 +11,42 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const bundles = await prisma.workxflowBundle.findMany({
-      where: { createdById: session.user.id },
-      include: {
-        productions: {
-          orderBy: { sortOrder: 'asc' },
+    // Fetch own bundles + bundles shared with me
+    const [ownBundles, sharedAccess] = await Promise.all([
+      prisma.workxflowBundle.findMany({
+        where: { createdById: session.user.id },
+        include: {
+          productions: { orderBy: { sortOrder: 'asc' } },
+          lock: { include: { lockedBy: { select: { id: true, name: true } } } },
+          access: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.bundleAccess.findMany({
+        where: { userId: session.user.id },
+        include: {
+          bundle: {
+            include: {
+              productions: { orderBy: { sortOrder: 'asc' } },
+              lock: { include: { lockedBy: { select: { id: true, name: true } } } },
+              access: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
+            },
+          },
+        },
+      }),
+    ])
 
-    return NextResponse.json({ bundles })
+    // Clean up expired locks
+    const now = new Date()
+    const allBundles = [
+      ...ownBundles.map(b => ({ ...b, isOwner: true, accessLevel: 'OWNER' as const })),
+      ...sharedAccess.map(a => ({ ...a.bundle, isOwner: false, accessLevel: a.accessLevel })),
+    ].map(b => ({
+      ...b,
+      lock: b.lock && new Date(b.lock.expiresAt) > now ? b.lock : null,
+    }))
+
+    return NextResponse.json({ bundles: allBundles })
   } catch (error) {
     console.error('Error fetching bundles:', error)
     return NextResponse.json({ error: 'Kon bundles niet ophalen' }, { status: 500 })

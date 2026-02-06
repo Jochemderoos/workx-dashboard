@@ -83,6 +83,11 @@ model User {
   newsletterAssignments  NewsletterAssignment[] @relation("NewsletterAssignee")
   newsletterCreated      NewsletterAssignment[] @relation("NewsletterCreator")
 
+  // Workxflow bundle sharing
+  bundleAccess     BundleAccess[]   @relation("BundleAccessUser")
+  grantedAccess    BundleAccess[]   @relation("BundleAccessGrantedBy")
+  bundleLocks      BundleLock[]
+
   @@index([isActive])
   @@index([role])
 }
@@ -888,6 +893,10 @@ model WorkxflowBundle {
   // Producties
   productions     WorkxflowProduction[]
 
+  // Multi-user toegang
+  access          BundleAccess[]
+  lock            BundleLock?
+
   @@index([createdById])
   @@index([status])
 }
@@ -916,6 +925,38 @@ model WorkxflowProduction {
   bundle          WorkxflowBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
 
   @@index([bundleId, sortOrder])
+}
+
+// Gedeelde toegang tot een bundle
+model BundleAccess {
+  id          String   @id @default(cuid())
+  bundleId    String
+  userId      String
+  accessLevel String   @default("EDITOR") // VIEWER, EDITOR
+  grantedAt   DateTime @default(now())
+  grantedById String
+
+  bundle      WorkxflowBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  user        User            @relation("BundleAccessUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy   User            @relation("BundleAccessGrantedBy", fields: [grantedById], references: [id])
+
+  @@unique([bundleId, userId])
+  @@index([userId])
+}
+
+// Bewerkingsslot op een bundle (voorkomt gelijktijdig bewerken)
+model BundleLock {
+  id             String   @id @default(cuid())
+  bundleId       String   @unique
+  lockedById     String
+  lockedAt       DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+  expiresAt      DateTime // Auto-verlopen na 5 minuten inactiviteit
+
+  bundle         WorkxflowBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  lockedBy       User            @relation(fields: [lockedById], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }
 
 // ==================== PITCH DOCUMENTEN ====================

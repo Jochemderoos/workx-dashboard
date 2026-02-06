@@ -40,8 +40,14 @@ export async function POST(
       return NextResponse.json({ error: 'Bundle niet gevonden' }, { status: 404 })
     }
 
+    // Check access: owner or shared user
     if (bundle.createdById !== session.user.id) {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+      const access = await prisma.bundleAccess.findUnique({
+        where: { bundleId_userId: { bundleId: params.id, userId: session.user.id } },
+      })
+      if (!access) {
+        return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+      }
     }
 
     // A4 size in points

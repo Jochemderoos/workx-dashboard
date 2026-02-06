@@ -141,10 +141,18 @@ export async function POST(
 
     // Get options from request body (optional)
     let includeLogoOnProcesstuk = true // default: include logo
+    let splitMode = false
+    let maxSizeMB = 20
     try {
       const body = await req.json()
       if (typeof body.includeLogoOnProcesstuk === 'boolean') {
         includeLogoOnProcesstuk = body.includeLogoOnProcesstuk
+      }
+      if (typeof body.split === 'boolean') {
+        splitMode = body.split
+      }
+      if (typeof body.maxSizeMB === 'number') {
+        maxSizeMB = body.maxSizeMB
       }
     } catch {
       // No body or invalid JSON, use defaults
@@ -163,8 +171,14 @@ export async function POST(
       return NextResponse.json({ error: 'Bundle niet gevonden' }, { status: 404 })
     }
 
+    // Check access: owner or shared user
     if (bundle.createdById !== session.user.id) {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+      const access = await prisma.bundleAccess.findUnique({
+        where: { bundleId_userId: { bundleId: params.id, userId: session.user.id } },
+      })
+      if (!access) {
+        return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+      }
     }
 
     // Create new PDF document
@@ -408,8 +422,147 @@ export async function POST(
 
     // Serialize PDF
     const pdfBytes = await pdfDoc.save()
+    const totalSizeMB = pdfBytes.length / (1024 * 1024)
 
-    // Return PDF
+    // If split mode or PDF exceeds max size, split into parts
+    if (splitMode || totalSizeMB > maxSizeMB) {
+      const maxSizeBytes = maxSizeMB * 1024 * 1024
+      const parts: Array<{ name: string; data: string }> = []
+
+      // Strategy: split by production groups
+      // Part 1: Processtuk + productielijst
+      // Part 2+: Productions in batches that fit under maxSize
+
+      const totalPages = pdfDoc.getPageCount()
+
+      // Count pages for processtuk + productielijst
+      let headerPageCount = 0
+      if (bundle.mainDocumentUrl && mainDocType === 'pdf') {
+        try {
+          const base64Data = bundle.mainDocumentUrl.split(',')[1]
+          if (base64Data) {
+            const mainDocBytes = Buffer.from(base64Data, 'base64')
+            const mainPdf = await PDFDocument.load(mainDocBytes)
+            headerPageCount += mainPdf.getPageCount()
+          }
+        } catch { /* ignore */ }
+      }
+      if (bundle.productions.length > 0 && bundle.includeProductielijst) {
+        headerPageCount += 1 // productielijst page
+      }
+
+      // Build page ranges for each production (sheet + document pages)
+      const productionPageRanges: Array<{ label: string; startPage: number; endPage: number }> = []
+      let currentPage = headerPageCount
+
+      for (const production of bundle.productions) {
+        const startPage = currentPage
+        currentPage += 1 // production sheet
+
+        const docType = detectDocumentType(production.documentUrl, production.documentType)
+        if (production.documentUrl && docType === 'pdf') {
+          try {
+            const base64Data = production.documentUrl.split(',')[1]
+            if (base64Data) {
+              const prodDocBytes = Buffer.from(base64Data, 'base64')
+              const prodPdf = await PDFDocument.load(prodDocBytes)
+              currentPage += prodPdf.getPageCount()
+            }
+          } catch { /* ignore */ }
+        } else if (production.documentUrl && (docType === 'image' || docType === 'excel' || docType === 'powerpoint' || docType === 'docx')) {
+          currentPage += 1 // placeholder/image page
+        }
+
+        productionPageRanges.push({
+          label: `${productionLabel} ${production.productionNumber}`,
+          startPage,
+          endPage: currentPage - 1,
+        })
+      }
+
+      // Part 1: Header (processtuk + productielijst)
+      if (headerPageCount > 0) {
+        const headerPdf = await PDFDocument.create()
+        const headerPages = await headerPdf.copyPages(pdfDoc, Array.from({ length: headerPageCount }, (_, i) => i))
+        headerPages.forEach(p => headerPdf.addPage(p))
+        const headerBytes = await headerPdf.save()
+        parts.push({
+          name: `${bundle.title.replace(/\s+/g, '-')}-processtuk.pdf`,
+          data: Buffer.from(headerBytes).toString('base64'),
+        })
+      }
+
+      // Remaining parts: group productions to fit under maxSize
+      let currentPartProductions: typeof productionPageRanges = []
+      let currentPartEstimate = 0
+
+      for (let i = 0; i < productionPageRanges.length; i++) {
+        const range = productionPageRanges[i]
+        const pageCount = range.endPage - range.startPage + 1
+
+        // Rough estimate: total PDF size / total pages * pages in this production
+        const estimatedSize = (pdfBytes.length / totalPages) * pageCount
+
+        if (currentPartProductions.length > 0 && currentPartEstimate + estimatedSize > maxSizeBytes) {
+          // Flush current part
+          const partPdf = await PDFDocument.create()
+          const firstProd = currentPartProductions[0]
+          const lastProd = currentPartProductions[currentPartProductions.length - 1]
+          const pageIndices: number[] = []
+          for (const prod of currentPartProductions) {
+            for (let p = prod.startPage; p <= prod.endPage; p++) {
+              pageIndices.push(p)
+            }
+          }
+          const copiedPages = await partPdf.copyPages(pdfDoc, pageIndices)
+          copiedPages.forEach(p => partPdf.addPage(p))
+          const partBytes = await partPdf.save()
+          parts.push({
+            name: `${bundle.title.replace(/\s+/g, '-')}-${firstProd.label}-tm-${lastProd.label}.pdf`.replace(/\s+/g, '-'),
+            data: Buffer.from(partBytes).toString('base64'),
+          })
+
+          currentPartProductions = []
+          currentPartEstimate = 0
+        }
+
+        currentPartProductions.push(range)
+        currentPartEstimate += estimatedSize
+      }
+
+      // Flush remaining
+      if (currentPartProductions.length > 0) {
+        const partPdf = await PDFDocument.create()
+        const firstProd = currentPartProductions[0]
+        const lastProd = currentPartProductions[currentPartProductions.length - 1]
+        const pageIndices: number[] = []
+        for (const prod of currentPartProductions) {
+          for (let p = prod.startPage; p <= prod.endPage; p++) {
+            pageIndices.push(p)
+          }
+        }
+        const copiedPages = await partPdf.copyPages(pdfDoc, pageIndices)
+        copiedPages.forEach(p => partPdf.addPage(p))
+        const partBytes = await partPdf.save()
+        parts.push({
+          name: `${bundle.title.replace(/\s+/g, '-')}-${firstProd.label}-tm-${lastProd.label}.pdf`.replace(/\s+/g, '-'),
+          data: Buffer.from(partBytes).toString('base64'),
+        })
+      }
+
+      // Return JSON with parts
+      return NextResponse.json({
+        split: true,
+        totalSizeMB: Math.round(totalSizeMB * 10) / 10,
+        parts: parts.map(p => ({
+          name: p.name,
+          sizeMB: Math.round((Buffer.from(p.data, 'base64').length / (1024 * 1024)) * 10) / 10,
+          data: `data:application/pdf;base64,${p.data}`,
+        })),
+      })
+    }
+
+    // Return single PDF
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
@@ -421,4 +574,3 @@ export async function POST(
     return NextResponse.json({ error: 'Kon PDF niet genereren' }, { status: 500 })
   }
 }
-// Force redeploy - logo 150% bigger, top-left flush - 5 feb 2026 20:45
