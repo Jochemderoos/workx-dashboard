@@ -7,7 +7,11 @@ export default function ChatPage() {
   const { data: session } = useSession()
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto relative">
+      {/* Decorative glows */}
+      <div className="absolute top-0 right-[10%] w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-32 left-[5%] w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Team Chat</h1>
         <p className="text-workx-muted">

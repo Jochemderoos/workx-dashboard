@@ -594,7 +594,11 @@ export default function OpleidingenPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Decorative glows */}
+      <div className="absolute top-0 right-[10%] w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-32 left-[5%] w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

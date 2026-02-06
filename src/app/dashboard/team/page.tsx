@@ -1430,7 +1430,11 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="space-y-8 fade-in">
+    <div className="space-y-8 fade-in relative">
+      {/* Decorative glows */}
+      <div className="absolute top-0 right-[10%] w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-40 left-[5%] w-48 h-48 bg-workx-lime/5 rounded-full blur-3xl pointer-events-none" />
+
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">

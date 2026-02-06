@@ -369,7 +369,11 @@ export default function HRDocsPage() {
   }
 
   return (
-    <div className="fade-in pb-8 hr-docs-page">
+    <div className="fade-in pb-8 hr-docs-page relative">
+      {/* Decorative glows */}
+      <div className="absolute top-0 right-[10%] w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-40 left-[5%] w-48 h-48 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">

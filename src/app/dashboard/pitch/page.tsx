@@ -632,7 +632,11 @@ export default function PitchPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in relative">
+      {/* Decorative glows */}
+      <div className="absolute top-0 right-[10%] w-64 h-64 bg-workx-lime/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-32 left-[5%] w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

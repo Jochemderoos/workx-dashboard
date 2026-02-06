@@ -339,7 +339,11 @@ export default function AppjeplekjePage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 fade-in max-w-5xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 fade-in max-w-5xl mx-auto relative">
+      {/* Decorative glows */}
+      <div className="absolute top-0 right-[10%] w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-32 left-[5%] w-48 h-48 bg-workx-lime/5 rounded-full blur-3xl pointer-events-none" />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

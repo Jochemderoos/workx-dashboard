@@ -616,7 +616,11 @@ export default function VakantiesPage() {
   }
 
   return (
-    <div className="space-y-8 fade-in">
+    <div className="space-y-8 fade-in relative">
+      {/* Decorative glows */}
+      <div className="absolute top-0 right-[10%] w-64 h-64 bg-yellow-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-32 left-[5%] w-48 h-48 bg-orange-500/5 rounded-full blur-3xl pointer-events-none" />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

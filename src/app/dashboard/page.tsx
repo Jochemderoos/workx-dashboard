@@ -382,9 +382,6 @@ function AppjeplekjeWidget({
     >
       {/* Decorative glow */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-400/30 transition-colors" />
-      <div className="absolute -bottom-4 -left-4 opacity-10 group-hover:opacity-20 transition-opacity">
-        <img src="/workx-pand.png" alt="" className="h-16 w-auto" />
-      </div>
 
       <div className="relative">
         {/* Header */}
