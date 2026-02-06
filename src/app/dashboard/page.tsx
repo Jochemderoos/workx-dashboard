@@ -680,8 +680,6 @@ export default function DashboardHome() {
   const [newsletterReminders, setNewsletterReminders] = useState<NewsletterAssignment[]>([])
   const [newsletterOverview, setNewsletterOverview] = useState<NewsletterAssignment[] | null>(null)
   const [isNewsletterManager, setIsNewsletterManager] = useState(false)
-  const [activityFeed, setActivityFeed] = useState<{ id: string; userId: string; userName: string; userAvatar: string | null; action: string; entityType: string; description: string; timeAgo: string }[]>([])
-
   // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
   const fetchDashboardSummary = async () => {
     try {
@@ -955,7 +953,6 @@ export default function DashboardHome() {
       fetchWork(),              // Separate: needs specific query params
       fetchVacations(),         // Separate: needs all=true
       fetchCalendarAbsences(),  // Separate: needs date range filter
-      fetchActivity(),          // Activity feed
     ]).finally(() => setIsLoading(false))
   }, [])
 
@@ -1024,18 +1021,6 @@ export default function DashboardHome() {
       }
     } catch (e) {
       console.error('Error fetching calendar absences:', e)
-    }
-  }
-
-  const fetchActivity = async () => {
-    try {
-      const res = await fetch('/api/dashboard/activity')
-      if (res.ok) {
-        const data = await res.json()
-        setActivityFeed(data.activities || [])
-      }
-    } catch (e) {
-      console.error('Error fetching activity feed:', e)
     }
   }
 
@@ -2547,9 +2532,8 @@ export default function DashboardHome() {
         ))}
       </div>
 
-      {/* Quick Actions + Activity Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
+      {/* Quick Actions */}
+      <div>
         <div className="card p-5 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-workx-lime/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
           <div className="relative">
@@ -2562,7 +2546,7 @@ export default function DashboardHome() {
                 <p className="text-xs text-gray-400">Veelgebruikte handelingen</p>
               </div>
             </div>
-            <div className="space-y-1.5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {[
                 { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakantie aanvragen', color: 'text-yellow-400', bg: 'bg-yellow-500/10 hover:bg-yellow-500/20' },
                 { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback geven', color: 'text-purple-400', bg: 'bg-purple-500/10 hover:bg-purple-500/20' },
@@ -2572,87 +2556,18 @@ export default function DashboardHome() {
                 <Link
                   key={action.label}
                   href={action.href}
-                  className={`flex items-center gap-3 p-2.5 rounded-xl ${action.bg} transition-all group`}
+                  className={`flex items-center gap-3 p-3 rounded-xl ${action.bg} transition-all group`}
                 >
                   <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <action.icon size={16} className={action.color} />
                   </div>
                   <span className="text-sm text-white/80 group-hover:text-white transition-colors">{action.label}</span>
-                  <Icons.arrowRight size={12} className="ml-auto text-gray-600 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all" />
                 </Link>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Activity Feed */}
-        <div className="lg:col-span-2 card p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                  <Icons.activity className="text-indigo-400" size={18} />
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-white">Recente activiteit</h2>
-                  <p className="text-xs text-gray-400">Wat er gebeurt binnen het team</p>
-                </div>
-              </div>
-            </div>
-            {activityFeed.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-3">
-                  <Icons.activity className="text-gray-500" size={20} />
-                </div>
-                <p className="text-sm text-gray-400">Nog geen activiteit geregistreerd</p>
-                <p className="text-xs text-gray-500 mt-1">Acties verschijnen hier automatisch</p>
-              </div>
-            ) : (
-              <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
-                {activityFeed.slice(0, 10).map((activity) => {
-                  const actionConfig: Record<string, { icon: typeof Icons.plus; color: string; bg: string }> = {
-                    CREATE: { icon: Icons.plus, color: 'text-green-400', bg: 'bg-green-500/10' },
-                    UPDATE: { icon: Icons.edit, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-                    DELETE: { icon: Icons.x, color: 'text-red-400', bg: 'bg-red-500/10' },
-                  }
-                  const config = actionConfig[activity.action] || actionConfig.UPDATE
-                  const ActionIcon = config.icon
-
-                  return (
-                    <div
-                      key={activity.id}
-                      className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group"
-                    >
-                      {/* User avatar */}
-                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10 ring-2 ring-white/5">
-                        {activity.userAvatar ? (
-                          <img src={activity.userAvatar} alt={activity.userName} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">
-                            {activity.userName.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white/80">
-                          <span className="font-medium text-white">{activity.userName.split(' ')[0]}</span>{' '}
-                          <span className="text-gray-400">{activity.description}</span>
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">{activity.timeAgo}</p>
-                      </div>
-                      {/* Action type badge */}
-                      <div className={`w-6 h-6 rounded-md ${config.bg} flex items-center justify-center flex-shrink-0`}>
-                        <ActionIcon size={12} className={config.color} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   )
