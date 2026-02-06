@@ -181,7 +181,7 @@ body {
   transition: border-color 0.3s, box-shadow 0.3s;
   position: relative;
   overflow: hidden;
-  isolation: isolate;
+  z-index: 0; /* stacking context without GPU compositing artifacts from isolation:isolate */
 }
 
 .card:hover {
