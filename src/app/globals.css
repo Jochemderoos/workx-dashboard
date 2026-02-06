@@ -173,33 +173,22 @@ body {
 
 /* ==================== PREMIUM DESIGN SYSTEM ==================== */
 
-/* Glass card with subtle gradient border */
+/* Glass card - fully opaque background, no GPU-heavy transitions */
 .card {
-  background: linear-gradient(135deg, rgba(50, 50, 50, 0.95) 0%, rgba(35, 35, 35, 0.98) 100%);
+  background: #2d2d2d;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.3s, box-shadow 0.3s;
   position: relative;
   overflow: hidden;
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  isolation: isolate;
 }
 
 .card:hover {
   border-color: rgba(249, 255, 133, 0.12);
-  transform: translateY(-3px);
   box-shadow:
-    0 20px 40px -15px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(249, 255, 133, 0.05),
-    0 0 60px -20px rgba(249, 255, 133, 0.15);
+    0 12px 24px -8px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(249, 255, 133, 0.05);
 }
 
 /* Accent card with glow */
@@ -210,35 +199,14 @@ body {
   position: relative;
 }
 
-.card-accent::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 17px;
-  background: linear-gradient(135deg, rgba(249, 255, 133, 0.1), transparent);
-  z-index: -1;
-  filter: blur(20px);
-}
-
 /* Premium stat card */
 .stat-card {
-  background: linear-gradient(135deg, rgba(50, 50, 50, 0.8) 0%, rgba(35, 35, 35, 0.6) 100%);
+  background: #2a2a2a;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   padding: 1.5rem;
   position: relative;
   overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(249, 255, 133, 0.05) 0%, transparent 70%);
-  pointer-events: none;
 }
 
 /* ==================== ANIMATED GRADIENT BORDER ==================== */
@@ -261,40 +229,8 @@ body {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--gradient-angle),
-    rgba(249, 255, 133, 0.6),
-    rgba(249, 255, 133, 0.05) 25%,
-    rgba(100, 200, 255, 0.3) 50%,
-    rgba(249, 255, 133, 0.05) 75%,
-    rgba(249, 255, 133, 0.6)
-  );
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  -webkit-mask-composite: xor;
-  animation: gradient-rotate 4s linear infinite;
+  border: 1.5px solid rgba(249, 255, 133, 0.15);
   z-index: 1;
-  pointer-events: none;
-}
-
-/* Outer glow blur */
-.card-glow-border::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  background: conic-gradient(
-    from var(--gradient-angle),
-    rgba(249, 255, 133, 0.15),
-    transparent 25%,
-    rgba(100, 200, 255, 0.08) 50%,
-    transparent 75%,
-    rgba(249, 255, 133, 0.15)
-  );
-  filter: blur(12px);
-  animation: gradient-rotate 4s linear infinite;
-  z-index: -1;
   pointer-events: none;
 }
 

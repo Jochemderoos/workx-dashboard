@@ -2492,9 +2492,9 @@ export default function DashboardHome() {
           /* Werkdruk Widget for Partners/Hanna */
           <SpotlightCard as={Link} href="/dashboard/werk" className="card p-5 overflow-hidden group hover:border-blue-500/30 transition-all" maxTilt={8}>
             <div className="absolute top-0 right-0 w-[384px] h-[384px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.05) 0%, transparent 70%)' }} />
-            {/* Blue light streak */}
+            {/* Blue light streak - no blur filter to avoid GPU artifacts */}
             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
-            <div className="absolute bottom-0 left-[10%] right-[10%] h-[6px] bg-gradient-to-r from-transparent via-blue-400/20 to-transparent blur-sm" />
+            <div className="absolute bottom-0 left-[5%] right-[5%] h-[10px] bg-gradient-to-r from-transparent via-blue-400/15 to-transparent" />
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
