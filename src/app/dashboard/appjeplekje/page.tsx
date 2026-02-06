@@ -383,6 +383,8 @@ export default function AppjeplekjePage() {
                 ? day.date <= todayStr  // Na 20:00: vandaag is ook verleden
                 : day.date < todayStr   // Voor 20:00: alleen gisteren en eerder
 
+              const isSelfInWeekDay = attendanceData?.currentUserId && day.attendees.some(a => a.userId === attendanceData.currentUserId)
+
               return (
               <div
                 key={day.date}
@@ -392,9 +394,11 @@ export default function AppjeplekjePage() {
                 } ${
                   day.date === selectedDate
                     ? 'bg-workx-lime/20 border-2 border-workx-lime/50 ring-2 ring-workx-lime/20'
-                    : day.isToday
-                      ? 'bg-white/10 border-2 border-workx-lime/40'
-                      : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
+                    : isSelfInWeekDay
+                      ? 'bg-workx-lime/10 border-2 border-workx-lime/40 shadow-[0_0_15px_rgba(249,255,133,0.15)]'
+                      : day.isToday
+                        ? 'bg-white/10 border-2 border-workx-lime/40'
+                        : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
                 }`}
               >
                 {/* Day header */}
