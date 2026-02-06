@@ -16,6 +16,40 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const dateParam = searchParams.get('date')
+    const startDateParam = searchParams.get('startDate')
+    const endDateParam = searchParams.get('endDate')
+
+    // Range query: return attendance for multiple dates (for calendar view)
+    if (startDateParam && endDateParam) {
+      const attendances = await prisma.officeAttendance.findMany({
+        where: {
+          date: { gte: startDateParam, lte: endDateParam },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: { date: 'asc' },
+      })
+
+      // Group by date
+      const byDate: Record<string, { name: string; avatarUrl: string | null; timeSlot: string }[]> = {}
+      for (const a of attendances) {
+        if (!byDate[a.date]) byDate[a.date] = []
+        byDate[a.date].push({
+          name: a.user.name,
+          avatarUrl: a.user.avatarUrl,
+          timeSlot: a.timeSlot || 'FULL_DAY',
+        })
+      }
+
+      return NextResponse.json({ byDate })
+    }
 
     // Gebruik vandaag als geen datum is meegegeven
     const date = dateParam || new Date().toISOString().split('T')[0]

@@ -76,6 +76,9 @@ model User {
   assignedZaken     Zaak[]            @relation("AssignedZaken")
   zaakAssignments   ZaakAssignment[]
 
+  // Wie doet Wat
+  responsibilities  Responsibility[]  @relation("ResponsibleUser")
+
   @@index([isActive])
   @@index([role])
 }
@@ -944,4 +947,20 @@ model PitchDocument {
   @@unique([type, name, language])
   @@index([type, isActive])
   @@index([language])
+}
+
+// ==================== WIE DOET WAT ====================
+
+// Verantwoordelijkheden toewijzing
+model Responsibility {
+  id              String   @id @default(cuid())
+  task            String   // Beschrijving van de taak/verantwoordelijkheid
+  responsibleId   String   // Wie is verantwoordelijk
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  responsible     User     @relation("ResponsibleUser", fields: [responsibleId], references: [id], onDelete: Cascade)
+
+  @@index([responsibleId])
 }

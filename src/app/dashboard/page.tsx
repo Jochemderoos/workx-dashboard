@@ -782,24 +782,8 @@ export default function DashboardHome() {
       }
     }
 
-    // Try to get user location, fallback to Amsterdam
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // Got user location - reverse geocode for city name would require another API
-          // For simplicity, just use "Uw locatie"
-          fetchWeather(position.coords.latitude, position.coords.longitude, 'Uw locatie')
-        },
-        () => {
-          // Geolocation denied or failed - use Amsterdam
-          fetchWeather(52.3676, 4.9041, 'Amsterdam')
-        },
-        { timeout: 5000 }
-      )
-    } else {
-      // No geolocation support - use Amsterdam
-      fetchWeather(52.3676, 4.9041, 'Amsterdam')
-    }
+    // Altijd Amsterdam gebruiken (geen locatie-tracking meer)
+    fetchWeather(52.3676, 4.9041, 'Amsterdam')
   }, [])
 
   useEffect(() => {

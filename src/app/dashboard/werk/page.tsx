@@ -6,8 +6,9 @@ import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { formatDateForAPI } from '@/lib/date-utils'
-import { TEAM_PHOTOS, ADVOCATEN } from '@/lib/team-photos'
+import { TEAM_PHOTOS, ADVOCATEN, getPhotoUrl } from '@/lib/team-photos'
 import ZakenToewijzing from '@/components/zaken/ZakenToewijzing'
+import WieDoetWat from '@/components/werk/WieDoetWat'
 
 interface WorkItem {
   id: string
@@ -82,7 +83,7 @@ export default function WerkOverzichtPage() {
   const [editingItem, setEditingItem] = useState<WorkItem | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
-  const [pageMode, setPageMode] = useState<'toewijzing' | 'werkdruk' | 'urenoverzicht'>('toewijzing') // Default to toewijzing (zaken overzicht)
+  const [pageMode, setPageMode] = useState<'toewijzing' | 'werkdruk' | 'urenoverzicht' | 'wie-doet-wat'>('wie-doet-wat') // Default to wie-doet-wat (zichtbaar voor iedereen)
 
   // Monthly hours state
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
@@ -307,10 +308,6 @@ export default function WerkOverzichtPage() {
         const user = await res.json()
         const isManager = user.role === 'PARTNER' || user.role === 'ADMIN'
         setCanEditWorkload(isManager)
-        // Als manager, default naar werkdruk tab
-        if (isManager && pageMode === 'toewijzing') {
-          setPageMode('werkdruk')
-        }
       }
     } catch (error) {
       console.error('Kon gebruiker niet laden')
@@ -507,6 +504,15 @@ export default function WerkOverzichtPage() {
         <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {/* Mode Toggle */}
           <div className="flex gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-white/5 rounded-lg sm:rounded-xl">
+            <button
+              onClick={() => setPageMode('wie-doet-wat')}
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                pageMode === 'wie-doet-wat' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icons.users size={14} className="sm:w-4 sm:h-4" />
+              <span>Wie doet Wat</span>
+            </button>
             {canEditWorkload && (
               <button
                 onClick={() => setPageMode('werkdruk')}
@@ -1726,13 +1732,9 @@ export default function WerkOverzichtPage() {
         <ZakenToewijzing isPartner={canEditWorkload} />
       )}
 
-      {/* Melding voor niet-gemachtigde gebruikers */}
-      {!canEditWorkload && (
-        <div className="card p-8 text-center">
-          <Icons.lock className="mx-auto text-gray-600 mb-3" size={40} />
-          <p className="text-gray-400">Deze pagina is alleen toegankelijk voor partners</p>
-          <p className="text-gray-500 text-sm mt-1">Neem contact op met een partner voor werkgerelateerde vragen</p>
-        </div>
+      {/* WIE DOET WAT - zichtbaar voor iedereen */}
+      {pageMode === 'wie-doet-wat' && (
+        <WieDoetWat canEdit={canEditWorkload} />
       )}
 
     </div>

@@ -55,7 +55,7 @@ const mainMenuItems = [
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', iconAnim: 'icon-calendar-hover' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover' },
   { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', iconAnim: 'icon-graduation-hover' },
-  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover', roles: ['PARTNER', 'ADMIN'] },
+  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover' },
 ]
 
@@ -132,9 +132,7 @@ export default function Sidebar({ user }: SidebarProps) {
         <div>
           <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Menu</p>
           <div className="space-y-1">
-            {mainMenuItems
-              .filter((item) => !item.roles || item.roles.includes(user.role))
-              .map((item) => <NavLink key={item.href} {...item} />)}
+            {mainMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
 
