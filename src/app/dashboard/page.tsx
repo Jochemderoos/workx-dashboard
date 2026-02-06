@@ -13,6 +13,8 @@ import AnimatedNumber from '@/components/ui/AnimatedNumber'
 import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
 import MagneticButton from '@/components/ui/MagneticButton'
 import Sparkline from '@/components/ui/Sparkline'
+import TextReveal from '@/components/ui/TextReveal'
+import { BeamConnector } from '@/components/ui/AnimatedBeam'
 
 // Logo Component - uses actual Workx logo
 function WorkxLogoSmall() {
@@ -796,6 +798,15 @@ export default function DashboardHome() {
     return nextBirthday.find(b => b.daysUntil === 0)
   }, [nextBirthday])
 
+  // Auto-stop confetti after 10 seconds
+  const [showConfetti, setShowConfetti] = useState(true)
+  useEffect(() => {
+    if (birthdayToday) {
+      const timer = setTimeout(() => setShowConfetti(false), 10000)
+      return () => clearTimeout(timer)
+    }
+  }, [birthdayToday])
+
   // Filter quick links based on user role
   const quickLinks = useMemo(() => {
     const userRole = currentUser?.role || 'MEDEWERKER'
@@ -1383,7 +1394,7 @@ export default function DashboardHome() {
       )}
 
       {/* BIRTHDAY CELEBRATION - Full screen confetti when someone has birthday TODAY */}
-      {birthdayToday && (
+      {birthdayToday && showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden birthday-celebration">
           {/* Massive confetti burst */}
           {[...Array(50)].map((_, i) => (
@@ -1416,7 +1427,7 @@ export default function DashboardHome() {
       )}
 
       {/* Hero Header with Logo */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-4 sm:p-6 lg:p-8 card-glow-border">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-4 sm:p-6 lg:p-8 card-glow-border noise-overlay-strong">
         <div className="absolute top-0 right-0 w-96 h-96 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-workx-lime/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
@@ -1428,7 +1439,9 @@ export default function DashboardHome() {
             </div>
             <div>
               <p className="text-workx-lime text-xs sm:text-sm font-medium mb-1">{getGreeting()}</p>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-white mb-2">Welkom bij Workx</h1>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-white mb-2">
+                <TextReveal stagger={0.04} duration={0.35} delay={0.1}>Welkom bij Workx</TextReveal>
+              </h1>
               <p className="text-gray-400 max-w-md hidden sm:block">
                 Beheer je zaken, bereken bonussen en houd je team op de hoogte. Alles in één dashboard.
               </p>
@@ -2460,7 +2473,8 @@ export default function DashboardHome() {
       </div>
 
       {/* Bottom section with Widget and Stats */}
-      <ScrollReveal direction="up" distance={35} duration={0.5} staggerChildren={0.1} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <ScrollReveal direction="up" distance={35} duration={0.5} staggerChildren={0.1} className="relative grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <BeamConnector className="hidden lg:block" />
         {/* Dynamic Widget based on role */}
         <ScrollRevealItem>
         {isAdmin ? (
@@ -2568,7 +2582,7 @@ export default function DashboardHome() {
 
       {/* Quick Actions */}
       <ScrollReveal direction="up" distance={30} duration={0.5}>
-        <div className="card p-5 relative overflow-hidden liquid-glass">
+        <div className="card p-5 relative overflow-hidden liquid-glass noise-overlay">
           <div className="absolute top-0 right-0 w-40 h-40 bg-workx-lime/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4">
