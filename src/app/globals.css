@@ -135,6 +135,91 @@ body {
   pointer-events: none;
 }
 
+/* ==================== ANIMATED GRADIENT BORDER ==================== */
+
+@property --gradient-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.card-glow-border {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.card-glow-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    rgba(249, 255, 133, 0.6),
+    rgba(249, 255, 133, 0.05) 25%,
+    rgba(100, 200, 255, 0.3) 50%,
+    rgba(249, 255, 133, 0.05) 75%,
+    rgba(249, 255, 133, 0.6)
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  animation: gradient-rotate 4s linear infinite;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Outer glow blur */
+.card-glow-border::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    rgba(249, 255, 133, 0.15),
+    transparent 25%,
+    rgba(100, 200, 255, 0.08) 50%,
+    transparent 75%,
+    rgba(249, 255, 133, 0.15)
+  );
+  filter: blur(12px);
+  animation: gradient-rotate 4s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes gradient-rotate {
+  0% { --gradient-angle: 0deg; }
+  100% { --gradient-angle: 360deg; }
+}
+
+/* Subtle variant - for less prominent cards */
+.card-glow-border-subtle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    rgba(249, 255, 133, 0.3),
+    transparent 30%,
+    rgba(249, 255, 133, 0.1) 50%,
+    transparent 70%,
+    rgba(249, 255, 133, 0.3)
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  animation: gradient-rotate 6s linear infinite;
+  z-index: 1;
+  pointer-events: none;
+}
+
 /* ==================== GRACHTENPAND SILHOUETTE ==================== */
 
 .grachtenpand {

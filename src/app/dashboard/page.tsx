@@ -8,6 +8,8 @@ import { TEAM_PHOTOS, ALL_TEAM_MEMBERS, getPhotoUrl } from '@/lib/team-photos'
 import { LUSTRUM_CONFIG, MALLORCA_FACTS, getCountdown } from '@/lib/lustrum-data'
 import { formatDateForAPI, parseDateFromAPI } from '@/lib/date-utils'
 import toast from 'react-hot-toast'
+import SpotlightCard from '@/components/ui/SpotlightCard'
+import AnimatedNumber from '@/components/ui/AnimatedNumber'
 
 // Logo Component - uses actual Workx logo
 function WorkxLogoSmall() {
@@ -1411,7 +1413,7 @@ export default function DashboardHome() {
       )}
 
       {/* Hero Header with Logo */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-4 sm:p-6 lg:p-8">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-4 sm:p-6 lg:p-8 card-glow-border">
         <div className="absolute top-0 right-0 w-96 h-96 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-workx-lime/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
@@ -1453,7 +1455,9 @@ export default function DashboardHome() {
               ) : (
                 <>
                   <div className="text-4xl mb-1">{weatherInfo.icon}</div>
-                  <p className="text-2xl font-semibold text-white">{weather.temperature}°</p>
+                  <div className="text-2xl font-semibold text-white">
+                    <AnimatedNumber value={weather.temperature} suffix="°" stiffness={50} damping={20} />
+                  </div>
                   <p className="text-xs text-gray-400">{weatherInfo.desc}</p>
                   <div className="flex items-center justify-center gap-2 mt-2 text-xs text-gray-500">
                     <span className="flex items-center gap-0.5">
@@ -1498,10 +1502,13 @@ export default function DashboardHome() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {quickLinks.map(({ href, Icon, label, desc, color, iconAnim }) => (
-            <Link
+            <SpotlightCard
               key={href}
+              as={Link}
               href={href}
-              className={`group relative overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] p-4 hover:border-workx-lime/30 hover:bg-white/[0.05] transition-all duration-300 ${iconAnim}`}
+              className={`group overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] p-4 hover:border-workx-lime/30 hover:bg-white/[0.05] transition-all duration-300 ${iconAnim}`}
+              maxTilt={8}
+              spotlightSize={300}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-100 transition-opacity`} />
               <div className="relative">
@@ -1514,7 +1521,7 @@ export default function DashboardHome() {
               <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Icons.arrowRight size={14} className="text-workx-lime" />
               </div>
-            </Link>
+            </SpotlightCard>
           ))}
           </div>
         </div>
@@ -2054,7 +2061,7 @@ export default function DashboardHome() {
           </Link>
         ) : (
           /* Vacation Card for Employees */
-          <Link href="/dashboard/vakanties" className="card p-4 relative overflow-hidden group block hover:border-workx-lime/30 transition-all">
+          <SpotlightCard as={Link} href="/dashboard/vakanties" className="card p-4 overflow-hidden group block hover:border-workx-lime/30 transition-all card-glow-border-subtle" maxTilt={6} spotlightSize={400}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
 
             <div className="relative">
@@ -2074,17 +2081,21 @@ export default function DashboardHome() {
               {/* Vakantiedagen direct zichtbaar */}
               <div className="grid grid-cols-3 gap-2 text-center mb-3">
                 <div className="bg-white/5 rounded-lg p-2">
-                  <p className="text-lg font-semibold text-workx-lime">
-                    {vacationBalance?.totaalDagen || 0}
-                  </p>
+                  <div className="text-lg font-semibold text-workx-lime">
+                    <AnimatedNumber value={vacationBalance?.totaalDagen || 0} decimals={1} stiffness={60} damping={18} />
+                  </div>
                   <p className="text-xs text-gray-400">Totaal</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-2">
-                  <p className="text-lg font-semibold text-orange-400">{vacationBalance?.opgenomenLopendJaar || 0}</p>
+                  <div className="text-lg font-semibold text-orange-400">
+                    <AnimatedNumber value={vacationBalance?.opgenomenLopendJaar || 0} decimals={1} stiffness={60} damping={18} />
+                  </div>
                   <p className="text-xs text-gray-400">Opgenomen</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-2">
-                  <p className="text-lg font-semibold text-workx-lime">{vacationBalance?.resterend || 0}</p>
+                  <div className="text-lg font-semibold text-workx-lime">
+                    <AnimatedNumber value={vacationBalance?.resterend || 0} decimals={1} stiffness={60} damping={18} />
+                  </div>
                   <p className="text-xs text-gray-400">Resterend</p>
                 </div>
               </div>
@@ -2165,7 +2176,7 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
-          </Link>
+          </SpotlightCard>
         )}
 
         {/* Birthday Card - GROOTS on birthday, normal otherwise */}
@@ -2450,7 +2461,7 @@ export default function DashboardHome() {
         {/* Dynamic Widget based on role */}
         {isAdmin ? (
           /* Werkdruk Widget for Partners/Hanna */
-          <Link href="/dashboard/werk" className="card p-5 relative overflow-hidden group hover:border-workx-lime/30 transition-all">
+          <SpotlightCard as={Link} href="/dashboard/werk" className="card p-5 overflow-hidden group hover:border-workx-lime/30 transition-all" maxTilt={8}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors" />
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
@@ -2484,10 +2495,10 @@ export default function DashboardHome() {
                 </div>
               </div>
             </div>
-          </Link>
+          </SpotlightCard>
         ) : (
           /* Feedback Widget for Employees */
-          <Link href="/dashboard/feedback" className="card p-5 relative overflow-hidden group hover:border-purple-500/30 transition-all">
+          <SpotlightCard as={Link} href="/dashboard/feedback" className="card p-5 overflow-hidden group hover:border-purple-500/30 transition-all" maxTilt={8}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
@@ -2506,19 +2517,21 @@ export default function DashboardHome() {
                 Heb je een idee of bug gevonden? Laat het weten via de feedback pagina.
               </p>
             </div>
-          </Link>
+          </SpotlightCard>
         )}
 
         {/* Stats - Right side - All clickable */}
         {[
-          { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Open zaken', value: workItems.length.toString(), color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover' },
-          { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Events deze week', value: events.length.toString(), color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover' },
+          { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Open zaken', numValue: workItems.length, color: 'text-blue-400', bg: 'bg-blue-500/10', iconAnim: 'icon-briefcase-hover' },
+          { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Events deze week', numValue: events.length, color: 'text-purple-400', bg: 'bg-purple-500/10', iconAnim: 'icon-calendar-hover' },
         ].map((stat, index) => (
-          <Link
+          <SpotlightCard
             key={stat.label}
+            as={Link}
             href={stat.href}
-            className={`card p-5 group hover:border-white/10 transition-all relative overflow-hidden ${stat.iconAnim}`}
-            style={{ animationDelay: `${index * 50}ms` }}
+            className={`card p-5 group hover:border-white/10 transition-all overflow-hidden ${stat.iconAnim}`}
+            maxTilt={10}
+            spotlightSize={250}
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative flex items-center gap-3 mb-3">
@@ -2526,9 +2539,11 @@ export default function DashboardHome() {
                 <stat.icon className={stat.color} size={18} />
               </div>
             </div>
-            <p className="relative text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">{stat.value}</p>
+            <div className="relative text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">
+              <AnimatedNumber value={stat.numValue} stiffness={60} damping={15} />
+            </div>
             <p className="relative text-sm text-gray-400">{stat.label}</p>
-          </Link>
+          </SpotlightCard>
         ))}
       </div>
 
