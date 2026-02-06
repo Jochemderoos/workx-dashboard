@@ -1,337 +1,575 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icons } from '@/components/ui/Icons'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type CategoryKey = 'navigatie' | 'acties' | 'zoeken'
 
 interface CommandItem {
   id: string
   label: string
   description?: string
   icon: React.ComponentType<{ className?: string; size?: number }>
-  action?: () => void
-  href?: string
-  category: 'navigation' | 'actions' | 'recent'
+  href: string
+  category: CategoryKey
   keywords?: string[]
 }
 
-interface CommandPaletteProps {
-  isOpen: boolean
-  onClose: () => void
+// ---------------------------------------------------------------------------
+// Data
+// ---------------------------------------------------------------------------
+
+const NAVIGATION_ITEMS: CommandItem[] = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    description: 'Overzicht van alles',
+    icon: Icons.home,
+    href: '/dashboard',
+    category: 'navigatie',
+    keywords: ['home', 'start', 'overzicht'],
+  },
+  {
+    id: 'agenda',
+    label: 'Agenda',
+    description: 'Bekijk je kalender',
+    icon: Icons.calendar,
+    href: '/dashboard/agenda',
+    category: 'navigatie',
+    keywords: ['kalender', 'events', 'afspraken', 'planning'],
+  },
+  {
+    id: 'bonus',
+    label: 'Bonus Calculator',
+    description: 'Bereken je bonus',
+    icon: Icons.euro,
+    href: '/dashboard/bonus',
+    category: 'navigatie',
+    keywords: ['berekenen', 'geld', 'provisie', 'omzet'],
+  },
+  {
+    id: 'vakanties',
+    label: 'Vakantie Overzicht',
+    description: 'Verlof en vakanties beheren',
+    icon: Icons.sun,
+    href: '/dashboard/vakanties',
+    category: 'navigatie',
+    keywords: ['verlof', 'vrij', 'vakantie', 'afwezig', 'dagen'],
+  },
+  {
+    id: 'werk',
+    label: 'Werk & Taken',
+    description: 'Zaken en dossiers',
+    icon: Icons.briefcase,
+    href: '/dashboard/werk',
+    category: 'navigatie',
+    keywords: ['taken', 'zaken', 'projecten', 'dossiers', 'werk'],
+  },
+  {
+    id: 'lustrum',
+    label: 'Lustrum 2026',
+    description: '15 jaar Workx vieren',
+    icon: Icons.star,
+    href: '/dashboard/lustrum',
+    category: 'navigatie',
+    keywords: ['feest', 'jubileum', 'mallorca', 'reis', 'party'],
+  },
+  {
+    id: 'chat',
+    label: 'Chat',
+    description: 'Berichten en gesprekken',
+    icon: Icons.chat,
+    href: '/dashboard/chat',
+    category: 'navigatie',
+    keywords: ['berichten', 'gesprek', 'slack', 'communicatie'],
+  },
+  {
+    id: 'appjeplekje',
+    label: 'Appjeplekje',
+    description: 'Werkplek reserveren',
+    icon: Icons.mapPin,
+    href: '/dashboard/appjeplekje',
+    category: 'navigatie',
+    keywords: ['kantoor', 'werkplek', 'plek', 'reserveren', 'aanmelden'],
+  },
+  {
+    id: 'werkdruk',
+    label: 'Werkdruk',
+    description: 'Werkdruk inzicht',
+    icon: Icons.activity,
+    href: '/dashboard/werkdruk',
+    category: 'navigatie',
+    keywords: ['druk', 'stress', 'balans', 'capaciteit'],
+  },
+  {
+    id: 'financien',
+    label: 'Financi\u00ebn',
+    description: 'Financieel overzicht',
+    icon: Icons.pieChart,
+    href: '/dashboard/financien',
+    category: 'navigatie',
+    keywords: ['geld', 'salaris', 'budget', 'kosten', 'declaratie'],
+  },
+  {
+    id: 'feedback',
+    label: 'Feedback',
+    description: 'Geef en bekijk feedback',
+    icon: Icons.chat,
+    href: '/dashboard/feedback',
+    category: 'navigatie',
+    keywords: ['idee', 'bug', 'suggestie', 'melding'],
+  },
+  {
+    id: 'profiel',
+    label: 'Profiel',
+    description: 'Je profiel bekijken',
+    icon: Icons.user,
+    href: '/dashboard/profiel',
+    category: 'navigatie',
+    keywords: ['account', 'instellingen', 'gegevens'],
+  },
+  {
+    id: 'workxflow',
+    label: 'Workxflow',
+    description: 'Processen en workflows',
+    icon: Icons.layers,
+    href: '/dashboard/workxflow',
+    category: 'navigatie',
+    keywords: ['proces', 'flow', 'workflow', 'automatisering'],
+  },
+]
+
+const ACTION_ITEMS: CommandItem[] = [
+  {
+    id: 'vakantie-aanvragen',
+    label: 'Vakantie aanvragen',
+    description: 'Vraag verlof aan',
+    icon: Icons.sun,
+    href: '/dashboard/vakanties',
+    category: 'acties',
+    keywords: ['verlof', 'vrij', 'aanvragen', 'vakantie'],
+  },
+  {
+    id: 'feedback-geven',
+    label: 'Feedback geven',
+    description: 'Deel je idee of melding',
+    icon: Icons.edit,
+    href: '/dashboard/feedback',
+    category: 'acties',
+    keywords: ['idee', 'melding', 'suggestie'],
+  },
+  {
+    id: 'ziekmelding',
+    label: 'Ziekmelding',
+    description: 'Meld je ziek',
+    icon: Icons.alertCircle,
+    href: '/dashboard/ziektedagen',
+    category: 'acties',
+    keywords: ['ziek', 'afwezig', 'melden'],
+  },
+]
+
+const ALL_ITEMS: CommandItem[] = [...NAVIGATION_ITEMS, ...ACTION_ITEMS]
+
+const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  navigatie: 'NAVIGATIE',
+  acties: 'ACTIES',
+  zoeken: 'ZOEKEN',
 }
 
-const navigationItems: CommandItem[] = [
-  { id: 'dashboard', label: 'Dashboard', description: 'Ga naar dashboard', icon: Icons.home, href: '/dashboard', category: 'navigation', keywords: ['home', 'start', 'overzicht'] },
-  { id: 'lustrum', label: 'Lustrum Mallorca', description: '15 jaar Workx', icon: Icons.palmTree, href: '/dashboard/lustrum', category: 'navigation', keywords: ['feest', 'reis', 'mallorca', 'jubileum'] },
-  { id: 'appjeplekje', label: 'Appjeplekje', description: 'Werkplek reserveren', icon: Icons.mapPin, href: '/dashboard/appjeplekje', category: 'navigation', keywords: ['kantoor', 'werkplek', 'aanmelden', 'plek'] },
-  { id: 'agenda', label: 'Agenda', description: 'Bekijk kalender', icon: Icons.calendar, href: '/dashboard/agenda', category: 'navigation', keywords: ['events', 'afspraken', 'kalender', 'planning'] },
-  { id: 'vakanties', label: 'Vakanties & Verlof', description: 'Verlof beheren', icon: Icons.sun, href: '/dashboard/vakanties', category: 'navigation', keywords: ['vakantie', 'vrij', 'verlof', 'afwezig'] },
-  { id: 'werk', label: 'Werk', description: 'Zaken en dossiers', icon: Icons.briefcase, href: '/dashboard/werk', category: 'navigation', keywords: ['taken', 'zaken', 'projecten', 'dossiers'] },
-  { id: 'financien', label: 'Financien', description: 'Financieel overzicht', icon: Icons.pieChart, href: '/dashboard/financien', category: 'navigation', keywords: ['geld', 'salaris', 'budget', 'kosten'] },
-  { id: 'bonus', label: 'Bonus Calculator', description: 'Bereken je bonus', icon: Icons.euro, href: '/dashboard/bonus', category: 'navigation', keywords: ['bonus', 'berekenen', 'omzet', 'provisie'] },
-  { id: 'transitie', label: 'Transitievergoeding', description: 'Transitie berekenen', icon: Icons.calculator, href: '/dashboard/transitie', category: 'navigation', keywords: ['ontslag', 'vergoeding', 'berekenen'] },
-  { id: 'afspiegeling', label: 'Afspiegeling', description: 'Afspiegelingstool', icon: Icons.layers, href: '/dashboard/afspiegeling', category: 'navigation', keywords: ['reorganisatie', 'ontslag', 'selectie'] },
-  { id: 'pitch', label: 'Pitch Maker', description: 'Maak pitch documenten', icon: Icons.file, href: '/dashboard/pitch', category: 'navigation', keywords: ['pitch', 'pdf', 'document', 'cv', 'team'] },
-  { id: 'team', label: 'Team', description: 'Bekijk collega\'s', icon: Icons.users, href: '/dashboard/team', category: 'navigation', keywords: ['collega', 'medewerkers', 'mensen'] },
-  { id: 'hr-docs', label: 'Workx Docs', description: 'HR documenten', icon: Icons.books, href: '/dashboard/hr-docs', category: 'navigation', keywords: ['handboek', 'regels', 'hr', 'documenten', 'beleid'] },
-  { id: 'feedback', label: 'Feedback', description: 'Geef feedback', icon: Icons.chat, href: '/dashboard/feedback', category: 'navigation', keywords: ['idee', 'bug', 'suggestie', 'melding'] },
-  { id: 'settings', label: 'Instellingen', description: 'Account instellingen', icon: Icons.settings, href: '/dashboard/settings', category: 'navigation', keywords: ['profiel', 'wachtwoord', 'account'] },
-]
+const CATEGORY_ORDER: CategoryKey[] = ['navigatie', 'acties', 'zoeken']
 
-const actionItems: CommandItem[] = [
-  { id: 'new-expense', label: 'Nieuwe declaratie', description: 'Declareer onkosten', icon: Icons.plus, href: '/dashboard/financien?action=new-expense', category: 'actions', keywords: ['declaratie', 'onkosten', 'uitgave'] },
-  { id: 'request-leave', label: 'Verlof aanvragen', description: 'Vraag vrij aan', icon: Icons.calendar, href: '/dashboard/vakanties?action=request', category: 'actions', keywords: ['verlof', 'vakantie', 'vrij', 'aanvragen'] },
-  { id: 'new-feedback', label: 'Feedback geven', description: 'Deel je idee of melding', icon: Icons.chat, href: '/dashboard/feedback?action=new', category: 'actions', keywords: ['feedback', 'idee', 'melding', 'bug'] },
-]
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
+/** Return fragments where matches are wrapped in a highlight span. */
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text
+
+  const lowerText = text.toLowerCase()
+  const lowerQuery = query.toLowerCase().trim()
+  const idx = lowerText.indexOf(lowerQuery)
+
+  if (idx === -1) return text
+
+  const before = text.slice(0, idx)
+  const match = text.slice(idx, idx + lowerQuery.length)
+  const after = text.slice(idx + lowerQuery.length)
+
+  return (
+    <>
+      {before}
+      <span className="text-[#f9ff85] font-semibold">{match}</span>
+      {after}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export default function CommandPalette() {
+  const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  // Filter items based on query
-  const filteredItems = useMemo(() => {
-    const allItems = [...navigationItems, ...actionItems]
-
-    if (!query.trim()) {
-      // Show navigation first, then actions when no query
-      return allItems
+  // ---- Global keyboard shortcut (Cmd+K / Ctrl+K) ----
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsOpen((prev) => !prev)
+      }
     }
 
-    const lowerQuery = query.toLowerCase().trim()
-    return allItems.filter(item => {
-      const matchesLabel = item.label.toLowerCase().includes(lowerQuery)
-      const matchesDescription = item.description?.toLowerCase().includes(lowerQuery)
-      const matchesKeywords = item.keywords?.some(kw => kw.toLowerCase().includes(lowerQuery))
-      return matchesLabel || matchesDescription || matchesKeywords
+    document.addEventListener('keydown', handleGlobalKeyDown)
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
+
+  // ---- Filter logic ----
+  const filteredItems = useMemo(() => {
+    if (!query.trim()) return ALL_ITEMS
+
+    const q = query.toLowerCase().trim()
+
+    return ALL_ITEMS.filter((item) => {
+      if (item.label.toLowerCase().includes(q)) return true
+      if (item.description?.toLowerCase().includes(q)) return true
+      if (item.keywords?.some((kw) => kw.toLowerCase().includes(q))) return true
+      return false
     })
   }, [query])
 
-  // Group items by category
-  const groupedItems = useMemo(() => {
-    const groups: Record<string, CommandItem[]> = {
-      navigation: [],
-      actions: [],
-      recent: [],
+  // ---- Group by category ----
+  const grouped = useMemo(() => {
+    const map: Record<CategoryKey, CommandItem[]> = {
+      navigatie: [],
+      acties: [],
+      zoeken: [],
     }
 
-    filteredItems.forEach(item => {
-      groups[item.category].push(item)
+    filteredItems.forEach((item) => {
+      map[item.category]?.push(item)
     })
 
-    return groups
-  }, [filteredItems])
+    // If the user has typed a query, duplicate all results into "Zoeken" so
+    // the category header makes sense. But we only use Zoeken when query is active.
+    if (query.trim()) {
+      return { navigatie: [] as CommandItem[], acties: [] as CommandItem[], zoeken: filteredItems }
+    }
 
-  // Flat list for keyboard navigation
+    return map
+  }, [filteredItems, query])
+
+  // Flat list for keyboard nav
   const flatItems = useMemo(() => {
-    return [...groupedItems.navigation, ...groupedItems.actions, ...groupedItems.recent]
-  }, [groupedItems])
+    const items: CommandItem[] = []
+    for (const cat of CATEGORY_ORDER) {
+      items.push(...grouped[cat])
+    }
+    return items
+  }, [grouped])
 
-  // Reset selection when items change
+  // ---- Reset on open / query change ----
   useEffect(() => {
     setSelectedIndex(0)
   }, [filteredItems])
 
-  // Focus input when opened
   useEffect(() => {
     if (isOpen) {
       setQuery('')
       setSelectedIndex(0)
-      setTimeout(() => inputRef.current?.focus(), 50)
+      // Small delay for DOM to mount before focus
+      const t = setTimeout(() => inputRef.current?.focus(), 30)
+      return () => clearTimeout(t)
     }
   }, [isOpen])
 
-  // Scroll selected item into view
+  // ---- Scroll selected into view ----
   useEffect(() => {
-    const selectedElement = listRef.current?.querySelector(`[data-index="${selectedIndex}"]`)
-    selectedElement?.scrollIntoView({ block: 'nearest' })
+    if (!listRef.current) return
+    const el = listRef.current.querySelector(`[data-cmd-index="${selectedIndex}"]`)
+    el?.scrollIntoView({ block: 'nearest' })
   }, [selectedIndex])
 
-  const executeItem = useCallback((item: CommandItem) => {
-    if (item.action) {
-      item.action()
-    } else if (item.href) {
+  // ---- Execute ----
+  const execute = useCallback(
+    (item: CommandItem) => {
       router.push(item.href)
-    }
-    onClose()
-  }, [router, onClose])
+      setIsOpen(false)
+    },
+    [router],
+  )
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
-        setSelectedIndex(prev => (prev + 1) % flatItems.length)
-        break
-      case 'ArrowUp':
-        e.preventDefault()
-        setSelectedIndex(prev => (prev - 1 + flatItems.length) % flatItems.length)
-        break
-      case 'Enter':
-        e.preventDefault()
-        if (flatItems[selectedIndex]) {
-          executeItem(flatItems[selectedIndex])
+  // ---- Keyboard navigation inside palette ----
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowDown': {
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev + 1) % Math.max(flatItems.length, 1))
+          break
         }
-        break
-      case 'Escape':
-        e.preventDefault()
-        onClose()
-        break
-    }
-  }, [flatItems, selectedIndex, executeItem, onClose])
+        case 'ArrowUp': {
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev - 1 + flatItems.length) % Math.max(flatItems.length, 1))
+          break
+        }
+        case 'Enter': {
+          e.preventDefault()
+          const target = flatItems[selectedIndex]
+          if (target) execute(target)
+          break
+        }
+        case 'Escape': {
+          e.preventDefault()
+          setIsOpen(false)
+          break
+        }
+      }
+    },
+    [flatItems, selectedIndex, execute],
+  )
 
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'navigation': return 'Navigatie'
-      case 'actions': return 'Snelle acties'
-      case 'recent': return 'Recent'
-      default: return category
-    }
-  }
+  // ---- Render helpers ----
+  let runningIndex = 0
 
-  let itemIndex = 0
+  function renderCategory(category: CategoryKey) {
+    const items = grouped[category]
+    if (items.length === 0) return null
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[9998] command-palette-overlay"
-            onClick={onClose}
-          />
+    return (
+      <div key={category} className="mb-1">
+        {/* Category header */}
+        <div className="px-4 py-2 text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase select-none">
+          {CATEGORY_LABELS[category]}
+        </div>
 
-          {/* Palette */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed left-1/2 top-[20%] -translate-x-1/2 z-[9999] w-full max-w-xl mx-4"
-          >
-            <div className="command-palette overflow-hidden">
-              {/* Search Input */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
-                <Icons.search size={20} className="text-white/40" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Zoek pagina's, acties..."
-                  className="flex-1 bg-transparent text-white placeholder-white/40 outline-none text-base"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                />
-                <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-[10px] text-white/30 bg-white/5 rounded border border-white/10">
-                  ESC
-                </kbd>
+        {items.map((item) => {
+          const idx = runningIndex++
+          const isSelected = idx === selectedIndex
+          const Icon = item.icon
+
+          return (
+            <button
+              key={item.id}
+              data-cmd-index={idx}
+              onClick={() => execute(item)}
+              onMouseEnter={() => setSelectedIndex(idx)}
+              className={`
+                group w-full flex items-center gap-3 px-4 py-2.5 text-left
+                transition-all duration-100 ease-out
+                ${isSelected ? 'bg-white/[0.06]' : 'bg-transparent hover:bg-white/[0.03]'}
+              `}
+            >
+              {/* Icon container */}
+              <div
+                className={`
+                  w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                  transition-colors duration-100
+                  ${isSelected ? 'bg-[#f9ff85]/15 text-[#f9ff85]' : 'bg-white/[0.06] text-white/50'}
+                `}
+              >
+                <Icon size={16} />
               </div>
 
-              {/* Results */}
-              <div
-                ref={listRef}
-                className="max-h-[400px] overflow-y-auto workx-scrollbar py-2"
-              >
-                {flatItems.length === 0 ? (
-                  <div className="px-4 py-8 text-center">
-                    <Icons.search size={24} className="mx-auto mb-2 text-white/20" />
-                    <p className="text-white/40 text-sm">Geen resultaten voor "{query}"</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Navigation Section */}
-                    {groupedItems.navigation.length > 0 && (
-                      <div className="mb-2">
-                        <div className="px-4 py-1.5 text-[10px] font-medium text-white/30 uppercase tracking-wider">
-                          {getCategoryLabel('navigation')}
-                        </div>
-                        {groupedItems.navigation.map((item) => {
-                          const currentIndex = itemIndex++
-                          const Icon = item.icon
-                          return (
-                            <button
-                              key={item.id}
-                              data-index={currentIndex}
-                              onClick={() => executeItem(item)}
-                              onMouseEnter={() => setSelectedIndex(currentIndex)}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                                selectedIndex === currentIndex
-                                  ? 'bg-workx-lime/10'
-                                  : 'hover:bg-white/5'
-                              }`}
-                            >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                selectedIndex === currentIndex
-                                  ? 'bg-workx-lime/20 text-workx-lime'
-                                  : 'bg-white/5 text-white/60'
-                              }`}>
-                                <Icon size={16} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium truncate ${
-                                  selectedIndex === currentIndex ? 'text-workx-lime' : 'text-white'
-                                }`}>
-                                  {item.label}
-                                </p>
-                                {item.description && (
-                                  <p className="text-xs text-white/40 truncate">{item.description}</p>
-                                )}
-                              </div>
-                              {selectedIndex === currentIndex && (
-                                <kbd className="text-[10px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded">
-                                  Enter
-                                </kbd>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {/* Actions Section */}
-                    {groupedItems.actions.length > 0 && (
-                      <div className="mb-2">
-                        <div className="px-4 py-1.5 text-[10px] font-medium text-white/30 uppercase tracking-wider">
-                          {getCategoryLabel('actions')}
-                        </div>
-                        {groupedItems.actions.map((item) => {
-                          const currentIndex = itemIndex++
-                          const Icon = item.icon
-                          return (
-                            <button
-                              key={item.id}
-                              data-index={currentIndex}
-                              onClick={() => executeItem(item)}
-                              onMouseEnter={() => setSelectedIndex(currentIndex)}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                                selectedIndex === currentIndex
-                                  ? 'bg-workx-lime/10'
-                                  : 'hover:bg-white/5'
-                              }`}
-                            >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                selectedIndex === currentIndex
-                                  ? 'bg-workx-lime/20 text-workx-lime'
-                                  : 'bg-white/5 text-white/60'
-                              }`}>
-                                <Icon size={16} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium truncate ${
-                                  selectedIndex === currentIndex ? 'text-workx-lime' : 'text-white'
-                                }`}>
-                                  {item.label}
-                                </p>
-                                {item.description && (
-                                  <p className="text-xs text-white/40 truncate">{item.description}</p>
-                                )}
-                              </div>
-                              {selectedIndex === currentIndex && (
-                                <kbd className="text-[10px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded">
-                                  Enter
-                                </kbd>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </>
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <p
+                  className={`
+                    text-[13px] font-medium truncate transition-colors duration-100
+                    ${isSelected ? 'text-white' : 'text-white/80'}
+                  `}
+                >
+                  {highlightMatch(item.label, query)}
+                </p>
+                {item.description && (
+                  <p className="text-[11px] text-white/30 truncate mt-0.5">
+                    {highlightMatch(item.description, query)}
+                  </p>
                 )}
               </div>
 
-              {/* Footer */}
-              <div className="px-4 py-2.5 border-t border-white/5 flex items-center justify-between text-[10px] text-white/30">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <kbd className="px-1 py-0.5 rounded bg-white/5">↑</kbd>
-                    <kbd className="px-1 py-0.5 rounded bg-white/5">↓</kbd>
-                    <span className="ml-1">navigeren</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 rounded bg-white/5">↵</kbd>
-                    <span className="ml-1">openen</span>
+              {/* Arrow hint on selected */}
+              {isSelected && (
+                <div className="flex-shrink-0 text-white/20">
+                  <Icons.arrowRight size={14} />
+                </div>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // JSX
+  // ---------------------------------------------------------------------------
+
+  return (
+    <>
+      {/* ---- Floating badge hint (visible when palette is closed) ---- */}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsOpen(true)}
+            className="
+              fixed bottom-5 right-5 z-[9990]
+              flex items-center gap-1.5 px-3 py-1.5
+              bg-white/[0.06] hover:bg-white/[0.10]
+              border border-white/[0.08] hover:border-white/[0.15]
+              rounded-lg backdrop-blur-md
+              text-white/40 hover:text-white/60
+              transition-all duration-200 ease-out
+              shadow-lg shadow-black/20
+              cursor-pointer select-none
+            "
+            aria-label="Open command palette"
+          >
+            <Icons.command size={13} className="opacity-70" />
+            <span className="text-[11px] font-medium tracking-wide">K</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* ---- Command palette overlay + modal ---- */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="cmd-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* Palette container */}
+            <motion.div
+              key="cmd-palette"
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+              className="
+                fixed inset-0 z-[9999]
+                flex items-start justify-center
+                pt-[min(20vh,180px)] px-4
+                pointer-events-none
+              "
+            >
+              <div
+                className="
+                  pointer-events-auto
+                  w-full max-w-[560px]
+                  bg-[#232323]/[0.98]
+                  border border-white/[0.08]
+                  rounded-2xl
+                  shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04),0_0_80px_-20px_rgba(249,255,133,0.07)]
+                  backdrop-blur-xl
+                  overflow-hidden
+                  flex flex-col
+                "
+                role="dialog"
+                aria-modal="true"
+                aria-label="Command palette"
+              >
+                {/* ---- Search input ---- */}
+                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.06]">
+                  <Icons.search size={18} className="text-white/30 flex-shrink-0" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Zoek een pagina, actie..."
+                    className="
+                      flex-1 bg-transparent text-[15px] text-white
+                      placeholder-white/30 outline-none
+                      caret-[#f9ff85]
+                    "
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                  />
+                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] text-white/25 bg-white/[0.05] rounded border border-white/[0.06] font-mono">
+                    ESC
+                  </kbd>
+                </div>
+
+                {/* ---- Results list ---- */}
+                <div
+                  ref={listRef}
+                  className="flex-1 overflow-y-auto overscroll-contain py-1.5"
+                  style={{ maxHeight: 'min(420px, 50vh)' }}
+                >
+                  {flatItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-14 px-4">
+                      <Icons.search size={28} className="text-white/10 mb-3" />
+                      <p className="text-[13px] text-white/30">
+                        Geen resultaten voor &ldquo;{query}&rdquo;
+                      </p>
+                      <p className="text-[11px] text-white/15 mt-1">
+                        Probeer een andere zoekterm
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Reset running index before rendering */}
+                      {(() => { runningIndex = 0; return null })()}
+                      {CATEGORY_ORDER.map((cat) => (
+                        <Fragment key={cat}>{renderCategory(cat)}</Fragment>
+                      ))}
+                    </>
+                  )}
+                </div>
+
+                {/* ---- Footer with keyboard shortcuts ---- */}
+                <div className="flex items-center justify-between gap-4 px-4 py-2.5 border-t border-white/[0.05] bg-white/[0.01]">
+                  <div className="flex items-center gap-4">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-white/25">
+                      <kbd className="inline-flex items-center justify-center w-[18px] h-[18px] rounded bg-white/[0.06] text-[10px] font-mono leading-none">&uarr;</kbd>
+                      <kbd className="inline-flex items-center justify-center w-[18px] h-[18px] rounded bg-white/[0.06] text-[10px] font-mono leading-none">&darr;</kbd>
+                      <span className="ml-0.5">navigeren</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] text-white/25">
+                      <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded bg-white/[0.06] text-[10px] font-mono leading-none">&crarr;</kbd>
+                      <span className="ml-0.5">selecteer</span>
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-white/25">
+                    <kbd className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded bg-white/[0.06] text-[10px] font-mono leading-none">esc</kbd>
+                    <span className="ml-0.5">sluiten</span>
                   </span>
                 </div>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 rounded bg-white/5">esc</kbd>
-                  <span className="ml-1">sluiten</span>
-                </span>
               </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   )
 }

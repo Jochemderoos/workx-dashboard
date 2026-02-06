@@ -18,6 +18,7 @@ import {
   type HotspotCategory,
   type PacklistItem,
 } from '@/lib/lustrum-data'
+import toast from 'react-hot-toast'
 
 // Weather code mapping
 const getWeatherInfo = (code: number) => {
@@ -177,11 +178,11 @@ export default function LustrumPage() {
         setTimeout(() => setIdeaSubmitted(false), 5000)
       } else {
         const error = await res.json()
-        alert(error.error || 'Er ging iets mis')
+        toast.error(error.error || 'Er ging iets mis')
       }
     } catch (error) {
       console.error('Error submitting idea:', error)
-      alert('Er ging iets mis met de verbinding')
+      toast.error('Er ging iets mis met de verbinding')
     } finally {
       setIsSubmittingIdea(false)
     }
@@ -333,11 +334,11 @@ export default function LustrumPage() {
         setShowFlightModal(false)
       } else {
         const error = await res.json()
-        alert(error.error || 'Fout bij opslaan')
+        toast.error(error.error || 'Fout bij opslaan')
       }
     } catch (error) {
       console.error('Error saving flight info:', error)
-      alert('Fout bij opslaan')
+      toast.error('Fout bij opslaan')
     } finally {
       setIsSavingFlight(false)
     }
@@ -364,11 +365,11 @@ export default function LustrumPage() {
         setShowProgramModal(false)
       } else {
         const error = await res.json()
-        alert(error.error || 'Fout bij opslaan')
+        toast.error(error.error || 'Fout bij opslaan')
       }
     } catch (error) {
       console.error('Error saving program item:', error)
-      alert('Fout bij opslaan')
+      toast.error('Fout bij opslaan')
     } finally {
       setIsSavingProgram(false)
     }
@@ -384,11 +385,11 @@ export default function LustrumPage() {
         setProgramItems(programItems.filter(item => item.id !== id))
       } else {
         const error = await res.json()
-        alert(error.error || 'Fout bij verwijderen')
+        toast.error(error.error || 'Fout bij verwijderen')
       }
     } catch (error) {
       console.error('Error deleting program item:', error)
-      alert('Fout bij verwijderen')
+      toast.error('Fout bij verwijderen')
     }
   }
 

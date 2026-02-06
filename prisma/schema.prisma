@@ -88,6 +88,9 @@ model User {
   grantedAccess    BundleAccess[]   @relation("BundleAccessGrantedBy")
   bundleLocks      BundleLock[]
 
+  // Audit log
+  auditLogs        AuditLog[]       @relation("AuditLogs")
+
   @@index([isActive])
   @@index([role])
 }
@@ -169,11 +172,12 @@ model ChatMessage {
 
   sender    User        @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  parent    ChatMessage? @relation("ThreadReplies", fields: [parentId], references: [id])
+  parent    ChatMessage? @relation("ThreadReplies", fields: [parentId], references: [id], onDelete: SetNull)
   replies   ChatMessage[] @relation("ThreadReplies")
 
   @@index([channelId, createdAt])
   @@index([senderId])
+  @@index([parentId])
 }
 
 // ==================== BONUS CALCULATOR ====================
@@ -235,11 +239,12 @@ model VacationPeriod {
 
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   balance   VacationBalance @relation(fields: [balanceId], references: [id], onDelete: Cascade)
-  createdBy User            @relation("CreatedPeriods", fields: [createdById], references: [id])
+  createdBy User            @relation("CreatedPeriods", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([userId, year])
   @@index([balanceId])
   @@index([endDate])
+  @@index([createdById])
 }
 
 // Ouderschapsverlof tracking - ondersteunt meerdere kinderen per medewerker
@@ -326,11 +331,13 @@ model WorkItem {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  assignee     User?     @relation("AssignedWork", fields: [assigneeId], references: [id])
+  assignee     User?     @relation("AssignedWork", fields: [assigneeId], references: [id], onDelete: SetNull)
   createdBy    User      @relation("CreatedWork", fields: [createdById], references: [id])
 
   @@index([assigneeId])
+  @@index([createdById])
   @@index([status])
+  @@index([dueDate])
 }
 
 // ==================== TRANSITIEVERGOEDING (voor opslag berekeningen) ====================
@@ -362,6 +369,8 @@ model TransitieCalculation {
   months           Int
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  @@index([createdAt])
 }
 
 // ==================== FEEDBACK ====================
@@ -400,7 +409,7 @@ model CalendarEvent {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy   User     @relation("CreatedEvents", fields: [createdById], references: [id])
+  createdBy   User     @relation("CreatedEvents", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([startTime])
   @@index([endTime])
@@ -518,6 +527,8 @@ model LustrumIdea {
   submittedBy String   // Naam van de inzender
   isAnonymous Boolean  @default(false)
   createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // ==================== SALARISHUIS & ARBEIDSVOORWAARDEN ====================
@@ -605,9 +616,10 @@ model TrainingSession {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy   User     @relation("CreatedTrainingSessions", fields: [createdById], references: [id])
+  createdBy   User     @relation("CreatedTrainingSessions", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([date])
+  @@index([createdById])
 }
 
 // Certificaten van individuele opleidingen
@@ -687,7 +699,7 @@ model Zaak {
   createdBy             User     @relation("CreatedZaken", fields: [createdById], references: [id])
 
   assignedToId          String?  // Wie is uiteindelijk toegewezen
-  assignedTo            User?    @relation("AssignedZaken", fields: [assignedToId], references: [id])
+  assignedTo            User?    @relation("AssignedZaken", fields: [assignedToId], references: [id], onDelete: SetNull)
   assignedAt            DateTime?
 
   // Toewijzing queue
@@ -784,6 +796,8 @@ model AuditLog {
   ipAddress   String?  // IP adres van de gebruiker
   userAgent   String?  // Browser info
   createdAt   DateTime @default(now())
+
+  user        User     @relation("AuditLogs", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([entityType])
@@ -938,7 +952,7 @@ model BundleAccess {
 
   bundle      WorkxflowBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
   user        User            @relation("BundleAccessUser", fields: [userId], references: [id], onDelete: Cascade)
-  grantedBy   User            @relation("BundleAccessGrantedBy", fields: [grantedById], references: [id])
+  grantedBy   User            @relation("BundleAccessGrantedBy", fields: [grantedById], references: [id], onDelete: Cascade)
 
   @@unique([bundleId, userId])
   @@index([userId])

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import toast from 'react-hot-toast'
 
 interface Attendee {
   id: string
@@ -211,7 +212,7 @@ export default function AppjeplekjePage() {
       if (!res.ok) {
         const errorData = await res.json()
         console.error('API Error:', errorData)
-        alert(errorData.error || 'Er ging iets mis')
+        toast.error(errorData.error || 'Er ging iets mis')
         return
       }
 
@@ -220,7 +221,7 @@ export default function AppjeplekjePage() {
       await fetchWeekOverview()
     } catch (error) {
       console.error('Error toggling attendance:', error)
-      alert('Er ging iets mis met de verbinding')
+      toast.error('Er ging iets mis met de verbinding')
     } finally {
       setIsToggling(false)
     }
@@ -242,7 +243,7 @@ export default function AppjeplekjePage() {
       if (!res.ok) {
         const errorData = await res.json()
         console.error('API Error:', errorData)
-        alert(errorData.error || 'Er ging iets mis')
+        toast.error(errorData.error || 'Er ging iets mis')
         return
       }
 
@@ -251,7 +252,7 @@ export default function AppjeplekjePage() {
       await fetchWeekOverview()
     } catch (error) {
       console.error('Error updating time slot:', error)
-      alert('Er ging iets mis met de verbinding')
+      toast.error('Er ging iets mis met de verbinding')
     } finally {
       setIsToggling(false)
     }

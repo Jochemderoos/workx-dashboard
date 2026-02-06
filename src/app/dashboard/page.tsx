@@ -7,11 +7,141 @@ import { Icons } from '@/components/ui/Icons'
 import { TEAM_PHOTOS, ALL_TEAM_MEMBERS, getPhotoUrl } from '@/lib/team-photos'
 import { LUSTRUM_CONFIG, MALLORCA_FACTS, getCountdown } from '@/lib/lustrum-data'
 import { formatDateForAPI, parseDateFromAPI } from '@/lib/date-utils'
+import toast from 'react-hot-toast'
 
 // Logo Component - uses actual Workx logo
 function WorkxLogoSmall() {
   return (
     <img src="/workx-logo.png" alt="Workx Advocaten" className="h-14 w-auto" draggable={false} />
+  )
+}
+
+// Skeleton block helper
+function Skeleton({ className = '' }: { className?: string }) {
+  return <div className={`skeleton-wave rounded-lg ${className}`} />
+}
+
+// Full dashboard skeleton shown during initial load
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-8 animate-in">
+      {/* Hero skeleton */}
+      <div className="rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <Skeleton className="hidden md:block w-14 h-14 rounded-xl" />
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-72 hidden sm:block" />
+            </div>
+          </div>
+          <div className="hidden lg:flex items-start gap-8">
+            <Skeleton className="w-[120px] h-[120px] rounded-xl" />
+            <div className="text-right space-y-2">
+              <Skeleton className="h-12 w-32 ml-auto" />
+              <Skeleton className="h-4 w-48 ml-auto" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick links + Appjeplekje skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3">
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-3 w-12" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                <Skeleton className="w-10 h-10 rounded-lg mb-3" />
+                <Skeleton className="h-4 w-20 mb-1" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="hidden lg:block lg:col-span-2">
+          <div className="mb-4"><Skeleton className="h-5 w-20" /></div>
+          <div className="rounded-2xl border-2 border-white/10 p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <Skeleton className="w-10 h-10 rounded-xl" />
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+            <Skeleton className="h-3 w-full rounded-full" />
+            <div className="flex gap-2 mt-3">
+              {[1,2,3,4].map(i => <Skeleton key={i} className="w-8 h-8 rounded-full" />)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Absence overview skeleton */}
+          <div className="card p-5">
+            <div className="flex items-center gap-3 mb-5">
+              <Skeleton className="w-10 h-10 rounded-xl" />
+              <div className="space-y-1">
+                <Skeleton className="h-5 w-36" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {[1,2,3,4,5].map(i => (
+                <Skeleton key={i} className="h-32 rounded-xl" />
+              ))}
+            </div>
+          </div>
+          {/* Events skeleton */}
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <Skeleton className="w-8 h-8 rounded-lg" />
+              <Skeleton className="h-5 w-40" />
+            </div>
+            <div className="space-y-1.5">
+              {[1,2,3].map(i => (
+                <div key={i} className="card p-3 flex items-center gap-3">
+                  <Skeleton className="w-1 h-10 rounded-full" />
+                  <div className="flex-1 space-y-1">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Lustrum skeleton */}
+        <Skeleton className="h-64 rounded-2xl" />
+      </div>
+
+      {/* Bottom cards skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="card p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Skeleton className="w-10 h-10 rounded-xl" />
+            <div className="space-y-1"><Skeleton className="h-4 w-28" /><Skeleton className="h-3 w-16" /></div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[1,2,3].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Skeleton className="w-10 h-10 rounded-xl" />
+            <div className="space-y-1"><Skeleton className="h-4 w-28" /><Skeleton className="h-3 w-20" /></div>
+          </div>
+          <Skeleton className="h-20 rounded-lg" />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -550,6 +680,7 @@ export default function DashboardHome() {
   const [newsletterReminders, setNewsletterReminders] = useState<NewsletterAssignment[]>([])
   const [newsletterOverview, setNewsletterOverview] = useState<NewsletterAssignment[] | null>(null)
   const [isNewsletterManager, setIsNewsletterManager] = useState(false)
+  const [activityFeed, setActivityFeed] = useState<{ id: string; userId: string; userName: string; userAvatar: string | null; action: string; entityType: string; description: string; timeAgo: string }[]>([])
 
   // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
   const fetchDashboardSummary = async () => {
@@ -824,6 +955,7 @@ export default function DashboardHome() {
       fetchWork(),              // Separate: needs specific query params
       fetchVacations(),         // Separate: needs all=true
       fetchCalendarAbsences(),  // Separate: needs date range filter
+      fetchActivity(),          // Activity feed
     ]).finally(() => setIsLoading(false))
   }, [])
 
@@ -892,6 +1024,18 @@ export default function DashboardHome() {
       }
     } catch (e) {
       console.error('Error fetching calendar absences:', e)
+    }
+  }
+
+  const fetchActivity = async () => {
+    try {
+      const res = await fetch('/api/dashboard/activity')
+      if (res.ok) {
+        const data = await res.json()
+        setActivityFeed(data.activities || [])
+      }
+    } catch (e) {
+      console.error('Error fetching activity feed:', e)
     }
   }
 
@@ -994,14 +1138,14 @@ export default function DashboardHome() {
       if (!res.ok) {
         const errorData = await res.json()
         console.error('API Error:', errorData)
-        alert(errorData.error || 'Er ging iets mis')
+        toast.error(errorData.error || 'Er ging iets mis')
         return
       }
 
       await fetchOfficeAttendance()
     } catch (e) {
       console.error('Error toggling attendance:', e)
-      alert('Er ging iets mis met de verbinding')
+      toast.error('Er ging iets mis met de verbinding')
     } finally {
       setIsTogglingAttendance(false)
     }
@@ -1030,14 +1174,14 @@ export default function DashboardHome() {
       if (!res.ok) {
         const errorData = await res.json()
         console.error('API Error:', errorData)
-        alert(errorData.error || 'Er ging iets mis')
+        toast.error(errorData.error || 'Er ging iets mis')
         return
       }
 
       await fetchTomorrowAttendance()
     } catch (e) {
       console.error('Error toggling tomorrow attendance:', e)
-      alert('Er ging iets mis met de verbinding')
+      toast.error('Er ging iets mis met de verbinding')
     } finally {
       setIsTogglingTomorrowAttendance(false)
     }
@@ -1172,8 +1316,13 @@ export default function DashboardHome() {
   // Filter PENDING assignments for the overview widget
   const pendingOverviewArticles = newsletterOverview?.filter(a => a.status === 'PENDING') || []
 
+  // Show skeleton during initial load
+  if (isLoading) {
+    return <DashboardSkeleton />
+  }
+
   return (
-    <div className="space-y-8 fade-in">
+    <div className="space-y-8 stagger">
       {/* LUSTRUM COUNTDOWN MILESTONE POPUP */}
       {showCountdownPopup && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] overflow-y-auto" onClick={() => setShowCountdownPopup(false)}>
@@ -1801,13 +1950,7 @@ export default function DashboardHome() {
               </Link>
             </div>
 
-            {isLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="card h-14 animate-pulse" />
-                ))}
-              </div>
-            ) : events.length === 0 ? (
+            {events.length === 0 ? (
               <div className="card p-8 text-center">
                 <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-3">
                   <Icons.calendar className="text-gray-500" size={20} />
@@ -2402,6 +2545,114 @@ export default function DashboardHome() {
             <p className="relative text-sm text-gray-400">{stat.label}</p>
           </Link>
         ))}
+      </div>
+
+      {/* Quick Actions + Activity Feed */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Actions */}
+        <div className="card p-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-workx-lime/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+                <Icons.zap className="text-workx-lime" size={18} />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-white">Snelle acties</h2>
+                <p className="text-xs text-gray-400">Veelgebruikte handelingen</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {[
+                { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakantie aanvragen', color: 'text-yellow-400', bg: 'bg-yellow-500/10 hover:bg-yellow-500/20' },
+                { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback geven', color: 'text-purple-400', bg: 'bg-purple-500/10 hover:bg-purple-500/20' },
+                { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Event toevoegen', color: 'text-blue-400', bg: 'bg-blue-500/10 hover:bg-blue-500/20' },
+                { href: '/dashboard/chat', icon: Icons.chat, label: 'Chat openen', color: 'text-green-400', bg: 'bg-green-500/10 hover:bg-green-500/20' },
+              ].map((action) => (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className={`flex items-center gap-3 p-2.5 rounded-xl ${action.bg} transition-all group`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <action.icon size={16} className={action.color} />
+                  </div>
+                  <span className="text-sm text-white/80 group-hover:text-white transition-colors">{action.label}</span>
+                  <Icons.arrowRight size={12} className="ml-auto text-gray-600 group-hover:text-white/50 group-hover:translate-x-0.5 transition-all" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Activity Feed */}
+        <div className="lg:col-span-2 card p-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                  <Icons.activity className="text-indigo-400" size={18} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-white">Recente activiteit</h2>
+                  <p className="text-xs text-gray-400">Wat er gebeurt binnen het team</p>
+                </div>
+              </div>
+            </div>
+            {activityFeed.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mx-auto mb-3">
+                  <Icons.activity className="text-gray-500" size={20} />
+                </div>
+                <p className="text-sm text-gray-400">Nog geen activiteit geregistreerd</p>
+                <p className="text-xs text-gray-500 mt-1">Acties verschijnen hier automatisch</p>
+              </div>
+            ) : (
+              <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
+                {activityFeed.slice(0, 10).map((activity) => {
+                  const actionConfig: Record<string, { icon: typeof Icons.plus; color: string; bg: string }> = {
+                    CREATE: { icon: Icons.plus, color: 'text-green-400', bg: 'bg-green-500/10' },
+                    UPDATE: { icon: Icons.edit, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+                    DELETE: { icon: Icons.x, color: 'text-red-400', bg: 'bg-red-500/10' },
+                  }
+                  const config = actionConfig[activity.action] || actionConfig.UPDATE
+                  const ActionIcon = config.icon
+
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.03] transition-colors group"
+                    >
+                      {/* User avatar */}
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10 ring-2 ring-white/5">
+                        {activity.userAvatar ? (
+                          <img src={activity.userAvatar} alt={activity.userName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">
+                            {activity.userName.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white/80">
+                          <span className="font-medium text-white">{activity.userName.split(' ')[0]}</span>{' '}
+                          <span className="text-gray-400">{activity.description}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">{activity.timeAgo}</p>
+                      </div>
+                      {/* Action type badge */}
+                      <div className={`w-6 h-6 rounded-md ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                        <ActionIcon size={12} className={config.color} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

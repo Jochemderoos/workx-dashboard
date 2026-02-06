@@ -446,6 +446,15 @@ body {
 .stagger > *:nth-child(6) { animation-delay: 0.3s; }
 .stagger > *:nth-child(7) { animation-delay: 0.35s; }
 .stagger > *:nth-child(8) { animation-delay: 0.4s; }
+.stagger > *:nth-child(9) { animation-delay: 0.45s; }
+.stagger > *:nth-child(10) { animation-delay: 0.5s; }
+.stagger > *:nth-child(11) { animation-delay: 0.55s; }
+.stagger > *:nth-child(12) { animation-delay: 0.6s; }
+
+/* Smooth entrance for skeleton → content transition */
+.animate-in {
+  animation: fadeIn 0.3s ease-out;
+}
 
 /* ==================== GRADIENT TEXT ==================== */
 
