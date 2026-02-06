@@ -14,7 +14,7 @@ import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
 import MagneticButton from '@/components/ui/MagneticButton'
 import Sparkline from '@/components/ui/Sparkline'
 import TextReveal from '@/components/ui/TextReveal'
-import { BeamConnector } from '@/components/ui/AnimatedBeam'
+// import { BeamConnector } from '@/components/ui/AnimatedBeam'
 
 // Logo Component - uses actual Workx logo
 function WorkxLogoSmall() {
@@ -2473,8 +2473,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Bottom section with Widget and Stats */}
-      <ScrollReveal direction="up" distance={35} duration={0.5} staggerChildren={0.1} className="relative grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <BeamConnector className="hidden lg:block" />
+      <ScrollReveal direction="up" distance={35} duration={0.5} staggerChildren={0.1} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Dynamic Widget based on role */}
         <ScrollRevealItem>
         {isAdmin ? (
