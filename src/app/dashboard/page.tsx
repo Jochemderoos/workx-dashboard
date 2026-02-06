@@ -2485,150 +2485,124 @@ export default function DashboardHome() {
       </div>
 
       {/* Bottom section with Widget and Stats */}
-      <ScrollReveal direction="up" distance={35} duration={0.5} staggerChildren={0.1} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Dynamic Widget based on role */}
-        <ScrollRevealItem>
         {isAdmin ? (
           /* Werkdruk Widget for Partners/Hanna */
-          <SpotlightCard as={Link} href="/dashboard/werk" className="card p-5 overflow-hidden group hover:border-blue-500/30 transition-all" maxTilt={8}>
-            <div className="absolute top-0 right-0 w-[384px] h-[384px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.05) 0%, transparent 70%)' }} />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                    <Icons.activity className="text-yellow-400" size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">Werkdruk</p>
-                    <p className="text-xs text-gray-400">Team overzicht</p>
-                  </div>
+          <Link href="/dashboard/werk" className="card p-5 block relative group hover:border-blue-500/30 transition-all">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                  <Icons.activity className="text-yellow-400" size={18} />
                 </div>
-                <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-workx-lime group-hover:translate-x-1 transition-all" />
+                <div>
+                  <p className="text-sm font-medium text-white">Werkdruk</p>
+                  <p className="text-xs text-gray-400">Team overzicht</p>
+                </div>
               </div>
-              <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                  <span className="text-gray-400">Rustig</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                  <span className="text-gray-400">Normaal</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
-                  <span className="text-gray-400">Druk</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                  <span className="text-gray-400">Zeer druk</span>
-                </div>
+              <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-workx-lime group-hover:translate-x-1 transition-all" />
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                <span className="text-gray-400">Rustig</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                <span className="text-gray-400">Normaal</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+                <span className="text-gray-400">Druk</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                <span className="text-gray-400">Zeer druk</span>
               </div>
             </div>
-          </SpotlightCard>
+          </Link>
         ) : (
           /* Feedback Widget for Employees */
-          <SpotlightCard as={Link} href="/dashboard/feedback" className="card p-5 overflow-hidden group hover:border-purple-500/30 transition-all" maxTilt={8}>
-            <div className="absolute top-0 right-0 w-[384px] h-[384px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.05) 0%, transparent 70%)' }} />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                    <Icons.chat className="text-purple-400" size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">Feedback</p>
-                    <p className="text-xs text-gray-400">Deel je ideeën</p>
-                  </div>
+          <Link href="/dashboard/feedback" className="card p-5 block relative group hover:border-purple-500/30 transition-all">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Icons.chat className="text-purple-400" size={18} />
                 </div>
-                <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
+                <div>
+                  <p className="text-sm font-medium text-white">Feedback</p>
+                  <p className="text-xs text-gray-400">Deel je ideeën</p>
+                </div>
               </div>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Heb je een idee of bug gevonden? Laat het weten via de feedback pagina.
-              </p>
+              <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
             </div>
-          </SpotlightCard>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Heb je een idee of bug gevonden? Laat het weten via de feedback pagina.
+            </p>
+          </Link>
         )}
-        </ScrollRevealItem>
 
         {/* Eerstvolgende Opleiding */}
-        <ScrollRevealItem>
-          <SpotlightCard
-            as={Link}
-            href="/dashboard/opleidingen"
-            className="card p-5 group hover:border-white/10 transition-all overflow-hidden"
-            maxTilt={10}
-            spotlightSize={250}
-          >
-            <div className="absolute top-0 right-0 w-[240px] h-[240px] -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%)' }} />
-            <div className="relative flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Icons.graduationCap className="text-blue-400" size={18} />
-              </div>
+        <Link href="/dashboard/opleidingen" className="card p-5 block relative group hover:border-white/10 transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Icons.graduationCap className="text-blue-400" size={18} />
             </div>
-            <div className="relative">
-              {nextTraining ? (
-                <>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="text-2xl font-semibold text-white group-hover:text-workx-lime transition-colors">
-                      <AnimatedNumber value={Math.max(0, Math.ceil((new Date(nextTraining.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} stiffness={60} damping={15} />
-                      <span className="text-sm font-normal text-gray-400 ml-1">dagen</span>
-                    </div>
-                    <Sparkline
-                      data={[2, 4, 3, 6, 5, 8, 4, 7, 6, 9]}
-                      width={80}
-                      height={32}
-                      color="#60a5fa"
-                      strokeWidth={1.5}
-                      duration={1.2}
-                    />
+          </div>
+          <div>
+            {nextTraining ? (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-2xl font-semibold text-white group-hover:text-workx-lime transition-colors">
+                    <AnimatedNumber value={Math.max(0, Math.ceil((new Date(nextTraining.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} stiffness={60} damping={15} />
+                    <span className="text-sm font-normal text-gray-400 ml-1">dagen</span>
                   </div>
-                  <p className="text-sm text-gray-400">Eerstvolgende opleiding</p>
-                  <p className="text-xs text-blue-400/80 mt-1 truncate">{nextTraining.title}</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-gray-400 mb-1">Geen komende opleiding</p>
-                  <p className="text-xs text-gray-500">Bekijk het opleidingsoverzicht</p>
-                </>
-              )}
-            </div>
-          </SpotlightCard>
-        </ScrollRevealItem>
+                  <Sparkline
+                    data={[2, 4, 3, 6, 5, 8, 4, 7, 6, 9]}
+                    width={80}
+                    height={32}
+                    color="#60a5fa"
+                    strokeWidth={1.5}
+                    duration={1.2}
+                  />
+                </div>
+                <p className="text-sm text-gray-400">Eerstvolgende opleiding</p>
+                <p className="text-xs text-blue-400/80 mt-1 truncate">{nextTraining.title}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-400 mb-1">Geen komende opleiding</p>
+                <p className="text-xs text-gray-500">Bekijk het opleidingsoverzicht</p>
+              </>
+            )}
+          </div>
+        </Link>
 
         {/* Events deze week */}
-        <ScrollRevealItem>
-          <SpotlightCard
-            as={Link}
-            href="/dashboard/agenda"
-            className="card p-5 group hover:border-white/10 transition-all overflow-hidden"
-            maxTilt={10}
-            spotlightSize={250}
-          >
-            <div className="absolute top-0 right-0 w-[240px] h-[240px] -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.05) 0%, transparent 70%)' }} />
-            <div className="relative flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Icons.calendar className="text-purple-400" size={18} />
-              </div>
+        <Link href="/dashboard/agenda" className="card p-5 block relative group hover:border-white/10 transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Icons.calendar className="text-purple-400" size={18} />
             </div>
-            <div className="relative flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">
-                  <AnimatedNumber value={events.length} stiffness={60} damping={15} />
-                </div>
-                <p className="text-sm text-gray-400">Events deze week</p>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-semibold text-white mb-1 group-hover:text-workx-lime transition-colors">
+                <AnimatedNumber value={events.length} stiffness={60} damping={15} />
               </div>
-              <Sparkline
-                data={[2, 4, 3, 5, 7, 4, 6, 3, 5, 4]}
-                width={80}
-                height={32}
-                color="#c084fc"
-                strokeWidth={1.5}
-                duration={1.2}
-              />
+              <p className="text-sm text-gray-400">Events deze week</p>
             </div>
-          </SpotlightCard>
-        </ScrollRevealItem>
-      </ScrollReveal>
+            <Sparkline
+              data={[2, 4, 3, 5, 7, 4, 6, 3, 5, 4]}
+              width={80}
+              height={32}
+              color="#c084fc"
+              strokeWidth={1.5}
+              duration={1.2}
+            />
+          </div>
+        </Link>
+      </div>
 
       {/* Quick Actions */}
       <ScrollReveal direction="up" distance={30} duration={0.5}>
