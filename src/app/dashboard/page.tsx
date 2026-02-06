@@ -382,7 +382,7 @@ function AppjeplekjeWidget({
       }`}
     >
       {/* Decorative glow */}
-      <div className="absolute top-0 right-0 w-[384px] h-[384px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.2) 0%, transparent 70%)' }} />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-cyan-400/30 transition-colors" />
       <div className="absolute -bottom-4 -left-4 opacity-10 group-hover:opacity-20 transition-opacity">
         <img src="/workx-pand.png" alt="" className="h-16 w-auto" />
       </div>
@@ -623,7 +623,7 @@ function LustrumTeaserWidget() {
         className="card p-5 block group hover:border-orange-500/30 transition-all relative overflow-hidden"
       >
         {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-[384px] h-[384px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.1) 0%, transparent 70%)' }} />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-orange-500/20 transition-colors" />
         <div className="absolute -bottom-4 -left-4 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">
           🎉
         </div>
@@ -1433,7 +1433,7 @@ export default function DashboardHome() {
       )}
 
       {/* Hero Header with Logo */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-4 sm:p-6 lg:p-8 card-glow-border">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray to-workx-dark border border-white/10 p-4 sm:p-6 lg:p-8 card-glow-border noise-overlay-strong">
         <div className="absolute top-0 right-0 w-96 h-96 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-workx-lime/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
@@ -1468,7 +1468,7 @@ export default function DashboardHome() {
 
           <div className="hidden lg:flex items-start gap-8">
             {/* Weather Widget */}
-            <div className="text-center bg-white/[0.04] border border-white/[0.08] rounded-xl p-4 min-w-[120px]">
+            <div className="text-center liquid-glass-sm p-4 min-w-[120px]">
               {weather.isLoading ? (
                 <div className="animate-pulse">
                   <div className="w-12 h-12 bg-white/10 rounded-full mx-auto mb-2" />
@@ -1587,12 +1587,12 @@ export default function DashboardHome() {
                 {/* Animated glow for urgent items */}
                 {(urgency === 'urgent' || isOverdue) && (
                   <>
-                    <div className="absolute top-0 left-0 w-[480px] h-[480px] -translate-y-1/2 -translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(239,68,68,0.2) 0%, transparent 70%)' }} />
-                    <div className="absolute bottom-0 right-0 w-[384px] h-[384px] translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.15) 0%, transparent 70%)' }} />
+                    <div className="absolute top-0 left-0 w-40 h-40 bg-red-500/20 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2 animate-pulse" />
+                    <div className="absolute bottom-0 right-0 w-32 h-32 bg-orange-500/15 rounded-full blur-3xl translate-y-1/2 translate-x-1/2 animate-pulse" style={{ animationDelay: '1s' }} />
                   </>
                 )}
                 {urgency === 'warning' && (
-                  <div className="absolute top-0 right-0 w-[480px] h-[480px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%)' }} />
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                 )}
 
                 <div className="relative flex items-start gap-4">
@@ -1676,8 +1676,8 @@ export default function DashboardHome() {
       {isNewsletterManager && pendingOverviewArticles.length > 0 && (
         <div className="relative overflow-hidden rounded-2xl border border-workx-lime/20 bg-gradient-to-br from-workx-lime/5 via-transparent to-emerald-500/5 p-5 shadow-lg shadow-workx-lime/5">
           {/* Subtle glow */}
-          <div className="absolute top-0 right-0 w-[576px] h-[576px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(249,255,133,0.1) 0%, transparent 70%)' }} />
-          <div className="absolute bottom-0 left-0 w-[384px] h-[384px] translate-y-1/2 -translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)' }} />
+          <div className="absolute top-0 right-0 w-48 h-48 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
           <div className="relative">
             {/* Header */}
@@ -1790,8 +1790,8 @@ export default function DashboardHome() {
         <div className="lg:col-span-2 space-y-6">
           {/* Absence Overview - 2 Weeks */}
           <Link href="/dashboard/vakanties" className="card p-3 sm:p-5 relative overflow-hidden block group hover:border-yellow-500/30 transition-all">
-            <div className="absolute top-0 right-0 w-[768px] h-[768px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.05) 0%, transparent 70%)' }} />
-            <div className="absolute bottom-0 left-0 w-[576px] h-[576px] translate-y-1/2 -translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.05) 0%, transparent 70%)' }} />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-yellow-500/10 transition-colors" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none group-hover:bg-orange-500/10 transition-colors" />
 
             <div className="relative">
               {/* Header - stays fixed */}
@@ -2033,7 +2033,7 @@ export default function DashboardHome() {
         {isAdmin ? (
           /* Feedback Widget for Admin */
           <Link href="/dashboard/feedback" className="card p-4 relative overflow-hidden block group hover:border-purple-500/30 transition-all">
-            <div className="absolute top-0 right-0 w-[320px] h-[320px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.05) 0%, transparent 70%)' }} />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-purple-500/10 transition-colors" />
 
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
@@ -2089,8 +2089,8 @@ export default function DashboardHome() {
           </Link>
         ) : (
           /* Vacation Card for Employees */
-          <SpotlightCard as={Link} href="/dashboard/vakanties" className="card p-4 overflow-hidden group block hover:border-workx-lime/30 transition-all" maxTilt={6} spotlightSize={400}>
-            <div className="absolute top-0 right-0 w-[320px] h-[320px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(249,255,133,0.05) 0%, transparent 70%)' }} />
+          <SpotlightCard as={Link} href="/dashboard/vakanties" className="card p-4 overflow-hidden group block hover:border-workx-lime/30 transition-all card-glow-border-subtle" maxTilt={6} spotlightSize={400}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
 
             <div className="relative">
               <div className="flex items-center justify-between mb-4">
@@ -2373,12 +2373,12 @@ export default function DashboardHome() {
             }`}
           >
             {/* Glowing orbs */}
-            <div className={`absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 pointer-events-none transition-all duration-700 ${
-              birthdayToday ? 'w-[720px] h-[720px]' : 'w-[480px] h-[480px] group-hover:w-[720px] group-hover:h-[720px]'
-            }`} style={{ background: birthdayToday ? 'radial-gradient(circle, rgba(236,72,153,0.3) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(236,72,153,0.05) 0%, transparent 70%)' }} />
-            <div className={`absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 pointer-events-none transition-all duration-700 ${
-              birthdayToday ? 'w-[400px] h-[400px]' : 'w-[320px] h-[320px] group-hover:w-[400px] group-hover:h-[400px]'
-            }`} style={{ background: birthdayToday ? 'radial-gradient(circle, rgba(168,85,247,0.3) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(168,85,247,0.05) 0%, transparent 70%)' }} />
+            <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 transition-all duration-700 ${
+              birthdayToday ? 'bg-pink-500/30 scale-150' : 'bg-pink-500/5 group-hover:bg-pink-500/20 group-hover:scale-150'
+            }`} />
+            <div className={`absolute bottom-0 left-0 w-32 h-32 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 transition-all duration-700 ${
+              birthdayToday ? 'bg-purple-500/30 scale-125' : 'bg-purple-500/5 group-hover:bg-purple-500/15 group-hover:scale-125'
+            }`} />
 
             <div className="relative">
               {/* Header */}
@@ -2609,8 +2609,8 @@ export default function DashboardHome() {
 
       {/* Quick Actions */}
       <ScrollReveal direction="up" distance={30} duration={0.5}>
-        <div className="card p-5 relative overflow-hidden noise-overlay">
-          <div className="absolute top-0 right-0 w-[480px] h-[480px] -translate-y-1/2 translate-x-1/2 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(249,255,133,0.05) 0%, transparent 70%)' }} />
+        <div className="card p-5 relative overflow-hidden liquid-glass noise-overlay">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-workx-lime/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
