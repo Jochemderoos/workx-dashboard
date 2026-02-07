@@ -7,7 +7,8 @@ test.describe('User Experience - Wat ziet een medewerker?', () => {
     await navigateTo(page, '/dashboard')
 
     // "Goedemorgen/Goedemiddag/Goedenavond, Jochem"
-    const greeting = page.locator('text=/Goede(morgen|middag|avond)/i').first()
+    await waitForPageLoad(page)
+    const greeting = page.getByText(/Goedemorgen|Goedemiddag|Goedenavond/i).first()
     await expect(greeting).toBeVisible({ timeout: 15_000 })
 
     // Naam moet erbij staan
