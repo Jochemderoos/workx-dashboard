@@ -161,16 +161,41 @@ export default function ClaudeChat({
 
         buffer += decoder.decode(value, { stream: true })
 
-        // Parse SSE events from buffer — handle both \n and \r\n line endings
-        const eventRegex = /event: (\w+)\r?\ndata: (.*)\r?\n\r?\n/g
-        let match
-        const remaining = buffer
+        // Parse SSE events from buffer
+        // Format: event: <type>\ndata: <line1>\ndata: <line2>\n...\n\n
+        const events: Array<{ event: string; data: string }> = []
         let lastIndex = 0
+        const remaining = buffer
 
-        while ((match = eventRegex.exec(remaining)) !== null) {
-          lastIndex = match.index + match[0].length
-          const event = match[1]
-          const data = match[2]
+        // Find complete events (terminated by double newline)
+        let searchFrom = 0
+        while (searchFrom < remaining.length) {
+          const eventStart = remaining.indexOf('event: ', searchFrom)
+          if (eventStart === -1) break
+
+          // Find the double-newline terminator
+          const terminator = remaining.indexOf('\n\n', eventStart)
+          if (terminator === -1) break // incomplete event, wait for more data
+
+          const eventBlock = remaining.slice(eventStart, terminator)
+          const lines = eventBlock.split('\n')
+
+          // First line: event type
+          const eventLine = lines[0]
+          const eventType = eventLine.replace('event: ', '').trim()
+
+          // Remaining lines: data (SSE spec: "data: " or "data:")
+          const dataLines = lines.slice(1)
+            .filter(l => l.startsWith('data:'))
+            .map(l => l.startsWith('data: ') ? l.slice(6) : l.slice(5))
+          const data = dataLines.join('\n')
+
+          events.push({ event: eventType, data })
+          lastIndex = terminator + 2 // skip past \n\n
+          searchFrom = lastIndex
+        }
+
+        for (const { event, data } of events) {
 
           switch (event) {
             case 'conversation_id':

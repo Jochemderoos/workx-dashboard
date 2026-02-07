@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
 
+// Force Node.js runtime with streaming support
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const SYSTEM_PROMPT = `Je bent de AI-assistent van Workx Advocaten, een gespecialiseerd arbeidsrechtadvocatenkantoor in Amsterdam.
 
 ## Kernregels
@@ -208,7 +212,10 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: string, data: string) => {
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`))
+        // SSE spec: newlines in data must use multiple "data:" lines
+        const lines = data.split('\n')
+        const sseData = lines.map(l => `data: ${l}`).join('\n')
+        controller.enqueue(encoder.encode(`event: ${event}\n${sseData}\n\n`))
       }
 
       send('conversation_id', convId)
@@ -308,9 +315,11 @@ export async function POST(req: NextRequest) {
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Content-Encoding': 'none',
     },
   })
 }
