@@ -44,3 +44,9 @@ prisma/*.db-journal
 .env*.local
 desktop/dist/
 desktop/node_modules/
+
+# E2E tests
+.env.test
+test-results/
+playwright-report/
+.auth/
