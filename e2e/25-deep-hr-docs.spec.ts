@@ -51,20 +51,13 @@ test.describe('HR Docs - Diepgaande tests (Partner)', () => {
     await navigateTo(page, '/dashboard/hr-docs')
     await waitForPageLoad(page)
 
-    // Wacht op chapter buttons (kan sidebar of mobile nav zijn)
-    const chapterButtons = page.locator('.chapter-btn')
-    await expect(chapterButtons.first()).toBeVisible({ timeout: 10_000 })
+    // Desktop sidebar chapters (aside is hidden lg:block, visible op 1280px)
+    const sidebarChapters = page.locator('aside .chapter-btn')
+    await expect(sidebarChapters.first()).toBeVisible({ timeout: 10_000 })
 
-    const chapterCount = await chapterButtons.count()
-    expect(chapterCount).toBeGreaterThanOrEqual(3)
-
-    // Target chapter buttons in de hr-docs sidebar (desktop) of vallen terug op zichtbare chapter buttons
-    const sidebarChapters = page.locator('.hr-docs-sidebar .chapter-btn')
-    const sidebarCount = await sidebarChapters.count()
-
-    // Gebruik sidebar chapters als ze beschikbaar zijn, anders gebruik zichtbare chapter buttons
-    const targetChapters = sidebarCount >= 3 ? sidebarChapters : page.locator('.chapter-btn:visible')
-    const targetCount = await targetChapters.count()
+    const targetCount = await sidebarChapters.count()
+    expect(targetCount).toBeGreaterThanOrEqual(3)
+    const targetChapters = sidebarChapters
 
     if (targetCount >= 3) {
       // Onthoud de titel van het derde hoofdstuk
