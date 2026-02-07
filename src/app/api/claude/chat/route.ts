@@ -45,6 +45,9 @@ Bij berekeningen (transitievergoeding, opzegtermijnen, verjaringstermijnen):
 - Vermeld het toepasselijke wetsartikel
 - Geef aan welke aannames je hebt gemaakt`
 
+// Allow up to 60 seconds for streaming responses (Vercel Pro)
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
@@ -114,8 +117,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Fetch active knowledge sources (Bronnen Manager)
-  // Prefer processed summaries over raw content for better, more focused knowledge
+  // Cap total to prevent exceeding token limits
   let sourcesContext = ''
+  const MAX_SOURCES_TOTAL = 30000
   try {
     const activeSources = await prisma.aISource.findMany({
       where: { userId, isActive: true },
@@ -129,17 +133,18 @@ export async function POST(req: NextRequest) {
         description: true,
       },
     })
+    let sourcesLength = 0
     for (const source of activeSources) {
-      // Use processed summary if available, otherwise fall back to raw content
       const knowledge = source.isProcessed && source.summary
         ? source.summary
         : source.content
 
       if (knowledge) {
         const label = source.isProcessed ? 'Verwerkte kennisbron' : 'Kennisbron (onverwerkt)'
-        // Processed summaries get more context budget (they're already condensed)
-        const maxLength = source.isProcessed ? 50000 : 20000
-        const trimmedKnowledge = knowledge.slice(0, maxLength)
+        const maxPerSource = source.isProcessed ? 10000 : 5000
+        const trimmedKnowledge = knowledge.slice(0, maxPerSource)
+        if (sourcesLength + trimmedKnowledge.length > MAX_SOURCES_TOTAL) break
+        sourcesLength += trimmedKnowledge.length
         sourcesContext += `\n\n--- ${label}: ${source.name} (${source.category}) ---\n${trimmedKnowledge}\n--- Einde bron ---`
       }
     }
@@ -147,8 +152,9 @@ export async function POST(req: NextRequest) {
     // Sources not available yet (table may not exist)
   }
 
-  // Fetch Workx templates (for template-based document generation)
+  // Fetch Workx templates (only metadata, not full content — too large for chat context)
   let templatesContext = ''
+  const MAX_TEMPLATES_TOTAL = 5000
   try {
     const templates = await prisma.aITemplate.findMany({
       where: { userId, isActive: true },
@@ -156,24 +162,23 @@ export async function POST(req: NextRequest) {
         name: true,
         category: true,
         description: true,
-        content: true,
         placeholders: true,
         instructions: true,
       },
     })
+    let templatesLength = 0
     for (const template of templates) {
-      if (template.content) {
-        templatesContext += `\n\n--- Workx Template: ${template.name} (${template.category}) ---\n`
-        if (template.description) templatesContext += `Beschrijving: ${template.description}\n`
-        if (template.placeholders) {
-          try {
-            const fields = JSON.parse(template.placeholders)
-            if (fields.length > 0) templatesContext += `Invulvelden: ${fields.join(', ')}\n`
-          } catch { /* skip */ }
-        }
-        if (template.instructions) templatesContext += `Instructies: ${template.instructions}\n`
-        templatesContext += `\nTemplate inhoud:\n${template.content.slice(0, 20000)}\n--- Einde template ---`
+      let entry = `\n- **${template.name}** (${template.category})`
+      if (template.description) entry += `: ${template.description}`
+      if (template.placeholders) {
+        try {
+          const fields = JSON.parse(template.placeholders)
+          if (fields.length > 0) entry += ` — Velden: ${fields.join(', ')}`
+        } catch { /* skip */ }
       }
+      if (templatesLength + entry.length > MAX_TEMPLATES_TOTAL) break
+      templatesLength += entry.length
+      templatesContext += entry
     }
   } catch {
     // Templates not available yet
@@ -184,7 +189,7 @@ export async function POST(req: NextRequest) {
     systemPrompt += `\n\n## Beschikbare kennisbronnen\nDe volgende juridische bronnen zijn beschikbaar als referentiemateriaal. Gebruik deze kennis bij het beantwoorden van vragen over Nederlands arbeidsrecht:${sourcesContext}`
   }
   if (templatesContext) {
-    systemPrompt += `\n\n## Workx Advocaten Templates\nDe volgende kantoorsjablonen zijn beschikbaar. Als de gebruiker vraagt om een document te genereren of een template in te vullen, gebruik dan het bijbehorende template als basis. Behoud de structuur en vul de velden in met de opgegeven gegevens. Markeer ontbrekende gegevens als [INVULLEN: omschrijving].${templatesContext}`
+    systemPrompt += `\n\n## Beschikbare Templates\nDe volgende kantoorsjablonen zijn beschikbaar (gebruik de Templates tab om ze in te vullen):${templatesContext}`
   }
   if (documentContext) {
     systemPrompt += `\n\n## Bijgevoegde documenten\nDe volgende documenten zijn beschikbaar als context voor dit gesprek:${documentContext}`
@@ -209,11 +214,21 @@ export async function POST(req: NextRequest) {
       send('conversation_id', convId)
 
       try {
-        const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+        const apiKey = process.env.ANTHROPIC_API_KEY
+        if (!apiKey) {
+          console.error('ANTHROPIC_API_KEY is not set')
+          send('error', 'API key niet geconfigureerd. Stel ANTHROPIC_API_KEY in op Vercel.')
+          controller.close()
+          return
+        }
+
+        const client = new Anthropic({ apiKey })
 
         let fullResponse = ''
         let hasWebSearch = false
         const citations: string[] = []
+
+        console.log(`[chat] System prompt: ${systemPrompt.length} chars, Messages: ${messages.length}`)
 
         const response = await client.messages.create({
           model: 'claude-sonnet-4-5-20250929',
@@ -282,8 +297,9 @@ export async function POST(req: NextRequest) {
 
         send('done', '')
       } catch (error) {
-        console.error('Claude chat error:', error)
-        send('error', 'Er ging iets mis bij het genereren van een antwoord.')
+        const errMsg = error instanceof Error ? error.message : String(error)
+        console.error('Claude chat error:', errMsg, error)
+        send('error', `Fout: ${errMsg.slice(0, 200)}`)
       }
 
       controller.close()

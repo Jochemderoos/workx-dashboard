@@ -135,7 +135,8 @@ export default function ClaudeChat({
       })
 
       if (!response.ok) {
-        throw new Error('Chat request failed')
+        const errorText = await response.text().catch(() => '')
+        throw new Error(`Chat request failed (${response.status}): ${errorText.slice(0, 200)}`)
       }
 
       const reader = response.body?.getReader()
@@ -160,8 +161,8 @@ export default function ClaudeChat({
 
         buffer += decoder.decode(value, { stream: true })
 
-        // Parse SSE events from buffer
-        const eventRegex = /event: (\w+)\ndata: (.*)\n\n/g
+        // Parse SSE events from buffer — handle both \n and \r\n line endings
+        const eventRegex = /event: (\w+)\r?\ndata: (.*)\r?\n\r?\n/g
         let match
         const remaining = buffer
         let lastIndex = 0
