@@ -38,6 +38,7 @@ const mainMenuItems = [
 ]
 
 const toolsMenuItems = [
+  { href: '/dashboard/ai', icon: Icons.sparkles, label: 'AI Assistent', iconAnim: 'icon-zap-hover', isAI: true },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover' },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover' },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', iconAnim: 'icon-layers-hover' },
@@ -55,10 +56,27 @@ const manageMenuItems = [
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
 
-  const NavLink = ({ href, icon: Icon, label, iconAnim, badge }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string }) => {
+  const NavLink = ({ href, icon: Icon, label, iconAnim, badge, isAI }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string; isAI?: boolean }) => {
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
     const isLustrum = href === '/dashboard/lustrum'
     const isSlack = href === '/dashboard/chat'
+
+    if (isAI) {
+      return (
+        <Link href={href} className={`nav-link group relative ${isActive ? 'active' : ''}`}>
+          <div className="absolute -inset-1 bg-gradient-to-r from-[#f9ff85]/30 via-[#60a5fa]/20 to-[#f9ff85]/30 rounded-xl opacity-0 group-hover:opacity-100 blur-md transition-opacity" />
+          <div className="relative flex items-center gap-3 w-full">
+            <span className="icon-animated">
+              <Icon size={18} />
+            </span>
+            <span className="flex-1">{label}</span>
+            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-gradient-to-r from-workx-lime/20 to-blue-500/20 text-workx-lime border border-workx-lime/20">
+              AI
+            </span>
+          </div>
+        </Link>
+      )
+    }
 
     if (isSlack) {
       return (

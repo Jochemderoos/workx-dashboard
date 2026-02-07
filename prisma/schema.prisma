@@ -91,6 +91,13 @@ model User {
   // Audit log
   auditLogs        AuditLog[]       @relation("AuditLogs")
 
+  // AI Assistent
+  aiProjects      AIProject[]
+  aiConversations AIConversation[]
+  aiDocuments     AIDocument[]
+  aiSources       AISource[]
+  aiTemplates     AITemplate[]
+
   @@index([isActive])
   @@index([role])
 }
@@ -1053,4 +1060,121 @@ model NewsletterAssignment {
 
   @@index([assigneeId])
   @@index([deadline])
+}
+
+// ==================== AI ASSISTENT ====================
+
+model AIProject {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  icon        String   @default("folder")
+  color       String   @default("#f9ff85")
+  status      String   @default("active")
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user          User             @relation(fields: [userId], references: [id])
+  conversations AIConversation[]
+  documents     AIDocument[]
+
+  @@index([userId, updatedAt])
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  projectId String?
+  userId    String
+  title     String   @default("Nieuw gesprek")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project  AIProject?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages AIMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([projectId])
+}
+
+model AIMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  content        String   @db.Text
+  hasWebSearch   Boolean  @default(false)
+  citations      String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model AIDocument {
+  id          String   @id @default(cuid())
+  projectId   String?
+  userId      String
+  name        String
+  description String?
+  fileType    String
+  fileSize    Int
+  content     String?  @db.Text
+  fileUrl     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  user    User       @relation(fields: [userId], references: [id])
+  project AIProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+model AISource {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String                          // "VAAN AR Updates", "SDU Arbeidsrecht", etc.
+  type        String                          // "website" | "document" | "api"
+  description String?  @db.Text              // Beschrijving van de bron
+  url         String?  @db.Text              // URL voor website-bronnen
+  credentials String?  @db.Text              // Encrypted login gegevens (JSON)
+  content     String?  @db.Text              // Geëxtraheerde/geüploade content (rauw)
+  summary     String?  @db.Text              // Door Claude verwerkte kennissamenvatting
+  category    String   @default("arbeidsrecht") // arbeidsrecht, civiel, procesrecht, etc.
+  isActive    Boolean  @default(true)
+  isProcessed Boolean  @default(false)        // Of de bron is verwerkt tot kennis
+  lastSynced  DateTime?                       // Laatst gesynchroniseerd (voor websites)
+  processedAt DateTime?                       // Laatst verwerkt door Claude
+  pagesCrawled Int     @default(0)            // Aantal pagina's gecrawld (voor websites)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([category])
+}
+
+model AITemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String                          // "Vaststellingsovereenkomst", "Dagvaarding", etc.
+  category    String   @default("arbeidsrecht") // arbeidsrecht, procesrecht, contracten, etc.
+  description String?  @db.Text              // Beschrijving en wanneer te gebruiken
+  fileType    String   @default("docx")       // docx, pdf, txt
+  fileSize    Int      @default(0)            // Bestandsgrootte in bytes
+  content     String?  @db.Text              // Geëxtraheerde tekst uit template
+  fileBase64  String?  @db.Text              // Origineel bestand als base64 (voor download)
+  placeholders String? @db.Text              // JSON array van invulvelden die Claude herkent
+  instructions String? @db.Text              // Claude-instructies voor het invullen van dit template
+  isActive    Boolean  @default(true)
+  usageCount  Int      @default(0)           // Hoe vaak dit template is gebruikt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([category])
 }
