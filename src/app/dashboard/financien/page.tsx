@@ -493,7 +493,7 @@ export default function FinancienPage() {
 
   // Budget donut chart
   const BudgetDonut = ({ spent, budget, size = 120 }: { spent: number; budget: number; size?: number }) => {
-    const percentage = Math.min((spent / budget) * 100, 100)
+    const percentage = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0
     const remaining = budget - spent
     const circumference = 2 * Math.PI * 45
     const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`
@@ -837,8 +837,8 @@ export default function FinancienPage() {
     window.open(pdfUrl, '_blank')
   }
 
-  const totalBudget = budgets.reduce((a, b) => a + b.budget, 0)
-  const totalSpent = budgets.reduce((a, b) => a + b.spent, 0)
+  const totalBudget = budgets.reduce((a, b) => a + (Number(b.budget) || 0), 0)
+  const totalSpent = budgets.reduce((a, b) => a + (Number(b.spent) || 0), 0)
 
   if (loading) {
     return (
@@ -1194,7 +1194,7 @@ export default function FinancienPage() {
             <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
               <p className="text-gray-400 text-xs sm:text-sm">Besteed</p>
               <p className="text-base sm:text-2xl font-semibold text-white mt-1 truncate">{formatCurrency(totalSpent)}</p>
-              <p className="text-xs sm:text-sm text-gray-400 mt-1 hidden sm:block">{((totalSpent / totalBudget) * 100).toFixed(1)}% van budget</p>
+              <p className="text-xs sm:text-sm text-gray-400 mt-1 hidden sm:block">{totalBudget > 0 ? ((totalSpent / totalBudget) * 100).toFixed(1) : '0'}% van budget</p>
             </div>
             <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
               <p className="text-gray-400 text-xs sm:text-sm">Beschikbaar</p>
@@ -1240,7 +1240,7 @@ export default function FinancienPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {budgets.map(budget => {
               const remaining = budget.budget - budget.spent
-              const percentage = (budget.spent / budget.budget) * 100
+              const percentage = budget.budget > 0 ? (budget.spent / budget.budget) * 100 : 0
 
               return (
                 <div key={budget.id} className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
@@ -1335,8 +1335,8 @@ export default function FinancienPage() {
               <h3 className="text-white font-medium mb-6">Budget Overzicht</h3>
               <div className="space-y-4">
                 {budgets.map(budget => {
-                  const percentage = (budget.spent / totalBudget) * 100
-                  const budgetPercentage = (budget.budget / totalBudget) * 100
+                  const percentage = totalBudget > 0 ? (budget.spent / totalBudget) * 100 : 0
+                  const budgetPercentage = totalBudget > 0 ? (budget.budget / totalBudget) * 100 : 0
 
                   return (
                     <div key={budget.id} className="flex items-center gap-4">

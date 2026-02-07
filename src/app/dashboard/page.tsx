@@ -322,11 +322,13 @@ function AppjeplekjeWidget({
 
   useEffect(() => {
     const now = new Date()
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    const todayWork = nextWorkday(now)
+    const tomorrowWork = new Date(todayWork)
+    tomorrowWork.setDate(tomorrowWork.getDate() + 1)
+    const tomorrowFinal = nextWorkday(tomorrowWork)
     setDateLabels({
-      today: `${now.getDate()} ${now.toLocaleDateString('nl-NL', { month: 'short' })}`,
-      tomorrow: `${tomorrow.getDate()} ${tomorrow.toLocaleDateString('nl-NL', { month: 'short' })}`
+      today: `${todayWork.getDate()} ${todayWork.toLocaleDateString('nl-NL', { month: 'short' })}`,
+      tomorrow: `${tomorrowFinal.getDate()} ${tomorrowFinal.toLocaleDateString('nl-NL', { month: 'short' })}`
     })
   }, [])
 
@@ -1049,9 +1051,18 @@ export default function DashboardHome() {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   }
 
+  // Helper: skip weekends - advance to next Monday if date falls on Saturday or Sunday
+  const nextWorkday = (date: Date) => {
+    const d = new Date(date)
+    const day = d.getDay()
+    if (day === 6) d.setDate(d.getDate() + 2) // Saturday → Monday
+    else if (day === 0) d.setDate(d.getDate() + 1) // Sunday → Monday
+    return d
+  }
+
   const fetchOfficeAttendance = async () => {
     try {
-      const now = new Date()
+      const now = nextWorkday(new Date())
       const today = formatDateStr(now)
       const res = await fetch(`/api/office-attendance?date=${today}`)
       if (res.ok) {
@@ -1070,7 +1081,7 @@ export default function DashboardHome() {
       }
     } catch (e) {
       console.error('Error fetching office attendance:', e)
-      const now = new Date()
+      const now = nextWorkday(new Date())
       const today = formatDateStr(now)
       setOfficeAttendance({
         date: today,
@@ -1085,9 +1096,11 @@ export default function DashboardHome() {
 
   const fetchTomorrowAttendance = async () => {
     try {
-      const tomorrow = new Date()
+      const todayWork = nextWorkday(new Date())
+      const tomorrow = new Date(todayWork)
       tomorrow.setDate(tomorrow.getDate() + 1)
-      const tomorrowStr = formatDateStr(tomorrow)
+      const tomorrowFinal = nextWorkday(tomorrow)
+      const tomorrowStr = formatDateStr(tomorrowFinal)
       const res = await fetch(`/api/office-attendance?date=${tomorrowStr}`)
       if (res.ok) {
         const data = await res.json()
@@ -1104,10 +1117,12 @@ export default function DashboardHome() {
       }
     } catch (e) {
       console.error('Error fetching tomorrow attendance:', e)
-      const tomorrow = new Date()
+      const todayWork = nextWorkday(new Date())
+      const tomorrow = new Date(todayWork)
       tomorrow.setDate(tomorrow.getDate() + 1)
+      const tomorrowFinal = nextWorkday(tomorrow)
       setTomorrowAttendance({
-        date: formatDateStr(tomorrow),
+        date: formatDateStr(tomorrowFinal),
         attendees: [],
         totalWorkplaces: 11,
         occupiedWorkplaces: 0,

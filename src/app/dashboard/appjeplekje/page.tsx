@@ -97,9 +97,12 @@ export default function AppjeplekjePage() {
     try {
       const today = new Date()
       const dayOfWeek = today.getDay()
-      // Bereken maandag van deze week
+      // Bereken maandag: op weekend → volgende maandag, anders deze week
       const monday = new Date(today)
-      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+      let diff: number
+      if (dayOfWeek === 6) diff = 2        // Zaterdag → volgende maandag
+      else if (dayOfWeek === 0) diff = 1    // Zondag → volgende maandag
+      else diff = 1 - dayOfWeek             // Doordeweeks → maandag van deze week
       monday.setDate(today.getDate() + diff)
 
       const dayNames = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag']
