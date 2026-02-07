@@ -23,6 +23,15 @@ function WorkxLogoSmall() {
   )
 }
 
+// Helper: skip weekends - advance to next Monday if date falls on Saturday or Sunday
+const nextWorkday = (date: Date) => {
+  const d = new Date(date)
+  const day = d.getDay()
+  if (day === 6) d.setDate(d.getDate() + 2) // Saturday → Monday
+  else if (day === 0) d.setDate(d.getDate() + 1) // Sunday → Monday
+  return d
+}
+
 // Skeleton block helper
 function Skeleton({ className = '' }: { className?: string }) {
   return <div className={`skeleton-wave rounded-lg ${className}`} />
@@ -1049,15 +1058,6 @@ export default function DashboardHome() {
   // Helper to format date string
   const formatDateStr = (date: Date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  }
-
-  // Helper: skip weekends - advance to next Monday if date falls on Saturday or Sunday
-  const nextWorkday = (date: Date) => {
-    const d = new Date(date)
-    const day = d.getDay()
-    if (day === 6) d.setDate(d.getDate() + 2) // Saturday → Monday
-    else if (day === 0) d.setDate(d.getDate() + 1) // Sunday → Monday
-    return d
   }
 
   const fetchOfficeAttendance = async () => {
