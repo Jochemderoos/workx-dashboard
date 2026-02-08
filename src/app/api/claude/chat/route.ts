@@ -187,6 +187,16 @@ export async function POST(req: NextRequest) {
           error: 'Claude had meer tijd nodig dan verwacht. Probeer een kortere of eenvoudigere vraag.',
         }, { status: 504 })
       }
+      if (msg.includes('rate_limit') || msg.includes('429')) {
+        return NextResponse.json({
+          error: 'Even rustig aan — te veel verzoeken tegelijk. Wacht een minuut en probeer het opnieuw.',
+        }, { status: 429 })
+      }
+      if (msg.includes('overloaded') || msg.includes('529')) {
+        return NextResponse.json({
+          error: 'Claude is momenteel overbelast. Probeer het over een paar seconden opnieuw.',
+        }, { status: 503 })
+      }
       throw apiErr
     }
 
