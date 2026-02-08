@@ -31,6 +31,7 @@ const navigationItems = [
   { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', keywords: ['dagvaarding', 'producties', 'printen', 'rechtbank', 'document'] },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', keywords: ['collega', 'medewerkers', 'mensen'] },
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', keywords: ['handboek', 'regels', 'hr', 'documenten', 'beleid', 'the way it workx'] },
+  { href: '/dashboard/ai', icon: Icons.sparkles, label: 'AI Assistent', keywords: ['ai', 'claude', 'chat', 'vraag', 'juridisch', 'assistent'] },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', keywords: ['idee', 'bug', 'suggestie', 'melding'] },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', keywords: ['profiel', 'wachtwoord', 'account'] },
 ]
@@ -43,6 +44,7 @@ const mobileMenuItems = [
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof' },
   { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financiën' },
+  { href: '/dashboard/ai', icon: Icons.sparkles, label: 'AI Assistent', badge: 'AI' },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus' },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitie' },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling' },
