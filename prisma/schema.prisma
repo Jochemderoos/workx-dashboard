@@ -104,11 +104,12 @@ model User {
   auditLogs        AuditLog[]       @relation("AuditLogs")
 
   // AI Assistent
-  aiProjects      AIProject[]
-  aiConversations AIConversation[]
-  aiDocuments     AIDocument[]
-  aiSources       AISource[]
-  aiTemplates     AITemplate[]
+  aiProjects            AIProject[]
+  aiProjectMemberships  AIProjectMember[] @relation("AIProjectMembers")
+  aiConversations       AIConversation[]
+  aiDocuments           AIDocument[]
+  aiSources             AISource[]
+  aiTemplates           AITemplate[]
 
   @@index([isActive])
   @@index([role])
@@ -1087,11 +1088,27 @@ model AIProject {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user          User             @relation(fields: [userId], references: [id])
+  user          User               @relation(fields: [userId], references: [id])
   conversations AIConversation[]
   documents     AIDocument[]
+  members       AIProjectMember[]
 
   @@index([userId, updatedAt])
+}
+
+model AIProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("member")
+  addedAt   DateTime @default(now())
+  addedById String
+
+  project   AIProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User      @relation("AIProjectMembers", fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model AIConversation {

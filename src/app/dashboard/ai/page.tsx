@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
@@ -19,6 +19,8 @@ interface Project {
   status: string
   createdAt: string
   _count: { conversations: number; documents: number }
+  members?: Array<{ user: TeamUser; role: string }>
+  user?: { id: string; name: string }
 }
 
 interface Document {
@@ -34,6 +36,13 @@ interface Conversation {
   title: string
   projectId: string | null
   updatedAt: string
+}
+
+interface TeamUser {
+  id: string
+  name: string
+  email: string
+  role: string
 }
 
 const PROJECT_ICONS = [
@@ -54,6 +63,12 @@ const PROJECT_COLORS = [
   '#fbbf24', '#fb923c', '#f87171', '#2dd4bf', '#818cf8',
 ]
 
+const ROLE_LABELS: Record<string, string> = {
+  PARTNER: 'Partner',
+  ADMIN: 'Admin',
+  EMPLOYEE: 'Medewerker',
+}
+
 export default function AIAssistentPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
@@ -69,6 +84,13 @@ export default function AIAssistentPage() {
     color: '#f9ff85',
   })
 
+  // Team selection state
+  const [allUsers, setAllUsers] = useState<TeamUser[]>([])
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [userSearchQuery, setUserSearchQuery] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     Promise.all([
       fetch('/api/claude/projects').then(r => r.json()),
@@ -83,6 +105,27 @@ export default function AIAssistentPage() {
     })
   }, [])
 
+  // Fetch users when new project form opens
+  useEffect(() => {
+    if (showNewProject && allUsers.length === 0) {
+      fetch('/api/claude/users')
+        .then(r => r.json())
+        .then(setAllUsers)
+        .catch(() => {})
+    }
+  }, [showNewProject])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowUserDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
   const createProject = async () => {
     if (!newProject.title.trim()) {
       toast.error('Vul een titel in')
@@ -93,7 +136,10 @@ export default function AIAssistentPage() {
       const res = await fetch('/api/claude/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newProject),
+        body: JSON.stringify({
+          ...newProject,
+          memberIds: selectedMemberIds,
+        }),
       })
 
       if (!res.ok) throw new Error()
@@ -102,6 +148,7 @@ export default function AIAssistentPage() {
       setProjects([project, ...projects])
       setShowNewProject(false)
       setNewProject({ title: '', description: '', icon: 'briefcase', color: '#f9ff85' })
+      setSelectedMemberIds([])
       toast.success('Project aangemaakt!')
       router.push(`/dashboard/ai/${project.id}`)
     } catch {
@@ -110,7 +157,6 @@ export default function AIAssistentPage() {
   }
 
   const handleConversationCreated = (id: string) => {
-    // Update URL without navigation/re-render (prevents losing chat messages)
     window.history.replaceState(null, '', `/dashboard/ai?conv=${id}`)
   }
 
@@ -129,6 +175,25 @@ export default function AIAssistentPage() {
       toast.error('Kon document niet verwijderen')
     }
   }
+
+  const toggleMember = (userId: string) => {
+    setSelectedMemberIds(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    )
+  }
+
+  const filteredUsers = allUsers.filter(u =>
+    u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+  )
+
+  const tabs = [
+    { id: 'chat' as const, label: 'Chat', desc: 'Snel een vraag stellen', icon: Icons.chat },
+    { id: 'projects' as const, label: 'Projecten', desc: 'Dossiers & zaken', icon: Icons.briefcase, count: projects.length },
+    { id: 'kennisbank' as const, label: 'Kennisbank', desc: 'Gedeelde documenten', icon: Icons.books, count: documents.length },
+    { id: 'bronnen' as const, label: 'Bronnen', desc: 'Juridische bronnen', icon: Icons.database },
+    { id: 'templates' as const, label: 'Templates', desc: 'Document sjablonen', icon: Icons.fileText },
+  ]
 
   return (
     <div className="space-y-6">
@@ -163,26 +228,38 @@ export default function AIAssistentPage() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
-        {[
-          { id: 'chat' as const, label: 'Snelle Chat', icon: Icons.chat },
-          { id: 'projects' as const, label: 'Projecten', icon: Icons.briefcase },
-          { id: 'kennisbank' as const, label: 'Kennisbank', icon: Icons.books },
-          { id: 'bronnen' as const, label: 'Bronnen', icon: Icons.database },
-          { id: 'templates' as const, label: 'Templates', icon: Icons.fileText },
-        ].map((tab) => (
+      {/* Tab Navigation - Prominent & Sticky */}
+      <div className="grid grid-cols-5 gap-2 sticky top-0 z-30 bg-workx-dark py-2 -my-2">
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
+            className={`relative flex flex-col items-center gap-1.5 px-3 py-3.5 rounded-xl text-center transition-all ${
               activeTab === tab.id
-                ? 'bg-workx-lime text-workx-dark font-medium'
-                : 'text-white/50 hover:text-white hover:bg-white/5'
+                ? 'bg-workx-lime text-workx-dark shadow-lg shadow-workx-lime/20'
+                : 'bg-white/[0.03] border border-white/10 text-white/50 hover:text-white hover:bg-white/[0.06] hover:border-white/20'
             }`}
           >
-            <tab.icon size={15} />
-            <span>{tab.label}</span>
+            <tab.icon size={20} />
+            <div className="flex items-center gap-1.5">
+              <span className={`text-sm ${activeTab === tab.id ? 'font-semibold' : 'font-medium'}`}>
+                {tab.label}
+              </span>
+              {tab.count !== undefined && tab.count > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                  activeTab === tab.id
+                    ? 'bg-workx-dark/20 text-workx-dark'
+                    : 'bg-white/10 text-white/40'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </div>
+            <span className={`text-[10px] leading-tight ${
+              activeTab === tab.id ? 'text-workx-dark/60' : 'text-white/25'
+            }`}>
+              {tab.desc}
+            </span>
           </button>
         ))}
       </div>
@@ -192,7 +269,6 @@ export default function AIAssistentPage() {
         <div className="rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden" style={{ height: '600px' }}>
           <ClaudeChat
             onConversationCreated={handleConversationCreated}
-            placeholder="Stel een vraag over arbeidsrecht, contracten, ontslag, transitievergoeding..."
           />
         </div>
       )}
@@ -278,6 +354,95 @@ export default function AIAssistentPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Team members selection */}
+                <div>
+                  <label className="text-[11px] text-white/40 block mb-1">Teamleden (optioneel)</label>
+                  <p className="text-[10px] text-white/20 mb-2">Alleen jij en geselecteerde teamleden zien dit project</p>
+
+                  {/* Selected members chips */}
+                  {selectedMemberIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {selectedMemberIds.map(id => {
+                        const user = allUsers.find(u => u.id === id)
+                        if (!user) return null
+                        return (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-workx-lime/10 border border-workx-lime/20 text-xs text-workx-lime"
+                          >
+                            {user.name}
+                            <button
+                              onClick={() => toggleMember(id)}
+                              className="hover:text-white transition-colors"
+                            >
+                              <Icons.x size={12} />
+                            </button>
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* User dropdown */}
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowUserDropdown(!showUserDropdown)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-white/40 hover:text-white/60 hover:bg-white/[0.07] transition-all w-full text-left"
+                    >
+                      <Icons.userPlus size={14} />
+                      Teamlid toevoegen...
+                    </button>
+
+                    {showUserDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-workx-gray border border-white/10 rounded-lg shadow-xl z-50 max-h-60 overflow-hidden">
+                        <div className="p-2 border-b border-white/5">
+                          <input
+                            type="text"
+                            value={userSearchQuery}
+                            onChange={(e) => setUserSearchQuery(e.target.value)}
+                            placeholder="Zoek op naam..."
+                            className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white placeholder-white/25 focus:outline-none focus:border-workx-lime/40"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="overflow-y-auto max-h-48">
+                          {filteredUsers.map(user => (
+                            <button
+                              key={user.id}
+                              onClick={() => {
+                                toggleMember(user.id)
+                              }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-left text-xs transition-colors ${
+                                selectedMemberIds.includes(user.id)
+                                  ? 'bg-workx-lime/10 text-workx-lime'
+                                  : 'text-white/60 hover:bg-white/5 hover:text-white'
+                              }`}
+                            >
+                              <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                                {user.name.charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="truncate">{user.name}</p>
+                                <p className="text-[10px] text-white/25 truncate">{user.email}</p>
+                              </div>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/30 flex-shrink-0">
+                                {ROLE_LABELS[user.role] || user.role}
+                              </span>
+                              {selectedMemberIds.includes(user.id) && (
+                                <Icons.check size={12} className="text-workx-lime flex-shrink-0" />
+                              )}
+                            </button>
+                          ))}
+                          {filteredUsers.length === 0 && (
+                            <p className="px-3 py-4 text-[11px] text-white/20 text-center">Geen gebruikers gevonden</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-2">
@@ -288,7 +453,11 @@ export default function AIAssistentPage() {
                   Aanmaken
                 </button>
                 <button
-                  onClick={() => setShowNewProject(false)}
+                  onClick={() => {
+                    setShowNewProject(false)
+                    setSelectedMemberIds([])
+                    setUserSearchQuery('')
+                  }}
                   className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors"
                 >
                   Annuleren
@@ -325,6 +494,7 @@ export default function AIAssistentPage() {
                   status={project.status}
                   conversationCount={project._count.conversations}
                   documentCount={project._count.documents}
+                  memberCount={project.members?.length}
                 />
               ))}
             </div>

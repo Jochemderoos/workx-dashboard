@@ -1,12 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
 import ClaudeChat from '@/components/claude/ClaudeChat'
 import DocumentUploader from '@/components/claude/DocumentUploader'
 import LegalQuickActions from '@/components/claude/LegalQuickActions'
+
+interface ProjectMember {
+  id: string
+  role: string
+  user: { id: string; name: string; email: string; role: string }
+}
 
 interface Project {
   id: string
@@ -15,8 +21,11 @@ interface Project {
   icon: string
   color: string
   status: string
+  userId: string
   conversations: Conversation[]
   documents: ProjectDocument[]
+  members: ProjectMember[]
+  user: { id: string; name: string }
   _count: { conversations: number; documents: number }
 }
 
@@ -45,11 +54,24 @@ interface Message {
   createdAt?: string
 }
 
+interface TeamUser {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
 const PROJECT_ICONS: Record<string, string> = {
   folder: '📁', briefcase: '💼', scale: '⚖️', document: '📄',
   gavel: '🔨', shield: '🛡️', building: '🏢', people: '👥',
   contract: '📝', money: '💰', clock: '⏰', warning: '⚠️',
   star: '⭐', fire: '🔥', lock: '🔒',
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  PARTNER: 'Partner',
+  ADMIN: 'Admin',
+  EMPLOYEE: 'Medewerker',
 }
 
 export default function ProjectDetailPage() {
@@ -66,10 +88,28 @@ export default function ProjectDetailPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
+
+  // Team management state
+  const [allUsers, setAllUsers] = useState<TeamUser[]>([])
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [memberSearchQuery, setMemberSearchQuery] = useState('')
+  const memberDropdownRef = useRef<HTMLDivElement>(null)
+
   // Fetch project data
   useEffect(() => {
     fetchProject()
   }, [projectId])
+
+  // Close member dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (memberDropdownRef.current && !memberDropdownRef.current.contains(e.target as Node)) {
+        setShowAddMember(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   const fetchProject = async () => {
     try {
@@ -103,15 +143,12 @@ export default function ProjectDetailPage() {
     setMessages([]) // Clear while loading
 
     try {
-      // Fetch messages for conversation - we need a simple endpoint
-      // For now we load from the chat API by fetching conversation messages
       const res = await fetch(`/api/claude/chat?conversationId=${convId}`)
       if (res.ok) {
         const data = await res.json()
         setMessages(data.messages || [])
       }
     } catch {
-      // If no dedicated endpoint, start with empty
       setMessages([])
     }
   }
@@ -123,7 +160,6 @@ export default function ProjectDetailPage() {
 
   const handleConversationCreated = (id: string) => {
     setActiveConvId(id)
-    // Refresh project to get updated conversation list
     fetchProject()
   }
 
@@ -191,6 +227,68 @@ export default function ProjectDetailPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
+  // Team management functions
+  const fetchUsersIfNeeded = async () => {
+    if (allUsers.length === 0) {
+      try {
+        const res = await fetch('/api/claude/users')
+        const data = await res.json()
+        setAllUsers(data)
+      } catch { /* ignore */ }
+    }
+  }
+
+  const addMember = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/claude/projects/${projectId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+      if (res.ok) {
+        const member = await res.json()
+        setProject(prev => prev ? {
+          ...prev,
+          members: [...prev.members, member],
+        } : null)
+        toast.success('Teamlid toegevoegd')
+      } else {
+        const err = await res.json()
+        toast.error(err.error || 'Kon teamlid niet toevoegen')
+      }
+    } catch {
+      toast.error('Kon teamlid niet toevoegen')
+    }
+  }
+
+  const removeMember = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/claude/projects/${projectId}/members`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+      if (res.ok) {
+        setProject(prev => prev ? {
+          ...prev,
+          members: prev.members.filter(m => m.user.id !== userId),
+        } : null)
+        toast.success('Teamlid verwijderd')
+      }
+    } catch {
+      toast.error('Kon teamlid niet verwijderen')
+    }
+  }
+
+  const isOwner = project?.userId === project?.user?.id // current user fetched this, so they have access
+
+  const filteredUsersForAdd = allUsers.filter(u => {
+    const alreadyMember = project?.members.some(m => m.user.id === u.id)
+    const matchesSearch = u.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(memberSearchQuery.toLowerCase())
+    return !alreadyMember && matchesSearch
+  })
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[80vh]">
@@ -241,7 +339,7 @@ export default function ProjectDetailPage() {
 
         {/* Settings panel */}
         {showSettings && (
-          <div className="p-4 border-b border-white/5 space-y-3 bg-white/[0.02] animate-fade-in">
+          <div className="p-4 border-b border-white/5 space-y-3 bg-white/[0.02] animate-fade-in overflow-y-auto max-h-[60vh]">
             <div>
               <label className="text-[10px] text-white/30 block mb-1">Titel</label>
               <input
@@ -273,6 +371,99 @@ export default function ProjectDetailPage() {
               >
                 Verwijderen
               </button>
+            </div>
+
+            {/* Team members section */}
+            <div className="pt-2 border-t border-white/5">
+              <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2">
+                Teamleden ({project.members.length})
+              </p>
+
+              <div className="space-y-1">
+                {project.members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-medium text-white/60 flex-shrink-0">
+                      {member.user.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] text-white/60 truncate">{member.user.name}</p>
+                    </div>
+                    {member.role === 'owner' && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-workx-lime/10 text-workx-lime flex-shrink-0">
+                        Eigenaar
+                      </span>
+                    )}
+                    {member.role !== 'owner' && project.userId === project.user.id && (
+                      <button
+                        onClick={() => removeMember(member.user.id)}
+                        className="p-1 rounded text-white/10 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Verwijderen"
+                      >
+                        <Icons.x size={10} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add member */}
+              <div className="relative mt-2" ref={memberDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddMember(!showAddMember)
+                    fetchUsersIfNeeded()
+                  }}
+                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/[0.07] transition-all w-full"
+                >
+                  <Icons.userPlus size={12} />
+                  Teamlid toevoegen
+                </button>
+
+                {showAddMember && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-workx-gray border border-white/10 rounded-lg shadow-xl z-50 max-h-48 overflow-hidden">
+                    <div className="p-1.5 border-b border-white/5">
+                      <input
+                        type="text"
+                        value={memberSearchQuery}
+                        onChange={(e) => setMemberSearchQuery(e.target.value)}
+                        placeholder="Zoek..."
+                        className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-white placeholder-white/25 focus:outline-none focus:border-workx-lime/40"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="overflow-y-auto max-h-36">
+                      {filteredUsersForAdd.map(user => (
+                        <button
+                          key={user.id}
+                          onClick={() => {
+                            addMember(user.id)
+                            setShowAddMember(false)
+                            setMemberSearchQuery('')
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-[10px] text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-medium flex-shrink-0">
+                            {user.name.charAt(0)}
+                          </div>
+                          <span className="truncate flex-1">{user.name}</span>
+                          <span className="text-[8px] text-white/20 flex-shrink-0">
+                            {ROLE_LABELS[user.role] || user.role}
+                          </span>
+                        </button>
+                      ))}
+                      {filteredUsersForAdd.length === 0 && (
+                        <p className="px-2.5 py-3 text-[10px] text-white/20 text-center">
+                          {allUsers.length === 0 ? 'Laden...' : 'Geen gebruikers gevonden'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -322,7 +513,7 @@ export default function ProjectDetailPage() {
           initialMessages={messages}
           onConversationCreated={handleConversationCreated}
           onNewMessage={fetchProject}
-          placeholder={`Vraag iets over ${project.title}...`}
+          placeholder={`Stel een vraag over ${project.title}...`}
           quickActionPrompt={quickActionPrompt}
           onQuickActionHandled={() => setQuickActionPrompt(null)}
         />
@@ -413,4 +604,3 @@ export default function ProjectDetailPage() {
     </div>
   )
 }
-

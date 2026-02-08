@@ -45,8 +45,38 @@ export default function ClaudeChat({
   const [statusText, setStatusText] = useState('')
   const [convId, setConvId] = useState<string | null>(initialConvId || null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [activeOptions, setActiveOptions] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const RESPONSE_OPTIONS = [
+    { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
+    { id: 'uitgebreid', label: 'Uitgebreid + bronnen', instruction: 'Geef een uitgebreid en grondig antwoord met bronvermeldingen (wetsartikelen, jurisprudentie, literatuur) waar mogelijk.' },
+    { id: 'nl', label: 'Nederlands', instruction: 'Antwoord in het Nederlands.' },
+    { id: 'en', label: 'Engels', instruction: 'Answer in English.' },
+    { id: 'word', label: 'Word-format', instruction: 'Structureer het antwoord als een formeel document met kopjes, opsommingen en duidelijke paragrafen, geschikt om te kopiëren naar een Word-bestand.' },
+  ] as const
+
+  const toggleOption = (id: string) => {
+    setActiveOptions(prev => {
+      const next = new Set(prev)
+      // Mutual exclusivity: kort <-> uitgebreid, nl <-> en
+      if (id === 'kort' && next.has('uitgebreid')) next.delete('uitgebreid')
+      if (id === 'uitgebreid' && next.has('kort')) next.delete('kort')
+      if (id === 'nl' && next.has('en')) next.delete('en')
+      if (id === 'en' && next.has('nl')) next.delete('nl')
+
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const buildInstructions = (): string => {
+    const active = RESPONSE_OPTIONS.filter(o => activeOptions.has(o.id))
+    if (active.length === 0) return ''
+    return active.map(o => o.instruction).join(' ') + '\n\n'
+  }
 
   // Only sync from parent when initialMessages actually has content
   // (prevents wiping local messages when parent re-renders with empty default [])
@@ -100,7 +130,11 @@ export default function ClaudeChat({
     const text = overrideMessage || input.trim()
     if (!text || isLoading) return
 
-    // Add user message
+    // Build the full message with option instructions prepended
+    const instructions = buildInstructions()
+    const fullMessage = instructions ? instructions + text : text
+
+    // Add user message (show only the user's text, not the instructions)
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -132,7 +166,7 @@ export default function ClaudeChat({
         body: JSON.stringify({
           conversationId: convId,
           projectId,
-          message: text,
+          message: fullMessage,
           documentIds,
         }),
         signal: controller.signal,
@@ -347,7 +381,25 @@ export default function ClaudeChat({
       </div>
 
       {/* Input area */}
-      <div className="flex-shrink-0 p-4 border-t border-white/5">
+      <div className="flex-shrink-0 p-4 border-t border-white/5 space-y-2">
+        {/* Response option chips */}
+        <div className="flex flex-wrap gap-1.5">
+          {RESPONSE_OPTIONS.map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => toggleOption(opt.id)}
+              disabled={isLoading}
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all border ${
+                activeOptions.has(opt.id)
+                  ? 'bg-workx-lime/15 border-workx-lime/30 text-workx-lime font-medium'
+                  : 'bg-white/[0.03] border-white/10 text-white/35 hover:text-white/60 hover:bg-white/[0.06]'
+              } disabled:opacity-30`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-end gap-2">
           <div className="flex-1 relative">
             <textarea
@@ -357,8 +409,10 @@ export default function ClaudeChat({
               onKeyDown={handleKeyDown}
               placeholder={placeholder || 'Typ je vraag...'}
               disabled={isLoading}
+              spellCheck={false}
+              autoComplete="off"
               rows={1}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/40 focus:bg-white/[0.07] transition-all disabled:opacity-50"
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-[inherit] placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/40 focus:bg-white/[0.07] transition-all disabled:opacity-50"
               style={{ maxHeight: '200px' }}
             />
           </div>

@@ -11,6 +11,7 @@ interface ProjectCardProps {
   status: string
   conversationCount: number
   documentCount: number
+  memberCount?: number
 }
 
 const PROJECT_ICONS: Record<string, string> = {
@@ -40,6 +41,7 @@ export default function ProjectCard({
   status,
   conversationCount,
   documentCount,
+  memberCount,
 }: ProjectCardProps) {
   const displayIcon = PROJECT_ICONS[icon] || icon
 
@@ -80,6 +82,9 @@ export default function ProjectCard({
         <div className="flex items-center gap-4 mt-4 text-[11px] text-white/30">
           <span>{conversationCount} gesprek{conversationCount !== 1 ? 'ken' : ''}</span>
           <span>{documentCount} document{documentCount !== 1 ? 'en' : ''}</span>
+          {memberCount && memberCount > 1 && (
+            <span>{memberCount} leden</span>
+          )}
         </div>
       </div>
     </Link>
