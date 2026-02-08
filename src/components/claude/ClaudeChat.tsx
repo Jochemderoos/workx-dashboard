@@ -48,12 +48,20 @@ export default function ClaudeChat({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Only sync from parent when initialMessages actually has content
+  // (prevents wiping local messages when parent re-renders with empty default [])
+  const initialMsgCount = initialMessages.length
   useEffect(() => {
-    setMessages(initialMessages)
-  }, [initialMessages])
+    if (initialMsgCount > 0) {
+      setMessages(initialMessages)
+    }
+  }, [initialMsgCount])
 
+  // Only update convId when parent explicitly passes a new one
   useEffect(() => {
-    setConvId(initialConvId || null)
+    if (initialConvId) {
+      setConvId(initialConvId)
+    }
   }, [initialConvId])
 
   const scrollToBottom = useCallback(() => {
@@ -221,6 +229,13 @@ export default function ClaudeChat({
 
   return (
     <div className={`flex flex-col ${compact ? 'h-[500px]' : 'h-full'}`}>
+      {/* Debug: message count - remove after confirming fix */}
+      {messages.length > 0 && (
+        <div className="flex-shrink-0 px-4 py-1 bg-blue-500/20 border-b border-blue-500/30 text-xs text-blue-300">
+          {messages.length} bericht{messages.length !== 1 ? 'en' : ''} in gesprek
+          {convId && <span className="ml-2 text-blue-400/50">({convId.slice(0, 8)}...)</span>}
+        </div>
+      )}
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {/* Empty state */}
