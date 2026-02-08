@@ -75,6 +75,7 @@ export default function AIAssistentPage() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [recentConversations, setRecentConversations] = useState<Conversation[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [chatActive, setChatActive] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [activeTab, setActiveTab] = useState<'chat' | 'projects' | 'kennisbank' | 'bronnen' | 'templates'>('chat')
   const [newProject, setNewProject] = useState({
@@ -195,32 +196,44 @@ export default function AIAssistentPage() {
     { id: 'templates' as const, label: 'Templates', desc: 'Document sjablonen', icon: Icons.fileText },
   ]
 
-  return (
-    <div className="space-y-6">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray via-workx-dark to-workx-gray border border-white/10 p-8">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-workx-lime/5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px]" />
+  // Whether to use compact layout (chat active on chat tab)
+  const isCompactMode = chatActive && activeTab === 'chat'
 
-        <div className="relative flex items-start justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center border border-workx-lime/20">
-                <Icons.sparkles size={24} className="text-workx-lime" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-white">AI Assistent</h1>
-                <p className="text-sm text-white/40">Juridische AI voor Workx Advocaten</p>
-              </div>
+  return (
+    <div className={`transition-all duration-500 ease-in-out ${isCompactMode ? 'space-y-2' : 'space-y-6'}`}>
+      {/* Hero Header - collapses when chat is active */}
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray via-workx-dark to-workx-gray border border-white/10 transition-all duration-500 ease-in-out ${
+        isCompactMode ? 'p-3' : 'p-8'
+      }`}>
+        <div className={`absolute top-0 right-0 w-96 h-96 bg-workx-lime/5 rounded-full blur-[100px] transition-opacity duration-500 ${isCompactMode ? 'opacity-0' : 'opacity-100'}`} />
+        <div className={`absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] transition-opacity duration-500 ${isCompactMode ? 'opacity-0' : 'opacity-100'}`} />
+
+        <div className="relative flex items-center justify-between">
+          <div className={`flex items-center gap-3 transition-all duration-500`}>
+            <div className={`rounded-2xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center border border-workx-lime/20 transition-all duration-500 ${
+              isCompactMode ? 'w-8 h-8 rounded-xl' : 'w-12 h-12'
+            }`}>
+              <Icons.sparkles size={isCompactMode ? 16 : 24} className="text-workx-lime" />
             </div>
-            <p className="text-sm text-white/30 max-w-xl leading-relaxed">
-              Stel vragen over arbeidsrecht, analyseer documenten, zoek rechtspraak, en laat berekeningen maken.
-              Organiseer je werk in projecten per dossier of cliënt.
+            <div>
+              <h1 className={`font-semibold text-white transition-all duration-500 ${isCompactMode ? 'text-base' : 'text-2xl'}`}>AI Assistent</h1>
+              <p className={`text-white/40 transition-all duration-500 overflow-hidden ${isCompactMode ? 'text-[0px] opacity-0 h-0' : 'text-sm opacity-100'}`}>
+                Juridische AI voor Workx Advocaten
+              </p>
+            </div>
+          </div>
+
+          {/* Description - hidden when compact */}
+          <div className={`transition-all duration-500 overflow-hidden ${isCompactMode ? 'max-w-0 opacity-0' : 'max-w-xl opacity-100'}`}>
+            <p className="text-sm text-white/30 leading-relaxed whitespace-nowrap">
+              Stel vragen, analyseer documenten, zoek rechtspraak
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-white/20">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2 text-[11px] text-white/20 flex-shrink-0">
+            <div className={`flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 transition-all duration-500 ${
+              isCompactMode ? 'px-2 py-1' : 'px-3 py-1.5'
+            }`}>
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               Claude Sonnet 4.5
             </div>
@@ -228,21 +241,29 @@ export default function AIAssistentPage() {
         </div>
       </div>
 
-      {/* Tab Navigation - Prominent & Sticky */}
-      <div className="grid grid-cols-5 gap-2 sticky top-0 z-30 bg-workx-dark py-2 -my-2">
+      {/* Tab Navigation - shrinks when chat is active */}
+      <div className={`grid grid-cols-5 gap-2 sticky top-0 z-30 bg-workx-dark transition-all duration-500 ease-in-out ${
+        isCompactMode ? 'py-1 -my-1' : 'py-2 -my-2'
+      }`}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`relative flex flex-col items-center gap-1.5 px-3 py-3.5 rounded-xl text-center transition-all ${
+            className={`relative flex items-center justify-center rounded-xl text-center transition-all duration-300 ${
+              isCompactMode
+                ? 'flex-row gap-1.5 px-2 py-2'
+                : 'flex-col gap-1.5 px-3 py-3.5'
+            } ${
               activeTab === tab.id
                 ? 'bg-workx-lime text-workx-dark shadow-lg shadow-workx-lime/20'
                 : 'bg-white/[0.03] border border-white/10 text-white/50 hover:text-white hover:bg-white/[0.06] hover:border-white/20'
             }`}
           >
-            <tab.icon size={20} />
+            <tab.icon size={isCompactMode ? 16 : 20} />
             <div className="flex items-center gap-1.5">
-              <span className={`text-sm ${activeTab === tab.id ? 'font-semibold' : 'font-medium'}`}>
+              <span className={`transition-all duration-300 ${
+                isCompactMode ? 'text-xs' : 'text-sm'
+              } ${activeTab === tab.id ? 'font-semibold' : 'font-medium'}`}>
                 {tab.label}
               </span>
               {tab.count !== undefined && tab.count > 0 && (
@@ -255,7 +276,12 @@ export default function AIAssistentPage() {
                 </span>
               )}
             </div>
-            <span className={`text-[10px] leading-tight ${
+            {/* Description - hidden in compact mode */}
+            <span className={`text-[10px] leading-tight transition-all duration-300 overflow-hidden ${
+              isCompactMode
+                ? 'max-h-0 opacity-0 w-0'
+                : 'max-h-6 opacity-100'
+            } ${
               activeTab === tab.id ? 'text-workx-dark/60' : 'text-white/25'
             }`}>
               {tab.desc}
@@ -266,12 +292,16 @@ export default function AIAssistentPage() {
 
       {/* Content based on active tab */}
       {activeTab === 'chat' && (
-        <div className="rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden" style={{ height: 'calc(100vh - 320px)' }}>
+        <div
+          className="rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden transition-all duration-500 ease-in-out"
+          style={{ height: isCompactMode ? 'calc(100vh - 180px)' : 'calc(100vh - 320px)' }}
+        >
           <ClaudeChat
             onConversationCreated={handleConversationCreated}
             onNewChat={() => {
               window.history.replaceState(null, '', '/dashboard/ai')
             }}
+            onActiveChange={setChatActive}
           />
         </div>
       )}

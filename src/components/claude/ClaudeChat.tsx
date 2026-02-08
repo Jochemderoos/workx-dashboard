@@ -28,6 +28,7 @@ interface ClaudeChatProps {
   onConversationCreated?: (id: string) => void
   onNewMessage?: () => void
   onNewChat?: () => void
+  onActiveChange?: (active: boolean) => void
   placeholder?: string
   compact?: boolean
   quickActionPrompt?: string | null
@@ -42,6 +43,7 @@ export default function ClaudeChat({
   onConversationCreated,
   onNewMessage,
   onNewChat,
+  onActiveChange,
   placeholder,
   compact = false,
   quickActionPrompt,
@@ -88,6 +90,12 @@ export default function ClaudeChat({
     if (active.length === 0) return ''
     return active.map(o => o.instruction).join(' ') + '\n\n'
   }
+
+  // Notify parent when chat becomes active/inactive
+  const hasMessages = messages.length > 0 || isLoading
+  useEffect(() => {
+    onActiveChange?.(hasMessages)
+  }, [hasMessages])
 
   const startNewChat = () => {
     if (isLoading) return
