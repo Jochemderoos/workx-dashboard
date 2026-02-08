@@ -534,6 +534,141 @@ function AppjeplekjeWidget({
   )
 }
 
+// "What's New" widget — dismissible via localStorage
+const WHATS_NEW_VERSION = '2026-02-08' // Bump this to re-show the widget after new updates
+function WhatsNewWidget() {
+  const [dismissed, setDismissed] = useState(true) // Start hidden to avoid flash
+
+  useEffect(() => {
+    const stored = localStorage.getItem('workx-whats-new-dismissed')
+    setDismissed(stored === WHATS_NEW_VERSION)
+  }, [])
+
+  const dismiss = () => {
+    localStorage.setItem('workx-whats-new-dismissed', WHATS_NEW_VERSION)
+    setDismissed(true)
+  }
+
+  if (dismissed) return null
+
+  const features = [
+    {
+      icon: Icons.sparkles,
+      title: 'AI Assistent',
+      desc: 'Stel juridische vragen, analyseer documenten en zoek jurisprudentie met Claude AI.',
+      href: '/dashboard/ai',
+      color: 'from-violet-500/20 to-blue-500/20',
+      iconColor: 'text-violet-400',
+      iconBg: 'bg-violet-500/10',
+      isNew: true,
+    },
+    {
+      icon: Icons.file,
+      title: 'Pitch Maker',
+      desc: 'Genereer professionele team pitches en profielen als PDF.',
+      href: '/dashboard/pitch',
+      color: 'from-blue-500/20 to-cyan-500/20',
+      iconColor: 'text-blue-400',
+      iconBg: 'bg-blue-500/10',
+      isNew: true,
+    },
+    {
+      icon: Icons.printer,
+      title: 'Workxflow',
+      desc: 'Print dagvaardingen en producties klaar voor de rechtbank.',
+      href: '/dashboard/workxflow',
+      color: 'from-emerald-500/20 to-green-500/20',
+      iconColor: 'text-emerald-400',
+      iconBg: 'bg-emerald-500/10',
+      isNew: true,
+    },
+  ]
+
+  const improvements = [
+    'AI Assistent nu ook beschikbaar op mobiel',
+    'Appjeplekje slaat weekenden automatisch over',
+    'Nieuwsbrief-herinneringen op het dashboard',
+    'Verbeterde zoekfunctie in de top-balk',
+  ]
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-workx-lime/30 bg-gradient-to-br from-workx-lime/5 via-workx-dark to-violet-500/5 p-5 sm:p-6 shadow-lg shadow-workx-lime/5">
+      {/* Background glow */}
+      <div className="absolute top-0 left-0 w-48 h-48 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/4" />
+      <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-500/10 rounded-full blur-3xl translate-y-1/2 translate-x-1/4" />
+
+      <div className="relative">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime/20 to-violet-500/20 flex items-center justify-center">
+              <Icons.zap className="text-workx-lime" size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-white">Nieuw!</h2>
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-workx-lime/20 text-workx-lime border border-workx-lime/30">
+                  Feb 2026
+                </span>
+              </div>
+              <p className="text-xs text-gray-400">Ontdek de nieuwste functies</p>
+            </div>
+          </div>
+          <button
+            onClick={dismiss}
+            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all"
+            title="Verbergen"
+          >
+            <Icons.x size={16} />
+          </button>
+        </div>
+
+        {/* Feature cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          {features.map((feature) => {
+            const Icon = feature.icon
+            return (
+              <Link
+                key={feature.href}
+                href={feature.href}
+                className={`group relative overflow-hidden rounded-xl border border-white/5 bg-gradient-to-br ${feature.color} p-4 hover:border-white/20 hover:scale-[1.02] transition-all duration-300`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-9 h-9 rounded-lg ${feature.iconBg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                    <Icon size={18} className={feature.iconColor} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <h3 className="text-sm font-semibold text-white">{feature.title}</h3>
+                      {feature.isNew && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-workx-lime/20 text-workx-lime">NIEUW</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 line-clamp-2">{feature.desc}</p>
+                  </div>
+                </div>
+                <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Icons.arrowRight size={14} className="text-white/60" />
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Smaller improvements */}
+        <div className="flex flex-wrap gap-2">
+          {improvements.map((item, i) => (
+            <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/5">
+              <Icons.check size={12} className="text-workx-lime flex-shrink-0" />
+              <span className="text-xs text-gray-300">{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Lustrum Teaser Widget with rotating content
 function LustrumTeaserWidget() {
   const [countdown, setCountdown] = useState(getCountdown())
@@ -1590,6 +1725,9 @@ export default function DashboardHome() {
           />
         </ScrollRevealItem>
       </ScrollReveal>
+
+      {/* WHAT'S NEW WIDGET */}
+      <WhatsNewWidget />
 
       {/* NEWSLETTER WIDGETS */}
       {/* Employee reminder widget - shown when user has PENDING assignments */}
