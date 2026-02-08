@@ -58,6 +58,9 @@ export default function ClaudeChat({
   const [activeOptions, setActiveOptions] = useState<Set<string>>(new Set())
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [thinkingText, setThinkingText] = useState('')
+  const [isThinking, setIsThinking] = useState(false)
+  const [thinkingExpanded, setThinkingExpanded] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -216,6 +219,9 @@ export default function ClaudeChat({
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsLoading(true)
+    setIsThinking(false)
+    setThinkingText('')
+    setThinkingExpanded(false)
     setStatusText('Verbinden met Claude...')
 
     // Reset textarea height
@@ -301,7 +307,18 @@ export default function ClaudeChat({
                 setConvId(event.conversationId)
                 onConversationCreated?.(event.conversationId)
               }
+            } else if (event.type === 'thinking_start') {
+              setIsThinking(true)
+              setStatusText('Claude overweegt...')
+            } else if (event.type === 'thinking' && event.text) {
+              setThinkingText(prev => prev + event.text)
             } else if (event.type === 'delta' && event.text) {
+              // First text delta means thinking is done — auto-collapse
+              if (isThinking) {
+                setIsThinking(false)
+                setThinkingExpanded(false)
+                setStatusText('Claude schrijft...')
+              }
               streamedText += event.text
               // Update the assistant message content in-place
               setMessages(prev => prev.map(m =>
@@ -507,8 +524,44 @@ export default function ClaudeChat({
           </div>
         ))}
 
-        {/* Loading/thinking indicator */}
-        {isLoading && (
+        {/* Thinking display - subtle collapsible reasoning */}
+        {thinkingText && isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] ml-10">
+              {/* Collapsed: tiny label. Expanded: reasoning text */}
+              <button
+                onClick={() => setThinkingExpanded(!thinkingExpanded)}
+                className="flex items-center gap-1.5 py-1 text-[10px] text-white/25 hover:text-white/40 transition-colors"
+              >
+                <Icons.chevronRight size={10} className={`transition-transform duration-200 ${thinkingExpanded ? 'rotate-90' : ''}`} />
+                {isThinking ? (
+                  <>
+                    <span>Claude overweegt</span>
+                    <div className="flex gap-0.5 ml-0.5">
+                      <div className="w-1 h-1 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '0s' }} />
+                      <div className="w-1 h-1 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '0.15s' }} />
+                      <div className="w-1 h-1 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '0.3s' }} />
+                    </div>
+                  </>
+                ) : (
+                  <span>Overwegingen bekijken</span>
+                )}
+              </button>
+              <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                thinkingExpanded || isThinking ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[180px] mb-2">
+                  <p className="text-[11px] text-white/25 leading-relaxed whitespace-pre-wrap">
+                    {thinkingText}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading indicator (only when not thinking) */}
+        {isLoading && !isThinking && !thinkingText && (
           <div className="flex justify-start">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/10 flex items-center justify-center">

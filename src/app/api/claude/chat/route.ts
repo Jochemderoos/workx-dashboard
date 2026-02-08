@@ -240,16 +240,40 @@ export async function POST(req: NextRequest) {
         const citations: Array<{ url: string; title: string }> = []
 
         try {
-          const anthropicStream = client.messages.stream({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const streamParams: any = {
             model: 'claude-sonnet-4-5-20250929',
-            max_tokens: 4096,
+            max_tokens: 16000,
             system: systemPrompt,
             messages: msgs,
+            thinking: {
+              type: 'enabled',
+              budget_tokens: 10000,
+            },
             ...(tools.length > 0 ? { tools } : {}),
-          })
+          }
+
+          const anthropicStream = client.messages.stream(streamParams)
 
           // Send conversationId immediately
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start', conversationId: convId })}\n\n`))
+
+          // Stream thinking and text via raw stream events
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          anthropicStream.on('streamEvent' as any, (event: any) => {
+            try {
+              if (event.type === 'content_block_start') {
+                if (event.content_block?.type === 'thinking') {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking_start' })}\n\n`))
+                }
+              }
+              if (event.type === 'content_block_delta') {
+                if (event.delta?.type === 'thinking_delta' && event.delta.thinking) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', text: event.delta.thinking })}\n\n`))
+                }
+              }
+            } catch { /* ignore thinking stream errors */ }
+          })
 
           anthropicStream.on('text', (text) => {
             fullText += text
