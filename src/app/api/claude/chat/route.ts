@@ -162,19 +162,33 @@ export async function POST(req: NextRequest) {
     const client = new Anthropic({ apiKey })
     console.log(`[chat] Prompt: ${systemPrompt.length} chars, ${msgs.length} messages`)
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 8096,
-      system: systemPrompt,
-      messages: msgs,
-      tools: [
-        {
-          type: 'web_search_20250305',
-          name: 'web_search',
-          max_uses: 5,
-        },
-      ],
-    })
+    let response
+    try {
+      response = await client.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: msgs,
+        tools: [
+          {
+            type: 'web_search_20250305',
+            name: 'web_search',
+            max_uses: 2,
+          },
+        ],
+      }, {
+        timeout: 50000, // 50s timeout — leave 10s buffer for Vercel's 60s limit
+      })
+    } catch (apiErr) {
+      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
+      console.error('[chat] Claude API error:', msg)
+      if (msg.includes('timeout') || msg.includes('abort')) {
+        return NextResponse.json({
+          error: 'Claude had meer tijd nodig dan verwacht. Probeer een kortere of eenvoudigere vraag.',
+        }, { status: 504 })
+      }
+      throw apiErr
+    }
 
     // Extract text and citations from response
     let fullText = ''
