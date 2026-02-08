@@ -134,146 +134,38 @@ export default function ClaudeChat({
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const errorText = await response.text().catch(() => '')
-        throw new Error(`Chat request failed (${response.status}): ${errorText.slice(0, 200)}`)
+        throw new Error(data.error || `Fout ${response.status}`)
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No reader available')
+      // Update conversation ID
+      if (data.conversationId && !convId) {
+        setConvId(data.conversationId)
+        onConversationCreated?.(data.conversationId)
+      }
 
-      const decoder = new TextDecoder()
-      let assistantMessage: Message = {
-        id: `temp-assistant-${Date.now()}`,
+      // Add assistant message
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: '',
-        citations: [],
+        content: data.content || '',
+        hasWebSearch: data.hasWebSearch || false,
+        citations: data.citations || [],
       }
 
       setMessages(prev => [...prev, assistantMessage])
-
-      let buffer = ''
-      let gotFirstText = false
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-
-        // Parse SSE events from buffer
-        // Format: event: <type>\ndata: <line1>\ndata: <line2>\n...\n\n
-        const events: Array<{ event: string; data: string }> = []
-        let lastIndex = 0
-        const remaining = buffer
-
-        // Find complete events (terminated by double newline)
-        let searchFrom = 0
-        while (searchFrom < remaining.length) {
-          const eventStart = remaining.indexOf('event: ', searchFrom)
-          if (eventStart === -1) break
-
-          // Find the double-newline terminator
-          const terminator = remaining.indexOf('\n\n', eventStart)
-          if (terminator === -1) break // incomplete event, wait for more data
-
-          const eventBlock = remaining.slice(eventStart, terminator)
-          const lines = eventBlock.split('\n')
-
-          // First line: event type
-          const eventLine = lines[0]
-          const eventType = eventLine.replace('event: ', '').trim()
-
-          // Remaining lines: data (SSE spec: "data: " or "data:")
-          const dataLines = lines.slice(1)
-            .filter(l => l.startsWith('data:'))
-            .map(l => l.startsWith('data: ') ? l.slice(6) : l.slice(5))
-          const data = dataLines.join('\n')
-
-          events.push({ event: eventType, data })
-          lastIndex = terminator + 2 // skip past \n\n
-          searchFrom = lastIndex
-        }
-
-        for (const { event, data } of events) {
-
-          switch (event) {
-            case 'conversation_id':
-              if (!convId) {
-                setConvId(data)
-                onConversationCreated?.(data)
-              }
-              break
-
-            case 'text':
-              if (!gotFirstText) {
-                gotFirstText = true
-                setStreamStatus({ phase: 'writing' })
-              }
-              assistantMessage = {
-                ...assistantMessage,
-                content: assistantMessage.content + data,
-              }
-              setMessages(prev => [
-                ...prev.slice(0, -1),
-                { ...assistantMessage },
-              ])
-              break
-
-            case 'web_search_start':
-              setStreamStatus({ phase: 'searching', detail: data })
-              assistantMessage = { ...assistantMessage, hasWebSearch: true }
-              break
-
-            case 'citation':
-              setStreamStatus({ phase: 'citing' })
-              try {
-                const citation = JSON.parse(data)
-                const exists = assistantMessage.citations?.some(c => c.url === citation.url)
-                if (!exists) {
-                  assistantMessage = {
-                    ...assistantMessage,
-                    citations: [...(assistantMessage.citations || []), citation],
-                  }
-                  setMessages(prev => [
-                    ...prev.slice(0, -1),
-                    { ...assistantMessage },
-                  ])
-                }
-              } catch { /* ignore parse errors */ }
-              break
-
-            case 'done':
-              setStreamStatus({ phase: 'done' })
-              onNewMessage?.()
-              break
-
-            case 'error':
-              assistantMessage = {
-                ...assistantMessage,
-                content: assistantMessage.content || data,
-              }
-              setMessages(prev => [
-                ...prev.slice(0, -1),
-                { ...assistantMessage },
-              ])
-              break
-          }
-        }
-
-        // Keep unprocessed data in buffer
-        if (lastIndex > 0) {
-          buffer = remaining.slice(lastIndex)
-        }
-      }
+      onNewMessage?.()
     } catch (error) {
-      console.error('Chat error:', error)
+      const errMsg = error instanceof Error ? error.message : 'Onbekende fout'
+      console.error('Chat error:', errMsg)
       setMessages(prev => [
         ...prev,
         {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: 'Er ging iets mis. Controleer je internetverbinding en probeer het opnieuw.',
+          content: `Er ging iets mis: ${errMsg}`,
         },
       ])
     } finally {
