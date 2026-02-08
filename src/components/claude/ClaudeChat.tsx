@@ -184,7 +184,7 @@ export default function ClaudeChat({
       }])
 
       onNewMessage?.()
-      toast.success(`Antwoord: ${data.content!.slice(0, 80)}...`, { id: toastId, duration: 8000 })
+      toast.success('Antwoord ontvangen', { id: toastId })
       setStatusText('')
 
     } catch (error) {
@@ -252,8 +252,11 @@ export default function ClaudeChat({
                     <Icons.sparkles size={14} className="text-workx-lime" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-[#2a2a2a] border border-[#404041]">
-                      <p className="text-sm text-white whitespace-pre-wrap break-words">{msg.content}</p>
+                    <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-white/[0.04] border border-white/[0.08]">
+                      <div
+                        className="claude-response text-sm text-white/90 leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                      />
                     </div>
 
                     {/* Citations */}

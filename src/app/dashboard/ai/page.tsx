@@ -110,7 +110,8 @@ export default function AIAssistentPage() {
   }
 
   const handleConversationCreated = (id: string) => {
-    router.push(`/dashboard/ai?conv=${id}`)
+    // Update URL without navigation/re-render (prevents losing chat messages)
+    window.history.replaceState(null, '', `/dashboard/ai?conv=${id}`)
   }
 
   const formatFileSize = (bytes: number) => {
