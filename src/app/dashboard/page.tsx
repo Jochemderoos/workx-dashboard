@@ -248,6 +248,7 @@ interface FeedbackItem {
 interface CurrentUser {
   name: string
   role: string
+  whatsNewDismissed?: string | null
 }
 
 // Newsletter assignment interface
@@ -534,19 +535,24 @@ function AppjeplekjeWidget({
   )
 }
 
-// "What's New" widget — dismissible via localStorage
+// "What's New" widget — dismissible via API (stored on User model)
 const WHATS_NEW_VERSION = '2026-02-08' // Bump this to re-show the widget after new updates
-function WhatsNewWidget() {
-  const [dismissed, setDismissed] = useState(true) // Start hidden to avoid flash
+function WhatsNewWidget({ dismissedVersion }: { dismissedVersion?: string | null }) {
+  const [dismissed, setDismissed] = useState(dismissedVersion === WHATS_NEW_VERSION)
 
   useEffect(() => {
-    const stored = localStorage.getItem('workx-whats-new-dismissed')
-    setDismissed(stored === WHATS_NEW_VERSION)
-  }, [])
+    setDismissed(dismissedVersion === WHATS_NEW_VERSION)
+  }, [dismissedVersion])
 
-  const dismiss = () => {
-    localStorage.setItem('workx-whats-new-dismissed', WHATS_NEW_VERSION)
+  const dismiss = async () => {
     setDismissed(true)
+    try {
+      await fetch('/api/dashboard/whats-new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: WHATS_NEW_VERSION }),
+      })
+    } catch { /* silent fail — widget stays hidden via state */ }
   }
 
   if (dismissed) return null
@@ -878,7 +884,7 @@ export default function DashboardHome() {
 
         // Set current user
         if (data.currentUser) {
-          setCurrentUser({ name: data.currentUser.name, role: data.currentUser.role })
+          setCurrentUser({ name: data.currentUser.name, role: data.currentUser.role, whatsNewDismissed: data.currentUser.whatsNewDismissed })
         }
 
         // Set birthdays
@@ -1727,7 +1733,7 @@ export default function DashboardHome() {
       </ScrollReveal>
 
       {/* WHAT'S NEW WIDGET */}
-      <WhatsNewWidget />
+      <WhatsNewWidget dismissedVersion={currentUser?.whatsNewDismissed} />
 
       {/* NEWSLETTER WIDGETS */}
       {/* Employee reminder widget - shown when user has PENDING assignments */}

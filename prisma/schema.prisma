@@ -103,6 +103,9 @@ model User {
   // Audit log
   auditLogs        AuditLog[]       @relation("AuditLogs")
 
+  // Dashboard preferences
+  whatsNewDismissed     String?   // Version string of last dismissed "What's New" widget
+
   // AI Assistent
   aiProjects            AIProject[]
   aiProjectMemberships  AIProjectMember[] @relation("AIProjectMembers")
