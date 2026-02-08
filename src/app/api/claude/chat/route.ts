@@ -261,7 +261,7 @@ export async function POST(req: NextRequest) {
             const blockType = (block as { type: string }).type
             if (blockType === 'web_search_tool_use' || blockType === 'server_tool_use') {
               hasWebSearch = true
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Zoeken op het web...' })}\n\n`))
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'AI Search...' })}\n\n`))
             }
           })
 
