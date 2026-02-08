@@ -329,12 +329,26 @@ function AppjeplekjeWidget({
   const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>('today')
   const [dateLabels, setDateLabels] = useState({ today: '', tomorrow: '' })
 
+  // Determine if today is a weekend — show day names instead of "Vandaag"/"Morgen"
+  const [isWeekend, setIsWeekend] = useState(false)
+  const [dayNames, setDayNames] = useState({ today: 'Vandaag', tomorrow: 'Morgen' })
+
   useEffect(() => {
     const now = new Date()
+    const day = now.getDay()
+    const weekend = day === 0 || day === 6
+    setIsWeekend(weekend)
+
     const todayWork = nextWorkday(now)
     const tomorrowWork = new Date(todayWork)
     tomorrowWork.setDate(tomorrowWork.getDate() + 1)
     const tomorrowFinal = nextWorkday(tomorrowWork)
+
+    const dayNamesFmt = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
+    setDayNames({
+      today: weekend ? dayNamesFmt[todayWork.getDay()] : 'Vandaag',
+      tomorrow: weekend ? dayNamesFmt[tomorrowFinal.getDay()] : 'Morgen',
+    })
     setDateLabels({
       today: `${todayWork.getDate()} ${todayWork.toLocaleDateString('nl-NL', { month: 'short' })}`,
       tomorrow: `${tomorrowFinal.getDate()} ${tomorrowFinal.toLocaleDateString('nl-NL', { month: 'short' })}`
@@ -408,7 +422,7 @@ function AppjeplekjeWidget({
             <div>
               <p className="text-sm font-semibold text-white">Appjeplekje</p>
               <p className="text-xs text-cyan-300 font-medium">
-                {selectedDay === 'today' ? 'Vandaag' : 'Morgen'} · {selectedDay === 'today' ? dateLabels.today : dateLabels.tomorrow}
+                {selectedDay === 'today' ? dayNames.today : dayNames.tomorrow} · {selectedDay === 'today' ? dateLabels.today : dateLabels.tomorrow}
               </p>
             </div>
           </div>
@@ -449,7 +463,7 @@ function AppjeplekjeWidget({
                 : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            Vandaag
+            {dayNames.today}
           </button>
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedDay('tomorrow') }}
@@ -459,7 +473,7 @@ function AppjeplekjeWidget({
                 : 'text-gray-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            Morgen
+            {dayNames.tomorrow}
           </button>
         </div>
 
@@ -1139,7 +1153,7 @@ export default function DashboardHome() {
     setIsTogglingAttendance(true)
 
     try {
-      const now = new Date()
+      const now = nextWorkday(new Date())
       const today = formatDateStr(now)
       let res: Response
 
@@ -1174,9 +1188,11 @@ export default function DashboardHome() {
     setIsTogglingTomorrowAttendance(true)
 
     try {
-      const tomorrow = new Date()
+      const todayWork = nextWorkday(new Date())
+      const tomorrow = new Date(todayWork)
       tomorrow.setDate(tomorrow.getDate() + 1)
-      const tomorrowStr = formatDateStr(tomorrow)
+      const tomorrowFinal = nextWorkday(tomorrow)
+      const tomorrowStr = formatDateStr(tomorrowFinal)
       let res: Response
 
       if (tomorrowAttendance.isCurrentUserAttending) {
