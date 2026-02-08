@@ -1,3 +1,15 @@
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  ⚠️  GEDEELDE DATABASE - VOORZICHTIG MET PRISMA DB PUSH!  ⚠️  ║
+// ║                                                                ║
+// ║  Deze database wordt GEDEELD met het study-hub project.        ║
+// ║  `prisma db push` VERWIJDERT alle study_* tabellen!            ║
+// ║                                                                ║
+// ║  Als je db push MOET gebruiken:                                ║
+// ║    - NOOIT met --accept-data-loss                              ║
+// ║    - Controleer of study_ tabellen NIET worden verwijderd      ║
+// ║    - Na db push: check of study_ tabellen nog bestaan          ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
 generator client {
   provider = "prisma-client-js"
 }
