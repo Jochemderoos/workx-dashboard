@@ -158,10 +158,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ANTHROPIC_API_KEY niet geconfigureerd' }, { status: 500 })
     }
 
-    // Call Claude (non-streaming for reliability)
-    const client = new Anthropic({ apiKey, timeout: 45000 })
-    console.log(`[chat] Prompt: ${systemPrompt.length} chars, ${msgs.length} messages`)
-
     // Only enable web search when user explicitly asks for it
     const lowerMsg = message.toLowerCase()
     const wantsSearch = /zoek|search|rechtspraak|ecli|uitspraak|actueel|recent|nieuws|jurisprudentie/.test(lowerMsg)
@@ -173,83 +169,109 @@ export async function POST(req: NextRequest) {
       max_uses: 2,
     }] : []
 
-    let response
-    try {
-      response = await client.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: msgs,
-        ...(tools.length > 0 ? { tools } : {}),
-      })
-    } catch (apiErr) {
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
-      console.error('[chat] Claude API error:', msg)
-      if (msg.includes('timeout') || msg.includes('abort')) {
-        return NextResponse.json({
-          error: 'Claude had meer tijd nodig dan verwacht. Probeer een kortere of eenvoudigere vraag.',
-        }, { status: 504 })
-      }
-      if (msg.includes('rate_limit') || msg.includes('429')) {
-        return NextResponse.json({
-          error: 'Even rustig aan — te veel verzoeken tegelijk. Wacht een minuut en probeer het opnieuw.',
-        }, { status: 429 })
-      }
-      if (msg.includes('overloaded') || msg.includes('529')) {
-        return NextResponse.json({
-          error: 'Claude is momenteel overbelast. Probeer het over een paar seconden opnieuw.',
-        }, { status: 503 })
-      }
-      throw apiErr
-    }
+    const client = new Anthropic({ apiKey, timeout: 55000 })
+    console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, search=${wantsSearch}`)
 
-    // Extract text and citations from response
-    let fullText = ''
-    let hasWebSearch = false
-    const citations: Array<{ url: string; title: string }> = []
+    // Stream the response
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        let fullText = ''
+        let hasWebSearch = false
+        const citations: Array<{ url: string; title: string }> = []
 
-    for (const block of response.content) {
-      if (block.type === 'text') {
-        fullText += block.text
-        // Check for citations in the block
-        if ('citations' in block && Array.isArray((block as { citations?: unknown[] }).citations)) {
-          for (const cite of (block as { citations: Array<{ type: string; url?: string; title?: string }> }).citations) {
-            if (cite.url && !citations.some(c => c.url === cite.url)) {
-              citations.push({ url: cite.url, title: cite.title || '' })
+        try {
+          const anthropicStream = client.messages.stream({
+            model: 'claude-sonnet-4-5-20250929',
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: msgs,
+            ...(tools.length > 0 ? { tools } : {}),
+          })
+
+          // Send conversationId immediately
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start', conversationId: convId })}\n\n`))
+
+          anthropicStream.on('text', (text) => {
+            fullText += text
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
+          })
+
+          // Listen for content blocks for web search detection
+          anthropicStream.on('contentBlock', (block) => {
+            const blockType = (block as { type: string }).type
+            if (blockType === 'web_search_tool_use' || blockType === 'server_tool_use') {
+              hasWebSearch = true
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Zoeken op het web...' })}\n\n`))
+            }
+          })
+
+          // Wait for the full response
+          const finalMessage = await anthropicStream.finalMessage()
+
+          // Extract citations from the final message
+          for (const block of finalMessage.content) {
+            if (block.type === 'text' && 'citations' in block && Array.isArray((block as { citations?: unknown[] }).citations)) {
+              for (const cite of (block as { citations: Array<{ type: string; url?: string; title?: string }> }).citations) {
+                if (cite.url && !citations.some(c => c.url === cite.url)) {
+                  citations.push({ url: cite.url, title: cite.title || '' })
+                }
+              }
             }
           }
-        }
-      }
-      const blockType = (block as { type: string }).type
-      if (blockType === 'web_search_tool_use' || blockType === 'server_tool_use') {
-        hasWebSearch = true
-      }
-    }
 
-    // Save assistant message
-    await prisma.aIMessage.create({
-      data: {
-        conversationId: convId,
-        role: 'assistant',
-        content: fullText,
-        hasWebSearch,
-        citations: citations.length > 0 ? JSON.stringify(citations) : null,
+          // Save assistant message to database
+          await prisma.aIMessage.create({
+            data: {
+              conversationId: convId,
+              role: 'assistant',
+              content: fullText,
+              hasWebSearch,
+              citations: citations.length > 0 ? JSON.stringify(citations) : null,
+            },
+          })
+
+          // Update conversation title
+          if (history.length <= 1) {
+            await prisma.aIConversation.update({
+              where: { id: convId },
+              data: { title: message.slice(0, 80) + (message.length > 80 ? '...' : '') },
+            })
+          }
+
+          // Send final event with citations
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'done',
+            hasWebSearch,
+            citations,
+          })}\n\n`))
+
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : String(error)
+          console.error('[chat] Stream error:', errMsg)
+
+          let userError = errMsg.slice(0, 500)
+          if (errMsg.includes('timeout') || errMsg.includes('abort')) {
+            userError = 'Claude had meer tijd nodig dan verwacht. Probeer een kortere of eenvoudigere vraag.'
+          } else if (errMsg.includes('rate_limit') || errMsg.includes('429')) {
+            userError = 'Even rustig aan — te veel verzoeken tegelijk. Wacht een minuut en probeer het opnieuw.'
+          } else if (errMsg.includes('overloaded') || errMsg.includes('529')) {
+            userError = 'Claude is momenteel overbelast. Probeer het over een paar seconden opnieuw.'
+          }
+
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: userError })}\n\n`))
+        } finally {
+          controller.close()
+        }
       },
     })
 
-    // Update conversation title
-    if (history.length <= 1) {
-      await prisma.aIConversation.update({
-        where: { id: convId },
-        data: { title: message.slice(0, 80) + (message.length > 80 ? '...' : '') },
-      })
-    }
-
-    return NextResponse.json({
-      conversationId: convId,
-      content: fullText,
-      hasWebSearch,
-      citations,
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     })
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error)

@@ -266,7 +266,7 @@ export default function AIAssistentPage() {
 
       {/* Content based on active tab */}
       {activeTab === 'chat' && (
-        <div className="rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden" style={{ height: '600px' }}>
+        <div className="rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden" style={{ height: 'calc(100vh - 320px)' }}>
           <ClaudeChat
             onConversationCreated={handleConversationCreated}
           />

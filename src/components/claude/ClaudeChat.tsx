@@ -150,11 +150,11 @@ export default function ClaudeChat({
       textareaRef.current.style.height = 'auto'
     }
 
-    const toastId = toast.loading('Claude denkt na...')
+    const assistantMsgId = `assistant-${Date.now()}`
 
-    // Timeout after 90 seconds
+    // Timeout after 120 seconds (streaming keeps connection alive)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 90000)
+    const timeoutId = setTimeout(() => controller.abort(), 120000)
 
     try {
       setStatusText('Verzoek versturen...')
@@ -173,12 +173,9 @@ export default function ClaudeChat({
       })
 
       clearTimeout(timeoutId)
-      setStatusText('Antwoord verwerken...')
-
-      // Read response as text first (avoids double-read issue)
-      const rawText = await response.text()
 
       if (!response.ok) {
+        const rawText = await response.text()
         let errorMsg = `Server fout (${response.status})`
         try {
           const errData = JSON.parse(rawText)
@@ -189,44 +186,85 @@ export default function ClaudeChat({
         throw new Error(errorMsg)
       }
 
-      if (!rawText) {
-        throw new Error('Server gaf een leeg antwoord')
+      if (!response.body) {
+        throw new Error('Server gaf geen stream terug')
       }
 
-      let data: {
-        conversationId?: string
-        content?: string
-        hasWebSearch?: boolean
-        citations?: Array<{ url: string; title: string }>
-      }
+      setStatusText('Claude schrijft...')
 
-      try {
-        data = JSON.parse(rawText)
-      } catch {
-        throw new Error(`Server gaf ongeldig antwoord: ${rawText.slice(0, 100)}`)
-      }
-
-      if (!data.content) {
-        throw new Error(`Claude gaf een leeg antwoord`)
-      }
-
-      // Update conversation ID
-      if (data.conversationId && !convId) {
-        setConvId(data.conversationId)
-        onConversationCreated?.(data.conversationId)
-      }
-
-      // Add assistant message
+      // Add empty assistant message that we'll update with streamed content
       setMessages(prev => [...prev, {
-        id: `assistant-${Date.now()}`,
+        id: assistantMsgId,
         role: 'assistant',
-        content: data.content!,
-        hasWebSearch: data.hasWebSearch || false,
-        citations: data.citations || [],
+        content: '',
       }])
 
+      // Read SSE stream
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let streamedText = ''
+      let hasWebSearch = false
+      let citations: Array<{ url: string; title: string }> = []
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        // Process complete SSE events from buffer
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || '' // Keep incomplete event in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const jsonStr = line.slice(6)
+
+          try {
+            const event = JSON.parse(jsonStr)
+
+            if (event.type === 'start' && event.conversationId) {
+              if (!convId) {
+                setConvId(event.conversationId)
+                onConversationCreated?.(event.conversationId)
+              }
+            } else if (event.type === 'delta' && event.text) {
+              streamedText += event.text
+              // Update the assistant message content in-place
+              setMessages(prev => prev.map(m =>
+                m.id === assistantMsgId ? { ...m, content: streamedText } : m
+              ))
+            } else if (event.type === 'status' && event.text) {
+              setStatusText(event.text)
+            } else if (event.type === 'done') {
+              hasWebSearch = event.hasWebSearch || false
+              citations = event.citations || []
+              // Final update with citations
+              setMessages(prev => prev.map(m =>
+                m.id === assistantMsgId ? { ...m, hasWebSearch, citations } : m
+              ))
+            } else if (event.type === 'error') {
+              throw new Error(event.error || 'Onbekende fout')
+            }
+          } catch (parseErr) {
+            if (parseErr instanceof Error && parseErr.message !== 'Onbekende fout' && !parseErr.message.startsWith('Claude')) {
+              console.warn('[ClaudeChat] SSE parse warning:', jsonStr.slice(0, 100))
+            } else {
+              throw parseErr
+            }
+          }
+        }
+      }
+
+      if (!streamedText) {
+        // Remove empty assistant message
+        setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
+        throw new Error('Claude gaf een leeg antwoord')
+      }
+
       onNewMessage?.()
-      toast.success('Antwoord ontvangen', { id: toastId })
+      toast.dismiss()
       setStatusText('')
 
     } catch (error) {
@@ -234,21 +272,37 @@ export default function ClaudeChat({
       let errMsg = 'Onbekende fout'
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          errMsg = 'Geen reactie na 90 seconden. Probeer een kortere vraag.'
+          errMsg = 'Geen reactie na 2 minuten. Probeer een kortere vraag.'
         } else {
           errMsg = error.message
         }
       }
 
       console.error('[ClaudeChat] Error:', errMsg)
-      toast.error(errMsg, { id: toastId, duration: 15000 })
+      toast.error(errMsg, { duration: 15000 })
       setStatusText('')
 
-      setMessages(prev => [...prev, {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: `**Fout:** ${errMsg}\n\nProbeer het opnieuw of ververs de pagina (Ctrl+Shift+R).`,
-      }])
+      // If we already have streamed content, keep it and add error note
+      setMessages(prev => {
+        const existing = prev.find(m => m.id === assistantMsgId)
+        if (existing && existing.content) {
+          return prev // Keep partial response
+        }
+        // Replace empty assistant msg with error
+        return prev.map(m =>
+          m.id === assistantMsgId
+            ? { ...m, content: `**Fout:** ${errMsg}\n\nProbeer het opnieuw of ververs de pagina (Ctrl+Shift+R).` }
+            : m
+        ).concat(
+          !prev.some(m => m.id === assistantMsgId)
+            ? [{
+                id: `error-${Date.now()}`,
+                role: 'assistant' as const,
+                content: `**Fout:** ${errMsg}\n\nProbeer het opnieuw of ververs de pagina (Ctrl+Shift+R).`,
+              }]
+            : []
+        )
+      })
     } finally {
       setIsLoading(false)
     }
