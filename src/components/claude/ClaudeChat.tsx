@@ -64,6 +64,7 @@ export default function ClaudeChat({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isThinkingRef = useRef(false) // Tracks thinking state inside streaming closure
 
   const RESPONSE_OPTIONS = [
     { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
@@ -220,6 +221,7 @@ export default function ClaudeChat({
     setInput('')
     setIsLoading(true)
     setIsThinking(false)
+    isThinkingRef.current = false
     setThinkingText('')
     setThinkingExpanded(false)
     setStatusText('Verbinden met Claude...')
@@ -309,12 +311,15 @@ export default function ClaudeChat({
               }
             } else if (event.type === 'thinking_start') {
               setIsThinking(true)
+              isThinkingRef.current = true
               setStatusText('Claude overweegt...')
             } else if (event.type === 'thinking' && event.text) {
               setThinkingText(prev => prev + event.text)
             } else if (event.type === 'delta' && event.text) {
               // First text delta means thinking is done — auto-collapse
-              if (isThinking) {
+              // Use ref to avoid stale closure (isThinking state is captured at function creation)
+              if (isThinkingRef.current) {
+                isThinkingRef.current = false
                 setIsThinking(false)
                 setThinkingExpanded(false)
                 setStatusText('Claude schrijft...')

@@ -91,11 +91,14 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  // Parse citations from JSON string
-  const parsed = messages.map(m => ({
-    ...m,
-    citations: m.citations ? JSON.parse(m.citations as string) : null,
-  }))
+  // Parse citations from JSON string (with safe parsing)
+  const parsed = messages.map(m => {
+    let parsedCitations = null
+    if (m.citations) {
+      try { parsedCitations = JSON.parse(m.citations as string) } catch { /* ignore malformed */ }
+    }
+    return { ...m, citations: parsedCitations }
+  })
 
   return NextResponse.json({ messages: parsed })
 }
@@ -115,7 +118,23 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id
 
   try {
-    // Create or get conversation
+    // Verify projectId access if provided
+    if (projectId) {
+      const projectAccess = await prisma.aIProject.findFirst({
+        where: {
+          id: projectId,
+          OR: [
+            { userId },
+            { members: { some: { userId } } },
+          ],
+        },
+      })
+      if (!projectAccess) {
+        return NextResponse.json({ error: 'Geen toegang tot dit project' }, { status: 403 })
+      }
+    }
+
+    // Create or get conversation (with ownership check)
     let convId = conversationId
     if (!convId) {
       const conversation = await prisma.aIConversation.create({
@@ -126,6 +145,20 @@ export async function POST(req: NextRequest) {
         },
       })
       convId = conversation.id
+    } else {
+      // H2 fix: verify user owns or is member of the conversation
+      const convAccess = await prisma.aIConversation.findFirst({
+        where: {
+          id: convId,
+          OR: [
+            { userId },
+            { project: { members: { some: { userId } } } },
+          ],
+        },
+      })
+      if (!convAccess) {
+        return NextResponse.json({ error: 'Geen toegang tot dit gesprek' }, { status: 403 })
+      }
     }
 
     // Save user message
@@ -137,12 +170,13 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Get conversation history (last 30 messages)
-    const history = await prisma.aIMessage.findMany({
+    // Get conversation history (last 30 messages — fetch newest, then reverse)
+    const historyDesc = await prisma.aIMessage.findMany({
       where: { conversationId: convId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: 30,
     })
+    const history = historyDesc.reverse()
 
     // Build context from documents
     let documentContext = ''
@@ -165,12 +199,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (projectId) {
-      // Include ALL project documents (from any team member)
+      // Include project documents (auth already verified above)
+      // Limit total document context to 200K chars to avoid exceeding context window
       const projectDocs = await prisma.aIDocument.findMany({
         where: { projectId },
+        take: 20,
       })
       for (const doc of projectDocs) {
         if (doc.content && !documentIds?.includes(doc.id)) {
+          if (documentContext.length > 200000) break
           documentContext += `\n\n--- ${doc.name} ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
         }
       }
@@ -359,6 +396,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error)
     console.error('[chat] Error:', errMsg)
-    return NextResponse.json({ error: errMsg.slice(0, 500) }, { status: 500 })
+    return NextResponse.json({ error: 'Er is een interne fout opgetreden. Probeer het opnieuw.' }, { status: 500 })
   }
 }

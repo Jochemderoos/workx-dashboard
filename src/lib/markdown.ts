@@ -158,10 +158,16 @@ function processInline(text: string): string {
   // Italic
   result = result.replace(/\*(.+?)\*/g, '<em>$1</em>')
 
-  // Links: [text](url)
+  // Links: [text](url) — filter dangerous URI schemes
   result = result.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+    (_match, text, url) => {
+      const trimmed = url.trim().toLowerCase()
+      if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) {
+        return text // Strip the link, keep just the text
+      }
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`
+    }
   )
 
   return result
