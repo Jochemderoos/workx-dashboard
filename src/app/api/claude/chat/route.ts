@@ -120,40 +120,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Fetch active knowledge sources (Bronnen Manager)
-  // Cap total to prevent exceeding token limits
+  // Fetch knowledge sources — only summaries, not raw content (performance)
   let sourcesContext = ''
-  const MAX_SOURCES_TOTAL = 30000
+  const MAX_SOURCES_TOTAL = 6000
   try {
     const activeSources = await prisma.aISource.findMany({
-      where: { userId, isActive: true },
+      where: { userId, isActive: true, isProcessed: true },
       select: {
         name: true,
-        type: true,
         category: true,
-        content: true,
         summary: true,
-        isProcessed: true,
-        description: true,
       },
     })
     let sourcesLength = 0
     for (const source of activeSources) {
-      const knowledge = source.isProcessed && source.summary
-        ? source.summary
-        : source.content
-
-      if (knowledge) {
-        const label = source.isProcessed ? 'Verwerkte kennisbron' : 'Kennisbron (onverwerkt)'
-        const maxPerSource = source.isProcessed ? 10000 : 5000
-        const trimmedKnowledge = knowledge.slice(0, maxPerSource)
-        if (sourcesLength + trimmedKnowledge.length > MAX_SOURCES_TOTAL) break
-        sourcesLength += trimmedKnowledge.length
-        sourcesContext += `\n\n--- ${label}: ${source.name} (${source.category}) ---\n${trimmedKnowledge}\n--- Einde bron ---`
+      if (source.summary) {
+        const trimmed = source.summary.slice(0, 3000)
+        if (sourcesLength + trimmed.length > MAX_SOURCES_TOTAL) break
+        sourcesLength += trimmed.length
+        sourcesContext += `\n\n--- ${source.name} (${source.category}) ---\n${trimmed}\n--- Einde ---`
       }
     }
   } catch {
-    // Sources not available yet (table may not exist)
+    // Sources not available yet
   }
 
   // Fetch Workx templates (only metadata, not full content — too large for chat context)
