@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import { renderMarkdown } from '@/lib/markdown'
+import toast from 'react-hot-toast'
 
 interface Message {
   id: string
@@ -122,22 +123,62 @@ export default function ClaudeChat({
       textareaRef.current.style.height = 'auto'
     }
 
-    try {
-      const response = await fetch('/api/claude/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: convId,
-          projectId,
-          message: text,
-          documentIds,
-        }),
-      })
+    const toastId = toast.loading('Claude denkt na...')
 
-      const data = await response.json()
+    // Abort controller with 90s timeout
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 90000)
+
+    try {
+      let response: Response
+      try {
+        response = await fetch('/api/claude/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: convId,
+            projectId,
+            message: text,
+            documentIds,
+          }),
+          signal: controller.signal,
+        })
+      } catch (fetchErr) {
+        if (controller.signal.aborted) {
+          throw new Error('Timeout: geen reactie van server na 90 seconden')
+        }
+        throw new Error(`Netwerkfout: ${fetchErr instanceof Error ? fetchErr.message : 'Kan server niet bereiken'}`)
+      } finally {
+        clearTimeout(timeout)
+      }
+
+      // Read body as text first, then parse as JSON
+      const rawText = await response.text()
 
       if (!response.ok) {
-        throw new Error(data.error || `Fout ${response.status}`)
+        // Try to parse error message from JSON response
+        try {
+          const errData = JSON.parse(rawText)
+          throw new Error(errData.error || `Server fout ${response.status}`)
+        } catch (parseErr) {
+          if (parseErr instanceof Error && parseErr.message.startsWith('Server fout')) throw parseErr
+          throw new Error(`Server fout ${response.status}: ${rawText.slice(0, 200)}`)
+        }
+      }
+
+      if (!rawText) {
+        throw new Error('Leeg antwoord van server')
+      }
+
+      let data: { conversationId?: string; content?: string; hasWebSearch?: boolean; citations?: Array<{ url: string; title: string }> }
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        throw new Error(`Ongeldig JSON antwoord: ${rawText.slice(0, 150)}`)
+      }
+
+      if (!data.content) {
+        throw new Error(`Leeg antwoord van Claude (keys: ${Object.keys(data).join(', ')})`)
       }
 
       // Update conversation ID
@@ -150,22 +191,24 @@ export default function ClaudeChat({
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: data.content || '',
+        content: data.content,
         hasWebSearch: data.hasWebSearch || false,
         citations: data.citations || [],
       }
 
       setMessages(prev => [...prev, assistantMessage])
       onNewMessage?.()
+      toast.success('Antwoord ontvangen!', { id: toastId })
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Onbekende fout'
-      console.error('Chat error:', errMsg)
+      console.error('[ClaudeChat] Error:', errMsg)
+      toast.error(errMsg, { id: toastId, duration: 15000 })
       setMessages(prev => [
         ...prev,
         {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: `Er ging iets mis: ${errMsg}`,
+          content: `**Fout:** ${errMsg}\n\nProbeer het opnieuw. Als dit blijft gebeuren, ververs de pagina (Ctrl+Shift+R).`,
         },
       ])
     } finally {
