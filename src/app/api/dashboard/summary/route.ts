@@ -4,6 +4,19 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { OFFICE_CONFIG, getDefaultVacationDays } from '@/lib/config'
 
+// Skip weekends: advance to next Monday if date falls on Saturday or Sunday
+function nextWorkday(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  if (day === 6) d.setDate(d.getDate() + 2) // Saturday → Monday
+  else if (day === 0) d.setDate(d.getDate() + 1) // Sunday → Monday
+  return d
+}
+
+function formatDateStr(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 // Transform DB parental leave (uren/dagen) to frontend format (weken)
 function transformParentalLeaveForFrontend(leave: any) {
   return {
@@ -34,12 +47,15 @@ export async function GET() {
     const currentYear = now.getFullYear()
 
     // Format today's date as YYYY-MM-DD for office attendance queries
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    // Skip weekends: on Saturday/Sunday, show Monday's data instead
+    const todayWork = nextWorkday(now)
+    const today = formatDateStr(todayWork)
 
-    // Calculate tomorrow's date
-    const tomorrowDate = new Date(now)
+    // Calculate tomorrow's working day
+    const tomorrowDate = new Date(todayWork)
     tomorrowDate.setDate(tomorrowDate.getDate() + 1)
-    const tomorrow = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`
+    const tomorrowWork = nextWorkday(tomorrowDate)
+    const tomorrow = formatDateStr(tomorrowWork)
 
     // Fetch all data in parallel using Promise.all
     const [
