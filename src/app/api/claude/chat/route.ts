@@ -159,8 +159,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Call Claude (non-streaming for reliability)
-    const client = new Anthropic({ apiKey })
+    const client = new Anthropic({ apiKey, timeout: 45000 })
     console.log(`[chat] Prompt: ${systemPrompt.length} chars, ${msgs.length} messages`)
+
+    // Only enable web search when user explicitly asks for it
+    const lowerMsg = message.toLowerCase()
+    const wantsSearch = /zoek|search|rechtspraak|ecli|uitspraak|actueel|recent|nieuws|jurisprudentie/.test(lowerMsg)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tools: any[] = wantsSearch ? [{
+      type: 'web_search_20250305',
+      name: 'web_search',
+      max_uses: 2,
+    }] : []
 
     let response
     try {
@@ -169,15 +180,7 @@ export async function POST(req: NextRequest) {
         max_tokens: 4096,
         system: systemPrompt,
         messages: msgs,
-        tools: [
-          {
-            type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 2,
-          },
-        ],
-      }, {
-        timeout: 50000, // 50s timeout — leave 10s buffer for Vercel's 60s limit
+        ...(tools.length > 0 ? { tools } : {}),
       })
     } catch (apiErr) {
       const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
