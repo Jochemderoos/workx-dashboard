@@ -152,11 +152,11 @@ export default function ClaudeChat({
     }
   }, [initialMsgCount])
 
-  // Only update convId when parent explicitly passes a new one
+  // Sync convId from parent (including reset to null)
   useEffect(() => {
-    if (initialConvId) {
-      setConvId(initialConvId)
-    }
+    setConvId(initialConvId || null)
+    setActiveOptions(new Set())
+    setAttachedDocs([])
   }, [initialConvId])
 
   const scrollToBottom = useCallback(() => {
@@ -237,9 +237,8 @@ export default function ClaudeChat({
         signal: controller.signal,
       })
 
-      clearTimeout(timeoutId)
-
       if (!response.ok) {
+        clearTimeout(timeoutId)
         const rawText = await response.text()
         let errorMsg = `Server fout (${response.status})`
         try {
@@ -313,14 +312,17 @@ export default function ClaudeChat({
               throw new Error(event.error || 'Onbekende fout')
             }
           } catch (parseErr) {
-            if (parseErr instanceof Error && parseErr.message !== 'Onbekende fout' && !parseErr.message.startsWith('Claude')) {
-              console.warn('[ClaudeChat] SSE parse warning:', jsonStr.slice(0, 100))
-            } else {
+            // Re-throw application errors (from event.type === 'error')
+            if (parseErr instanceof Error && parseErr.message && parseErr.message !== jsonStr) {
               throw parseErr
             }
+            // JSON parse errors are just warnings (e.g. incomplete chunk)
+            console.warn('[ClaudeChat] SSE parse warning:', jsonStr.slice(0, 100))
           }
         }
       }
+
+      clearTimeout(timeoutId)
 
       if (!streamedText) {
         // Remove empty assistant message
@@ -330,7 +332,6 @@ export default function ClaudeChat({
 
       onNewMessage?.()
       setAttachedDocs([]) // Clear attached docs after successful send
-      toast.dismiss()
       setStatusText('')
 
     } catch (error) {
@@ -462,7 +463,7 @@ export default function ClaudeChat({
                               title={citation.url}
                             >
                               <Icons.globe size={10} />
-                              <span className="truncate max-w-[200px]">{citation.title || new URL(citation.url).hostname}</span>
+                              <span className="truncate max-w-[200px]">{citation.title || (() => { try { return new URL(citation.url).hostname } catch { return citation.url } })()}</span>
                             </a>
                           ))}
                         </div>

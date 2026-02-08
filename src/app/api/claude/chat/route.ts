@@ -49,6 +49,57 @@ Bij berekeningen (transitievergoeding, opzegtermijnen, verjaringstermijnen):
 - Vermeld het toepasselijke wetsartikel
 - Geef aan welke aannames je hebt gemaakt`
 
+// GET: load messages for an existing conversation
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const conversationId = searchParams.get('conversationId')
+
+  if (!conversationId) {
+    return NextResponse.json({ error: 'conversationId is verplicht' }, { status: 400 })
+  }
+
+  // Verify user owns or is member of the conversation's project
+  const conversation = await prisma.aIConversation.findFirst({
+    where: {
+      id: conversationId,
+      OR: [
+        { userId: session.user.id },
+        { project: { members: { some: { userId: session.user.id } } } },
+      ],
+    },
+  })
+
+  if (!conversation) {
+    return NextResponse.json({ error: 'Gesprek niet gevonden' }, { status: 404 })
+  }
+
+  const messages = await prisma.aIMessage.findMany({
+    where: { conversationId },
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      role: true,
+      content: true,
+      hasWebSearch: true,
+      citations: true,
+      createdAt: true,
+    },
+  })
+
+  // Parse citations from JSON string
+  const parsed = messages.map(m => ({
+    ...m,
+    citations: m.citations ? JSON.parse(m.citations as string) : null,
+  }))
+
+  return NextResponse.json({ messages: parsed })
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
@@ -96,8 +147,15 @@ export async function POST(req: NextRequest) {
     // Build context from documents
     let documentContext = ''
     if (documentIds?.length) {
+      // Allow documents the user owns OR that belong to a shared project
       const docs = await prisma.aIDocument.findMany({
-        where: { id: { in: documentIds }, userId },
+        where: {
+          id: { in: documentIds },
+          OR: [
+            { userId },
+            { project: { members: { some: { userId } } } },
+          ],
+        },
       })
       for (const doc of docs) {
         if (doc.content) {
@@ -107,8 +165,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (projectId) {
+      // Include ALL project documents (from any team member)
       const projectDocs = await prisma.aIDocument.findMany({
-        where: { projectId, userId },
+        where: { projectId },
       })
       for (const doc of projectDocs) {
         if (doc.content && !documentIds?.includes(doc.id)) {

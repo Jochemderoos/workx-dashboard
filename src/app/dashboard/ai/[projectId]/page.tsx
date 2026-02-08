@@ -280,7 +280,7 @@ export default function ProjectDetailPage() {
     }
   }
 
-  const isOwner = project?.userId === project?.user?.id // current user fetched this, so they have access
+  // Note: remove-member button is always visible; the API enforces owner-only access
 
   const filteredUsersForAdd = allUsers.filter(u => {
     const alreadyMember = project?.members.some(m => m.user.id === u.id)
@@ -396,7 +396,7 @@ export default function ProjectDetailPage() {
                         Eigenaar
                       </span>
                     )}
-                    {member.role !== 'owner' && project.userId === project.user.id && (
+                    {member.role !== 'owner' && (
                       <button
                         onClick={() => removeMember(member.user.id)}
                         className="p-1 rounded text-white/10 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
