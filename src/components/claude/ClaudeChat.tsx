@@ -14,6 +14,12 @@ interface Message {
   createdAt?: string
 }
 
+interface AttachedDoc {
+  id: string
+  name: string
+  fileType: string
+}
+
 interface ClaudeChatProps {
   conversationId?: string | null
   projectId?: string | null
@@ -21,6 +27,7 @@ interface ClaudeChatProps {
   initialMessages?: Message[]
   onConversationCreated?: (id: string) => void
   onNewMessage?: () => void
+  onNewChat?: () => void
   placeholder?: string
   compact?: boolean
   quickActionPrompt?: string | null
@@ -34,6 +41,7 @@ export default function ClaudeChat({
   initialMessages = [],
   onConversationCreated,
   onNewMessage,
+  onNewChat,
   placeholder,
   compact = false,
   quickActionPrompt,
@@ -46,8 +54,11 @@ export default function ClaudeChat({
   const [convId, setConvId] = useState<string | null>(initialConvId || null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [activeOptions, setActiveOptions] = useState<Set<string>>(new Set())
+  const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([])
+  const [isUploading, setIsUploading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const RESPONSE_OPTIONS = [
     { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
@@ -76,6 +87,60 @@ export default function ClaudeChat({
     const active = RESPONSE_OPTIONS.filter(o => activeOptions.has(o.id))
     if (active.length === 0) return ''
     return active.map(o => o.instruction).join(' ') + '\n\n'
+  }
+
+  const startNewChat = () => {
+    if (isLoading) return
+    setMessages([])
+    setConvId(null)
+    setInput('')
+    setAttachedDocs([])
+    setActiveOptions(new Set())
+    onNewChat?.()
+  }
+
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = ''
+
+    const ext = file.name.split('.').pop()?.toLowerCase() || ''
+    if (!['pdf', 'docx', 'txt', 'md'].includes(ext)) {
+      toast.error(`Bestandstype .${ext} niet ondersteund. Toegestaan: pdf, docx, txt, md`)
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Bestand is te groot (max 10MB)')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      if (projectId) formData.append('projectId', projectId)
+
+      const res = await fetch('/api/claude/documents', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload mislukt')
+      }
+      const doc = await res.json()
+      setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])
+      toast.success(`${file.name} bijgevoegd`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload mislukt')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const removeAttachedDoc = (docId: string) => {
+    setAttachedDocs(prev => prev.filter(d => d.id !== docId))
   }
 
   // Only sync from parent when initialMessages actually has content
@@ -167,7 +232,7 @@ export default function ClaudeChat({
           conversationId: convId,
           projectId,
           message: fullMessage,
-          documentIds,
+          documentIds: [...documentIds, ...attachedDocs.map(d => d.id)],
         }),
         signal: controller.signal,
       })
@@ -264,6 +329,7 @@ export default function ClaudeChat({
       }
 
       onNewMessage?.()
+      setAttachedDocs([]) // Clear attached docs after successful send
       toast.dismiss()
       setStatusText('')
 
@@ -317,6 +383,32 @@ export default function ClaudeChat({
 
   return (
     <div className={`flex flex-col ${compact ? 'h-[500px]' : 'h-full'}`}>
+      {/* Hidden file input for document attachment */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx,.txt,.md"
+        onChange={handleFileAttach}
+        className="hidden"
+      />
+
+      {/* Top bar with New Chat button */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-white/5">
+        <div className="flex items-center gap-2 text-[11px] text-white/30">
+          {convId && messages.length > 0 && (
+            <span>{messages.filter(m => m.role === 'user').length} berichten</span>
+          )}
+        </div>
+        <button
+          onClick={startNewChat}
+          disabled={isLoading || (messages.length === 0 && !convId)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/[0.05] border border-white/10 text-white/50 hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 disabled:opacity-20 disabled:cursor-not-allowed"
+        >
+          <Icons.plus size={14} />
+          Nieuwe chat
+        </button>
+      </div>
+
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {/* Empty state */}
@@ -436,6 +528,27 @@ export default function ClaudeChat({
 
       {/* Input area */}
       <div className="flex-shrink-0 p-4 border-t border-white/5 space-y-2">
+        {/* Attached documents chips */}
+        {attachedDocs.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {attachedDocs.map((doc) => (
+              <span
+                key={doc.id}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400"
+              >
+                <Icons.paperclip size={10} />
+                <span className="truncate max-w-[150px]">{doc.name}</span>
+                <button
+                  onClick={() => removeAttachedDoc(doc.id)}
+                  className="hover:text-white transition-colors"
+                >
+                  <Icons.x size={10} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Response option chips */}
         <div className="flex flex-wrap gap-1.5">
           {RESPONSE_OPTIONS.map((opt) => (
@@ -455,6 +568,22 @@ export default function ClaudeChat({
         </div>
 
         <div className="flex items-end gap-2">
+          {/* Attach document button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading || isUploading}
+            title="Document bijvoegen (PDF, DOCX, TXT, MD)"
+            className="flex-shrink-0 w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-white/40 flex items-center justify-center hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            {isUploading ? (
+              <div className="animate-spin">
+                <Icons.refresh size={16} />
+              </div>
+            ) : (
+              <Icons.paperclip size={18} />
+            )}
+          </button>
+
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
