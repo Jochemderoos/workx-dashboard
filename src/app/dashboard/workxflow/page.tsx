@@ -1609,8 +1609,8 @@ export default function WorkxflowPage() {
 
       {/* Printer settings modal */}
       {showPrinterSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="card p-6 max-w-lg w-full">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-12 overflow-y-auto bg-black/70 backdrop-blur-sm">
+          <div className="card p-6 max-w-lg w-full mb-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-medium text-white">Printer Instellingen</h3>
               <button
