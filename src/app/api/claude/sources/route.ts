@@ -167,8 +167,9 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
     const { PDFParse } = await import('pdf-parse')
     const uint8 = new Uint8Array(buffer)
     const parser = new PDFParse(uint8)
-    const rawText = await parser.getText()
-    const text = typeof rawText === 'string' ? rawText : String(rawText)
+    const result = await parser.getText()
+    // pdf-parse v2 returns { text, pages, total } — extract the text property
+    const text = typeof result === 'string' ? result : (result?.text ?? String(result))
     return text || ''
   } catch {
     // Fallback to basic extraction if pdf-parse fails

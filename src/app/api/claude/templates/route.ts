@@ -101,8 +101,9 @@ export async function POST(req: NextRequest) {
       const { PDFParse } = await import('pdf-parse')
       const uint8 = new Uint8Array(buffer)
       const parser = new PDFParse(uint8)
-      const rawText = await parser.getText()
-      textContent = typeof rawText === 'string' ? rawText : String(rawText)
+      const result = await parser.getText()
+      // pdf-parse v2 returns { text, pages, total } — extract the text property
+      textContent = typeof result === 'string' ? result : (result?.text ?? String(result))
     } catch {
       textContent = '[PDF tekst kon niet worden geëxtraheerd]'
     }
