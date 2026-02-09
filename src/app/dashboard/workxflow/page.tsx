@@ -916,7 +916,7 @@ export default function WorkxflowPage() {
                       <p className="text-sm text-gray-400">Zaak: {activeBundle.caseNumber}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {/* Share button - owner only */}
                     {activeBundle.isOwner !== false && (
                       <button
@@ -928,33 +928,38 @@ export default function WorkxflowPage() {
                         Delen
                       </button>
                     )}
-                    <button
-                      onClick={() => generatePdf(false)}
-                      disabled={isGeneratingPdf}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30 text-sm font-medium"
-                      title="Download complete PDF met processtuk, overzicht en alle producties"
-                    >
-                      {isGeneratingPdf ? (
-                        <span className="w-4 h-4 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Icons.download size={16} />
-                      )}
-                      Volledige PDF
-                    </button>
-                    <button
-                      onClick={() => generatePdf(true)}
-                      disabled={isGeneratingPdf}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 text-sm"
-                      title="Download PDF in delen (max 20 MB per bestand)"
-                    >
-                      <Icons.layers size={16} />
-                      In Delen
-                    </button>
+
+                    {/* PDF & Print group */}
+                    <div className="flex items-center rounded-lg border border-white/10 overflow-hidden">
+                      <button
+                        onClick={() => generatePdf(false)}
+                        disabled={isGeneratingPdf}
+                        className="flex items-center gap-2 px-3 py-2 bg-red-500/20 text-red-300 hover:bg-red-500/30 text-sm font-medium border-r border-white/10"
+                        title="Download complete PDF met processtuk, overzicht en alle producties"
+                      >
+                        {isGeneratingPdf ? (
+                          <span className="w-4 h-4 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Icons.download size={16} />
+                        )}
+                        PDF
+                      </button>
+                      <button
+                        onClick={() => generatePdf(true)}
+                        disabled={isGeneratingPdf}
+                        className="flex items-center gap-1.5 px-2.5 py-2 bg-white/5 text-gray-300 hover:bg-white/10 text-sm"
+                        title="Download PDF in delen (max 20 MB per bestand)"
+                      >
+                        <Icons.layers size={14} />
+                        In delen
+                      </button>
+                    </div>
+
                     {isElectron && (
                       <button
                         onClick={printBundle}
                         disabled={isPrinting}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90 text-sm"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90 text-sm"
                       >
                         {isPrinting ? (
                           <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
