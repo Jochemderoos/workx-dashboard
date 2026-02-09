@@ -113,6 +113,8 @@ model User {
   aiDocuments           AIDocument[]
   aiSources             AISource[]
   aiTemplates           AITemplate[]
+  aiFavorites           AIFavorite[]
+  aiAnnotations         AIAnnotation[]
 
   @@index([isActive])
   @@index([role])
@@ -1140,6 +1142,8 @@ model AIMessage {
   createdAt      DateTime @default(now())
 
   conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  favorites    AIFavorite[]
+  annotations  AIAnnotation[]
 
   @@index([conversationId, createdAt])
 }
@@ -1186,6 +1190,36 @@ model AISource {
 
   @@index([userId, isActive])
   @@index([category])
+}
+
+model AIFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  messageId String
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message AIMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@index([userId, createdAt])
+}
+
+model AIAnnotation {
+  id        String   @id @default(cuid())
+  userId    String
+  messageId String
+  content   String   @db.Text
+  type      String   @default("comment") // comment, correction, warning
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message AIMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([userId])
 }
 
 model AITemplate {

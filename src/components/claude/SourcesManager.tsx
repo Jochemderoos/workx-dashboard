@@ -832,14 +832,45 @@ export default function SourcesManager() {
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-white/30">
                       {source.description && <span className="truncate max-w-[200px]">{source.description}</span>}
-                      {source.processedAt && (
-                        <span>Verwerkt: {new Date(source.processedAt).toLocaleDateString('nl-NL')}</span>
+                    </div>
+                    {/* Quality indicator bar */}
+                    <div className="flex items-center gap-2 mt-1">
+                      {source.isProcessed ? (() => {
+                        const daysSinceProcess = source.processedAt
+                          ? Math.floor((Date.now() - new Date(source.processedAt).getTime()) / (1000 * 60 * 60 * 24))
+                          : 999
+                        const isFresh = daysSinceProcess < 14
+                        const isStale = daysSinceProcess > 60
+                        return (
+                          <>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                              isFresh ? 'bg-green-500/10 text-green-400' : isStale ? 'bg-red-500/10 text-red-400' : 'bg-yellow-500/10 text-yellow-400'
+                            }`}>
+                              <span className={`w-1 h-1 rounded-full ${
+                                isFresh ? 'bg-green-400' : isStale ? 'bg-red-400' : 'bg-yellow-400'
+                              }`} />
+                              {isFresh ? 'Actueel' : isStale ? 'Verouderd' : 'Redelijk actueel'}
+                            </span>
+                            {source.processedAt && (
+                              <span className="text-[10px] text-white/20">
+                                {daysSinceProcess === 0 ? 'vandaag' : daysSinceProcess === 1 ? 'gisteren' : `${daysSinceProcess}d geleden`} verwerkt
+                              </span>
+                            )}
+                            {source.pagesCrawled > 0 && (
+                              <span className="text-[10px] text-white/20">{source.pagesCrawled} pag.</span>
+                            )}
+                          </>
+                        )
+                      })() : (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-white/5 text-white/25">
+                          <span className="w-1 h-1 rounded-full bg-white/25" />
+                          Niet verwerkt
+                        </span>
                       )}
-                      {source.pagesCrawled > 0 && (
-                        <span>{source.pagesCrawled} pagina&apos;s</span>
-                      )}
-                      {!source.processedAt && source.lastSynced && (
-                        <span>Gesynchroniseerd: {new Date(source.lastSynced).toLocaleDateString('nl-NL')}</span>
+                      {source.lastSynced && (
+                        <span className="text-[10px] text-white/15">
+                          Sync: {new Date(source.lastSynced).toLocaleDateString('nl-NL')}
+                        </span>
                       )}
                     </div>
                   </div>

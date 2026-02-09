@@ -86,6 +86,19 @@ export async function POST(req: NextRequest) {
     try {
       textContent = await extractTextFromPdfDirect(buffer)
       console.log(`[documents] PDF extracted: ${textContent.length} chars from ${file.name}`)
+      // If extracted text is too short, it's likely a scanned document — try OCR
+      if (textContent.length < 100 || textContent.includes('[Geen tekst gevonden')) {
+        console.log(`[documents] PDF appears to be scanned, attempting OCR for ${file.name}`)
+        try {
+          const ocrText = await extractTextWithOCR(buffer)
+          if (ocrText.length > textContent.length) {
+            textContent = ocrText
+            console.log(`[documents] OCR extracted: ${ocrText.length} chars from ${file.name}`)
+          }
+        } catch (ocrErr) {
+          console.error(`[documents] OCR failed for ${file.name}:`, ocrErr instanceof Error ? ocrErr.message : ocrErr)
+        }
+      }
     } catch (pdfErr) {
       console.error(`[documents] pdfjs-dist failed for ${file.name}:`, pdfErr instanceof Error ? pdfErr.message : pdfErr)
       try {
@@ -93,7 +106,13 @@ export async function POST(req: NextRequest) {
         console.log(`[documents] PDF fallback extracted: ${textContent.length} chars from ${file.name}`)
       } catch (fallbackErr) {
         console.error(`[documents] PDF fallback also failed:`, fallbackErr)
-        textContent = '[PDF tekst kon niet worden geëxtraheerd]'
+        // Last resort: try OCR
+        try {
+          textContent = await extractTextWithOCR(buffer)
+          console.log(`[documents] OCR fallback extracted: ${textContent.length} chars from ${file.name}`)
+        } catch {
+          textContent = '[PDF tekst kon niet worden geëxtraheerd — het document is mogelijk een scan zonder OCR-laag]'
+        }
       }
     }
   } else if (extension === 'docx') {
@@ -181,6 +200,23 @@ function extractTextFromPdfBuffer(buffer: Buffer): string {
   }
 
   return textParts.join(' ').trim() || '[Geen tekst gevonden in PDF - upload als TXT voor betere resultaten]'
+}
+
+/** Extract text from scanned PDF using Tesseract.js OCR (optional dependency) */
+async function extractTextWithOCR(buffer: Buffer): Promise<string> {
+  try {
+    // Dynamic import — tesseract.js is an optional dependency
+    // Install with: npm install tesseract.js
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const tesseract = require('tesseract.js') as { createWorker: (lang: string) => Promise<{ recognize: (buf: Buffer) => Promise<{ data: { text: string } }>; terminate: () => Promise<void> }> }
+    const worker = await tesseract.createWorker('nld+eng') // Dutch + English
+    const { data: { text } } = await worker.recognize(buffer)
+    await worker.terminate()
+    return text.trim() || '[OCR kon geen tekst herkennen uit dit document]'
+  } catch (err) {
+    console.error('[documents] Tesseract OCR not available:', err instanceof Error ? err.message : err)
+    return '[Gescand document — installeer tesseract.js voor OCR-ondersteuning: npm install tesseract.js]'
+  }
 }
 
 /** Extract text from DOCX buffer */

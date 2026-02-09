@@ -48,7 +48,41 @@ Als documenten zijn bijgevoegd:
 Bij berekeningen (transitievergoeding, opzegtermijnen, verjaringstermijnen):
 - Toon altijd de rekenmethode stap voor stap
 - Vermeld het toepasselijke wetsartikel
-- Geef aan welke aannames je hebt gemaakt`
+- Geef aan welke aannames je hebt gemaakt
+
+## Proceskosten-calculator (2025 tarieven)
+Gebruik deze tarieven wanneer de gebruiker vraagt om een proceskostenberekening:
+
+**Griffierecht 2025:**
+- Onvermogenden: €90
+- Natuurlijke personen: €241 (vordering ≤€12.500), €649 (vordering >€12.500)
+- Rechtspersonen: €688 (vordering ≤€12.500), €2.889 (vordering >€12.500)
+- Hoger beroep: €361 (onvermogend), €862 (natuurlijk persoon), €6.077 (rechtspersoon)
+- Kort geding: zelfde als dagvaarding
+- Verzoekschrift arbeid (art. 7:685 BW): €90 (onvermogend), €241 (natuurlijk persoon), €688 (rechtspersoon)
+
+**Salaris gemachtigde (liquidatietarief kantonrechter 2025):**
+- Per punt: €200 (vordering ≤€12.500), €400 (vordering €12.500-€25.000), €500 (vordering €25.000-€100.000)
+- Dagvaarding/verzoekschrift = 1 punt, conclusie/akte = 1 punt, zitting = 1 punt, repliek/dupliek = 0.5 punt
+
+**Salaris advocaat (liquidatietarief rechtbank 2025):**
+- Tarief II (onbepaald/€12.500-€60.000): €621/punt
+- Tarief III (€60.000-€200.000): €1.086/punt
+- Tarief IV (€200.000-€400.000): €1.552/punt
+
+**Nakosten:** €178 (zonder betekening), €273 (met betekening)
+**Explootkosten dagvaarding:** ca. €115-€130 (verschilt per deurwaarder)
+
+Presenteer berekeningen altijd in een overzichtelijke tabel.
+
+## Betrouwbaarheidsindicator
+Sluit ELK antwoord af met een betrouwbaarheidsindicator op de LAATSTE regel in exact dit formaat:
+%%CONFIDENCE:hoog%% of %%CONFIDENCE:gemiddeld%% of %%CONFIDENCE:laag%%
+Regels:
+- **hoog**: je antwoord is gebaseerd op duidelijke wettekst, vaste rechtspraak of eenduidige feiten
+- **gemiddeld**: er is interpretatieruimte, tegenstrijdige rechtspraak, of je mist mogelijk relevante feiten
+- **laag**: de vraag valt buiten je expertise, er zijn onvoldoende gegevens, of de juridische situatie is zeer onzeker
+Voeg GEEN toelichting toe na de %%CONFIDENCE%% tag — die wordt automatisch verwerkt.`
 
 // GET: load messages for an existing conversation
 export async function GET(req: NextRequest) {
@@ -110,7 +144,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { conversationId, projectId, message, documentIds, anonymize } = await req.json()
+  const { conversationId, projectId, message, documentIds, anonymize, model: requestedModel } = await req.json()
 
   if (!message?.trim()) {
     return NextResponse.json({ error: 'Bericht mag niet leeg zijn' }, { status: 400 })
@@ -245,6 +279,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch knowledge sources — only processed summaries
     let sourcesContext = ''
+    const usedSourceNames: Array<{ name: string; category: string }> = []
     try {
       // Include all active sources (shared within the firm, not user-scoped)
       const activeSources = await prisma.aISource.findMany({
@@ -258,12 +293,48 @@ export async function POST(req: NextRequest) {
           if (len + trimmed.length > 6000) break
           len += trimmed.length
           sourcesContext += `\n\n--- ${source.name} ---\n${trimmed}`
+          usedSourceNames.push({ name: source.name, category: source.category })
         }
       }
     } catch { /* sources not available */ }
 
+    // Fetch project context from previous conversations (chat memory)
+    let projectMemory = ''
+    if (projectId) {
+      try {
+        // Get summaries from other conversations in this project (excluding current)
+        const otherConvs = await prisma.aIConversation.findMany({
+          where: {
+            projectId,
+            ...(convId ? { id: { not: convId } } : {}),
+          },
+          orderBy: { updatedAt: 'desc' },
+          take: 5,
+          select: {
+            title: true,
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: 2, // Last exchange from each conversation
+              select: { role: true, content: true },
+            },
+          },
+        })
+        for (const conv of otherConvs) {
+          if (conv.messages.length > 0) {
+            const lastMsg = conv.messages.find(m => m.role === 'assistant')
+            if (lastMsg) {
+              projectMemory += `\n\n### ${conv.title}\n${lastMsg.content.slice(0, 1000)}${lastMsg.content.length > 1000 ? '...' : ''}`
+            }
+          }
+        }
+      } catch { /* project memory not critical */ }
+    }
+
     // Build system prompt
     let systemPrompt = SYSTEM_PROMPT
+    if (projectMemory) {
+      systemPrompt += `\n\n## Dossiergeheugen — Eerdere gesprekken in dit project\nHieronder staan samenvattingen van eerdere gesprekken in dit dossier. Gebruik deze context om consistent te antwoorden en niet te herhalen wat al besproken is.${projectMemory}`
+    }
     if (anonymize) {
       systemPrompt += `\n\n## Privacy — Geanonimiseerde gegevens
 BELANGRIJK: In dit gesprek zijn persoonsgegevens geanonimiseerd ter bescherming van de privacy.
@@ -318,8 +389,36 @@ Vraag NIET naar de echte namen of gegevens.`
       max_uses: 2,
     }] : []
 
+    // Always add rechtspraak search tool — Claude decides when to use it
+    const wantsRechtspraak = /ecli|uitspraak|rechtspraak|jurisprudentie|vonnis|beschikking|arrest|kantonrechter|gerechtshof|hoge raad/.test(lowerMsg)
+    if (wantsRechtspraak) {
+      tools.push({
+        name: 'search_rechtspraak',
+        description: 'Doorzoek rechtspraak.nl voor Nederlandse rechterlijke uitspraken. Retourneert ECLI-nummers, samenvattingen en links naar uitspraken.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding"' },
+            max: { type: 'number', description: 'Maximum aantal resultaten (1-20)', default: 5 },
+          },
+          required: ['query'],
+        },
+      })
+      tools.push({
+        name: 'get_rechtspraak_ruling',
+        description: 'Haal de volledige tekst van een uitspraak op via het ECLI-nummer.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            ecli: { type: 'string', description: 'ECLI-nummer, bijv. "ECLI:NL:HR:2023:1234"' },
+          },
+          required: ['ecli'],
+        },
+      })
+    }
+
     const client = new Anthropic({ apiKey, timeout: 55000 })
-    console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, search=${wantsSearch}`)
+    console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, search=${wantsSearch}, rechtspraak=${wantsRechtspraak}`)
 
     // Stream the response
     const encoder = new TextEncoder()
@@ -330,9 +429,11 @@ Vraag NIET naar de echte namen of gegevens.`
         const citations: Array<{ url: string; title: string }> = []
 
         try {
+          // Model selection: default Sonnet, optionally Opus for deep analysis
+          const modelId = requestedModel === 'opus' ? 'claude-opus-4-6' : 'claude-sonnet-4-5-20250929'
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const streamParams: any = {
-            model: 'claude-sonnet-4-5-20250929',
+            model: modelId,
             max_tokens: 16000,
             system: systemPrompt,
             messages: msgs,
@@ -380,7 +481,58 @@ Vraag NIET naar de echte namen of gegevens.`
           })
 
           // Wait for the full response
-          const finalMessage = await anthropicStream.finalMessage()
+          let finalMessage = await anthropicStream.finalMessage()
+
+          // Handle tool use: execute rechtspraak tools and continue
+          if (finalMessage.stop_reason === 'tool_use') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const toolUseBlocks = finalMessage.content.filter((b: any) => b.type === 'tool_use')
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const toolResults: any[] = []
+
+            for (const toolBlock of toolUseBlocks) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const tb = toolBlock as any
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: `Rechtspraak.nl doorzoeken...` })}\n\n`))
+
+              try {
+                let resultText = ''
+                if (tb.name === 'search_rechtspraak') {
+                  const params = new URLSearchParams({ q: tb.input.query, max: String(tb.input.max || 5), return: 'DOC', sort: 'DESC' })
+                  const searchRes = await fetch(`https://data.rechtspraak.nl/uitspraken/zoeken?${params}`, { headers: { Accept: 'application/xml' } })
+                  resultText = await searchRes.text()
+                } else if (tb.name === 'get_rechtspraak_ruling') {
+                  const contentRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(tb.input.ecli)}`, { headers: { Accept: 'application/xml' } })
+                  const xml = await contentRes.text()
+                  // Trim to max 30K chars to stay within context
+                  resultText = xml.slice(0, 30000)
+                }
+                toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: resultText || 'Geen resultaten gevonden' })
+              } catch (toolErr) {
+                toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: `Error: ${toolErr instanceof Error ? toolErr.message : 'Tool failed'}`, is_error: true })
+              }
+            }
+
+            // Continue conversation with tool results
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Resultaten analyseren...' })}\n\n`))
+            const continueMsgs = [
+              ...msgs,
+              { role: 'assistant' as const, content: finalMessage.content },
+              { role: 'user' as const, content: toolResults },
+            ]
+            const continueStream = client.messages.stream({
+              model: modelId,
+              max_tokens: 16000,
+              system: systemPrompt,
+              messages: continueMsgs,
+              thinking: { type: 'enabled' as const, budget_tokens: 10000 },
+            })
+            continueStream.on('text', (text) => {
+              fullText += text
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
+            })
+            finalMessage = await continueStream.finalMessage()
+          }
 
           // Extract citations from the final message
           for (const block of finalMessage.content) {
@@ -412,11 +564,13 @@ Vraag NIET naar de echte namen of gegevens.`
             })
           }
 
-          // Send final event with citations
+          // Send final event with citations and source names
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: 'done',
             hasWebSearch,
             citations,
+            sources: usedSourceNames,
+            model: modelId,
           })}\n\n`))
 
         } catch (error) {

@@ -6,7 +6,6 @@ import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
 import ClaudeChat from '@/components/claude/ClaudeChat'
 import ProjectCard from '@/components/claude/ProjectCard'
-import DocumentUploader from '@/components/claude/DocumentUploader'
 import SourcesManager from '@/components/claude/SourcesManager'
 import TemplatesManager from '@/components/claude/TemplatesManager'
 
@@ -21,14 +20,6 @@ interface Project {
   _count: { conversations: number; documents: number }
   members?: Array<{ user: TeamUser; role: string }>
   user?: { id: string; name: string }
-}
-
-interface Document {
-  id: string
-  name: string
-  fileType: string
-  fileSize: number
-  createdAt: string
 }
 
 interface Conversation {
@@ -72,12 +63,11 @@ const ROLE_LABELS: Record<string, string> = {
 export default function AIAssistentPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
-  const [documents, setDocuments] = useState<Document[]>([])
   const [recentConversations, setRecentConversations] = useState<Conversation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [chatActive, setChatActive] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
-  const [activeTab, setActiveTab] = useState<'chat' | 'projects' | 'kennisbank' | 'bronnen' | 'templates'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'projects' | 'bronnen' | 'templates'>('chat')
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
@@ -100,12 +90,8 @@ export default function AIAssistentPage() {
   const [isSavingToProject, setIsSavingToProject] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/claude/projects').then(r => r.json()),
-      fetch('/api/claude/documents?projectId=null').then(r => r.json()),
-    ]).then(([projectsData, docsData]) => {
+    fetch('/api/claude/projects').then(r => r.json()).then((projectsData) => {
       setProjects(projectsData)
-      setDocuments(docsData)
     }).catch(() => {
       toast.error('Kon data niet laden')
     }).finally(() => {
@@ -166,22 +152,6 @@ export default function AIAssistentPage() {
 
   const handleConversationCreated = (id: string) => {
     window.history.replaceState(null, '', `/dashboard/ai?conv=${id}`)
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
-
-  const deleteDocument = async (id: string) => {
-    try {
-      await fetch(`/api/claude/documents/${id}`, { method: 'DELETE' })
-      setDocuments(documents.filter(d => d.id !== id))
-      toast.success('Document verwijderd')
-    } catch {
-      toast.error('Kon document niet verwijderen')
-    }
   }
 
   const toggleMember = (userId: string) => {
@@ -263,7 +233,6 @@ export default function AIAssistentPage() {
   const tabs = [
     { id: 'chat' as const, label: 'Chat', desc: 'Snel een vraag stellen', icon: Icons.chat },
     { id: 'projects' as const, label: 'Projecten', desc: 'Dossiers & zaken', icon: Icons.briefcase, count: projects.length },
-    { id: 'kennisbank' as const, label: 'Kennisbank', desc: 'Gedeelde documenten', icon: Icons.books, count: documents.length },
     { id: 'bronnen' as const, label: 'Bronnen', desc: 'Juridische bronnen', icon: Icons.database },
     { id: 'templates' as const, label: 'Templates', desc: 'Document sjablonen', icon: Icons.fileText },
   ]
@@ -314,7 +283,7 @@ export default function AIAssistentPage() {
       </div>
 
       {/* Tab Navigation - shrinks when chat is active */}
-      <div className={`grid grid-cols-5 gap-2 sticky top-0 z-30 bg-workx-dark transition-all duration-500 ease-in-out ${
+      <div className={`grid grid-cols-4 gap-2 sticky top-0 z-30 bg-workx-dark transition-all duration-500 ease-in-out ${
         isCompactMode ? 'py-1 -my-1' : 'py-2 -my-2'
       }`}>
         {tabs.map((tab) => (
@@ -603,55 +572,6 @@ export default function AIAssistentPage() {
                   memberCount={project.members?.length}
                 />
               ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'kennisbank' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-white/60">Kennisbank</p>
-              <p className="text-xs text-white/30">Gedeelde documenten beschikbaar in alle gesprekken</p>
-            </div>
-          </div>
-
-          <DocumentUploader
-            onUpload={(doc) => setDocuments([doc as Document, ...documents])}
-          />
-
-          {/* Document list */}
-          {documents.length > 0 ? (
-            <div className="space-y-2">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.05] transition-colors group"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-white/30">
-                    <Icons.file size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white/80 truncate">{doc.name}</p>
-                    <p className="text-[11px] text-white/30">
-                      {doc.fileType.toUpperCase()} · {formatFileSize(doc.fileSize)} · {new Date(doc.createdAt).toLocaleDateString('nl-NL')}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => deleteDocument(doc.id)}
-                    className="p-2 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Verwijderen"
-                  >
-                    <Icons.trash size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-xl bg-white/[0.02] border border-white/10 p-8 text-center">
-              <p className="text-sm text-white/30">Nog geen documenten in de kennisbank</p>
-              <p className="text-xs text-white/20 mt-1">Upload documenten die je in alle gesprekken wilt gebruiken</p>
             </div>
           )}
         </div>

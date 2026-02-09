@@ -11,6 +11,9 @@ interface Message {
   content: string
   hasWebSearch?: boolean
   citations?: Array<{ url: string; title: string }>
+  sources?: Array<{ name: string; category: string }>
+  confidence?: 'hoog' | 'gemiddeld' | 'laag'
+  model?: string
   createdAt?: string
 }
 
@@ -64,6 +67,13 @@ export default function ClaudeChat({
   const [isThinking, setIsThinking] = useState(false)
   const [thinkingExpanded, setThinkingExpanded] = useState(false)
   const [anonymize, setAnonymize] = useState(false)
+  const [selectedModel, setSelectedModel] = useState<'sonnet' | 'opus'>('sonnet')
+  const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set())
+  const [annotatingId, setAnnotatingId] = useState<string | null>(null)
+  const [annotationText, setAnnotationText] = useState('')
+  const [annotationType, setAnnotationType] = useState<'comment' | 'correction' | 'warning'>('comment')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [annotations, setAnnotations] = useState<Record<string, any[]>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -77,6 +87,8 @@ export default function ClaudeChat({
     { id: 'nl', label: 'Nederlands', instruction: 'Antwoord in het Nederlands.' },
     { id: 'en', label: 'Engels', instruction: 'Answer in English.' },
     { id: 'word', label: 'Word-format', instruction: 'Structureer het antwoord als een formeel document met kopjes, opsommingen en duidelijke paragrafen, geschikt om te kopiëren naar een Word-bestand.' },
+    { id: 'client', label: 'Cliënt-taal', instruction: 'Schrijf het antwoord in begrijpelijke taal voor een cliënt die geen juridische achtergrond heeft. Vermijd juridisch jargon of leg het uit. Gebruik een vriendelijke, professionele toon alsof je een e-mail aan de cliënt schrijft. Begin met "Beste [cliënt]," en eindig met een uitnodiging om contact op te nemen bij vragen.' },
+    { id: 'vergelijk', label: 'Vergelijk documenten', instruction: 'Vergelijk de bijgevoegde documenten met elkaar. Maak een gestructureerde vergelijking met: (1) Overeenkomsten, (2) Verschillen, (3) Ontbrekende bepalingen, (4) Juridische risico\'s per document. Gebruik een overzichtelijke tabel waar mogelijk. Markeer de belangrijkste afwijkingen met een ⚠️.' },
   ] as const
 
   const toggleOption = (id: string) => {
@@ -200,6 +212,110 @@ export default function ClaudeChat({
     }
   }, [quickActionPrompt])
 
+  const exportToDocument = async (content: string, format: 'pdf' | 'docx') => {
+    try {
+      if (format === 'pdf') {
+        // Dynamic import jsPDF
+        const { default: jsPDF } = await import('jspdf')
+        const doc = new jsPDF({ format: 'a4', unit: 'mm' })
+        doc.setFont('helvetica')
+        doc.setFontSize(10)
+        // Header
+        doc.setFontSize(8)
+        doc.setTextColor(150)
+        doc.text('Workx Advocaten — AI Assistent', 15, 12)
+        doc.text(new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), 195, 12, { align: 'right' })
+        doc.setDrawColor(230)
+        doc.line(15, 15, 195, 15)
+        // Content
+        doc.setFontSize(10)
+        doc.setTextColor(30)
+        const cleaned = content
+          .replace(/#{1,6}\s/g, '')
+          .replace(/\*\*(.*?)\*\*/g, '$1')
+          .replace(/\*(.*?)\*/g, '$1')
+          .replace(/`([^`]+)`/g, '$1')
+        const lines = doc.splitTextToSize(cleaned, 175)
+        doc.text(lines, 15, 22)
+        // Footer
+        const pageCount = doc.getNumberOfPages()
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i)
+          doc.setFontSize(7)
+          doc.setTextColor(180)
+          doc.text('Dit document is gegenereerd door AI en vormt geen juridisch advies.', 15, 287)
+          doc.text(`Pagina ${i} van ${pageCount}`, 195, 287, { align: 'right' })
+        }
+        doc.save(`workx-ai-${new Date().toISOString().slice(0, 10)}.pdf`)
+        toast.success('PDF gedownload')
+      } else {
+        // Simple DOCX export via HTML blob
+        const htmlContent = `
+          <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+          <head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.6;color:#1a1a1a}h1,h2,h3{color:#333}p{margin:0 0 8pt}</style></head>
+          <body>
+          <p style="font-size:8pt;color:#999">Workx Advocaten — AI Assistent — ${new Date().toLocaleDateString('nl-NL')}</p>
+          <hr style="border:1px solid #eee">
+          ${renderMarkdown(content)}
+          <hr style="border:1px solid #eee">
+          <p style="font-size:7pt;color:#aaa;margin-top:12pt"><em>Dit document is gegenereerd door AI en vormt geen juridisch advies.</em></p>
+          </body></html>`
+        const blob = new Blob([htmlContent], { type: 'application/msword' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `workx-ai-${new Date().toISOString().slice(0, 10)}.doc`
+        a.click()
+        URL.revokeObjectURL(url)
+        toast.success('Word-document gedownload')
+      }
+    } catch (err) {
+      console.error('Export error:', err)
+      toast.error('Export mislukt')
+    }
+  }
+
+  const toggleFavorite = async (messageId: string) => {
+    try {
+      const res = await fetch('/api/claude/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId }),
+      })
+      const data = await res.json()
+      setFavoritedIds(prev => {
+        const next = new Set(prev)
+        if (data.favorited) next.add(messageId)
+        else next.delete(messageId)
+        return next
+      })
+      toast.success(data.favorited ? 'Opgeslagen als favoriet' : 'Favoriet verwijderd')
+    } catch {
+      toast.error('Kon favoriet niet opslaan')
+    }
+  }
+
+  const submitAnnotation = async (messageId: string) => {
+    if (!annotationText.trim()) return
+    try {
+      const res = await fetch('/api/claude/annotations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, content: annotationText, type: annotationType }),
+      })
+      const annotation = await res.json()
+      setAnnotations(prev => ({
+        ...prev,
+        [messageId]: [...(prev[messageId] || []), annotation],
+      }))
+      setAnnotatingId(null)
+      setAnnotationText('')
+      toast.success('Annotatie geplaatst')
+    } catch {
+      toast.error('Kon annotatie niet plaatsen')
+    }
+  }
+
   const copyToClipboard = async (content: string, id: string) => {
     try {
       await navigator.clipboard.writeText(content)
@@ -255,6 +371,7 @@ export default function ClaudeChat({
           message: fullMessage,
           documentIds: [...documentIds, ...attachedDocs.map(d => d.id)],
           anonymize,
+          model: selectedModel,
         }),
         signal: controller.signal,
       })
@@ -347,9 +464,19 @@ export default function ClaudeChat({
             } else if (event.type === 'done') {
               hasWebSearch = event.hasWebSearch || false
               citations = event.citations || []
-              // Final update with citations
+              const sources = event.sources || []
+              const eventModel = event.model || ''
+              // Parse confidence from response content
+              let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
+              const confMatch = streamedText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+              if (confMatch) {
+                confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
+                // Strip the confidence tag from displayed text
+                streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+              }
+              // Final update with citations, sources, confidence, model
               setMessages(prev => prev.map(m =>
-                m.id === assistantMsgId ? { ...m, hasWebSearch, citations } : m
+                m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel } : m
               ))
             } else if (event.type === 'error') {
               throw new Error(event.error || 'Onbekende fout')
@@ -536,7 +663,52 @@ export default function ClaudeChat({
                       </div>
                     )}
 
-                    {/* Copy button */}
+                    {/* Confidence + Sources + Model metadata */}
+                    {(msg.confidence || msg.sources?.length || msg.model) && (
+                      <div className="flex flex-wrap items-center gap-2 mt-2 ml-1">
+                        {/* Confidence badge */}
+                        {msg.confidence && (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border ${
+                            msg.confidence === 'hoog'
+                              ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                              : msg.confidence === 'gemiddeld'
+                              ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                              : 'bg-red-500/10 border-red-500/20 text-red-400'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              msg.confidence === 'hoog' ? 'bg-green-400' : msg.confidence === 'gemiddeld' ? 'bg-yellow-400' : 'bg-red-400'
+                            }`} />
+                            {msg.confidence === 'hoog' ? 'Hoge betrouwbaarheid' : msg.confidence === 'gemiddeld' ? 'Gemiddelde betrouwbaarheid' : 'Lage betrouwbaarheid — verifieer'}
+                          </span>
+                        )}
+                        {/* Model badge */}
+                        {msg.model && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] border bg-white/5 border-white/10 text-white/30">
+                            {msg.model.includes('opus') ? 'Opus' : 'Sonnet'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {/* Knowledge sources used */}
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="mt-1.5 ml-1">
+                        <p className="text-[10px] uppercase tracking-wider text-white/20 mb-1 font-medium">Kennisbronnen gebruikt</p>
+                        <div className="flex flex-wrap gap-1">
+                          {msg.sources.map((source, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[10px] text-white/35"
+                            >
+                              <Icons.database size={8} />
+                              {source.name}
+                              <span className="text-white/15">({source.category})</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action buttons: Copy, Export, Favorite, Annotate */}
                     {msg.content && (
                       <div className="flex items-center gap-1 mt-1.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
@@ -549,6 +721,95 @@ export default function ClaudeChat({
                             <><Icons.copy size={10} /> Kopieer</>
                           )}
                         </button>
+                        <button
+                          onClick={() => exportToDocument(msg.content, 'pdf')}
+                          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/30 hover:text-white/60 transition-colors"
+                        >
+                          <Icons.download size={10} /> PDF
+                        </button>
+                        <button
+                          onClick={() => exportToDocument(msg.content, 'docx')}
+                          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/30 hover:text-white/60 transition-colors"
+                        >
+                          <Icons.download size={10} /> Word
+                        </button>
+                        <span className="text-white/10 mx-0.5">|</span>
+                        <button
+                          onClick={() => toggleFavorite(msg.id)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
+                            favoritedIds.has(msg.id) ? 'text-yellow-400' : 'text-white/30 hover:text-yellow-400'
+                          }`}
+                        >
+                          <Icons.star size={10} /> {favoritedIds.has(msg.id) ? 'Favoriet' : 'Bewaar'}
+                        </button>
+                        <button
+                          onClick={() => setAnnotatingId(annotatingId === msg.id ? null : msg.id)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
+                            annotatingId === msg.id ? 'text-blue-400' : 'text-white/30 hover:text-blue-400'
+                          }`}
+                        >
+                          <Icons.chat size={10} /> Annoteer
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Annotations display */}
+                    {annotations[msg.id]?.length > 0 && (
+                      <div className="mt-2 ml-1 space-y-1">
+                        {annotations[msg.id].map((ann) => (
+                          <div
+                            key={ann.id}
+                            className={`flex items-start gap-2 px-2.5 py-1.5 rounded-lg text-[11px] ${
+                              ann.type === 'correction' ? 'bg-red-500/5 border border-red-500/10' :
+                              ann.type === 'warning' ? 'bg-yellow-500/5 border border-yellow-500/10' :
+                              'bg-blue-500/5 border border-blue-500/10'
+                            }`}
+                          >
+                            <span className="font-medium text-white/50 shrink-0">{ann.user?.name || 'Collega'}:</span>
+                            <span className="text-white/40">{ann.content}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Annotation form */}
+                    {annotatingId === msg.id && (
+                      <div className="mt-2 ml-1 p-2.5 rounded-lg bg-white/[0.03] border border-white/10 space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          {(['comment', 'correction', 'warning'] as const).map((t) => (
+                            <button
+                              key={t}
+                              onClick={() => setAnnotationType(t)}
+                              className={`px-2 py-0.5 rounded text-[10px] border transition-all ${
+                                annotationType === t
+                                  ? t === 'correction' ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                                    : t === 'warning' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                                    : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                                  : 'bg-white/5 border-white/10 text-white/30'
+                              }`}
+                            >
+                              {t === 'comment' ? 'Opmerking' : t === 'correction' ? 'Correctie' : 'Waarschuwing'}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex items-end gap-2">
+                          <input
+                            type="text"
+                            value={annotationText}
+                            onChange={(e) => setAnnotationText(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && submitAnnotation(msg.id)}
+                            placeholder="Schrijf een annotatie..."
+                            className="flex-1 px-2.5 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/20 focus:outline-none focus:border-blue-400/40"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => submitAnnotation(msg.id)}
+                            disabled={!annotationText.trim()}
+                            className="px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 text-[11px] font-medium hover:bg-blue-500/30 transition-colors disabled:opacity-30"
+                          >
+                            Plaatsen
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -689,8 +950,35 @@ export default function ClaudeChat({
           </div>
         )}
 
-        {/* Response option chips */}
-        <div className="flex flex-wrap gap-1.5">
+        {/* Model selector + Response option chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* Model toggle */}
+          <div className="flex items-center rounded-lg border border-white/10 overflow-hidden mr-1">
+            <button
+              onClick={() => setSelectedModel('sonnet')}
+              disabled={isLoading}
+              className={`px-2.5 py-1 text-[11px] transition-all ${
+                selectedModel === 'sonnet'
+                  ? 'bg-workx-lime/15 text-workx-lime font-medium'
+                  : 'bg-transparent text-white/35 hover:text-white/60'
+              } disabled:opacity-30`}
+            >
+              Sonnet
+            </button>
+            <button
+              onClick={() => setSelectedModel('opus')}
+              disabled={isLoading}
+              className={`px-2.5 py-1 text-[11px] transition-all border-l border-white/10 ${
+                selectedModel === 'opus'
+                  ? 'bg-purple-500/15 text-purple-400 font-medium'
+                  : 'bg-transparent text-white/35 hover:text-white/60'
+              } disabled:opacity-30`}
+              title="Opus — diepgaandere analyse, langzamer"
+            >
+              Opus
+            </button>
+          </div>
+          <span className="text-white/10 text-[10px]">|</span>
           {RESPONSE_OPTIONS.map((opt) => (
             <button
               key={opt.id}
