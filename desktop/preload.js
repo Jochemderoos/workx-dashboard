@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Get available printers
   getPrinters: () => ipcRenderer.invoke('get-printers'),
 
+  // Get available paper bins/trays for a specific printer
+  getPrinterBins: (printerName) => ipcRenderer.invoke('get-printer-bins', printerName),
+
   // Print a single document
   printDocument: (options) => ipcRenderer.invoke('print-document', options),
 

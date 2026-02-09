@@ -95,6 +95,8 @@ export default function WorkxflowPage() {
     bijlagenTray: 1 as number,        // Blanco
   })
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([])
+  const [availableBins, setAvailableBins] = useState<string[]>([])
+  const [isDetectingBins, setIsDetectingBins] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
   const [includeLogoOnProcesstuk, setIncludeLogoOnProcesstuk] = useState(true)
 
@@ -738,6 +740,38 @@ export default function WorkxflowPage() {
       }
     } catch (error) {
       toast.error('Kon instellingen niet opslaan')
+    }
+  }
+
+  const detectPrinterBins = async () => {
+    if (!isElectron) return
+    const printerName = printerSettings.selectedPrinter
+    if (!printerName) {
+      toast.error('Selecteer eerst een printer')
+      return
+    }
+
+    setIsDetectingBins(true)
+    try {
+      // @ts-ignore
+      const result = await window.electronAPI.getPrinterBins(printerName)
+      if (result.success && result.bins?.length > 0) {
+        setAvailableBins(result.bins)
+        // Auto-fill tray names with detected bins
+        const newSettings = { ...printerSettings }
+        if (result.bins[0]) newSettings.tray1Name = result.bins[0]
+        if (result.bins[1]) newSettings.tray2Name = result.bins[1]
+        if (result.bins[2]) newSettings.tray3Name = result.bins[2]
+        if (result.bins[3]) newSettings.tray4Name = result.bins[3]
+        setPrinterSettings(newSettings)
+        toast.success(`${result.bins.length} lades gevonden`)
+      } else {
+        toast.error('Kon geen lades detecteren voor deze printer')
+      }
+    } catch (error) {
+      toast.error('Kon lades niet detecteren')
+    } finally {
+      setIsDetectingBins(false)
     }
   }
 
@@ -1574,8 +1608,26 @@ export default function WorkxflowPage() {
 
               {/* Printer trays */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Printer lades</label>
-                <p className="text-xs text-gray-500 mb-3">Vul de naam in zoals je printer ze kent (zie printerinstellingen)</p>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-white">Printer lades</label>
+                  <button
+                    onClick={detectPrinterBins}
+                    disabled={isDetectingBins || !printerSettings.selectedPrinter}
+                    className="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-medium hover:bg-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    {isDetectingBins ? (
+                      <span className="w-3 h-3 border border-blue-300 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Icons.search size={12} />
+                    )}
+                    Detecteer lades
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  {availableBins.length > 0
+                    ? `${availableBins.length} lades gedetecteerd — selecteer de juiste lade per positie`
+                    : 'Klik "Detecteer lades" om de beschikbare lades van je printer op te halen'}
+                </p>
                 <div className="space-y-2">
                   {[
                     { key: 'tray1Name' as const, label: 'Lade 1', desc: 'Blanco', color: 'text-gray-400' },
@@ -1588,13 +1640,25 @@ export default function WorkxflowPage() {
                         <span className={`text-xs font-medium ${tray.color}`}>{tray.label}</span>
                         <span className="text-[10px] text-gray-500 ml-1.5">{tray.desc}</span>
                       </div>
-                      <input
-                        type="text"
-                        value={printerSettings[tray.key]}
-                        onChange={(e) => setPrinterSettings(prev => ({ ...prev, [tray.key]: e.target.value }))}
-                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
-                        placeholder={tray.label}
-                      />
+                      {availableBins.length > 0 ? (
+                        <select
+                          value={printerSettings[tray.key]}
+                          onChange={(e) => setPrinterSettings(prev => ({ ...prev, [tray.key]: e.target.value }))}
+                          className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
+                        >
+                          {availableBins.map((bin) => (
+                            <option key={bin} value={bin}>{bin}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={printerSettings[tray.key]}
+                          onChange={(e) => setPrinterSettings(prev => ({ ...prev, [tray.key]: e.target.value }))}
+                          className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
+                          placeholder={tray.label}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1675,8 +1739,9 @@ export default function WorkxflowPage() {
               {/* Info box */}
               <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                 <p className="text-xs text-blue-300">
-                  <strong>Tip:</strong> De lade-namen verschillen per printer. Check de printerinstellingen
-                  of print een testpagina om de juiste namen te vinden.
+                  <strong>Belangrijk:</strong> De lade-namen moeten exact overeenkomen met hoe je printer ze
+                  kent. Selecteer eerst je printer en klik dan op &quot;Detecteer lades&quot; om de juiste namen
+                  automatisch op te halen.
                 </p>
               </div>
             </div>

@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const { execFile } = require('child_process')
+const util = require('util')
+const execFileAsync = util.promisify(execFile)
 
 // For Windows printing
 let print = null
@@ -19,15 +22,15 @@ const settingsPath = path.join(app.getPath('userData'), 'printer-settings.json')
 // Default settings
 const defaultSettings = {
   selectedPrinter: '',
-  tray1Name: 'Lade 1', // Blanco
-  tray2Name: 'Lade 2', // Geel papier met logo
-  tray3Name: 'Lade 3', // Wit papier met logo
-  tray4Name: 'Lade 4', // Briefpapier met logo
-  colorMode: 'color', // 'color' or 'monochrome'
-  duplex: false, // double-sided printing
-  processtukTray: 4, // Briefpapier met logo
+  tray1Name: 'Tray 1',  // Blanco — will be auto-detected
+  tray2Name: 'Tray 2',  // Geel papier met logo
+  tray3Name: 'Tray 3',  // Wit papier met logo
+  tray4Name: 'Tray 4',  // Briefpapier met logo
+  colorMode: 'color',    // 'color' or 'monochrome'
+  duplex: false,         // double-sided printing
+  processtukTray: 4,     // Briefpapier met logo
   productiebladenTray: 2, // Geel papier met logo
-  bijlagenTray: 1, // Blanco
+  bijlagenTray: 1,       // Blanco
 }
 
 // Load settings
@@ -128,6 +131,29 @@ ipcMain.handle('get-printers', async () => {
   }
 })
 
+// Get available paper bins/trays for a printer via PowerShell + System.Drawing
+ipcMain.handle('get-printer-bins', async (event, printerName) => {
+  try {
+    const psScript = `
+      Add-Type -AssemblyName System.Drawing
+      $ps = New-Object System.Drawing.Printing.PrinterSettings
+      $ps.PrinterName = '${printerName.replace(/'/g, "''")}'
+      if ($ps.IsValid) {
+        $ps.PaperSources | ForEach-Object { $_.SourceName }
+      } else {
+        Write-Error "Printer not found"
+      }
+    `
+    const { stdout } = await execFileAsync('Powershell.exe', ['-Command', psScript])
+    const bins = stdout.trim().split(/\r?\n/).filter(b => b.trim())
+    console.log(`[print] Available bins for "${printerName}":`, bins)
+    return { success: true, bins }
+  } catch (error) {
+    console.error('[print] Failed to get printer bins:', error.message)
+    return { success: false, error: error.message, bins: [] }
+  }
+})
+
 // Print a document
 ipcMain.handle('print-document', async (event, options) => {
   const { documentUrl, printerName, tray, copies = 1 } = options
@@ -146,28 +172,29 @@ ipcMain.handle('print-document', async (event, options) => {
     }
 
     if (print && print.print) {
-      // Use pdf-to-printer for Windows
+      // Use pdf-to-printer for Windows (SumatraPDF)
       const printOptions = {
         printer: printerName || settings.selectedPrinter || undefined,
         copies: copies,
       }
 
-      // Add tray selection based on settings
+      // Add tray/bin selection (pdf-to-printer uses "bin", NOT "paperSource")
       if (tray) {
         const trayNames = { 1: settings.tray1Name, 2: settings.tray2Name, 3: settings.tray3Name, 4: settings.tray4Name }
-        printOptions.paperSource = trayNames[tray] || settings.tray1Name
+        printOptions.bin = trayNames[tray] || settings.tray1Name
       }
 
-      // Add color mode (monochrome = black/white)
+      // Add color mode (pdf-to-printer passes "monochrome" to SumatraPDF)
       if (settings.colorMode === 'monochrome') {
         printOptions.monochrome = true
       }
 
-      // Add duplex (double-sided) printing
+      // Add duplex (pdf-to-printer uses "side", NOT "duplex")
       if (settings.duplex) {
-        printOptions.duplex = 'longEdge' // or 'shortEdge' for flip on short edge
+        printOptions.side = 'duplexlong'
       }
 
+      console.log(`[print] Options:`, JSON.stringify(printOptions, null, 2))
       await print.print(pdfPath, printOptions)
       return { success: true }
     } else {
@@ -199,14 +226,28 @@ ipcMain.handle('print-document', async (event, options) => {
 
 // Print bundle with multiple jobs to different trays
 ipcMain.handle('print-bundle', async (event, printData) => {
-  const { printJobs, trayConfig } = printData
+  const { printJobs } = printData
   const settings = loadSettings()
+
+  console.log(`[print-bundle] Starting bundle print with ${printJobs.length} jobs`)
+  console.log(`[print-bundle] Settings:`, JSON.stringify({
+    printer: settings.selectedPrinter,
+    colorMode: settings.colorMode,
+    duplex: settings.duplex,
+    tray1: settings.tray1Name,
+    tray2: settings.tray2Name,
+    tray3: settings.tray3Name,
+    tray4: settings.tray4Name,
+  }, null, 2))
 
   try {
     const results = []
 
     for (const job of printJobs) {
-      if (!job.documentUrl) continue
+      if (!job.documentUrl) {
+        console.log(`[print-bundle] Skipping ${job.name}: no documentUrl`)
+        continue
+      }
 
       // Show progress
       mainWindow.webContents.send('print-progress', {
@@ -221,15 +262,19 @@ ipcMain.handle('print-bundle', async (event, printData) => {
       const trayName = trayNames[tray] || settings.tray1Name
       const trayDescription = trayDescriptions[tray] || `Lade ${tray}`
 
+      console.log(`[print-bundle] Job "${job.name}": tray=${tray}, bin="${trayName}", description="${trayDescription}"`)
+
       // Save PDF to temp file
       let pdfPath
       if (job.documentUrl.startsWith('data:')) {
         const base64Data = job.documentUrl.split(',')[1]
         pdfPath = path.join(app.getPath('temp'), `workx-print-${job.name.replace(/\s+/g, '-')}-${Date.now()}.pdf`)
         fs.writeFileSync(pdfPath, Buffer.from(base64Data, 'base64'))
+        console.log(`[print-bundle] Saved temp PDF: ${pdfPath} (${(base64Data.length * 0.75 / 1024).toFixed(0)} KB)`)
       }
 
       if (!pdfPath) {
+        console.log(`[print-bundle] Skipping ${job.name}: documentUrl is not a data URL`)
         results.push({ job: job.name, success: false, error: 'No PDF data' })
         continue
       }
@@ -239,17 +284,19 @@ ipcMain.handle('print-bundle', async (event, printData) => {
         type: 'info',
         title: `Printen: ${job.name}`,
         message: `Klaar om te printen naar ${trayDescription}`,
-        detail: `${job.description}\n\nPrinter: ${settings.selectedPrinter || 'Standaard'}\nLade: ${trayName}\n\nControleer dat de juiste printer en lade zijn geselecteerd.`,
+        detail: `${job.description}\n\nPrinter: ${settings.selectedPrinter || 'Standaard'}\nLade: ${trayName} (lade ${tray})\nKleur: ${settings.colorMode === 'monochrome' ? 'Zwart-wit' : 'Kleur'}\n\nControleer dat de juiste printer en lade zijn geselecteerd.`,
         buttons: ['Printen', 'Overslaan', 'Annuleren alle'],
       })
 
       if (dialogResult.response === 2) {
-        // Cancel all
+        // Cancel all - clean up temp file
+        try { fs.unlinkSync(pdfPath) } catch (e) {}
         return { success: false, error: 'Geannuleerd door gebruiker' }
       }
 
       if (dialogResult.response === 1) {
-        // Skip this job
+        // Skip this job - clean up temp file
+        try { fs.unlinkSync(pdfPath) } catch (e) {}
         results.push({ job: job.name, success: true, skipped: true })
         continue
       }
@@ -257,34 +304,41 @@ ipcMain.handle('print-bundle', async (event, printData) => {
       // Print the document
       if (print && print.print) {
         try {
+          // pdf-to-printer v5 options:
+          // - bin: tray name (NOT paperSource)
+          // - monochrome: true/false (NOT colorMode)
+          // - side: 'duplexlong'|'duplexshort'|'simplex' (NOT duplex)
+          // - copies: number
           const printOptions = {
             printer: settings.selectedPrinter || undefined,
-            paperSource: trayName,
+            bin: trayName,
+            copies: job.copies || 1,
           }
 
-          // Add color mode (monochrome = black/white)
+          // Add monochrome (black/white)
           if (settings.colorMode === 'monochrome') {
             printOptions.monochrome = true
           }
 
           // Add duplex (double-sided) printing
           if (settings.duplex) {
-            printOptions.duplex = 'longEdge'
+            printOptions.side = 'duplexlong'
           }
 
-          console.log(`[print] Printing ${job.name} to ${settings.selectedPrinter || 'default'}, tray: ${trayName}`)
+          console.log(`[print-bundle] Printing "${job.name}" with options:`, JSON.stringify(printOptions))
           await print.print(pdfPath, printOptions)
+          console.log(`[print-bundle] ✓ "${job.name}" printed successfully`)
           results.push({ job: job.name, success: true })
         } catch (err) {
-          console.error(`[print] pdf-to-printer failed for ${job.name}:`, err.message)
-          results.push({ job: job.name, success: false, error: err.message })
+          console.error(`[print-bundle] ✗ pdf-to-printer failed for "${job.name}":`, err.message || err)
+          results.push({ job: job.name, success: false, error: err.message || String(err) })
         }
       } else {
         // Fallback: use Electron's built-in webContents.print with the PDF loaded in a hidden window
         try {
-          console.log(`[print] Fallback: printing ${job.name} via Electron print dialog`)
+          console.log(`[print-bundle] Fallback: printing "${job.name}" via Electron print dialog`)
           const printWin = new BrowserWindow({ show: false, width: 800, height: 600 })
-          await printWin.loadFile(pdfPath)
+          await printWin.loadURL(`file://${pdfPath}`)
           await new Promise((resolve, reject) => {
             printWin.webContents.print(
               {
@@ -307,7 +361,7 @@ ipcMain.handle('print-bundle', async (event, printData) => {
           })
           results.push({ job: job.name, success: true })
         } catch (err) {
-          console.error(`[print] Electron fallback failed for ${job.name}:`, err.message)
+          console.error(`[print-bundle] Electron fallback failed for "${job.name}":`, err.message)
           results.push({ job: job.name, success: false, error: err.message })
         }
       }
@@ -318,11 +372,13 @@ ipcMain.handle('print-bundle', async (event, printData) => {
       } catch (e) {}
     }
 
+    console.log(`[print-bundle] Done. Results:`, JSON.stringify(results))
     return {
       success: results.every((r) => r.success || r.skipped),
       results,
     }
   } catch (error) {
+    console.error('[print-bundle] Fatal error:', error.message)
     return { success: false, error: error.message }
   }
 })
