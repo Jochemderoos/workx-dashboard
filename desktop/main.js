@@ -23,6 +23,9 @@ const defaultSettings = {
   tray2Name: 'Manual', // Geel papier (productievellen)
   colorMode: 'color', // 'color' or 'monochrome'
   duplex: false, // double-sided printing
+  processtukTray: 1, // Lade voor processtuk
+  productiebladenTray: 2, // Lade voor productiebladen (geel)
+  bijlagenTray: 1, // Lade voor bijlagen
 }
 
 // Load settings
@@ -264,9 +267,42 @@ ipcMain.handle('print-bundle', async (event, printData) => {
             printOptions.duplex = 'longEdge'
           }
 
+          console.log(`[print] Printing ${job.name} to ${settings.selectedPrinter || 'default'}, tray: ${trayName}`)
           await print.print(pdfPath, printOptions)
           results.push({ job: job.name, success: true })
         } catch (err) {
+          console.error(`[print] pdf-to-printer failed for ${job.name}:`, err.message)
+          results.push({ job: job.name, success: false, error: err.message })
+        }
+      } else {
+        // Fallback: use Electron's built-in webContents.print with the PDF loaded in a hidden window
+        try {
+          console.log(`[print] Fallback: printing ${job.name} via Electron print dialog`)
+          const printWin = new BrowserWindow({ show: false, width: 800, height: 600 })
+          await printWin.loadFile(pdfPath)
+          await new Promise((resolve, reject) => {
+            printWin.webContents.print(
+              {
+                silent: false,
+                printBackground: true,
+                deviceName: settings.selectedPrinter || undefined,
+                copies: job.copies || 1,
+                color: settings.colorMode !== 'monochrome',
+                duplexMode: settings.duplex ? 'longEdge' : 'simplex',
+              },
+              (success, errorType) => {
+                printWin.close()
+                if (success) {
+                  resolve()
+                } else {
+                  reject(new Error(errorType || 'Print mislukt'))
+                }
+              }
+            )
+          })
+          results.push({ job: job.name, success: true })
+        } catch (err) {
+          console.error(`[print] Electron fallback failed for ${job.name}:`, err.message)
           results.push({ job: job.name, success: false, error: err.message })
         }
       }

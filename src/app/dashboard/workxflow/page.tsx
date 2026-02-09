@@ -88,6 +88,9 @@ export default function WorkxflowPage() {
     tray2Name: 'Manual',
     colorMode: 'color' as 'color' | 'monochrome',
     duplex: false,
+    processtukTray: 1 as number,      // Lade voor processtuk
+    productiebladenTray: 2 as number, // Lade voor productiebladen (geel)
+    bijlagenTray: 1 as number,        // Lade voor bijlagen
   })
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([])
   const [isConverting, setIsConverting] = useState(false)
@@ -669,6 +672,13 @@ export default function WorkxflowPage() {
 
       if (res.ok) {
         const printData = await res.json()
+
+        // Override tray assignments based on user settings
+        for (const job of printData.printJobs) {
+          if (job.name === 'Processtuk') job.tray = printerSettings.processtukTray
+          else if (job.name === 'Productiebladen') job.tray = printerSettings.productiebladenTray
+          else job.tray = printerSettings.bijlagenTray
+        }
 
         // Send to Electron for printing
         // @ts-ignore
@@ -1357,7 +1367,7 @@ export default function WorkxflowPage() {
                           </div>
                           {/* Yellow indicator */}
                           <div className="absolute bottom-0 left-0 right-0 bg-yellow-600/40 p-1.5">
-                            <p className="text-[8px] text-yellow-900 text-center font-medium">Lade 2 • Geel papier</p>
+                            <p className="text-[8px] text-yellow-900 text-center font-medium">Lade {printerSettings.productiebladenTray} • Geel papier</p>
                           </div>
                         </div>
 
@@ -1409,7 +1419,7 @@ export default function WorkxflowPage() {
                             )}
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-700 to-gray-700/80 p-1.5">
                               <p className="text-[8px] text-white truncate font-medium">{production.documentName || production.title}</p>
-                              <p className="text-[7px] text-gray-300">Lade 1 • Blanco papier</p>
+                              <p className="text-[7px] text-gray-300">Lade {printerSettings.bijlagenTray} • Blanco papier</p>
                             </div>
                           </div>
                         ) : (
@@ -1589,6 +1599,47 @@ export default function WorkxflowPage() {
                 <p className="text-xs text-gray-500 mt-1">
                   Dit is de lade waar het gele papier met logo in zit
                 </p>
+              </div>
+
+              {/* Tray assignment per job type */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Lade-toewijzing per onderdeel</label>
+                <p className="text-xs text-gray-500 mb-3">Kies welke lade voor elk onderdeel wordt gebruikt</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400 w-32">Processtuk</span>
+                    <select
+                      value={printerSettings.processtukTray}
+                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, processtukTray: Number(e.target.value) }))}
+                      className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
+                    >
+                      <option value={1}>Lade 1 — {printerSettings.tray1Name}</option>
+                      <option value={2}>Lade 2 — {printerSettings.tray2Name}</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-yellow-400 w-32">Productiebladen</span>
+                    <select
+                      value={printerSettings.productiebladenTray}
+                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, productiebladenTray: Number(e.target.value) }))}
+                      className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
+                    >
+                      <option value={1}>Lade 1 — {printerSettings.tray1Name}</option>
+                      <option value={2}>Lade 2 — {printerSettings.tray2Name}</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400 w-32">Bijlagen</span>
+                    <select
+                      value={printerSettings.bijlagenTray}
+                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, bijlagenTray: Number(e.target.value) }))}
+                      className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
+                    >
+                      <option value={1}>Lade 1 — {printerSettings.tray1Name}</option>
+                      <option value={2}>Lade 2 — {printerSettings.tray2Name}</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {/* Color mode */}
