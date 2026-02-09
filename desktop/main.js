@@ -19,13 +19,15 @@ const settingsPath = path.join(app.getPath('userData'), 'printer-settings.json')
 // Default settings
 const defaultSettings = {
   selectedPrinter: '',
-  tray1Name: 'Auto', // Briefpapier (processtuk + bijlagen)
-  tray2Name: 'Manual', // Geel papier (productievellen)
+  tray1Name: 'Lade 1', // Blanco
+  tray2Name: 'Lade 2', // Geel papier met logo
+  tray3Name: 'Lade 3', // Wit papier met logo
+  tray4Name: 'Lade 4', // Briefpapier met logo
   colorMode: 'color', // 'color' or 'monochrome'
   duplex: false, // double-sided printing
-  processtukTray: 1, // Lade voor processtuk
-  productiebladenTray: 2, // Lade voor productiebladen (geel)
-  bijlagenTray: 1, // Lade voor bijlagen
+  processtukTray: 4, // Briefpapier met logo
+  productiebladenTray: 2, // Geel papier met logo
+  bijlagenTray: 1, // Blanco
 }
 
 // Load settings
@@ -152,7 +154,8 @@ ipcMain.handle('print-document', async (event, options) => {
 
       // Add tray selection based on settings
       if (tray) {
-        printOptions.paperSource = tray === 1 ? settings.tray1Name : settings.tray2Name
+        const trayNames = { 1: settings.tray1Name, 2: settings.tray2Name, 3: settings.tray3Name, 4: settings.tray4Name }
+        printOptions.paperSource = trayNames[tray] || settings.tray1Name
       }
 
       // Add color mode (monochrome = black/white)
@@ -213,8 +216,10 @@ ipcMain.handle('print-bundle', async (event, printData) => {
 
       // Determine tray based on job type
       const tray = job.tray || 1
-      const trayName = tray === 1 ? settings.tray1Name : settings.tray2Name
-      const trayDescription = tray === 1 ? 'Briefpapier' : 'Geel productie-papier'
+      const trayNames = { 1: settings.tray1Name, 2: settings.tray2Name, 3: settings.tray3Name, 4: settings.tray4Name }
+      const trayDescriptions = { 1: 'Blanco', 2: 'Geel papier met logo', 3: 'Wit papier met logo', 4: 'Briefpapier met logo' }
+      const trayName = trayNames[tray] || settings.tray1Name
+      const trayDescription = trayDescriptions[tray] || `Lade ${tray}`
 
       // Save PDF to temp file
       let pdfPath

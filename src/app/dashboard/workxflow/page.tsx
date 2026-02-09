@@ -84,13 +84,15 @@ export default function WorkxflowPage() {
   const [showPrinterSettings, setShowPrinterSettings] = useState(false)
   const [printerSettings, setPrinterSettings] = useState({
     selectedPrinter: '',
-    tray1Name: 'Auto',
-    tray2Name: 'Manual',
+    tray1Name: 'Lade 1',    // Blanco
+    tray2Name: 'Lade 2',    // Geel papier met logo
+    tray3Name: 'Lade 3',    // Wit papier met logo
+    tray4Name: 'Lade 4',    // Briefpapier met logo
     colorMode: 'color' as 'color' | 'monochrome',
     duplex: false,
-    processtukTray: 1 as number,      // Lade voor processtuk
-    productiebladenTray: 2 as number, // Lade voor productiebladen (geel)
-    bijlagenTray: 1 as number,        // Lade voor bijlagen
+    processtukTray: 4 as number,      // Briefpapier met logo
+    productiebladenTray: 2 as number, // Geel papier met logo
+    bijlagenTray: 1 as number,        // Blanco
   })
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([])
   const [isConverting, setIsConverting] = useState(false)
@@ -1372,7 +1374,7 @@ export default function WorkxflowPage() {
                           </div>
                           {/* Yellow indicator */}
                           <div className="absolute bottom-0 left-0 right-0 bg-yellow-600/40 p-1.5">
-                            <p className="text-[8px] text-yellow-900 text-center font-medium">Lade {printerSettings.productiebladenTray} • Geel papier</p>
+                            <p className="text-[8px] text-yellow-900 text-center font-medium">Lade {printerSettings.productiebladenTray} • {printerSettings[`tray${printerSettings.productiebladenTray}Name` as keyof typeof printerSettings]}</p>
                           </div>
                         </div>
 
@@ -1424,7 +1426,7 @@ export default function WorkxflowPage() {
                             )}
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-700 to-gray-700/80 p-1.5">
                               <p className="text-[8px] text-white truncate font-medium">{production.documentName || production.title}</p>
-                              <p className="text-[7px] text-gray-300">Lade {printerSettings.bijlagenTray} • Blanco papier</p>
+                              <p className="text-[7px] text-gray-300">Lade {printerSettings.bijlagenTray} • {printerSettings[`tray${printerSettings.bijlagenTray}Name` as keyof typeof printerSettings]}</p>
                             </div>
                           </div>
                         ) : (
@@ -1570,40 +1572,32 @@ export default function WorkxflowPage() {
                 <p className="text-xs text-gray-500 mt-1">Selecteer de printer voor Workxflow documenten</p>
               </div>
 
-              {/* Tray 1 - Briefpapier */}
+              {/* Printer trays */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Lade voor Briefpapier
-                  <span className="text-blue-400 ml-2 text-xs font-normal">(processtuk + bijlagen)</span>
-                </label>
-                <input
-                  type="text"
-                  value={printerSettings.tray1Name}
-                  onChange={(e) => setPrinterSettings(prev => ({ ...prev, tray1Name: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg bg-white/10 border border-white/10 text-white"
-                  placeholder="bijv. Tray 1, Auto, Cassette 1"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Veelvoorkomende waarden: Auto, Manual, Tray 1, Tray 2, Cassette 1, Drawer 1
-                </p>
-              </div>
-
-              {/* Tray 2 - Geel papier */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Lade voor Geel Papier
-                  <span className="text-yellow-400 ml-2 text-xs font-normal">(productievellen)</span>
-                </label>
-                <input
-                  type="text"
-                  value={printerSettings.tray2Name}
-                  onChange={(e) => setPrinterSettings(prev => ({ ...prev, tray2Name: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg bg-white/10 border border-white/10 text-white"
-                  placeholder="bijv. Tray 2, Manual, Cassette 2"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Dit is de lade waar het gele papier met logo in zit
-                </p>
+                <label className="block text-sm font-medium text-white mb-2">Printer lades</label>
+                <p className="text-xs text-gray-500 mb-3">Vul de naam in zoals je printer ze kent (zie printerinstellingen)</p>
+                <div className="space-y-2">
+                  {[
+                    { key: 'tray1Name' as const, label: 'Lade 1', desc: 'Blanco', color: 'text-gray-400' },
+                    { key: 'tray2Name' as const, label: 'Lade 2', desc: 'Geel papier met logo', color: 'text-yellow-400' },
+                    { key: 'tray3Name' as const, label: 'Lade 3', desc: 'Wit papier met logo', color: 'text-blue-400' },
+                    { key: 'tray4Name' as const, label: 'Lade 4', desc: 'Briefpapier met logo', color: 'text-emerald-400' },
+                  ].map((tray) => (
+                    <div key={tray.key} className="flex items-center gap-3">
+                      <div className="w-36 flex-shrink-0">
+                        <span className={`text-xs font-medium ${tray.color}`}>{tray.label}</span>
+                        <span className="text-[10px] text-gray-500 ml-1.5">{tray.desc}</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={printerSettings[tray.key]}
+                        onChange={(e) => setPrinterSettings(prev => ({ ...prev, [tray.key]: e.target.value }))}
+                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
+                        placeholder={tray.label}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Tray assignment per job type */}
@@ -1611,39 +1605,25 @@ export default function WorkxflowPage() {
                 <label className="block text-sm font-medium text-white mb-2">Lade-toewijzing per onderdeel</label>
                 <p className="text-xs text-gray-500 mb-3">Kies welke lade voor elk onderdeel wordt gebruikt</p>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400 w-32">Processtuk</span>
-                    <select
-                      value={printerSettings.processtukTray}
-                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, processtukTray: Number(e.target.value) }))}
-                      className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
-                    >
-                      <option value={1}>Lade 1 — {printerSettings.tray1Name}</option>
-                      <option value={2}>Lade 2 — {printerSettings.tray2Name}</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-yellow-400 w-32">Productiebladen</span>
-                    <select
-                      value={printerSettings.productiebladenTray}
-                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, productiebladenTray: Number(e.target.value) }))}
-                      className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
-                    >
-                      <option value={1}>Lade 1 — {printerSettings.tray1Name}</option>
-                      <option value={2}>Lade 2 — {printerSettings.tray2Name}</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400 w-32">Bijlagen</span>
-                    <select
-                      value={printerSettings.bijlagenTray}
-                      onChange={(e) => setPrinterSettings(prev => ({ ...prev, bijlagenTray: Number(e.target.value) }))}
-                      className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
-                    >
-                      <option value={1}>Lade 1 — {printerSettings.tray1Name}</option>
-                      <option value={2}>Lade 2 — {printerSettings.tray2Name}</option>
-                    </select>
-                  </div>
+                  {[
+                    { key: 'processtukTray' as const, label: 'Processtuk', color: 'text-emerald-400' },
+                    { key: 'productiebladenTray' as const, label: 'Productiebladen', color: 'text-yellow-400' },
+                    { key: 'bijlagenTray' as const, label: 'Bijlagen', color: 'text-gray-400' },
+                  ].map((job) => (
+                    <div key={job.key} className="flex items-center gap-3">
+                      <span className={`text-xs font-medium w-32 ${job.color}`}>{job.label}</span>
+                      <select
+                        value={printerSettings[job.key]}
+                        onChange={(e) => setPrinterSettings(prev => ({ ...prev, [job.key]: Number(e.target.value) }))}
+                        className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/10 text-white text-sm"
+                      >
+                        <option value={1}>Lade 1 — {printerSettings.tray1Name}</option>
+                        <option value={2}>Lade 2 — {printerSettings.tray2Name}</option>
+                        <option value={3}>Lade 3 — {printerSettings.tray3Name}</option>
+                        <option value={4}>Lade 4 — {printerSettings.tray4Name}</option>
+                      </select>
+                    </div>
+                  ))}
                 </div>
               </div>
 
