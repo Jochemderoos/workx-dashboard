@@ -134,36 +134,51 @@ ipcMain.handle('get-printers', async () => {
 // Get available paper bins/trays for a printer via PowerShell + System.Drawing
 ipcMain.handle('get-printer-bins', async (event, printerName) => {
   try {
-    // Use System.Drawing to get paper sources — returns SourceName (used by SumatraPDF bin=)
-    // and Kind (numeric ID for debugging)
-    const psScript = `
-      Add-Type -AssemblyName System.Drawing
-      $ps = New-Object System.Drawing.Printing.PrinterSettings
-      $ps.PrinterName = '${printerName.replace(/'/g, "''")}'
-      if ($ps.IsValid) {
-        $ps.PaperSources | ForEach-Object {
-          "$($_.SourceName)|$($_.Kind)"
-        }
-      } else {
-        Write-Error "Printer '${printerName.replace(/'/g, "''")}' not found"
-      }
-    `
-    const { stdout } = await execFileAsync('Powershell.exe', ['-Command', psScript])
+    const safeName = printerName.replace(/'/g, "''")
+
+    // Write a temp PowerShell script (avoids escaping issues with -Command)
+    const psScriptPath = path.join(app.getPath('temp'), 'workx-detect-bins.ps1')
+    const psScript = [
+      'Add-Type -AssemblyName System.Drawing',
+      '$ps = New-Object System.Drawing.Printing.PrinterSettings',
+      `$ps.PrinterName = '${safeName}'`,
+      'if ($ps.IsValid) {',
+      '  $ps.PaperSources | ForEach-Object { Write-Output "$($_.SourceName)|$($_.RawKind)" }',
+      '} else {',
+      '  Write-Error "Printer not found"',
+      '}',
+    ].join('\r\n')
+    fs.writeFileSync(psScriptPath, psScript, 'utf8')
+
+    console.log(`[print] Detecting bins for "${printerName}" via ${psScriptPath}`)
+    const { stdout, stderr } = await execFileAsync('Powershell.exe', [
+      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', psScriptPath
+    ])
+
+    // Clean up temp script
+    try { fs.unlinkSync(psScriptPath) } catch (e) {}
+
+    if (stderr && stderr.trim()) {
+      console.error('[print] PowerShell stderr:', stderr.trim())
+    }
+
     const lines = stdout.trim().split(/\r?\n/).filter(b => b.trim())
     const bins = []
     const binsDetailed = []
     for (const line of lines) {
-      const [name, kind] = line.split('|')
+      const parts = line.split('|')
+      const name = parts[0] ? parts[0].trim() : ''
+      const rawKind = parts[1] ? parts[1].trim() : ''
       if (name) {
-        bins.push(name.trim())
-        binsDetailed.push({ name: name.trim(), kind: kind ? kind.trim() : 'unknown' })
+        bins.push(name)
+        binsDetailed.push({ name, rawKind })
       }
     }
-    console.log(`[print] Available bins for "${printerName}":`, JSON.stringify(binsDetailed))
+    console.log(`[print] Detected ${bins.length} bins:`, JSON.stringify(binsDetailed))
     return { success: true, bins, binsDetailed }
   } catch (error) {
-    console.error('[print] Failed to get printer bins:', error.message)
-    return { success: false, error: error.message, bins: [] }
+    console.error('[print] Failed to get printer bins:', error.message || error)
+    return { success: false, error: error.message || String(error), bins: [] }
   }
 })
 
@@ -194,7 +209,11 @@ ipcMain.handle('print-document', async (event, options) => {
       // Add tray/bin selection (pdf-to-printer uses "bin", NOT "paperSource")
       if (tray) {
         const trayNames = { 1: settings.tray1Name, 2: settings.tray2Name, 3: settings.tray3Name, 4: settings.tray4Name }
-        printOptions.bin = trayNames[tray] || settings.tray1Name
+        const binName = trayNames[tray] || settings.tray1Name
+        const isGenericName = /^(Tray|Lade|Cassette)\s*\d+$/i.test(binName)
+        if (binName && !isGenericName) {
+          printOptions.bin = binName
+        }
       }
 
       // Add color mode (pdf-to-printer passes "monochrome" to SumatraPDF)
@@ -323,8 +342,18 @@ ipcMain.handle('print-bundle', async (event, printData) => {
         try {
           const printOptions = {
             printer: settings.selectedPrinter || undefined,
-            bin: trayName,
             copies: job.copies || 1,
+          }
+
+          // Only send bin= if the tray name looks like a real printer bin name
+          // (not a generic "Tray 1" or "Lade 1" placeholder).
+          // Generic names cause "paper out" errors because the printer doesn't recognize them.
+          const isGenericName = /^(Tray|Lade|Cassette)\s*\d+$/i.test(trayName)
+          if (trayName && !isGenericName) {
+            printOptions.bin = trayName
+            console.log(`[print-bundle] Using bin="${trayName}" for "${job.name}"`)
+          } else {
+            console.log(`[print-bundle] Skipping bin for "${job.name}" (generic name: "${trayName}")`)
           }
 
           if (settings.colorMode === 'monochrome') {
