@@ -28,7 +28,7 @@ const defaultSettings = {
   tray4Name: 'Tray 4',  // Briefpapier met logo
   colorMode: 'color',    // 'color' or 'monochrome'
   duplex: false,         // double-sided printing
-  processtukTray: 4,     // Briefpapier met logo
+  processtukTray: 3,     // Wit papier met logo
   productiebladenTray: 2, // Geel papier met logo
   bijlagenTray: 1,       // Blanco
 }
@@ -134,20 +134,33 @@ ipcMain.handle('get-printers', async () => {
 // Get available paper bins/trays for a printer via PowerShell + System.Drawing
 ipcMain.handle('get-printer-bins', async (event, printerName) => {
   try {
+    // Use System.Drawing to get paper sources — returns SourceName (used by SumatraPDF bin=)
+    // and Kind (numeric ID for debugging)
     const psScript = `
       Add-Type -AssemblyName System.Drawing
       $ps = New-Object System.Drawing.Printing.PrinterSettings
       $ps.PrinterName = '${printerName.replace(/'/g, "''")}'
       if ($ps.IsValid) {
-        $ps.PaperSources | ForEach-Object { $_.SourceName }
+        $ps.PaperSources | ForEach-Object {
+          "$($_.SourceName)|$($_.Kind)"
+        }
       } else {
-        Write-Error "Printer not found"
+        Write-Error "Printer '${printerName.replace(/'/g, "''")}' not found"
       }
     `
     const { stdout } = await execFileAsync('Powershell.exe', ['-Command', psScript])
-    const bins = stdout.trim().split(/\r?\n/).filter(b => b.trim())
-    console.log(`[print] Available bins for "${printerName}":`, bins)
-    return { success: true, bins }
+    const lines = stdout.trim().split(/\r?\n/).filter(b => b.trim())
+    const bins = []
+    const binsDetailed = []
+    for (const line of lines) {
+      const [name, kind] = line.split('|')
+      if (name) {
+        bins.push(name.trim())
+        binsDetailed.push({ name: name.trim(), kind: kind ? kind.trim() : 'unknown' })
+      }
+    }
+    console.log(`[print] Available bins for "${printerName}":`, JSON.stringify(binsDetailed))
+    return { success: true, bins, binsDetailed }
   } catch (error) {
     console.error('[print] Failed to get printer bins:', error.message)
     return { success: false, error: error.message, bins: [] }
@@ -229,6 +242,9 @@ ipcMain.handle('print-bundle', async (event, printData) => {
   const { printJobs } = printData
   const settings = loadSettings()
 
+  const trayNames = { 1: settings.tray1Name, 2: settings.tray2Name, 3: settings.tray3Name, 4: settings.tray4Name }
+  const trayDescriptions = { 1: 'Blanco', 2: 'Geel papier met logo', 3: 'Wit papier met logo', 4: 'Briefpapier met logo' }
+
   console.log(`[print-bundle] Starting bundle print with ${printJobs.length} jobs`)
   console.log(`[print-bundle] Settings:`, JSON.stringify({
     printer: settings.selectedPrinter,
@@ -240,29 +256,52 @@ ipcMain.handle('print-bundle', async (event, printData) => {
     tray4: settings.tray4Name,
   }, null, 2))
 
+  // Filter jobs that have actual documents
+  const validJobs = printJobs.filter(job => !!job.documentUrl)
+  if (validJobs.length === 0) {
+    return { success: false, error: 'Geen documenten om te printen' }
+  }
+
+  // Build a summary of all jobs for ONE confirmation dialog
+  const jobSummary = validJobs.map(job => {
+    const tray = job.tray || 1
+    const binName = trayNames[tray] || settings.tray1Name
+    const desc = trayDescriptions[tray] || `Lade ${tray}`
+    return `  • ${job.name} → ${desc} (${binName})`
+  }).join('\n')
+
+  const colorText = settings.colorMode === 'monochrome' ? 'Zwart-wit' : 'Kleur'
+  const duplexText = settings.duplex ? 'Dubbelzijdig' : 'Enkelzijdig'
+
+  // Show ONE confirmation dialog for all jobs
+  const dialogResult = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    title: 'Printen bevestigen',
+    message: `${validJobs.length} onderdelen printen?`,
+    detail: `Printer: ${settings.selectedPrinter || 'Standaard'}\nKleur: ${colorText} | ${duplexText}\n\n${jobSummary}\n\nAlle onderdelen worden achter elkaar geprint.`,
+    buttons: ['Alles printen', 'Annuleren'],
+    defaultId: 0,
+  })
+
+  if (dialogResult.response === 1) {
+    return { success: false, error: 'Geannuleerd door gebruiker' }
+  }
+
   try {
     const results = []
 
-    for (const job of printJobs) {
-      if (!job.documentUrl) {
-        console.log(`[print-bundle] Skipping ${job.name}: no documentUrl`)
-        continue
-      }
-
+    for (const job of validJobs) {
       // Show progress
       mainWindow.webContents.send('print-progress', {
         job: job.name,
         status: 'printing',
       })
 
-      // Determine tray based on job type
+      // Determine tray/bin
       const tray = job.tray || 1
-      const trayNames = { 1: settings.tray1Name, 2: settings.tray2Name, 3: settings.tray3Name, 4: settings.tray4Name }
-      const trayDescriptions = { 1: 'Blanco', 2: 'Geel papier met logo', 3: 'Wit papier met logo', 4: 'Briefpapier met logo' }
       const trayName = trayNames[tray] || settings.tray1Name
-      const trayDescription = trayDescriptions[tray] || `Lade ${tray}`
 
-      console.log(`[print-bundle] Job "${job.name}": tray=${tray}, bin="${trayName}", description="${trayDescription}"`)
+      console.log(`[print-bundle] Job "${job.name}": tray=${tray}, bin="${trayName}"`)
 
       // Save PDF to temp file
       let pdfPath
@@ -279,64 +318,35 @@ ipcMain.handle('print-bundle', async (event, printData) => {
         continue
       }
 
-      // Show dialog to confirm print
-      const dialogResult = await dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: `Printen: ${job.name}`,
-        message: `Klaar om te printen naar ${trayDescription}`,
-        detail: `${job.description}\n\nPrinter: ${settings.selectedPrinter || 'Standaard'}\nLade: ${trayName} (lade ${tray})\nKleur: ${settings.colorMode === 'monochrome' ? 'Zwart-wit' : 'Kleur'}\n\nControleer dat de juiste printer en lade zijn geselecteerd.`,
-        buttons: ['Printen', 'Overslaan', 'Annuleren alle'],
-      })
-
-      if (dialogResult.response === 2) {
-        // Cancel all - clean up temp file
-        try { fs.unlinkSync(pdfPath) } catch (e) {}
-        return { success: false, error: 'Geannuleerd door gebruiker' }
-      }
-
-      if (dialogResult.response === 1) {
-        // Skip this job - clean up temp file
-        try { fs.unlinkSync(pdfPath) } catch (e) {}
-        results.push({ job: job.name, success: true, skipped: true })
-        continue
-      }
-
       // Print the document
       if (print && print.print) {
         try {
-          // pdf-to-printer v5 options:
-          // - bin: tray name (NOT paperSource)
-          // - monochrome: true/false (NOT colorMode)
-          // - side: 'duplexlong'|'duplexshort'|'simplex' (NOT duplex)
-          // - copies: number
           const printOptions = {
             printer: settings.selectedPrinter || undefined,
             bin: trayName,
             copies: job.copies || 1,
           }
 
-          // Add monochrome (black/white)
           if (settings.colorMode === 'monochrome') {
             printOptions.monochrome = true
           }
 
-          // Add duplex (double-sided) printing
           if (settings.duplex) {
             printOptions.side = 'duplexlong'
           }
 
           console.log(`[print-bundle] Printing "${job.name}" with options:`, JSON.stringify(printOptions))
           await print.print(pdfPath, printOptions)
-          console.log(`[print-bundle] ✓ "${job.name}" printed successfully`)
+          console.log(`[print-bundle] OK "${job.name}" printed successfully`)
           results.push({ job: job.name, success: true })
         } catch (err) {
-          console.error(`[print-bundle] ✗ pdf-to-printer failed for "${job.name}":`, err.message || err)
+          console.error(`[print-bundle] FAIL pdf-to-printer failed for "${job.name}":`, err.message || err)
           results.push({ job: job.name, success: false, error: err.message || String(err) })
         }
       } else {
-        // Fallback: use Electron's built-in webContents.print with the PDF loaded in a hidden window
+        // Fallback: use Electron's built-in print
         try {
-          console.log(`[print-bundle] Fallback: printing "${job.name}" via Electron print dialog`)
+          console.log(`[print-bundle] Fallback: printing "${job.name}" via Electron`)
           const printWin = new BrowserWindow({ show: false, width: 800, height: 600 })
           await printWin.loadURL(`file://${pdfPath}`)
           await new Promise((resolve, reject) => {
@@ -351,11 +361,8 @@ ipcMain.handle('print-bundle', async (event, printData) => {
               },
               (success, errorType) => {
                 printWin.close()
-                if (success) {
-                  resolve()
-                } else {
-                  reject(new Error(errorType || 'Print mislukt'))
-                }
+                if (success) resolve()
+                else reject(new Error(errorType || 'Print mislukt'))
               }
             )
           })
@@ -367,14 +374,12 @@ ipcMain.handle('print-bundle', async (event, printData) => {
       }
 
       // Clean up temp file
-      try {
-        fs.unlinkSync(pdfPath)
-      } catch (e) {}
+      try { fs.unlinkSync(pdfPath) } catch (e) {}
     }
 
     console.log(`[print-bundle] Done. Results:`, JSON.stringify(results))
     return {
-      success: results.every((r) => r.success || r.skipped),
+      success: results.every((r) => r.success),
       results,
     }
   } catch (error) {

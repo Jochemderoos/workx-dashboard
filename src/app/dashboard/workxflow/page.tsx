@@ -90,7 +90,7 @@ export default function WorkxflowPage() {
     tray4Name: 'Lade 4',    // Briefpapier met logo
     colorMode: 'color' as 'color' | 'monochrome',
     duplex: false,
-    processtukTray: 4 as number,      // Briefpapier met logo
+    processtukTray: 3 as number,      // Wit papier met logo
     productiebladenTray: 2 as number, // Geel papier met logo
     bijlagenTray: 1 as number,        // Blanco
   })
