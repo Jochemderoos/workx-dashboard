@@ -63,44 +63,65 @@ export async function POST(
       mainDocumentPdf = bundle.mainDocumentUrl
     }
 
-    // 2. Production sheets PDF (Tray 2 - yellow paper with logo, only "PRODUCTIE X" text)
-    const sheetsPdf = await PDFDocument.create()
-    const helveticaBold = await sheetsPdf.embedFont(StandardFonts.HelveticaBold)
+    // 2. Create individual production sheet PDFs (one per production)
+    // and interleave with production documents for correct assembly order
+    const helveticaBold = await PDFDocument.create().then(async d => {
+      const font = await d.embedFont(StandardFonts.HelveticaBold)
+      return font
+    })
+
+    const label = bundle.productionLabel || 'PRODUCTIE'
+    const isBijlage = bundle.productionLabel === 'BIJLAGE'
+
+    // Build interleaved print jobs: productievel → productie, per production
+    const interleavedJobs: Array<{
+      name: string
+      tray: number
+      copies: number
+      documentUrl: string | null
+      description: string
+    }> = []
 
     for (const production of bundle.productions) {
-      const sheetPage = sheetsPdf.addPage([pageWidth, pageHeight])
+      // Create individual production sheet PDF
+      const sheetPdf = await PDFDocument.create()
+      const sheetFont = await sheetPdf.embedFont(StandardFonts.HelveticaBold)
+      const sheetPage = sheetPdf.addPage([pageWidth, pageHeight])
 
-      // NO background color - the paper is already yellow with logo
-      // Just add the text "PRODUCTIE X" centered
-
-      const label = bundle.productionLabel || 'PRODUCTIE'
       const productionText = `${label} ${production.productionNumber}`
-      const textWidth = helveticaBold.widthOfTextAtSize(productionText, 48)
+      const textWidth = sheetFont.widthOfTextAtSize(productionText, 48)
 
       sheetPage.drawText(productionText, {
         x: (pageWidth - textWidth) / 2,
         y: pageHeight / 2,
         size: 48,
-        font: helveticaBold,
+        font: sheetFont,
         color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
       })
+
+      const sheetBytes = await sheetPdf.save()
+      const sheetBase64 = `data:application/pdf;base64,${Buffer.from(sheetBytes).toString('base64')}`
+
+      // Add production sheet (yellow paper)
+      interleavedJobs.push({
+        name: `Productievel ${production.productionNumber}`,
+        tray: 2,
+        copies: 1,
+        documentUrl: sheetBase64,
+        description: `Productievel ${production.productionNumber} - geel papier`,
+      })
+
+      // Add production document (normal paper) if it exists
+      if (production.documentUrl) {
+        interleavedJobs.push({
+          name: `${isBijlage ? 'Bijlage' : 'Productie'} ${production.productionNumber}: ${production.title}`,
+          tray: 1,
+          copies: 1,
+          documentUrl: production.documentUrl,
+          description: `${isBijlage ? 'Bijlage' : 'Productie'} ${production.productionNumber}`,
+        })
+      }
     }
-
-    const sheetsBytes = await sheetsPdf.save()
-    const sheetsPdfBase64 = `data:application/pdf;base64,${Buffer.from(sheetsBytes).toString('base64')}`
-
-    // 3. Production documents (Tray 1 - normal paper)
-    const productionDocuments: Array<{
-      productionNumber: string
-      title: string
-      documentUrl: string | null
-      documentType: string | null
-    }> = bundle.productions.map(p => ({
-      productionNumber: p.productionNumber,
-      title: p.title,
-      documentUrl: p.documentUrl,
-      documentType: p.documentType,
-    }))
 
     // Return print data structure
     return NextResponse.json({
@@ -109,58 +130,26 @@ export async function POST(
       caseNumber: bundle.caseNumber,
       clientName: bundle.clientName,
 
-      // Print jobs organized by tray
+      // Print jobs: processtuk first, then interleaved productievel + productie
       printJobs: [
-        // Job 1: Main document (processtuk) - Tray 1, NO logo (logo pre-printed on paper)
+        // Job 1: Main document (processtuk)
         {
           name: 'Processtuk',
-          tray: 1, // Normal paper tray
+          tray: 1,
           copies: 1,
           documentUrl: mainDocumentPdf,
-          description: 'Hoofddocument - printen op briefpapier (logo al aanwezig)',
+          description: 'Hoofddocument - printen op briefpapier',
         },
 
-        // Job 2: Production sheets - Tray 2, yellow paper with logo
-        {
-          name: 'Productiebladen',
-          tray: 2, // Yellow paper tray
-          copies: 1,
-          documentUrl: sheetsPdfBase64,
-          description: 'Productiebladen - printen op geel papier (logo al aanwezig)',
-        },
-
-        // Job 3+: Individual production documents - Tray 1, normal paper
-        ...productionDocuments
-          .filter(p => p.documentUrl)
-          .map((p) => ({
-            name: `${bundle.productionLabel === 'BIJLAGE' ? 'Bijlage' : 'Productie'} ${p.productionNumber}: ${p.title}`,
-            tray: 1, // Normal paper tray
-            copies: 1,
-            documentUrl: p.documentUrl,
-            description: `Bijlage ${bundle.productionLabel === 'BIJLAGE' ? 'bijlage' : 'productie'} ${p.productionNumber}`,
-          })),
+        // Jobs 2+: Interleaved productievel → productie per production
+        ...interleavedJobs,
       ],
 
       // Print order instructions
       printOrder: [
-        'Processtuk eerst printen op briefpapier (lade 1)',
-        'Dan productiebladen op geel papier (lade 2)',
-        'Daarna de bijlagen per productie op normaal papier (lade 1)',
+        'Processtuk eerst',
+        'Dan per productie: productievel (geel) → bijlage (blanco)',
       ],
-
-      // Tray configuration hints for the desktop app
-      trayConfig: {
-        1: {
-          name: 'Normaal/Briefpapier',
-          description: 'Wit papier met Workx logo (voor processtuk en bijlagen)',
-          paperType: 'letterhead',
-        },
-        2: {
-          name: 'Geel productie-papier',
-          description: 'Geel papier met Workx logo (voor productiebladen)',
-          paperType: 'yellow-letterhead',
-        },
-      },
     })
   } catch (error) {
     console.error('Error generating print data:', error)

@@ -89,7 +89,10 @@ export default function WorkxflowPage() {
     tray3Name: 'Lade 3',    // Wit papier met logo
     tray4Name: 'Lade 4',    // Briefpapier met logo
     colorMode: 'color' as 'color' | 'monochrome',
-    duplex: false,
+    duplex: false,                          // Global default (legacy)
+    processtukDuplex: false as boolean,     // Per-type duplex
+    productiebladenDuplex: false as boolean,
+    bijlagenDuplex: false as boolean,
     processtukTray: 3 as number,      // Wit papier met logo
     productiebladenTray: 2 as number, // Geel papier met logo
     bijlagenTray: 1 as number,        // Blanco
@@ -677,11 +680,18 @@ export default function WorkxflowPage() {
       if (res.ok) {
         const printData = await res.json()
 
-        // Override tray assignments based on user settings
+        // Override tray and duplex assignments based on user settings
         for (const job of printData.printJobs) {
-          if (job.name === 'Processtuk') job.tray = printerSettings.processtukTray
-          else if (job.name === 'Productiebladen') job.tray = printerSettings.productiebladenTray
-          else job.tray = printerSettings.bijlagenTray
+          if (job.name === 'Processtuk') {
+            job.tray = printerSettings.processtukTray
+            job.duplex = printerSettings.processtukDuplex
+          } else if (job.name === 'Productiebladen' || job.name?.startsWith('Productievel ')) {
+            job.tray = printerSettings.productiebladenTray
+            job.duplex = printerSettings.productiebladenDuplex
+          } else {
+            job.tray = printerSettings.bijlagenTray
+            job.duplex = printerSettings.bijlagenDuplex
+          }
         }
 
         // Send to Electron for printing
@@ -1720,20 +1730,26 @@ export default function WorkxflowPage() {
                 </div>
               </div>
 
-              {/* Duplex */}
+              {/* Per-type Duplex */}
               <div>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={printerSettings.duplex}
-                    onChange={(e) => setPrinterSettings(prev => ({ ...prev, duplex: e.target.checked }))}
-                    className="w-4 h-4 rounded text-workx-lime bg-white/10 border-white/20 focus:ring-workx-lime"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-white">Dubbelzijdig printen</span>
-                    <p className="text-xs text-gray-500">Print op beide zijden van het papier</p>
-                  </div>
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Dubbelzijdig printen</label>
+                <div className="space-y-2">
+                  {[
+                    { key: 'processtukDuplex' as const, label: 'Processtuk', color: 'text-emerald-400' },
+                    { key: 'productiebladenDuplex' as const, label: 'Productiebladen', color: 'text-yellow-400' },
+                    { key: 'bijlagenDuplex' as const, label: 'Bijlagen / Producties', color: 'text-gray-400' },
+                  ].map(({ key, label, color }) => (
+                    <label key={key} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!printerSettings[key]}
+                        onChange={(e) => setPrinterSettings(prev => ({ ...prev, [key]: e.target.checked }))}
+                        className="w-4 h-4 rounded text-workx-lime bg-white/10 border-white/20 focus:ring-workx-lime"
+                      />
+                      <span className={`text-sm ${color}`}>{label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {/* Info box */}

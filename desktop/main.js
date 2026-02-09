@@ -22,12 +22,15 @@ const settingsPath = path.join(app.getPath('userData'), 'printer-settings.json')
 // Default settings
 const defaultSettings = {
   selectedPrinter: '',
-  tray1Name: 'Tray 1',  // Blanco — will be auto-detected
-  tray2Name: 'Tray 2',  // Geel papier met logo
-  tray3Name: 'Tray 3',  // Wit papier met logo
-  tray4Name: 'Tray 4',  // Briefpapier met logo
+  tray1Name: 'Lade 1',  // Blanco (Canon UFR II bin name)
+  tray2Name: 'Lade 2',  // Geel papier met logo
+  tray3Name: 'Lade 3',  // Wit papier met logo
+  tray4Name: 'Lade 4',  // Briefpapier met logo
   colorMode: 'color',    // 'color' or 'monochrome'
-  duplex: false,         // double-sided printing
+  duplex: false,         // global default (legacy)
+  processtukDuplex: false,
+  productiebladenDuplex: false,
+  bijlagenDuplex: false,
   processtukTray: 3,     // Wit papier met logo
   productiebladenTray: 2, // Geel papier met logo
   bijlagenTray: 1,       // Blanco
@@ -184,7 +187,7 @@ ipcMain.handle('get-printer-bins', async (event, printerName) => {
 
 // Print a document
 ipcMain.handle('print-document', async (event, options) => {
-  const { documentUrl, printerName, tray, copies = 1 } = options
+  const { documentUrl, printerName, tray, copies = 1, duplex } = options
   const settings = loadSettings()
 
   try {
@@ -204,14 +207,17 @@ ipcMain.handle('print-document', async (event, options) => {
       const printOptions = {
         printer: printerName || settings.selectedPrinter || undefined,
         copies: copies,
+        scale: 'fit',        // Scale PDF to fit A4 page
+        paperSize: 'A4',     // Explicitly request A4 paper
       }
 
       // Add tray/bin selection (pdf-to-printer uses "bin", NOT "paperSource")
+      // Skip bin for "Lade 1" — it's the default tray, and Canon printers prompt
+      // for confirmation when you explicitly request it. Omitting bin = Auto = Lade 1.
       if (tray) {
         const trayNames = { 1: settings.tray1Name, 2: settings.tray2Name, 3: settings.tray3Name, 4: settings.tray4Name }
         const binName = trayNames[tray] || settings.tray1Name
-        const isGenericName = /^(Tray|Lade|Cassette)\s*\d+$/i.test(binName)
-        if (binName && !isGenericName) {
+        if (binName && binName !== 'Lade 1') {
           printOptions.bin = binName
         }
       }
@@ -221,10 +227,9 @@ ipcMain.handle('print-document', async (event, options) => {
         printOptions.monochrome = true
       }
 
-      // Add duplex (pdf-to-printer uses "side", NOT "duplex")
-      if (settings.duplex) {
-        printOptions.side = 'duplexlong'
-      }
+      // Set side explicitly (per-job or global fallback)
+      const jobDuplex = duplex !== undefined ? duplex : settings.duplex
+      printOptions.side = jobDuplex ? 'duplexlong' : 'simplex'
 
       console.log(`[print] Options:`, JSON.stringify(printOptions, null, 2))
       await print.print(pdfPath, printOptions)
@@ -286,18 +291,18 @@ ipcMain.handle('print-bundle', async (event, printData) => {
     const tray = job.tray || 1
     const binName = trayNames[tray] || settings.tray1Name
     const desc = trayDescriptions[tray] || `Lade ${tray}`
-    return `  • ${job.name} → ${desc} (${binName})`
+    const duplexLabel = job.duplex ? ' [2-zijdig]' : ''
+    return `  • ${job.name} → ${desc} (${binName})${duplexLabel}`
   }).join('\n')
 
   const colorText = settings.colorMode === 'monochrome' ? 'Zwart-wit' : 'Kleur'
-  const duplexText = settings.duplex ? 'Dubbelzijdig' : 'Enkelzijdig'
 
   // Show ONE confirmation dialog for all jobs
   const dialogResult = await dialog.showMessageBox(mainWindow, {
     type: 'question',
     title: 'Printen bevestigen',
     message: `${validJobs.length} onderdelen printen?`,
-    detail: `Printer: ${settings.selectedPrinter || 'Standaard'}\nKleur: ${colorText} | ${duplexText}\n\n${jobSummary}\n\nAlle onderdelen worden achter elkaar geprint.`,
+    detail: `Printer: ${settings.selectedPrinter || 'Standaard'}\nKleur: ${colorText}\n\n${jobSummary}\n\nAlle onderdelen worden achter elkaar geprint.`,
     buttons: ['Alles printen', 'Annuleren'],
     defaultId: 0,
   })
@@ -343,31 +348,40 @@ ipcMain.handle('print-bundle', async (event, printData) => {
           const printOptions = {
             printer: settings.selectedPrinter || undefined,
             copies: job.copies || 1,
+            scale: 'fit',        // Scale PDF to fit A4 page
+            paperSize: 'A4',     // Explicitly request A4 paper
           }
 
-          // Only send bin= if the tray name looks like a real printer bin name
-          // (not a generic "Tray 1" or "Lade 1" placeholder).
-          // Generic names cause "paper out" errors because the printer doesn't recognize them.
-          const isGenericName = /^(Tray|Lade|Cassette)\s*\d+$/i.test(trayName)
-          if (trayName && !isGenericName) {
+          // Send bin name to select the correct tray (Canon UFR II uses "Lade 1", "Lade 2", etc.)
+          // Skip bin for "Lade 1" — it's the default tray, and Canon printers prompt
+          // for confirmation when you explicitly request it. Omitting bin = Auto = Lade 1.
+          if (trayName && trayName !== 'Lade 1') {
             printOptions.bin = trayName
             console.log(`[print-bundle] Using bin="${trayName}" for "${job.name}"`)
           } else {
-            console.log(`[print-bundle] Skipping bin for "${job.name}" (generic name: "${trayName}")`)
+            console.log(`[print-bundle] Skipping bin for "${job.name}" (default tray: "${trayName}")`)
           }
 
           if (settings.colorMode === 'monochrome') {
             printOptions.monochrome = true
           }
 
-          if (settings.duplex) {
-            printOptions.side = 'duplexlong'
-          }
+          // Set side per job (duplex is set per document type by the frontend)
+          const jobDuplex = job.duplex !== undefined ? job.duplex : settings.duplex
+          printOptions.side = jobDuplex ? 'duplexlong' : 'simplex'
 
           console.log(`[print-bundle] Printing "${job.name}" with options:`, JSON.stringify(printOptions))
           await print.print(pdfPath, printOptions)
           console.log(`[print-bundle] OK "${job.name}" printed successfully`)
           results.push({ job: job.name, success: true })
+
+          // Wait between jobs to let the print spooler settle
+          // Without this delay, rapid sequential jobs can cause the printer
+          // to lose settings (bin, duplex) on subsequent jobs
+          if (validJobs.indexOf(job) < validJobs.length - 1) {
+            console.log(`[print-bundle] Waiting 3s before next job...`)
+            await new Promise(r => setTimeout(r, 3000))
+          }
         } catch (err) {
           console.error(`[print-bundle] FAIL pdf-to-printer failed for "${job.name}":`, err.message || err)
           results.push({ job: job.name, success: false, error: err.message || String(err) })
