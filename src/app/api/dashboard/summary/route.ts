@@ -220,7 +220,7 @@ export async function GET() {
         orderBy: { childNumber: 'asc' },
       }),
 
-      // 9. Current User - current user info (name, role, email, birthDate)
+      // 9. Current User - current user info (name, role, email, birthDate, whatsNewDismissed)
       prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -229,6 +229,7 @@ export async function GET() {
           role: true,
           email: true,
           birthDate: true,
+          whatsNewDismissed: true,
         },
       }),
 

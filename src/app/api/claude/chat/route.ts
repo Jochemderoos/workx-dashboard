@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
+import { anonymizeText } from '@/lib/anonymize'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { conversationId, projectId, message, documentIds } = await req.json()
+  const { conversationId, projectId, message, documentIds, anonymize } = await req.json()
 
   if (!message?.trim()) {
     return NextResponse.json({ error: 'Bericht mag niet leeg zijn' }, { status: 400 })
@@ -161,7 +162,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Save user message
+    // Save user message (always store ORIGINAL, unanonymized content)
     await prisma.aIMessage.create({
       data: {
         conversationId: convId,
@@ -213,6 +214,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Anonymize message and document context if requested
+    let messageForClaude = message
+    if (anonymize) {
+      const anonMessage = anonymizeText(message)
+      messageForClaude = anonMessage.text
+      if (documentContext) {
+        const anonDocs = anonymizeText(documentContext)
+        documentContext = anonDocs.text
+      }
+    }
+
     // Fetch knowledge sources — only processed summaries
     let sourcesContext = ''
     try {
@@ -233,6 +245,12 @@ export async function POST(req: NextRequest) {
 
     // Build system prompt
     let systemPrompt = SYSTEM_PROMPT
+    if (anonymize) {
+      systemPrompt += `\n\n## Privacy — Geanonimiseerde gegevens
+BELANGRIJK: In dit gesprek zijn persoonsgegevens geanonimiseerd ter bescherming van de privacy.
+Gebruik ALTIJD dezelfde placeholders ([Persoon-1], [Bedrijf-1], [BSN-1], etc.) in je antwoord.
+Vraag NIET naar de echte namen of gegevens.`
+    }
     if (sourcesContext) {
       systemPrompt += `\n\n## Kennisbronnen${sourcesContext}`
     }
@@ -240,11 +258,15 @@ export async function POST(req: NextRequest) {
       systemPrompt += `\n\n## Documenten${documentContext}`
     }
 
-    // Build messages
+    // Build messages — use anonymized version of the LAST user message
     const msgs: Array<{ role: 'user' | 'assistant'; content: string }> = []
-    for (const msg of history) {
+    for (let i = 0; i < history.length; i++) {
+      const msg = history[i]
       if (msg.role === 'user' || msg.role === 'assistant') {
-        msgs.push({ role: msg.role as 'user' | 'assistant', content: msg.content })
+        // For the last user message, use anonymized version if applicable
+        const isLastUserMsg = msg.role === 'user' && i === history.length - 1 && anonymize
+        const content = isLastUserMsg ? messageForClaude : msg.content
+        msgs.push({ role: msg.role as 'user' | 'assistant', content })
       }
     }
 

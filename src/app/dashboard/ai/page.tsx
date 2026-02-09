@@ -92,6 +92,13 @@ export default function AIAssistentPage() {
   const [userSearchQuery, setUserSearchQuery] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Save-to-project modal state
+  const [saveModalConvId, setSaveModalConvId] = useState<string | null>(null)
+  const [saveModalNewProject, setSaveModalNewProject] = useState(false)
+  const [saveModalNewTitle, setSaveModalNewTitle] = useState('')
+  const [saveModalNewDesc, setSaveModalNewDesc] = useState('')
+  const [isSavingToProject, setIsSavingToProject] = useState(false)
+
   useEffect(() => {
     Promise.all([
       fetch('/api/claude/projects').then(r => r.json()),
@@ -187,6 +194,71 @@ export default function AIAssistentPage() {
     u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
     u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
   )
+
+  const handleSaveToProject = (conversationId: string) => {
+    setSaveModalConvId(conversationId)
+    setSaveModalNewProject(false)
+    setSaveModalNewTitle('')
+    setSaveModalNewDesc('')
+  }
+
+  const saveConversationToProject = async (targetProjectId: string) => {
+    if (!saveModalConvId) return
+    setIsSavingToProject(true)
+    try {
+      const res = await fetch(`/api/claude/conversations/${saveModalConvId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: targetProjectId }),
+      })
+      if (!res.ok) throw new Error()
+      const project = projects.find(p => p.id === targetProjectId)
+      toast.success(`Chat opgeslagen in ${project?.title || 'project'}`)
+      setSaveModalConvId(null)
+      router.push(`/dashboard/ai/${targetProjectId}`)
+    } catch {
+      toast.error('Kon chat niet opslaan in project')
+    } finally {
+      setIsSavingToProject(false)
+    }
+  }
+
+  const createProjectAndSave = async () => {
+    if (!saveModalNewTitle.trim() || !saveModalConvId) return
+    setIsSavingToProject(true)
+    try {
+      // Create project
+      const projectRes = await fetch('/api/claude/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: saveModalNewTitle,
+          description: saveModalNewDesc || null,
+          icon: 'briefcase',
+          color: '#f9ff85',
+        }),
+      })
+      if (!projectRes.ok) throw new Error()
+      const newProj = await projectRes.json()
+
+      // Move conversation to new project
+      const moveRes = await fetch(`/api/claude/conversations/${saveModalConvId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: newProj.id }),
+      })
+      if (!moveRes.ok) throw new Error()
+
+      setProjects([newProj, ...projects])
+      toast.success(`Chat opgeslagen in "${saveModalNewTitle}"`)
+      setSaveModalConvId(null)
+      router.push(`/dashboard/ai/${newProj.id}`)
+    } catch {
+      toast.error('Kon project niet aanmaken')
+    } finally {
+      setIsSavingToProject(false)
+    }
+  }
 
   const tabs = [
     { id: 'chat' as const, label: 'Chat', desc: 'Snel een vraag stellen', icon: Icons.chat },
@@ -302,6 +374,7 @@ export default function AIAssistentPage() {
               window.history.replaceState(null, '', '/dashboard/ai')
             }}
             onActiveChange={setChatActive}
+            onSaveToProject={handleSaveToProject}
           />
         </div>
       )}
@@ -590,6 +663,113 @@ export default function AIAssistentPage() {
 
       {activeTab === 'templates' && (
         <TemplatesManager />
+      )}
+
+      {/* Save-to-project modal */}
+      {saveModalConvId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => !isSavingToProject && setSaveModalConvId(null)}
+          />
+          <div className="relative w-full max-w-md mx-4 rounded-2xl bg-workx-gray border border-white/10 shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-white/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Icons.folder size={18} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Opslaan in project</h3>
+                    <p className="text-[11px] text-white/30">Kies een project of maak een nieuw project aan</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSaveModalConvId(null)}
+                  disabled={isSavingToProject}
+                  className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-all"
+                >
+                  <Icons.x size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 max-h-[400px] overflow-y-auto space-y-2">
+              {/* New project option */}
+              {!saveModalNewProject ? (
+                <button
+                  onClick={() => setSaveModalNewProject(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-white/10 text-white/50 hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 transition-all"
+                >
+                  <Icons.plus size={16} />
+                  <span className="text-sm font-medium">Nieuw project aanmaken</span>
+                </button>
+              ) : (
+                <div className="rounded-xl border border-workx-lime/20 bg-workx-lime/5 p-4 space-y-3">
+                  <input
+                    type="text"
+                    value={saveModalNewTitle}
+                    onChange={(e) => setSaveModalNewTitle(e.target.value)}
+                    placeholder="Projectnaam..."
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/25 focus:outline-none focus:border-workx-lime/40"
+                    autoFocus
+                  />
+                  <textarea
+                    value={saveModalNewDesc}
+                    onChange={(e) => setSaveModalNewDesc(e.target.value)}
+                    placeholder="Beschrijving (optioneel)..."
+                    rows={2}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/40"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={createProjectAndSave}
+                      disabled={!saveModalNewTitle.trim() || isSavingToProject}
+                      className="flex-1 px-4 py-2 rounded-lg bg-workx-lime text-workx-dark text-sm font-medium hover:bg-workx-lime/90 transition-colors disabled:opacity-50"
+                    >
+                      {isSavingToProject ? 'Opslaan...' : 'Aanmaken & opslaan'}
+                    </button>
+                    <button
+                      onClick={() => setSaveModalNewProject(false)}
+                      disabled={isSavingToProject}
+                      className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      Annuleren
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing projects */}
+              {projects.map((project) => (
+                <button
+                  key={project.id}
+                  onClick={() => saveConversationToProject(project.id)}
+                  disabled={isSavingToProject}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-white/20 transition-all text-left disabled:opacity-50"
+                >
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: project.color + '20' }}
+                  >
+                    <Icons.briefcase size={16} style={{ color: project.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{project.title}</p>
+                    <p className="text-[11px] text-white/30">
+                      {project._count.conversations} chat{project._count.conversations !== 1 ? 's' : ''} · {project._count.documents} doc{project._count.documents !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <Icons.arrowRight size={14} className="text-white/20 flex-shrink-0" />
+                </button>
+              ))}
+
+              {projects.length === 0 && !saveModalNewProject && (
+                <p className="text-center text-xs text-white/25 py-4">Nog geen projecten. Maak er een aan.</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

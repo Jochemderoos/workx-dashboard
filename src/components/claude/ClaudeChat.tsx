@@ -29,6 +29,7 @@ interface ClaudeChatProps {
   onNewMessage?: () => void
   onNewChat?: () => void
   onActiveChange?: (active: boolean) => void
+  onSaveToProject?: (conversationId: string) => void
   placeholder?: string
   compact?: boolean
   quickActionPrompt?: string | null
@@ -44,6 +45,7 @@ export default function ClaudeChat({
   onNewMessage,
   onNewChat,
   onActiveChange,
+  onSaveToProject,
   placeholder,
   compact = false,
   quickActionPrompt,
@@ -61,6 +63,7 @@ export default function ClaudeChat({
   const [thinkingText, setThinkingText] = useState('')
   const [isThinking, setIsThinking] = useState(false)
   const [thinkingExpanded, setThinkingExpanded] = useState(false)
+  const [anonymize, setAnonymize] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -249,6 +252,7 @@ export default function ClaudeChat({
           projectId,
           message: fullMessage,
           documentIds: [...documentIds, ...attachedDocs.map(d => d.id)],
+          anonymize,
         }),
         signal: controller.signal,
       })
@@ -423,21 +427,33 @@ export default function ClaudeChat({
         className="hidden"
       />
 
-      {/* Top bar with New Chat button */}
+      {/* Top bar with New Chat + Save to Project buttons */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-white/5">
         <div className="flex items-center gap-2 text-[11px] text-white/30">
           {convId && messages.length > 0 && (
             <span>{messages.filter(m => m.role === 'user').length} berichten</span>
           )}
         </div>
-        <button
-          onClick={startNewChat}
-          disabled={isLoading || (messages.length === 0 && !convId)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/[0.05] border border-white/10 text-white/50 hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 disabled:opacity-20 disabled:cursor-not-allowed"
-        >
-          <Icons.plus size={14} />
-          Nieuwe chat
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Save to project — only when conversation exists and is NOT already in a project */}
+          {convId && !projectId && onSaveToProject && (
+            <button
+              onClick={() => onSaveToProject(convId)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/[0.05] border border-white/10 text-white/50 hover:text-blue-400 hover:border-blue-400/30 hover:bg-blue-400/5"
+            >
+              <Icons.folder size={14} />
+              Opslaan in project
+            </button>
+          )}
+          <button
+            onClick={startNewChat}
+            disabled={isLoading || (messages.length === 0 && !convId)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/[0.05] border border-white/10 text-white/50 hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 disabled:opacity-20 disabled:cursor-not-allowed"
+          >
+            <Icons.plus size={14} />
+            Nieuwe chat
+          </button>
+        </div>
       </div>
 
       {/* Messages area */}
@@ -595,6 +611,42 @@ export default function ClaudeChat({
 
       {/* Input area */}
       <div className="flex-shrink-0 p-4 border-t border-white/5 space-y-2">
+        {/* Anonymize toggle — prominent, above input */}
+        <button
+          type="button"
+          onClick={() => setAnonymize(!anonymize)}
+          className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${
+            anonymize
+              ? 'bg-workx-lime/10 border-workx-lime/30'
+              : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/10'
+          }`}
+        >
+          <div className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center transition-all ${
+            anonymize
+              ? 'bg-workx-lime border-workx-lime'
+              : 'border-white/20'
+          }`}>
+            {anonymize && <Icons.check size={12} className="text-workx-dark" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <Icons.shield size={14} className={anonymize ? 'text-workx-lime' : 'text-white/40'} />
+              <span className={`text-xs font-medium ${anonymize ? 'text-workx-lime' : 'text-white/60'}`}>
+                Anonimiseer persoonsgegevens
+              </span>
+            </div>
+            {anonymize ? (
+              <p className="text-[10px] text-workx-lime/60 mt-0.5 leading-relaxed">
+                PII wordt vervangen door placeholders ([Persoon-1], [BSN-1], etc.) voordat het naar AI wordt gestuurd.
+              </p>
+            ) : (
+              <p className="text-[10px] text-white/25 mt-0.5 leading-relaxed">
+                De Orde van Advocaten vereist dat persoonsgegevens van cli&#235;nten worden geanonimiseerd voordat deze in een AI-tool worden ingelezen.
+              </p>
+            )}
+          </div>
+        </button>
+
         {/* Attached documents chips */}
         {attachedDocs.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -603,6 +655,7 @@ export default function ClaudeChat({
                 key={doc.id}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400"
               >
+                {anonymize && <Icons.shield size={9} className="text-workx-lime" />}
                 <Icons.paperclip size={10} />
                 <span className="truncate max-w-[150px]">{doc.name}</span>
                 <button

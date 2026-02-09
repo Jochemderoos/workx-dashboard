@@ -14,6 +14,7 @@ import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
 import MagneticButton from '@/components/ui/MagneticButton'
 import Sparkline from '@/components/ui/Sparkline'
 import TextReveal from '@/components/ui/TextReveal'
+import { CURRENT_CHANGELOG, CHANGELOG_VERSION } from '@/lib/changelog'
 // import { BeamConnector } from '@/components/ui/AnimatedBeam'
 
 // Logo Component - uses actual Workx logo
@@ -536,12 +537,25 @@ function AppjeplekjeWidget({
 }
 
 // "What's New" widget — dismissible via API (stored on User model)
-const WHATS_NEW_VERSION = '2026-02-08' // Bump this to re-show the widget after new updates
+// Content comes from src/lib/changelog.ts — edit that file to update
+const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  sparkles: Icons.sparkles,
+  file: Icons.file,
+  printer: Icons.printer,
+  briefcase: Icons.briefcase,
+  calendar: Icons.calendar,
+  star: Icons.star,
+  zap: Icons.zap,
+  shield: Icons.shield,
+  check: Icons.check,
+  globe: Icons.globe,
+}
+
 function WhatsNewWidget({ dismissedVersion }: { dismissedVersion?: string | null }) {
-  const [dismissed, setDismissed] = useState(dismissedVersion === WHATS_NEW_VERSION)
+  const [dismissed, setDismissed] = useState(dismissedVersion === CHANGELOG_VERSION)
 
   useEffect(() => {
-    setDismissed(dismissedVersion === WHATS_NEW_VERSION)
+    setDismissed(dismissedVersion === CHANGELOG_VERSION)
   }, [dismissedVersion])
 
   const dismiss = async () => {
@@ -550,52 +564,25 @@ function WhatsNewWidget({ dismissedVersion }: { dismissedVersion?: string | null
       await fetch('/api/dashboard/whats-new', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ version: WHATS_NEW_VERSION }),
+        body: JSON.stringify({ version: CHANGELOG_VERSION }),
       })
     } catch { /* silent fail — widget stays hidden via state */ }
   }
 
   if (dismissed) return null
 
-  const features = [
-    {
-      icon: Icons.sparkles,
-      title: 'AI Assistent',
-      desc: 'Stel juridische vragen, analyseer documenten en zoek jurisprudentie met Claude AI.',
-      href: '/dashboard/ai',
-      color: 'from-violet-500/20 to-blue-500/20',
-      iconColor: 'text-violet-400',
-      iconBg: 'bg-violet-500/10',
-      isNew: true,
-    },
-    {
-      icon: Icons.file,
-      title: 'Pitch Maker',
-      desc: 'Genereer professionele team pitches en profielen als PDF.',
-      href: '/dashboard/pitch',
-      color: 'from-blue-500/20 to-cyan-500/20',
-      iconColor: 'text-blue-400',
-      iconBg: 'bg-blue-500/10',
-      isNew: true,
-    },
-    {
-      icon: Icons.printer,
-      title: 'Workxflow',
-      desc: 'Print dagvaardingen en producties klaar voor de rechtbank.',
-      href: '/dashboard/workxflow',
-      color: 'from-emerald-500/20 to-green-500/20',
-      iconColor: 'text-emerald-400',
-      iconBg: 'bg-emerald-500/10',
-      isNew: true,
-    },
-  ]
+  const { features: changelogFeatures, improvements } = CURRENT_CHANGELOG
 
-  const improvements = [
-    'AI Assistent nu ook beschikbaar op mobiel',
-    'Appjeplekje slaat weekenden automatisch over',
-    'Nieuwsbrief-herinneringen op het dashboard',
-    'Verbeterde zoekfunctie in de top-balk',
-  ]
+  const features = changelogFeatures.map(f => ({
+    icon: ICON_MAP[f.icon] || Icons.sparkles,
+    title: f.title,
+    desc: f.description,
+    href: f.href,
+    color: f.color,
+    iconColor: f.iconColor,
+    iconBg: f.iconBg,
+    isNew: f.isNew ?? false,
+  }))
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-workx-lime/30 bg-gradient-to-br from-workx-lime/5 via-workx-dark to-violet-500/5 p-5 sm:p-6 shadow-lg shadow-workx-lime/5">
@@ -614,7 +601,7 @@ function WhatsNewWidget({ dismissedVersion }: { dismissedVersion?: string | null
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold text-white">Nieuw!</h2>
                 <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-workx-lime/20 text-workx-lime border border-workx-lime/30">
-                  Feb 2026
+                  {CURRENT_CHANGELOG.date}
                 </span>
               </div>
               <p className="text-xs text-gray-400">Ontdek de nieuwste functies</p>
