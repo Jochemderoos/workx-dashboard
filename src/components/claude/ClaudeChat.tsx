@@ -68,6 +68,8 @@ export default function ClaudeChat({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isThinkingRef = useRef(false) // Tracks thinking state inside streaming closure
+  const streamBufferRef = useRef('') // Buffered streaming text for batched updates
+  const rafIdRef = useRef<number | null>(null) // requestAnimationFrame ID for batched rendering
 
   const RESPONSE_OPTIONS = [
     { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
@@ -329,10 +331,17 @@ export default function ClaudeChat({
                 setStatusText('Claude schrijft...')
               }
               streamedText += event.text
-              // Update the assistant message content in-place
-              setMessages(prev => prev.map(m =>
-                m.id === assistantMsgId ? { ...m, content: streamedText } : m
-              ))
+              // Batch updates: accumulate text in ref, only re-render once per animation frame
+              streamBufferRef.current = streamedText
+              if (!rafIdRef.current) {
+                rafIdRef.current = requestAnimationFrame(() => {
+                  rafIdRef.current = null
+                  const buffered = streamBufferRef.current
+                  setMessages(prev => prev.map(m =>
+                    m.id === assistantMsgId ? { ...m, content: buffered } : m
+                  ))
+                })
+              }
             } else if (event.type === 'status' && event.text) {
               setStatusText(event.text)
             } else if (event.type === 'done') {
@@ -357,6 +366,17 @@ export default function ClaudeChat({
       }
 
       clearTimeout(timeoutId)
+
+      // Flush any remaining buffered text
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current)
+        rafIdRef.current = null
+      }
+      if (streamedText) {
+        setMessages(prev => prev.map(m =>
+          m.id === assistantMsgId ? { ...m, content: streamedText } : m
+        ))
+      }
 
       if (!streamedText) {
         // Remove empty assistant message
@@ -715,7 +735,7 @@ export default function ClaudeChat({
               spellCheck={false}
               autoComplete="off"
               rows={1}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-[inherit] placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/40 focus:bg-white/[0.07] transition-all disabled:opacity-50"
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-base placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/40 focus:bg-white/[0.07] transition-all disabled:opacity-50"
               style={{ maxHeight: '200px' }}
             />
           </div>

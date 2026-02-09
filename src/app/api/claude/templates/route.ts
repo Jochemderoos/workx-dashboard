@@ -31,8 +31,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
+  // Show all templates to all authenticated users (shared within the firm)
   const templates = await prisma.aITemplate.findMany({
-    where: { userId: session.user.id },
+    where: {},
     orderBy: { updatedAt: 'desc' },
     select: {
       id: true,

@@ -13,8 +13,9 @@ export async function GET(
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
+  // All authenticated users can download templates (shared within the firm)
   const template = await prisma.aITemplate.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id: params.id },
     select: {
       name: true,
       fileType: true,

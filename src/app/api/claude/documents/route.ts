@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const projectId = searchParams.get('projectId')
 
-  const where: Record<string, unknown> = { userId: session.user.id }
+  // Show all documents to all authenticated users (shared within the firm)
+  const where: Record<string, unknown> = {}
 
   if (projectId === 'null' || projectId === '') {
     where.projectId = null // Kennisbank (geen project)

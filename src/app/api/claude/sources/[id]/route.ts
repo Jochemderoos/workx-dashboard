@@ -13,8 +13,9 @@ export async function GET(
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
+  // All authenticated users can view sources (shared within the firm)
   const source = await prisma.aISource.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id: params.id },
   })
 
   if (!source) {

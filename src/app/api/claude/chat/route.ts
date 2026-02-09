@@ -246,8 +246,9 @@ export async function POST(req: NextRequest) {
     // Fetch knowledge sources — only processed summaries
     let sourcesContext = ''
     try {
+      // Include all active sources (shared within the firm, not user-scoped)
       const activeSources = await prisma.aISource.findMany({
-        where: { userId, isActive: true, isProcessed: true },
+        where: { isActive: true, isProcessed: true },
         select: { name: true, category: true, summary: true },
       })
       let len = 0

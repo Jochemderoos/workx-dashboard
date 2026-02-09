@@ -10,8 +10,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
+  // Show all sources to all authenticated users (shared within the firm)
   const sources = await prisma.aISource.findMany({
-    where: { userId: session.user.id },
+    where: {},
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,

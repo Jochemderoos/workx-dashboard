@@ -13,8 +13,9 @@ export async function GET(
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
+  // All authenticated users can view documents (shared within the firm)
   const document = await prisma.aIDocument.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id: params.id },
   })
 
   if (!document) {
