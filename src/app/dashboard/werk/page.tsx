@@ -149,9 +149,9 @@ export default function WerkOverzichtPage() {
     }
 
     // Apply history offset
-    current.setDate(current.getDate() - (historyOffset * 3))
+    current.setDate(current.getDate() - (historyOffset * 5))
 
-    while (days.length < 3) {
+    while (days.length < 5) {
       const dayOfWeek = current.getDay()
       // Skip weekends (0 = Sunday, 6 = Saturday)
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
@@ -163,7 +163,6 @@ export default function WerkOverzichtPage() {
     return days.reverse() // Oldest first
   }, [historyOffset])
 
-  // Alias for backwards compatibility
   const last3Workdays = workdaysToShow
 
   // Get workload for a specific person and date
