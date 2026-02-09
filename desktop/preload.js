@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Print a full bundle with multiple jobs
   printBundle: (printData) => ipcRenderer.invoke('print-bundle', printData),
 
+  // Cancel a running print bundle
+  cancelPrintBundle: () => ipcRenderer.invoke('cancel-print-bundle'),
+
   // Select printer
   selectPrinter: () => ipcRenderer.invoke('select-printer'),
 

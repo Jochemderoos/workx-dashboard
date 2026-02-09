@@ -261,8 +261,19 @@ ipcMain.handle('print-document', async (event, options) => {
   }
 })
 
+// Cancel flag for print bundle
+let printBundleCancelled = false
+
+// Cancel print bundle
+ipcMain.handle('cancel-print-bundle', async () => {
+  printBundleCancelled = true
+  console.log('[print-bundle] Cancel requested by user')
+  return { success: true }
+})
+
 // Print bundle with multiple jobs to different trays
 ipcMain.handle('print-bundle', async (event, printData) => {
+  printBundleCancelled = false
   const { printJobs } = printData
   const settings = loadSettings()
 
@@ -315,6 +326,14 @@ ipcMain.handle('print-bundle', async (event, printData) => {
     const results = []
 
     for (const job of validJobs) {
+      // Check if cancelled
+      if (printBundleCancelled) {
+        console.log(`[print-bundle] Cancelled — skipping remaining jobs`)
+        mainWindow.webContents.send('print-progress', { job: job.name, status: 'cancelled' })
+        results.push({ job: job.name, success: false, error: 'Geannuleerd' })
+        continue
+      }
+
       // Show progress
       mainWindow.webContents.send('print-progress', {
         job: job.name,

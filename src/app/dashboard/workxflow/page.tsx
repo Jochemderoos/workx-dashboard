@@ -1002,18 +1002,34 @@ export default function WorkxflowPage() {
                     </div>
 
                     {isElectron && (
-                      <button
-                        onClick={printBundle}
-                        disabled={isPrinting}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90 text-sm"
-                      >
-                        {isPrinting ? (
-                          <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Icons.printer size={16} />
+                      <>
+                        <button
+                          onClick={printBundle}
+                          disabled={isPrinting}
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime text-workx-dark font-medium hover:bg-workx-lime/90 text-sm"
+                        >
+                          {isPrinting ? (
+                            <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Icons.printer size={16} />
+                          )}
+                          Printen
+                        </button>
+                        {isPrinting && (
+                          <button
+                            onClick={() => {
+                              // @ts-ignore
+                              window.electronAPI?.cancelPrintBundle?.()
+                              setIsPrinting(false)
+                              toast('Printen wordt geannuleerd...')
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 text-sm border border-red-500/30"
+                          >
+                            <Icons.x size={14} />
+                            Annuleren
+                          </button>
                         )}
-                        Printen
-                      </button>
+                      </>
                     )}
                   </div>
                 </div>
