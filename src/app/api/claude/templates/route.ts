@@ -98,12 +98,19 @@ export async function POST(req: NextRequest) {
     textContent = buffer.toString('utf-8')
   } else if (ext === 'pdf') {
     try {
-      const { PDFParse } = await import('pdf-parse')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.mjs')
       const uint8 = new Uint8Array(buffer)
-      const parser = new PDFParse(uint8)
-      const result = await parser.getText()
-      // pdf-parse v2 returns { text, pages, total } — extract the text property
-      textContent = typeof result === 'string' ? result : (result?.text ?? String(result))
+      const doc = await pdfjsLib.getDocument({ data: uint8, useSystemFonts: true }).promise
+      const pages: string[] = []
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i)
+        const content = await page.getTextContent()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pageText = content.items.map((item: any) => item.str).join(' ')
+        if (pageText.trim()) pages.push(pageText.trim())
+      }
+      textContent = pages.join('\n\n') || '[PDF tekst kon niet worden geëxtraheerd]'
     } catch {
       textContent = '[PDF tekst kon niet worden geëxtraheerd]'
     }

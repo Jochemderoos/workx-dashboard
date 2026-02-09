@@ -81,14 +81,9 @@ export async function POST(req: NextRequest) {
   if (extension === 'txt' || extension === 'md') {
     textContent = buffer.toString('utf-8')
   } else if (extension === 'pdf') {
-    // For PDF: extract text using PDFParse class (with basic fallback)
+    // For PDF: extract text using pdfjs-dist directly (no native canvas dependency)
     try {
-      const { PDFParse } = await import('pdf-parse')
-      const uint8 = new Uint8Array(buffer)
-      const parser = new PDFParse(uint8)
-      const result = await parser.getText()
-      // pdf-parse v2 returns { text, pages, total } — extract the text property
-      textContent = typeof result === 'string' ? result : (result?.text ?? String(result))
+      textContent = await extractTextFromPdfDirect(buffer)
     } catch {
       try {
         textContent = extractTextFromPdfBuffer(buffer)
@@ -126,6 +121,23 @@ export async function POST(req: NextRequest) {
   })
 
   return NextResponse.json(document, { status: 201 })
+}
+
+/** Extract text from PDF using pdfjs-dist (works in serverless, no native deps) */
+async function extractTextFromPdfDirect(buffer: Buffer): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const uint8 = new Uint8Array(buffer)
+  const doc = await pdfjsLib.getDocument({ data: uint8, useSystemFonts: true }).promise
+  const pages: string[] = []
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i)
+    const content = await page.getTextContent()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pageText = content.items.map((item: any) => item.str).join(' ')
+    if (pageText.trim()) pages.push(pageText.trim())
+  }
+  return pages.join('\n\n') || '[Geen tekst gevonden in PDF - mogelijk een gescand document]'
 }
 
 /** Extract text from PDF buffer using basic parsing */

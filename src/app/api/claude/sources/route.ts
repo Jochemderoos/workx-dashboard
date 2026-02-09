@@ -160,19 +160,24 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(source, { status: 201 })
 }
 
-/** Extract text from PDF using pdf-parse (with fallback) */
+/** Extract text from PDF using pdfjs-dist directly (works in serverless, no native deps) */
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
-    // Use PDFParse class from pdf-parse package
-    const { PDFParse } = await import('pdf-parse')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.mjs')
     const uint8 = new Uint8Array(buffer)
-    const parser = new PDFParse(uint8)
-    const result = await parser.getText()
-    // pdf-parse v2 returns { text, pages, total } — extract the text property
-    const text = typeof result === 'string' ? result : (result?.text ?? String(result))
-    return text || ''
+    const doc = await pdfjsLib.getDocument({ data: uint8, useSystemFonts: true }).promise
+    const pages: string[] = []
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i)
+      const content = await page.getTextContent()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pageText = content.items.map((item: any) => item.str).join(' ')
+      if (pageText.trim()) pages.push(pageText.trim())
+    }
+    return pages.join('\n\n') || ''
   } catch {
-    // Fallback to basic extraction if pdf-parse fails
+    // Fallback to basic extraction
     return extractTextFromPdfBasic(buffer)
   }
 }
