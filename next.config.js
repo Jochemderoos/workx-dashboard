@@ -2,7 +2,7 @@
 const nextConfig = {
   poweredByHeader: false,
   experimental: {
-    serverComponentsExternalPackages: ['puppeteer-core'],
+    serverComponentsExternalPackages: ['puppeteer-core', 'pdfjs-dist'],
   },
   images: {
     remotePatterns: [

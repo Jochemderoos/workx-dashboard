@@ -84,10 +84,14 @@ export async function POST(req: NextRequest) {
     // For PDF: extract text using pdfjs-dist directly (no native canvas dependency)
     try {
       textContent = await extractTextFromPdfDirect(buffer)
-    } catch {
+      console.log(`[documents] PDF extracted: ${textContent.length} chars from ${file.name}`)
+    } catch (pdfErr) {
+      console.error(`[documents] pdfjs-dist failed for ${file.name}:`, pdfErr instanceof Error ? pdfErr.message : pdfErr)
       try {
         textContent = extractTextFromPdfBuffer(buffer)
-      } catch {
+        console.log(`[documents] PDF fallback extracted: ${textContent.length} chars from ${file.name}`)
+      } catch (fallbackErr) {
+        console.error(`[documents] PDF fallback also failed:`, fallbackErr)
         textContent = '[PDF tekst kon niet worden geëxtraheerd]'
       }
     }
@@ -125,10 +129,28 @@ export async function POST(req: NextRequest) {
 
 /** Extract text from PDF using pdfjs-dist (works in serverless, no native deps) */
 async function extractTextFromPdfDirect(buffer: Buffer): Promise<string> {
+  // Try multiple import paths for pdfjs-dist compatibility across environments
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  let getDocument: any
+  try {
+    const mod = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    getDocument = mod.getDocument
+  } catch {
+    // Fallback to main entry
+    const mod = await import('pdfjs-dist')
+    getDocument = mod.getDocument
+  }
+
   const uint8 = new Uint8Array(buffer)
-  const doc = await pdfjsLib.getDocument({ data: uint8, useSystemFonts: true }).promise
+  const doc = await getDocument({
+    data: uint8,
+    useSystemFonts: true,
+    disableFontFace: true,
+    isEvalSupported: false,
+  }).promise
+
+  console.log(`[documents] pdfjs loaded PDF: ${doc.numPages} pages`)
+
   const pages: string[] = []
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)

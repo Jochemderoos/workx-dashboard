@@ -99,9 +99,16 @@ export async function POST(req: NextRequest) {
   } else if (ext === 'pdf') {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.mjs')
+      let getDocument: any
+      try {
+        const mod = await import('pdfjs-dist/legacy/build/pdf.mjs')
+        getDocument = mod.getDocument
+      } catch {
+        const mod = await import('pdfjs-dist')
+        getDocument = mod.getDocument
+      }
       const uint8 = new Uint8Array(buffer)
-      const doc = await pdfjsLib.getDocument({ data: uint8, useSystemFonts: true }).promise
+      const doc = await getDocument({ data: uint8, useSystemFonts: true, disableFontFace: true, isEvalSupported: false }).promise
       const pages: string[] = []
       for (let i = 1; i <= doc.numPages; i++) {
         const page = await doc.getPage(i)
@@ -111,7 +118,8 @@ export async function POST(req: NextRequest) {
         if (pageText.trim()) pages.push(pageText.trim())
       }
       textContent = pages.join('\n\n') || '[PDF tekst kon niet worden geëxtraheerd]'
-    } catch {
+    } catch (err) {
+      console.error('[templates] PDF extraction failed:', err instanceof Error ? err.message : err)
       textContent = '[PDF tekst kon niet worden geëxtraheerd]'
     }
   } else if (ext === 'docx') {
