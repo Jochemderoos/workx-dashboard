@@ -142,13 +142,18 @@ ipcMain.handle('get-printer-bins', async (event, printerName) => {
     // Write a temp PowerShell script (avoids escaping issues with -Command)
     const psScriptPath = path.join(app.getPath('temp'), 'workx-detect-bins.ps1')
     const psScript = [
-      'Add-Type -AssemblyName System.Drawing',
-      '$ps = New-Object System.Drawing.Printing.PrinterSettings',
-      `$ps.PrinterName = '${safeName}'`,
-      'if ($ps.IsValid) {',
-      '  $ps.PaperSources | ForEach-Object { Write-Output "$($_.SourceName)|$($_.RawKind)" }',
-      '} else {',
-      '  Write-Error "Printer not found"',
+      '$ErrorActionPreference = "Stop"',
+      'try {',
+      '  Add-Type -AssemblyName System.Drawing',
+      '  $ps = New-Object System.Drawing.Printing.PrinterSettings',
+      `  $ps.PrinterName = '${safeName}'`,
+      '  if ($ps.IsValid) {',
+      '    $ps.PaperSources | ForEach-Object { Write-Output "$($_.SourceName)|$($_.RawKind)" }',
+      '  } else {',
+      `    Write-Output "ERROR|Printer '${safeName}' niet gevonden of niet geldig"`,
+      '  }',
+      '} catch {',
+      '  Write-Output "ERROR|$($_.Exception.Message)"',
       '}',
     ].join('\r\n')
     fs.writeFileSync(psScriptPath, psScript, 'utf8')
@@ -156,7 +161,7 @@ ipcMain.handle('get-printer-bins', async (event, printerName) => {
     console.log(`[print] Detecting bins for "${printerName}" via ${psScriptPath}`)
     const { stdout, stderr } = await execFileAsync('Powershell.exe', [
       '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', psScriptPath
-    ])
+    ], { timeout: 15000 })
 
     // Clean up temp script
     try { fs.unlinkSync(psScriptPath) } catch (e) {}
@@ -166,22 +171,37 @@ ipcMain.handle('get-printer-bins', async (event, printerName) => {
     }
 
     const lines = stdout.trim().split(/\r?\n/).filter(b => b.trim())
+
+    // Check for error output
+    if (lines.length === 1 && lines[0].startsWith('ERROR|')) {
+      const errMsg = lines[0].split('|')[1] || 'Onbekende fout'
+      console.error('[print] Detection error:', errMsg)
+      return { success: false, error: errMsg, bins: [] }
+    }
+
     const bins = []
     const binsDetailed = []
     for (const line of lines) {
       const parts = line.split('|')
       const name = parts[0] ? parts[0].trim() : ''
       const rawKind = parts[1] ? parts[1].trim() : ''
-      if (name) {
+      if (name && !name.startsWith('ERROR')) {
         bins.push(name)
         binsDetailed.push({ name, rawKind })
       }
     }
     console.log(`[print] Detected ${bins.length} bins:`, JSON.stringify(binsDetailed))
+    if (bins.length === 0) {
+      return { success: false, error: 'Geen lades gevonden. Controleer of de printer aan staat en verbonden is.', bins: [] }
+    }
     return { success: true, bins, binsDetailed }
   } catch (error) {
     console.error('[print] Failed to get printer bins:', error.message || error)
-    return { success: false, error: error.message || String(error), bins: [] }
+    const msg = error.message || String(error)
+    const friendlyMsg = msg.includes('ETIMEDOUT') || msg.includes('timeout')
+      ? 'Timeout — printer reageert niet. Controleer of de printer aan staat.'
+      : msg
+    return { success: false, error: friendlyMsg, bins: [] }
   }
 })
 

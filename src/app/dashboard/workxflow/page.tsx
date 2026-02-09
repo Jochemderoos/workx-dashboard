@@ -757,7 +757,7 @@ export default function WorkxflowPage() {
     if (!isElectron) return
     const printerName = printerSettings.selectedPrinter
     if (!printerName) {
-      toast.error('Selecteer eerst een printer')
+      toast.error('Selecteer eerst een printer (bijv. iR-ADV C477)')
       return
     }
 
@@ -767,19 +767,25 @@ export default function WorkxflowPage() {
       const result = await window.electronAPI.getPrinterBins(printerName)
       if (result.success && result.bins?.length > 0) {
         setAvailableBins(result.bins)
-        // Auto-fill tray names with detected bins
+        // Auto-fill tray names: find "Lade 1" through "Lade 4" specifically
         const newSettings = { ...printerSettings }
-        if (result.bins[0]) newSettings.tray1Name = result.bins[0]
-        if (result.bins[1]) newSettings.tray2Name = result.bins[1]
-        if (result.bins[2]) newSettings.tray3Name = result.bins[2]
-        if (result.bins[3]) newSettings.tray4Name = result.bins[3]
+        const findBin = (n: number) => result.bins.find((b: string) => /^Lade\s*$/i.test(b) === false && b.toLowerCase().includes(`lade ${n}`)) || result.bins.find((b: string) => b.includes(`${n}`))
+        // Try to match exact "Lade X" names, fallback to positional
+        const lade1 = result.bins.find((b: string) => /^Lade\s+1$/i.test(b))
+        const lade2 = result.bins.find((b: string) => /^Lade\s+2$/i.test(b))
+        const lade3 = result.bins.find((b: string) => /^Lade\s+3$/i.test(b))
+        const lade4 = result.bins.find((b: string) => /^Lade\s+4$/i.test(b))
+        if (lade1) newSettings.tray1Name = lade1
+        if (lade2) newSettings.tray2Name = lade2
+        if (lade3) newSettings.tray3Name = lade3
+        if (lade4) newSettings.tray4Name = lade4
         setPrinterSettings(newSettings)
         toast.success(`${result.bins.length} lades gevonden`)
       } else {
-        toast.error('Kon geen lades detecteren voor deze printer')
+        toast.error(result.error ? `Detectie mislukt: ${result.error}` : 'Kon geen lades detecteren voor deze printer')
       }
-    } catch (error) {
-      toast.error('Kon lades niet detecteren')
+    } catch (error: any) {
+      toast.error(`Fout bij detectie: ${error?.message || error}`)
     } finally {
       setIsDetectingBins(false)
     }
