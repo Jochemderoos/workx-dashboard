@@ -179,10 +179,12 @@ export async function POST(req: NextRequest) {
     })
     const history = historyDesc.reverse()
 
-    // Build context from documents
+    // Build context from documents — use native PDF support when available
     let documentContext = ''
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const documentBlocks: any[] = []  // Native document blocks for Claude API
+
     if (documentIds?.length) {
-      // Allow documents the user owns OR that belong to a shared project
       const docs = await prisma.aIDocument.findMany({
         where: {
           id: { in: documentIds },
@@ -193,21 +195,37 @@ export async function POST(req: NextRequest) {
         },
       })
       for (const doc of docs) {
-        if (doc.content) {
+        // Prefer native PDF support: send base64 PDF directly to Claude
+        if (doc.fileType === 'pdf' && doc.fileUrl?.startsWith('data:application/pdf;base64,')) {
+          const base64Data = doc.fileUrl.split(',')[1]
+          documentBlocks.push({
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+            title: doc.name,
+          })
+        } else if (doc.content) {
+          // Fallback for text files and docs without fileUrl
           documentContext += `\n\n--- Document: ${doc.name} ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
         }
       }
     }
 
     if (projectId) {
-      // Include project documents (auth already verified above)
-      // Limit total document context to 200K chars to avoid exceeding context window
       const projectDocs = await prisma.aIDocument.findMany({
         where: { projectId },
         take: 20,
       })
       for (const doc of projectDocs) {
-        if (doc.content && !documentIds?.includes(doc.id)) {
+        if (documentIds?.includes(doc.id)) continue
+        if (doc.fileType === 'pdf' && doc.fileUrl?.startsWith('data:application/pdf;base64,')) {
+          if (documentBlocks.length >= 5) break  // Max 5 PDF attachments
+          const base64Data = doc.fileUrl.split(',')[1]
+          documentBlocks.push({
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+            title: doc.name,
+          })
+        } else if (doc.content) {
           if (documentContext.length > 200000) break
           documentContext += `\n\n--- ${doc.name} ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
         }
@@ -259,14 +277,26 @@ Vraag NIET naar de echte namen of gegevens.`
     }
 
     // Build messages — use anonymized version of the LAST user message
-    const msgs: Array<{ role: 'user' | 'assistant'; content: string }> = []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const msgs: Array<{ role: 'user' | 'assistant'; content: any }> = []
     for (let i = 0; i < history.length; i++) {
       const msg = history[i]
       if (msg.role === 'user' || msg.role === 'assistant') {
-        // For the last user message, use anonymized version if applicable
-        const isLastUserMsg = msg.role === 'user' && i === history.length - 1 && anonymize
-        const content = isLastUserMsg ? messageForClaude : msg.content
-        msgs.push({ role: msg.role as 'user' | 'assistant', content })
+        const isLastUserMsg = msg.role === 'user' && i === history.length - 1
+        const content = (isLastUserMsg && anonymize) ? messageForClaude : msg.content
+
+        // Attach PDF document blocks to the last user message
+        if (isLastUserMsg && documentBlocks.length > 0) {
+          msgs.push({
+            role: 'user',
+            content: [
+              ...documentBlocks,
+              { type: 'text', text: content },
+            ],
+          })
+        } else {
+          msgs.push({ role: msg.role as 'user' | 'assistant', content })
+        }
       }
     }
 
