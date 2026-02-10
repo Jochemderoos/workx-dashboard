@@ -13,9 +13,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
+    // Get the last 6 meeting weeks to limit the scope
+    const recentWeeks = await prisma.meetingWeek.findMany({
+      orderBy: { meetingDate: 'desc' },
+      take: 6,
+      select: { id: true },
+    })
+    const recentWeekIds = recentWeeks.map(w => w.id)
+
     const actions = await prisma.meetingAction.findMany({
       where: {
         isCompleted: false,
+        weekId: { in: recentWeekIds },
       },
       include: {
         week: {

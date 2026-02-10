@@ -6,6 +6,7 @@ import { Icons } from '@/components/ui/Icons'
 import WeekSection from '@/components/notulen/WeekSection'
 import ResponsibilityOverview from '@/components/notulen/ResponsibilityOverview'
 import TextReveal from '@/components/ui/TextReveal'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface Topic {
   id: string
@@ -89,7 +90,7 @@ export default function NotulenPage() {
 
   // Add week state
   const [isAddingWeek, setIsAddingWeek] = useState(false)
-  const [newWeekDate, setNewWeekDate] = useState('')
+  const [newWeekDate, setNewWeekDate] = useState<Date | null>(null)
 
   // Add month state
   const [isAddingMonth, setIsAddingMonth] = useState(false)
@@ -140,7 +141,7 @@ export default function NotulenPage() {
         const res = await fetch('/api/team')
         if (res.ok) {
           const data = await res.json()
-          setEmployees(data.filter((u: any) => u.role === 'EMPLOYEE' && u.isActive).map((u: any) => ({ id: u.id, name: u.name })))
+          setEmployees(data.filter((u: any) => u.isActive !== false).map((u: any) => ({ id: u.id, name: u.name })))
         }
       } catch {
         // ignore
@@ -237,20 +238,18 @@ export default function NotulenPage() {
 
   const handleAddWeek = async () => {
     if (!newWeekDate || !selectedMonthId) return
-    const date = new Date(newWeekDate)
-    const dateLabel = date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    // Capitalize first letter
+    const dateLabel = newWeekDate.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     const formattedLabel = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)
 
     try {
       const res = await fetch(`/api/notulen/${selectedMonthId}/weeks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meetingDate: new Date(newWeekDate).toISOString(), dateLabel: formattedLabel }),
+        body: JSON.stringify({ meetingDate: newWeekDate.toISOString(), dateLabel: formattedLabel }),
       })
       if (!res.ok) throw new Error()
       toast.success('Week toegevoegd')
-      setNewWeekDate('')
+      setNewWeekDate(null)
       setIsAddingWeek(false)
       handleDataChange()
     } catch {
@@ -495,15 +494,17 @@ export default function NotulenPage() {
           {/* Add week button */}
           <div className="flex items-center gap-3">
             {isAddingWeek ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={newWeekDate}
-                  onChange={(e) => setNewWeekDate(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-                />
-                <button onClick={handleAddWeek} disabled={!newWeekDate} className="btn-primary px-4 py-2 text-sm disabled:opacity-30">Toevoegen</button>
-                <button onClick={() => { setIsAddingWeek(false); setNewWeekDate('') }} className="btn-secondary px-4 py-2 text-sm">Annuleren</button>
+              <div className="flex items-center gap-3">
+                <div className="w-64">
+                  <DatePicker
+                    selected={newWeekDate}
+                    onChange={(date) => setNewWeekDate(date)}
+                    placeholder="Kies vergaderdatum..."
+                    dateFormat="EEEE d MMMM yyyy"
+                  />
+                </div>
+                <button onClick={handleAddWeek} disabled={!newWeekDate} className="btn-primary px-4 py-2.5 text-sm rounded-xl disabled:opacity-30">Toevoegen</button>
+                <button onClick={() => { setIsAddingWeek(false); setNewWeekDate(null) }} className="btn-secondary px-4 py-2.5 text-sm rounded-xl">Annuleren</button>
               </div>
             ) : (
               <button

@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import TopicRow from './TopicRow'
-import ActionItem from './ActionItem'
 import WerkverdelingTable from './WerkverdelingTable'
 import toast from 'react-hot-toast'
 
@@ -63,9 +62,6 @@ export default function WeekSection({
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const [isAddingTopic, setIsAddingTopic] = useState(false)
   const [newTopicTitle, setNewTopicTitle] = useState('')
-  const [isAddingAction, setIsAddingAction] = useState(false)
-  const [newActionDesc, setNewActionDesc] = useState('')
-  const [newActionResponsible, setNewActionResponsible] = useState('')
 
   const basePath = `/api/notulen/${monthId}/weeks/${weekId}`
 
@@ -135,18 +131,14 @@ export default function WeekSection({
     }
   }
 
-  const handleAddAction = async () => {
-    if (!newActionDesc.trim() || !newActionResponsible) return
+  const handleAddAction = async (_topicId: string, description: string, responsibleName: string) => {
     try {
       const res = await fetch(`${basePath}/actions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: newActionDesc.trim(), responsibleName: newActionResponsible }),
+        body: JSON.stringify({ description, responsibleName }),
       })
       if (!res.ok) throw new Error()
-      setNewActionDesc('')
-      setNewActionResponsible('')
-      setIsAddingAction(false)
       onDataChange()
     } catch {
       toast.error('Kon actiepunt niet toevoegen')
@@ -191,7 +183,7 @@ export default function WeekSection({
       {/* Content */}
       {isOpen && (
         <div className="p-5 space-y-6">
-          {/* Topics */}
+          {/* Topics with inline actions */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="grid grid-cols-[1fr_2fr_auto] gap-3 w-full text-xs font-medium text-gray-400 uppercase tracking-wider px-3">
@@ -205,8 +197,13 @@ export default function WeekSection({
                 <TopicRow
                   key={topic.id}
                   {...topic}
+                  actions={actions}
+                  teamMembers={teamMembers}
                   onUpdate={handleUpdateTopic}
                   onDelete={handleDeleteTopic}
+                  onUpdateAction={handleUpdateAction}
+                  onDeleteAction={handleDeleteAction}
+                  onAddAction={handleAddAction}
                 />
               ))}
             </div>
@@ -250,71 +247,6 @@ export default function WeekSection({
               />
             </div>
           )}
-
-          {/* Actions */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider px-1">Actiepunten</h4>
-              {actions.length > 0 && (
-                <span className="text-xs text-gray-500">
-                  {actions.filter(a => a.isCompleted).length}/{actions.length} afgerond
-                </span>
-              )}
-            </div>
-            <div>
-              {actions.map((action) => (
-                <ActionItem
-                  key={action.id}
-                  {...action}
-                  teamMembers={teamMembers}
-                  onUpdate={handleUpdateAction}
-                  onDelete={handleDeleteAction}
-                />
-              ))}
-            </div>
-            {/* Add action */}
-            {isAddingAction ? (
-              <div className="flex items-start gap-2 mt-2 px-3">
-                <div className="flex-1 space-y-2">
-                  <input
-                    value={newActionDesc}
-                    onChange={(e) => setNewActionDesc(e.target.value)}
-                    placeholder="Beschrijving actiepunt..."
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-                    autoFocus
-                  />
-                  <select
-                    value={newActionResponsible}
-                    onChange={(e) => setNewActionResponsible(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-                  >
-                    <option value="">Verantwoordelijke...</option>
-                    {teamMembers.map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={handleAddAction}
-                  disabled={!newActionDesc.trim() || !newActionResponsible}
-                  className="p-1.5 rounded-lg bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 transition-colors disabled:opacity-30"
-                >
-                  <Icons.check size={14} />
-                </button>
-                <button onClick={() => { setIsAddingAction(false); setNewActionDesc(''); setNewActionResponsible('') }} className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 transition-colors">
-                  <Icons.x size={14} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsAddingAction(true)}
-                className="flex items-center gap-2 mt-2 px-3 py-2 text-sm text-gray-500 hover:text-workx-lime transition-colors"
-              >
-                <Icons.plus size={14} />
-                <span>Actiepunt toevoegen</span>
-              </button>
-            )}
-          </div>
         </div>
       )}
     </div>
