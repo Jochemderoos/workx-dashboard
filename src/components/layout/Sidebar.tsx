@@ -135,19 +135,14 @@ export default function Sidebar({ user }: SidebarProps) {
           <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Menu</p>
           <div className="space-y-1">
             {mainMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
+            {(user.role === 'PARTNER' || user.role === 'ADMIN') && (
+              <>
+                <NavLink href="/dashboard/partners/werk" icon={Icons.briefcase} label="Werk (Partners)" iconAnim="icon-briefcase-hover" />
+                <NavLink href="/dashboard/partners/notulen" icon={Icons.fileText} label="Notulen" iconAnim="icon-file-hover" />
+              </>
+            )}
           </div>
         </div>
-
-        {/* Partners - alleen voor PARTNER en ADMIN */}
-        {(user.role === 'PARTNER' || user.role === 'ADMIN') && (
-          <div>
-            <p className="px-4 mb-2 text-[10px] font-medium text-workx-lime/40 uppercase tracking-widest">Partners</p>
-            <div className="space-y-1">
-              <NavLink href="/dashboard/partners/werk" icon={Icons.briefcase} label="Werk" iconAnim="icon-briefcase-hover" />
-              <NavLink href="/dashboard/partners/notulen" icon={Icons.fileText} label="Notulen" iconAnim="icon-file-hover" />
-            </div>
-          </div>
-        )}
 
         {/* Tools */}
         <div>
