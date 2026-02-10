@@ -459,7 +459,7 @@ export async function POST(
     const totalSizeMB = pdfBytes.length / (1024 * 1024)
 
     // If split mode or PDF exceeds max size, split into parts
-    if (splitMode || totalSizeMB > maxSizeMB) {
+    if (splitMode) {
       const maxSizeBytes = maxSizeMB * 1024 * 1024
       const parts: Array<{ name: string; data: string }> = []
 
