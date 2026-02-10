@@ -88,8 +88,6 @@ export default function ClaudeChat({
     { id: 'nl', label: 'Nederlands', instruction: 'Antwoord in het Nederlands.' },
     { id: 'en', label: 'Engels', instruction: 'Answer in English.' },
     { id: 'word', label: 'Word-format', instruction: 'Structureer het antwoord als een formeel document met kopjes, opsommingen en duidelijke paragrafen, geschikt om te kopiëren naar een Word-bestand.' },
-    { id: 'client', label: 'Cliënt-taal', instruction: 'Schrijf het antwoord in begrijpelijke taal voor een cliënt die geen juridische achtergrond heeft. Vermijd juridisch jargon of leg het uit. Gebruik een vriendelijke, professionele toon alsof je een e-mail aan de cliënt schrijft. Begin met "Beste [cliënt]," en eindig met een uitnodiging om contact op te nemen bij vragen.' },
-    { id: 'vergelijk', label: 'Vergelijk documenten', instruction: 'Vergelijk de bijgevoegde documenten met elkaar. Maak een gestructureerde vergelijking met: (1) Overeenkomsten, (2) Verschillen, (3) Ontbrekende bepalingen, (4) Juridische risico\'s per document. Gebruik een overzichtelijke tabel waar mogelijk. Markeer de belangrijkste afwijkingen met een ⚠️.' },
   ] as const
 
   const toggleOption = (id: string) => {
@@ -190,13 +188,14 @@ export default function ClaudeChat({
     setAttachedDocs([])
   }, [initialConvId])
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToBottom = useCallback((instant?: boolean) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' })
   }, [])
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, scrollToBottom])
+    // During streaming: instant scroll to avoid jittery smooth-scroll conflicts
+    scrollToBottom(isLoading)
+  }, [messages, scrollToBottom, isLoading])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -624,24 +623,37 @@ export default function ClaudeChat({
         )}
 
         {/* Message bubbles */}
-        {messages.map((msg) => (
+        {messages.map((msg, msgIndex) => {
+          // Check if this is the currently streaming message (last assistant msg while loading)
+          const isStreaming = isLoading && msg.role === 'assistant' && msgIndex === messages.length - 1
+
+          return (
           <div
             key={msg.id}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className={`relative group max-w-[85%]`}>
+            <div className={`relative group ${msg.role === 'user' ? 'max-w-[85%]' : 'max-w-[95%] w-full'}`}>
               {/* Assistant message */}
               {msg.role === 'assistant' && (
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/10 flex items-center justify-center mt-0.5">
-                    <Icons.sparkles size={14} className="text-workx-lime" />
+                <div className="flex items-start gap-2.5">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/10 flex items-center justify-center mt-1">
+                    <Icons.sparkles size={12} className="text-workx-lime" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-white/[0.04] border border-white/[0.08]">
-                      <div
-                        className="claude-response text-sm text-white/90 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
-                      />
+                      {isStreaming ? (
+                        // During streaming: plain text to avoid layout reflow from markdown parsing
+                        <div className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap">
+                          {msg.content}
+                          <span className="inline-block w-0.5 h-4 bg-workx-lime/60 animate-pulse ml-0.5 align-text-bottom" />
+                        </div>
+                      ) : (
+                        // Completed: full markdown rendering
+                        <div
+                          className="claude-response text-sm text-white/90 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                        />
+                      )}
                     </div>
 
                     {/* Citations */}
@@ -827,7 +839,8 @@ export default function ClaudeChat({
               )}
             </div>
           </div>
-        ))}
+          )
+        })}
 
         {/* Thinking display - subtle collapsible reasoning */}
         {thinkingText && isLoading && (
