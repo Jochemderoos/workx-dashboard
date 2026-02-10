@@ -38,12 +38,15 @@ export async function uploadToBlob(
 
   if (!tokenRes.ok) {
     const err = await tokenRes.json().catch(() => ({ error: 'Token request failed' }))
+    console.error('Token request failed:', tokenRes.status, err)
     throw new Error(err.error || 'Kon upload token niet ophalen')
   }
 
-  const { clientToken } = await tokenRes.json()
+  const tokenData = await tokenRes.json()
+  const clientToken = tokenData.clientToken
 
   if (!clientToken) {
+    console.error('No clientToken in response:', tokenData)
     throw new Error('Geen upload token ontvangen')
   }
 
@@ -59,7 +62,10 @@ export async function uploadToBlob(
     headers['x-content-length'] = String(file.size)
   }
 
-  const putRes = await fetch(`${VERCEL_BLOB_API_URL}/${filename}`, {
+  const uploadUrl = `${VERCEL_BLOB_API_URL}/${filename}`
+  console.log('Uploading to:', uploadUrl, 'size:', file.size)
+
+  const putRes = await fetch(uploadUrl, {
     method: 'PUT',
     headers,
     // @ts-ignore — duplex is required for streaming request bodies in some browsers
@@ -69,10 +75,12 @@ export async function uploadToBlob(
 
   if (!putRes.ok) {
     const errorText = await putRes.text().catch(() => 'Upload failed')
-    throw new Error(`Upload mislukt: ${errorText}`)
+    console.error('Blob PUT failed:', putRes.status, errorText)
+    throw new Error(`Upload mislukt (${putRes.status}): ${errorText}`)
   }
 
   const result = await putRes.json()
+  console.log('Upload success:', result.url)
 
   return {
     url: result.url,

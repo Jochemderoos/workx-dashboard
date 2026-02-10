@@ -38,13 +38,12 @@ export async function POST(req: NextRequest) {
           maximumSizeInBytes: 50 * 1024 * 1024, // 50MB
         }
       },
-      onUploadCompleted: async () => {
-        // No-op — processing happens in the calling code
-      },
+      // No onUploadCompleted — we don't need a callback
     })
 
     return NextResponse.json(jsonResponse)
   } catch (error) {
+    console.error('Upload handler error:', error)
     return NextResponse.json(
       { error: (error as Error).message },
       { status: 400 }
