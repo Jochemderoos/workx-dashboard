@@ -74,6 +74,7 @@ export default function ClaudeChat({
   const [annotationType, setAnnotationType] = useState<'comment' | 'correction' | 'warning'>('comment')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [annotations, setAnnotations] = useState<Record<string, any[]>>({})
+  const [optionsExpanded, setOptionsExpanded] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -125,6 +126,7 @@ export default function ClaudeChat({
     setInput('')
     setAttachedDocs([])
     setActiveOptions(new Set())
+    setOptionsExpanded(true) // Re-expand options for new chat
     onNewChat?.()
   }
 
@@ -394,6 +396,7 @@ export default function ClaudeChat({
       }
 
       setStatusText('Claude schrijft...')
+      setOptionsExpanded(false) // Collapse options to maximize answer space
 
       // Add empty assistant message that we'll update with streamed content
       setMessages(prev => [...prev, {
@@ -890,156 +893,225 @@ export default function ClaudeChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area */}
-      <div className="flex-shrink-0 p-4 border-t border-white/5 space-y-2">
-        {/* Anonymize toggle — prominent, above input */}
-        <button
-          type="button"
-          onClick={() => setAnonymize(!anonymize)}
-          className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${
-            anonymize
-              ? 'bg-workx-lime/10 border-workx-lime/30'
-              : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/10'
+      {/* Input area — compact when options collapsed, expanded when shown */}
+      <div className="flex-shrink-0 border-t border-white/5">
+        {/* Collapsible options panel */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            optionsExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
           }`}
         >
-          <div className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center transition-all ${
-            anonymize
-              ? 'bg-workx-lime border-workx-lime'
-              : 'border-white/20'
-          }`}>
-            {anonymize && <Icons.check size={12} className="text-workx-dark" />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <Icons.shield size={14} className={anonymize ? 'text-workx-lime' : 'text-white/40'} />
-              <span className={`text-xs font-medium ${anonymize ? 'text-workx-lime' : 'text-white/60'}`}>
-                Anonimiseer persoonsgegevens
-              </span>
-            </div>
-            {anonymize ? (
-              <p className="text-[10px] text-workx-lime/60 mt-0.5 leading-relaxed">
-                PII wordt vervangen door placeholders ([Persoon-1], [BSN-1], etc.) voordat het naar AI wordt gestuurd.
-              </p>
-            ) : (
-              <p className="text-[10px] text-white/25 mt-0.5 leading-relaxed">
-                De Orde van Advocaten vereist dat persoonsgegevens van cli&#235;nten worden geanonimiseerd voordat deze in een AI-tool worden ingelezen.
-              </p>
-            )}
-          </div>
-        </button>
+          <div className="px-4 pt-3 space-y-2">
+            {/* Anonymize toggle */}
+            <button
+              type="button"
+              onClick={() => setAnonymize(!anonymize)}
+              className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl border transition-all text-left ${
+                anonymize
+                  ? 'bg-workx-lime/10 border-workx-lime/30'
+                  : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/10'
+              }`}
+            >
+              <div className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center transition-all ${
+                anonymize
+                  ? 'bg-workx-lime border-workx-lime'
+                  : 'border-white/20'
+              }`}>
+                {anonymize && <Icons.check size={12} className="text-workx-dark" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Icons.shield size={14} className={anonymize ? 'text-workx-lime' : 'text-white/40'} />
+                  <span className={`text-xs font-medium ${anonymize ? 'text-workx-lime' : 'text-white/60'}`}>
+                    Anonimiseer persoonsgegevens
+                  </span>
+                </div>
+                {anonymize ? (
+                  <p className="text-[10px] text-workx-lime/60 mt-0.5 leading-relaxed">
+                    PII wordt vervangen door placeholders ([Persoon-1], [BSN-1], etc.) voordat het naar AI wordt gestuurd.
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-white/25 mt-0.5 leading-relaxed">
+                    De Orde van Advocaten vereist dat persoonsgegevens van cli&#235;nten worden geanonimiseerd voordat deze in een AI-tool worden ingelezen.
+                  </p>
+                )}
+              </div>
+            </button>
 
-        {/* Attached documents chips */}
-        {attachedDocs.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {attachedDocs.map((doc) => (
-              <span
-                key={doc.id}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400"
-              >
-                {anonymize && <Icons.shield size={9} className="text-workx-lime" />}
-                <Icons.paperclip size={10} />
-                <span className="truncate max-w-[150px]">{doc.name}</span>
+            {/* Model selector + Response option chips */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* Model toggle */}
+              <div className="flex items-center rounded-lg border border-white/10 overflow-hidden mr-1">
                 <button
-                  onClick={() => removeAttachedDoc(doc.id)}
-                  className="hover:text-white transition-colors"
+                  onClick={() => setSelectedModel('sonnet')}
+                  disabled={isLoading}
+                  className={`px-2.5 py-1 text-[11px] transition-all ${
+                    selectedModel === 'sonnet'
+                      ? 'bg-workx-lime/15 text-workx-lime font-medium'
+                      : 'bg-transparent text-white/35 hover:text-white/60'
+                  } disabled:opacity-30`}
                 >
-                  <Icons.x size={10} />
+                  Sonnet
                 </button>
-              </span>
-            ))}
+                <button
+                  onClick={() => setSelectedModel('opus')}
+                  disabled={isLoading}
+                  className={`px-2.5 py-1 text-[11px] transition-all border-l border-white/10 ${
+                    selectedModel === 'opus'
+                      ? 'bg-purple-500/15 text-purple-400 font-medium'
+                      : 'bg-transparent text-white/35 hover:text-white/60'
+                  } disabled:opacity-30`}
+                  title="Opus — diepgaandere analyse, langzamer"
+                >
+                  Opus
+                </button>
+              </div>
+              <span className="text-white/10 text-[10px]">|</span>
+              {RESPONSE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => toggleOption(opt.id)}
+                  disabled={isLoading}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] transition-all border ${
+                    activeOptions.has(opt.id)
+                      ? 'bg-workx-lime/15 border-workx-lime/30 text-workx-lime font-medium'
+                      : 'bg-white/[0.03] border-white/10 text-white/35 hover:text-white/60 hover:bg-white/[0.06]'
+                  } disabled:opacity-30`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-
-        {/* Model selector + Response option chips */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {/* Model toggle */}
-          <div className="flex items-center rounded-lg border border-white/10 overflow-hidden mr-1">
-            <button
-              onClick={() => setSelectedModel('sonnet')}
-              disabled={isLoading}
-              className={`px-2.5 py-1 text-[11px] transition-all ${
-                selectedModel === 'sonnet'
-                  ? 'bg-workx-lime/15 text-workx-lime font-medium'
-                  : 'bg-transparent text-white/35 hover:text-white/60'
-              } disabled:opacity-30`}
-            >
-              Sonnet
-            </button>
-            <button
-              onClick={() => setSelectedModel('opus')}
-              disabled={isLoading}
-              className={`px-2.5 py-1 text-[11px] transition-all border-l border-white/10 ${
-                selectedModel === 'opus'
-                  ? 'bg-purple-500/15 text-purple-400 font-medium'
-                  : 'bg-transparent text-white/35 hover:text-white/60'
-              } disabled:opacity-30`}
-              title="Opus — diepgaandere analyse, langzamer"
-            >
-              Opus
-            </button>
-          </div>
-          <span className="text-white/10 text-[10px]">|</span>
-          {RESPONSE_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => toggleOption(opt.id)}
-              disabled={isLoading}
-              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all border ${
-                activeOptions.has(opt.id)
-                  ? 'bg-workx-lime/15 border-workx-lime/30 text-workx-lime font-medium'
-                  : 'bg-white/[0.03] border-white/10 text-white/35 hover:text-white/60 hover:bg-white/[0.06]'
-              } disabled:opacity-30`}
-            >
-              {opt.label}
-            </button>
-          ))}
         </div>
 
-        <div className="flex items-end gap-2">
-          {/* Attach document button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || isUploading}
-            title="Document bijvoegen (PDF, DOCX, TXT, MD)"
-            className="flex-shrink-0 w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-white/40 flex items-center justify-center hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
-          >
-            {isUploading ? (
-              <div className="animate-spin">
-                <Icons.refresh size={16} />
-              </div>
-            ) : (
-              <Icons.paperclip size={18} />
-            )}
-          </button>
+        {/* Always visible: input row with inline toggle + active indicators */}
+        <div className="px-4 pb-3 pt-2 space-y-2">
+          {/* Attached documents chips */}
+          {attachedDocs.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {attachedDocs.map((doc) => (
+                <span
+                  key={doc.id}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400"
+                >
+                  {anonymize && <Icons.shield size={9} className="text-workx-lime" />}
+                  <Icons.paperclip size={10} />
+                  <span className="truncate max-w-[150px]">{doc.name}</span>
+                  <button
+                    onClick={() => removeAttachedDoc(doc.id)}
+                    className="hover:text-white transition-colors"
+                  >
+                    <Icons.x size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
 
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder || 'Typ je vraag...'}
-              disabled={isLoading}
-              spellCheck={false}
-              autoComplete="off"
-              rows={1}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-base placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/40 focus:bg-white/[0.07] transition-all disabled:opacity-50"
-              style={{ maxHeight: '200px' }}
-            />
+          {/* Collapsed state: show compact summary of active options + toggle button */}
+          {!optionsExpanded && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                onClick={() => setOptionsExpanded(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border bg-white/[0.04] border-white/10 text-white/40 hover:text-white/70 hover:bg-white/[0.07] hover:border-white/20"
+              >
+                <Icons.settings size={12} />
+                Opties
+                <Icons.chevronRight size={10} className="rotate-90" />
+              </button>
+              {/* Show compact active indicators */}
+              {anonymize && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-workx-lime/10 border border-workx-lime/20 text-[10px] text-workx-lime">
+                  <Icons.shield size={9} /> Anoniem
+                </span>
+              )}
+              {selectedModel === 'opus' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-[10px] text-purple-400">
+                  Opus
+                </span>
+              )}
+              {activeOptions.size > 0 && (
+                <>
+                  {Array.from(activeOptions).map(optId => {
+                    const opt = RESPONSE_OPTIONS.find(o => o.id === optId)
+                    return opt ? (
+                      <span
+                        key={optId}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-workx-lime/10 border border-workx-lime/20 text-[10px] text-workx-lime"
+                      >
+                        {opt.label}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleOption(optId) }}
+                          className="hover:text-white transition-colors ml-0.5"
+                        >
+                          <Icons.x size={8} />
+                        </button>
+                      </span>
+                    ) : null
+                  })}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Expanded state: show collapse button */}
+          {optionsExpanded && messages.length > 0 && (
+            <button
+              onClick={() => setOptionsExpanded(false)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all text-white/30 hover:text-white/60"
+            >
+              <Icons.chevronRight size={10} className="-rotate-90" />
+              Opties verbergen
+            </button>
+          )}
+
+          <div className="flex items-end gap-2">
+            {/* Attach document button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || isUploading}
+              title="Document bijvoegen (PDF, DOCX, TXT, MD)"
+              className="flex-shrink-0 w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-white/40 flex items-center justify-center hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+            >
+              {isUploading ? (
+                <div className="animate-spin">
+                  <Icons.refresh size={16} />
+                </div>
+              ) : (
+                <Icons.paperclip size={18} />
+              )}
+            </button>
+
+            <div className="flex-1 relative">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder || 'Typ je vraag...'}
+                disabled={isLoading}
+                spellCheck={false}
+                autoComplete="off"
+                rows={1}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-base placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/40 focus:bg-white/[0.07] transition-all disabled:opacity-50"
+                style={{ maxHeight: '200px' }}
+              />
+            </div>
+            <button
+              onClick={() => sendMessage()}
+              disabled={isLoading || !input.trim()}
+              className="flex-shrink-0 w-11 h-11 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center hover:bg-workx-lime/90 transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/10"
+            >
+              {isLoading ? (
+                <div className="animate-spin">
+                  <Icons.refresh size={18} />
+                </div>
+              ) : (
+                <Icons.send size={18} />
+              )}
+            </button>
           </div>
-          <button
-            onClick={() => sendMessage()}
-            disabled={isLoading || !input.trim()}
-            className="flex-shrink-0 w-11 h-11 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center hover:bg-workx-lime/90 transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/10"
-          >
-            {isLoading ? (
-              <div className="animate-spin">
-                <Icons.refresh size={18} />
-              </div>
-            ) : (
-              <Icons.send size={18} />
-            )}
-          </button>
         </div>
       </div>
     </div>
