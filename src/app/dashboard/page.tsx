@@ -837,6 +837,8 @@ export default function DashboardHome() {
   const [newsletterOverview, setNewsletterOverview] = useState<NewsletterAssignment[] | null>(null)
   const [isNewsletterManager, setIsNewsletterManager] = useState(false)
   const [nextTraining, setNextTraining] = useState<{ id: string; title: string; speaker: string; date: string; startTime: string | null; location: string | null; points: number } | null>(null)
+  const [openMeetingActions, setOpenMeetingActions] = useState<{ id: string; description: string; responsibleName: string; week: { dateLabel: string } }[]>([])
+  const [werkverdelingGesprek, setWerkverdelingGesprek] = useState<{ partnerName: string; weekDate: string } | null>(null)
   // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
   const fetchDashboardSummary = async () => {
     try {
@@ -915,6 +917,14 @@ export default function DashboardHome() {
         // Set next training session
         if (data.nextTraining) {
           setNextTraining(data.nextTraining)
+        }
+
+        // Set notulen data
+        if (data.openMeetingActions) {
+          setOpenMeetingActions(data.openMeetingActions)
+        }
+        if (data.werkverdelingGesprek) {
+          setWerkverdelingGesprek(data.werkverdelingGesprek)
         }
       }
     } catch (error) {
@@ -1721,6 +1731,58 @@ export default function DashboardHome() {
 
       {/* WHAT'S NEW WIDGET */}
       <WhatsNewWidget dismissedVersion={currentUser?.whatsNewDismissed} />
+
+      {/* WERKVERDELINGSGESPREK WIDGET - for employees */}
+      {werkverdelingGesprek && (
+        <Link href="/dashboard/partners/notulen" className="block">
+          <div className="relative overflow-hidden rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-transparent p-5 hover:border-yellow-500/50 transition-all group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="relative flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Icons.users className="text-yellow-400" size={22} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">Werkverdelingsgesprek</p>
+                <p className="text-xs text-yellow-300/80 mt-0.5">
+                  Je hebt deze week een werkverdelingsgesprek met <span className="font-medium text-yellow-200">{werkverdelingGesprek.partnerName}</span>
+                </p>
+              </div>
+              <Icons.chevronRight size={16} className="text-yellow-400/50 group-hover:text-yellow-400 group-hover:translate-x-1 transition-all" />
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* OPEN ACTIEPUNTEN WIDGET - for partners + admin */}
+      {openMeetingActions.length > 0 && (
+        <div className="card p-5 border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-transparent">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                <Icons.target className="text-orange-400" size={18} />
+              </div>
+              <div>
+                <h3 className="font-medium text-white text-sm">Open Actiepunten</h3>
+                <p className="text-xs text-gray-500">Uit maandagoverleg</p>
+              </div>
+            </div>
+            <Link href="/dashboard/partners/notulen" className="text-xs text-orange-400 hover:text-orange-300 transition-colors">
+              Alle bekijken →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {openMeetingActions.slice(0, 5).map((action) => (
+              <div key={action.id} className="flex items-start gap-3 py-1.5">
+                <div className="w-2 h-2 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white/80 truncate">{action.description}</p>
+                  <p className="text-[10px] text-gray-500">{action.responsibleName} · {action.week.dateLabel}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* NEWSLETTER WIDGETS */}
       {/* Employee reminder widget - shown when user has PENDING assignments */}

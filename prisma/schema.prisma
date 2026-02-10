@@ -1244,3 +1244,90 @@ model AITemplate {
   @@index([userId, isActive])
   @@index([category])
 }
+
+// ==================== NOTULEN - MAANDAGOVERLEG ====================
+
+// Maandcontainer voor notulen (bijv. "November 2024", "December 2024")
+model MeetingMonth {
+  id        String   @id @default(cuid())
+  year      Int
+  month     Int      // 1-12
+  label     String   // "November 2024", "Lustrum Mallorca"
+  isLustrum Boolean  @default(false) // Special Lustrum tab
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  weeks     MeetingWeek[]
+
+  @@unique([year, month, isLustrum])
+  @@index([year, month])
+}
+
+// Wekelijkse vergadering
+model MeetingWeek {
+  id          String   @id @default(cuid())
+  monthId     String
+  meetingDate DateTime // Datum van de vergadering
+  dateLabel   String   // "Maandag 4 november 2024"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  month         MeetingMonth       @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  topics        MeetingTopic[]
+  actions       MeetingAction[]
+  distributions WorkDistribution[]
+
+  @@index([monthId])
+  @@index([meetingDate])
+}
+
+// Agendapunt per week
+model MeetingTopic {
+  id         String   @id @default(cuid())
+  weekId     String
+  title      String   // "Uren afgelopen week", "Werkverdeling partners", of custom
+  remarks    String?  @db.Text // Opmerkingen
+  isStandard Boolean  @default(false) // true voor vaste agendapunten
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  week MeetingWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@index([weekId, sortOrder])
+}
+
+// Actiepunt voortkomend uit vergadering
+model MeetingAction {
+  id              String    @id @default(cuid())
+  weekId          String
+  description     String    @db.Text
+  responsibleName String    // Naam van verantwoordelijke (bijv. "Bas", "Hanna")
+  isCompleted     Boolean   @default(false)
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  week MeetingWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@index([weekId])
+  @@index([isCompleted])
+  @@index([responsibleName])
+}
+
+// Werkverdelingsgesprek per week - partner <-> medewerker koppeling
+model WorkDistribution {
+  id           String  @id @default(cuid())
+  weekId       String
+  partnerName  String  // "Bas", "Maaike", "Jochem", "Juliette"
+  employeeName String? // Naam van medewerker (uit dropdown)
+  employeeId   String? // Optioneel: user ID van medewerker
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  week MeetingWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@unique([weekId, partnerName])
+  @@index([weekId])
+  @@index([employeeId])
+}

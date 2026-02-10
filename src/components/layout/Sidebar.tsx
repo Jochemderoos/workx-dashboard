@@ -33,8 +33,14 @@ const mainMenuItems = [
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', iconAnim: 'icon-calendar-hover' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover' },
   { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', iconAnim: 'icon-graduation-hover' },
-  { href: '/dashboard/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover' },
+  { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover' },
+]
+
+// Partners sectie - alleen zichtbaar voor PARTNER en ADMIN
+const partnersMenuItems = [
+  { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover' },
+  { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Notulen', iconAnim: 'icon-file-hover' },
 ]
 
 const toolsMenuItems = [
@@ -131,6 +137,16 @@ export default function Sidebar({ user }: SidebarProps) {
             {mainMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
+
+        {/* Partners - alleen voor PARTNER en ADMIN */}
+        {['PARTNER', 'ADMIN'].includes(user.role) && (
+          <div>
+            <p className="px-4 mb-2 text-[10px] font-medium text-workx-lime/40 uppercase tracking-widest">Partners</p>
+            <div className="space-y-1">
+              {partnersMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
+            </div>
+          </div>
+        )}
 
         {/* Tools */}
         <div>

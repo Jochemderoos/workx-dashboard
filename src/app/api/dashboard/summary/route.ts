@@ -74,6 +74,8 @@ export async function GET() {
       allNewsletterAssignments,
       isNewsletterResponsible,
       nextTraining,
+      openMeetingActions,
+      currentWeekDistribution,
     ] = await Promise.all([
       // 1. Calendar Events - upcoming events (fetch more to allow social event prioritization)
       prisma.calendarEvent.findMany({
@@ -297,6 +299,32 @@ export async function GET() {
           points: true,
         },
       }),
+
+      // 15. Open Meeting Actions - for partners/admin dashboard widget
+      prisma.meetingAction.findMany({
+        where: { isCompleted: false },
+        include: {
+          week: {
+            select: { id: true, dateLabel: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }).catch(() => []),
+
+      // 16. Work Distribution for current week - for employee widget
+      prisma.meetingWeek.findFirst({
+        where: {
+          meetingDate: {
+            gte: new Date(todayWork.getTime() - 3 * 24 * 60 * 60 * 1000), // within 3 days before
+            lte: new Date(todayWork.getTime() + 3 * 24 * 60 * 60 * 1000), // within 3 days after
+          },
+        },
+        include: {
+          distributions: true,
+        },
+        orderBy: { meetingDate: 'desc' },
+      }).catch(() => null),
     ])
 
     // Calculate vacation balance totals for easier frontend use
@@ -427,6 +455,18 @@ export async function GET() {
         currentUser?.role === 'ADMIN'
       ),
       nextTraining,
+      // Notulen data
+      openMeetingActions: (
+        currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
+      ) ? openMeetingActions : [],
+      werkverdelingGesprek: currentWeekDistribution?.distributions?.find(
+        (d: any) => d.employeeId === userId || d.employeeName === currentUser?.name
+      ) ? {
+        partnerName: currentWeekDistribution?.distributions?.find(
+          (d: any) => d.employeeId === userId || d.employeeName === currentUser?.name
+        )?.partnerName,
+        weekDate: currentWeekDistribution?.meetingDate,
+      } : null,
       // Meta information
       fetchedAt: now.toISOString(),
     }, {
