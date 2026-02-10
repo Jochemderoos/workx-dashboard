@@ -72,6 +72,65 @@ export async function POST(
 
     const label = bundle.productionLabel || 'PRODUCTIE'
     const isBijlage = bundle.productionLabel === 'BIJLAGE'
+    const listTitle = isBijlage ? 'Bijlagenlijst' : 'Productielijst'
+
+    // Generate productielijst PDF page (same tray as processtuk)
+    let productielijstPdf: string | null = null
+    if (bundle.productions.length > 0 && bundle.includeProductielijst) {
+      const listDoc = await PDFDocument.create()
+      const listBoldFont = await listDoc.embedFont(StandardFonts.HelveticaBold)
+      const listFont = await listDoc.embedFont(StandardFonts.Helvetica)
+      const listPage = listDoc.addPage([pageWidth, pageHeight])
+
+      // Title
+      listPage.drawText(listTitle, {
+        x: 30,
+        y: pageHeight - 80,
+        size: 28,
+        font: listBoldFont,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
+
+      // Production list
+      let y = pageHeight - 130
+      for (const production of bundle.productions) {
+        const numText = String(production.productionNumber)
+        const numWidth = Math.max(40, listBoldFont.widthOfTextAtSize(numText, 14) + 16)
+
+        // Yellow highlight box
+        listPage.drawRectangle({
+          x: 30,
+          y: y - 8,
+          width: numWidth,
+          height: 28,
+          color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
+        })
+
+        // Production number
+        listPage.drawText(numText, {
+          x: 38,
+          y: y,
+          size: 14,
+          font: listBoldFont,
+          color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+        })
+
+        // Production title
+        listPage.drawText(production.title, {
+          x: 30 + numWidth + 15,
+          y: y,
+          size: 12,
+          font: listFont,
+          color: rgb(0, 0, 0),
+        })
+
+        y -= 38
+        if (y < 80) break
+      }
+
+      const listBytes = await listDoc.save()
+      productielijstPdf = `data:application/pdf;base64,${Buffer.from(listBytes).toString('base64')}`
+    }
 
     // Build interleaved print jobs: productievel → productie, per production
     const interleavedJobs: Array<{
@@ -130,7 +189,7 @@ export async function POST(
       caseNumber: bundle.caseNumber,
       clientName: bundle.clientName,
 
-      // Print jobs: processtuk first, then interleaved productievel + productie
+      // Print jobs: processtuk → productielijst → interleaved productievel + productie
       printJobs: [
         // Job 1: Main document (processtuk)
         {
@@ -141,13 +200,23 @@ export async function POST(
           description: 'Hoofddocument - printen op briefpapier',
         },
 
-        // Jobs 2+: Interleaved productievel → productie per production
+        // Job 2: Productielijst (same tray as processtuk)
+        ...(productielijstPdf ? [{
+          name: listTitle,
+          tray: 1,
+          copies: 1,
+          documentUrl: productielijstPdf,
+          description: `${listTitle} - overzicht van alle producties`,
+        }] : []),
+
+        // Jobs 3+: Interleaved productievel → productie per production
         ...interleavedJobs,
       ],
 
       // Print order instructions
       printOrder: [
         'Processtuk eerst',
+        ...(productielijstPdf ? [`${listTitle} (onderdeel processtuk)`] : []),
         'Dan per productie: productievel (geel) → bijlage (blanco)',
       ],
     })
