@@ -953,16 +953,16 @@ export default function WerkOverzichtPage() {
               <div className="min-w-0">
                 {/* Table header */}
                 <div className="grid gap-1 px-2 sm:px-4 py-2 sm:py-3 bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider"
-                  style={{ gridTemplateColumns: 'minmax(90px, 140px) repeat(5, 1fr) minmax(40px, 56px)' }}
+                  style={{ gridTemplateColumns: showPartners ? 'minmax(56px, 130px) repeat(5, 1fr) minmax(36px, 52px)' : 'minmax(56px, 130px) repeat(5, 1fr)' }}
                 >
                   <div className="text-[10px] sm:text-xs">Naam</div>
               {last3Workdays.map(day => (
                 <div key={day.toISOString()} className="text-center text-[10px] sm:text-xs">
                   <span className="hidden sm:inline">{day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric' })}</span>
-                  <span className="sm:hidden">{day.toLocaleDateString('nl-NL', { weekday: 'narrow', day: 'numeric' })}</span>
+                  <span className="sm:hidden">{day.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '')}</span>
                 </div>
               ))}
-              <div className="text-center text-[10px] sm:text-xs">Week</div>
+              {showPartners && <div className="text-center text-[10px] sm:text-xs">Week</div>}
             </div>
 
             {/* Table body */}
@@ -978,7 +978,7 @@ export default function WerkOverzichtPage() {
                   <ScrollRevealItem key={person}>
                   <div
                     className={`grid gap-1 px-2 sm:px-4 py-1.5 sm:py-3 items-center hover:bg-white/[0.02] transition-colors ${isPartner ? 'bg-workx-lime/[0.02]' : ''}`}
-                    style={{ gridTemplateColumns: 'minmax(90px, 140px) repeat(5, 1fr) minmax(40px, 56px)' }}
+                    style={{ gridTemplateColumns: showPartners ? 'minmax(56px, 130px) repeat(5, 1fr) minmax(36px, 52px)' : 'minmax(56px, 130px) repeat(5, 1fr)' }}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <img
@@ -1045,7 +1045,8 @@ export default function WerkOverzichtPage() {
                         </div>
                       )
                     })}
-                    {/* Week total */}
+                    {/* Week total - only on Sat/Sun/Mon */}
+                    {showPartners && (
                     <div className="flex justify-center items-center">
                       <span className={`text-xs sm:text-sm font-bold ${
                         weekTotal > 25 ? 'text-red-400' : weekTotal > 20 ? 'text-orange-400' : weekTotal > 0 ? 'text-white/60' : 'text-white/15'
@@ -1053,6 +1054,7 @@ export default function WerkOverzichtPage() {
                         {weekTotal > 0 ? weekTotal.toFixed(1).replace('.', ',') : '-'}
                       </span>
                     </div>
+                    )}
                   </div>
                   </ScrollRevealItem>
                 )
