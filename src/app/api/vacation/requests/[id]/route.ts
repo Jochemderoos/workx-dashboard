@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendPushNotification } from '@/lib/push-notifications'
+import { sendDirectMessage } from '@/lib/slack'
 
 /**
  * Parse a date string to a Date object, ensuring we get the correct local date
@@ -38,7 +40,7 @@ export async function PATCH(
     const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
 
     const body = await req.json()
-    const { status, startDate, endDate, reason } = body
+    const { status, startDate, endDate, reason, rejectionReason } = body
 
     const request = await prisma.vacationRequest.findUnique({
       where: { id: params.id }
@@ -80,7 +82,7 @@ export async function PATCH(
           approvedBy: session.user.id,
         },
         include: {
-          user: { select: { id: true, name: true } }
+          user: { select: { id: true, name: true, email: true, werkdagen: true } }
         }
       })
 
@@ -92,12 +94,88 @@ export async function PATCH(
           where: { userId: request.userId, year: currentYear },
           data: { opgenomenLopendJaar: { increment: request.days } }
         })
+
+        // Create VacationPeriod for the calendar/agenda
+        const balance = await prisma.vacationBalance.findFirst({
+          where: { userId: request.userId },
+        })
+        if (balance) {
+          const userWerkdagen = updatedRequest.user?.werkdagen || '1,2,3,4,5'
+          await prisma.vacationPeriod.create({
+            data: {
+              userId: request.userId,
+              balanceId: balance.id,
+              year: currentYear,
+              startDate: request.startDate,
+              endDate: request.endDate,
+              werkdagen: userWerkdagen,
+              days: request.days,
+              note: request.reason,
+              createdById: session.user.id,
+            },
+          }).catch((e: any) => console.error('Error creating VacationPeriod:', e))
+        }
       } else if (status === 'REJECTED' && wasApproved) {
         // Was approved, now rejected - remove days
         await prisma.vacationBalance.updateMany({
           where: { userId: request.userId, year: currentYear },
           data: { opgenomenLopendJaar: { decrement: request.days } }
         })
+      }
+
+      // Notify the employee about the decision
+      const employee = updatedRequest.user
+      if (employee) {
+        const reqStart = parseLocalDate(request.startDate)
+        const reqEnd = parseLocalDate(request.endDate)
+        const startStr = reqStart.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
+        const endStr = reqEnd.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+
+        if (status === 'APPROVED') {
+          // Push notification
+          sendPushNotification(request.userId, {
+            title: 'Vakantieaanvraag goedgekeurd ✓',
+            body: `Je vakantie van ${startStr} t/m ${endStr} (${request.days} dagen) is goedgekeurd.`,
+            url: '/dashboard',
+            tag: 'vacation-approved',
+          }).catch(() => {})
+
+          // Slack DM
+          if (employee.email) {
+            sendDirectMessage(employee.email, `✅ Je vakantieaanvraag is goedgekeurd!\n${startStr} – ${endStr} (${request.days} werkdagen)`, [
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `✅ *Je vakantieaanvraag is goedgekeurd!*\n📅 ${startStr} – ${endStr}\n📊 *${request.days} werkdagen*\nVeel plezier! 🏖️`,
+                },
+              },
+            ]).catch(() => {})
+          }
+        } else if (status === 'REJECTED') {
+          const rejectMsg = rejectionReason ? `\nReden: ${rejectionReason}` : ''
+
+          // Push notification
+          sendPushNotification(request.userId, {
+            title: 'Vakantieaanvraag afgewezen',
+            body: `Je vakantie van ${startStr} t/m ${endStr} is helaas afgewezen.${rejectionReason ? ` Reden: ${rejectionReason}` : ''}`,
+            url: '/dashboard',
+            tag: 'vacation-rejected',
+          }).catch(() => {})
+
+          // Slack DM
+          if (employee.email) {
+            sendDirectMessage(employee.email, `❌ Je vakantieaanvraag is afgewezen\n${startStr} – ${endStr} (${request.days} werkdagen)${rejectMsg}`, [
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `❌ *Je vakantieaanvraag is afgewezen*\n📅 ${startStr} – ${endStr}\n📊 *${request.days} werkdagen*${rejectionReason ? `\n💬 _${rejectionReason}_` : ''}\nNeem contact op als je vragen hebt.`,
+                },
+              },
+            ]).catch(() => {})
+          }
+        }
       }
 
       return NextResponse.json(updatedRequest)

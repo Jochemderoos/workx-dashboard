@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendPushNotification } from '@/lib/push-notifications'
+import { sendDirectMessage } from '@/lib/slack'
 
 /**
  * Parse a date string to a Date object, ensuring we get the correct local date
@@ -182,6 +184,56 @@ export async function POST(req: NextRequest) {
           }
         }
       })
+    }
+
+    // Notify admin(s) when a non-admin creates a PENDING request
+    if (status === 'PENDING') {
+      const requesterName = request.user?.name || 'Medewerker'
+      const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
+      const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+      const dashboardUrl = process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app'
+
+      // Find all admins to notify
+      const admins = await prisma.user.findMany({
+        where: { role: 'ADMIN', isActive: true },
+        select: { id: true, email: true, name: true }
+      })
+
+      for (const admin of admins) {
+        // Push notification
+        sendPushNotification(admin.id, {
+          title: 'Nieuwe vakantieaanvraag',
+          body: `${requesterName} vraagt ${calculatedDays} werkdagen vakantie aan (${startStr} – ${endStr})`,
+          url: '/dashboard',
+          tag: 'vacation-request',
+        }).catch(() => {})
+
+        // Slack DM
+        sendDirectMessage(admin.email, `🏖️ Nieuwe vakantieaanvraag van ${requesterName} (${calculatedDays} werkdagen)\n${startStr} – ${endStr}${reason ? `\nReden: ${reason}` : ''}\n${dashboardUrl}/dashboard`, [
+          {
+            type: 'header',
+            text: { type: 'plain_text', text: '🏖️ Nieuwe vakantieaanvraag', emoji: true },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*${requesterName}* vraagt vakantie aan:\n📅 ${startStr} – ${endStr}\n📊 *${calculatedDays} werkdagen*${reason ? `\n💬 ${reason}` : ''}`,
+            },
+          },
+          {
+            type: 'actions',
+            elements: [
+              {
+                type: 'button',
+                text: { type: 'plain_text', text: '✅ Bekijk in Dashboard', emoji: true },
+                url: `${dashboardUrl}/dashboard`,
+                style: 'primary',
+              },
+            ],
+          },
+        ]).catch(() => {})
+      }
     }
 
     return NextResponse.json(request, { status: 201 })

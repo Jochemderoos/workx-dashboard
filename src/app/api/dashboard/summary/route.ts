@@ -76,6 +76,8 @@ export async function GET() {
       nextTraining,
       openMeetingActions,
       currentWeekDistribution,
+      pendingVacationRequests,
+      myVacationRequests,
     ] = await Promise.all([
       // 1. Calendar Events - upcoming events (fetch more to allow social event prioritization)
       prisma.calendarEvent.findMany({
@@ -325,6 +327,37 @@ export async function GET() {
         },
         orderBy: { meetingDate: 'desc' },
       }).catch(() => null),
+
+      // 17. Pending Vacation Requests - for admin widget
+      prisma.vacationRequest.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+              werkdagen: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      }).catch(() => []),
+
+      // 18. My Vacation Requests - for employee widget (last 90 days)
+      prisma.vacationRequest.findMany({
+        where: {
+          userId: userId,
+          createdAt: { gte: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) },
+        },
+        include: {
+          user: {
+            select: { id: true, name: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }).catch(() => []),
     ])
 
     // Calculate vacation balance totals for easier frontend use
@@ -467,6 +500,11 @@ export async function GET() {
         )?.partnerName,
         weekDate: currentWeekDistribution?.meetingDate,
       } : null,
+      // Vacation request data
+      pendingVacationRequests: (
+        currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+      ) ? pendingVacationRequests : [],
+      myVacationRequests: myVacationRequests,
       // Meta information
       fetchedAt: now.toISOString(),
     }, {

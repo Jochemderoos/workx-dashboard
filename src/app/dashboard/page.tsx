@@ -839,6 +839,16 @@ export default function DashboardHome() {
   const [nextTraining, setNextTraining] = useState<{ id: string; title: string; speaker: string; date: string; startTime: string | null; location: string | null; points: number } | null>(null)
   const [openMeetingActions, setOpenMeetingActions] = useState<{ id: string; description: string; responsibleName: string; week: { dateLabel: string } }[]>([])
   const [werkverdelingGesprek, setWerkverdelingGesprek] = useState<{ partnerName: string; weekDate: string } | null>(null)
+  const [pendingVacationRequests, setPendingVacationRequests] = useState<any[]>([])
+  const [myVacationRequests, setMyVacationRequests] = useState<any[]>([])
+  const [showVacationRequestForm, setShowVacationRequestForm] = useState(false)
+  const [vacationFormStartDate, setVacationFormStartDate] = useState('')
+  const [vacationFormEndDate, setVacationFormEndDate] = useState('')
+  const [vacationFormReason, setVacationFormReason] = useState('')
+  const [vacationFormSubmitting, setVacationFormSubmitting] = useState(false)
+  const [rejectingRequestId, setRejectingRequestId] = useState<string | null>(null)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null)
   // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
   const fetchDashboardSummary = async () => {
     try {
@@ -925,6 +935,14 @@ export default function DashboardHome() {
         }
         if (data.werkverdelingGesprek) {
           setWerkverdelingGesprek(data.werkverdelingGesprek)
+        }
+
+        // Set vacation request data
+        if (data.pendingVacationRequests) {
+          setPendingVacationRequests(data.pendingVacationRequests)
+        }
+        if (data.myVacationRequests) {
+          setMyVacationRequests(data.myVacationRequests)
         }
       }
     } catch (error) {
@@ -1370,6 +1388,87 @@ export default function DashboardHome() {
     }
   }
 
+  // Vacation request handlers
+  const submitVacationRequest = async () => {
+    if (!vacationFormStartDate || !vacationFormEndDate) {
+      toast.error('Vul een start- en einddatum in')
+      return
+    }
+    setVacationFormSubmitting(true)
+    try {
+      const res = await fetch('/api/vacation/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDate: vacationFormStartDate,
+          endDate: vacationFormEndDate,
+          reason: vacationFormReason || undefined,
+        }),
+      })
+      if (res.ok) {
+        toast.success('Vakantieaanvraag ingediend!')
+        setShowVacationRequestForm(false)
+        setVacationFormStartDate('')
+        setVacationFormEndDate('')
+        setVacationFormReason('')
+        // Refresh data
+        fetchDashboardSummary()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Er ging iets mis')
+      }
+    } catch (e) {
+      toast.error('Er ging iets mis met de verbinding')
+    } finally {
+      setVacationFormSubmitting(false)
+    }
+  }
+
+  const handleVacationAction = async (requestId: string, action: 'APPROVED' | 'REJECTED', rejectReason?: string) => {
+    setProcessingRequestId(requestId)
+    try {
+      const res = await fetch(`/api/vacation/requests/${requestId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: action,
+          rejectionReason: rejectReason || undefined,
+        }),
+      })
+      if (res.ok) {
+        toast.success(action === 'APPROVED' ? 'Vakantie goedgekeurd!' : 'Vakantie afgewezen')
+        setRejectingRequestId(null)
+        setRejectionReason('')
+        // Refresh data
+        fetchDashboardSummary()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Er ging iets mis')
+      }
+    } catch (e) {
+      toast.error('Er ging iets mis met de verbinding')
+    } finally {
+      setProcessingRequestId(null)
+    }
+  }
+
+  // Calculate vacation days for preview
+  const vacationDaysPreview = useMemo(() => {
+    if (!vacationFormStartDate || !vacationFormEndDate) return null
+    const start = new Date(vacationFormStartDate)
+    const end = new Date(vacationFormEndDate)
+    if (end < start) return null
+    // Simple workday calculation (Mon-Fri, no holidays for preview)
+    let days = 0
+    const current = new Date(start)
+    while (current <= end) {
+      const day = current.getDay()
+      if (day !== 0 && day !== 6) days++
+      current.setDate(current.getDate() + 1)
+    }
+    return days
+  }, [vacationFormStartDate, vacationFormEndDate])
+
   const formatDate = (date: string) => {
     const d = new Date(date)
     const now = new Date()
@@ -1731,6 +1830,115 @@ export default function DashboardHome() {
 
       {/* WHAT'S NEW WIDGET */}
       <WhatsNewWidget dismissedVersion={currentUser?.whatsNewDismissed} />
+
+      {/* VAKANTIEAANVRAGEN WIDGET - for admin/partner */}
+      {isAdmin && pendingVacationRequests.length > 0 && (
+        <div className="relative overflow-hidden rounded-2xl border-2 border-orange-400/50 bg-gradient-to-br from-orange-500/10 via-yellow-500/5 to-transparent p-5 animate-in shadow-lg shadow-orange-500/10">
+          {/* Pulse animation border effect */}
+          <div className="absolute inset-0 rounded-2xl border-2 border-orange-400/30 animate-pulse pointer-events-none" />
+          <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                  <Icons.sun className="text-orange-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Vakantieaanvragen</h3>
+                  <p className="text-xs text-gray-400">Wachtend op goedkeuring</p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-300 text-xs font-bold">
+                {pendingVacationRequests.length}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {pendingVacationRequests.map((req: any) => {
+                const start = new Date(req.startDate)
+                const end = new Date(req.endDate)
+                const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+                const initials = req.user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '??'
+
+                // Calculate saldo impact
+                const currentBalance = vacationBalance?.resterend || 0
+
+                return (
+                  <div key={req.id} className="bg-white/[0.03] rounded-xl p-4 border border-white/5">
+                    <div className="flex items-start gap-3 mb-3">
+                      {req.user?.avatarUrl ? (
+                        <img src={req.user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-300 text-sm font-bold">
+                          {initials}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white">{req.user?.name || 'Medewerker'}</p>
+                        <p className="text-xs text-gray-400">{startStr} – {endStr}</p>
+                        <p className="text-xs text-orange-300 font-medium">{req.days} werkdagen</p>
+                        {req.reason && (
+                          <p className="text-xs text-gray-500 mt-1 italic">"{req.reason}"</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {rejectingRequestId === req.id ? (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder="Reden voor afwijzing (optioneel)"
+                          value={rejectionReason}
+                          onChange={(e) => setRejectionReason(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleVacationAction(req.id, 'REJECTED', rejectionReason)}
+                            disabled={processingRequestId === req.id}
+                            className="flex-1 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 text-xs font-medium hover:bg-red-500/30 transition-all disabled:opacity-50"
+                          >
+                            {processingRequestId === req.id ? 'Bezig...' : 'Afwijzen'}
+                          </button>
+                          <button
+                            onClick={() => { setRejectingRequestId(null); setRejectionReason('') }}
+                            className="px-3 py-2 rounded-lg bg-white/5 text-gray-400 text-xs hover:bg-white/10 transition-all"
+                          >
+                            Annuleer
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleVacationAction(req.id, 'APPROVED')}
+                          disabled={processingRequestId === req.id}
+                          className="flex-1 px-3 py-2 rounded-lg bg-green-500/20 text-green-300 text-xs font-bold hover:bg-green-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {processingRequestId === req.id ? (
+                            <span className="w-3.5 h-3.5 border-2 border-green-300/30 border-t-green-300 rounded-full animate-spin" />
+                          ) : (
+                            <><Icons.check size={14} /> Goedkeuren</>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setRejectingRequestId(req.id)}
+                          disabled={processingRequestId === req.id}
+                          className="flex-1 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          <Icons.x size={14} /> Afwijzen
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* WERKVERDELINGSGESPREK WIDGET - for employees */}
       {werkverdelingGesprek && (
@@ -2308,53 +2516,167 @@ export default function DashboardHome() {
             </div>
           </Link>
         ) : (
-          /* Vacation Card for Employees */
-          <SpotlightCard as={Link} href="/dashboard/vakanties" className="card p-4 overflow-hidden group block hover:border-workx-lime/30 transition-all card-glow-border-subtle" maxTilt={6} spotlightSize={400}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-workx-lime/10 transition-colors" />
+          /* Vacation Card for Employees - with request form */
+          <div className="card p-4 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
 
             <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icons.sun className="text-workx-lime" size={18} />
+              <Link href="/dashboard/vakanties" className="block group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Icons.sun className="text-workx-lime" size={18} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Mijn Vakantiedagen</p>
+                      <p className="text-xs text-gray-400">Saldo {vacationBalance?.year || new Date().getFullYear()}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">Mijn Vakantiedagen</p>
-                    <p className="text-xs text-gray-400">Saldo {vacationBalance?.year || new Date().getFullYear()}</p>
+                  <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-workx-lime group-hover:translate-x-1 transition-all" />
+                </div>
+
+                {/* Vakantiedagen direct zichtbaar */}
+                <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                  <div className="bg-white/5 rounded-lg p-2">
+                    <div className="text-lg font-semibold text-workx-lime">
+                      <AnimatedNumber value={vacationBalance?.totaalDagen || 0} decimals={1} stiffness={60} damping={18} />
+                    </div>
+                    <p className="text-xs text-gray-400">Totaal</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-2">
+                    <div className="text-lg font-semibold text-orange-400">
+                      <AnimatedNumber value={vacationBalance?.opgenomenLopendJaar || 0} decimals={1} stiffness={60} damping={18} />
+                    </div>
+                    <p className="text-xs text-gray-400">Opgenomen</p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-2">
+                    <div className="text-lg font-semibold text-workx-lime">
+                      <AnimatedNumber value={vacationBalance?.resterend || 0} decimals={1} stiffness={60} damping={18} />
+                    </div>
+                    <p className="text-xs text-gray-400">Resterend</p>
                   </div>
                 </div>
-                <Icons.arrowRight size={16} className="text-gray-500 group-hover:text-workx-lime group-hover:translate-x-1 transition-all" />
+
+                {/* Progress bar */}
+                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-orange-400"
+                    style={{ width: `${vacationBalance?.totaalDagen ? (vacationBalance.opgenomenLopendJaar / vacationBalance.totaalDagen) * 100 : 0}%` }}
+                  />
+                </div>
+              </Link>
+
+              {/* Vakantie Aanvragen Button & Form */}
+              <div className="mt-4 pt-4 border-t border-white/5">
+                {!showVacationRequestForm ? (
+                  <button
+                    onClick={() => setShowVacationRequestForm(true)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium hover:bg-workx-lime/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Icons.plus size={16} /> Vakantie aanvragen
+                  </button>
+                ) : (
+                  <div className="space-y-3 fade-in">
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Nieuwe aanvraag</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500 mb-1 block">Startdatum</label>
+                        <input
+                          type="date"
+                          value={vacationFormStartDate}
+                          onChange={(e) => setVacationFormStartDate(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-workx-lime/50 [color-scheme:dark]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500 mb-1 block">Einddatum</label>
+                        <input
+                          type="date"
+                          value={vacationFormEndDate}
+                          onChange={(e) => setVacationFormEndDate(e.target.value)}
+                          min={vacationFormStartDate || undefined}
+                          className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-workx-lime/50 [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
+                    {vacationDaysPreview !== null && (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-workx-lime/5 border border-workx-lime/20">
+                        <span className="text-xs text-gray-400">Geschatte werkdagen</span>
+                        <span className="text-sm font-bold text-workx-lime">{vacationDaysPreview} dagen</span>
+                      </div>
+                    )}
+                    {vacationDaysPreview !== null && vacationBalance && vacationDaysPreview > vacationBalance.resterend && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                        <Icons.alertTriangle size={14} className="text-orange-400 flex-shrink-0" />
+                        <span className="text-xs text-orange-300">Meer dagen dan beschikbaar saldo ({vacationBalance.resterend})</span>
+                      </div>
+                    )}
+                    <input
+                      type="text"
+                      placeholder="Reden / opmerking (optioneel)"
+                      value={vacationFormReason}
+                      onChange={(e) => setVacationFormReason(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/50"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={submitVacationRequest}
+                        disabled={vacationFormSubmitting || !vacationFormStartDate || !vacationFormEndDate}
+                        className="flex-1 px-4 py-2 rounded-lg bg-workx-lime text-black text-sm font-bold hover:bg-workx-lime/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                      >
+                        {vacationFormSubmitting ? (
+                          <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                        ) : (
+                          <><Icons.send size={14} /> Indienen</>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => { setShowVacationRequestForm(false); setVacationFormStartDate(''); setVacationFormEndDate(''); setVacationFormReason('') }}
+                        className="px-4 py-2 rounded-lg bg-white/5 text-gray-400 text-sm hover:bg-white/10 transition-all"
+                      >
+                        Annuleer
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Vakantiedagen direct zichtbaar */}
-              <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                <div className="bg-white/5 rounded-lg p-2">
-                  <div className="text-lg font-semibold text-workx-lime">
-                    <AnimatedNumber value={vacationBalance?.totaalDagen || 0} decimals={1} stiffness={60} damping={18} />
-                  </div>
-                  <p className="text-xs text-gray-400">Totaal</p>
-                </div>
-                <div className="bg-white/5 rounded-lg p-2">
-                  <div className="text-lg font-semibold text-orange-400">
-                    <AnimatedNumber value={vacationBalance?.opgenomenLopendJaar || 0} decimals={1} stiffness={60} damping={18} />
-                  </div>
-                  <p className="text-xs text-gray-400">Opgenomen</p>
-                </div>
-                <div className="bg-white/5 rounded-lg p-2">
-                  <div className="text-lg font-semibold text-workx-lime">
-                    <AnimatedNumber value={vacationBalance?.resterend || 0} decimals={1} stiffness={60} damping={18} />
-                  </div>
-                  <p className="text-xs text-gray-400">Resterend</p>
-                </div>
-              </div>
+              {/* Recente aanvragen */}
+              {myVacationRequests.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-2">Recente aanvragen</p>
+                  <div className="space-y-1.5">
+                    {myVacationRequests.slice(0, 5).map((req: any) => {
+                      const start = new Date(req.startDate)
+                      const end = new Date(req.endDate)
+                      const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                      const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                      const isRecent = new Date().getTime() - new Date(req.updatedAt || req.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000
+                      const statusConfig: Record<string, { color: string; border: string; bg: string; label: string }> = {
+                        PENDING: { color: 'text-yellow-400', border: '', bg: 'bg-yellow-500/10', label: 'Wachtend' },
+                        APPROVED: { color: 'text-green-400', border: isRecent ? 'border-green-500/30' : '', bg: 'bg-green-500/10', label: 'Goedgekeurd' },
+                        REJECTED: { color: 'text-red-400', border: isRecent ? 'border-red-500/30' : '', bg: 'bg-red-500/10', label: 'Afgewezen' },
+                      }
+                      const cfg = statusConfig[req.status] || statusConfig.PENDING
 
-              {/* Progress bar */}
-              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-orange-400"
-                  style={{ width: `${vacationBalance?.totaalDagen ? (vacationBalance.opgenomenLopendJaar / vacationBalance.totaalDagen) * 100 : 0}%` }}
-                />
-              </div>
+                      return (
+                        <div
+                          key={req.id}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.02] ${cfg.border ? `border ${cfg.border}` : 'border border-transparent'}`}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs text-white">{startStr} – {endStr}</p>
+                            <p className="text-[10px] text-gray-500">{req.days} dagen{req.reason ? ` · ${req.reason}` : ''}</p>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${cfg.bg} ${cfg.color}`}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Ouderschapsverlof - alleen als aanwezig */}
               {parentalLeave && (
@@ -2424,7 +2746,7 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
-          </SpotlightCard>
+          </div>
         )}
 
         {/* Birthday Card - GROOTS on birthday, normal otherwise */}
