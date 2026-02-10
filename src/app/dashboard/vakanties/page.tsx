@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -139,6 +139,14 @@ export default function VakantiesPage() {
   const [showWorkdaysCalculator, setShowWorkdaysCalculator] = useState(false)
   const [showPeriodModal, setShowPeriodModal] = useState(false) // standalone period edit modal
 
+  // Vacation request state (for non-admin employees)
+  const [showVacationRequestForm, setShowVacationRequestForm] = useState(false)
+  const [vacReqStartDate, setVacReqStartDate] = useState('')
+  const [vacReqEndDate, setVacReqEndDate] = useState('')
+  const [vacReqReason, setVacReqReason] = useState('')
+  const [vacReqSubmitting, setVacReqSubmitting] = useState(false)
+  const [myVacationRequests, setMyVacationRequests] = useState<VacationRequest[]>([])
+
   // Balance editing state
   const [editingBalance, setEditingBalance] = useState<string | null>(null)
   const [selectedBalanceUserId, setSelectedBalanceUserId] = useState('')
@@ -181,6 +189,13 @@ export default function VakantiesPage() {
         }
       } else {
         throw new Error('Kon niet ophalen data')
+      }
+
+      // Fetch my vacation requests (for non-admin employees)
+      const reqRes = await fetch('/api/vacation/requests')
+      if (reqRes.ok) {
+        const reqData = await reqRes.json()
+        setMyVacationRequests(reqData)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -253,6 +268,57 @@ export default function VakantiesPage() {
       toast.error(error.message)
     }
   }
+
+  // Submit vacation REQUEST (for non-admin employees)
+  const submitVacationRequest = async () => {
+    if (!vacReqStartDate || !vacReqEndDate) {
+      toast.error('Vul een start- en einddatum in')
+      return
+    }
+    setVacReqSubmitting(true)
+    try {
+      const res = await fetch('/api/vacation/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDate: vacReqStartDate,
+          endDate: vacReqEndDate,
+          reason: vacReqReason || undefined,
+        }),
+      })
+      if (res.ok) {
+        toast.success('Vakantieaanvraag ingediend!')
+        setShowVacationRequestForm(false)
+        setVacReqStartDate('')
+        setVacReqEndDate('')
+        setVacReqReason('')
+        fetchData()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Er ging iets mis')
+      }
+    } catch (e) {
+      toast.error('Er ging iets mis met de verbinding')
+    } finally {
+      setVacReqSubmitting(false)
+    }
+  }
+
+  // Calculate vacation days preview for request form
+  const vacReqDaysPreview = useMemo(() => {
+    if (!vacReqStartDate || !vacReqEndDate) return null
+    const start = new Date(vacReqStartDate)
+    const end = new Date(vacReqEndDate)
+    if (end < start) return null
+    let days = 0
+    const current = new Date(start)
+    while (current <= end) {
+      const day = current.getDay()
+      if (day !== 0 && day !== 6) days++
+      current.setDate(current.getDate() + 1)
+    }
+    return days
+  }, [vacReqStartDate, vacReqEndDate])
 
   // Delete vacation
   const handleDelete = async (id: string) => {
@@ -658,7 +724,7 @@ export default function VakantiesPage() {
               </button>
             )}
           </div>
-          {pageMode === 'overzicht' && (
+          {pageMode === 'overzicht' && isAdmin && (
             <Popover.Root open={showForm} onOpenChange={setShowForm}>
               <Popover.Trigger asChild>
                 <button className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-3 sm:px-4">
@@ -1752,6 +1818,135 @@ export default function VakantiesPage() {
                     <p className="text-sm font-medium text-white">{myVacationBalance.bijgekocht || 0}</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Vakantie Aanvragen Widget - for non-admin employees */}
+          {!isAdmin && (
+            <div className="card p-5 border-workx-lime/20 bg-gradient-to-br from-workx-lime/5 to-transparent relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-workx-lime/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-workx-lime/20 flex items-center justify-center">
+                      <Icons.send className="text-workx-lime" size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">Vakantie aanvragen</h3>
+                      <p className="text-xs text-gray-400">Dien een aanvraag in ter goedkeuring</p>
+                    </div>
+                  </div>
+                </div>
+
+                {!showVacationRequestForm ? (
+                  <button
+                    onClick={() => setShowVacationRequestForm(true)}
+                    className="w-full px-4 py-3 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium hover:bg-workx-lime/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Icons.plus size={16} /> Nieuwe aanvraag
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Startdatum</label>
+                        <input
+                          type="date"
+                          value={vacReqStartDate}
+                          onChange={(e) => setVacReqStartDate(e.target.value)}
+                          className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-workx-lime/50 [color-scheme:dark]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Einddatum</label>
+                        <input
+                          type="date"
+                          value={vacReqEndDate}
+                          onChange={(e) => setVacReqEndDate(e.target.value)}
+                          min={vacReqStartDate || undefined}
+                          className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-workx-lime/50 [color-scheme:dark]"
+                        />
+                      </div>
+                    </div>
+                    {vacReqDaysPreview !== null && (
+                      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-workx-lime/5 border border-workx-lime/20">
+                        <span className="text-xs text-gray-400">Geschatte werkdagen</span>
+                        <span className="text-sm font-bold text-workx-lime">{vacReqDaysPreview} dagen</span>
+                      </div>
+                    )}
+                    {vacReqDaysPreview !== null && myVacationBalance && vacReqDaysPreview > myVacationBalance.resterend && (
+                      <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                        <Icons.alertTriangle size={14} className="text-orange-400 flex-shrink-0" />
+                        <span className="text-xs text-orange-300">Meer dagen dan beschikbaar saldo ({myVacationBalance.resterend})</span>
+                      </div>
+                    )}
+                    <input
+                      type="text"
+                      placeholder="Reden / opmerking (optioneel)"
+                      value={vacReqReason}
+                      onChange={(e) => setVacReqReason(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/50"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={submitVacationRequest}
+                        disabled={vacReqSubmitting || !vacReqStartDate || !vacReqEndDate}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-workx-lime text-black text-sm font-bold hover:bg-workx-lime/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                      >
+                        {vacReqSubmitting ? (
+                          <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                        ) : (
+                          <><Icons.send size={14} /> Indienen</>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => { setShowVacationRequestForm(false); setVacReqStartDate(''); setVacReqEndDate(''); setVacReqReason('') }}
+                        className="px-4 py-2.5 rounded-xl bg-white/5 text-gray-400 text-sm hover:bg-white/10 transition-all"
+                      >
+                        Annuleer
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recente aanvragen */}
+                {myVacationRequests.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-white/5">
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-3">Mijn aanvragen</p>
+                    <div className="space-y-2">
+                      {myVacationRequests.slice(0, 8).map((req) => {
+                        const start = new Date(req.startDate)
+                        const end = new Date(req.endDate)
+                        const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                        const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                        const isRecent = new Date().getTime() - new Date(req.endDate).getTime() < 7 * 24 * 60 * 60 * 1000
+                        const statusConfig: Record<string, { color: string; border: string; bg: string; label: string }> = {
+                          PENDING: { color: 'text-yellow-400', border: '', bg: 'bg-yellow-500/10', label: 'Wachtend' },
+                          APPROVED: { color: 'text-green-400', border: isRecent ? 'border-green-500/30' : '', bg: 'bg-green-500/10', label: 'Goedgekeurd' },
+                          REJECTED: { color: 'text-red-400', border: isRecent ? 'border-red-500/30' : '', bg: 'bg-red-500/10', label: 'Afgewezen' },
+                        }
+                        const cfg = statusConfig[req.status] || statusConfig.PENDING
+
+                        return (
+                          <div
+                            key={req.id}
+                            className={`flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/[0.02] ${cfg.border ? `border ${cfg.border}` : 'border border-transparent'}`}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm text-white">{startStr} – {endStr}</p>
+                              <p className="text-xs text-gray-500">{req.days} dagen{req.reason ? ` · ${req.reason}` : ''}</p>
+                            </div>
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+                              {cfg.label}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
