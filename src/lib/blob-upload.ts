@@ -5,13 +5,15 @@
  * (which pulls in Node.js-only dependencies that break Next.js 14.1 webpack builds).
  *
  * Step 1: Request a client token from our /api/upload endpoint
- * Step 2: PUT the file directly to Vercel Blob storage using the token
+ * Step 2: PUT the file directly to Vercel's blob API using the token
  */
 
 interface BlobUploadResult {
   url: string
   pathname: string
 }
+
+const VERCEL_BLOB_API_URL = 'https://vercel.com/api/blob'
 
 export async function uploadToBlob(
   filename: string,
@@ -45,22 +47,22 @@ export async function uploadToBlob(
     throw new Error('Geen upload token ontvangen')
   }
 
-  // Extract store ID and API URL from the client token
-  // Token format: vercel_blob_client_<storeId>_<base64payload>
-  const parts = clientToken.split('_')
-  const storeId = parts[3]
+  // Step 2: PUT file directly to Vercel Blob API
+  const headers: Record<string, string> = {
+    authorization: `Bearer ${clientToken}`,
+    'x-api-version': '7',
+  }
+  if (file.type) {
+    headers['content-type'] = file.type
+  }
+  if (file.size) {
+    headers['x-content-length'] = String(file.size)
+  }
 
-  // Step 2: PUT file directly to Vercel Blob storage
-  const uploadUrl = `https://${storeId}.public.blob.vercel-storage.com/${filename}`
-
-  const putRes = await fetch(uploadUrl, {
+  const putRes = await fetch(`${VERCEL_BLOB_API_URL}/${filename}`, {
     method: 'PUT',
-    headers: {
-      authorization: `Bearer ${clientToken}`,
-      'x-api-version': '7',
-      ...(file.type ? { 'content-type': file.type } : {}),
-    },
-    // @ts-ignore — duplex is required for streaming request bodies
+    headers,
+    // @ts-ignore — duplex is required for streaming request bodies in some browsers
     duplex: 'half',
     body: file,
   })
