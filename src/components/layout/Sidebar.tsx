@@ -139,13 +139,12 @@ export default function Sidebar({ user }: SidebarProps) {
         </div>
 
         {/* Partners - alleen voor PARTNER en ADMIN */}
-        {/* DEBUG: */}
-        <p className="px-4 text-[9px] text-red-400">role: "{user.role}"</p>
-        {['PARTNER', 'ADMIN'].includes(user.role) && (
+        {(user.role === 'PARTNER' || user.role === 'ADMIN') && (
           <div>
             <p className="px-4 mb-2 text-[10px] font-medium text-workx-lime/40 uppercase tracking-widest">Partners</p>
             <div className="space-y-1">
-              {partnersMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
+              <NavLink href="/dashboard/partners/werk" icon={Icons.briefcase} label="Werk" iconAnim="icon-briefcase-hover" />
+              <NavLink href="/dashboard/partners/notulen" icon={Icons.fileText} label="Notulen" iconAnim="icon-file-hover" />
             </div>
           </div>
         )}
