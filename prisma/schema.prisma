@@ -1292,7 +1292,8 @@ model MeetingTopic {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  week MeetingWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  week    MeetingWeek     @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  actions MeetingAction[]
 
   @@index([weekId, sortOrder])
 }
@@ -1301,16 +1302,19 @@ model MeetingTopic {
 model MeetingAction {
   id              String    @id @default(cuid())
   weekId          String
+  topicId         String?   // Optioneel: gekoppeld aan specifiek agendapunt
   description     String    @db.Text
-  responsibleName String    // Naam van verantwoordelijke (bijv. "Bas", "Hanna")
+  responsibleName String    // Naam/namen van verantwoordelijke(n), komma-gescheiden
   isCompleted     Boolean   @default(false)
   completedAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  week MeetingWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  week  MeetingWeek  @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  topic MeetingTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
 
   @@index([weekId])
+  @@index([topicId])
   @@index([isCompleted])
   @@index([responsibleName])
 }

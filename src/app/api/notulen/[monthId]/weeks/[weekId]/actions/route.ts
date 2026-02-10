@@ -47,7 +47,7 @@ export async function POST(
     }
 
     const { weekId } = params
-    const { description, responsibleName } = await req.json()
+    const { description, responsibleName, topicId } = await req.json()
 
     if (!description || !responsibleName) {
       return NextResponse.json(
@@ -61,6 +61,7 @@ export async function POST(
         weekId,
         description,
         responsibleName,
+        topicId: topicId || null,
         isCompleted: false,
       },
     })

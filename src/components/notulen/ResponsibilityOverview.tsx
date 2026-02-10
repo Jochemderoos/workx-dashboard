@@ -20,12 +20,15 @@ interface ResponsibilityOverviewProps {
 }
 
 export default function ResponsibilityOverview({ actions, onToggleComplete }: ResponsibilityOverviewProps) {
-  // Group by responsible person
-  const grouped = actions.reduce((acc, action) => {
-    if (!acc[action.responsibleName]) acc[action.responsibleName] = []
-    acc[action.responsibleName].push(action)
-    return acc
-  }, {} as Record<string, OpenAction[]>)
+  // Group by responsible person — handle comma-separated names
+  const grouped: Record<string, OpenAction[]> = {}
+  for (const action of actions) {
+    const names = action.responsibleName.split(',').map(n => n.trim()).filter(Boolean)
+    for (const name of names) {
+      if (!grouped[name]) grouped[name] = []
+      grouped[name].push(action)
+    }
+  }
 
   const sortedNames = Object.keys(grouped).sort()
 

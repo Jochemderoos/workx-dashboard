@@ -14,6 +14,7 @@ interface Topic {
   remarks: string | null
   isStandard: boolean
   sortOrder: number
+  actions?: Action[]
 }
 
 interface Action {
@@ -21,6 +22,7 @@ interface Action {
   description: string
   responsibleName: string
   isCompleted: boolean
+  topicId?: string | null
   week?: { id: string; dateLabel: string }
 }
 

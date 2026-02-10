@@ -17,11 +17,12 @@ export async function PATCH(
     }
 
     const { actionId } = params
-    const { description, responsibleName, isCompleted } = await req.json()
+    const { description, responsibleName, isCompleted, topicId } = await req.json()
 
     const updateData: Record<string, unknown> = {}
     if (description !== undefined) updateData.description = description
     if (responsibleName !== undefined) updateData.responsibleName = responsibleName
+    if (topicId !== undefined) updateData.topicId = topicId || null
 
     if (isCompleted !== undefined) {
       updateData.isCompleted = isCompleted

@@ -26,6 +26,11 @@ export async function GET(
           include: {
             topics: {
               orderBy: { sortOrder: 'asc' },
+              include: {
+                actions: {
+                  orderBy: { createdAt: 'desc' },
+                },
+              },
             },
             actions: {
               orderBy: { createdAt: 'desc' },
