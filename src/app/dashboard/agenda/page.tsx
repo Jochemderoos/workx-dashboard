@@ -691,7 +691,7 @@ export default function AgendaPage() {
 
                       <Popover.Portal>
                         <Popover.Content
-                          className="w-[320px] sm:w-[380px] bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[70vh] overflow-hidden flex flex-col z-50 animate-modal-in"
+                          className="w-[calc(100vw-32px)] sm:w-[380px] bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[70vh] overflow-hidden flex flex-col z-50 animate-modal-in"
                           sideOffset={8}
                           collisionPadding={16}
                           side="bottom"
