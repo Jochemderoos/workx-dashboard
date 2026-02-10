@@ -48,7 +48,7 @@ const formatRoomBookingTitle = (event: CalendarEvent, short = false) => {
   if (!isRoomBooking(event)) return event.title
   const creatorName = event.createdBy?.name?.split(' ')[0] || 'Onbekend' // Only first name
   if (short) return `🔔 ${event.title}`
-  return `🔔 Vergaderruimte gereserveerd - ${creatorName}`
+  return `🔔 ${event.title}`
 }
 
 // View type for agenda
