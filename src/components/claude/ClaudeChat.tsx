@@ -75,12 +75,14 @@ export default function ClaudeChat({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [annotations, setAnnotations] = useState<Record<string, any[]>>({})
   const [optionsExpanded, setOptionsExpanded] = useState(true)
+  const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const streamingTextRef = useRef<HTMLSpanElement>(null) // Direct DOM node for streaming text
   const isThinkingRef = useRef(false) // Tracks thinking state inside streaming closure
-  const streamBufferRef = useRef('') // Buffered streaming text for batched updates
-  const rafIdRef = useRef<number | null>(null) // requestAnimationFrame ID for batched rendering
+  const streamBufferRef = useRef('') // Buffered streaming text
+  const scrollThrottleRef = useRef<number>(0) // Throttle scroll during streaming
 
   const RESPONSE_OPTIONS = [
     { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
@@ -396,8 +398,9 @@ export default function ClaudeChat({
 
       setStatusText('Claude schrijft...')
       setOptionsExpanded(false) // Collapse options to maximize answer space
+      setStreamingMsgId(assistantMsgId) // Mark which message is streaming
 
-      // Add empty assistant message that we'll update with streamed content
+      // Add empty assistant message placeholder
       setMessages(prev => [...prev, {
         id: assistantMsgId,
         role: 'assistant',
@@ -442,7 +445,6 @@ export default function ClaudeChat({
               setThinkingText(prev => prev + event.text)
             } else if (event.type === 'delta' && event.text) {
               // First text delta means thinking is done — auto-collapse
-              // Use ref to avoid stale closure (isThinking state is captured at function creation)
               if (isThinkingRef.current) {
                 isThinkingRef.current = false
                 setIsThinking(false)
@@ -450,16 +452,16 @@ export default function ClaudeChat({
                 setStatusText('Claude schrijft...')
               }
               streamedText += event.text
-              // Batch updates: accumulate text in ref, only re-render once per animation frame
               streamBufferRef.current = streamedText
-              if (!rafIdRef.current) {
-                rafIdRef.current = requestAnimationFrame(() => {
-                  rafIdRef.current = null
-                  const buffered = streamBufferRef.current
-                  setMessages(prev => prev.map(m =>
-                    m.id === assistantMsgId ? { ...m, content: buffered } : m
-                  ))
-                })
+              // Direct DOM write — bypasses React entirely, zero re-renders
+              if (streamingTextRef.current) {
+                streamingTextRef.current.textContent = streamedText
+              }
+              // Throttled scroll: max once per 300ms
+              const now = Date.now()
+              if (now - scrollThrottleRef.current > 300) {
+                scrollThrottleRef.current = now
+                messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
               }
             } else if (event.type === 'status' && event.text) {
               setStatusText(event.text)
@@ -476,7 +478,8 @@ export default function ClaudeChat({
                 // Strip the confidence tag from displayed text
                 streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
               }
-              // Final update with citations, sources, confidence, model
+              // Final update: flush content into React state + render markdown
+              setStreamingMsgId(null)
               setMessages(prev => prev.map(m =>
                 m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel } : m
               ))
@@ -495,15 +498,12 @@ export default function ClaudeChat({
       }
 
       clearTimeout(timeoutId)
+      setStreamingMsgId(null)
 
-      // Flush any remaining buffered text
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current)
-        rafIdRef.current = null
-      }
+      // Flush final content into state if not already done by 'done' event
       if (streamedText) {
         setMessages(prev => prev.map(m =>
-          m.id === assistantMsgId ? { ...m, content: streamedText } : m
+          m.id === assistantMsgId && !m.content ? { ...m, content: streamedText } : m
         ))
       }
 
@@ -531,6 +531,7 @@ export default function ClaudeChat({
       console.error('[ClaudeChat] Error:', errMsg)
       toast.error(errMsg, { duration: 15000 })
       setStatusText('')
+      setStreamingMsgId(null)
 
       // If we already have streamed content, keep it and add error note
       setMessages(prev => {
@@ -624,8 +625,7 @@ export default function ClaudeChat({
 
         {/* Message bubbles */}
         {messages.map((msg, msgIndex) => {
-          // Check if this is the currently streaming message (last assistant msg while loading)
-          const isStreaming = isLoading && msg.role === 'assistant' && msgIndex === messages.length - 1
+          const isStreaming = streamingMsgId === msg.id
 
           return (
           <div
@@ -642,9 +642,9 @@ export default function ClaudeChat({
                   <div className="flex-1 min-w-0">
                     <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-white/[0.04] border border-white/[0.08]">
                       {isStreaming ? (
-                        // During streaming: plain text to avoid layout reflow from markdown parsing
+                        // Streaming: direct DOM ref, zero React re-renders
                         <div className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap">
-                          {msg.content}
+                          <span ref={streamingTextRef} />
                           <span className="inline-block w-0.5 h-4 bg-workx-lime/60 animate-pulse ml-0.5 align-text-bottom" />
                         </div>
                       ) : (
