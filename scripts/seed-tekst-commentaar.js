@@ -11,7 +11,7 @@ const USER_ID = 'cml1u6k0700034ehqar3klcr5' // Hanna (admin)
 
 async function main() {
   // Look for the PDF in Downloads
-  const pdfPath = 'C:/Users/quiri/Downloads/Tekst en commentaar 2024.pdf'
+  const pdfPath = 'C:/Users/quiri/Downloads/PDF Tekst en commentaar 2024.pdf'
 
   if (!fs.existsSync(pdfPath)) {
     console.error(`PDF niet gevonden: ${pdfPath}`)
