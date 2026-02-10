@@ -40,22 +40,6 @@ const SOURCE_PRESETS = [
     requiresLogin: true,
   },
   {
-    name: 'Rechtspraak.nl',
-    type: 'website',
-    url: 'https://uitspraken.rechtspraak.nl/',
-    category: 'rechtspraak',
-    description: 'Officiële database van uitspraken van de Nederlandse rechtspraak',
-    requiresLogin: false,
-  },
-  {
-    name: 'Wetten.overheid.nl',
-    type: 'website',
-    url: 'https://wetten.overheid.nl/',
-    category: 'arbeidsrecht',
-    description: 'Actuele wetteksten, waaronder Boek 7 BW, WW, WAZO, WAB',
-    requiresLogin: false,
-  },
-  {
     name: 'UWV Werkgevers',
     type: 'website',
     url: 'https://www.uwv.nl/werkgevers',

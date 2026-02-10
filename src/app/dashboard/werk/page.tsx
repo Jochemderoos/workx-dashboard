@@ -6,7 +6,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { formatDateForAPI } from '@/lib/date-utils'
-import { TEAM_PHOTOS, ADVOCATEN, getPhotoUrl } from '@/lib/team-photos'
+import { TEAM_PHOTOS, ADVOCATEN, PARTNERS, getPhotoUrl } from '@/lib/team-photos'
 import ZakenToewijzing from '@/components/zaken/ZakenToewijzing'
 import WieDoetWat from '@/components/werk/WieDoetWat'
 import SpotlightCard from '@/components/ui/SpotlightCard'
@@ -164,6 +164,22 @@ export default function WerkOverzichtPage() {
   }, [historyOffset])
 
   const last3Workdays = workdaysToShow
+
+  // Determine if we should show partners (Sat, Sun, Mon)
+  const today = new Date()
+  const currentDayOfWeek = today.getDay() // 0=Sun, 1=Mon, 6=Sat
+  const showPartners = currentDayOfWeek === 0 || currentDayOfWeek === 1 || currentDayOfWeek === 6
+  const peopleToShow = showPartners ? [...PARTNERS, ...ADVOCATEN] : ADVOCATEN
+
+  // Calculate week total hours for a person
+  const getWeekTotal = (person: string): number => {
+    let total = 0
+    for (const day of workdaysToShow) {
+      const entry = workloadEntries.find(e => e.personName === person && e.date === formatDateForAPI(day))
+      if (entry?.hours) total += entry.hours
+    }
+    return total
+  }
 
   // Get workload for a specific person and date
   const getWorkload = (person: string, date: Date): WorkloadLevel => {
@@ -933,44 +949,46 @@ export default function WerkOverzichtPage() {
             </div>
 
             {/* Table - compact on mobile, full on desktop */}
-            <div className="overflow-x-auto sm:overflow-visible">
-              <div className="min-w-0 sm:min-w-[600px]">
+            <div className="overflow-hidden">
+              <div className="min-w-0">
                 {/* Table header */}
-                <div className="grid gap-1 sm:gap-4 px-2 sm:px-5 py-2 sm:py-3 bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider"
-                  style={{ gridTemplateColumns: 'minmax(100px, 1fr) repeat(3, minmax(50px, 80px))' }}
+                <div className="grid gap-1 px-2 sm:px-4 py-2 sm:py-3 bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider"
+                  style={{ gridTemplateColumns: 'minmax(90px, 140px) repeat(5, 1fr) minmax(40px, 56px)' }}
                 >
-                  <div className="hidden sm:block">Medewerker</div>
-                  <div className="sm:hidden">Naam</div>
+                  <div className="text-[10px] sm:text-xs">Naam</div>
               {last3Workdays.map(day => (
                 <div key={day.toISOString()} className="text-center text-[10px] sm:text-xs">
-                  <span className="hidden sm:inline">{day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                  <span className="sm:hidden">{day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric' })}</span>
+                  <span className="hidden sm:inline">{day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric' })}</span>
+                  <span className="sm:hidden">{day.toLocaleDateString('nl-NL', { weekday: 'narrow', day: 'numeric' })}</span>
                 </div>
               ))}
+              <div className="text-center text-[10px] sm:text-xs">Week</div>
             </div>
 
             {/* Table body */}
             <ScrollReveal staggerChildren={0.05}>
             <div className="divide-y divide-white/5">
-              {ADVOCATEN.map((person) => {
+              {peopleToShow.map((person) => {
                 const photoUrl = TEAM_PHOTOS[person]
                 const firstName = person.split(' ')[0]
+                const isPartner = PARTNERS.includes(person)
+                const weekTotal = getWeekTotal(person)
 
                 return (
                   <ScrollRevealItem key={person}>
                   <div
-                    className="grid gap-1 sm:gap-4 px-2 sm:px-5 py-2 sm:py-4 items-center hover:bg-white/[0.02] transition-colors"
-                    style={{ gridTemplateColumns: 'minmax(100px, 1fr) repeat(3, minmax(50px, 80px))' }}
+                    className={`grid gap-1 px-2 sm:px-4 py-1.5 sm:py-3 items-center hover:bg-white/[0.02] transition-colors ${isPartner ? 'bg-workx-lime/[0.02]' : ''}`}
+                    style={{ gridTemplateColumns: 'minmax(90px, 140px) repeat(5, 1fr) minmax(40px, 56px)' }}
                   >
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <img
                         src={photoUrl}
                         alt={person}
-                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl object-cover ring-2 ring-white/10 flex-shrink-0"
+                        className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg object-cover ring-2 ring-white/10 flex-shrink-0"
                       />
                       <div className="min-w-0">
-                        <p className="font-medium text-white text-sm sm:text-base whitespace-nowrap hidden sm:block">{person}</p>
-                        <p className="font-medium text-white text-xs sm:hidden">{firstName}</p>
+                        <p className="font-medium text-white text-xs sm:text-sm whitespace-nowrap truncate">{firstName}</p>
+                        {isPartner && <p className="text-[9px] text-workx-lime/60 leading-none">Partner</p>}
                       </div>
                     </div>
                     {last3Workdays.map(day => {
@@ -1027,10 +1045,19 @@ export default function WerkOverzichtPage() {
                         </div>
                       )
                     })}
+                    {/* Week total */}
+                    <div className="flex justify-center items-center">
+                      <span className={`text-xs sm:text-sm font-bold ${
+                        weekTotal > 25 ? 'text-red-400' : weekTotal > 20 ? 'text-orange-400' : weekTotal > 0 ? 'text-white/60' : 'text-white/15'
+                      }`}>
+                        {weekTotal > 0 ? weekTotal.toFixed(1).replace('.', ',') : '-'}
+                      </span>
+                    </div>
                   </div>
                   </ScrollRevealItem>
                 )
               })}
+              {/* Partners divider when showing both */}
               </div>
             </ScrollReveal>
             </div>

@@ -46,6 +46,15 @@ export function getPhotoUrl(name: string, avatarUrl?: string | null): string | n
   return null
 }
 
+// Partners
+export const PARTNERS = [
+  'Marnix Ritmeester',
+  'Jochem de Roos',
+  'Maaike de Jong',
+  'Bas den Ridder',
+  'Juliette Niersman',
+]
+
 // Lijst van advocaten (voor werkdruk tracking)
 export const ADVOCATEN = [
   'Justine Schellekens',
