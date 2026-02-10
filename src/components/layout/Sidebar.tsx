@@ -139,6 +139,8 @@ export default function Sidebar({ user }: SidebarProps) {
         </div>
 
         {/* Partners - alleen voor PARTNER en ADMIN */}
+        {/* DEBUG: */}
+        <p className="px-4 text-[9px] text-red-400">role: "{user.role}"</p>
         {['PARTNER', 'ADMIN'].includes(user.role) && (
           <div>
             <p className="px-4 mb-2 text-[10px] font-medium text-workx-lime/40 uppercase tracking-widest">Partners</p>
