@@ -290,7 +290,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fetch knowledge sources — only processed summaries
+    // Fetch knowledge sources — include all processed summaries
     let sourcesContext = ''
     const usedSourceNames: Array<{ name: string; category: string }> = []
     try {
@@ -302,10 +302,10 @@ export async function POST(req: NextRequest) {
       let len = 0
       for (const source of activeSources) {
         if (source.summary) {
-          const trimmed = source.summary.slice(0, 3000)
-          if (len + trimmed.length > 6000) break
+          const trimmed = source.summary.slice(0, 8000)
+          if (len + trimmed.length > 50000) break
           len += trimmed.length
-          sourcesContext += `\n\n--- ${source.name} ---\n${trimmed}`
+          sourcesContext += `\n\n--- ${source.name} (${source.category}) ---\n${trimmed}`
           usedSourceNames.push({ name: source.name, category: source.category })
         }
       }
@@ -355,7 +355,11 @@ Gebruik ALTIJD dezelfde placeholders ([Persoon-1], [Bedrijf-1], [BSN-1], etc.) i
 Vraag NIET naar de echte namen of gegevens.`
     }
     if (sourcesContext) {
-      systemPrompt += `\n\n## Kennisbronnen${sourcesContext}`
+      systemPrompt += `\n\n## Kennisbronnen van Workx Advocaten
+De volgende interne kennisbronnen zijn beschikbaar. Gebruik deze ACTIEF bij het beantwoorden van vragen:
+- Verwijs naar relevante informatie uit deze bronnen waar toepasselijk
+- Combineer interne kennis met externe bronnen (wetgeving, rechtspraak, web search)
+- Vermeld welke kennisbron je hebt gebruikt in je antwoord${sourcesContext}`
     }
     if (documentContext) {
       systemPrompt += `\n\n## Documenten${documentContext}`
@@ -532,8 +536,31 @@ BELANGRIJK:
           // Wait for the full response
           let finalMessage = await anthropicStream.finalMessage()
 
-          // Handle tool use: execute rechtspraak tools and continue
-          if (finalMessage.stop_reason === 'tool_use') {
+          // Extract citations from any response (web search results, etc.)
+          const extractCitations = (message: typeof finalMessage) => {
+            for (const block of message.content) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const b = block as any
+              if (b.type === 'text' && Array.isArray(b.citations)) {
+                for (const cite of b.citations) {
+                  if (cite.url && !citations.some(c => c.url === cite.url)) {
+                    citations.push({ url: cite.url, title: cite.title || '' })
+                  }
+                }
+              }
+            }
+          }
+
+          // Extract citations from initial response (important: web search citations live here)
+          extractCitations(finalMessage)
+
+          // Handle tool use: execute rechtspraak tools and continue (multi-round loop)
+          let toolRound = 0
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let loopMsgs: Array<{ role: 'user' | 'assistant'; content: any }> = [...msgs]
+
+          while (finalMessage.stop_reason === 'tool_use' && toolRound < 3) {
+            toolRound++
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const toolUseBlocks = finalMessage.content.filter((b: any) => b.type === 'tool_use')
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -542,7 +569,7 @@ BELANGRIJK:
             for (const toolBlock of toolUseBlocks) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const tb = toolBlock as any
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: `Rechtspraak.nl doorzoeken...` })}\n\n`))
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: `Rechtspraak.nl doorzoeken... (${toolRound})` })}\n\n`))
 
               try {
                 let resultText = ''
@@ -575,8 +602,8 @@ BELANGRIJK:
 
             // Continue conversation with tool results
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Resultaten analyseren...' })}\n\n`))
-            const continueMsgs = [
-              ...msgs,
+            loopMsgs = [
+              ...loopMsgs,
               { role: 'assistant' as const, content: finalMessage.content },
               { role: 'user' as const, content: toolResults },
             ]
@@ -584,8 +611,9 @@ BELANGRIJK:
               model: modelId,
               max_tokens: 16000,
               system: systemPrompt,
-              messages: continueMsgs,
+              messages: loopMsgs,
               thinking: { type: 'enabled' as const, budget_tokens: 10000 },
+              tools,
             })
 
             // Stream thinking events for the continuation too
@@ -606,18 +634,18 @@ BELANGRIJK:
               fullText += text
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
             })
-            finalMessage = await continueStream.finalMessage()
-          }
 
-          // Extract citations from the final message
-          for (const block of finalMessage.content) {
-            if (block.type === 'text' && 'citations' in block && Array.isArray((block as { citations?: unknown[] }).citations)) {
-              for (const cite of (block as { citations: Array<{ type: string; url?: string; title?: string }> }).citations) {
-                if (cite.url && !citations.some(c => c.url === cite.url)) {
-                  citations.push({ url: cite.url, title: cite.title || '' })
-                }
+            // Detect web search in continuation
+            continueStream.on('contentBlock', (block) => {
+              const blockType = (block as { type: string }).type
+              if (blockType === 'web_search_tool_use' || blockType === 'server_tool_use') {
+                hasWebSearch = true
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'AI Search...' })}\n\n`))
               }
-            }
+            })
+
+            finalMessage = await continueStream.finalMessage()
+            extractCitations(finalMessage)
           }
 
           // Save assistant message to database
