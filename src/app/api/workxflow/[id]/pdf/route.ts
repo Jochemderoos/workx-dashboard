@@ -108,24 +108,59 @@ async function drawWorkxLogo(
 }
 
 /**
- * Detect actual document type from data URL
+ * Detect actual document type from URL (data: or https://)
  * More reliable than stored documentType
  */
-function detectDocumentType(dataUrl: string | null, storedType: string | null): string {
-  if (!dataUrl) return storedType || 'unknown'
+function detectDocumentType(url: string | null, storedType: string | null): string {
+  if (!url) return storedType || 'unknown'
+
+  // Blob URLs (https://) — rely on stored type or file extension
+  if (url.startsWith('https://')) {
+    if (storedType && storedType !== 'other' && storedType !== 'unknown') return storedType
+    const lower = url.toLowerCase()
+    if (lower.includes('.pdf')) return 'pdf'
+    if (/\.(jpg|jpeg|png|gif|webp)/.test(lower)) return 'image'
+    if (/\.(doc|docx)/.test(lower)) return 'docx'
+    if (/\.(xls|xlsx)/.test(lower)) return 'excel'
+    if (/\.(ppt|pptx)/.test(lower)) return 'powerpoint'
+    return storedType || 'unknown'
+  }
 
   // Check the MIME type in the data URL
-  if (dataUrl.startsWith('data:application/pdf')) return 'pdf'
-  if (dataUrl.startsWith('data:image/')) return 'image'
-  if (dataUrl.includes('application/vnd.openxmlformats-officedocument.wordprocessingml')) return 'docx'
-  if (dataUrl.includes('application/msword')) return 'docx'
-  if (dataUrl.includes('application/vnd.openxmlformats-officedocument.spreadsheetml')) return 'excel'
-  if (dataUrl.includes('application/vnd.ms-excel')) return 'excel'
-  if (dataUrl.includes('application/vnd.openxmlformats-officedocument.presentationml')) return 'powerpoint'
-  if (dataUrl.includes('application/vnd.ms-powerpoint')) return 'powerpoint'
+  if (url.startsWith('data:application/pdf')) return 'pdf'
+  if (url.startsWith('data:image/')) return 'image'
+  if (url.includes('application/vnd.openxmlformats-officedocument.wordprocessingml')) return 'docx'
+  if (url.includes('application/msword')) return 'docx'
+  if (url.includes('application/vnd.openxmlformats-officedocument.spreadsheetml')) return 'excel'
+  if (url.includes('application/vnd.ms-excel')) return 'excel'
+  if (url.includes('application/vnd.openxmlformats-officedocument.presentationml')) return 'powerpoint'
+  if (url.includes('application/vnd.ms-powerpoint')) return 'powerpoint'
 
   // Fallback to stored type
   return storedType || 'unknown'
+}
+
+/**
+ * Get document bytes from either a data: URL (base64) or an https:// URL (blob storage)
+ */
+async function getDocumentBytes(url: string): Promise<Buffer | null> {
+  try {
+    if (url.startsWith('data:')) {
+      const base64Data = url.split(',')[1]
+      if (!base64Data) return null
+      return Buffer.from(base64Data, 'base64')
+    }
+    if (url.startsWith('https://')) {
+      const response = await fetch(url)
+      if (!response.ok) return null
+      const arrayBuffer = await response.arrayBuffer()
+      return Buffer.from(arrayBuffer)
+    }
+    return null
+  } catch (err) {
+    console.error('Error fetching document bytes:', err)
+    return null
+  }
 }
 
 // POST - Generate PDF for bundle
@@ -197,9 +232,8 @@ export async function POST(
 
     if (bundle.mainDocumentUrl && mainDocType === 'pdf') {
       try {
-        const base64Data = bundle.mainDocumentUrl.split(',')[1]
-        if (base64Data) {
-          const mainDocBytes = Buffer.from(base64Data, 'base64')
+        const mainDocBytes = await getDocumentBytes(bundle.mainDocumentUrl)
+        if (mainDocBytes) {
           const mainPdf = await PDFDocument.load(mainDocBytes)
           const mainPages = await pdfDoc.copyPages(mainPdf, mainPdf.getPageIndices())
           for (const page of mainPages) {
@@ -325,9 +359,8 @@ export async function POST(
       // Add production document if present (NO logo on attachments)
       if (production.documentUrl && docType === 'pdf') {
         try {
-          const base64Data = production.documentUrl.split(',')[1]
-          if (base64Data) {
-            const prodDocBytes = Buffer.from(base64Data, 'base64')
+          const prodDocBytes = await getDocumentBytes(production.documentUrl)
+          if (prodDocBytes) {
             const prodPdf = await PDFDocument.load(prodDocBytes)
             const prodPages = await pdfDoc.copyPages(prodPdf, prodPdf.getPageIndices())
             prodPages.forEach(page => pdfDoc.addPage(page))
@@ -337,10 +370,11 @@ export async function POST(
         }
       } else if (production.documentUrl && docType === 'image') {
         try {
-          const base64Data = production.documentUrl.split(',')[1]
-          if (base64Data) {
-            const imgBytes = Buffer.from(base64Data, 'base64')
+          const imgBytes = await getDocumentBytes(production.documentUrl)
+          if (imgBytes) {
             const isJpg = production.documentUrl.includes('jpeg') || production.documentUrl.includes('jpg')
+              || production.documentName?.toLowerCase().includes('.jpg')
+              || production.documentName?.toLowerCase().includes('.jpeg')
             const image = isJpg
               ? await pdfDoc.embedJpg(imgBytes)
               : await pdfDoc.embedPng(imgBytes)
@@ -439,9 +473,8 @@ export async function POST(
       let headerPageCount = 0
       if (bundle.mainDocumentUrl && mainDocType === 'pdf') {
         try {
-          const base64Data = bundle.mainDocumentUrl.split(',')[1]
-          if (base64Data) {
-            const mainDocBytes = Buffer.from(base64Data, 'base64')
+          const mainDocBytes = await getDocumentBytes(bundle.mainDocumentUrl)
+          if (mainDocBytes) {
             const mainPdf = await PDFDocument.load(mainDocBytes)
             headerPageCount += mainPdf.getPageCount()
           }
@@ -462,9 +495,8 @@ export async function POST(
         const docType = detectDocumentType(production.documentUrl, production.documentType)
         if (production.documentUrl && docType === 'pdf') {
           try {
-            const base64Data = production.documentUrl.split(',')[1]
-            if (base64Data) {
-              const prodDocBytes = Buffer.from(base64Data, 'base64')
+            const prodDocBytes = await getDocumentBytes(production.documentUrl)
+            if (prodDocBytes) {
               const prodPdf = await PDFDocument.load(prodDocBytes)
               currentPage += prodPdf.getPageCount()
             }

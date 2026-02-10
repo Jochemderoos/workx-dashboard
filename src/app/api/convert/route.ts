@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { put } from '@vercel/blob'
 
 const CONVERTAPI_SECRET = process.env.CONVERTAPI_SECRET
 
 /**
  * Convert Office documents (docx, xlsx, pptx) to PDF using ConvertAPI
+ *
+ * Accepts either:
+ * - { fileUrl, fileName } — file is in Vercel Blob storage (new flow)
+ * - { fileData, fileName } — file is base64 data URL (legacy, kept for backwards-compat)
  */
 export async function POST(req: NextRequest) {
   try {
@@ -14,13 +19,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const { fileData, fileName } = await req.json()
+    const body = await req.json()
+    const { fileUrl, fileData, fileName } = body
 
     if (!CONVERTAPI_SECRET) {
       return NextResponse.json({ error: 'ConvertAPI niet geconfigureerd' }, { status: 500 })
     }
 
-    if (!fileData || !fileName) {
+    if ((!fileUrl && !fileData) || !fileName) {
       return NextResponse.json({ error: 'Geen bestand' }, { status: 400 })
     }
 
@@ -37,10 +43,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Onondersteund bestandstype' }, { status: 400 })
     }
 
-    // Extract base64 data (remove data URL prefix if present)
-    let base64Data = fileData
-    if (fileData.includes(',')) {
-      base64Data = fileData.split(',')[1]
+    // Get base64 data for ConvertAPI
+    let base64Data: string
+
+    if (fileUrl) {
+      // New flow: fetch from blob storage
+      const fileResponse = await fetch(fileUrl)
+      if (!fileResponse.ok) {
+        return NextResponse.json({ error: 'Kon bestand niet ophalen' }, { status: 500 })
+      }
+      const fileBuffer = await fileResponse.arrayBuffer()
+      base64Data = Buffer.from(fileBuffer).toString('base64')
+    } else {
+      // Legacy flow: base64 data URL
+      base64Data = fileData
+      if (fileData.includes(',')) {
+        base64Data = fileData.split(',')[1]
+      }
     }
 
     // Call ConvertAPI
@@ -77,28 +96,44 @@ export async function POST(req: NextRequest) {
     if (result.Files && result.Files.length > 0) {
       const pdfFile = result.Files[0]
 
-      let pdfBase64 = ''
+      let pdfBytes: Buffer | null = null
 
       // Check if FileData is directly available
       if (pdfFile.FileData) {
-        pdfBase64 = pdfFile.FileData
+        pdfBytes = Buffer.from(pdfFile.FileData, 'base64')
       }
       // Otherwise download from URL
       else if (pdfFile.Url) {
         const pdfResponse = await fetch(pdfFile.Url)
         const pdfBuffer = await pdfResponse.arrayBuffer()
-        pdfBase64 = Buffer.from(pdfBuffer).toString('base64')
+        pdfBytes = Buffer.from(pdfBuffer)
       }
 
-      if (pdfBase64) {
-        const pdfDataUrl = `data:application/pdf;base64,${pdfBase64}`
+      if (pdfBytes) {
         const pdfName = pdfFile.FileName || fileName.replace(/\.(docx?|xlsx?|pptx?)$/i, '.pdf')
 
-        return NextResponse.json({
-          success: true,
-          pdfData: pdfDataUrl,
-          pdfName: pdfName,
-        })
+        // Upload converted PDF to Vercel Blob
+        try {
+          const blob = await put(pdfName, pdfBytes, {
+            access: 'public',
+            contentType: 'application/pdf',
+          })
+
+          return NextResponse.json({
+            success: true,
+            pdfUrl: blob.url,
+            pdfName: pdfName,
+          })
+        } catch (blobError) {
+          console.error('Blob upload failed, falling back to base64:', blobError)
+          // Fallback: return base64 if blob upload fails
+          const pdfDataUrl = `data:application/pdf;base64,${pdfBytes.toString('base64')}`
+          return NextResponse.json({
+            success: true,
+            pdfData: pdfDataUrl,
+            pdfName: pdfName,
+          })
+        }
       }
     }
 

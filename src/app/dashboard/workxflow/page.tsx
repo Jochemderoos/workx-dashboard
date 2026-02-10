@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { uploadToBlob } from '@/lib/blob-upload'
 import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 // Debounce hook
 function useDebounceCallback<T extends (...args: any[]) => any>(
@@ -295,75 +298,136 @@ export default function WorkxflowPage() {
   const uploadMainDocument = async (file: File) => {
     if (!activeBundle) return
 
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      let fileData = e.target?.result as string
-      let fileName = file.name
-      let docType = 'other'
-      const lowerName = file.name.toLowerCase()
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Bestand is te groot (max 50MB)')
+      return
+    }
 
-      // Check if it's an Office file that needs conversion
-      const isOfficeFile = /\.(doc|docx|xls|xlsx|ppt|pptx)$/.test(lowerName)
+    let fileName = file.name
+    let docType = 'other'
+    const lowerName = file.name.toLowerCase()
+    let fileToUpload: File | Blob = file
 
-      if (isOfficeFile) {
-        // Convert to PDF using ConvertAPI
-        setIsConverting(true)
-        toast.loading('Processtuk wordt geconverteerd naar PDF...', { id: 'converting-main' })
+    // Check if it's an Office file that needs conversion
+    const isOfficeFile = /\.(doc|docx|xls|xlsx|ppt|pptx)$/.test(lowerName)
 
-        try {
-          const response = await fetch('/api/convert', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fileData: fileData,
-              fileName: fileName,
-            }),
-          })
-
-          if (response.ok) {
-            const result = await response.json()
-            fileData = result.pdfData
-            fileName = result.pdfName
-            docType = 'pdf'
-            toast.success('Geconverteerd naar PDF!', { id: 'converting-main' })
-          } else {
-            const error = await response.json()
-            console.error('Conversion failed:', error)
-            toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting-main' })
-            docType = 'docx'
-          }
-        } catch (err) {
-          console.error('Conversion error:', err)
-          toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting-main' })
-          docType = 'docx'
-        } finally {
-          setIsConverting(false)
-        }
-      } else if (file.type.includes('pdf') || lowerName.endsWith('.pdf')) {
-        docType = 'pdf'
-      }
+    if (isOfficeFile) {
+      // Convert to PDF using ConvertAPI — upload original to blob first, then send URL
+      setIsConverting(true)
+      toast.loading('Processtuk wordt geconverteerd naar PDF...', { id: 'converting-main' })
 
       try {
-        const res = await fetch(`/api/workxflow/${activeBundle.id}`, {
-          method: 'PATCH',
+        // Upload original file to blob first
+        const originalBlob = await uploadToBlob(file.name, file)
+
+        const response = await fetch('/api/convert', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            mainDocumentUrl: fileData,
-            mainDocumentName: fileName,
-            mainDocumentType: docType,
+            fileUrl: originalBlob.url,
+            fileName: fileName,
           }),
         })
-        if (res.ok) {
-          const updated = await res.json()
-          setActiveBundle(updated)
-          setBundles(prev => prev.map(b => b.id === updated.id ? updated : b))
-          toast.success('Processtuk geüpload')
+
+        if (response.ok) {
+          const result = await response.json()
+          // Convert API now returns a blob URL or base64 — handle both
+          if (result.pdfUrl) {
+            // New flow: PDF is already a blob URL
+            try {
+              const res = await fetch(`/api/workxflow/${activeBundle.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  mainDocumentUrl: result.pdfUrl,
+                  mainDocumentName: result.pdfName,
+                  mainDocumentType: 'pdf',
+                }),
+              })
+              if (res.ok) {
+                const updated = await res.json()
+                setActiveBundle(updated)
+                setBundles(prev => prev.map(b => b.id === updated.id ? updated : b))
+                toast.success('Geconverteerd en geüpload!', { id: 'converting-main' })
+              }
+            } catch (error) {
+              toast.error('Upload mislukt', { id: 'converting-main' })
+            }
+            setIsConverting(false)
+            return
+          }
+          // Fallback: pdfData is base64, convert to blob and upload
+          const base64Data = result.pdfData.split(',')[1]
+          const pdfBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
+          fileToUpload = new Blob([pdfBytes], { type: 'application/pdf' })
+          fileName = result.pdfName
+          docType = 'pdf'
+          toast.success('Geconverteerd naar PDF!', { id: 'converting-main' })
+        } else {
+          const error = await response.json()
+          console.error('Conversion failed:', error)
+          toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting-main' })
+          docType = 'docx'
+          // Use original blob URL directly
+          try {
+            const res = await fetch(`/api/workxflow/${activeBundle.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                mainDocumentUrl: originalBlob.url,
+                mainDocumentName: fileName,
+                mainDocumentType: docType,
+              }),
+            })
+            if (res.ok) {
+              const updated = await res.json()
+              setActiveBundle(updated)
+              setBundles(prev => prev.map(b => b.id === updated.id ? updated : b))
+              toast.success('Processtuk geüpload')
+            }
+          } catch (error) {
+            toast.error('Upload mislukt')
+          }
+          setIsConverting(false)
+          return
         }
-      } catch (error) {
-        toast.error('Upload mislukt')
+      } catch (err) {
+        console.error('Conversion error:', err)
+        toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting-main' })
+        docType = 'docx'
+      } finally {
+        setIsConverting(false)
       }
+    } else if (file.type.includes('pdf') || lowerName.endsWith('.pdf')) {
+      docType = 'pdf'
     }
-    reader.readAsDataURL(file)
+
+    try {
+      // Upload to Vercel Blob
+      toast.loading('Bestand uploaden...', { id: 'upload-main' })
+      const blob = await uploadToBlob(fileName, fileToUpload)
+
+      const res = await fetch(`/api/workxflow/${activeBundle.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mainDocumentUrl: blob.url,
+          mainDocumentName: fileName,
+          mainDocumentType: docType,
+        }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setActiveBundle(updated)
+        setBundles(prev => prev.map(b => b.id === updated.id ? updated : b))
+        toast.success('Processtuk geüpload', { id: 'upload-main' })
+      } else {
+        toast.error('Upload mislukt', { id: 'upload-main' })
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Upload mislukt', { id: 'upload-main' })
+    }
   }
 
   const removeMainDocument = async () => {
@@ -403,69 +467,108 @@ export default function WorkxflowPage() {
     }
 
     if (file) {
-      // Read file as base64
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        let fileData = e.target?.result as string
-        let fileName = file.name
-        let docType = 'other'
-        const lowerName = file.name.toLowerCase()
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`Bestand "${file.name}" is te groot (max 50MB)`)
+        return
+      }
 
-        // Check if it's an Office file that needs conversion
-        const isOfficeFile = /\.(doc|docx|xls|xlsx|ppt|pptx)$/.test(lowerName)
+      let fileName = file.name
+      let docType = 'other'
+      const lowerName = file.name.toLowerCase()
 
-        if (isOfficeFile) {
-          // Convert to PDF using ConvertAPI
-          setIsConverting(true)
-          toast.loading('Bestand wordt geconverteerd naar PDF...', { id: 'converting' })
+      // Check if it's an Office file that needs conversion
+      const isOfficeFile = /\.(doc|docx|xls|xlsx|ppt|pptx)$/.test(lowerName)
 
-          try {
-            const response = await fetch('/api/convert', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                fileData: fileData,
-                fileName: fileName,
-              }),
-            })
+      if (isOfficeFile) {
+        setIsConverting(true)
+        toast.loading('Bestand wordt geconverteerd naar PDF...', { id: 'converting' })
 
-            if (response.ok) {
-              const result = await response.json()
-              fileData = result.pdfData
-              fileName = result.pdfName
-              docType = 'pdf'
+        try {
+          // Upload original file to blob first
+          const originalBlob = await uploadToBlob(file.name, file)
+
+          const response = await fetch('/api/convert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fileUrl: originalBlob.url,
+              fileName: fileName,
+            }),
+          })
+
+          if (response.ok) {
+            const result = await response.json()
+            if (result.pdfUrl) {
+              production.documentUrl = result.pdfUrl
+              production.documentName = result.pdfName
+              production.documentType = 'pdf'
               toast.success('Geconverteerd naar PDF!', { id: 'converting' })
-            } else {
-              const error = await response.json()
-              console.error('Conversion failed:', error)
-              toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting' })
-              // Keep original file type
-              if (/\.(doc|docx)$/.test(lowerName)) docType = 'docx'
-              else if (/\.(xls|xlsx)$/.test(lowerName)) docType = 'excel'
-              else if (/\.(ppt|pptx)$/.test(lowerName)) docType = 'powerpoint'
+              await saveProduction(production)
+              setIsConverting(false)
+              return
             }
-          } catch (err) {
-            console.error('Conversion error:', err)
+            // Fallback: pdfData is base64, upload to blob
+            const base64Data = result.pdfData.split(',')[1]
+            const pdfBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))
+            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' })
+            const uploadedPdf = await uploadToBlob(result.pdfName, pdfBlob)
+            production.documentUrl = uploadedPdf.url
+            production.documentName = result.pdfName
+            production.documentType = 'pdf'
+            toast.success('Geconverteerd naar PDF!', { id: 'converting' })
+          } else {
+            console.error('Conversion failed')
             toast.error('Conversie mislukt, origineel bestand wordt opgeslagen', { id: 'converting' })
+            production.documentUrl = originalBlob.url
+            production.documentName = fileName
             if (/\.(doc|docx)$/.test(lowerName)) docType = 'docx'
             else if (/\.(xls|xlsx)$/.test(lowerName)) docType = 'excel'
             else if (/\.(ppt|pptx)$/.test(lowerName)) docType = 'powerpoint'
-          } finally {
-            setIsConverting(false)
+            production.documentType = docType
           }
-        } else if (file.type.includes('pdf') || lowerName.endsWith('.pdf')) {
+        } catch (err) {
+          console.error('Conversion error:', err)
+          toast.error('Conversie mislukt', { id: 'converting' })
+          // Try to upload original file anyway
+          try {
+            const fallbackBlob = await uploadToBlob(file.name, file)
+            production.documentUrl = fallbackBlob.url
+            production.documentName = fileName
+            if (/\.(doc|docx)$/.test(lowerName)) docType = 'docx'
+            else if (/\.(xls|xlsx)$/.test(lowerName)) docType = 'excel'
+            else if (/\.(ppt|pptx)$/.test(lowerName)) docType = 'powerpoint'
+            production.documentType = docType
+          } catch {
+            toast.error('Upload mislukt')
+            setIsConverting(false)
+            return
+          }
+        } finally {
+          setIsConverting(false)
+        }
+      } else {
+        // Non-Office file: upload directly to blob
+        if (file.type.includes('pdf') || lowerName.endsWith('.pdf')) {
           docType = 'pdf'
         } else if (file.type.includes('image') || /\.(jpg|jpeg|png|gif|webp)$/.test(lowerName)) {
           docType = 'image'
         }
 
-        production.documentUrl = fileData
-        production.documentName = fileName
-        production.documentType = docType
-
-        await saveProduction(production)
+        try {
+          toast.loading('Bestand uploaden...', { id: `upload-${nextNumber}` })
+          const blob = await uploadToBlob(file.name, file)
+          production.documentUrl = blob.url
+          production.documentName = fileName
+          production.documentType = docType
+          toast.dismiss(`upload-${nextNumber}`)
+        } catch (err) {
+          console.error('Upload error:', err)
+          toast.error('Upload mislukt', { id: `upload-${nextNumber}` })
+          return
+        }
       }
-      reader.readAsDataURL(file)
+
+      await saveProduction(production)
     } else {
       await saveProduction(production)
     }

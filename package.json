@@ -26,6 +26,8 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@react-pdf/renderer": "^4.3.2",
     "@slack/web-api": "^7.13.0",
+    "@vercel/blob": "^2.2.0",
+    "adm-zip": "^0.5.16",
     "bcryptjs": "^2.4.3",
     "chromium": "^3.0.3",
     "date-fns": "^3.6.0",
@@ -48,8 +50,7 @@
     "swr": "^2.4.0",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
-    "zustand": "^4.5.0",
-    "adm-zip": "^0.5.16"
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
