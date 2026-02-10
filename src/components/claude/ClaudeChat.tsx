@@ -252,16 +252,26 @@ export default function ClaudeChat({
         doc.save(`workx-ai-${new Date().toISOString().slice(0, 10)}.pdf`)
         toast.success('PDF gedownload')
       } else {
-        // Simple DOCX export via HTML blob
+        // DOCX export — professional legal document styling
         const htmlContent = `
           <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-          <head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.6;color:#1a1a1a}h1,h2,h3{color:#333}p{margin:0 0 8pt}</style></head>
+          <head><meta charset="utf-8">
+          <style>
+            body { font-family: 'Book Antiqua', 'Palatino Linotype', Georgia, serif; font-size: 10.5pt; line-height: 1.5; color: #1a1a1a; margin: 2cm 2.5cm; }
+            h1, h2, h3 { font-family: 'Book Antiqua', 'Palatino Linotype', Georgia, serif; font-size: 10.5pt; font-weight: normal; color: #1a1a1a; margin: 12pt 0 4pt 0; text-decoration: underline; }
+            h1 { font-size: 11pt; text-decoration: none; text-transform: uppercase; letter-spacing: 0.5pt; }
+            p { margin: 0 0 6pt 0; text-align: justify; }
+            strong { font-weight: normal; }
+            ul, ol { margin: 2pt 0 6pt 0; padding-left: 20pt; }
+            li { margin: 0 0 2pt 0; }
+            table { border-collapse: collapse; width: 100%; margin: 6pt 0; font-size: 10pt; }
+            td, th { border: 0.5pt solid #999; padding: 3pt 6pt; text-align: left; font-weight: normal; }
+            blockquote { margin: 6pt 0 6pt 20pt; padding-left: 10pt; border-left: 1.5pt solid #999; font-style: italic; }
+          </style></head>
           <body>
-          <p style="font-size:8pt;color:#999">Workx Advocaten — AI Assistent — ${new Date().toLocaleDateString('nl-NL')}</p>
-          <hr style="border:1px solid #eee">
+          <p style="font-size: 8pt; color: #888; margin-bottom: 12pt;">Workx Advocaten &mdash; ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           ${renderMarkdown(content)}
-          <hr style="border:1px solid #eee">
-          <p style="font-size:7pt;color:#aaa;margin-top:12pt"><em>Dit document is gegenereerd door AI en vormt geen juridisch advies.</em></p>
+          <p style="font-size: 7.5pt; color: #999; margin-top: 18pt; border-top: 0.5pt solid #ccc; padding-top: 6pt;"><em>Dit document is gegenereerd met behulp van AI en vormt geen juridisch advies. Raadpleeg uw advocaat voor een op uw situatie toegespitst advies.</em></p>
           </body></html>`
         const blob = new Blob([htmlContent], { type: 'application/msword' })
         const url = URL.createObjectURL(blob)
