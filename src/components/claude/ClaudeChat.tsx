@@ -443,7 +443,7 @@ export default function ClaudeChat({
 
     // Timeout after 120 seconds (streaming keeps connection alive)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 120000)
+    const timeoutId = setTimeout(() => controller.abort(), 300000)
 
     try {
       setStatusText('Verzoek versturen...')

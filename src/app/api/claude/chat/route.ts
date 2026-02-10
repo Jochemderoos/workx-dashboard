@@ -7,7 +7,7 @@ import { anonymizeText } from '@/lib/anonymize'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+export const maxDuration = 300
 
 const SYSTEM_PROMPT = `Je bent de AI-assistent van Workx Advocaten, een gespecialiseerd arbeidsrechtadvocatenkantoor in Amsterdam.
 
@@ -442,7 +442,7 @@ BELANGRIJK:
     const tools: any[] = [{
       type: 'web_search_20250305',
       name: 'web_search',
-      max_uses: 5,
+      max_uses: 15,
     }]
 
     // Rechtspraak tools always available — direct API access to Dutch case law
@@ -470,7 +470,7 @@ BELANGRIJK:
       },
     })
 
-    const client = new Anthropic({ apiKey, timeout: 120000 })
+    const client = new Anthropic({ apiKey, timeout: 300000 })
     console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, tools=${tools.length}`)
 
     // Stream the response
@@ -487,12 +487,12 @@ BELANGRIJK:
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const streamParams: any = {
             model: modelId,
-            max_tokens: 16000,
+            max_tokens: 32000,
             system: systemPrompt,
             messages: msgs,
             thinking: {
               type: 'enabled',
-              budget_tokens: 10000,
+              budget_tokens: 16000,
             },
             ...(tools.length > 0 ? { tools } : {}),
           }
@@ -559,7 +559,7 @@ BELANGRIJK:
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let loopMsgs: Array<{ role: 'user' | 'assistant'; content: any }> = [...msgs]
 
-          while (finalMessage.stop_reason === 'tool_use' && toolRound < 3) {
+          while (finalMessage.stop_reason === 'tool_use' && toolRound < 6) {
             toolRound++
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const toolUseBlocks = finalMessage.content.filter((b: any) => b.type === 'tool_use')
@@ -609,7 +609,7 @@ BELANGRIJK:
             ]
             const continueStream = client.messages.stream({
               model: modelId,
-              max_tokens: 16000,
+              max_tokens: 32000,
               system: systemPrompt,
               messages: loopMsgs,
               thinking: { type: 'enabled' as const, budget_tokens: 10000 },
