@@ -23,6 +23,12 @@ interface AttachedDoc {
   fileType: string
 }
 
+interface DocxEditBlock {
+  documentId: string
+  documentName: string
+  edits: Array<{ find: string; replace: string }>
+}
+
 interface ClaudeChatProps {
   conversationId?: string | null
   projectId?: string | null
@@ -111,6 +117,74 @@ export default function ClaudeChat({
     const active = RESPONSE_OPTIONS.filter(o => activeOptions.has(o.id))
     if (active.length === 0) return ''
     return active.map(o => o.instruction).join(' ') + '\n\n'
+  }
+
+  /**
+   * Parse %%DOCX_EDITS%%...%%END_DOCX_EDITS%% block from message content
+   */
+  const parseDocxEdits = (content: string): DocxEditBlock | null => {
+    const match = content.match(/%%DOCX_EDITS%%([\s\S]*?)%%END_DOCX_EDITS%%/)
+    if (!match) return null
+    try {
+      const parsed = JSON.parse(match[1].trim())
+      if (parsed.documentId && parsed.edits?.length) return parsed as DocxEditBlock
+    } catch { /* invalid JSON */ }
+    return null
+  }
+
+  /**
+   * Strip the DOCX_EDITS block from display content
+   */
+  const stripDocxEdits = (content: string): string => {
+    return content.replace(/\s*%%DOCX_EDITS%%[\s\S]*?%%END_DOCX_EDITS%%\s*/, '').trim()
+  }
+
+  /**
+   * Download a modified DOCX by sending edits to the modify endpoint
+   */
+  const downloadModifiedDocx = async (editBlock: DocxEditBlock) => {
+    try {
+      const res = await fetch(`/api/claude/documents/${editBlock.documentId}/modify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ edits: editBlock.edits }),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Download mislukt' }))
+        throw new Error(errData.error || `Server fout (${res.status})`)
+      }
+
+      // Check edit results from header
+      const editResultsHeader = res.headers.get('X-Edit-Results')
+      if (editResultsHeader) {
+        try {
+          const results = JSON.parse(editResultsHeader) as Array<{ find: string; status: string }>
+          const notFound = results.filter(r => r.status === 'not_found')
+          if (notFound.length > 0) {
+            toast(`${notFound.length} van ${results.length} wijziging(en) niet gevonden in het document`, {
+              icon: '⚠️',
+              duration: 5000,
+            })
+          }
+        } catch { /* ignore parse errors */ }
+      }
+
+      // Download the file
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const baseName = editBlock.documentName.replace(/\.docx$/i, '')
+      a.download = `${baseName}-bewerkt.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Gewijzigd document gedownload')
+    } catch (err) {
+      console.error('[downloadModifiedDocx] Error:', err)
+      toast.error(err instanceof Error ? err.message : 'Download mislukt')
+    }
   }
 
   // Notify parent when chat becomes active/inactive
@@ -658,13 +732,33 @@ export default function ClaudeChat({
                           <span className="inline-block w-0.5 h-4 bg-workx-lime/60 animate-pulse ml-0.5 align-text-bottom" />
                         </div>
                       ) : (
-                        // Completed: full markdown rendering
+                        // Completed: full markdown rendering (strip DOCX edit blocks from display)
                         <div
                           className="claude-response text-sm text-white/90 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(stripDocxEdits(msg.content)) }}
                         />
                       )}
                     </div>
+
+                    {/* DOCX Edit download button */}
+                    {!isStreaming && msg.content && (() => {
+                      const editBlock = parseDocxEdits(msg.content)
+                      if (!editBlock) return null
+                      return (
+                        <div className="mt-2.5 ml-0.5">
+                          <button
+                            onClick={() => downloadModifiedDocx(editBlock)}
+                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-green-500/10 border border-green-500/25 text-green-400 hover:bg-green-500/15 hover:border-green-500/40 transition-all text-xs font-medium"
+                          >
+                            <Icons.download size={14} />
+                            <span>Download gewijzigd document ({editBlock.documentName})</span>
+                            <span className="text-green-400/50 text-[10px]">
+                              {editBlock.edits.length} wijziging{editBlock.edits.length !== 1 ? 'en' : ''}
+                            </span>
+                          </button>
+                        </div>
+                      )
+                    })()}
 
                     {/* Citations */}
                     {msg.citations && msg.citations.length > 0 && (

@@ -7,7 +7,7 @@ import { anonymizeText } from '@/lib/anonymize'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 
 const SYSTEM_PROMPT = `Je bent de AI-assistent van Workx Advocaten, een gespecialiseerd arbeidsrechtadvocatenkantoor in Amsterdam.
 
@@ -226,6 +226,7 @@ export async function POST(req: NextRequest) {
     let documentContext = ''
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const documentBlocks: any[] = []  // Native document blocks for Claude API
+    let hasDocxAttachments = false
 
     if (documentIds?.length) {
       const docs = await prisma.aIDocument.findMany({
@@ -238,6 +239,8 @@ export async function POST(req: NextRequest) {
         },
       })
       for (const doc of docs) {
+        // Track DOCX attachments for edit instructions
+        if (doc.fileType === 'docx') hasDocxAttachments = true
         // Prefer native PDF support: send base64 PDF directly to Claude
         if (doc.fileType === 'pdf' && doc.fileUrl?.startsWith('data:application/pdf;base64,')) {
           const base64Data = doc.fileUrl.split(',')[1]
@@ -247,8 +250,8 @@ export async function POST(req: NextRequest) {
             title: doc.name,
           })
         } else if (doc.content) {
-          // Fallback for text files and docs without fileUrl
-          documentContext += `\n\n--- Document: ${doc.name} ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
+          // Fallback for text files and docs without fileUrl — include document ID for DOCX editing
+          documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
         }
       }
     }
@@ -260,6 +263,7 @@ export async function POST(req: NextRequest) {
       })
       for (const doc of projectDocs) {
         if (documentIds?.includes(doc.id)) continue
+        if (doc.fileType === 'docx') hasDocxAttachments = true
         if (doc.fileType === 'pdf' && doc.fileUrl?.startsWith('data:application/pdf;base64,')) {
           if (documentBlocks.length >= 5) break  // Max 5 PDF attachments
           const base64Data = doc.fileUrl.split(',')[1]
@@ -270,7 +274,7 @@ export async function POST(req: NextRequest) {
           })
         } else if (doc.content) {
           if (documentContext.length > 200000) break
-          documentContext += `\n\n--- ${doc.name} ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
+          documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
         }
       }
     }
@@ -356,28 +360,70 @@ Vraag NIET naar de echte namen of gegevens.`
     if (documentContext) {
       systemPrompt += `\n\n## Documenten${documentContext}`
     }
+    if (hasDocxAttachments) {
+      systemPrompt += `\n\n## Word-document bewerking
+Wanneer de gebruiker vraagt om wijzigingen in een bijgevoegd Word-document (DOCX), geef dan:
+1. Een menselijke uitleg van de wijzigingen die je voorstelt
+2. Een gestructureerd bewerkingsblok in EXACT dit formaat:
 
-    // Build messages — use anonymized version of the LAST user message
+%%DOCX_EDITS%%
+{
+  "documentId": "<het document ID zoals vermeld bij het document hierboven>",
+  "documentName": "<bestandsnaam>",
+  "edits": [
+    { "find": "<EXACTE originele tekst uit het document>", "replace": "<nieuwe tekst>" }
+  ]
+}
+%%END_DOCX_EDITS%%
+
+BELANGRIJK:
+- De "find" tekst moet EXACT overeenkomen met tekst in het originele document, inclusief hoofdletters en leestekens
+- Gebruik zo lang mogelijke fragmenten om uniek te matchen (minimaal een halve zin)
+- Geef meerdere find/replace paren voor meerdere wijzigingen
+- Zet het bewerkingsblok ALTIJD aan het einde van je antwoord, NA de uitleg
+- Gebruik GEEN markdown-opmaak binnen het JSON-blok`
+    }
+
+    // Build messages — ensure alternating user/assistant roles (required by Claude API)
+    // When a previous request failed, assistant messages may be missing, causing
+    // consecutive user messages. We merge those to prevent API errors.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const msgs: Array<{ role: 'user' | 'assistant'; content: any }> = []
     for (let i = 0; i < history.length; i++) {
       const msg = history[i]
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        const isLastUserMsg = msg.role === 'user' && i === history.length - 1
-        const content = (isLastUserMsg && anonymize) ? messageForClaude : msg.content
+      if (msg.role !== 'user' && msg.role !== 'assistant') continue
 
-        // Attach PDF document blocks to the last user message
-        if (isLastUserMsg && documentBlocks.length > 0) {
-          msgs.push({
-            role: 'user',
-            content: [
-              ...documentBlocks,
-              { type: 'text', text: content },
-            ],
-          })
-        } else {
-          msgs.push({ role: msg.role as 'user' | 'assistant', content })
+      const isLastUserMsg = msg.role === 'user' && i === history.length - 1
+      const content = (isLastUserMsg && anonymize) ? messageForClaude : msg.content
+
+      // Merge consecutive user messages (can happen if previous assistant response failed)
+      const prev = msgs[msgs.length - 1]
+      if (prev && prev.role === msg.role && msg.role === 'user') {
+        // Append to previous user message
+        if (typeof prev.content === 'string') {
+          prev.content = prev.content + '\n\n' + content
         }
+        // If this merged msg is also the last one and has doc blocks, upgrade to multipart
+        if (isLastUserMsg && documentBlocks.length > 0) {
+          prev.content = [
+            ...documentBlocks,
+            { type: 'text', text: prev.content },
+          ]
+        }
+        continue
+      }
+
+      // Attach PDF document blocks to the last user message
+      if (isLastUserMsg && documentBlocks.length > 0) {
+        msgs.push({
+          role: 'user',
+          content: [
+            ...documentBlocks,
+            { type: 'text', text: content },
+          ],
+        })
+      } else {
+        msgs.push({ role: msg.role as 'user' | 'assistant', content })
       }
     }
 
@@ -387,47 +433,41 @@ Vraag NIET naar de echte namen of gegevens.`
       return NextResponse.json({ error: 'ANTHROPIC_API_KEY niet geconfigureerd' }, { status: 500 })
     }
 
-    // Only enable web search when user explicitly asks for it
-    const lowerMsg = message.toLowerCase()
-    const wantsSearch = /zoek|search|rechtspraak|ecli|uitspraak|actueel|recent|nieuws|jurisprudentie/.test(lowerMsg)
-
+    // Web search always available — Claude decides when to search (like Claude.ai)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tools: any[] = wantsSearch ? [{
+    const tools: any[] = [{
       type: 'web_search_20250305',
       name: 'web_search',
-      max_uses: 2,
-    }] : []
+      max_uses: 5,
+    }]
 
-    // Always add rechtspraak search tool — Claude decides when to use it
-    const wantsRechtspraak = /ecli|uitspraak|rechtspraak|jurisprudentie|vonnis|beschikking|arrest|kantonrechter|gerechtshof|hoge raad/.test(lowerMsg)
-    if (wantsRechtspraak) {
-      tools.push({
-        name: 'search_rechtspraak',
-        description: 'Doorzoek rechtspraak.nl voor Nederlandse rechterlijke uitspraken. Retourneert ECLI-nummers, samenvattingen en links naar uitspraken.',
-        input_schema: {
-          type: 'object',
-          properties: {
-            query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding"' },
-            max: { type: 'number', description: 'Maximum aantal resultaten (1-20)', default: 5 },
-          },
-          required: ['query'],
+    // Rechtspraak tools always available — direct API access to Dutch case law
+    tools.push({
+      name: 'search_rechtspraak',
+      description: 'Doorzoek rechtspraak.nl voor Nederlandse rechterlijke uitspraken. Retourneert ECLI-nummers, samenvattingen en links naar uitspraken. Gebruik dit als de gebruiker vraagt naar jurisprudentie, uitspraken, of specifieke rechtszaken.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding"' },
+          max: { type: 'number', description: 'Maximum aantal resultaten (1-20)', default: 5 },
         },
-      })
-      tools.push({
-        name: 'get_rechtspraak_ruling',
-        description: 'Haal de volledige tekst van een uitspraak op via het ECLI-nummer.',
-        input_schema: {
-          type: 'object',
-          properties: {
-            ecli: { type: 'string', description: 'ECLI-nummer, bijv. "ECLI:NL:HR:2023:1234"' },
-          },
-          required: ['ecli'],
+        required: ['query'],
+      },
+    })
+    tools.push({
+      name: 'get_rechtspraak_ruling',
+      description: 'Haal de volledige tekst van een uitspraak op via het ECLI-nummer. Gebruik dit om een specifieke uitspraak in detail te lezen.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          ecli: { type: 'string', description: 'ECLI-nummer, bijv. "ECLI:NL:HR:2023:1234"' },
         },
-      })
-    }
+        required: ['ecli'],
+      },
+    })
 
-    const client = new Anthropic({ apiKey, timeout: 55000 })
-    console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, search=${wantsSearch}, rechtspraak=${wantsRechtspraak}`)
+    const client = new Anthropic({ apiKey, timeout: 120000 })
+    console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, tools=${tools.length}`)
 
     // Stream the response
     const encoder = new TextEncoder()
@@ -506,19 +546,30 @@ Vraag NIET naar de echte namen of gegevens.`
 
               try {
                 let resultText = ''
+                // 15 second timeout for external API calls
+                const fetchTimeout = AbortSignal.timeout(15000)
+
                 if (tb.name === 'search_rechtspraak') {
                   const params = new URLSearchParams({ q: tb.input.query, max: String(tb.input.max || 5), return: 'DOC', sort: 'DESC' })
-                  const searchRes = await fetch(`https://data.rechtspraak.nl/uitspraken/zoeken?${params}`, { headers: { Accept: 'application/xml' } })
-                  resultText = await searchRes.text()
+                  const searchRes = await fetch(`https://data.rechtspraak.nl/uitspraken/zoeken?${params}`, {
+                    headers: { Accept: 'application/xml' },
+                    signal: fetchTimeout,
+                  })
+                  if (!searchRes.ok) throw new Error(`Rechtspraak API error: ${searchRes.status}`)
+                  resultText = (await searchRes.text()).slice(0, 15000)
                 } else if (tb.name === 'get_rechtspraak_ruling') {
-                  const contentRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(tb.input.ecli)}`, { headers: { Accept: 'application/xml' } })
-                  const xml = await contentRes.text()
-                  // Trim to max 30K chars to stay within context
-                  resultText = xml.slice(0, 30000)
+                  const contentRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(tb.input.ecli)}`, {
+                    headers: { Accept: 'application/xml' },
+                    signal: fetchTimeout,
+                  })
+                  if (!contentRes.ok) throw new Error(`Rechtspraak API error: ${contentRes.status}`)
+                  resultText = (await contentRes.text()).slice(0, 30000)
                 }
                 toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: resultText || 'Geen resultaten gevonden' })
               } catch (toolErr) {
-                toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: `Error: ${toolErr instanceof Error ? toolErr.message : 'Tool failed'}`, is_error: true })
+                const errMsg = toolErr instanceof Error ? toolErr.message : 'Tool failed'
+                console.error(`[chat] Tool ${tb.name} error:`, errMsg)
+                toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: `Fout bij ophalen: ${errMsg}. Beantwoord de vraag op basis van je eigen kennis.`, is_error: true })
               }
             }
 
@@ -536,6 +587,21 @@ Vraag NIET naar de echte namen of gegevens.`
               messages: continueMsgs,
               thinking: { type: 'enabled' as const, budget_tokens: 10000 },
             })
+
+            // Stream thinking events for the continuation too
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            continueStream.on('streamEvent' as any, (event: any) => {
+              try {
+                if (event.type === 'content_block_start' && event.content_block?.type === 'thinking') {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking_start' })}\n\n`))
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Claude analyseert resultaten...' })}\n\n`))
+                }
+                if (event.type === 'content_block_delta' && event.delta?.type === 'thinking_delta' && event.delta.thinking) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', text: event.delta.thinking })}\n\n`))
+                }
+              } catch { /* ignore */ }
+            })
+
             continueStream.on('text', (text) => {
               fullText += text
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
@@ -585,6 +651,15 @@ Vraag NIET naar de echte namen of gegevens.`
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error)
           console.error('[chat] Stream error:', errMsg)
+
+          // Save partial response or error placeholder to keep history alternation intact
+          // Without this, the next request would have consecutive user messages → API error
+          try {
+            const errorContent = fullText || `[Fout: ${errMsg.slice(0, 200)}]`
+            await prisma.aIMessage.create({
+              data: { conversationId: convId, role: 'assistant', content: errorContent },
+            })
+          } catch { /* DB save not critical here */ }
 
           let userError = errMsg.slice(0, 500)
           if (errMsg.includes('timeout') || errMsg.includes('abort')) {
