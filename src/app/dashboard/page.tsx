@@ -1506,7 +1506,7 @@ export default function DashboardHome() {
   const weatherInfo = getWeatherInfo(weather.weatherCode)
 
   // Check if current user is admin/partner (Jochem)
-  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
 
   // Feedback type config
   const feedbackTypeConfig: Record<string, { icon: any; color: string; bg: string }> = {

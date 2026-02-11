@@ -30,13 +30,32 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const all = searchParams.get('all') === 'true'
+    const statusFilter = searchParams.get('status')
 
     // Check if user is admin or partner (can see all vacations)
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true, name: true }
     })
-    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
+
+    // Admin can filter by status (e.g. ?status=PENDING)
+    if (isAdmin && statusFilter) {
+      const requests = await prisma.vacationRequest.findMany({
+        where: { status: statusFilter },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+      return NextResponse.json(requests)
+    }
 
     if (all || isAdmin) {
       // Get all approved requests (for calendar view) - or all for admins
@@ -105,7 +124,7 @@ export async function POST(req: NextRequest) {
       where: { id: session.user.id },
       select: { role: true, name: true }
     })
-    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
 
     // Determine target user
     // Admin/Partner can create for anyone, employees only for themselves
@@ -193,9 +212,9 @@ export async function POST(req: NextRequest) {
       const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
       const dashboardUrl = process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app'
 
-      // Find all admins to notify
+      // Find all admins, partners and office managers to notify
       const admins = await prisma.user.findMany({
-        where: { role: 'ADMIN', isActive: true },
+        where: { role: { in: ['ADMIN', 'PARTNER', 'OFFICE_MANAGER'] }, isActive: true },
         select: { id: true, email: true, name: true }
       })
 

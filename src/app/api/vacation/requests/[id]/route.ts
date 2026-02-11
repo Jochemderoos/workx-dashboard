@@ -37,7 +37,7 @@ export async function PATCH(
       where: { id: session.user.id },
       select: { role: true }
     })
-    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
 
     const body = await req.json()
     const { status, startDate, endDate, reason, rejectionReason } = body
@@ -242,7 +242,7 @@ export async function DELETE(
       where: { id: session.user.id },
       select: { role: true }
     })
-    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
 
     // Find the request
     const request = await prisma.vacationRequest.findUnique({
