@@ -1124,8 +1124,8 @@ export default function VakantiesPage() {
         </div>
       )}
 
-      {/* VAKANTIEAANVRAAG STATUS WIDGET - prominent notification for recently decided requests */}
-      {(() => {
+      {/* VAKANTIEAANVRAAG STATUS WIDGET - prominent notification for recently decided requests (employees only) */}
+      {!isAdmin && (() => {
         const now = new Date().getTime()
         const sevenDays = 7 * 24 * 60 * 60 * 1000
         const recentApproved = myVacationRequests.filter((req) => req.status === 'APPROVED' && (now - new Date((req as any).updatedAt || (req as any).createdAt).getTime()) < sevenDays)
@@ -2172,12 +2172,12 @@ export default function VakantiesPage() {
                   </div>
                 )}
 
-                {/* Recente aanvragen */}
-                {myVacationRequests.length > 0 && (
+                {/* Recente aanvragen - filter to own requests only (API returns all for admins) */}
+                {myVacationRequests.filter(r => r.userId === session?.user?.id).length > 0 && (
                   <div className="mt-4 pt-4 border-t border-white/5">
                     <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-3">Mijn aanvragen</p>
                     <div className="space-y-2">
-                      {myVacationRequests.slice(0, 8).map((req) => {
+                      {myVacationRequests.filter(r => r.userId === session?.user?.id).slice(0, 8).map((req) => {
                         const start = new Date(req.startDate)
                         const end = new Date(req.endDate)
                         const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
