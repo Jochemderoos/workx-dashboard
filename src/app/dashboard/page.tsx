@@ -20,7 +20,7 @@ import { CURRENT_CHANGELOG, CHANGELOG_VERSION } from '@/lib/changelog'
 // Logo Component - uses actual Workx logo
 function WorkxLogoSmall() {
   return (
-    <img src="/workx-logo.png" alt="Workx Advocaten" className="h-14 w-auto" draggable={false} />
+    <Image src="/workx-logo.png" alt="Workx Advocaten" width={56} height={56} className="h-14 w-auto" draggable={false} priority />
   )
 }
 
@@ -1770,8 +1770,8 @@ export default function DashboardHome() {
               </p>
               {/* Workx Pand with bicycle hover animation */}
               <div className="workx-pand-container h-20 mt-3 ml-auto">
-                <img src="/workx-pand.png" alt="Workx Pand" className="h-full opacity-50 hover:opacity-70 transition-opacity" />
-                <img src="/fiets.png" alt="Fiets" className="fiets" />
+                <Image src="/workx-pand.png" alt="Workx Pand" width={160} height={80} className="h-full w-auto opacity-50 hover:opacity-70 transition-opacity" />
+                <Image src="/fiets.png" alt="Fiets" width={40} height={40} className="fiets" />
               </div>
             </div>
           </div>
@@ -1869,7 +1869,7 @@ export default function DashboardHome() {
                   <div key={req.id} className="bg-white/[0.03] rounded-xl p-4 border border-white/5">
                     <div className="flex items-start gap-3 mb-3">
                       {req.user?.avatarUrl ? (
-                        <img src={req.user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                        <Image src={req.user.avatarUrl} alt="" width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-300 text-sm font-bold">
                           {initials}
@@ -2149,7 +2149,7 @@ export default function DashboardHome() {
                     {/* Avatar */}
                     <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10">
                       {photoUrl ? (
-                        <img src={photoUrl} alt={article.assignee.name} className="w-full h-full object-cover" />
+                        <Image src={photoUrl} alt={article.assignee.name} width={32} height={32} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">
                           {article.assignee.name.charAt(0)}
@@ -2855,9 +2855,11 @@ export default function DashboardHome() {
                   {/* Profile image as head */}
                   <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-pink-500 shadow-2xl shadow-pink-500/50 animate-wobble bg-gradient-to-br from-pink-500 to-purple-500">
                     {getPhotoUrl(nextBirthday[0].name, nextBirthday[0].avatarUrl) ? (
-                      <img
+                      <Image
                         src={getPhotoUrl(nextBirthday[0].name, nextBirthday[0].avatarUrl)!}
                         alt={nextBirthday[0].name}
+                        width={96}
+                        height={96}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -3003,7 +3005,7 @@ export default function DashboardHome() {
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-pink-500/10 flex items-center justify-center text-sm overflow-hidden">
                         {getPhotoUrl(person.name, person.avatarUrl) ? (
-                          <img src={getPhotoUrl(person.name, person.avatarUrl)!} alt={person.name} className="w-full h-full object-cover" />
+                          <Image src={getPhotoUrl(person.name, person.avatarUrl)!} alt={person.name} width={28} height={28} className="w-full h-full object-cover" />
                         ) : (
                           '🎂'
                         )}

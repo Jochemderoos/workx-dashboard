@@ -14,6 +14,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'workxadvocaten.nl',
       },
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
   async headers() {
