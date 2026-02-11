@@ -1828,12 +1828,9 @@ export default function DashboardHome() {
         </ScrollRevealItem>
       </ScrollReveal>
 
-      {/* WHAT'S NEW WIDGET */}
-      <WhatsNewWidget dismissedVersion={currentUser?.whatsNewDismissed} />
-
-      {/* VAKANTIEAANVRAGEN WIDGET - for admin/partner */}
+      {/* VAKANTIEAANVRAGEN WIDGET - for admin/partner/office_manager - BEFORE What's New */}
       {isAdmin && (
-        <div className={`relative overflow-hidden rounded-2xl border-2 ${pendingVacationRequests.length > 0 ? 'border-orange-400/50 shadow-lg shadow-orange-500/10' : 'border-white/10'} bg-gradient-to-br from-orange-500/10 via-yellow-500/5 to-transparent p-5 animate-in`}>
+        <div className={`relative overflow-hidden rounded-2xl border-2 ${pendingVacationRequests.length > 0 ? 'border-orange-400 shadow-lg shadow-orange-500/20' : 'border-orange-500/30'} bg-gradient-to-br ${pendingVacationRequests.length > 0 ? 'from-orange-500/20 via-orange-500/10 to-yellow-500/10' : 'from-orange-500/10 via-orange-500/5 to-transparent'} p-5`}>
           {/* Pulse animation border effect - only when pending */}
           {pendingVacationRequests.length > 0 && (
             <div className="absolute inset-0 rounded-2xl border-2 border-orange-400/30 animate-pulse pointer-events-none" />
@@ -1843,7 +1840,7 @@ export default function DashboardHome() {
           <div className="relative">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                <div className={`w-10 h-10 rounded-xl ${pendingVacationRequests.length > 0 ? 'bg-orange-500/30' : 'bg-orange-500/20'} flex items-center justify-center`}>
                   <Icons.sun className="text-orange-400" size={20} />
                 </div>
                 <div>
@@ -1856,91 +1853,95 @@ export default function DashboardHome() {
               </span>
             </div>
 
-            <div className="space-y-3">
-              {pendingVacationRequests.map((req: any) => {
-                const start = new Date(req.startDate)
-                const end = new Date(req.endDate)
-                const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
-                const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
-                const initials = req.user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '??'
+            {pendingVacationRequests.length > 0 ? (
+              <div className="space-y-3">
+                {pendingVacationRequests.map((req: any) => {
+                  const start = new Date(req.startDate)
+                  const end = new Date(req.endDate)
+                  const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                  const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+                  const initials = req.user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '??'
 
-                // Calculate saldo impact
-                const currentBalance = vacationBalance?.resterend || 0
-
-                return (
-                  <div key={req.id} className="bg-white/[0.03] rounded-xl p-4 border border-white/5">
-                    <div className="flex items-start gap-3 mb-3">
-                      {req.user?.avatarUrl ? (
-                        <Image src={req.user.avatarUrl} alt="" width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-300 text-sm font-bold">
-                          {initials}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white">{req.user?.name || 'Medewerker'}</p>
-                        <p className="text-xs text-gray-400">{startStr} – {endStr}</p>
-                        <p className="text-xs text-orange-300 font-medium">{req.days} werkdagen</p>
-                        {req.reason && (
-                          <p className="text-xs text-gray-500 mt-1 italic">"{req.reason}"</p>
+                  return (
+                    <div key={req.id} className="bg-white/[0.05] rounded-xl p-4 border border-orange-500/20">
+                      <div className="flex items-start gap-3 mb-3">
+                        {req.user?.avatarUrl ? (
+                          <Image src={req.user.avatarUrl} alt="" width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-300 text-sm font-bold">
+                            {initials}
+                          </div>
                         )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white">{req.user?.name || 'Medewerker'}</p>
+                          <p className="text-xs text-gray-400">{startStr} – {endStr}</p>
+                          <p className="text-xs text-orange-300 font-medium">{req.days} werkdagen</p>
+                          {req.reason && (
+                            <p className="text-xs text-gray-500 mt-1 italic">"{req.reason}"</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {rejectingRequestId === req.id ? (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          placeholder="Reden voor afwijzing (optioneel)"
-                          value={rejectionReason}
-                          onChange={(e) => setRejectionReason(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
-                        />
+                      {rejectingRequestId === req.id ? (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            placeholder="Reden voor afwijzing (optioneel)"
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleVacationAction(req.id, 'REJECTED', rejectionReason)}
+                              disabled={processingRequestId === req.id}
+                              className="flex-1 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 text-xs font-medium hover:bg-red-500/30 transition-all disabled:opacity-50"
+                            >
+                              {processingRequestId === req.id ? 'Bezig...' : 'Afwijzen'}
+                            </button>
+                            <button
+                              onClick={() => { setRejectingRequestId(null); setRejectionReason('') }}
+                              className="px-3 py-2 rounded-lg bg-white/5 text-gray-400 text-xs hover:bg-white/10 transition-all"
+                            >
+                              Annuleer
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleVacationAction(req.id, 'REJECTED', rejectionReason)}
+                            onClick={() => handleVacationAction(req.id, 'APPROVED')}
                             disabled={processingRequestId === req.id}
-                            className="flex-1 px-3 py-2 rounded-lg bg-red-500/20 text-red-300 text-xs font-medium hover:bg-red-500/30 transition-all disabled:opacity-50"
+                            className="flex-1 px-3 py-2 rounded-lg bg-green-500/20 text-green-300 text-xs font-bold hover:bg-green-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                           >
-                            {processingRequestId === req.id ? 'Bezig...' : 'Afwijzen'}
+                            {processingRequestId === req.id ? (
+                              <span className="w-3.5 h-3.5 border-2 border-green-300/30 border-t-green-300 rounded-full animate-spin" />
+                            ) : (
+                              <><Icons.check size={14} /> Goedkeuren</>
+                            )}
                           </button>
                           <button
-                            onClick={() => { setRejectingRequestId(null); setRejectionReason('') }}
-                            className="px-3 py-2 rounded-lg bg-white/5 text-gray-400 text-xs hover:bg-white/10 transition-all"
+                            onClick={() => setRejectingRequestId(req.id)}
+                            disabled={processingRequestId === req.id}
+                            className="flex-1 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                           >
-                            Annuleer
+                            <Icons.x size={14} /> Afwijzen
                           </button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleVacationAction(req.id, 'APPROVED')}
-                          disabled={processingRequestId === req.id}
-                          className="flex-1 px-3 py-2 rounded-lg bg-green-500/20 text-green-300 text-xs font-bold hover:bg-green-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
-                        >
-                          {processingRequestId === req.id ? (
-                            <span className="w-3.5 h-3.5 border-2 border-green-300/30 border-t-green-300 rounded-full animate-spin" />
-                          ) : (
-                            <><Icons.check size={14} /> Goedkeuren</>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => setRejectingRequestId(req.id)}
-                          disabled={processingRequestId === req.id}
-                          className="flex-1 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
-                        >
-                          <Icons.x size={14} /> Afwijzen
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-2">Er zijn momenteel geen openstaande vakantieaanvragen.</p>
+            )}
           </div>
         </div>
       )}
+
+      {/* WHAT'S NEW WIDGET */}
+      <WhatsNewWidget dismissedVersion={currentUser?.whatsNewDismissed} />
 
       {/* WERKVERDELINGSGESPREK WIDGET - for employees */}
       {werkverdelingGesprek && (
