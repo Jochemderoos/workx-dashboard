@@ -1832,10 +1832,12 @@ export default function DashboardHome() {
       <WhatsNewWidget dismissedVersion={currentUser?.whatsNewDismissed} />
 
       {/* VAKANTIEAANVRAGEN WIDGET - for admin/partner */}
-      {isAdmin && pendingVacationRequests.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border-2 border-orange-400/50 bg-gradient-to-br from-orange-500/10 via-yellow-500/5 to-transparent p-5 animate-in shadow-lg shadow-orange-500/10">
-          {/* Pulse animation border effect */}
-          <div className="absolute inset-0 rounded-2xl border-2 border-orange-400/30 animate-pulse pointer-events-none" />
+      {isAdmin && (
+        <div className={`relative overflow-hidden rounded-2xl border-2 ${pendingVacationRequests.length > 0 ? 'border-orange-400/50 shadow-lg shadow-orange-500/10' : 'border-white/10'} bg-gradient-to-br from-orange-500/10 via-yellow-500/5 to-transparent p-5 animate-in`}>
+          {/* Pulse animation border effect - only when pending */}
+          {pendingVacationRequests.length > 0 && (
+            <div className="absolute inset-0 rounded-2xl border-2 border-orange-400/30 animate-pulse pointer-events-none" />
+          )}
           <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
           <div className="relative">
@@ -1846,10 +1848,10 @@ export default function DashboardHome() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-white">Vakantieaanvragen</h3>
-                  <p className="text-xs text-gray-400">Wachtend op goedkeuring</p>
+                  <p className="text-xs text-gray-400">{pendingVacationRequests.length > 0 ? 'Wachtend op goedkeuring' : 'Geen openstaande aanvragen'}</p>
                 </div>
               </div>
-              <span className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-300 text-xs font-bold">
+              <span className={`px-3 py-1 rounded-full ${pendingVacationRequests.length > 0 ? 'bg-orange-500/20 text-orange-300' : 'bg-white/5 text-gray-500'} text-xs font-bold`}>
                 {pendingVacationRequests.length}
               </span>
             </div>
