@@ -75,7 +75,7 @@ export default function VakantiesPage() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'timeline'>('month')
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [pageMode, setPageMode] = useState<'overzicht' | 'beheer'>('overzicht')
 
@@ -1091,6 +1091,30 @@ export default function VakantiesPage() {
                     const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
                     const initials = req.user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '??'
 
+                    // Calculate overlapping colleagues from approved vacations
+                    const overlappingVacations = vacations
+                      .filter(v =>
+                        v.status === 'APPROVED' &&
+                        v.userId !== req.userId &&
+                        new Date(v.startDate) <= end &&
+                        new Date(v.endDate) >= start
+                      )
+                    // Also check parental leaves
+                    const overlappingLeaves = allParentalLeaves
+                      .filter(l =>
+                        l.userId !== req.userId &&
+                        l.startDatum && l.eindDatum &&
+                        new Date(l.startDatum) <= end &&
+                        new Date(l.eindDatum) >= start
+                      )
+                    // Unique people from both sources
+                    const overlapMap = new Map<string, string>()
+                    overlappingVacations.forEach(v => { if (v.user?.id && v.user?.name) overlapMap.set(v.user.id, v.user.name) })
+                    overlappingLeaves.forEach(l => { if (l.userId && l.user?.name) overlapMap.set(l.userId, l.user.name) })
+                    const uniqueOverlap = Array.from(overlapMap.values())
+                    const overlapCount = uniqueOverlap.length
+                    const isWarning = overlapCount >= 4
+
                     return (
                       <div key={req.id} className="bg-white/[0.03] rounded-xl p-4 border border-white/5">
                         <div className="flex items-start gap-3 mb-3">
@@ -1106,6 +1130,25 @@ export default function VakantiesPage() {
                             )}
                           </div>
                         </div>
+
+                        {/* Overlap indicator */}
+                        {overlapCount > 0 && (
+                          <div className={`mb-3 px-3 py-2 rounded-lg text-xs ${isWarning ? 'bg-red-500/15 border border-red-500/30' : 'bg-white/[0.03]'}`}>
+                            <div className={`flex items-center gap-1.5 ${isWarning ? 'text-red-300 font-medium' : 'text-gray-400'}`}>
+                              {isWarning ? (
+                                <Icons.alertTriangle size={14} className="text-red-400 flex-shrink-0" />
+                              ) : (
+                                <Icons.users size={14} className="flex-shrink-0" />
+                              )}
+                              <span>
+                                {overlapCount} collega{overlapCount !== 1 ? '\'s' : ''} al afwezig in deze periode
+                              </span>
+                            </div>
+                            <p className={`mt-1 ${isWarning ? 'text-red-400/80' : 'text-gray-500'} pl-5`}>
+                              {uniqueOverlap.join(', ')}
+                            </p>
+                          </div>
+                        )}
 
                         {rejectingRequestId === req.id ? (
                           <div className="space-y-2">
@@ -2325,15 +2368,6 @@ export default function VakantiesPage() {
                 <Icons.grid size={14} />
                 Maand
               </button>
-              <button
-                onClick={() => setViewMode('timeline')}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                  viewMode === 'timeline' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icons.list size={14} />
-                Lijst
-              </button>
             </div>
 
             <div className="flex items-center justify-center gap-2">
@@ -2477,7 +2511,7 @@ export default function VakantiesPage() {
                           {day.date.getDate()}
                         </span>
                         <div className="mt-1 space-y-0.5">
-                          {dayVacations.slice(0, 3).map(v => {
+                          {dayVacations.map(v => {
                             const color = getColorForUser(v.user.name)
                             return (
                               <div
@@ -2489,9 +2523,6 @@ export default function VakantiesPage() {
                               </div>
                             )
                           })}
-                          {dayVacations.length > 3 && (
-                            <span className="text-xs text-gray-400">+{dayVacations.length - 3}</span>
-                          )}
                         </div>
                       </div>
                     )
@@ -2501,95 +2532,6 @@ export default function VakantiesPage() {
             </div>
           )}
 
-          {/* Timeline View */}
-          {viewMode === 'timeline' && (
-            <div className="card overflow-hidden">
-              <div className="p-5 border-b border-white/5">
-                <h2 className="font-semibold text-white">Overzicht per persoon</h2>
-              </div>
-              <div className="divide-y divide-white/5">
-                {vacations.filter(v => v.status === 'APPROVED').length === 0 ? (
-                  <div className="p-16 text-center">
-                    <div className="w-20 h-20 rounded-2xl bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
-                      <Icons.sun className="text-yellow-400/50" size={32} />
-                    </div>
-                    <h3 className="text-lg font-medium text-white mb-2">Geen vakanties gepland</h3>
-                    <p className="text-gray-400 mb-4">Voeg een vakantie toe om te beginnen</p>
-                    <button onClick={(e) => { setModalClickY(e.clientY); setShowForm(true) }} className="btn-primary inline-flex items-center gap-2">
-                      <Icons.plus size={16} />
-                      Vakantie toevoegen
-                    </button>
-                  </div>
-                ) : (
-                  vacations
-                    .filter(v => v.status === 'APPROVED')
-                    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-                    .map((v, i) => {
-                      const start = new Date(v.startDate)
-                      const end = new Date(v.endDate)
-                      const isPast = end < new Date()
-                      const isActive = start <= new Date() && end >= new Date()
-                      const color = getColorForUser(v.user.name)
-                      const canEdit = isAdmin || v.userId === session?.user?.id
-
-                      return (
-                        <div
-                          key={v.id}
-                          className={`p-5 flex items-center gap-5 hover:bg-white/[0.02] transition-colors group ${isPast ? 'opacity-50' : ''}`}
-                        >
-                          <div
-                            className="w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-lg flex-shrink-0"
-                            style={{ backgroundColor: color + '20', color }}
-                          >
-                            {v.user.name.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3">
-                              <h3 className="font-medium text-white">{v.user.name}</h3>
-                              {isActive && (
-                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400">
-                                  Nu afwezig
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 text-sm text-gray-400">
-                              <span className="flex items-center gap-1.5">
-                                <Icons.calendar size={12} />
-                                {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
-                              </span>
-                              <span className="text-gray-500">•</span>
-                              <span>{v.days} {v.days === 1 ? 'dag' : 'dagen'}</span>
-                              {v.reason && (
-                                <>
-                                  <span className="text-gray-500">•</span>
-                                  <span>{v.reason}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          {canEdit && (
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <button
-                                onClick={() => handleEdit(v)}
-                                className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                              >
-                                <Icons.edit size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(v.id)}
-                                className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                              >
-                                <Icons.trash size={16} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })
-                )}
-              </div>
-            </div>
-          )}
         </>
       )}
 

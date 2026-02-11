@@ -78,6 +78,7 @@ export async function GET() {
       currentWeekDistribution,
       pendingVacationRequests,
       myVacationRequests,
+      allApprovedVacations,
     ] = await Promise.all([
       // 1. Calendar Events - upcoming events (fetch more to allow social event prioritization)
       prisma.calendarEvent.findMany({
@@ -358,6 +359,20 @@ export async function GET() {
         orderBy: { createdAt: 'desc' },
         take: 10,
       }).catch(() => []),
+
+      // 19. All Approved Vacations - for overlap indicator in pending requests (admins only)
+      prisma.vacationRequest.findMany({
+        where: {
+          status: 'APPROVED',
+          endDate: { gte: now },
+        },
+        include: {
+          user: {
+            select: { id: true, name: true },
+          },
+        },
+        orderBy: { startDate: 'asc' },
+      }).catch(() => []),
     ])
 
     // Calculate vacation balance totals for easier frontend use
@@ -504,6 +519,9 @@ export async function GET() {
       pendingVacationRequests: (
         currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
       ) ? pendingVacationRequests : [],
+      allApprovedVacations: (
+        currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
+      ) ? allApprovedVacations : [],
       myVacationRequests: myVacationRequests,
       // Meta information
       fetchedAt: now.toISOString(),

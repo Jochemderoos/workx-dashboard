@@ -840,6 +840,7 @@ export default function DashboardHome() {
   const [openMeetingActions, setOpenMeetingActions] = useState<{ id: string; description: string; responsibleName: string; week: { dateLabel: string } }[]>([])
   const [werkverdelingGesprek, setWerkverdelingGesprek] = useState<{ partnerName: string; weekDate: string } | null>(null)
   const [pendingVacationRequests, setPendingVacationRequests] = useState<any[]>([])
+  const [allApprovedVacations, setAllApprovedVacations] = useState<any[]>([])
   const [myVacationRequests, setMyVacationRequests] = useState<any[]>([])
   const [showVacationRequestForm, setShowVacationRequestForm] = useState(false)
   const [vacationFormStartDate, setVacationFormStartDate] = useState('')
@@ -940,6 +941,9 @@ export default function DashboardHome() {
         // Set vacation request data
         if (data.pendingVacationRequests) {
           setPendingVacationRequests(data.pendingVacationRequests)
+        }
+        if (data.allApprovedVacations) {
+          setAllApprovedVacations(data.allApprovedVacations)
         }
         if (data.myVacationRequests) {
           setMyVacationRequests(data.myVacationRequests)
@@ -1862,6 +1866,19 @@ export default function DashboardHome() {
                   const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
                   const initials = req.user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '??'
 
+                  // Calculate overlapping colleagues
+                  const overlappingPeople = allApprovedVacations
+                    .filter((v: any) =>
+                      v.user?.id !== req.userId &&
+                      new Date(v.startDate) <= end &&
+                      new Date(v.endDate) >= start
+                    )
+                  const uniqueOverlap = Array.from(
+                    new Map(overlappingPeople.map((v: any) => [v.user?.id, v.user?.name])).entries()
+                  ).map(([, name]) => name).filter(Boolean) as string[]
+                  const overlapCount = uniqueOverlap.length
+                  const isWarning = overlapCount >= 4
+
                   return (
                     <div key={req.id} className="bg-white/[0.05] rounded-xl p-4 border border-orange-500/20">
                       <div className="flex items-start gap-3 mb-3">
@@ -1881,6 +1898,25 @@ export default function DashboardHome() {
                           )}
                         </div>
                       </div>
+
+                      {/* Overlap indicator */}
+                      {overlapCount > 0 && (
+                        <div className={`mb-3 px-3 py-2 rounded-lg text-xs ${isWarning ? 'bg-red-500/15 border border-red-500/30' : 'bg-white/[0.03]'}`}>
+                          <div className={`flex items-center gap-1.5 ${isWarning ? 'text-red-300 font-medium' : 'text-gray-400'}`}>
+                            {isWarning ? (
+                              <Icons.alertTriangle size={14} className="text-red-400 flex-shrink-0" />
+                            ) : (
+                              <Icons.users size={14} className="flex-shrink-0" />
+                            )}
+                            <span>
+                              {overlapCount} collega{overlapCount !== 1 ? '\'s' : ''} al afwezig in deze periode
+                            </span>
+                          </div>
+                          <p className={`mt-1 ${isWarning ? 'text-red-400/80' : 'text-gray-500'} pl-5`}>
+                            {uniqueOverlap.join(', ')}
+                          </p>
+                        </div>
+                      )}
 
                       {rejectingRequestId === req.id ? (
                         <div className="space-y-2">
@@ -2380,7 +2416,7 @@ export default function DashboardHome() {
                             </div>
                           ) : (
                             <div className="space-y-0.5 sm:space-y-1">
-                              {absences.slice(0, 3).map((v, j) => (
+                              {absences.map((v, j) => (
                                 <div
                                   key={j}
                                   className="flex items-center justify-center sm:justify-start gap-1 sm:gap-1.5"
@@ -2397,9 +2433,6 @@ export default function DashboardHome() {
                                   </span>
                                 </div>
                               ))}
-                              {absences.length > 3 && (
-                                <p className="text-xs text-gray-400 text-center">+{absences.length - 3}</p>
-                              )}
                             </div>
                           )}
                         </div>
@@ -2435,7 +2468,7 @@ export default function DashboardHome() {
                             </div>
                           ) : (
                             <div className="space-y-0.5 sm:space-y-1">
-                              {absences.slice(0, 3).map((v, j) => (
+                              {absences.map((v, j) => (
                                 <div
                                   key={j}
                                   className="flex items-center justify-center sm:justify-start gap-1 sm:gap-1.5"
@@ -2452,9 +2485,6 @@ export default function DashboardHome() {
                                   </span>
                                 </div>
                               ))}
-                              {absences.length > 3 && (
-                                <p className="text-xs text-gray-400 text-center">+{absences.length - 3}</p>
-                              )}
                             </div>
                           )}
                         </div>
