@@ -1335,3 +1335,16 @@ model WorkDistribution {
   @@index([weekId])
   @@index([employeeId])
 }
+
+// ==================== NOTIFICATIE DISMISSALS ====================
+
+// Bijhoudt welke notificaties een gebruiker als gelezen heeft gemarkeerd
+model NotificationDismissal {
+  id              String   @id @default(cuid())
+  userId          String
+  notificationKey String   // bijv. "vacation-clxyz123", "zaak-clabc456"
+  dismissedAt     DateTime @default(now())
+
+  @@unique([userId, notificationKey])
+  @@index([userId])
+}

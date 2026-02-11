@@ -14,6 +14,13 @@ export async function GET() {
     const userId = session.user.id
     const now = new Date()
 
+    // Haal alle dismissed notification keys op voor deze user
+    const dismissals = await prisma.notificationDismissal.findMany({
+      where: { userId },
+      select: { notificationKey: true },
+    })
+    const dismissedKeys = new Set(dismissals.map((d) => d.notificationKey))
+
     // Build notifications from various sources
     const notifications: any[] = []
 
@@ -40,13 +47,14 @@ export async function GET() {
     })
 
     pendingZaken.forEach((assignment) => {
+      const key = `zaak-${assignment.id}`
       notifications.push({
-        id: `zaak-${assignment.id}`,
+        id: key,
         type: 'zaak',
         title: 'Nieuwe zaak beschikbaar',
         message: `${assignment.zaak?.shortDescription || 'Nieuwe zaak'} - van ${assignment.zaak?.createdBy?.name || 'onbekend'}`,
         createdAt: assignment.createdAt,
-        read: false,
+        read: dismissedKeys.has(key),
         href: '/dashboard/werk',
       })
     })
@@ -64,13 +72,14 @@ export async function GET() {
 
     recentVacationUpdates.forEach((request) => {
       const isApproved = request.status === 'APPROVED'
+      const key = `vacation-${request.id}`
       notifications.push({
-        id: `vacation-${request.id}`,
+        id: key,
         type: 'vacation',
         title: isApproved ? 'Vakantie goedgekeurd' : 'Vakantie afgewezen',
         message: `Je verlofaanvraag voor ${new Date(request.startDate).toLocaleDateString('nl-NL')} is ${isApproved ? 'goedgekeurd' : 'afgewezen'}`,
         createdAt: request.updatedAt,
-        read: true, // These are informational
+        read: dismissedKeys.has(key),
         href: '/dashboard/vakanties',
       })
     })
@@ -91,13 +100,14 @@ export async function GET() {
     })
 
     todayEvents.forEach((event) => {
+      const key = `event-${event.id}`
       notifications.push({
-        id: `event-${event.id}`,
+        id: key,
         type: 'calendar',
         title: 'Vandaag',
         message: `${event.title} om ${new Date(event.startTime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`,
         createdAt: now,
-        read: true,
+        read: dismissedKeys.has(key),
         href: '/dashboard/agenda',
       })
     })
@@ -114,13 +124,14 @@ export async function GET() {
       })
 
       if (unprocessedFeedback > 0) {
+        const key = 'feedback-unprocessed'
         notifications.push({
-          id: 'feedback-unprocessed',
+          id: key,
           type: 'feedback',
           title: 'Nieuwe feedback',
           message: `Er ${unprocessedFeedback === 1 ? 'is' : 'zijn'} ${unprocessedFeedback} nieuwe feedback item${unprocessedFeedback === 1 ? '' : 's'}`,
           createdAt: now,
-          read: false,
+          read: dismissedKeys.has(key),
           href: '/dashboard/feedback',
         })
       }

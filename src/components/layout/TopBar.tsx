@@ -6,9 +6,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import { NotificationCenter } from '@/components/NotificationCenter'
 
 interface TopBarProps {
   user: {
+    id: string
     name: string
     email: string
     role: string
@@ -410,6 +412,9 @@ export default function TopBar({ user }: TopBarProps) {
             <span className="text-sm text-white/50 group-hover:text-workx-lime hidden lg:inline transition-colors">Home</span>
           </Link>
         )}
+
+        {/* Notification bell */}
+        <NotificationCenter userId={user.id} />
 
         {/* Command Palette trigger */}
         <button

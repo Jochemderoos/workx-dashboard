@@ -3075,6 +3075,23 @@ textarea::-webkit-scrollbar-thumb:hover {
   animation: badge-pulse 2s ease-in-out infinite;
 }
 
+/* Notification bell ring animation */
+@keyframes bell-ring {
+  0% { transform: rotate(0); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-12deg); }
+  30% { transform: rotate(10deg); }
+  40% { transform: rotate(-8deg); }
+  50% { transform: rotate(5deg); }
+  60% { transform: rotate(0); }
+  100% { transform: rotate(0); }
+}
+
+.bell-ring {
+  animation: bell-ring 1s ease-in-out infinite;
+  transform-origin: top center;
+}
+
 /* Success confetti burst */
 @keyframes confetti-burst {
   0% {

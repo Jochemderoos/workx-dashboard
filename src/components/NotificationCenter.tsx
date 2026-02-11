@@ -98,18 +98,28 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
     }
   }
 
+  const hasUnread = unreadCount > 0
+
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>
         <button
-          className="relative p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all group"
+          className={`relative p-2 rounded-xl border transition-all group ${
+            hasUnread
+              ? 'bg-workx-lime/20 border-workx-lime/40 hover:bg-workx-lime/30 hover:border-workx-lime/60 shadow-[0_0_12px_rgba(249,255,133,0.15)]'
+              : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20'
+          }`}
           aria-label="Notificaties"
         >
           <Icons.bell
             size={20}
-            className="text-gray-400 group-hover:text-white transition-colors"
+            className={`transition-colors ${
+              hasUnread
+                ? 'text-workx-lime bell-ring'
+                : 'text-gray-400 group-hover:text-white'
+            }`}
           />
-          {unreadCount > 0 && (
+          {hasUnread && (
             <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center badge-pulse">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
