@@ -502,7 +502,7 @@ export async function GET() {
       } : null,
       // Vacation request data
       pendingVacationRequests: (
-        currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+        currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
       ) ? pendingVacationRequests : [],
       myVacationRequests: myVacationRequests,
       // Meta information
