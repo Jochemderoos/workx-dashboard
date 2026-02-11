@@ -387,8 +387,6 @@ export default function VakantiesPage() {
     setReason(vacation.reason || '')
     setEditingId(vacation.id)
     setShowForm(true)
-    // Scroll to top so the form popover is visible
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // Balance management
@@ -723,6 +721,326 @@ export default function VakantiesPage() {
     )
   }
 
+  // Shared parental leave form content - used in both Popover (add) and Modal (edit)
+  const parentalLeaveFormContent = (
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+            <Icons.heart className="text-purple-400" size={18} />
+          </div>
+          <h2 className="font-semibold text-white text-lg">
+            {editingParentalLeave ? 'Ouderschapsverlof bewerken' : 'Ouderschapsverlof toevoegen'}
+          </h2>
+        </div>
+        <button onClick={resetParentalLeaveForm} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+          <Icons.x size={18} />
+        </button>
+      </div>
+
+      <div className="space-y-5">
+        {!editingParentalLeave && (
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Medewerker</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowParentalMemberDropdown(!showParentalMemberDropdown)}
+                className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
+              >
+                {parentalLeaveForm.userId ? (
+                  <>
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500/20 to-pink-600/5 flex items-center justify-center text-pink-400 font-semibold text-sm">
+                      {teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name?.charAt(0) || '?'}
+                    </div>
+                    <span className="flex-1 text-white">{teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                      <Icons.user className="text-gray-500" size={16} />
+                    </div>
+                    <span className="flex-1 text-gray-400">Selecteer een medewerker...</span>
+                  </>
+                )}
+                <Icons.chevronDown
+                  size={18}
+                  className={`text-gray-500 transition-transform ${showParentalMemberDropdown ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {showParentalMemberDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowParentalMemberDropdown(false)} />
+                  <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                    <div className="max-h-64 overflow-y-auto py-1 workx-scrollbar">
+                      {teamMembers
+                        .filter(m => !allParentalLeaves.some(pl => pl.userId === m.id))
+                        .map((member, index) => {
+                          const isSelected = parentalLeaveForm.userId === member.id
+                          const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                          const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
+                          const colorClass = colors[index % colors.length]
+
+                          return (
+                            <button
+                              key={member.id}
+                              type="button"
+                              onClick={() => {
+                                setParentalLeaveForm({ ...parentalLeaveForm, userId: member.id })
+                                setShowParentalMemberDropdown(false)
+                              }}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
+                                isSelected
+                                  ? 'bg-workx-lime/10 text-white'
+                                  : 'text-white/70 hover:bg-white/5 hover:text-white'
+                              }`}
+                            >
+                              <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
+                                {initials}
+                              </div>
+                              <span className="flex-1 text-sm">{member.name}</span>
+                              {isSelected && <Icons.check size={16} className="text-workx-lime" />}
+                            </button>
+                          )
+                        })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Naam kind</label>
+            <input
+              type="text"
+              value={parentalLeaveForm.kindNaam}
+              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, kindNaam: e.target.value })}
+              placeholder="Bijv. Emma"
+              className="input-field"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Geboortedatum kind</label>
+            <DatePicker
+              selected={parentalLeaveForm.kindGeboorteDatum}
+              onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, kindGeboorteDatum: date })}
+              placeholder="Selecteer datum..."
+              maxDate={new Date()}
+            />
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+          <h4 className="text-sm font-medium text-green-400 mb-3">Betaald verlof (70% UWV)</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
+              <input type="number" step="0.5" value={parentalLeaveForm.betaaldTotaalWeken || ''} onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldTotaalWeken: parseFloat(e.target.value) || 0 })} className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
+              <input type="number" step="0.5" value={parentalLeaveForm.betaaldOpgenomenWeken || ''} onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })} className="input-field" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+          <h4 className="text-sm font-medium text-purple-400 mb-3">Onbetaald verlof</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
+              <input type="number" step="0.5" value={parentalLeaveForm.onbetaaldTotaalWeken || ''} onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldTotaalWeken: parseFloat(e.target.value) || 0 })} className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
+              <input type="number" step="0.5" value={parentalLeaveForm.onbetaaldOpgenomenWeken || ''} onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })} className="input-field" />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Startdatum</label>
+            <DatePicker selected={parentalLeaveForm.startDatum} onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, startDatum: date })} placeholder="Selecteer datum..." />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Te gebruiken tot</label>
+            <DatePicker selected={parentalLeaveForm.eindDatum} onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, eindDatum: date })} placeholder="Selecteer datum..." minDate={parentalLeaveForm.startDatum || undefined} />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
+          <textarea value={parentalLeaveForm.note} onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, note: e.target.value })} placeholder="Eventuele opmerkingen..." rows={2} className="input-field resize-none" />
+        </div>
+
+        <div className="flex gap-3 pt-3">
+          <button type="button" className="flex-1 btn-secondary" onClick={resetParentalLeaveForm}>
+            Annuleren
+          </button>
+          <button
+            onClick={handleSaveParentalLeave}
+            disabled={!editingParentalLeave && !parentalLeaveForm.userId}
+            className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Icons.check size={16} />
+            {editingParentalLeave ? 'Bijwerken' : 'Toevoegen'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+
+  // Shared vacation form content - used in both Popover (add) and Modal (edit)
+  const vacationFormContent = (
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+            <Icons.sun className="text-yellow-400" size={18} />
+          </div>
+          <h2 className="font-semibold text-white text-lg">
+            {editingId ? 'Vakantie bewerken' : 'Vakantie toevoegen'}
+          </h2>
+        </div>
+        <button onClick={resetForm} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+          <Icons.x size={18} />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {isAdmin && (
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Wie gaat er met vakantie?</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowTeamDropdown(!showTeamDropdown)}
+                className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
+              >
+                {selectedUserId ? (
+                  <>
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-workx-lime font-semibold text-sm">
+                      {teamMembers.find(m => m.id === selectedUserId)?.name?.charAt(0) || '?'}
+                    </div>
+                    <span className="flex-1 text-white">{teamMembers.find(m => m.id === selectedUserId)?.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                      <Icons.user className="text-gray-500" size={16} />
+                    </div>
+                    <span className="flex-1 text-gray-400">Selecteer een teamlid...</span>
+                  </>
+                )}
+                <Icons.chevronDown
+                  size={18}
+                  className={`text-gray-500 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {showTeamDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
+                  <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
+                    <div className="max-h-64 overflow-y-auto py-1">
+                      {teamMembers.map((member, index) => {
+                        const isSelected = selectedUserId === member.id
+                        const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                        const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
+                        const colorClass = colors[index % colors.length]
+
+                        return (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedUserId(member.id)
+                              setShowTeamDropdown(false)
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
+                              isSelected
+                                ? 'bg-workx-lime/10 text-white'
+                                : 'text-white/70 hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
+                              {initials}
+                            </div>
+                            <span className="flex-1 text-sm">{member.name}</span>
+                            {isSelected && <Icons.check size={16} className="text-workx-lime" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Van</label>
+            <DatePicker
+              selected={startDate}
+              onChange={setStartDate}
+              placeholder="Selecteer startdatum..."
+              maxDate={endDate || undefined}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Tot en met</label>
+            <DatePicker
+              selected={endDate}
+              onChange={setEndDate}
+              placeholder="Selecteer einddatum..."
+              minDate={startDate || undefined}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">Reden (optioneel)</label>
+          <div className="relative">
+            <Icons.edit className="absolute left-3 top-3 text-gray-500" size={16} />
+            <input
+              type="text"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="Bijv. skivakantie, familiebezoek..."
+              className="input-field pl-10"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-3">
+          <button type="button" className="flex-1 btn-secondary" onClick={resetForm}>
+            Annuleren
+          </button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={() => { if (confirm('Weet je zeker dat je deze vakantie wilt verwijderen?')) { handleDelete(editingId); resetForm() } }}
+              className="px-4 py-2.5 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors"
+            >
+              <Icons.trash size={16} />
+            </button>
+          )}
+          <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
+            <Icons.check size={16} />
+            {editingId ? 'Bijwerken' : 'Toevoegen'}
+          </button>
+        </div>
+      </form>
+    </>
+  )
+
   return (
     <div className="space-y-8 fade-in relative">
       {/* Decorative glows */}
@@ -767,7 +1085,7 @@ export default function VakantiesPage() {
             )}
           </div>
           {pageMode === 'overzicht' && isAdmin && (
-            <Popover.Root open={showForm} onOpenChange={setShowForm}>
+            <Popover.Root open={showForm && !editingId} onOpenChange={(open) => { if (!open) resetForm(); else setShowForm(true); }}>
               <Popover.Trigger asChild>
                 <button className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-3 sm:px-4">
                   <Icons.plus size={14} />
@@ -782,138 +1100,7 @@ export default function VakantiesPage() {
                   side="bottom"
                   align="end"
                 >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                        <Icons.sun className="text-yellow-400" size={18} />
-                      </div>
-                      <h2 className="font-semibold text-white text-lg">
-                        {editingId ? 'Vakantie bewerken' : 'Vakantie toevoegen'}
-                      </h2>
-                    </div>
-                    <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-                      <Icons.x size={18} />
-                    </Popover.Close>
-                  </div>
-
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Team member selection - only for admins */}
-                    {isAdmin && (
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Wie gaat er met vakantie?</label>
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-                            className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
-                          >
-                            {selectedUserId ? (
-                              <>
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-workx-lime font-semibold text-sm">
-                                  {teamMembers.find(m => m.id === selectedUserId)?.name?.charAt(0) || '?'}
-                                </div>
-                                <span className="flex-1 text-white">{teamMembers.find(m => m.id === selectedUserId)?.name}</span>
-                              </>
-                            ) : (
-                              <>
-                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                                  <Icons.user className="text-gray-500" size={16} />
-                                </div>
-                                <span className="flex-1 text-gray-400">Selecteer een teamlid...</span>
-                              </>
-                            )}
-                            <Icons.chevronDown
-                              size={18}
-                              className={`text-gray-500 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
-                            />
-                          </button>
-
-                          {showTeamDropdown && (
-                            <>
-                              <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
-                              <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
-                                <div className="max-h-64 overflow-y-auto py-1">
-                                  {teamMembers.map((member, index) => {
-                                    const isSelected = selectedUserId === member.id
-                                    const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
-                                    const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
-                                    const colorClass = colors[index % colors.length]
-
-                                    return (
-                                      <button
-                                        key={member.id}
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedUserId(member.id)
-                                          setShowTeamDropdown(false)
-                                        }}
-                                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
-                                          isSelected
-                                            ? 'bg-workx-lime/10 text-white'
-                                            : 'text-white/70 hover:bg-white/5 hover:text-white'
-                                        }`}
-                                      >
-                                        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
-                                          {initials}
-                                        </div>
-                                        <span className="flex-1 text-sm">{member.name}</span>
-                                        {isSelected && <Icons.check size={16} className="text-workx-lime" />}
-                                      </button>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Van</label>
-                        <DatePicker
-                          selected={startDate}
-                          onChange={setStartDate}
-                          placeholder="Selecteer startdatum..."
-                          maxDate={endDate || undefined}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Tot en met</label>
-                        <DatePicker
-                          selected={endDate}
-                          onChange={setEndDate}
-                          placeholder="Selecteer einddatum..."
-                          minDate={startDate || undefined}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-2">Reden (optioneel)</label>
-                      <div className="relative">
-                        <Icons.edit className="absolute left-3 top-3 text-gray-500" size={16} />
-                        <input
-                          type="text"
-                          value={reason}
-                          onChange={e => setReason(e.target.value)}
-                          placeholder="Bijv. skivakantie, familiebezoek..."
-                          className="input-field pl-10"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3 pt-3">
-                      <Popover.Close className="flex-1 btn-secondary" onClick={resetForm}>
-                        Annuleren
-                      </Popover.Close>
-                      <button type="submit" className="flex-1 btn-primary flex items-center justify-center gap-2">
-                        <Icons.check size={16} />
-                        {editingId ? 'Bijwerken' : 'Toevoegen'}
-                      </button>
-                    </div>
-                  </form>
+                  {vacationFormContent}
                   <Popover.Arrow className="fill-workx-gray" />
                 </Popover.Content>
               </Popover.Portal>
@@ -921,6 +1108,21 @@ export default function VakantiesPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Vacation Modal - centered overlay, only when editing */}
+      {showForm && editingId && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={resetForm}
+        >
+          <div
+            className="w-full max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto animate-modal-in"
+            onClick={e => e.stopPropagation()}
+          >
+            {vacationFormContent}
+          </div>
+        </div>
+      )}
 
       {/* VAKANTIEAANVRAAG STATUS WIDGET - prominent notification for recently decided requests */}
       {(() => {
@@ -1624,10 +1826,9 @@ export default function VakantiesPage() {
                 </div>
                 <h2 className="font-medium text-white text-sm sm:text-base">Ouderschapsverlof</h2>
               </div>
-              <Popover.Root open={showParentalLeaveForm} onOpenChange={(open) => { if (!open) resetParentalLeaveForm(); else setShowParentalLeaveForm(true) }}>
+              <Popover.Root open={showParentalLeaveForm && !editingParentalLeave} onOpenChange={(open) => { if (!open) resetParentalLeaveForm(); else { resetParentalLeaveForm(); setShowParentalLeaveForm(true) } }}>
                 <Popover.Trigger asChild>
                   <button
-                    onClick={() => resetParentalLeaveForm()}
                     className="btn-primary text-sm flex items-center gap-2"
                   >
                     <Icons.plus size={14} />
@@ -1642,219 +1843,7 @@ export default function VakantiesPage() {
                     side="bottom"
                     align="end"
                   >
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                          <Icons.heart className="text-purple-400" size={18} />
-                        </div>
-                        <h2 className="font-semibold text-white text-lg">
-                          {editingParentalLeave ? 'Ouderschapsverlof bewerken' : 'Ouderschapsverlof toevoegen'}
-                        </h2>
-                      </div>
-                      <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-                        <Icons.x size={18} />
-                      </Popover.Close>
-                    </div>
-
-                    <div className="space-y-5">
-                      {/* Team member selection - only when creating */}
-                      {!editingParentalLeave && (
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Medewerker</label>
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => setShowParentalMemberDropdown(!showParentalMemberDropdown)}
-                              className="w-full flex items-center gap-3 px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-left hover:border-white/20 hover:bg-white/10 transition-all focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/20"
-                            >
-                              {parentalLeaveForm.userId ? (
-                                <>
-                                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500/20 to-pink-600/5 flex items-center justify-center text-pink-400 font-semibold text-sm">
-                                    {teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name?.charAt(0) || '?'}
-                                  </div>
-                                  <span className="flex-1 text-white">{teamMembers.find(m => m.id === parentalLeaveForm.userId)?.name}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                                    <Icons.user className="text-gray-500" size={16} />
-                                  </div>
-                                  <span className="flex-1 text-gray-400">Selecteer een medewerker...</span>
-                                </>
-                              )}
-                              <Icons.chevronDown
-                                size={18}
-                                className={`text-gray-500 transition-transform ${showParentalMemberDropdown ? 'rotate-180' : ''}`}
-                              />
-                            </button>
-
-                            {showParentalMemberDropdown && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setShowParentalMemberDropdown(false)} />
-                                <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-dark/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden fade-in">
-                                  <div className="max-h-64 overflow-y-auto py-1 workx-scrollbar">
-                                    {teamMembers
-                                      .filter(m => !allParentalLeaves.some(pl => pl.userId === m.id))
-                                      .map((member, index) => {
-                                        const isSelected = parentalLeaveForm.userId === member.id
-                                        const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2)
-                                        const colors = ['from-blue-500/30 to-blue-600/10', 'from-purple-500/30 to-purple-600/10', 'from-pink-500/30 to-pink-600/10', 'from-orange-500/30 to-orange-600/10', 'from-green-500/30 to-green-600/10', 'from-cyan-500/30 to-cyan-600/10']
-                                        const colorClass = colors[index % colors.length]
-
-                                        return (
-                                          <button
-                                            key={member.id}
-                                            type="button"
-                                            onClick={() => {
-                                              setParentalLeaveForm({ ...parentalLeaveForm, userId: member.id })
-                                              setShowParentalMemberDropdown(false)
-                                            }}
-                                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${
-                                              isSelected
-                                                ? 'bg-workx-lime/10 text-white'
-                                                : 'text-white/70 hover:bg-white/5 hover:text-white'
-                                            }`}
-                                          >
-                                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${colorClass} flex items-center justify-center font-semibold text-xs text-white`}>
-                                              {initials}
-                                            </div>
-                                            <span className="flex-1 text-sm">{member.name}</span>
-                                            {isSelected && <Icons.check size={16} className="text-workx-lime" />}
-                                          </button>
-                                        )
-                                      })}
-                                  </div>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Kind gegevens */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Naam kind</label>
-                          <input
-                            type="text"
-                            value={parentalLeaveForm.kindNaam}
-                            onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, kindNaam: e.target.value })}
-                            placeholder="Bijv. Emma"
-                            className="input-field"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Geboortedatum kind</label>
-                          <DatePicker
-                            selected={parentalLeaveForm.kindGeboorteDatum}
-                            onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, kindGeboorteDatum: date })}
-                            placeholder="Selecteer datum..."
-                            maxDate={new Date()}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Betaald verlof */}
-                      <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-                        <h4 className="text-sm font-medium text-green-400 mb-3">Betaald verlof (70% UWV)</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={parentalLeaveForm.betaaldTotaalWeken || ''}
-                              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldTotaalWeken: parseFloat(e.target.value) || 0 })}
-                              className="input-field"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={parentalLeaveForm.betaaldOpgenomenWeken || ''}
-                              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, betaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })}
-                              className="input-field"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Onbetaald verlof */}
-                      <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                        <h4 className="text-sm font-medium text-purple-400 mb-3">Onbetaald verlof</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Totaal weken</label>
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={parentalLeaveForm.onbetaaldTotaalWeken || ''}
-                              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldTotaalWeken: parseFloat(e.target.value) || 0 })}
-                              className="input-field"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Opgenomen weken</label>
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={parentalLeaveForm.onbetaaldOpgenomenWeken || ''}
-                              onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, onbetaaldOpgenomenWeken: parseFloat(e.target.value) || 0 })}
-                              className="input-field"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Periode en inzet */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Startdatum</label>
-                          <DatePicker
-                            selected={parentalLeaveForm.startDatum}
-                            onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, startDatum: date })}
-                            placeholder="Selecteer datum..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Te gebruiken tot</label>
-                          <DatePicker
-                            selected={parentalLeaveForm.eindDatum}
-                            onChange={(date) => setParentalLeaveForm({ ...parentalLeaveForm, eindDatum: date })}
-                            placeholder="Selecteer datum..."
-                            minDate={parentalLeaveForm.startDatum || undefined}
-                          />
-                        </div>
-                      </div>
-                      {/* Notitie */}
-                      <div>
-                        <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
-                        <textarea
-                          value={parentalLeaveForm.note}
-                          onChange={e => setParentalLeaveForm({ ...parentalLeaveForm, note: e.target.value })}
-                          placeholder="Eventuele opmerkingen..."
-                          rows={2}
-                          className="input-field resize-none"
-                        />
-                      </div>
-
-                      {/* Buttons */}
-                      <div className="flex gap-3 pt-3">
-                        <Popover.Close className="flex-1 btn-secondary" onClick={resetParentalLeaveForm}>
-                          Annuleren
-                        </Popover.Close>
-                        <button
-                          onClick={handleSaveParentalLeave}
-                          disabled={!editingParentalLeave && !parentalLeaveForm.userId}
-                          className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Icons.check size={16} />
-                          {editingParentalLeave ? 'Bijwerken' : 'Toevoegen'}
-                        </button>
-                      </div>
-                    </div>
+                    {parentalLeaveFormContent}
                     <Popover.Arrow className="fill-workx-gray" />
                   </Popover.Content>
                 </Popover.Portal>
@@ -2535,6 +2524,36 @@ export default function VakantiesPage() {
         </>
       )}
 
+      {/* Vacation Edit Modal - centered modal for editing (not anchored to trigger button) */}
+      {showForm && editingId && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={resetForm}
+        >
+          <div
+            className="w-full max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto animate-modal-in"
+            onClick={e => e.stopPropagation()}
+          >
+            {vacationFormContent}
+          </div>
+        </div>
+      )}
+
+      {/* Parental Leave Edit Modal - centered modal for editing */}
+      {showParentalLeaveForm && editingParentalLeave && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={resetParentalLeaveForm}
+        >
+          <div
+            className="w-full max-w-xl bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto animate-modal-in"
+            onClick={e => e.stopPropagation()}
+          >
+            {parentalLeaveFormContent}
+          </div>
+        </div>
+      )}
+
       {/* Standalone Period Edit Modal */}
       {showPeriodModal && editingPeriod && (
         <div
@@ -2657,12 +2676,22 @@ export default function VakantiesPage() {
                             <p className="text-xs text-gray-500 mt-0.5">Vakantie</p>
                           </div>
                         </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowDayModal(false); handleEdit(vacation) }}
-                          className="p-1.5 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Icons.edit size={14} />
-                        </button>
+                        {(isAdmin || vacation.userId === session?.user?.id) && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowDayModal(false); handleEdit(vacation) }}
+                              className="p-1.5 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-colors"
+                            >
+                              <Icons.edit size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); if (confirm('Weet je zeker dat je deze vakantie wilt verwijderen?')) { setShowDayModal(false); handleDelete(vacation.id) } }}
+                              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                            >
+                              <Icons.trash size={14} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-3">
                         <p className="text-xs text-gray-400 flex items-center gap-1.5">

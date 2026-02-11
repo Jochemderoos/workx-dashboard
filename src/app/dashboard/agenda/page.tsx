@@ -938,13 +938,15 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Event form modal - positioned near click */}
+      {/* Event form modal - centered */}
       {showForm && (
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={resetForm} />
           <div
-            className="fixed z-50 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-lg bg-workx-gray rounded-2xl p-6 border border-white/10 shadow-2xl max-h-[80vh] overflow-y-auto animate-modal-in"
-            style={{ top: `clamp(16px, ${modalClickY ? modalClickY - 20 : 100}px, calc(100vh - 500px))` }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+          >
+          <div
+            className="w-full max-w-lg bg-workx-gray rounded-2xl p-6 border border-white/10 shadow-2xl max-h-[80vh] overflow-y-auto animate-modal-in pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -1161,6 +1163,7 @@ export default function AgendaPage() {
                 </button>
               </div>
             </form>
+          </div>
           </div>
         </>
       )}
