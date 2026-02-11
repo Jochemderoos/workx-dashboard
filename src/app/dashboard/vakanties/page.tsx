@@ -1109,21 +1109,6 @@ export default function VakantiesPage() {
         </div>
       </div>
 
-      {/* Edit Vacation Modal - centered overlay, only when editing */}
-      {showForm && editingId && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={resetForm}
-        >
-          <div
-            className="w-full max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto animate-modal-in"
-            onClick={e => e.stopPropagation()}
-          >
-            {vacationFormContent}
-          </div>
-        </div>
-      )}
-
       {/* VAKANTIEAANVRAAG STATUS WIDGET - prominent notification for recently decided requests (employees only) */}
       {!isAdmin && (() => {
         const now = new Date().getTime()

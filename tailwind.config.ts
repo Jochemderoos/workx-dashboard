@@ -38,19 +38,19 @@ const config: Config = {
         },
         slideUp: {
           '0%': { opacity: '0', transform: 'translateY(30px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+          '100%': { opacity: '1', transform: 'none' },
         },
         slideInLeft: {
           '0%': { opacity: '0', transform: 'translateX(-30px)' },
-          '100%': { opacity: '1', transform: 'translateX(0)' },
+          '100%': { opacity: '1', transform: 'none' },
         },
         slideInRight: {
           '0%': { opacity: '0', transform: 'translateX(30px)' },
-          '100%': { opacity: '1', transform: 'translateX(0)' },
+          '100%': { opacity: '1', transform: 'none' },
         },
         scaleIn: {
           '0%': { opacity: '0', transform: 'scale(0.9)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '1', transform: 'none' },
         },
         bounceSoft: {
           '0%, 100%': { transform: 'translateY(0)' },
