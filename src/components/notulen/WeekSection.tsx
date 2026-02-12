@@ -168,7 +168,7 @@ export default function WeekSection({
   const openActionsCount = allActions.filter(a => !a.isCompleted).length
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card">
       {/* Header - clickable to toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
