@@ -23,7 +23,7 @@ interface AnalyticsData {
     perEmployee: { name: string; hourlyRate: number; effectiveRate: number }[]
   }
   kostprijs: { name: string; kostprijsPerUur: number; margePerUur: number; hourlyRate: number; annualSalary: number; totalBillable: number }[]
-  breakeven: { name: string; targetHours: number; actualHoursYTD: number; percentage: number }[]
+  breakeven: { name: string; targetHours: number; annualTargetHours: number; actualHoursYTD: number; percentage: number }[]
   verzuim: {
     kantoorGemiddelde: number
     benchmark: number
@@ -108,24 +108,24 @@ export default function InzichtenTab() {
         <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
           <p className="text-gray-400 text-xs sm:text-sm">Gem. Bezettingsgraad</p>
           <p className="text-lg sm:text-2xl font-semibold text-white mt-1">{kpis.avgBezetting.toFixed(1)}%</p>
-          <p className="text-xs text-white/30 mt-1">Benchmark: 70-80%</p>
+          <p className="text-xs text-white/30 mt-1">Percentage van gewerkte uren dat declarabel is. Benchmark: 70-80%.</p>
         </div>
         <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
           <p className="text-gray-400 text-xs sm:text-sm">Omzet per FTE (geschat)</p>
           <p className="text-lg sm:text-2xl font-semibold text-white mt-1 truncate">{fmtCurrency(kpis.omzetPerFTE)}</p>
-          <p className="text-xs text-white/30 mt-1">YTD {data.currentYear}</p>
+          <p className="text-xs text-white/30 mt-1">Geschatte omzet per fulltime medewerker dit jaar (billable uren x uurtarief).</p>
         </div>
         <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
           <p className="text-gray-400 text-xs sm:text-sm">Gem. Marge per uur</p>
           <p className="text-lg sm:text-2xl font-semibold text-white mt-1">{fmtCurrency(kpis.avgMargePerUur)}</p>
-          <p className="text-xs text-white/30 mt-1">Tarief - Kostprijs</p>
+          <p className="text-xs text-white/30 mt-1">Verschil tussen uurtarief en loonkosten per declarabel uur. Hoe hoger, hoe winstgevender.</p>
         </div>
         <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
           <p className="text-gray-400 text-xs sm:text-sm">Verzuimpercentage</p>
           <p className={`text-lg sm:text-2xl font-semibold mt-1 ${kpis.verzuimPercentage <= 3 ? 'text-green-400' : kpis.verzuimPercentage <= 5 ? 'text-orange-400' : 'text-red-400'}`}>
             {kpis.verzuimPercentage.toFixed(1)}%
           </p>
-          <p className="text-xs text-white/30 mt-1">Benchmark: &lt;3%</p>
+          <p className="text-xs text-white/30 mt-1">Percentage werkdagen dat medewerkers ziek zijn. Benchmark: onder 3%.</p>
         </div>
       </div>
 
@@ -144,6 +144,7 @@ export default function InzichtenTab() {
           <HorizontalBarChart
             data={bezettingsgraad.perEmployee.map(e => ({ name: e.name, value: e.percentage }))}
             title="Bezettingsgraad per medewerker"
+            description="Toont het percentage van de gewerkte uren dat declarabel (factureerbaar) is per medewerker. Een hogere bezettingsgraad betekent minder niet-declarabele tijd (intern overleg, admin, etc.). De witte lijn markeert de benchmark van 75%. Let op: als alle balken op 100% staan, worden mogelijk alle uren als declarabel geregistreerd en moet de urenregistratie gecontroleerd worden."
             valueLabel="%"
             barColor="#f9ff85"
             benchmarkLine={75}
@@ -160,6 +161,7 @@ export default function InzichtenTab() {
           <RankingBarChart
             data={omzetPerMedewerker.map(e => ({ name: e.name, value: e.estimated }))}
             title="Geschatte omzet per medewerker"
+            description="Berekend als: declarabele uren x uurtarief. Dit geeft een indicatie van de omzetbijdrage per medewerker. Medewerkers met veel declarabele uren en/of een hoog tarief staan bovenaan."
           />
         ) : (
           <EmptyState title="Omzet per medewerker" />
@@ -177,6 +179,7 @@ export default function InzichtenTab() {
               label: `€${e.hourlyRate}`
             }))}
             title="Uurtarief per medewerker"
+            description="Het afgesproken uurtarief per medewerker. De gele lijn toont het kantoorgemiddelde. Medewerkers boven het gemiddelde genereren relatief meer omzet per uur."
             comparisonLine={realisatiegraad.kantoorGemiddeld}
             comparisonLabel={`Kantoorgemiddelde: €${realisatiegraad.kantoorGemiddeld.toFixed(0)}/u`}
             formatValue={v => `€${v.toFixed(0)}`}
@@ -195,6 +198,7 @@ export default function InzichtenTab() {
               total: e.hourlyRate,
             }))}
             title="Kostprijs & marge per uur"
+            description="Elke balk toont hoeveel een declarabel uur kost (rood = loonkosten) en hoeveel marge overblijft (groen = uurtarief minus loonkosten). Berekend over de YTD-periode. Als er geen groene balk zichtbaar is, zijn de loonkosten per declarabel uur hoger dan het uurtarief."
           />
         ) : (
           <EmptyState title="Kostprijs per medewerker" />
@@ -211,6 +215,7 @@ export default function InzichtenTab() {
             percentage: e.percentage,
           }))}
           title="Break-even analyse (factureerbare uren vs. salariskosten)"
+          description="Toont hoeveel procent van het break-even target al behaald is dit jaar. Het target is het aantal declarabele uren dat nodig is om de jaarlijkse salariskosten te dekken, gecorrigeerd naar de verstreken maanden. Groen = op schema, oranje = aandachtspunt, rood = achter op schema."
         />
       ) : (
         <EmptyState title="Break-even analyse" />
@@ -223,6 +228,7 @@ export default function InzichtenTab() {
           <QuarterlyTrendChart
             data={verzuim.perQuarter}
             title="Verzuimpercentage per kwartaal"
+            description="Toont het verzuimpercentage per kwartaal als lijndiagram. De rode stippellijn is de benchmark van 3%. Een stijgende trend vraagt om aandacht voor werkdruk en welzijn."
             benchmark={verzuim.benchmark}
             benchmarkLabel={`Benchmark ${verzuim.benchmark}%`}
           />
@@ -250,6 +256,7 @@ export default function InzichtenTab() {
               secondary: e.totaal - e.resterend,
             }))}
             title="Vakantiedagen overzicht"
+            description="Toont het totaal aantal vakantiedagen per medewerker. De lichtgroene balk is opgenomen, de grijze balk is het resterend tegoed. Medewerkers met veel resterende dagen aan het eind van het jaar vormen een financieel risico."
             valueLabel=" dg"
             formatValue={v => v.toFixed(1)}
           />
@@ -265,6 +272,7 @@ export default function InzichtenTab() {
         forecastedTotal={forecast.forecastedTotal}
         previousYearTotal={forecast.previousYearTotal}
         title={`Omzet Forecast ${data.currentYear}`}
+        description="Projecteert de jaaromzet op basis van het gemiddelde van de maanden met data. De doorgetrokken lijn is werkelijk, de stippellijn is geprojecteerd. Vergelijk met het 2025-totaal voor groei-inzicht."
       />
 
       {/* Rij 8: Bonus ROI (#10) */}

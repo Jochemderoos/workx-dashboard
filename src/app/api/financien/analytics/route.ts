@@ -168,15 +168,16 @@ export async function GET() {
     const kostprijs = Object.entries(employeeHours).map(([name, h]) => {
       const user = findUserForName(name)
       const hourlyRate = user?.compensation?.hourlyRate || 0
-      const annualSalary = user ? (resolveSalary(user) || 0) * 12 : 0
-      const kostprijsPerUur = h.billable > 0 && annualSalary > 0 ? annualSalary / h.billable : 0
+      const monthlySalary = user ? (resolveSalary(user) || 0) : 0
+      const salaryCostYTD = monthlySalary * monthsElapsed
+      const kostprijsPerUur = h.billable > 0 && salaryCostYTD > 0 ? salaryCostYTD / h.billable : 0
       const margePerUur = hourlyRate - kostprijsPerUur
       return {
         name,
         kostprijsPerUur,
         margePerUur,
         hourlyRate,
-        annualSalary,
+        annualSalary: monthlySalary * 12,
         totalBillable: h.billable,
       }
     }).filter(e => e.annualSalary > 0).sort((a, b) => b.margePerUur - a.margePerUur)
@@ -186,15 +187,17 @@ export async function GET() {
       const user = findUserForName(name)
       const hourlyRate = user?.compensation?.hourlyRate || 0
       const annualSalary = user ? (resolveSalary(user) || 0) * 12 : 0
-      const targetHours = hourlyRate > 0 && annualSalary > 0 ? annualSalary / hourlyRate : 0
-      const percentage = targetHours > 0 ? (h.billable / targetHours) * 100 : 0
+      const annualTargetHours = hourlyRate > 0 && annualSalary > 0 ? annualSalary / hourlyRate : 0
+      const proRataTarget = annualTargetHours * (monthsElapsed / 12)
+      const percentage = proRataTarget > 0 ? (h.billable / proRataTarget) * 100 : 0
       return {
         name,
-        targetHours,
+        targetHours: proRataTarget,
+        annualTargetHours,
         actualHoursYTD: h.billable,
         percentage,
       }
-    }).filter(e => e.targetHours > 0).sort((a, b) => b.percentage - a.percentage)
+    }).filter(e => e.annualTargetHours > 0).sort((a, b) => b.percentage - a.percentage)
 
     // ======= #6 Verzuimpercentage =======
     // Calculate sick days per user per quarter

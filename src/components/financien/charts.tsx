@@ -35,9 +35,10 @@ export function GrowthCard({ label, current, previous, growth, isCurrency = true
 }
 
 // ======= Horizontal Bar Chart (#1 Bezettingsgraad, #7 Vakantie) =======
-export function HorizontalBarChart({ data, title, valueLabel, barColor = '#f9ff85', benchmarkLine, benchmarkLabel, maxOverride, formatValue }: {
+export function HorizontalBarChart({ data, title, description, valueLabel, barColor = '#f9ff85', benchmarkLine, benchmarkLabel, maxOverride, formatValue }: {
   data: { name: string; value: number; secondary?: number }[]
   title: string
+  description?: string
   valueLabel?: string
   barColor?: string
   benchmarkLine?: number
@@ -50,7 +51,9 @@ export function HorizontalBarChart({ data, title, valueLabel, barColor = '#f9ff8
 
   return (
     <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
-      <h3 className="text-white font-medium mb-4 text-sm sm:text-base">{title}</h3>
+      <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{title}</h3>
+      {description && <p className="text-white/40 text-xs mt-1 mb-3">{description}</p>}
+      {!description && <div className="mb-3" />}
       <div className="space-y-3">
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
@@ -95,9 +98,10 @@ export function HorizontalBarChart({ data, title, valueLabel, barColor = '#f9ff8
 }
 
 // ======= Ranking Bar Chart (#2 Omzet, #3 Realisatiegraad) =======
-export function RankingBarChart({ data, title, comparisonLine, comparisonLabel, formatValue }: {
+export function RankingBarChart({ data, title, description, comparisonLine, comparisonLabel, formatValue }: {
   data: { name: string; value: number; label?: string }[]
   title: string
+  description?: string
   comparisonLine?: number
   comparisonLabel?: string
   formatValue?: (v: number) => string
@@ -109,7 +113,9 @@ export function RankingBarChart({ data, title, comparisonLine, comparisonLabel, 
 
   return (
     <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
-      <h3 className="text-white font-medium mb-4 text-sm sm:text-base">{title}</h3>
+      <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{title}</h3>
+      {description && <p className="text-white/40 text-xs mt-1 mb-3">{description}</p>}
+      {!description && <div className="mb-3" />}
       <div className="space-y-3">
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
@@ -144,9 +150,10 @@ export function RankingBarChart({ data, title, comparisonLine, comparisonLabel, 
 }
 
 // ======= Stacked Bar Chart (#4 Kostprijs) =======
-export function StackedBarChart({ data, title }: {
+export function StackedBarChart({ data, title, description }: {
   data: { name: string; cost: number; margin: number; total: number }[]
   title: string
+  description?: string
 }) {
   const maxValue = Math.max(...data.map(d => d.total), 1)
   const fmtCurrency = (v: number) =>
@@ -154,7 +161,9 @@ export function StackedBarChart({ data, title }: {
 
   return (
     <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
-      <h3 className="text-white font-medium mb-4 text-sm sm:text-base">{title}</h3>
+      <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{title}</h3>
+      {description && <p className="text-white/40 text-xs mt-1 mb-3">{description}</p>}
+      {!description && <div className="mb-3" />}
       <div className="space-y-3">
         {data.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
@@ -182,9 +191,10 @@ export function StackedBarChart({ data, title }: {
 }
 
 // ======= Progress Gauge List (#5 Break-even) =======
-export function ProgressGaugeList({ data, title }: {
+export function ProgressGaugeList({ data, title, description }: {
   data: { name: string; actual: number; target: number; percentage: number }[]
   title: string
+  description?: string
 }) {
   const getColor = (pct: number) => {
     if (pct >= 100) return '#22c55e'
@@ -194,7 +204,9 @@ export function ProgressGaugeList({ data, title }: {
 
   return (
     <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
-      <h3 className="text-white font-medium mb-4 text-sm sm:text-base">{title}</h3>
+      <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{title}</h3>
+      {description && <p className="text-white/40 text-xs mt-1 mb-3">{description}</p>}
+      {!description && <div className="mb-3" />}
       <div className="space-y-4">
         {data.map((item, i) => (
           <div key={i}>
@@ -229,9 +241,10 @@ export function ProgressGaugeList({ data, title }: {
 }
 
 // ======= Quarterly Trend Chart (#6 Verzuim) =======
-export function QuarterlyTrendChart({ data, title, benchmark, benchmarkLabel }: {
+export function QuarterlyTrendChart({ data, title, description, benchmark, benchmarkLabel }: {
   data: number[]
   title: string
+  description?: string
   benchmark?: number
   benchmarkLabel?: string
 }) {
@@ -249,7 +262,9 @@ export function QuarterlyTrendChart({ data, title, benchmark, benchmarkLabel }: 
 
   return (
     <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
-      <h3 className="text-white font-medium mb-4 text-sm sm:text-base">{title}</h3>
+      <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{title}</h3>
+      {description && <p className="text-white/40 text-xs mt-1 mb-3">{description}</p>}
+      {!description && <div className="mb-3" />}
       <div style={{ height }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${height}`} preserveAspectRatio="xMidYMid meet">
           {/* Grid lines */}
@@ -306,12 +321,13 @@ export function QuarterlyTrendChart({ data, title, benchmark, benchmarkLabel }: 
 }
 
 // ======= Forecast Area Chart (#8) =======
-export function ForecastAreaChart({ actualMonths, projectedMonths, forecastedTotal, previousYearTotal, title }: {
+export function ForecastAreaChart({ actualMonths, projectedMonths, forecastedTotal, previousYearTotal, title, description }: {
   actualMonths: { month: number; omzet: number }[]
   projectedMonths: { month: number; omzet: number }[]
   forecastedTotal: number
   previousYearTotal: number
   title: string
+  description?: string
 }) {
   const allValues = [...actualMonths.map(m => m.omzet), ...projectedMonths.map(m => m.omzet)]
   const maxValue = Math.max(...allValues, 1) * 1.15
@@ -334,13 +350,15 @@ export function ForecastAreaChart({ actualMonths, projectedMonths, forecastedTot
 
   return (
     <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-2">
         <h3 className="text-white font-medium text-sm sm:text-base">{title}</h3>
         <div className="flex gap-4 text-xs">
           <div><span className="text-white/40">Forecast:</span> <span className="text-workx-lime font-medium">{fmtCurrency(forecastedTotal)}</span></div>
           <div><span className="text-white/40">2025:</span> <span className="text-white/60">{fmtCurrency(previousYearTotal)}</span></div>
         </div>
       </div>
+      {description && <p className="text-white/40 text-xs mt-1 mb-3">{description}</p>}
+      {!description && <div className="mb-3" />}
       <div style={{ height }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${height}`} preserveAspectRatio="xMidYMid meet">
           {/* Grid */}
@@ -403,9 +421,10 @@ export function ForecastAreaChart({ actualMonths, projectedMonths, forecastedTot
 }
 
 // ======= Donut Chart (#10 Bonus ROI) =======
-export function DonutChart({ segments, title, centerLabel, centerValue, size = 160 }: {
+export function DonutChart({ segments, title, description, centerLabel, centerValue, size = 160 }: {
   segments: { label: string; value: number; color: string }[]
   title: string
+  description?: string
   centerLabel: string
   centerValue: string
   size?: number
@@ -427,7 +446,9 @@ export function DonutChart({ segments, title, centerLabel, centerValue, size = 1
 
   return (
     <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
-      <h3 className="text-white font-medium mb-4 text-sm sm:text-base">{title}</h3>
+      <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{title}</h3>
+      {description && <p className="text-white/40 text-xs mt-1 mb-3">{description}</p>}
+      {!description && <div className="mb-3" />}
       <div className="flex flex-col sm:flex-row items-center gap-6">
         <div className="relative" style={{ width: size, height: size }}>
           <svg width={size} height={size} viewBox="0 0 100 100">
