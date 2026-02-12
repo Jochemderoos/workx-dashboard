@@ -65,6 +65,9 @@ export default function DatePicker({
         timeFormat="HH:mm"
         timeIntervals={15}
         isClearable={isClearable}
+        showYearDropdown
+        showMonthDropdown
+        dropdownMode="select"
         customInput={<CustomInput placeholder={placeholder} />}
         popperClassName="workx-datepicker-popper"
         calendarClassName="workx-calendar"
