@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         id: `vacation-${v.id}`,
         type: v.status === 'APPROVED' ? 'vacation_approved' : 'vacation_request',
         title: v.status === 'APPROVED' ? 'kreeg vakantie goedgekeurd' : 'vroeg vakantie aan',
-        description: `${new Date(v.startDate).toLocaleDateString('nl-NL')} - ${new Date(v.endDate).toLocaleDateString('nl-NL')}`,
+        description: `${new Date(v.startDate).toLocaleDateString('nl-NL', { timeZone: 'Europe/Amsterdam' })} - ${new Date(v.endDate).toLocaleDateString('nl-NL', { timeZone: 'Europe/Amsterdam' })}`,
         userName: v.user.name,
         userPhoto: v.user.avatarUrl,
         createdAt: v.createdAt,

@@ -128,8 +128,8 @@ export async function PATCH(
       if (employee) {
         const reqStart = parseLocalDate(request.startDate)
         const reqEnd = parseLocalDate(request.endDate)
-        const startStr = reqStart.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
-        const endStr = reqEnd.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+        const startStr = reqStart.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', timeZone: 'Europe/Amsterdam' })
+        const endStr = reqEnd.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Amsterdam' })
 
         if (status === 'APPROVED') {
           // Push notification

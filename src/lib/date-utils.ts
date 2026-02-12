@@ -31,14 +31,19 @@ export function formatDateForAPI(date: Date | null | undefined): string {
  */
 export function formatDateTimeForAPI(date: Date | null | undefined): string {
   if (!date) return ''
-  // Create ISO string but preserve local date/time components
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   const seconds = String(date.getSeconds()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+  // Include timezone offset so server interprets correctly (e.g. +01:00 for CET, +02:00 for CEST)
+  const offsetMin = -date.getTimezoneOffset()
+  const sign = offsetMin >= 0 ? '+' : '-'
+  const absOffset = Math.abs(offsetMin)
+  const offsetHours = String(Math.floor(absOffset / 60)).padStart(2, '0')
+  const offsetMins = String(absOffset % 60).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMins}`
 }
 
 /**

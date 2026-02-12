@@ -208,8 +208,8 @@ export async function POST(req: NextRequest) {
     // Notify admin(s) when a non-admin creates a PENDING request
     if (status === 'PENDING') {
       const requesterName = request.user?.name || 'Medewerker'
-      const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
-      const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+      const startStr = start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', timeZone: 'Europe/Amsterdam' })
+      const endStr = end.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Amsterdam' })
       const dashboardUrl = process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app'
 
       // Find all admins, partners and office managers to notify
