@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { formatDistanceToNow } from 'date-fns'
 import { nl } from 'date-fns/locale'
@@ -152,9 +153,11 @@ export function ActivityFeed({ limit = 10, showHeader = true, className = '' }: 
               {/* User avatar */}
               <div className="relative flex-shrink-0">
                 {activity.userPhoto || getPhotoUrl(activity.userName) ? (
-                  <img
+                  <Image
                     src={activity.userPhoto || getPhotoUrl(activity.userName) || ''}
                     alt={activity.userName}
+                    width={32}
+                    height={32}
                     className="w-8 h-8 rounded-full object-cover"
                   />
                 ) : (

@@ -52,12 +52,6 @@ export async function GET(req: NextRequest) {
         endDate: { gte: new Date() }
       } : { status: 'APPROVED' }
 
-      const vacations = await prisma.vacationRequest.findMany({
-        where: vacationFilter,
-        include: { user: { select: { id: true, name: true } } },
-        orderBy: { startDate: 'asc' },
-      })
-
       // Also fetch vacation periods
       const periodFilter = startDate && endDate ? {
         OR: [
@@ -69,11 +63,19 @@ export async function GET(req: NextRequest) {
         endDate: { gte: new Date() }
       } : {}
 
-      const vacationPeriods = await prisma.vacationPeriod.findMany({
-        where: periodFilter,
-        include: { user: { select: { id: true, name: true } } },
-        orderBy: { startDate: 'asc' },
-      })
+      // Run vacation and period queries in parallel
+      const [vacations, vacationPeriods] = await Promise.all([
+        prisma.vacationRequest.findMany({
+          where: vacationFilter,
+          include: { user: { select: { id: true, name: true } } },
+          orderBy: { startDate: 'asc' },
+        }),
+        prisma.vacationPeriod.findMany({
+          where: periodFilter,
+          include: { user: { select: { id: true, name: true } } },
+          orderBy: { startDate: 'asc' },
+        }),
+      ])
 
       // Convert vacations to calendar event format
       const vacationEvents = vacations.map(v => ({

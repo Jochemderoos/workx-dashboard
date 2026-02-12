@@ -1,6 +1,7 @@
 'use client'
 
 import { memo } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
@@ -18,11 +19,14 @@ interface SidebarProps {
 // Official Workx logo
 function WorkxLogoBox() {
   return (
-    <img
+    <Image
       src="/workx-logo.png"
       alt="Workx Advocaten"
+      width={180}
+      height={56}
       className="h-14 w-auto"
       draggable={false}
+      priority
     />
   )
 }
@@ -166,9 +170,11 @@ function SidebarComponent({ user }: SidebarProps) {
           <div className="absolute top-0 right-0 w-20 h-20 bg-workx-lime/10 rounded-full blur-2xl" />
           <div className="flex items-center gap-3 relative">
             {getPhotoUrl(user.name) ? (
-              <img
+              <Image
                 src={getPhotoUrl(user.name)!}
                 alt={user.name}
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-xl object-cover ring-2 ring-workx-lime/30 shadow-lg shadow-workx-lime/20"
               />
             ) : (
@@ -186,6 +192,7 @@ function SidebarComponent({ user }: SidebarProps) {
               onClick={() => signOut({ callbackUrl: '/login' })}
               className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors icon-logout-hover"
               title="Uitloggen"
+              aria-label="Uitloggen"
             >
               <span className="icon-animated">
                 <Icons.logout size={16} />
@@ -202,7 +209,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
         {/* Pigeons illustration with fly away animation */}
         <div className="flex justify-center pt-2 pigeons-container">
-          <img src="/pigeons.svg" alt="Pigeons" className="h-12 w-auto" />
+          <Image src="/pigeons.svg" alt="Pigeons" width={120} height={48} className="h-12 w-auto" />
         </div>
       </div>
     </aside>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -9,11 +10,13 @@ import { Icons } from '@/components/ui/Icons'
 // Official Workx logo
 function WorkxLogoBox() {
   return (
-    <img
+    <Image
       src="/workx-logo.png"
       alt="Workx Advocaten"
+      width={200}
+      height={80}
       className="h-20 w-auto mx-auto"
-      draggable={false}
+      priority
     />
   )
 }
@@ -69,7 +72,7 @@ export default function LoginPage() {
 
       {/* Workx Pand illustratie */}
       <div className="fixed bottom-0 right-10 pointer-events-none opacity-30 z-0">
-        <img src="/workx-pand.png" alt="Workx Pand" className="h-[400px] object-contain" />
+        <Image src="/workx-pand.png" alt="Workx Pand" width={500} height={400} className="h-[400px] object-contain" />
       </div>
 
       <div className="w-full max-w-sm relative z-10 fade-in">

@@ -431,6 +431,7 @@ export default function AgendaPage() {
                     else setSelectedDate(new Date((selectedDate || new Date()).getTime() - 24 * 60 * 60 * 1000))
                   }}
                   className="p-2 sm:p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
+                  aria-label="Vorige"
                 >
                   <Icons.chevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
@@ -450,6 +451,7 @@ export default function AgendaPage() {
                     else setSelectedDate(new Date((selectedDate || new Date()).getTime() + 24 * 60 * 60 * 1000))
                   }}
                   className="p-2 sm:p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
+                  aria-label="Volgende"
                 >
                   <Icons.chevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
@@ -709,7 +711,7 @@ export default function AgendaPage() {
                                 {day.date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}
                               </p>
                             </div>
-                            <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                            <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" aria-label="Sluiten">
                               <Icons.x size={18} />
                             </Popover.Close>
                           </div>
@@ -891,6 +893,7 @@ export default function AgendaPage() {
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(event.id) }}
                                 className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                aria-label="Verwijderen"
                               >
                                 <Icons.trash size={14} />
                               </button>
@@ -961,6 +964,7 @@ export default function AgendaPage() {
               <button
                 onClick={resetForm}
                 className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                aria-label="Sluiten"
               >
                 <Icons.x size={18} />
               </button>
@@ -1155,6 +1159,7 @@ export default function AgendaPage() {
                     type="button"
                     onClick={() => handleDeleteClick(editingEvent.id)}
                     className="px-4 py-2.5 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors"
+                    aria-label="Verwijderen"
                   >
                     <Icons.trash size={16} />
                   </button>
@@ -1193,6 +1198,7 @@ export default function AgendaPage() {
               <button
                 onClick={() => setShowDayModal(false)}
                 className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                aria-label="Sluiten"
               >
                 <Icons.x size={18} />
               </button>
@@ -1255,6 +1261,7 @@ export default function AgendaPage() {
                         <button
                           onClick={(e) => { e.stopPropagation(); setShowDayModal(false); handleDeleteClick(event.id) }}
                           className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                          aria-label="Verwijderen"
                         >
                           <Icons.trash size={14} />
                         </button>

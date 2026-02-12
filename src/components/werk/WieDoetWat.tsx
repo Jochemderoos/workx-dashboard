@@ -469,6 +469,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                         onClick={() => startEdit(r)}
                         className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                         title="Bewerken"
+                        aria-label="Bewerken"
                       >
                         <Icons.edit size={16} />
                       </button>
@@ -476,6 +477,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                         onClick={() => { setDeleteId(r.id); setShowDeleteConfirm(true) }}
                         className="p-2 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors"
                         title="Verwijderen"
+                        aria-label="Verwijderen"
                       >
                         <Icons.trash size={16} />
                       </button>
@@ -605,6 +607,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                                   onClick={() => handleSendReminder(a.id, a.assignee.name)}
                                   className="p-2 rounded-lg hover:bg-yellow-500/10 text-gray-500 hover:text-yellow-400 transition-colors"
                                   title="Herinnering sturen"
+                                  aria-label="Herinnering sturen"
                                 >
                                   <Icons.bell size={14} />
                                 </button>
@@ -614,6 +617,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                                 onClick={() => { setNlDeleteId(a.id); setShowNlDeleteConfirm(true) }}
                                 className="p-2 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
                                 title="Verwijderen"
+                                aria-label="Verwijderen"
                               >
                                 <Icons.trash size={14} />
                               </button>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
@@ -285,9 +286,11 @@ function TopBarComponent({ user }: TopBarProps) {
             className="relative p-1.5 rounded-lg hover:bg-workx-lime/10 transition-all group"
             title="Naar Dashboard"
           >
-            <img
+            <Image
               src="/workx-pand.png"
               alt="Home"
+              width={28}
+              height={28}
               className="h-7 w-auto opacity-50 group-hover:opacity-90 transition-all drop-shadow-[0_0_8px_rgba(249,255,133,0.3)] group-hover:drop-shadow-[0_0_12px_rgba(249,255,133,0.5)]"
             />
           </Link>
@@ -345,9 +348,11 @@ function TopBarComponent({ user }: TopBarProps) {
                         }`}
                       >
                         {result.photo ? (
-                          <img
+                          <Image
                             src={result.photo}
                             alt={result.label}
+                            width={32}
+                            height={32}
                             className="w-8 h-8 rounded-lg object-cover"
                           />
                         ) : (
@@ -390,9 +395,11 @@ function TopBarComponent({ user }: TopBarProps) {
             className="hidden md:flex items-center gap-2.5 px-3 py-2 rounded-xl border border-workx-lime/20 hover:border-workx-lime/40 hover:bg-workx-lime/5 transition-all group"
             title="Naar Dashboard"
           >
-            <img
+            <Image
               src="/workx-pand.png"
               alt="Home"
+              width={20}
+              height={20}
               className="h-5 w-auto opacity-40 group-hover:opacity-80 group-hover:scale-105 transition-all drop-shadow-[0_0_6px_rgba(249,255,133,0.25)] group-hover:drop-shadow-[0_0_10px_rgba(249,255,133,0.4)]"
             />
             <span className="text-sm text-white/50 group-hover:text-workx-lime hidden lg:inline transition-colors">Home</span>

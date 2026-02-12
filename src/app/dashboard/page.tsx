@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
@@ -10,6 +10,7 @@ import { formatDateForAPI, parseDateFromAPI } from '@/lib/date-utils'
 import toast from 'react-hot-toast'
 import SpotlightCard from '@/components/ui/SpotlightCard'
 import AnimatedNumber from '@/components/ui/AnimatedNumber'
+import { useDashboardSummary } from '@/lib/hooks/useData'
 import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
 import MagneticButton from '@/components/ui/MagneticButton'
 import Sparkline from '@/components/ui/Sparkline'
@@ -313,7 +314,7 @@ const allQuickLinks = [
 ]
 
 // Appjeplekje Widget - Compact office attendance widget with today/tomorrow tabs
-function AppjeplekjeWidget({
+const AppjeplekjeWidget = memo(function AppjeplekjeWidget({
   todayData,
   tomorrowData,
   isTogglingToday,
@@ -534,7 +535,7 @@ function AppjeplekjeWidget({
       </div>
     </Link>
   )
-}
+})
 
 // "What's New" widget — dismissible via API (stored on User model)
 // Content comes from src/lib/changelog.ts — edit that file to update
@@ -551,7 +552,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: 
   globe: Icons.globe,
 }
 
-function WhatsNewWidget({ dismissedVersion }: { dismissedVersion?: string | null }) {
+const WhatsNewWidget = memo(function WhatsNewWidget({ dismissedVersion }: { dismissedVersion?: string | null }) {
   const [dismissed, setDismissed] = useState(dismissedVersion === CHANGELOG_VERSION)
 
   useEffect(() => {
@@ -660,10 +661,10 @@ function WhatsNewWidget({ dismissedVersion }: { dismissedVersion?: string | null
       </div>
     </div>
   )
-}
+})
 
 // Lustrum Teaser Widget with rotating content
-function LustrumTeaserWidget() {
+const LustrumTeaserWidget = memo(function LustrumTeaserWidget() {
   const [countdown, setCountdown] = useState(getCountdown())
   const [teaserIndex, setTeaserIndex] = useState(0)
 
@@ -802,26 +803,55 @@ function LustrumTeaserWidget() {
       </Link>
     </div>
   )
-}
+})
 
 export default function DashboardHome() {
-  const [events, setEvents] = useState<CalendarEvent[]>([])
+  // SWR hook — auto-refreshes every 60s, deduplicates, caches
+  const { data: summaryData, isLoading: summaryLoading, mutate: mutateSummary } = useDashboardSummary()
+
+  // Derive state from SWR data (no separate useState needed)
+  const events: CalendarEvent[] = summaryData?.calendarEvents || []
+  const officeAttendance: OfficeAttendanceData | null = summaryData?.officeAttendance || null
+  const tomorrowAttendance: OfficeAttendanceData | null = summaryData?.tomorrowAttendance || null
+  const vacationBalance: VacationBalanceData | null = summaryData?.vacationBalance || null
+  const parentalLeave: ParentalLeaveData | null = summaryData?.parentalLeave?.[0] || null
+  const currentUser: CurrentUser | null = summaryData?.currentUser ? { name: summaryData.currentUser.name, role: summaryData.currentUser.role, whatsNewDismissed: summaryData.currentUser.whatsNewDismissed } : null
+  const newsletterReminders: NewsletterAssignment[] = summaryData?.newsletterReminders || []
+  const newsletterOverview: NewsletterAssignment[] | null = summaryData?.newsletterOverview ?? null
+  const isNewsletterManager: boolean = summaryData?.isNewsletterManager || false
+  const nextTraining = summaryData?.nextTraining || null
+  const openMeetingActions: { id: string; description: string; responsibleName: string; week: { dateLabel: string } }[] = summaryData?.openMeetingActions || []
+  const werkverdelingGesprek: { partnerName: string; weekDate: string } | null = summaryData?.werkverdelingGesprek || null
+  const pendingVacationRequests: any[] = summaryData?.pendingVacationRequests || []
+  const allApprovedVacations: any[] = summaryData?.allApprovedVacations || []
+  const myVacationRequests: any[] = summaryData?.myVacationRequests || []
+
+  const teamBirthdays: TeamBirthday[] = useMemo(() => {
+    if (!summaryData?.birthdays) return []
+    return summaryData.birthdays
+      .filter((u: any) => u.birthDate)
+      .map((u: any) => ({ name: u.name, birthDate: u.birthDate, avatarUrl: u.avatarUrl }))
+  }, [summaryData?.birthdays])
+
+  const feedbackItems: FeedbackItem[] = useMemo(() => {
+    if (!summaryData?.feedback) return []
+    return summaryData.feedback.map((f: any) => ({
+      id: f.id, type: f.type, title: f.title, description: f.description,
+      submittedBy: f.submittedByName, createdAt: f.createdAt,
+    }))
+  }, [summaryData?.feedback])
+
+  // Remaining UI state
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
   const [vacations, setVacations] = useState<VacationData[]>([])
   const [calendarAbsences, setCalendarAbsences] = useState<CalendarAbsence[]>([])
-  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([])
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showVacationDetails, setShowVacationDetails] = useState(false)
   const [showCountdownPopup, setShowCountdownPopup] = useState(false)
   const [countdownDays, setCountdownDays] = useState(0)
-  const [officeAttendance, setOfficeAttendance] = useState<OfficeAttendanceData | null>(null)
-  const [tomorrowAttendance, setTomorrowAttendance] = useState<OfficeAttendanceData | null>(null)
   const [isTogglingAttendance, setIsTogglingAttendance] = useState(false)
   const [isTogglingTomorrowAttendance, setIsTogglingTomorrowAttendance] = useState(false)
-  const [vacationBalance, setVacationBalance] = useState<VacationBalanceData | null>(null)
-  const [parentalLeave, setParentalLeave] = useState<ParentalLeaveData | null>(null)
   const [weather, setWeather] = useState<WeatherData>({
     temperature: 0,
     weatherCode: 0,
@@ -830,18 +860,8 @@ export default function DashboardHome() {
     location: 'Amsterdam',
     isLoading: true,
   })
-  const [teamBirthdays, setTeamBirthdays] = useState<TeamBirthday[]>([])
   const [showBirthdayPopup, setShowBirthdayPopup] = useState(false)
   const [birthdayAudioRef, setBirthdayAudioRef] = useState<HTMLAudioElement | null>(null)
-  const [newsletterReminders, setNewsletterReminders] = useState<NewsletterAssignment[]>([])
-  const [newsletterOverview, setNewsletterOverview] = useState<NewsletterAssignment[] | null>(null)
-  const [isNewsletterManager, setIsNewsletterManager] = useState(false)
-  const [nextTraining, setNextTraining] = useState<{ id: string; title: string; speaker: string; date: string; startTime: string | null; location: string | null; points: number } | null>(null)
-  const [openMeetingActions, setOpenMeetingActions] = useState<{ id: string; description: string; responsibleName: string; week: { dateLabel: string } }[]>([])
-  const [werkverdelingGesprek, setWerkverdelingGesprek] = useState<{ partnerName: string; weekDate: string } | null>(null)
-  const [pendingVacationRequests, setPendingVacationRequests] = useState<any[]>([])
-  const [allApprovedVacations, setAllApprovedVacations] = useState<any[]>([])
-  const [myVacationRequests, setMyVacationRequests] = useState<any[]>([])
   const [showVacationRequestForm, setShowVacationRequestForm] = useState(false)
   const [vacationFormStartDate, setVacationFormStartDate] = useState('')
   const [vacationFormEndDate, setVacationFormEndDate] = useState('')
@@ -850,109 +870,6 @@ export default function DashboardHome() {
   const [rejectingRequestId, setRejectingRequestId] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null)
-  // Fetch dashboard data from bundled API endpoint (combines 8 API calls into 1)
-  const fetchDashboardSummary = async () => {
-    try {
-      const res = await fetch('/api/dashboard/summary')
-      if (res.ok) {
-        const data = await res.json()
-
-        // Set calendar events
-        if (data.calendarEvents) {
-          setEvents(data.calendarEvents)
-        }
-
-        // Set office attendance (today)
-        if (data.officeAttendance) {
-          setOfficeAttendance(data.officeAttendance)
-        }
-
-        // Set tomorrow attendance
-        if (data.tomorrowAttendance) {
-          setTomorrowAttendance(data.tomorrowAttendance)
-        }
-
-        // Set vacation balance
-        if (data.vacationBalance) {
-          setVacationBalance(data.vacationBalance)
-        }
-
-        // Set parental leave
-        if (data.parentalLeave && data.parentalLeave.length > 0) {
-          setParentalLeave(data.parentalLeave[0])
-        }
-
-        // Set current user
-        if (data.currentUser) {
-          setCurrentUser({ name: data.currentUser.name, role: data.currentUser.role, whatsNewDismissed: data.currentUser.whatsNewDismissed })
-        }
-
-        // Set birthdays
-        if (data.birthdays) {
-          const formattedBirthdays = data.birthdays
-            .filter((u: any) => u.birthDate)
-            .map((u: any) => {
-              // birthDate is stored as MM-DD string directly
-              return {
-                name: u.name,
-                birthDate: u.birthDate, // Already in MM-DD format
-                avatarUrl: u.avatarUrl
-              }
-            })
-          setTeamBirthdays(formattedBirthdays)
-        }
-
-        // Set feedback
-        if (data.feedback) {
-          setFeedbackItems(data.feedback.map((f: any) => ({
-            id: f.id,
-            type: f.type,
-            title: f.title,
-            description: f.description,
-            submittedBy: f.submittedByName,
-            createdAt: f.createdAt,
-          })))
-        }
-
-        // Set newsletter data
-        if (data.newsletterReminders) {
-          setNewsletterReminders(data.newsletterReminders)
-        }
-        if (data.newsletterOverview !== undefined) {
-          setNewsletterOverview(data.newsletterOverview)
-        }
-        if (data.isNewsletterManager !== undefined) {
-          setIsNewsletterManager(data.isNewsletterManager)
-        }
-
-        // Set next training session
-        if (data.nextTraining) {
-          setNextTraining(data.nextTraining)
-        }
-
-        // Set notulen data
-        if (data.openMeetingActions) {
-          setOpenMeetingActions(data.openMeetingActions)
-        }
-        if (data.werkverdelingGesprek) {
-          setWerkverdelingGesprek(data.werkverdelingGesprek)
-        }
-
-        // Set vacation request data
-        if (data.pendingVacationRequests) {
-          setPendingVacationRequests(data.pendingVacationRequests)
-        }
-        if (data.allApprovedVacations) {
-          setAllApprovedVacations(data.allApprovedVacations)
-        }
-        if (data.myVacationRequests) {
-          setMyVacationRequests(data.myVacationRequests)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard summary:', error)
-    }
-  }
 
   // Calculate next birthday
   const nextBirthday = useMemo(() => {
@@ -1149,13 +1066,12 @@ export default function DashboardHome() {
     }
   }, [])
 
-  // Main data fetch: 1 bundled API call + 3 specialized calls (was 11 separate calls)
+  // Supplementary data fetches (summary is handled by SWR hook above)
   useEffect(() => {
     Promise.all([
-      fetchDashboardSummary(),  // Bundled: events, attendance, balance, parental, user, birthdays, feedback
-      fetchWork(),              // Separate: needs specific query params
-      fetchVacations(),         // Separate: needs all=true
-      fetchCalendarAbsences(),  // Separate: needs date range filter
+      fetchWork(),
+      fetchVacations(),
+      fetchCalendarAbsences(),
     ]).finally(() => setIsLoading(false))
   }, [])
 
@@ -1234,79 +1150,7 @@ export default function DashboardHome() {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   }
 
-  const fetchOfficeAttendance = async () => {
-    try {
-      const now = nextWorkday(new Date())
-      const today = formatDateStr(now)
-      const res = await fetch(`/api/office-attendance?date=${today}`)
-      if (res.ok) {
-        const data = await res.json()
-        setOfficeAttendance(data)
-      } else {
-        console.error('Error fetching office attendance:', res.status, res.statusText)
-        setOfficeAttendance({
-          date: today,
-          attendees: [],
-          totalWorkplaces: 11,
-          occupiedWorkplaces: 0,
-          availableWorkplaces: 11,
-          isCurrentUserAttending: false,
-        })
-      }
-    } catch (e) {
-      console.error('Error fetching office attendance:', e)
-      const now = nextWorkday(new Date())
-      const today = formatDateStr(now)
-      setOfficeAttendance({
-        date: today,
-        attendees: [],
-        totalWorkplaces: 11,
-        occupiedWorkplaces: 0,
-        availableWorkplaces: 11,
-        isCurrentUserAttending: false,
-      })
-    }
-  }
-
-  const fetchTomorrowAttendance = async () => {
-    try {
-      const todayWork = nextWorkday(new Date())
-      const tomorrow = new Date(todayWork)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const tomorrowFinal = nextWorkday(tomorrow)
-      const tomorrowStr = formatDateStr(tomorrowFinal)
-      const res = await fetch(`/api/office-attendance?date=${tomorrowStr}`)
-      if (res.ok) {
-        const data = await res.json()
-        setTomorrowAttendance(data)
-      } else {
-        setTomorrowAttendance({
-          date: tomorrowStr,
-          attendees: [],
-          totalWorkplaces: 11,
-          occupiedWorkplaces: 0,
-          availableWorkplaces: 11,
-          isCurrentUserAttending: false,
-        })
-      }
-    } catch (e) {
-      console.error('Error fetching tomorrow attendance:', e)
-      const todayWork = nextWorkday(new Date())
-      const tomorrow = new Date(todayWork)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const tomorrowFinal = nextWorkday(tomorrow)
-      setTomorrowAttendance({
-        date: formatDateStr(tomorrowFinal),
-        attendees: [],
-        totalWorkplaces: 11,
-        occupiedWorkplaces: 0,
-        availableWorkplaces: 11,
-        isCurrentUserAttending: false,
-      })
-    }
-  }
-
-  // fetchVacationBalance and fetchParentalLeave removed - now handled by fetchDashboardSummary
+  // Office attendance and vacation balance are now handled by SWR (useDashboardSummary)
 
   const toggleOfficeAttendance = async () => {
     if (!officeAttendance || isTogglingAttendance) return
@@ -1334,7 +1178,7 @@ export default function DashboardHome() {
         return
       }
 
-      await fetchOfficeAttendance()
+      await mutateSummary()
     } catch (e) {
       console.error('Error toggling attendance:', e)
       toast.error('Er ging iets mis met de verbinding')
@@ -1372,7 +1216,7 @@ export default function DashboardHome() {
         return
       }
 
-      await fetchTomorrowAttendance()
+      await mutateSummary()
     } catch (e) {
       console.error('Error toggling tomorrow attendance:', e)
       toast.error('Er ging iets mis met de verbinding')
@@ -1385,7 +1229,7 @@ export default function DashboardHome() {
     try {
       const res = await fetch(`/api/feedback/${id}`, { method: 'DELETE' })
       if (res.ok) {
-        setFeedbackItems(prev => prev.filter(f => f.id !== id))
+        mutateSummary()
       }
     } catch (e) {
       console.error('Error deleting feedback:', e)
@@ -1416,7 +1260,7 @@ export default function DashboardHome() {
         setVacationFormEndDate('')
         setVacationFormReason('')
         // Refresh data
-        fetchDashboardSummary()
+        mutateSummary()
       } else {
         const data = await res.json()
         toast.error(data.error || 'Er ging iets mis')
@@ -1444,7 +1288,7 @@ export default function DashboardHome() {
         setRejectingRequestId(null)
         setRejectionReason('')
         // Refresh data
-        fetchDashboardSummary()
+        mutateSummary()
       } else {
         const data = await res.json()
         toast.error(data.error || 'Er ging iets mis')
@@ -1529,7 +1373,7 @@ export default function DashboardHome() {
         body: JSON.stringify({ assignmentId }),
       })
       if (res.ok) {
-        setNewsletterReminders(prev => prev.filter(r => r.id !== assignmentId))
+        mutateSummary()
       }
     } catch (e) {
       console.error('Error dismissing reminder:', e)
@@ -1544,14 +1388,7 @@ export default function DashboardHome() {
         body: JSON.stringify({ id: assignmentId, status: 'SUBMITTED' }),
       })
       if (res.ok) {
-        // Remove from reminders
-        setNewsletterReminders(prev => prev.filter(r => r.id !== assignmentId))
-        // Update overview if present
-        if (newsletterOverview) {
-          setNewsletterOverview(prev => prev ? prev.map(a =>
-            a.id === assignmentId ? { ...a, status: 'SUBMITTED' } : a
-          ) : null)
-        }
+        mutateSummary()
       }
     } catch (e) {
       console.error('Error updating article status:', e)
@@ -1566,12 +1403,7 @@ export default function DashboardHome() {
         body: JSON.stringify({ assignmentId }),
       })
       if (res.ok) {
-        // Update overview
-        if (newsletterOverview) {
-          setNewsletterOverview(prev => prev ? prev.map(a =>
-            a.id === assignmentId ? { ...a, reminderPushedAt: new Date().toISOString(), reminderDismissed: false } : a
-          ) : null)
-        }
+        mutateSummary()
       }
     } catch (e) {
       console.error('Error pushing reminder:', e)
@@ -1592,7 +1424,7 @@ export default function DashboardHome() {
   const pendingOverviewArticles = newsletterOverview?.filter(a => a.status === 'PENDING') || []
 
   // Show skeleton during initial load
-  if (isLoading) {
+  if (isLoading || summaryLoading) {
     return <DashboardSkeleton />
   }
 
