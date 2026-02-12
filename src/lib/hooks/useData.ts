@@ -105,13 +105,6 @@ export function useOfficeAttendance(date?: string) {
 }
 
 /**
- * Hook for Slack channels
- */
-export function useSlackChannels() {
-  return useSWR('/api/slack/channels', fetcher, slowOptions)
-}
-
-/**
  * Hook for bonus calculations
  */
 export function useBonusCalculations() {
@@ -222,7 +215,6 @@ export default {
   useNotifications,
   useActivity,
   useOfficeAttendance,
-  useSlackChannels,
   useBonusCalculations,
   useFinancialData,
   useSalaryScales,

@@ -13,7 +13,9 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const channelId = searchParams.get('channelId')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
+    const cursor = searchParams.get('cursor') // Message ID for cursor-based pagination
+    const direction = searchParams.get('direction') || 'before' // 'before' or 'after'
 
     if (!channelId) {
       return NextResponse.json({ error: 'Channel ID is verplicht' }, { status: 400 })
@@ -42,9 +44,21 @@ export async function GET(req: NextRequest) {
         sender: { select: { id: true, name: true, avatarUrl: true } }
       },
       orderBy: { createdAt: 'asc' },
-      take: limit,
+      take: limit + 1, // Fetch one extra to detect hasMore
+      ...(cursor ? {
+        cursor: { id: cursor },
+        skip: 1, // Skip the cursor itself
+      } : {}),
     })
-    return NextResponse.json(messages)
+
+    const hasMore = messages.length > limit
+    const resultMessages = hasMore ? messages.slice(0, limit) : messages
+
+    return NextResponse.json({
+      messages: resultMessages,
+      hasMore,
+      nextCursor: hasMore ? resultMessages[resultMessages.length - 1]?.id : null,
+    })
   } catch (error) {
     console.error('Error fetching messages:', error)
     return NextResponse.json({ error: 'Kon niet ophalen messages' }, { status: 500 })

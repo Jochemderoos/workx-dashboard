@@ -19,7 +19,9 @@ export async function GET(request: Request) {
       orderBy: { sortOrder: 'asc' }
     })
 
-    return NextResponse.json(chapters)
+    return NextResponse.json(chapters, {
+      headers: { 'Cache-Control': 'private, max-age=600, stale-while-revalidate=1200' }
+    })
   } catch (error) {
     console.error('Error fetching HR doc chapters:', error)
     return NextResponse.json({ error: 'Kon hoofdstukken niet ophalen' }, { status: 500 })

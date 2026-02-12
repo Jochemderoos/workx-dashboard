@@ -28,23 +28,54 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url)
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '10'), 50)
 
-    const activities: ActivityItem[] = []
     const now = new Date()
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const todayStr = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().split('T')[0]
 
-    // 1. Recent vacation requests
-    const recentVacations = await prisma.vacationRequest.findMany({
-      where: {
-        createdAt: { gte: weekAgo },
-      },
-      include: {
-        user: {
-          select: { name: true, avatarUrl: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    })
+    // Fetch all sources in parallel
+    const [recentVacations, todayAttendance, recentWorkItems, recentFeedback, recentZaken] = await Promise.all([
+      // 1. Recent vacation requests
+      prisma.vacationRequest.findMany({
+        where: { createdAt: { gte: weekAgo } },
+        include: { user: { select: { name: true, avatarUrl: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+
+      // 2. Today's office attendance
+      prisma.officeAttendance.findMany({
+        where: { date: todayStr },
+        include: { user: { select: { name: true, avatarUrl: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+
+      // 3. Recent work items
+      prisma.workItem.findMany({
+        where: { createdAt: { gte: weekAgo } },
+        include: { createdBy: { select: { name: true, avatarUrl: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+
+      // 4. Recent feedback
+      prisma.feedback.findMany({
+        where: { createdAt: { gte: weekAgo } },
+        include: { submittedBy: { select: { name: true, avatarUrl: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+
+      // 5. Recent zaken
+      prisma.zaak.findMany({
+        where: { createdAt: { gte: weekAgo } },
+        include: { createdBy: { select: { name: true, avatarUrl: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+    ])
+
+    const activities: ActivityItem[] = []
 
     recentVacations.forEach((v) => {
       activities.push({
@@ -59,23 +90,6 @@ export async function GET(req: NextRequest) {
       })
     })
 
-    // 2. Recent office attendance (today only)
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const todayStr = todayStart.toISOString().split('T')[0]
-
-    const todayAttendance = await prisma.officeAttendance.findMany({
-      where: {
-        date: todayStr,
-      },
-      include: {
-        user: {
-          select: { name: true, avatarUrl: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    })
-
     todayAttendance.forEach((a) => {
       activities.push({
         id: `attendance-${a.id}`,
@@ -86,20 +100,6 @@ export async function GET(req: NextRequest) {
         userPhoto: a.user.avatarUrl,
         createdAt: a.createdAt,
       })
-    })
-
-    // 3. Recent work items created
-    const recentWorkItems = await prisma.workItem.findMany({
-      where: {
-        createdAt: { gte: weekAgo },
-      },
-      include: {
-        createdBy: {
-          select: { name: true, avatarUrl: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
     })
 
     recentWorkItems.forEach((w) => {
@@ -115,20 +115,6 @@ export async function GET(req: NextRequest) {
       })
     })
 
-    // 4. Recent feedback
-    const recentFeedback = await prisma.feedback.findMany({
-      where: {
-        createdAt: { gte: weekAgo },
-      },
-      include: {
-        submittedBy: {
-          select: { name: true, avatarUrl: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-    })
-
     recentFeedback.forEach((f) => {
       activities.push({
         id: `feedback-${f.id}`,
@@ -139,20 +125,6 @@ export async function GET(req: NextRequest) {
         userPhoto: f.submittedBy.avatarUrl,
         createdAt: f.createdAt,
       })
-    })
-
-    // 5. Recent zaken assigned
-    const recentZaken = await prisma.zaak.findMany({
-      where: {
-        createdAt: { gte: weekAgo },
-      },
-      include: {
-        createdBy: {
-          select: { name: true, avatarUrl: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
     })
 
     recentZaken.forEach((z) => {
@@ -173,6 +145,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       activities: activities.slice(0, limit),
       total: activities.length,
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60'
+      }
     })
   } catch (error) {
     console.error('Error fetching activity:', error)

@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' }
     })
 
-    return NextResponse.json(users)
+    return NextResponse.json(users, {
+      headers: { 'Cache-Control': 'private, max-age=300, stale-while-revalidate=600' }
+    })
   } catch (error) {
     console.error('Error fetching team:', error)
     return NextResponse.json(

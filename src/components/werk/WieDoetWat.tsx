@@ -113,28 +113,55 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
       return
     }
 
+    const member = teamMembers.find(m => m.id === newResponsibleId)
+    const tempId = `temp-${Date.now()}`
+    const optimistic: Responsibility = {
+      id: tempId,
+      task: newTask.trim(),
+      sortOrder: responsibilities.length,
+      responsible: { id: newResponsibleId, name: member?.name || '', avatarUrl: member?.avatarUrl || null },
+    }
+
+    // Optimistic update
+    setResponsibilities(prev => [...prev, optimistic])
+    const savedTask = newTask.trim()
+    const savedResponsibleId = newResponsibleId
+    setNewTask('')
+    setNewResponsibleId('')
+
     try {
       const res = await fetch('/api/responsibilities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task: newTask.trim(), responsibleId: newResponsibleId }),
+        body: JSON.stringify({ task: savedTask, responsibleId: savedResponsibleId }),
       })
       if (res.ok) {
         const newResp = await res.json()
-        setResponsibilities(prev => [...prev, newResp])
-        setNewTask('')
-        setNewResponsibleId('')
+        setResponsibilities(prev => prev.map(r => r.id === tempId ? newResp : r))
         toast.success('Verantwoordelijkheid toegevoegd')
       } else {
+        setResponsibilities(prev => prev.filter(r => r.id !== tempId))
         toast.error('Kon niet toevoegen')
       }
     } catch {
+      setResponsibilities(prev => prev.filter(r => r.id !== tempId))
       toast.error('Er ging iets mis')
     }
   }
 
   const handleEdit = async (id: string) => {
     if (!editTask.trim() || !editResponsibleId) return
+
+    const member = teamMembers.find(m => m.id === editResponsibleId)
+    const previous = responsibilities.find(r => r.id === id)
+
+    // Optimistic update
+    setResponsibilities(prev => prev.map(r => r.id === id ? {
+      ...r,
+      task: editTask.trim(),
+      responsible: { id: editResponsibleId, name: member?.name || '', avatarUrl: member?.avatarUrl || null },
+    } : r))
+    setEditingId(null)
 
     try {
       const res = await fetch('/api/responsibilities', {
@@ -145,27 +172,50 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
       if (res.ok) {
         const updated = await res.json()
         setResponsibilities(prev => prev.map(r => r.id === id ? updated : r))
-        setEditingId(null)
         toast.success('Bijgewerkt')
+      } else {
+        if (previous) setResponsibilities(prev => prev.map(r => r.id === id ? previous : r))
+        toast.error('Kon niet bijwerken')
       }
     } catch {
+      if (previous) setResponsibilities(prev => prev.map(r => r.id === id ? previous : r))
       toast.error('Er ging iets mis')
     }
   }
 
   const handleDelete = async () => {
     if (!deleteId) return
+    const previous = responsibilities.find(r => r.id === deleteId)
+    const prevIndex = responsibilities.findIndex(r => r.id === deleteId)
+
+    // Optimistic update
+    setResponsibilities(prev => prev.filter(r => r.id !== deleteId))
+    setShowDeleteConfirm(false)
+    setDeleteId(null)
+
     try {
       const res = await fetch(`/api/responsibilities?id=${deleteId}`, { method: 'DELETE' })
       if (res.ok) {
-        setResponsibilities(prev => prev.filter(r => r.id !== deleteId))
         toast.success('Verwijderd')
+      } else {
+        if (previous) {
+          setResponsibilities(prev => {
+            const copy = [...prev]
+            copy.splice(prevIndex, 0, previous)
+            return copy
+          })
+        }
+        toast.error('Kon niet verwijderen')
       }
     } catch {
+      if (previous) {
+        setResponsibilities(prev => {
+          const copy = [...prev]
+          copy.splice(prevIndex, 0, previous)
+          return copy
+        })
+      }
       toast.error('Er ging iets mis')
-    } finally {
-      setShowDeleteConfirm(false)
-      setDeleteId(null)
     }
   }
 

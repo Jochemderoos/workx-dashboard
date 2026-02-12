@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
@@ -54,18 +55,16 @@ const toolsMenuItems = [
 
 const manageMenuItems = [
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover' },
-  { href: '/dashboard/chat', icon: Icons.slack, label: 'Slack Chat', iconAnim: 'icon-chat-hover' },
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover' },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover' },
 ]
 
-export default function Sidebar({ user }: SidebarProps) {
+function SidebarComponent({ user }: SidebarProps) {
   const pathname = usePathname()
 
   const NavLink = ({ href, icon: Icon, label, iconAnim, badge, isAI }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string; isAI?: boolean }) => {
     const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
     const isLustrum = href === '/dashboard/lustrum'
-    const isSlack = href === '/dashboard/chat'
 
     if (isAI) {
       return (
@@ -79,22 +78,6 @@ export default function Sidebar({ user }: SidebarProps) {
             <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-gradient-to-r from-workx-lime/20 to-blue-500/20 text-workx-lime border border-workx-lime/20">
               AI
             </span>
-          </div>
-        </Link>
-      )
-    }
-
-    if (isSlack) {
-      return (
-        <Link href={href} className={`nav-link group relative ${isActive ? 'active' : ''}`}>
-          {/* Slack rainbow glow on hover */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-[#E01E5A] via-[#ECB22E] via-[#2EB67D] to-[#36C5F0] rounded-xl opacity-0 group-hover:opacity-30 blur-md transition-opacity" />
-          <div className="relative flex items-center gap-3 w-full">
-            <span className="icon-animated">
-              <Icon size={18} />
-            </span>
-            <span className="flex-1">{label}</span>
-            {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-60" />}
           </div>
         </Link>
       )
@@ -225,3 +208,5 @@ export default function Sidebar({ user }: SidebarProps) {
     </aside>
   )
 }
+
+export default memo(SidebarComponent)

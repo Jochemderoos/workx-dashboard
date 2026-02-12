@@ -15,7 +15,9 @@ export async function GET() {
       orderBy: { experienceYear: 'asc' }
     })
 
-    return NextResponse.json(salaryScales)
+    return NextResponse.json(salaryScales, {
+      headers: { 'Cache-Control': 'private, max-age=3600, stale-while-revalidate=7200' }
+    })
   } catch (error) {
     console.error('Error fetching salary scales:', error)
     return NextResponse.json({ error: 'Server fout' }, { status: 500 })

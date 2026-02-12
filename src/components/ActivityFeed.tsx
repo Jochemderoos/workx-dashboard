@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import { formatDistanceToNow } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { getPhotoUrl } from '@/lib/team-photos'
+import { useActivity } from '@/lib/hooks/useData'
 
 interface ActivityItem {
   id: string
@@ -27,33 +27,9 @@ interface ActivityFeedProps {
 }
 
 export function ActivityFeed({ limit = 10, showHeader = true, className = '' }: ActivityFeedProps) {
-  const [activities, setActivities] = useState<ActivityItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        const res = await fetch(`/api/activity?limit=${limit}`)
-        if (res.ok) {
-          const data = await res.json()
-          setActivities(data.activities || [])
-        } else {
-          setError('Kon activiteiten niet laden')
-        }
-      } catch (err) {
-        setError('Verbindingsfout')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchActivities()
-
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchActivities, 60000)
-    return () => clearInterval(interval)
-  }, [limit])
+  const { data, error: fetchError, isLoading } = useActivity(limit)
+  const activities: ActivityItem[] = data?.activities || []
+  const error = fetchError ? 'Kon activiteiten niet laden' : null
 
   const getActivityIcon = (type: ActivityItem['type']) => {
     switch (type) {

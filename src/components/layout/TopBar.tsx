@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import { NotificationCenter } from '@/components/NotificationCenter'
+import { useTeam, useCalendarEvents, useWorkItems } from '@/lib/hooks/useData'
 
 interface TopBarProps {
   user: {
@@ -71,20 +72,32 @@ interface SearchResult {
   photo?: string
 }
 
-export default function TopBar({ user }: TopBarProps) {
+function TopBarComponent({ user }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [greeting, setGreeting] = useState('')
   const [dateString, setDateString] = useState('')
-  const [teamMembers, setTeamMembers] = useState<any[]>([])
-  const [events, setEvents] = useState<any[]>([])
-  const [workItems, setWorkItems] = useState<any[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const pathname = usePathname()
   const router = useRouter()
+
+  // SWR hooks for search data (cached + deduplicated across components)
+  const { data: teamData } = useTeam()
+  const { data: eventsData } = useCalendarEvents()
+  const { data: workData } = useWorkItems()
+  const teamMembers: any[] = teamData || []
+  const events: any[] = eventsData || []
+  const workItems: any[] = workData || []
+
+  // Debounce search query (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   useEffect(() => {
     const now = new Date()
@@ -101,34 +114,7 @@ export default function TopBar({ user }: TopBarProps) {
     }))
   }, [])
 
-  // Fetch content for search
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const [teamRes, eventsRes, workRes] = await Promise.all([
-          fetch('/api/team'),
-          fetch('/api/calendar?upcoming=true&limit=20'),
-          fetch('/api/work?limit=20'),
-        ])
-
-        if (teamRes.ok) {
-          const data = await teamRes.json()
-          setTeamMembers(data)
-        }
-        if (eventsRes.ok) {
-          const data = await eventsRes.json()
-          setEvents(data)
-        }
-        if (workRes.ok) {
-          const data = await workRes.json()
-          setWorkItems(data)
-        }
-      } catch (e) {
-        console.error('Error fetching search content:', e)
-      }
-    }
-    fetchContent()
-  }, [])
+  // Search content is now fetched via SWR hooks above (useTeam, useCalendarEvents, useWorkItems)
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -157,11 +143,11 @@ export default function TopBar({ user }: TopBarProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Search results
+  // Search results (debounced)
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return []
+    if (!debouncedQuery.trim()) return []
 
-    const query = searchQuery.toLowerCase().trim()
+    const query = debouncedQuery.toLowerCase().trim()
     const results: SearchResult[] = []
 
     // Search navigation items (filter by role)
@@ -229,7 +215,7 @@ export default function TopBar({ user }: TopBarProps) {
     }
 
     return results.slice(0, 8) // Limit to 8 results
-  }, [searchQuery, teamMembers, events, workItems, user.role])
+  }, [debouncedQuery, teamMembers, events, workItems, user.role])
 
   // Reset selected index when results change
   useEffect(() => {
@@ -515,3 +501,5 @@ export default function TopBar({ user }: TopBarProps) {
     </header>
   )
 }
+
+export default memo(TopBarComponent)

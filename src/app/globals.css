@@ -3092,6 +3092,15 @@ textarea::-webkit-scrollbar-thumb:hover {
   transform-origin: top center;
 }
 
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Success confetti burst */
 @keyframes confetti-burst {
   0% {

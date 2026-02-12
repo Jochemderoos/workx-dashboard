@@ -13,48 +13,41 @@ export async function POST() {
 
     const userId = session.user.id
 
-    // Haal huidige notificaties op via dezelfde logica als GET
+    // Haal alle notificatie-bronnen parallel op
     const now = new Date()
-    const notificationKeys: string[] = []
-
-    // 1. Pending zaak assignments
-    const pendingZaken = await prisma.zaakAssignment.findMany({
-      where: {
-        userId,
-        status: 'PENDING',
-        expiresAt: { gt: now },
-      },
-      select: { id: true },
-    })
-    pendingZaken.forEach((a) => notificationKeys.push(`zaak-${a.id}`))
-
-    // 2. Recent vacation updates
-    const recentVacationUpdates = await prisma.vacationRequest.findMany({
-      where: {
-        userId,
-        status: { in: ['APPROVED', 'REJECTED'] },
-        updatedAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
-      },
-      select: { id: true },
-    })
-    recentVacationUpdates.forEach((r) => notificationKeys.push(`vacation-${r.id}`))
-
-    // 3. Today's calendar events
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000)
-    const todayEvents = await prisma.calendarEvent.findMany({
-      where: {
-        startTime: { gte: todayStart, lt: todayEnd },
-      },
-      select: { id: true },
-    })
-    todayEvents.forEach((e) => notificationKeys.push(`event-${e.id}`))
 
-    // 4. Feedback (for admins/partners)
-    const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
-    })
+    const [pendingZaken, recentVacationUpdates, todayEvents, currentUser] = await Promise.all([
+      prisma.zaakAssignment.findMany({
+        where: { userId, status: 'PENDING', expiresAt: { gt: now } },
+        select: { id: true },
+      }),
+      prisma.vacationRequest.findMany({
+        where: {
+          userId,
+          status: { in: ['APPROVED', 'REJECTED'] },
+          updatedAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+        },
+        select: { id: true },
+      }),
+      prisma.calendarEvent.findMany({
+        where: { startTime: { gte: todayStart, lt: todayEnd } },
+        select: { id: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      }),
+    ])
+
+    const notificationKeys: string[] = [
+      ...pendingZaken.map((a) => `zaak-${a.id}`),
+      ...recentVacationUpdates.map((r) => `vacation-${r.id}`),
+      ...todayEvents.map((e) => `event-${e.id}`),
+    ]
+
+    // Feedback (for admins/partners)
     if (currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER') {
       const unprocessedCount = await prisma.feedback.count({
         where: { processed: false },
@@ -64,22 +57,15 @@ export async function POST() {
       }
     }
 
-    // Upsert alle keys als dismissed
+    // Bulk insert alle keys als dismissed (skipDuplicates voor al-bestaande)
     if (notificationKeys.length > 0) {
-      await Promise.all(
-        notificationKeys.map((key) =>
-          prisma.notificationDismissal.upsert({
-            where: {
-              userId_notificationKey: {
-                userId,
-                notificationKey: key,
-              },
-            },
-            update: { dismissedAt: new Date() },
-            create: { userId, notificationKey: key },
-          })
-        )
-      )
+      await prisma.notificationDismissal.createMany({
+        data: notificationKeys.map((key) => ({
+          userId,
+          notificationKey: key,
+        })),
+        skipDuplicates: true,
+      })
     }
 
     return NextResponse.json({ success: true })

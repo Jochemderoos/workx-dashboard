@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import * as Popover from '@radix-ui/react-popover'
 import { formatDistanceToNow } from 'date-fns'
 import { nl } from 'date-fns/locale'
+import { useNotifications } from '@/lib/hooks/useData'
 
 interface Notification {
   id: string
@@ -22,63 +23,47 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ userId }: NotificationCenterProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const { data, isLoading, mutate } = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const pollRef = useRef<NodeJS.Timeout>()
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
-    try {
-      const res = await fetch('/api/notifications')
-      if (res.ok) {
-        const data = await res.json()
-        setNotifications(data.notifications || [])
-        setUnreadCount(data.unreadCount || 0)
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Poll for new notifications
-  useEffect(() => {
-    fetchNotifications()
-
-    // Poll every 30 seconds
-    pollRef.current = setInterval(fetchNotifications, 30000)
-
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-      }
-    }
-  }, [])
+  const notifications: Notification[] = data?.notifications || []
+  const unreadCount: number = data?.unreadCount || 0
 
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
+    // Optimistic update
+    mutate(
+      {
+        notifications: notifications.map(n => n.id === notificationId ? { ...n, read: true } : n),
+        unreadCount: Math.max(0, unreadCount - 1),
+      },
+      false
+    )
     try {
       await fetch(`/api/notifications/${notificationId}/read`, { method: 'POST' })
-      setNotifications(prev =>
-        prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
-      )
-      setUnreadCount(prev => Math.max(0, prev - 1))
+      mutate()
     } catch (error) {
       console.error('Error marking notification as read:', error)
+      mutate() // Revert on error
     }
   }
 
   // Mark all as read
   const markAllAsRead = async () => {
+    // Optimistic update
+    mutate(
+      {
+        notifications: notifications.map(n => ({ ...n, read: true })),
+        unreadCount: 0,
+      },
+      false
+    )
     try {
       await fetch('/api/notifications/read-all', { method: 'POST' })
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-      setUnreadCount(0)
+      mutate()
     } catch (error) {
       console.error('Error marking all as read:', error)
+      mutate() // Revert on error
     }
   }
 

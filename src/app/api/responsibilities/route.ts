@@ -35,7 +35,9 @@ export async function GET() {
       }),
     ])
 
-    return NextResponse.json({ responsibilities, teamMembers })
+    return NextResponse.json({ responsibilities, teamMembers }, {
+      headers: { 'Cache-Control': 'private, max-age=120, stale-while-revalidate=300' }
+    })
   } catch (error) {
     console.error('Error fetching responsibilities:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

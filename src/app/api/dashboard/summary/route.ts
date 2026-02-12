@@ -101,20 +101,19 @@ export async function GET() {
       prisma.workItem.findMany({
         where: {
           assigneeId: userId,
-          status: { notIn: ['DONE', 'COMPLETED', 'CANCELLED'] }, // Active items (not completed or cancelled)
+          status: { notIn: ['DONE', 'COMPLETED', 'CANCELLED'] },
         },
-        include: {
-          assignee: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+          dueDate: true,
+          clientName: true,
+          caseNumber: true,
+          createdAt: true,
           createdBy: {
-            select: {
-              id: true,
-              name: true,
-            },
+            select: { name: true },
           },
         },
         orderBy: [
