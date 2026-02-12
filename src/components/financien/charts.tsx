@@ -192,7 +192,7 @@ export function StackedBarChart({ data, title, description }: {
 
 // ======= Progress Gauge List (#5 Break-even) =======
 export function ProgressGaugeList({ data, title, description }: {
-  data: { name: string; actual: number; target: number; percentage: number }[]
+  data: { name: string; actual: number; target: number; percentage: number; surplusHours?: number }[]
   title: string
   description?: string
 }) {
@@ -202,36 +202,54 @@ export function ProgressGaugeList({ data, title, description }: {
     return '#ef4444'
   }
 
+  // Dynamic scale: use max percentage in data so bars aren't all identical
+  const maxPct = Math.max(...data.map(d => d.percentage), 100)
+  const scale = maxPct * 1.1 // 10% breathing room
+  // Position of the 100% break-even line relative to scale
+  const breakEvenPos = (100 / scale) * 100
+
   return (
     <div className="bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
       <h3 className="text-white font-medium mb-1 text-sm sm:text-base">{title}</h3>
       {description && <p className="text-white/40 text-xs mt-1 mb-3">{description}</p>}
       {!description && <div className="mb-3" />}
       <div className="space-y-4">
-        {data.map((item, i) => (
-          <div key={i}>
-            <div className="flex justify-between text-xs sm:text-sm mb-1">
-              <span className="text-white/80">{item.name}</span>
-              <span className="text-white/60">
-                {item.actual.toFixed(0)} / {item.target.toFixed(0)} uur
-                <span className="ml-2 font-medium" style={{ color: getColor(item.percentage) }}>
-                  {item.percentage.toFixed(0)}%
+        {data.map((item, i) => {
+          const surplus = item.surplusHours ?? (item.actual - item.target)
+          return (
+            <div key={i}>
+              <div className="flex justify-between text-xs sm:text-sm mb-1">
+                <span className="text-white/80">{item.name}</span>
+                <span className="text-white/60">
+                  {item.actual.toFixed(0)} / {item.target.toFixed(0)} uur
+                  <span className="ml-1 font-medium" style={{ color: getColor(item.percentage) }}>
+                    ({surplus >= 0 ? '+' : ''}{surplus.toFixed(0)}u)
+                  </span>
+                  <span className="ml-1.5 font-medium" style={{ color: getColor(item.percentage) }}>
+                    {item.percentage.toFixed(0)}%
+                  </span>
                 </span>
-              </span>
+              </div>
+              <div className="relative h-3 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min((item.percentage / scale) * 100, 100)}%`,
+                    backgroundColor: getColor(item.percentage),
+                  }}
+                />
+                {/* 100% break-even reference line */}
+                <div
+                  className="absolute inset-y-0 w-0.5"
+                  style={{ left: `${breakEvenPos}%`, backgroundColor: 'rgba(255,255,255,0.4)' }}
+                />
+              </div>
             </div>
-            <div className="h-3 bg-white/5 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${Math.min(item.percentage, 100)}%`,
-                  backgroundColor: getColor(item.percentage),
-                }}
-              />
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
       <div className="flex items-center gap-4 mt-4 text-xs text-white/40">
+        <div className="flex items-center gap-1.5"><div className="w-4 h-0.5 bg-white/40" /><span>Break-even (100%)</span></div>
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-green-500" /><span>&ge;100%</span></div>
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-orange-500" /><span>80-100%</span></div>
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-500" /><span>&lt;80%</span></div>

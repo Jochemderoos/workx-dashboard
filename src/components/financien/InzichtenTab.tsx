@@ -23,7 +23,7 @@ interface AnalyticsData {
     perEmployee: { name: string; hourlyRate: number; effectiveRate: number }[]
   }
   kostprijs: { name: string; kostprijsPerUur: number; margePerUur: number; hourlyRate: number; annualSalary: number; totalBillable: number }[]
-  breakeven: { name: string; targetHours: number; annualTargetHours: number; actualHoursYTD: number; percentage: number }[]
+  breakeven: { name: string; targetHours: number; annualTargetHours: number; actualHoursYTD: number; surplusHours: number; percentage: number }[]
   verzuim: {
     kantoorGemiddelde: number
     benchmark: number
@@ -50,7 +50,6 @@ interface AnalyticsData {
     totalUnpaidInvoices: number
   }
   kpis: {
-    avgBezetting: number
     omzetPerFTE: number
     avgMargePerUur: number
     verzuimPercentage: number
@@ -99,17 +98,12 @@ export default function InzichtenTab() {
     )
   }
 
-  const { bezettingsgraad, omzetPerMedewerker, realisatiegraad, kostprijs, breakeven, verzuim, vakantieRisico, forecast, yoy, bonusROI, kpis } = data
+  const { omzetPerMedewerker, realisatiegraad, kostprijs, breakeven, verzuim, vakantieRisico, forecast, yoy, bonusROI, kpis } = data
 
   return (
     <div className="space-y-6">
       {/* Rij 1: Overview KPI-kaarten */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
-          <p className="text-gray-400 text-xs sm:text-sm">Gem. Bezettingsgraad</p>
-          <p className="text-lg sm:text-2xl font-semibold text-white mt-1">{kpis.avgBezetting.toFixed(1)}%</p>
-          <p className="text-xs text-white/30 mt-1">Percentage van gewerkte uren dat declarabel is. Benchmark: 70-80%.</p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
           <p className="text-gray-400 text-xs sm:text-sm">Omzet per FTE (geschat)</p>
           <p className="text-lg sm:text-2xl font-semibold text-white mt-1 truncate">{fmtCurrency(kpis.omzetPerFTE)}</p>
@@ -137,25 +131,8 @@ export default function InzichtenTab() {
         <GrowthCard label="Saldo" current={yoy.saldo.current} previous={yoy.saldo.previous} growth={yoy.saldo.growth} />
       </div>
 
-      {/* Rij 3: Bezettingsgraad + Omzet per medewerker */}
+      {/* Rij 3: Omzet per medewerker + Uurtarief per medewerker */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        {/* #1 Bezettingsgraad */}
-        {bezettingsgraad.perEmployee.length > 0 ? (
-          <HorizontalBarChart
-            data={bezettingsgraad.perEmployee.map(e => ({ name: e.name, value: e.percentage }))}
-            title="Bezettingsgraad per medewerker"
-            description="Toont het percentage van de gewerkte uren dat declarabel (factureerbaar) is per medewerker. Een hogere bezettingsgraad betekent minder niet-declarabele tijd (intern overleg, admin, etc.). De witte lijn markeert de benchmark van 75%. Let op: als alle balken op 100% staan, worden mogelijk alle uren als declarabel geregistreerd en moet de urenregistratie gecontroleerd worden."
-            valueLabel="%"
-            barColor="#f9ff85"
-            benchmarkLine={75}
-            benchmarkLabel="Benchmark 75%"
-            maxOverride={100}
-            formatValue={v => v.toFixed(0)}
-          />
-        ) : (
-          <EmptyState title="Bezettingsgraad" />
-        )}
-
         {/* #2 Omzet per medewerker */}
         {omzetPerMedewerker.length > 0 ? (
           <RankingBarChart
@@ -166,11 +143,8 @@ export default function InzichtenTab() {
         ) : (
           <EmptyState title="Omzet per medewerker" />
         )}
-      </div>
 
-      {/* Rij 4: Realisatiegraad + Kostprijs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        {/* #3 Realisatiegraad */}
+        {/* #3 Uurtarief */}
         {realisatiegraad.perEmployee.length > 0 ? (
           <RankingBarChart
             data={realisatiegraad.perEmployee.map(e => ({
@@ -187,23 +161,23 @@ export default function InzichtenTab() {
         ) : (
           <EmptyState title="Realisatiegraad" />
         )}
-
-        {/* #4 Kostprijs per medewerker */}
-        {kostprijs.length > 0 ? (
-          <StackedBarChart
-            data={kostprijs.map(e => ({
-              name: e.name,
-              cost: e.kostprijsPerUur,
-              margin: e.margePerUur,
-              total: e.hourlyRate,
-            }))}
-            title="Kostprijs & marge per uur"
-            description="Elke balk toont hoeveel een declarabel uur kost (rood = loonkosten) en hoeveel marge overblijft (groen = uurtarief minus loonkosten). Berekend over de YTD-periode. Als er geen groene balk zichtbaar is, zijn de loonkosten per declarabel uur hoger dan het uurtarief."
-          />
-        ) : (
-          <EmptyState title="Kostprijs per medewerker" />
-        )}
       </div>
+
+      {/* Rij 4: Kostprijs & marge per uur */}
+      {kostprijs.length > 0 ? (
+        <StackedBarChart
+          data={kostprijs.map(e => ({
+            name: e.name,
+            cost: e.kostprijsPerUur,
+            margin: e.margePerUur,
+            total: e.hourlyRate,
+          }))}
+          title="Kostprijs & marge per uur"
+          description="Elke balk toont hoeveel een declarabel uur kost (rood = loonkosten) en hoeveel marge overblijft (groen = uurtarief minus loonkosten). Berekend over de YTD-periode. Als er geen groene balk zichtbaar is, zijn de loonkosten per declarabel uur hoger dan het uurtarief."
+        />
+      ) : (
+        <EmptyState title="Kostprijs per medewerker" />
+      )}
 
       {/* Rij 5: Break-even analyse (#5) */}
       {breakeven.length > 0 ? (
@@ -213,9 +187,10 @@ export default function InzichtenTab() {
             actual: e.actualHoursYTD,
             target: e.targetHours,
             percentage: e.percentage,
+            surplusHours: e.surplusHours,
           }))}
           title="Break-even analyse (factureerbare uren vs. salariskosten)"
-          description="Toont hoeveel procent van het break-even target al behaald is dit jaar. Het target is het aantal declarabele uren dat nodig is om de jaarlijkse salariskosten te dekken, gecorrigeerd naar de verstreken maanden. Groen = op schema, oranje = aandachtspunt, rood = achter op schema."
+          description="Toont hoeveel procent van het break-even target al behaald is dit jaar. Het target is het aantal declarabele uren dat nodig is om de jaarlijkse salariskosten te dekken, gecorrigeerd naar de verstreken maanden. De witte lijn markeert het break-even punt. Groen = op schema, oranje = aandachtspunt, rood = achter op schema."
         />
       ) : (
         <EmptyState title="Break-even analyse" />

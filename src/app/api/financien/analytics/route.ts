@@ -101,10 +101,17 @@ export async function GET() {
       return null
     }
 
-    // Aggregate monthly hours per employee
+    // Aggregate monthly hours per employee (exclude partners/admins)
     const employeeHours: Record<string, { billable: number; worked: number; name: string }> = {}
     for (const entry of monthlyHoursData) {
       const name = correctName(entry.employeeName)
+      // Only include employees that exist in usersWithComp (excludes PARTNER/ADMIN)
+      const matchedUser = (() => {
+        if (nameToUser[name]) return nameToUser[name]
+        const firstName = name.split(' ')[0]
+        return usersWithComp.find(u => u.name?.split(' ')[0] === firstName) || null
+      })()
+      if (!matchedUser) continue
       if (!employeeHours[name]) employeeHours[name] = { billable: 0, worked: 0, name }
       employeeHours[name].billable += entry.billableHours
       employeeHours[name].worked += entry.workedHours
@@ -195,6 +202,7 @@ export async function GET() {
         targetHours: proRataTarget,
         annualTargetHours,
         actualHoursYTD: h.billable,
+        surplusHours: h.billable - proRataTarget,
         percentage,
       }
     }).filter(e => e.annualTargetHours > 0).sort((a, b) => b.percentage - a.percentage)
@@ -303,7 +311,6 @@ export async function GET() {
     const totalUnpaidInvoices = bonusCalcs.filter(b => !b.invoicePaid).reduce((s, b) => s + b.invoiceAmount, 0)
 
     // ======= KPI Kaarten =======
-    const avgBezetting = kantoorGemiddeldeBezetting
     const employeesWithRate = usersWithComp.filter(u => u.compensation?.hourlyRate)
     const fteCount = employeesWithRate.length || 1
     const omzetPerFTE = totalOmzet / fteCount
@@ -345,7 +352,6 @@ export async function GET() {
         totalUnpaidInvoices,
       },
       kpis: {
-        avgBezetting,
         omzetPerFTE,
         avgMargePerUur,
         verzuimPercentage: kantoorGemiddeldeVerzuim,
