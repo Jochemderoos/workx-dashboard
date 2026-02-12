@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
+import InzichtenTab from '@/components/financien/InzichtenTab'
 import jsPDF from 'jspdf'
 import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
@@ -109,7 +110,7 @@ interface EmployeeData {
   parentalLeaves: ParentalLeave[]
 }
 
-type TabType = 'overzicht' | 'grafieken' | 'budgetten' | 'salarishuis'
+type TabType = 'overzicht' | 'grafieken' | 'budgetten' | 'salarishuis' | 'inzichten'
 
 export default function FinancienPage() {
   const { data: session } = useSession()
@@ -878,6 +879,7 @@ export default function FinancienPage() {
             { id: 'grafieken' as TabType, label: 'Grafieken', icon: Icons.activity },
             { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
             { id: 'salarishuis' as TabType, label: 'Salarishuis', icon: Icons.euro },
+            ...(isManager ? [{ id: 'inzichten' as TabType, label: 'Inzichten', icon: Icons.activity }] : []),
           ].map(tab => (
             <button
               key={tab.id}
@@ -1582,6 +1584,9 @@ export default function FinancienPage() {
 
         </div>
       )}
+
+      {/* Inzichten Tab - alleen voor PARTNER/ADMIN */}
+      {activeTab === 'inzichten' && isManager && <InzichtenTab />}
 
     </div>
   )
