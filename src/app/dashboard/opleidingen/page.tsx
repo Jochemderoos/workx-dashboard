@@ -1713,88 +1713,55 @@ export default function OpleidingenPage() {
                     {/* Expanded content */}
                     {isExpanded && (
                       <div className="mt-4 pt-4 border-t border-white/10">
-                        {/* Attendance chips */}
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {attendees.map(userId => {
-                            const member = teamMembers.find(m => m.id === userId)
-                            if (!member) return null
+                        {/* Quick actions */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (attendees.length === teamMembers.length) {
+                                setSessionAttendees(prev => ({ ...prev, [s.id]: [] }))
+                              } else {
+                                setSessionAttendees(prev => ({ ...prev, [s.id]: teamMembers.map(m => m.id) }))
+                              }
+                            }}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+                          >
+                            {attendees.length === teamMembers.length ? 'Niemand selecteren' : 'Iedereen selecteren'}
+                          </button>
+                          <span className="text-xs text-gray-500">
+                            {attendees.length} van {teamMembers.length} geselecteerd
+                          </span>
+                        </div>
+
+                        {/* Team member grid with checkboxes */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[320px] overflow-y-auto pr-1">
+                          {teamMembers.map(member => {
+                            const isSelected = attendees.includes(member.id)
                             const photo = getPhotoUrl(member.name)
                             return (
-                              <span key={userId} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-lg text-sm text-white">
+                              <button
+                                key={member.id}
+                                onClick={(e) => { e.stopPropagation(); toggleAttendee(s.id, member.id) }}
+                                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                                  isSelected ? 'text-workx-lime bg-workx-lime/10' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                                }`}
+                              >
+                                <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-all ${
+                                  isSelected ? 'bg-workx-lime/20 border-workx-lime/50' : 'border-white/20'
+                                }`}>
+                                  {isSelected && <Icons.check size={10} className="text-workx-lime" />}
+                                </div>
                                 {photo ? (
-                                  <img src={photo} alt={member.name} className="w-5 h-5 rounded-full object-cover" />
+                                  <img src={photo} alt={member.name} className="w-5 h-5 rounded-md object-cover" />
                                 ) : (
-                                  <div className="w-5 h-5 rounded-full bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
+                                  <div className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
                                     {member.name.charAt(0)}
                                   </div>
                                 )}
-                                {member.name}
-                                <button
-                                  onClick={() => toggleAttendee(s.id, userId)}
-                                  className="ml-0.5 text-gray-500 hover:text-red-400"
-                                >
-                                  <Icons.x size={12} />
-                                </button>
-                              </span>
+                                <span>{member.name}</span>
+                              </button>
                             )
                           })}
-                        </div>
-
-                        {/* Add attendee dropdown */}
-                        <div className="relative">
-                          <button
-                            ref={attendanceDropdownOpen === s.id ? attendanceAnchorRef : undefined}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (attendanceDropdownOpen === s.id) {
-                                setAttendanceDropdownOpen(null)
-                              } else {
-                                setAttendanceDropdownOpen(s.id)
-                                updateDropdownPosition(e.currentTarget)
-                              }
-                            }}
-                            className="text-sm px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-1.5"
-                          >
-                            <Icons.plus size={14} />
-                            Toevoegen
-                          </button>
-
-                          {attendanceDropdownOpen === s.id && typeof document !== 'undefined' && createPortal(
-                            <div
-                              ref={attendanceDropdownRef}
-                              style={dropdownStyle}
-                              className="bg-workx-dark border border-white/10 rounded-lg shadow-2xl py-1 max-h-60 overflow-y-auto"
-                            >
-                              {teamMembers.map(member => {
-                                const isSelected = attendees.includes(member.id)
-                                const photo = getPhotoUrl(member.name)
-                                return (
-                                  <button
-                                    key={member.id}
-                                    onClick={() => toggleAttendee(s.id, member.id)}
-                                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                                      isSelected ? 'text-workx-lime bg-workx-lime/10' : 'text-white/70 hover:bg-white/5 hover:text-white'
-                                    }`}
-                                  >
-                                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-all ${
-                                      isSelected ? 'bg-workx-lime/20 border-workx-lime/50' : 'border-white/20'
-                                    }`}>
-                                      {isSelected && <Icons.check size={10} className="text-workx-lime" />}
-                                    </div>
-                                    {photo ? (
-                                      <img src={photo} alt={member.name} className="w-5 h-5 rounded-md object-cover" />
-                                    ) : (
-                                      <div className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
-                                        {member.name.charAt(0)}
-                                      </div>
-                                    )}
-                                    <span>{member.name}</span>
-                                  </button>
-                                )
-                              })}
-                            </div>,
-                            document.body
-                          )}
                         </div>
 
                         {/* Save button */}
