@@ -103,9 +103,25 @@ export default function OpleidingenPage() {
   const attendanceDropdownRef = useRef<HTMLDivElement>(null)
   const attendanceAnchorRef = useRef<HTMLButtonElement>(null)
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  // Bijeenkomst form state
+  const [showMeetingForm, setShowMeetingForm] = useState(false)
+  const [meetingForm, setMeetingForm] = useState({
+    title: '',
+    speaker: '',
+    date: null as Date | null,
+    startTime: '',
+    endTime: '',
+    location: '',
+    description: '',
+    points: 1,
+  })
   // Individual overview state
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
   const [selectedOverviewSessions, setSelectedOverviewSessions] = useState<Set<string>>(new Set())
+  const [personDropdownOpen, setPersonDropdownOpen] = useState(false)
+  const personDropdownRef = useRef<HTMLDivElement>(null)
+  const personAnchorRef = useRef<HTMLButtonElement>(null)
+  const [personDropdownStyle, setPersonDropdownStyle] = useState<React.CSSProperties>({})
 
   const currentYear = new Date().getFullYear()
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]
@@ -365,6 +381,34 @@ export default function OpleidingenPage() {
     }
   }
 
+  const handleCreateMeeting = async () => {
+    if (!meetingForm.title || !meetingForm.date) {
+      toast.error('Vul minimaal titel en datum in')
+      return
+    }
+
+    try {
+      const res = await fetch('/api/training/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...meetingForm,
+          speaker: meetingForm.speaker || '-',
+          date: formatDateForAPI(meetingForm.date),
+        }),
+      })
+
+      if (!res.ok) throw new Error()
+
+      toast.success('Bijeenkomst toegevoegd')
+      setShowMeetingForm(false)
+      setMeetingForm({ title: '', speaker: '', date: null, startTime: '', endTime: '', location: '', description: '', points: 1 })
+      fetchAttendanceSessions()
+    } catch {
+      toast.error('Kon bijeenkomst niet toevoegen')
+    }
+  }
+
   const toggleAttendee = (sessionId: string, userId: string) => {
     setSessionAttendees(prev => {
       const current = prev[sessionId] || []
@@ -392,6 +436,21 @@ export default function OpleidingenPage() {
     })
   }, [])
 
+  const updatePersonDropdownPosition = useCallback((anchor: HTMLButtonElement) => {
+    const rect = anchor.getBoundingClientRect()
+    const dropdownHeight = 300
+    const spaceBelow = window.innerHeight - rect.bottom
+    const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight
+    setPersonDropdownStyle({
+      position: 'fixed',
+      left: rect.left,
+      width: Math.max(rect.width, 280),
+      top: showAbove ? undefined : rect.bottom + 4,
+      bottom: showAbove ? window.innerHeight - rect.top + 4 : undefined,
+      zIndex: 9999,
+    })
+  }, [])
+
   // Click outside handler for attendance dropdown
   useEffect(() => {
     if (!attendanceDropdownOpen) return
@@ -406,6 +465,21 @@ export default function OpleidingenPage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [attendanceDropdownOpen])
+
+  // Click outside handler for person dropdown
+  useEffect(() => {
+    if (!personDropdownOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        personDropdownRef.current && !personDropdownRef.current.contains(e.target as Node) &&
+        personAnchorRef.current && !personAnchorRef.current.contains(e.target as Node)
+      ) {
+        setPersonDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [personDropdownOpen])
 
   const getPersonSessions = (userId: string) => {
     return attendanceSessions.filter(s =>
@@ -1451,6 +1525,128 @@ export default function OpleidingenPage() {
       {activeTab === 'presentielijsten' && (
         <ScrollReveal direction="up" distance={20} duration={0.5}>
         <div className="space-y-4">
+          {/* Add meeting button */}
+          <div className="flex justify-end">
+            <MagneticButton
+              onClick={() => setShowMeetingForm(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Icons.plus size={16} />
+              Bijeenkomst toevoegen
+            </MagneticButton>
+          </div>
+
+          {/* Meeting form */}
+          {showMeetingForm && (
+            <div className="card p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium text-white">Nieuwe bijeenkomst</h3>
+                <button
+                  onClick={() => setShowMeetingForm(false)}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
+                >
+                  <Icons.x size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Titel / Onderwerp *</label>
+                  <input
+                    type="text"
+                    value={meetingForm.title}
+                    onChange={(e) => setMeetingForm({ ...meetingForm, title: e.target.value })}
+                    className="input-field"
+                    placeholder="Bijv. Teamoverleg Q1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Spreker / Organisator</label>
+                  <input
+                    type="text"
+                    value={meetingForm.speaker}
+                    onChange={(e) => setMeetingForm({ ...meetingForm, speaker: e.target.value })}
+                    className="input-field"
+                    placeholder="Optioneel"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Datum *</label>
+                  <DatePicker
+                    selected={meetingForm.date}
+                    onChange={(date) => setMeetingForm({ ...meetingForm, date })}
+                    placeholder="Selecteer datum..."
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Starttijd</label>
+                    <input
+                      type="time"
+                      value={meetingForm.startTime}
+                      onChange={(e) => setMeetingForm({ ...meetingForm, startTime: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Eindtijd</label>
+                    <input
+                      type="time"
+                      value={meetingForm.endTime}
+                      onChange={(e) => setMeetingForm({ ...meetingForm, endTime: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Locatie</label>
+                  <input
+                    type="text"
+                    value={meetingForm.location}
+                    onChange={(e) => setMeetingForm({ ...meetingForm, location: e.target.value })}
+                    className="input-field"
+                    placeholder="Bijv. Vergaderzaal"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">PO-punten</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={meetingForm.points || ''}
+                    onChange={(e) => setMeetingForm({ ...meetingForm, points: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0"
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Beschrijving</label>
+                <textarea
+                  value={meetingForm.description}
+                  onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
+                  className="input-field min-h-[80px]"
+                  placeholder="Optionele beschrijving..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowMeetingForm(false)}
+                  className="btn-secondary"
+                >
+                  Annuleren
+                </button>
+                <button onClick={handleCreateMeeting} className="btn-primary">
+                  Toevoegen
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Sessions with attendance */}
           {isLoading ? (
             <div className="card p-8 text-center">
@@ -1633,28 +1829,86 @@ export default function OpleidingenPage() {
           <SpotlightCard className="card p-5">
             <h3 className="font-medium text-white mb-4">Individueel overzicht</h3>
 
-            {/* Person selector */}
+            {/* Person selector - custom dropdown */}
             <div className="mb-4">
               <label className="block text-sm text-gray-400 mb-2">Selecteer medewerker</label>
-              <select
-                value={selectedPerson || ''}
-                onChange={(e) => {
-                  setSelectedPerson(e.target.value || null)
-                  // Auto-select all sessions the person attended
-                  if (e.target.value) {
-                    const personSessions = getPersonSessions(e.target.value)
-                    setSelectedOverviewSessions(new Set(personSessions.map(s => s.id)))
-                  } else {
-                    setSelectedOverviewSessions(new Set())
-                  }
-                }}
-                className="input-field"
-              >
-                <option value="">-- Selecteer --</option>
-                {teamMembers.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <button
+                  ref={personAnchorRef}
+                  onClick={(e) => {
+                    if (personDropdownOpen) {
+                      setPersonDropdownOpen(false)
+                    } else {
+                      setPersonDropdownOpen(true)
+                      updatePersonDropdownPosition(e.currentTarget)
+                    }
+                  }}
+                  className="input-field w-full text-left flex items-center justify-between"
+                >
+                  {selectedPerson ? (
+                    <span className="flex items-center gap-2">
+                      {(() => {
+                        const member = teamMembers.find(m => m.id === selectedPerson)
+                        if (!member) return null
+                        const photo = getPhotoUrl(member.name)
+                        return (
+                          <>
+                            {photo ? (
+                              <img src={photo} alt={member.name} className="w-5 h-5 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
+                                {member.name.charAt(0)}
+                              </div>
+                            )}
+                            <span className="text-white">{member.name}</span>
+                          </>
+                        )
+                      })()}
+                    </span>
+                  ) : (
+                    <span className="text-white/30">Selecteer medewerker...</span>
+                  )}
+                  <Icons.chevronDown size={16} className={`text-gray-500 transition-transform ${personDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {personDropdownOpen && typeof document !== 'undefined' && createPortal(
+                  <div
+                    ref={personDropdownRef}
+                    style={personDropdownStyle}
+                    className="bg-workx-dark border border-white/10 rounded-lg shadow-2xl py-1 max-h-60 overflow-y-auto"
+                  >
+                    {teamMembers.map(member => {
+                      const isSelected = selectedPerson === member.id
+                      const photo = getPhotoUrl(member.name)
+                      return (
+                        <button
+                          key={member.id}
+                          onClick={() => {
+                            setSelectedPerson(member.id)
+                            setPersonDropdownOpen(false)
+                            const personSessions = getPersonSessions(member.id)
+                            setSelectedOverviewSessions(new Set(personSessions.map(s => s.id)))
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                            isSelected ? 'text-workx-lime bg-workx-lime/10' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          {photo ? (
+                            <img src={photo} alt={member.name} className="w-5 h-5 rounded-md object-cover" />
+                          ) : (
+                            <div className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
+                              {member.name.charAt(0)}
+                            </div>
+                          )}
+                          <span>{member.name}</span>
+                          {isSelected && <Icons.check size={14} className="text-workx-lime ml-auto" />}
+                        </button>
+                      )
+                    })}
+                  </div>,
+                  document.body
+                )}
+              </div>
             </div>
 
             {/* Person's sessions */}
