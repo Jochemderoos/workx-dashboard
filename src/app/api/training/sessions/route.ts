@@ -87,6 +87,50 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PUT - Update a training session
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { id, title, speaker, date, startTime, endTime, location, description, points } = body
+
+    if (!id || !title || !date) {
+      return NextResponse.json({ error: 'ID, titel en datum zijn verplicht' }, { status: 400 })
+    }
+
+    const updated = await prisma.trainingSession.update({
+      where: { id },
+      data: {
+        title,
+        speaker: speaker || '-',
+        date: new Date(date),
+        startTime: startTime || null,
+        endTime: endTime || null,
+        location: location || null,
+        description: description || null,
+        points: points || 1,
+      },
+      include: {
+        createdBy: { select: { id: true, name: true } },
+        attendances: {
+          include: {
+            user: { select: { id: true, name: true } },
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('Error updating training session:', error)
+    return NextResponse.json({ error: 'Kon sessie niet bijwerken' }, { status: 500 })
+  }
+}
+
 // PATCH - Update attendance for a training session
 export async function PATCH(req: NextRequest) {
   try {

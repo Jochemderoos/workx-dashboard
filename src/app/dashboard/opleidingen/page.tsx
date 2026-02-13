@@ -115,6 +115,19 @@ export default function OpleidingenPage() {
     description: '',
     points: 1,
   })
+  // Edit session state
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    speaker: '',
+    date: null as Date | null,
+    startTime: '',
+    endTime: '',
+    location: '',
+    description: '',
+    points: 1,
+  })
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
   // Individual overview state
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
   const [selectedOverviewSessions, setSelectedOverviewSessions] = useState<Set<string>>(new Set())
@@ -406,6 +419,52 @@ export default function OpleidingenPage() {
       fetchAttendanceSessions()
     } catch {
       toast.error('Kon bijeenkomst niet toevoegen')
+    }
+  }
+
+  const startEditSession = (s: TrainingSession) => {
+    setEditingSessionId(s.id)
+    setEditForm({
+      title: s.title,
+      speaker: s.speaker,
+      date: new Date(s.date),
+      startTime: s.startTime || '',
+      endTime: s.endTime || '',
+      location: s.location || '',
+      description: s.description || '',
+      points: s.points,
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingSessionId || !editForm.title || !editForm.date) {
+      toast.error('Vul minimaal titel en datum in')
+      return
+    }
+
+    setIsSavingEdit(true)
+    try {
+      const res = await fetch('/api/training/sessions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingSessionId,
+          ...editForm,
+          date: formatDateForAPI(editForm.date),
+        }),
+      })
+
+      if (!res.ok) throw new Error()
+
+      const updated = await res.json()
+      setAttendanceSessions(prev => prev.map(s => s.id === editingSessionId ? updated : s))
+      setSessions(prev => prev.map(s => s.id === editingSessionId ? updated : s))
+      setEditingSessionId(null)
+      toast.success('Sessie bijgewerkt')
+    } catch {
+      toast.error('Kon sessie niet bijwerken')
+    } finally {
+      setIsSavingEdit(false)
     }
   }
 
@@ -1667,6 +1726,109 @@ export default function OpleidingenPage() {
 
                 return (
                   <SpotlightCard key={s.id} className="card p-4 transition-colors">
+                    {/* Edit form */}
+                    {editingSessionId === s.id ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-white">Sessie bewerken</h3>
+                          <button
+                            onClick={() => setEditingSessionId(null)}
+                            className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
+                          >
+                            <Icons.x size={18} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Titel *</label>
+                            <input
+                              type="text"
+                              value={editForm.title}
+                              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Spreker</label>
+                            <input
+                              type="text"
+                              value={editForm.speaker}
+                              onChange={(e) => setEditForm({ ...editForm, speaker: e.target.value })}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Datum *</label>
+                            <DatePicker
+                              selected={editForm.date}
+                              onChange={(date) => setEditForm({ ...editForm, date })}
+                              placeholder="Selecteer datum..."
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Starttijd</label>
+                              <input
+                                type="time"
+                                value={editForm.startTime}
+                                onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
+                                className="input-field"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm text-gray-400 mb-2">Eindtijd</label>
+                              <input
+                                type="time"
+                                value={editForm.endTime}
+                                onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
+                                className="input-field"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Locatie</label>
+                            <input
+                              type="text"
+                              value={editForm.location}
+                              onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">PO-punten</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              min="0"
+                              value={editForm.points || ''}
+                              onChange={(e) => setEditForm({ ...editForm, points: parseFloat(e.target.value) || 0 })}
+                              onFocus={(e) => e.target.select()}
+                              className="input-field"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Beschrijving</label>
+                          <textarea
+                            value={editForm.description}
+                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                            className="input-field min-h-[80px]"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-3">
+                          <button onClick={() => setEditingSessionId(null)} className="btn-secondary">Annuleren</button>
+                          <button onClick={handleSaveEdit} disabled={isSavingEdit} className="btn-primary flex items-center gap-2">
+                            {isSavingEdit ? (
+                              <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                            ) : (
+                              <Icons.check size={14} />
+                            )}
+                            Opslaan
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                    <>
                     <div
                       className="flex items-start justify-between gap-4 cursor-pointer"
                       onClick={() => setExpandedSession(isExpanded ? null : s.id)}
@@ -1695,6 +1857,13 @@ export default function OpleidingenPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); startEditSession(s) }}
+                          className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                          title="Bewerken"
+                        >
+                          <Icons.edit size={16} />
+                        </button>
                         {savedAttendees.length > 0 && (
                           <button
                             onClick={(e) => { e.stopPropagation(); handlePrintAttendanceList(s) }}
@@ -1782,6 +1951,8 @@ export default function OpleidingenPage() {
                           </div>
                         )}
                       </div>
+                    )}
+                    </>
                     )}
                   </SpotlightCard>
                 )
