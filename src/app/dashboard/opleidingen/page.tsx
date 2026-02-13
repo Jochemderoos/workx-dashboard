@@ -233,6 +233,7 @@ export default function OpleidingenPage() {
 
       toast.success('Sessie verwijderd')
       fetchSessions()
+      setAttendanceSessions(prev => prev.filter(s => s.id !== id))
     } catch (error) {
       toast.error('Kon sessie niet verwijderen')
     }
@@ -1863,6 +1864,13 @@ export default function OpleidingenPage() {
                           title="Bewerken"
                         >
                           <Icons.edit size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id) }}
+                          className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                          title="Verwijderen"
+                        >
+                          <Icons.trash size={16} />
                         </button>
                         {savedAttendees.length > 0 && (
                           <button
