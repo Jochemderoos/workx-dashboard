@@ -30,6 +30,11 @@ export async function GET(req: NextRequest) {
         createdBy: {
           select: { id: true, name: true },
         },
+        attendances: {
+          include: {
+            user: { select: { id: true, name: true } },
+          },
+        },
       },
       orderBy: { date: 'asc' },
     })
@@ -79,6 +84,52 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error creating training session:', error)
     return NextResponse.json({ error: 'Kon niet aanmaken training session' }, { status: 500 })
+  }
+}
+
+// PATCH - Update attendance for a training session
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { sessionId, attendeeIds } = body as { sessionId: string; attendeeIds: string[] }
+
+    if (!sessionId || !Array.isArray(attendeeIds)) {
+      return NextResponse.json({ error: 'sessionId en attendeeIds zijn verplicht' }, { status: 400 })
+    }
+
+    await prisma.$transaction([
+      prisma.trainingAttendance.deleteMany({
+        where: { trainingSessionId: sessionId },
+      }),
+      prisma.trainingAttendance.createMany({
+        data: attendeeIds.map((userId) => ({
+          trainingSessionId: sessionId,
+          userId,
+        })),
+      }),
+    ])
+
+    const updated = await prisma.trainingSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        createdBy: { select: { id: true, name: true } },
+        attendances: {
+          include: {
+            user: { select: { id: true, name: true } },
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('Error updating attendance:', error)
+    return NextResponse.json({ error: 'Kon aanwezigheid niet bijwerken' }, { status: 500 })
   }
 }
 

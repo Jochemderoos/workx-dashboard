@@ -80,8 +80,9 @@ model User {
   compensation      EmployeeCompensation?
 
   // Opleidingen
-  createdTrainingSessions TrainingSession[] @relation("CreatedTrainingSessions")
-  certificates            Certificate[]     @relation("UserCertificates")
+  createdTrainingSessions TrainingSession[]    @relation("CreatedTrainingSessions")
+  certificates            Certificate[]        @relation("UserCertificates")
+  trainingAttendances     TrainingAttendance[] @relation("TrainingAttendances")
 
   // Zaken toewijzing
   createdZaken      Zaak[]            @relation("CreatedZaken")
@@ -642,9 +643,24 @@ model TrainingSession {
   updatedAt   DateTime @updatedAt
 
   createdBy   User     @relation("CreatedTrainingSessions", fields: [createdById], references: [id], onDelete: Cascade)
+  attendances TrainingAttendance[]
 
   @@index([date])
   @@index([createdById])
+}
+
+model TrainingAttendance {
+  id                String          @id @default(cuid())
+  trainingSessionId String
+  userId            String
+  createdAt         DateTime        @default(now())
+
+  trainingSession   TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  user              User            @relation("TrainingAttendances", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingSessionId, userId])
+  @@index([trainingSessionId])
+  @@index([userId])
 }
 
 // Certificaten van individuele opleidingen

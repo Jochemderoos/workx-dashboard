@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -11,6 +12,7 @@ import AnimatedNumber from '@/components/ui/AnimatedNumber'
 import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
 import MagneticButton from '@/components/ui/MagneticButton'
 import TextReveal from '@/components/ui/TextReveal'
+import { getPhotoUrl } from '@/lib/team-photos'
 
 interface TrainingSession {
   id: string
@@ -23,6 +25,14 @@ interface TrainingSession {
   description: string | null
   points: number
   createdBy: { id: string; name: string }
+  attendances?: { id: string; user: { id: string; name: string } }[]
+}
+
+interface TeamMember {
+  id: string
+  name: string
+  role: string
+  isActive?: boolean
 }
 
 interface Certificate {
@@ -46,7 +56,7 @@ interface PointsSummary {
 
 export default function OpleidingenPage() {
   const { data: session } = useSession()
-  const [activeTab, setActiveTab] = useState<'workx' | 'certificaten'>('workx')
+  const [activeTab, setActiveTab] = useState<'workx' | 'certificaten' | 'presentielijsten'>('workx')
   const [isLoading, setIsLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
@@ -83,16 +93,38 @@ export default function OpleidingenPage() {
   const [selectedCertificates, setSelectedCertificates] = useState<Set<string>>(new Set())
   const [isPrintingBulk, setIsPrintingBulk] = useState(false)
 
+  // Presentielijsten state
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [attendanceSessions, setAttendanceSessions] = useState<TrainingSession[]>([])
+  const [expandedSession, setExpandedSession] = useState<string | null>(null)
+  const [sessionAttendees, setSessionAttendees] = useState<Record<string, string[]>>({})
+  const [savingAttendance, setSavingAttendance] = useState<string | null>(null)
+  const [attendanceDropdownOpen, setAttendanceDropdownOpen] = useState<string | null>(null)
+  const attendanceDropdownRef = useRef<HTMLDivElement>(null)
+  const attendanceAnchorRef = useRef<HTMLButtonElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  // Individual overview state
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
+  const [selectedOverviewSessions, setSelectedOverviewSessions] = useState<Set<string>>(new Set())
+
   const currentYear = new Date().getFullYear()
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]
 
   useEffect(() => {
     if (activeTab === 'workx') {
       fetchSessions()
-    } else {
+    } else if (activeTab === 'certificaten') {
       fetchCertificates()
+    } else if (activeTab === 'presentielijsten') {
+      fetchAttendanceSessions()
     }
   }, [activeTab, selectedYear])
+
+  useEffect(() => {
+    if (activeTab === 'presentielijsten' && teamMembers.length === 0) {
+      fetchTeam()
+    }
+  }, [activeTab])
 
   const fetchSessions = async () => {
     setIsLoading(true)
@@ -273,6 +305,221 @@ export default function OpleidingenPage() {
     } catch (error) {
       toast.error('Kon certificaat niet verwijderen')
     }
+  }
+
+  // === Presentielijsten functions ===
+  const fetchTeam = async () => {
+    try {
+      const res = await fetch('/api/team')
+      if (res.ok) {
+        const data = await res.json()
+        setTeamMembers(data.filter((m: TeamMember) => m.isActive !== false))
+      }
+    } catch (error) {
+      console.error('Error fetching team:', error)
+    }
+  }
+
+  const fetchAttendanceSessions = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/training/sessions?year=${selectedYear}`)
+      if (res.ok) {
+        const data = await res.json()
+        setAttendanceSessions(data)
+        // Initialize local attendance state from fetched data
+        const attendeeMap: Record<string, string[]> = {}
+        data.forEach((s: TrainingSession) => {
+          attendeeMap[s.id] = s.attendances?.map(a => a.user.id) || []
+        })
+        setSessionAttendees(attendeeMap)
+      }
+    } catch (error) {
+      console.error('Error fetching attendance sessions:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSaveAttendance = async (sessionId: string) => {
+    setSavingAttendance(sessionId)
+    try {
+      const res = await fetch('/api/training/sessions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          attendeeIds: sessionAttendees[sessionId] || [],
+        }),
+      })
+      if (!res.ok) throw new Error()
+      const updated = await res.json()
+      setAttendanceSessions(prev =>
+        prev.map(s => s.id === sessionId ? updated : s)
+      )
+      toast.success('Aanwezigheid opgeslagen')
+    } catch {
+      toast.error('Kon aanwezigheid niet opslaan')
+    } finally {
+      setSavingAttendance(null)
+    }
+  }
+
+  const toggleAttendee = (sessionId: string, userId: string) => {
+    setSessionAttendees(prev => {
+      const current = prev[sessionId] || []
+      return {
+        ...prev,
+        [sessionId]: current.includes(userId)
+          ? current.filter(id => id !== userId)
+          : [...current, userId],
+      }
+    })
+  }
+
+  const updateDropdownPosition = useCallback((anchor: HTMLButtonElement) => {
+    const rect = anchor.getBoundingClientRect()
+    const dropdownHeight = 300
+    const spaceBelow = window.innerHeight - rect.bottom
+    const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight
+    setDropdownStyle({
+      position: 'fixed',
+      left: rect.left,
+      width: Math.max(rect.width, 280),
+      top: showAbove ? undefined : rect.bottom + 4,
+      bottom: showAbove ? window.innerHeight - rect.top + 4 : undefined,
+      zIndex: 9999,
+    })
+  }, [])
+
+  // Click outside handler for attendance dropdown
+  useEffect(() => {
+    if (!attendanceDropdownOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        attendanceDropdownRef.current && !attendanceDropdownRef.current.contains(e.target as Node) &&
+        attendanceAnchorRef.current && !attendanceAnchorRef.current.contains(e.target as Node)
+      ) {
+        setAttendanceDropdownOpen(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [attendanceDropdownOpen])
+
+  const getPersonSessions = (userId: string) => {
+    return attendanceSessions.filter(s =>
+      s.attendances?.some(a => a.user.id === userId)
+    )
+  }
+
+  const handlePrintAttendanceList = (s: TrainingSession) => {
+    const attendees = s.attendances || []
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) { toast.error('Kon printvenster niet openen'); return }
+    printWindow.document.write(`
+      <!DOCTYPE html><html><head>
+        <title>Presentielijst - ${s.title}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; }
+          .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f9ff85; }
+          .logo { font-size: 24px; font-weight: 600; margin-bottom: 5px; }
+          .logo span { background: #f9ff85; padding: 2px 8px; border-radius: 4px; }
+          .subtitle { color: #666; font-size: 12px; letter-spacing: 2px; }
+          h1 { font-size: 20px; margin-top: 20px; }
+          .meta { color: #666; margin-top: 8px; font-size: 14px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+          th { text-align: left; padding: 12px; background: #f5f5f5; font-weight: 600; border-bottom: 2px solid #ddd; }
+          td { padding: 12px; border-bottom: 1px solid #eee; }
+          .count { margin-top: 20px; font-size: 14px; color: #666; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; }
+          @media print { body { padding: 20px; } @page { margin: 20mm; } }
+        </style>
+      </head><body>
+        <div class="header">
+          <div class="logo"><span>Workx</span></div>
+          <div class="subtitle">ADVOCATEN</div>
+          <h1>Presentielijst: ${s.title}</h1>
+          <p class="meta">Spreker: ${s.speaker} &bull; Datum: ${new Date(s.date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${s.startTime ? ` &bull; ${s.startTime}${s.endTime ? ' - ' + s.endTime : ''}` : ''} &bull; ${s.points} PO-${s.points === 1 ? 'punt' : 'punten'}</p>
+        </div>
+        <p class="count">${attendees.length} aanwezige${attendees.length !== 1 ? 'n' : ''}</p>
+        <table>
+          <thead><tr><th>#</th><th>Naam</th><th>Handtekening</th></tr></thead>
+          <tbody>
+            ${attendees.map((a, i) => `<tr><td>${i + 1}</td><td>${a.user.name}</td><td style="min-width:200px"></td></tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Gegenereerd op ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          <p>Workx Advocaten - Presentielijst</p>
+        </div>
+      </body></html>
+    `)
+    printWindow.document.close()
+    printWindow.print()
+  }
+
+  const handlePrintPersonOverview = (personId: string, sessionIds: Set<string>) => {
+    const person = teamMembers.find(m => m.id === personId)
+    if (!person) return
+    const selectedSessions = attendanceSessions.filter(s => sessionIds.has(s.id) && s.attendances?.some(a => a.user.id === personId))
+    if (selectedSessions.length === 0) { toast.error('Geen sessies geselecteerd'); return }
+    const totalPoints = selectedSessions.reduce((sum, s) => sum + s.points, 0)
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) { toast.error('Kon printvenster niet openen'); return }
+    printWindow.document.write(`
+      <!DOCTYPE html><html><head>
+        <title>Opleidingsoverzicht - ${person.name}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; }
+          .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f9ff85; }
+          .logo { font-size: 24px; font-weight: 600; margin-bottom: 5px; }
+          .logo span { background: #f9ff85; padding: 2px 8px; border-radius: 4px; }
+          .subtitle { color: #666; font-size: 12px; letter-spacing: 2px; }
+          h1 { font-size: 20px; margin-top: 20px; }
+          .person { color: #666; margin-top: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+          th { text-align: left; padding: 12px; background: #f5f5f5; font-weight: 600; border-bottom: 2px solid #ddd; }
+          td { padding: 12px; border-bottom: 1px solid #eee; }
+          .points { text-align: right; font-weight: 600; }
+          .total-row { background: #f9ff85; font-weight: 700; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; }
+          @media print { body { padding: 20px; } @page { margin: 20mm; } }
+        </style>
+      </head><body>
+        <div class="header">
+          <div class="logo"><span>Workx</span></div>
+          <div class="subtitle">ADVOCATEN</div>
+          <h1>Individueel Opleidingsoverzicht ${selectedYear}</h1>
+          <p class="person">${person.name}</p>
+        </div>
+        <table>
+          <thead><tr><th>Opleiding</th><th>Spreker</th><th>Datum</th><th class="points">Punten</th></tr></thead>
+          <tbody>
+            ${selectedSessions.map(s => `
+              <tr>
+                <td>${s.title}</td>
+                <td>${s.speaker}</td>
+                <td>${new Date(s.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                <td class="points">${s.points}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="3"><strong>Totaal</strong></td>
+              <td class="points"><strong>${totalPoints}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Gegenereerd op ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          <p>Workx Advocaten - Opleidingsoverzicht</p>
+        </div>
+      </body></html>
+    `)
+    printWindow.document.close()
+    printWindow.print()
   }
 
   const handlePrintOverview = () => {
@@ -650,6 +897,19 @@ export default function OpleidingenPage() {
           <div className="flex items-center gap-2">
             <Icons.file size={16} />
             Mijn Certificaten
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('presentielijsten')}
+          className={`px-4 py-2 rounded-t-lg transition-colors ${
+            activeTab === 'presentielijsten'
+              ? 'bg-workx-lime text-workx-dark font-medium'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Icons.checkCircle size={16} />
+            Presentielijsten
           </div>
         </button>
       </div>
@@ -1183,6 +1443,294 @@ export default function OpleidingenPage() {
               ))}
             </div>
           )}
+        </div>
+        </ScrollReveal>
+      )}
+
+      {/* PRESENTIELIJSTEN TAB */}
+      {activeTab === 'presentielijsten' && (
+        <ScrollReveal direction="up" distance={20} duration={0.5}>
+        <div className="space-y-4">
+          {/* Sessions with attendance */}
+          {isLoading ? (
+            <div className="card p-8 text-center">
+              <div className="w-8 h-8 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin mx-auto" />
+            </div>
+          ) : attendanceSessions.length === 0 ? (
+            <div className="card p-8 text-center">
+              <Icons.calendar className="mx-auto text-gray-600 mb-3" size={40} />
+              <p className="text-gray-400">Geen opleidingssessies in {selectedYear}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {attendanceSessions.map((s) => {
+                const attendees = sessionAttendees[s.id] || []
+                const isExpanded = expandedSession === s.id
+                const savedAttendees = s.attendances || []
+                const hasChanges = JSON.stringify([...attendees].sort()) !== JSON.stringify([...savedAttendees.map(a => a.user.id)].sort())
+
+                return (
+                  <SpotlightCard key={s.id} className="card p-4 transition-colors">
+                    <div
+                      className="flex items-start justify-between gap-4 cursor-pointer"
+                      onClick={() => setExpandedSession(isExpanded ? null : s.id)}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                          <Icons.presentation className="text-blue-400" size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-white">{s.title}</h3>
+                          <p className="text-sm text-gray-400 mt-0.5">
+                            <span className="text-workx-lime">{s.speaker}</span>
+                          </p>
+                          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Icons.calendar size={12} />
+                              {new Date(s.date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </span>
+                            <span className="px-2 py-0.5 bg-workx-lime/10 text-workx-lime rounded">
+                              {s.points} {s.points === 1 ? 'punt' : 'punten'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded ${attendees.length > 0 ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-gray-500'}`}>
+                              {attendees.length}/{teamMembers.length} aanwezig
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {savedAttendees.length > 0 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handlePrintAttendanceList(s) }}
+                            className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-colors"
+                            title="Print presentielijst"
+                          >
+                            <Icons.printer size={16} />
+                          </button>
+                        )}
+                        <div className={`p-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                          <Icons.chevronDown size={16} className="text-gray-500" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded content */}
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t border-white/10">
+                        {/* Attendance chips */}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {attendees.map(userId => {
+                            const member = teamMembers.find(m => m.id === userId)
+                            if (!member) return null
+                            const photo = getPhotoUrl(member.name)
+                            return (
+                              <span key={userId} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-lg text-sm text-white">
+                                {photo ? (
+                                  <img src={photo} alt={member.name} className="w-5 h-5 rounded-full object-cover" />
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
+                                    {member.name.charAt(0)}
+                                  </div>
+                                )}
+                                {member.name}
+                                <button
+                                  onClick={() => toggleAttendee(s.id, userId)}
+                                  className="ml-0.5 text-gray-500 hover:text-red-400"
+                                >
+                                  <Icons.x size={12} />
+                                </button>
+                              </span>
+                            )
+                          })}
+                        </div>
+
+                        {/* Add attendee dropdown */}
+                        <div className="relative">
+                          <button
+                            ref={attendanceDropdownOpen === s.id ? attendanceAnchorRef : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (attendanceDropdownOpen === s.id) {
+                                setAttendanceDropdownOpen(null)
+                              } else {
+                                setAttendanceDropdownOpen(s.id)
+                                updateDropdownPosition(e.currentTarget)
+                              }
+                            }}
+                            className="text-sm px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-1.5"
+                          >
+                            <Icons.plus size={14} />
+                            Toevoegen
+                          </button>
+
+                          {attendanceDropdownOpen === s.id && typeof document !== 'undefined' && createPortal(
+                            <div
+                              ref={attendanceDropdownRef}
+                              style={dropdownStyle}
+                              className="bg-workx-dark border border-white/10 rounded-lg shadow-2xl py-1 max-h-60 overflow-y-auto"
+                            >
+                              {teamMembers.map(member => {
+                                const isSelected = attendees.includes(member.id)
+                                const photo = getPhotoUrl(member.name)
+                                return (
+                                  <button
+                                    key={member.id}
+                                    onClick={() => toggleAttendee(s.id, member.id)}
+                                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                                      isSelected ? 'text-workx-lime bg-workx-lime/10' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                                    }`}
+                                  >
+                                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-all ${
+                                      isSelected ? 'bg-workx-lime/20 border-workx-lime/50' : 'border-white/20'
+                                    }`}>
+                                      {isSelected && <Icons.check size={10} className="text-workx-lime" />}
+                                    </div>
+                                    {photo ? (
+                                      <img src={photo} alt={member.name} className="w-5 h-5 rounded-md object-cover" />
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
+                                        {member.name.charAt(0)}
+                                      </div>
+                                    )}
+                                    <span>{member.name}</span>
+                                  </button>
+                                )
+                              })}
+                            </div>,
+                            document.body
+                          )}
+                        </div>
+
+                        {/* Save button */}
+                        {hasChanges && (
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleSaveAttendance(s.id) }}
+                              disabled={savingAttendance === s.id}
+                              className="btn-primary text-sm flex items-center gap-2"
+                            >
+                              {savingAttendance === s.id ? (
+                                <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                              ) : (
+                                <Icons.check size={14} />
+                              )}
+                              Opslaan
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </SpotlightCard>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="border-t border-white/10 my-6" />
+
+          {/* Individual overview */}
+          <SpotlightCard className="card p-5">
+            <h3 className="font-medium text-white mb-4">Individueel overzicht</h3>
+
+            {/* Person selector */}
+            <div className="mb-4">
+              <label className="block text-sm text-gray-400 mb-2">Selecteer medewerker</label>
+              <select
+                value={selectedPerson || ''}
+                onChange={(e) => {
+                  setSelectedPerson(e.target.value || null)
+                  // Auto-select all sessions the person attended
+                  if (e.target.value) {
+                    const personSessions = getPersonSessions(e.target.value)
+                    setSelectedOverviewSessions(new Set(personSessions.map(s => s.id)))
+                  } else {
+                    setSelectedOverviewSessions(new Set())
+                  }
+                }}
+                className="input-field"
+              >
+                <option value="">-- Selecteer --</option>
+                {teamMembers.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Person's sessions */}
+            {selectedPerson && (() => {
+              const personSessions = getPersonSessions(selectedPerson)
+              const person = teamMembers.find(m => m.id === selectedPerson)
+              if (personSessions.length === 0) {
+                return (
+                  <p className="text-gray-500 text-sm">
+                    {person?.name} heeft geen sessies bijgewoond in {selectedYear}
+                  </p>
+                )
+              }
+              return (
+                <div className="space-y-2">
+                  {personSessions.map(s => (
+                    <label
+                      key={s.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedOverviewSessions.has(s.id) ? 'bg-workx-lime/5' : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                          selectedOverviewSessions.has(s.id) ? 'bg-workx-lime' : 'border-2 border-white/20'
+                        }`}
+                      >
+                        {selectedOverviewSessions.has(s.id) && (
+                          <Icons.check size={12} className="text-workx-dark" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-medium truncate">{s.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(s.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {' '}&bull; {s.points} {s.points === 1 ? 'punt' : 'punten'}
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={selectedOverviewSessions.has(s.id)}
+                        onChange={() => {
+                          setSelectedOverviewSessions(prev => {
+                            const next = new Set(prev)
+                            if (next.has(s.id)) next.delete(s.id)
+                            else next.add(s.id)
+                            return next
+                          })
+                        }}
+                      />
+                    </label>
+                  ))}
+
+                  {/* Print buttons */}
+                  <div className="flex gap-2 pt-3">
+                    <button
+                      onClick={() => handlePrintPersonOverview(selectedPerson, selectedOverviewSessions)}
+                      disabled={selectedOverviewSessions.size === 0}
+                      className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <Icons.printer size={14} />
+                      Print selectie ({selectedOverviewSessions.size})
+                    </button>
+                    <button
+                      onClick={() => handlePrintPersonOverview(selectedPerson, new Set(personSessions.map(s => s.id)))}
+                      className="btn-secondary text-sm flex items-center gap-2"
+                    >
+                      <Icons.printer size={14} />
+                      Print alles
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
+          </SpotlightCard>
         </div>
         </ScrollReveal>
       )}
