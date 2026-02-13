@@ -79,6 +79,7 @@ export async function GET() {
       pendingVacationRequests,
       myVacationRequests,
       allApprovedVacations,
+      calendarAbsenceEvents,
     ] = await Promise.all([
       // 1. Calendar Events - upcoming events (fetch more to allow social event prioritization)
       prisma.calendarEvent.findMany({
@@ -372,6 +373,29 @@ export async function GET() {
         },
         orderBy: { startDate: 'asc' },
       }).catch(() => []),
+
+      // 20. Calendar Absences - ABSENCE category events for current + next week (was separate fetch in page.tsx)
+      (() => {
+        const startOfWeek = new Date(now)
+        startOfWeek.setDate(now.getDate() - now.getDay() + 1) // Monday
+        startOfWeek.setHours(0, 0, 0, 0)
+        const endOfNextWeek = new Date(startOfWeek)
+        endOfNextWeek.setDate(startOfWeek.getDate() + 13) // Sunday next week
+        endOfNextWeek.setHours(23, 59, 59, 999)
+        return prisma.calendarEvent.findMany({
+          where: {
+            category: 'ABSENCE',
+            startTime: { lte: endOfNextWeek },
+            endTime: { gte: startOfWeek },
+          },
+          include: {
+            createdBy: {
+              select: { id: true, name: true },
+            },
+          },
+          orderBy: { startTime: 'asc' },
+        })
+      })().catch(() => []),
     ])
 
     // Calculate vacation balance totals for easier frontend use
@@ -522,11 +546,21 @@ export async function GET() {
         currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
       ) ? allApprovedVacations : [],
       myVacationRequests: myVacationRequests,
+      // Calendar absences (ABSENCE category events for current + next week)
+      calendarAbsences: (calendarAbsenceEvents as any[]).map((e: any) => ({
+        id: e.id,
+        personName: e.createdBy?.name || e.title?.replace('Afwezig: ', '') || 'Onbekend',
+        startDate: e.startTime,
+        endDate: e.endTime,
+        note: e.description || e.title,
+        color: '#f97316',
+        isCalendarEvent: true,
+      })),
       // Meta information
       fetchedAt: now.toISOString(),
     }, {
       headers: {
-        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120'
+        'Cache-Control': 'private, max-age=120, stale-while-revalidate=300'
       }
     })
   } catch (error) {

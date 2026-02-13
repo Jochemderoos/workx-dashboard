@@ -46,7 +46,7 @@ const realtimeOptions: SWRConfiguration = {
 export function useDashboardSummary() {
   return useSWR('/api/dashboard/summary', fetcher, {
     ...defaultOptions,
-    refreshInterval: 60 * 1000, // 1 minute
+    refreshInterval: 2 * 60 * 1000, // 2 minutes
   })
 }
 

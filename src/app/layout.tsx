@@ -3,8 +3,9 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { Toaster } from 'react-hot-toast'
-import ConsoleEasterEgg from '@/components/ui/ConsoleEasterEgg'
-import PWARegister from '@/components/PWARegister'
+import dynamic from 'next/dynamic'
+const ConsoleEasterEgg = dynamic(() => import('@/components/ui/ConsoleEasterEgg'), { ssr: false })
+const PWARegister = dynamic(() => import('@/components/PWARegister'), { ssr: false })
 
 const inter = Inter({ subsets: ['latin'] })
 

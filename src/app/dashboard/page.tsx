@@ -841,11 +841,29 @@ export default function DashboardHome() {
     }))
   }, [summaryData?.feedback])
 
+  // Derive work items, vacations, and calendar absences from summary (no separate fetches needed)
+  const workItems: WorkItem[] = useMemo(() => {
+    return (summaryData?.workItems || []).slice(0, 5)
+  }, [summaryData?.workItems])
+
+  const vacations: VacationData[] = useMemo(() => {
+    if (!summaryData?.upcomingVacations) return []
+    const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#ef4444', '#6366f1']
+    return summaryData.upcomingVacations.map((v: any, i: number) => ({
+      id: v.id,
+      personName: v.personName,
+      startDate: v.startDate,
+      endDate: v.endDate,
+      note: v.note || null,
+      color: colors[i % colors.length],
+    }))
+  }, [summaryData?.upcomingVacations])
+
+  const calendarAbsences: CalendarAbsence[] = useMemo(() => {
+    return summaryData?.calendarAbsences || []
+  }, [summaryData?.calendarAbsences])
+
   // Remaining UI state
-  const [workItems, setWorkItems] = useState<WorkItem[]>([])
-  const [vacations, setVacations] = useState<VacationData[]>([])
-  const [calendarAbsences, setCalendarAbsences] = useState<CalendarAbsence[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showVacationDetails, setShowVacationDetails] = useState(false)
   const [showCountdownPopup, setShowCountdownPopup] = useState(false)
@@ -1066,84 +1084,7 @@ export default function DashboardHome() {
     }
   }, [])
 
-  // Supplementary data fetches (summary is handled by SWR hook above)
-  useEffect(() => {
-    Promise.all([
-      fetchWork(),
-      fetchVacations(),
-      fetchCalendarAbsences(),
-    ]).finally(() => setIsLoading(false))
-  }, [])
-
-  // fetchEvents removed - now handled by fetchDashboardSummary
-
-  const fetchWork = async () => {
-    try {
-      const res = await fetch('/api/work?limit=5')
-      if (res.ok) {
-        const data = await res.json()
-        setWorkItems(data.filter((w: WorkItem) => w.status !== 'COMPLETED').slice(0, 5))
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  const fetchVacations = async () => {
-    try {
-      const res = await fetch('/api/vacation/requests?all=true')
-      if (res.ok) {
-        const data = await res.json()
-        // Transform API data to VacationData format
-        const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#ef4444', '#6366f1']
-        const transformed: VacationData[] = data.map((v: any, i: number) => ({
-          id: v.id,
-          personName: v.user?.name || 'Onbekend',
-          startDate: v.startDate,
-          endDate: v.endDate,
-          note: v.reason || null,
-          color: colors[i % colors.length],
-        }))
-        setVacations(transformed)
-      }
-    } catch (e) {
-      console.error('Error fetching vacations:', e)
-    }
-  }
-
-  // Fetch calendar events with ABSENCE category (part-time days, etc.)
-  const fetchCalendarAbsences = async () => {
-    try {
-      // Get 2 weeks range
-      const today = new Date()
-      const startOfWeek = new Date(today)
-      startOfWeek.setDate(today.getDate() - today.getDay() + 1) // Monday
-      const endOfNextWeek = new Date(startOfWeek)
-      endOfNextWeek.setDate(startOfWeek.getDate() + 13) // Sunday next week
-
-      const res = await fetch(`/api/calendar?startDate=${formatDateForAPI(startOfWeek)}&endDate=${formatDateForAPI(endOfNextWeek)}`)
-      if (res.ok) {
-        const data = await res.json()
-        // Filter only ABSENCE category events and transform
-        const absenceEvents = data
-          .filter((e: any) => e.category === 'ABSENCE')
-          .map((e: any) => ({
-            id: e.id,
-            personName: e.createdBy?.name || e.title.replace('Afwezig: ', ''),
-            startDate: e.startTime,
-            endDate: e.endTime,
-            note: e.description || e.title,
-            color: '#f97316', // Orange for absences
-            isCalendarEvent: true,
-          }))
-        setCalendarAbsences(absenceEvents)
-      }
-    } catch (e) {
-      console.error('Error fetching calendar absences:', e)
-    }
-  }
-
-  // fetchFeedback and fetchCurrentUser removed - now handled by fetchDashboardSummary
+  // fetchWork, fetchVacations, fetchCalendarAbsences removed - now bundled in summary API
 
   // Helper to format date string
   const formatDateStr = (date: Date) => {
@@ -1424,7 +1365,7 @@ export default function DashboardHome() {
   const pendingOverviewArticles = newsletterOverview?.filter(a => a.status === 'PENDING') || []
 
   // Show skeleton during initial load
-  if (isLoading || summaryLoading) {
+  if (summaryLoading) {
     return <DashboardSkeleton />
   }
 
