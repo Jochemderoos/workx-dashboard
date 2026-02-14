@@ -476,6 +476,35 @@ export default function OpleidingenPage() {
     }
   }
 
+  const handleDistributeCertificates = async (s: TrainingSession) => {
+    const attendeeIds = s.attendances?.map(a => a.user.id) || []
+    if (attendeeIds.length === 0) {
+      toast.error('Sla eerst de aanwezigheid op')
+      return
+    }
+    if (!confirm(`Certificaat "${s.title}" aanmaken voor ${attendeeIds.length} deelnemers?`)) return
+
+    try {
+      const res = await fetch('/api/training/certificates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: s.id,
+          trainingName: s.title,
+          provider: s.speaker,
+          completedDate: s.date,
+          points: s.points,
+          userIds: attendeeIds,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      toast.success(`${data.count} certificaten aangemaakt`)
+    } catch {
+      toast.error('Kon certificaten niet aanmaken')
+    }
+  }
+
   const toggleAttendee = (sessionId: string, userId: string) => {
     setSessionAttendees(prev => {
       const current = prev[sessionId] || []
@@ -1948,9 +1977,18 @@ export default function OpleidingenPage() {
                           })}
                         </div>
 
-                        {/* Save button */}
-                        {hasChanges && (
-                          <div className="mt-3 flex justify-end">
+                        {/* Action buttons */}
+                        <div className="mt-3 flex items-center justify-between">
+                          {savedAttendees.length > 0 && !hasChanges ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDistributeCertificates(s) }}
+                              className="btn-secondary text-sm flex items-center gap-2"
+                            >
+                              <Icons.award size={14} />
+                              Certificaten uitdelen ({savedAttendees.length})
+                            </button>
+                          ) : <div />}
+                          {hasChanges && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleSaveAttendance(s.id) }}
                               disabled={savingAttendance === s.id}
@@ -1963,8 +2001,8 @@ export default function OpleidingenPage() {
                               )}
                               Opslaan
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     )}
                     </>

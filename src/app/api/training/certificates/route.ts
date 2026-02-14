@@ -99,6 +99,50 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PUT - Bulk create certificates for session attendees
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { sessionId, trainingName, provider, completedDate, points, userIds } = body as {
+      sessionId: string
+      trainingName: string
+      provider?: string
+      completedDate: string
+      points: number
+      userIds: string[]
+    }
+
+    if (!trainingName || !completedDate || !points || !userIds?.length) {
+      return NextResponse.json({ error: 'Verplichte velden ontbreken' }, { status: 400 })
+    }
+
+    const date = new Date(completedDate)
+    const year = date.getFullYear()
+
+    const created = await prisma.certificate.createMany({
+      data: userIds.map(userId => ({
+        userId,
+        year,
+        trainingName,
+        provider: provider || null,
+        completedDate: date,
+        points: parseFloat(String(points)),
+        note: sessionId ? `Sessie: ${sessionId}` : null,
+      })),
+    })
+
+    return NextResponse.json({ success: true, count: created.count })
+  } catch (error) {
+    console.error('Error bulk creating certificates:', error)
+    return NextResponse.json({ error: 'Kon certificaten niet aanmaken' }, { status: 500 })
+  }
+}
+
 // DELETE - Delete a certificate
 export async function DELETE(req: NextRequest) {
   try {
