@@ -593,25 +593,33 @@ export default function OpleidingenPage() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; }
-          .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f9ff85; }
-          .logo { font-size: 24px; font-weight: 600; margin-bottom: 5px; }
-          .logo span { background: #f9ff85; padding: 2px 8px; border-radius: 4px; }
-          .subtitle { color: #666; font-size: 12px; letter-spacing: 2px; }
+          .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #f9ff85; }
+          .logo img { height: 50px; object-fit: contain; }
           h1 { font-size: 20px; margin-top: 20px; }
-          .meta { color: #666; margin-top: 8px; font-size: 14px; }
+          .meta { color: #666; margin-top: 8px; font-size: 14px; line-height: 1.6; }
+          .session-details { background: #fafafa; padding: 16px 20px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #f9ff85; }
+          .session-details p { margin: 4px 0; font-size: 13px; color: #555; }
+          .session-details strong { color: #333; }
           table { width: 100%; border-collapse: collapse; margin-top: 30px; }
           th { text-align: left; padding: 12px; background: #f5f5f5; font-weight: 600; border-bottom: 2px solid #ddd; }
           td { padding: 12px; border-bottom: 1px solid #eee; }
           .count { margin-top: 20px; font-size: 14px; color: #666; }
-          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; }
-          @media print { body { padding: 20px; } @page { margin: 20mm; } }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; text-align: center; }
+          .footer-bar { background: #333; color: white; padding: 10px; text-align: center; font-size: 10px; margin-top: 10px; border-radius: 4px; }
+          @media print { body { padding: 20px; } @page { margin: 20mm; } .footer-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
       </head><body>
         <div class="header">
-          <div class="logo"><span>Workx</span></div>
-          <div class="subtitle">ADVOCATEN</div>
+          <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
           <h1>Presentielijst: ${s.title}</h1>
-          <p class="meta">Spreker: ${s.speaker} &bull; Datum: ${new Date(s.date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${s.startTime ? ` &bull; ${s.startTime}${s.endTime ? ' - ' + s.endTime : ''}` : ''} &bull; ${s.points} PO-${s.points === 1 ? 'punt' : 'punten'}</p>
+          <div class="session-details">
+            <p><strong>Spreker:</strong> ${s.speaker}</p>
+            <p><strong>Datum:</strong> ${new Date(s.date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            ${s.startTime ? `<p><strong>Tijd:</strong> ${s.startTime}${s.endTime ? ' - ' + s.endTime : ''}</p>` : ''}
+            ${s.location ? `<p><strong>Locatie:</strong> ${s.location}</p>` : ''}
+            <p><strong>PO-punten:</strong> ${s.points} ${s.points === 1 ? 'punt' : 'punten'}</p>
+            ${s.description ? `<p style="margin-top:8px; font-style:italic; color:#777;">${s.description}</p>` : ''}
+          </div>
         </div>
         <p class="count">${attendees.length} aanwezige${attendees.length !== 1 ? 'n' : ''}</p>
         <table>
@@ -622,7 +630,7 @@ export default function OpleidingenPage() {
         </table>
         <div class="footer">
           <p>Gegenereerd op ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-          <p>Workx Advocaten - Presentielijst</p>
+          <div class="footer-bar">Workx Advocaten &bull; Herengracht 448, 1017 CA Amsterdam &bull; +31 (0)20 308 03 20 &bull; info@workxadvocaten.nl</div>
         </div>
       </body></html>
     `)
@@ -644,26 +652,31 @@ export default function OpleidingenPage() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; }
-          .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f9ff85; }
-          .logo { font-size: 24px; font-weight: 600; margin-bottom: 5px; }
-          .logo span { background: #f9ff85; padding: 2px 8px; border-radius: 4px; }
-          .subtitle { color: #666; font-size: 12px; letter-spacing: 2px; }
+          .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #f9ff85; }
+          .logo img { height: 50px; object-fit: contain; }
           h1 { font-size: 20px; margin-top: 20px; }
-          .person { color: #666; margin-top: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-          th { text-align: left; padding: 12px; background: #f5f5f5; font-weight: 600; border-bottom: 2px solid #ddd; }
+          .person { color: #555; margin-top: 5px; font-size: 16px; font-weight: 500; }
+          .summary-box { background: #fafafa; border-left: 4px solid #f9ff85; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+          .summary-box .total { font-size: 28px; font-weight: 700; color: #333; }
+          .summary-box .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { text-align: left; padding: 12px; background: #f5f5f5; font-weight: 600; border-bottom: 2px solid #ddd; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; }
           td { padding: 12px; border-bottom: 1px solid #eee; }
           .points { text-align: right; font-weight: 600; }
           .total-row { background: #f9ff85; font-weight: 700; }
-          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; }
-          @media print { body { padding: 20px; } @page { margin: 20mm; } }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; text-align: center; }
+          .footer-bar { background: #333; color: white; padding: 10px; text-align: center; font-size: 10px; margin-top: 10px; border-radius: 4px; }
+          @media print { body { padding: 20px; } @page { margin: 20mm; } .total-row, .footer-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
       </head><body>
         <div class="header">
-          <div class="logo"><span>Workx</span></div>
-          <div class="subtitle">ADVOCATEN</div>
+          <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
           <h1>Individueel Opleidingsoverzicht ${selectedYear}</h1>
           <p class="person">${person.name}</p>
+        </div>
+        <div class="summary-box">
+          <div class="total">${totalPoints} PO-punten</div>
+          <div class="label">${selectedSessions.length} opleiding${selectedSessions.length !== 1 ? 'en' : ''} bijgewoond</div>
         </div>
         <table>
           <thead><tr><th>Opleiding</th><th>Spreker</th><th>Datum</th><th class="points">Punten</th></tr></thead>
@@ -684,7 +697,7 @@ export default function OpleidingenPage() {
         </table>
         <div class="footer">
           <p>Gegenereerd op ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-          <p>Workx Advocaten - Opleidingsoverzicht</p>
+          <div class="footer-bar">Workx Advocaten &bull; Herengracht 448, 1017 CA Amsterdam &bull; +31 (0)20 308 03 20 &bull; info@workxadvocaten.nl</div>
         </div>
       </body></html>
     `)
@@ -714,10 +727,8 @@ export default function OpleidingenPage() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; }
-          .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #f9ff85; }
-          .logo { font-size: 24px; font-weight: 600; margin-bottom: 5px; }
-          .logo span { background: #f9ff85; padding: 2px 8px; border-radius: 4px; }
-          .subtitle { color: #666; font-size: 12px; letter-spacing: 2px; }
+          .header { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #f9ff85; }
+          .logo img { height: 50px; object-fit: contain; }
           h1 { font-size: 20px; margin-top: 20px; }
           .summary { background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; }
           .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
@@ -727,24 +738,25 @@ export default function OpleidingenPage() {
           .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 15px; overflow: hidden; }
           .progress-fill { height: 100%; background: linear-gradient(90deg, #f9ff85, #c5e600); border-radius: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-          th { text-align: left; padding: 12px; background: #f5f5f5; font-weight: 600; border-bottom: 2px solid #ddd; }
+          th { text-align: left; padding: 12px; background: #f5f5f5; font-weight: 600; border-bottom: 2px solid #ddd; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; }
           td { padding: 12px; border-bottom: 1px solid #eee; }
           tr:last-child td { border-bottom: none; }
           .points { text-align: right; font-weight: 600; }
           .total-row { background: #f9ff85; font-weight: 700; }
-          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 11px; text-align: center; }
+          .footer-bar { background: #333; color: white; padding: 10px; text-align: center; font-size: 10px; margin-top: 10px; border-radius: 4px; }
           @media print {
             body { padding: 20px; }
             @page { margin: 20mm; }
+            .progress-fill, .total-row, .footer-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         </style>
       </head>
       <body>
         <div class="header">
-          <div class="logo"><span>Workx</span></div>
-          <div class="subtitle">ADVOCATEN</div>
+          <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
           <h1>PO-punten Overzicht ${selectedYear}</h1>
-          <p style="color: #666; margin-top: 5px;">${userName}</p>
+          <p style="color: #555; margin-top: 5px; font-size: 16px; font-weight: 500;">${userName}</p>
         </div>
 
         <div class="summary">
@@ -759,7 +771,7 @@ export default function OpleidingenPage() {
             </div>
             <div class="summary-item">
               <div class="summary-value" style="color: ${pointsSummary.isComplete ? '#22c55e' : '#f59e0b'}">
-                ${pointsSummary.isComplete ? '✓' : pointsSummary.remainingPoints}
+                ${pointsSummary.isComplete ? '&#10003;' : pointsSummary.remainingPoints}
               </div>
               <div class="summary-label">${pointsSummary.isComplete ? 'Voldaan' : 'Nog te behalen'}</div>
             </div>
@@ -796,7 +808,7 @@ export default function OpleidingenPage() {
 
         <div class="footer">
           <p>Gegenereerd op ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-          <p>Workx Advocaten - PO-punten Registratie</p>
+          <div class="footer-bar">Workx Advocaten &bull; Herengracht 448, 1017 CA Amsterdam &bull; +31 (0)20 308 03 20 &bull; info@workxadvocaten.nl</div>
         </div>
       </body>
       </html>
@@ -821,41 +833,50 @@ export default function OpleidingenPage() {
         <title>Certificaat - ${cert.trainingName}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 60px; color: #333; }
-          .certificate { max-width: 600px; margin: 0 auto; text-align: center; border: 3px solid #f9ff85; padding: 50px; border-radius: 12px; }
-          .logo { font-size: 28px; font-weight: 600; margin-bottom: 5px; }
-          .logo span { background: #f9ff85; padding: 4px 12px; border-radius: 6px; }
-          .subtitle { color: #666; font-size: 10px; letter-spacing: 3px; margin-bottom: 40px; }
-          h1 { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
-          .training-name { font-size: 24px; font-weight: 700; margin-bottom: 30px; line-height: 1.3; }
-          .name { font-size: 20px; font-weight: 600; margin-bottom: 5px; }
-          .details { margin-top: 30px; padding-top: 30px; border-top: 1px solid #eee; }
-          .detail-row { display: flex; justify-content: space-between; margin: 10px 0; }
-          .detail-label { color: #666; }
-          .detail-value { font-weight: 500; }
-          .points-badge { display: inline-block; background: #f9ff85; padding: 10px 25px; border-radius: 50px; font-size: 18px; font-weight: 700; margin-top: 25px; }
-          .footer { margin-top: 40px; color: #999; font-size: 11px; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+          .certificate { max-width: 650px; width: 100%; margin: 0 auto; text-align: center; border: 3px solid #f9ff85; padding: 50px 40px; border-radius: 12px; position: relative; }
+          .certificate::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid #f0f0f0; border-radius: 8px; pointer-events: none; }
+          .logo { margin-bottom: 10px; }
+          .logo img { height: 55px; object-fit: contain; }
+          .divider { width: 80px; height: 3px; background: #f9ff85; margin: 25px auto; border-radius: 2px; }
+          h1 { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 10px; font-weight: 400; }
+          .training-name { font-size: 22px; font-weight: 700; margin-bottom: 25px; line-height: 1.4; color: #222; }
+          .certifies { color: #888; font-size: 13px; margin-bottom: 8px; }
+          .name { font-size: 24px; font-weight: 700; margin-bottom: 5px; color: #222; }
+          .name-underline { width: 200px; height: 1px; background: #ddd; margin: 0 auto 8px; }
+          .completed { color: #888; font-size: 13px; }
+          .details { margin-top: 30px; padding-top: 25px; border-top: 1px solid #eee; text-align: left; }
+          .detail-row { display: flex; justify-content: space-between; margin: 8px 0; padding: 6px 0; }
+          .detail-row:not(:last-child) { border-bottom: 1px solid #f5f5f5; }
+          .detail-label { color: #888; font-size: 13px; }
+          .detail-value { font-weight: 500; font-size: 13px; color: #333; }
+          .points-badge { display: inline-block; background: linear-gradient(135deg, #f9ff85, #e8f060); padding: 12px 30px; border-radius: 50px; font-size: 18px; font-weight: 700; margin-top: 25px; color: #333; }
+          .footer { margin-top: 35px; padding-top: 20px; border-top: 1px solid #eee; }
+          .footer-text { color: #aaa; font-size: 10px; }
+          .footer-bar { background: #333; color: white; padding: 8px; text-align: center; font-size: 9px; margin-top: 12px; border-radius: 4px; letter-spacing: 0.3px; }
           ${cert.certificateUrl ? `
-          .original-cert { margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee; }
+          .original-cert { margin-top: 30px; padding-top: 25px; border-top: 1px solid #eee; }
           .original-cert img { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
           ` : ''}
           @media print {
             body { padding: 20px; }
             @page { margin: 15mm; }
+            .points-badge, .footer-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         </style>
       </head>
       <body>
         <div class="certificate">
-          <div class="logo"><span>Workx</span></div>
-          <div class="subtitle">ADVOCATEN</div>
+          <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
+          <div class="divider"></div>
 
           <h1>Certificaat Permanente Opleiding</h1>
           <div class="training-name">${cert.trainingName}</div>
 
-          <p style="color: #666; margin-bottom: 10px;">Dit certificeert dat</p>
+          <p class="certifies">Dit certificeert dat</p>
           <div class="name">${userName}</div>
-          <p style="color: #666;">deze opleiding heeft afgerond</p>
+          <div class="name-underline"></div>
+          <p class="completed">deze opleiding succesvol heeft afgerond</p>
 
           <div class="details">
             ${cert.provider ? `
@@ -865,22 +886,29 @@ export default function OpleidingenPage() {
             </div>
             ` : ''}
             <div class="detail-row">
-              <span class="detail-label">Datum afgerond</span>
-              <span class="detail-value">${new Date(cert.completedDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              <span class="detail-label">Datum</span>
+              <span class="detail-value">${new Date(cert.completedDate).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
             </div>
+            ${cert.note ? `
+            <div class="detail-row">
+              <span class="detail-label">Referentie</span>
+              <span class="detail-value">${cert.note}</span>
+            </div>
+            ` : ''}
           </div>
 
           <div class="points-badge">${cert.points} PO-${cert.points === 1 ? 'punt' : 'punten'}</div>
 
           ${cert.certificateUrl ? `
           <div class="original-cert">
-            <p style="color: #666; margin-bottom: 15px; font-size: 12px;">Origineel certificaat:</p>
+            <p style="color: #888; margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Origineel certificaat</p>
             <img src="${cert.certificateUrl}" alt="Origineel certificaat" />
           </div>
           ` : ''}
 
           <div class="footer">
-            <p>Workx Advocaten - PO-punten Registratie</p>
+            <p class="footer-text">Gegenereerd op ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            <div class="footer-bar">Workx Advocaten &bull; Herengracht 448, 1017 CA Amsterdam &bull; +31 (0)20 308 03 20 &bull; info@workxadvocaten.nl</div>
           </div>
         </div>
       </body>
@@ -938,17 +966,19 @@ export default function OpleidingenPage() {
       <div class="certificate ${index > 0 ? 'page-break' : ''}">
         <div class="certificate-inner">
           <div class="header">
-            <div class="logo"><span>Workx</span></div>
-            <div class="subtitle">ADVOCATEN</div>
+            <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
           </div>
+          <div class="divider-line"></div>
           <div class="badge">CERTIFICAAT</div>
+          <p class="label">Dit certificeert dat</p>
           <div class="name">${userName}</div>
-          <p class="label">heeft succesvol deelgenomen aan</p>
+          <div class="name-line"></div>
+          <p class="label">succesvol heeft deelgenomen aan</p>
           <div class="training">${cert.trainingName}</div>
           ${cert.provider ? `<p class="provider">${cert.provider}</p>` : ''}
           <div class="details">
             <div class="detail">
-              <div class="detail-value">${new Date(cert.completedDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+              <div class="detail-value">${new Date(cert.completedDate).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
               <div class="detail-label">Datum</div>
             </div>
             <div class="detail">
@@ -956,12 +986,16 @@ export default function OpleidingenPage() {
               <div class="detail-label">PO-punten</div>
             </div>
           </div>
+          ${cert.note ? `<p class="ref">Ref: ${cert.note}</p>` : ''}
           ${cert.certificateUrl ? `
           <div class="original">
-            <p style="color: #666; margin-bottom: 15px; font-size: 12px;">Origineel certificaat:</p>
+            <p style="color: #888; margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Origineel certificaat</p>
             <img src="${cert.certificateUrl}" alt="Origineel certificaat" />
           </div>
           ` : ''}
+          <div class="cert-footer">
+            <div class="footer-bar">Workx Advocaten &bull; Herengracht 448, 1017 CA Amsterdam &bull; +31 (0)20 308 03 20</div>
+          </div>
         </div>
       </div>
     `).join('')
@@ -975,27 +1009,32 @@ export default function OpleidingenPage() {
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; }
           .certificate { padding: 40px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-          .certificate-inner { max-width: 600px; width: 100%; text-align: center; border: 3px solid #f9ff85; padding: 50px; border-radius: 12px; background: white; }
+          .certificate-inner { max-width: 650px; width: 100%; text-align: center; border: 3px solid #f9ff85; padding: 50px 40px; border-radius: 12px; background: white; position: relative; }
+          .certificate-inner::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid #f0f0f0; border-radius: 8px; pointer-events: none; }
           .page-break { page-break-before: always; }
-          .header { margin-bottom: 30px; }
-          .logo { font-size: 28px; font-weight: 600; margin-bottom: 5px; }
-          .logo span { background: #f9ff85; padding: 2px 10px; border-radius: 4px; }
-          .subtitle { color: #666; font-size: 11px; letter-spacing: 3px; }
-          .badge { display: inline-block; background: linear-gradient(135deg, #f9ff85, #e8f060); padding: 8px 24px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 3px; margin: 30px 0 20px; }
-          .name { font-size: 28px; font-weight: 700; margin: 20px 0 10px; }
-          .label { color: #666; margin-bottom: 15px; }
-          .training { font-size: 20px; font-weight: 600; color: #333; margin: 15px 0; }
-          .provider { color: #666; margin-bottom: 30px; }
-          .details { display: flex; justify-content: center; gap: 60px; margin: 30px 0; }
+          .header { margin-bottom: 10px; }
+          .logo img { height: 55px; object-fit: contain; }
+          .divider-line { width: 80px; height: 3px; background: #f9ff85; margin: 20px auto; border-radius: 2px; }
+          .badge { display: inline-block; background: linear-gradient(135deg, #f9ff85, #e8f060); padding: 8px 24px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 3px; margin: 15px 0 20px; }
+          .name { font-size: 26px; font-weight: 700; margin: 15px 0 5px; color: #222; }
+          .name-line { width: 200px; height: 1px; background: #ddd; margin: 0 auto 8px; }
+          .label { color: #888; margin-bottom: 5px; font-size: 13px; }
+          .training { font-size: 20px; font-weight: 600; color: #222; margin: 15px 0; line-height: 1.4; }
+          .provider { color: #666; margin-bottom: 20px; }
+          .ref { color: #aaa; font-size: 11px; margin-top: -10px; margin-bottom: 10px; }
+          .details { display: flex; justify-content: center; gap: 60px; margin: 25px 0; }
           .detail { text-align: center; }
-          .detail-value { font-size: 18px; font-weight: 600; }
-          .detail-label { font-size: 11px; color: #999; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
-          .original { margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee; }
+          .detail-value { font-size: 16px; font-weight: 600; color: #333; }
+          .detail-label { font-size: 10px; color: #999; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+          .original { margin-top: 30px; padding-top: 25px; border-top: 1px solid #eee; }
           .original img { max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+          .cert-footer { margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee; }
+          .footer-bar { background: #333; color: white; padding: 8px; text-align: center; font-size: 9px; border-radius: 4px; letter-spacing: 0.3px; }
           @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .certificate { padding: 20px; min-height: auto; }
             .certificate-inner { border: 2px solid #f9ff85; padding: 30px; }
+            .badge, .footer-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             @page { margin: 15mm; }
           }
         </style>
