@@ -363,6 +363,13 @@ export default function OpleidingenPage() {
           attendeeMap[s.id] = s.attendances?.map(a => a.user.id) || []
         })
         setSessionAttendees(attendeeMap)
+        // Auto-select own sessions for individual overview
+        if (session?.user?.id) {
+          const mySessionIds = data
+            .filter((s: TrainingSession) => s.attendances?.some((a: { user: { id: string } }) => a.user.id === session.user.id))
+            .map((s: TrainingSession) => s.id)
+          setSelectedOverviewSessions(new Set(mySessionIds))
+        }
       }
     } catch (error) {
       console.error('Error fetching attendance sessions:', error)
@@ -1971,166 +1978,97 @@ export default function OpleidingenPage() {
           {/* Divider */}
           <div className="border-t border-white/10 my-6" />
 
-          {/* Individual overview */}
-          <SpotlightCard className="card p-5">
-            <h3 className="font-medium text-white mb-4">Individueel overzicht</h3>
+          {/* Individual overview — own sessions only */}
+          {session?.user?.id && (() => {
+            const myId = session.user.id
+            const mySessions = attendanceSessions.filter(s =>
+              s.attendances?.some(a => a.user.id === myId)
+            )
+            const myTotalPoints = mySessions.reduce((sum, s) => sum + s.points, 0)
 
-            {/* Person selector - custom dropdown */}
-            <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">Selecteer medewerker</label>
-              <div className="relative">
-                <button
-                  ref={personAnchorRef}
-                  onClick={(e) => {
-                    if (personDropdownOpen) {
-                      setPersonDropdownOpen(false)
-                    } else {
-                      setPersonDropdownOpen(true)
-                      updatePersonDropdownPosition(e.currentTarget)
-                    }
-                  }}
-                  className="input-field w-full text-left flex items-center justify-between"
-                >
-                  {selectedPerson ? (
-                    <span className="flex items-center gap-2">
-                      {(() => {
-                        const member = teamMembers.find(m => m.id === selectedPerson)
-                        if (!member) return null
-                        const photo = getPhotoUrl(member.name)
-                        return (
-                          <>
-                            {photo ? (
-                              <img src={photo} alt={member.name} className="w-5 h-5 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
-                                {member.name.charAt(0)}
-                              </div>
-                            )}
-                            <span className="text-white">{member.name}</span>
-                          </>
-                        )
-                      })()}
-                    </span>
-                  ) : (
-                    <span className="text-white/30">Selecteer medewerker...</span>
+            return (
+              <SpotlightCard className="card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-medium text-white">Mijn presenties</h3>
+                    <p className="text-sm text-gray-400">
+                      {mySessions.length} {mySessions.length === 1 ? 'sessie' : 'sessies'} bijgewoond in {selectedYear}
+                    </p>
+                  </div>
+                  {mySessions.length > 0 && (
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-workx-lime">{myTotalPoints}</p>
+                      <p className="text-xs text-gray-500">PO-punten</p>
+                    </div>
                   )}
-                  <Icons.chevronDown size={16} className={`text-gray-500 transition-transform ${personDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
+                </div>
 
-                {personDropdownOpen && typeof document !== 'undefined' && createPortal(
-                  <div
-                    ref={personDropdownRef}
-                    style={personDropdownStyle}
-                    className="bg-workx-dark border border-white/10 rounded-lg shadow-2xl py-1 max-h-60 overflow-y-auto"
-                  >
-                    {teamMembers.map(member => {
-                      const isSelected = selectedPerson === member.id
-                      const photo = getPhotoUrl(member.name)
-                      return (
-                        <button
-                          key={member.id}
-                          onClick={() => {
-                            setSelectedPerson(member.id)
-                            setPersonDropdownOpen(false)
-                            const personSessions = getPersonSessions(member.id)
-                            setSelectedOverviewSessions(new Set(personSessions.map(s => s.id)))
-                          }}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                            isSelected ? 'text-workx-lime bg-workx-lime/10' : 'text-white/70 hover:bg-white/5 hover:text-white'
-                          }`}
-                        >
-                          {photo ? (
-                            <img src={photo} alt={member.name} className="w-5 h-5 rounded-md object-cover" />
-                          ) : (
-                            <div className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
-                              {member.name.charAt(0)}
-                            </div>
-                          )}
-                          <span>{member.name}</span>
-                          {isSelected && <Icons.check size={14} className="text-workx-lime ml-auto" />}
-                        </button>
-                      )
-                    })}
-                  </div>,
-                  document.body
-                )}
-              </div>
-            </div>
-
-            {/* Person's sessions */}
-            {selectedPerson && (() => {
-              const personSessions = getPersonSessions(selectedPerson)
-              const person = teamMembers.find(m => m.id === selectedPerson)
-              if (personSessions.length === 0) {
-                return (
-                  <p className="text-gray-500 text-sm">
-                    {person?.name} heeft geen sessies bijgewoond in {selectedYear}
-                  </p>
-                )
-              }
-              return (
-                <div className="space-y-2">
-                  {personSessions.map(s => (
-                    <label
-                      key={s.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedOverviewSessions.has(s.id) ? 'bg-workx-lime/5' : 'hover:bg-white/5'
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                          selectedOverviewSessions.has(s.id) ? 'bg-workx-lime' : 'border-2 border-white/20'
+                {mySessions.length === 0 ? (
+                  <p className="text-gray-500 text-sm">Je hebt nog geen sessies bijgewoond in {selectedYear}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {mySessions.map(s => (
+                      <label
+                        key={s.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                          selectedOverviewSessions.has(s.id) ? 'bg-workx-lime/5' : 'hover:bg-white/5'
                         }`}
                       >
-                        {selectedOverviewSessions.has(s.id) && (
-                          <Icons.check size={12} className="text-workx-dark" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white font-medium truncate">{s.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(s.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
-                          {' '}&bull; {s.points} {s.points === 1 ? 'punt' : 'punten'}
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        className="hidden"
-                        checked={selectedOverviewSessions.has(s.id)}
-                        onChange={() => {
-                          setSelectedOverviewSessions(prev => {
-                            const next = new Set(prev)
-                            if (next.has(s.id)) next.delete(s.id)
-                            else next.add(s.id)
-                            return next
-                          })
-                        }}
-                      />
-                    </label>
-                  ))}
+                        <div
+                          className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                            selectedOverviewSessions.has(s.id) ? 'bg-workx-lime' : 'border-2 border-white/20'
+                          }`}
+                        >
+                          {selectedOverviewSessions.has(s.id) && (
+                            <Icons.check size={12} className="text-workx-dark" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white font-medium truncate">{s.title}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(s.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {' '}&bull; {s.points} {s.points === 1 ? 'punt' : 'punten'}
+                          </p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={selectedOverviewSessions.has(s.id)}
+                          onChange={() => {
+                            setSelectedOverviewSessions(prev => {
+                              const next = new Set(prev)
+                              if (next.has(s.id)) next.delete(s.id)
+                              else next.add(s.id)
+                              return next
+                            })
+                          }}
+                        />
+                      </label>
+                    ))}
 
-                  {/* Print buttons */}
-                  <div className="flex gap-2 pt-3">
-                    <button
-                      onClick={() => handlePrintPersonOverview(selectedPerson, selectedOverviewSessions)}
-                      disabled={selectedOverviewSessions.size === 0}
-                      className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
-                    >
-                      <Icons.printer size={14} />
-                      Print selectie ({selectedOverviewSessions.size})
-                    </button>
-                    <button
-                      onClick={() => handlePrintPersonOverview(selectedPerson, new Set(personSessions.map(s => s.id)))}
-                      className="btn-secondary text-sm flex items-center gap-2"
-                    >
-                      <Icons.printer size={14} />
-                      Print alles
-                    </button>
+                    {/* Print buttons */}
+                    <div className="flex gap-2 pt-3">
+                      <button
+                        onClick={() => handlePrintPersonOverview(myId, selectedOverviewSessions)}
+                        disabled={selectedOverviewSessions.size === 0}
+                        className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Icons.printer size={14} />
+                        Print selectie ({selectedOverviewSessions.size})
+                      </button>
+                      <button
+                        onClick={() => handlePrintPersonOverview(myId, new Set(mySessions.map(s => s.id)))}
+                        className="btn-secondary text-sm flex items-center gap-2"
+                      >
+                        <Icons.printer size={14} />
+                        Print alles
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )
-            })()}
-          </SpotlightCard>
+                )}
+              </SpotlightCard>
+            )
+          })()}
         </div>
         </ScrollReveal>
       )}
