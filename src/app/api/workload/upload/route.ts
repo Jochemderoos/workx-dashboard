@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// Medewerkers voor werkdruk (geen partners)
+// Medewerkers + partners voor werkdruk
 const MEDEWERKERS = [
   'Hanna Blaauboer',
   'Justine Schellekens',
@@ -17,6 +17,11 @@ const MEDEWERKERS = [
   'Barbara Rip',
   'Lotte van Sint Truiden',
   'Julia Groen',
+  'Marnix Ritmeester',
+  'Jochem de Roos',
+  'Maaike de Jong',
+  'Bas den Ridder',
+  'Juliette Niersman',
 ]
 
 // Dutch day and month names for parsing
