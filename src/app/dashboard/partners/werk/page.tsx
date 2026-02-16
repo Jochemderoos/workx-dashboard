@@ -93,6 +93,24 @@ export default function PartnersWerkPage() {
   // State for navigating history
   const [historyOffset, setHistoryOffset] = useState(0)
 
+  // Werkdruk is only available Friday 20:00 – Monday 20:00
+  const isWerkdrukOpen = useMemo(() => {
+    const now = new Date()
+    const day = now.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+    const hour = now.getHours()
+    if (day === 0 || day === 6) return true       // Saturday & Sunday: always open
+    if (day === 5 && hour >= 20) return true       // Friday from 20:00
+    if (day === 1 && hour < 20) return true        // Monday until 20:00
+    return false                                    // Tue-Thu + Mon 20:00+ + Fri before 20:00: closed
+  }, [])
+
+  // Default to toewijzing if werkdruk is closed
+  useEffect(() => {
+    if (!isWerkdrukOpen && pageMode === 'werkdruk') {
+      setPageMode('toewijzing')
+    }
+  }, [isWerkdrukOpen])
+
   // Calculate workdays with offset for navigation
   // Only show today after 20:00 CET
   const workdaysToShow = useMemo(() => {
@@ -463,6 +481,7 @@ export default function PartnersWerkPage() {
         <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {/* Mode Toggle */}
           <div className="flex gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-white/5 rounded-lg sm:rounded-xl">
+            {isWerkdrukOpen && (
             <MagneticButton strength={0.2} radius={100}>
               <button
                 onClick={() => setPageMode('werkdruk')}
@@ -474,6 +493,7 @@ export default function PartnersWerkPage() {
                 <span>Werkdruk</span>
               </button>
             </MagneticButton>
+            )}
             <MagneticButton strength={0.2} radius={100}>
               <button
                 onClick={() => setPageMode('toewijzing')}
