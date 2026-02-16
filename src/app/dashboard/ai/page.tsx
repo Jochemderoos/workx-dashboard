@@ -27,6 +27,8 @@ interface Conversation {
   title: string
   projectId: string | null
   updatedAt: string
+  _count?: { messages: number }
+  project?: { title: string; icon: string; color: string } | null
 }
 
 interface TeamUser {
@@ -66,6 +68,8 @@ export default function AIAssistentPage() {
   const [recentConversations, setRecentConversations] = useState<Conversation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [chatActive, setChatActive] = useState(false)
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [activeTab, setActiveTab] = useState<'chat' | 'projects' | 'bronnen' | 'templates'>('chat')
   const [newProject, setNewProject] = useState({
@@ -90,13 +94,22 @@ export default function AIAssistentPage() {
   const [isSavingToProject, setIsSavingToProject] = useState(false)
 
   useEffect(() => {
-    fetch('/api/claude/projects').then(r => r.json()).then((projectsData) => {
+    Promise.all([
+      fetch('/api/claude/projects').then(r => r.json()),
+      fetch('/api/claude/conversations').then(r => r.json()),
+    ]).then(([projectsData, convsData]) => {
       setProjects(projectsData)
+      if (Array.isArray(convsData)) setRecentConversations(convsData)
     }).catch(() => {
       toast.error('Kon data niet laden')
     }).finally(() => {
       setIsLoading(false)
     })
+
+    // Check URL for conv parameter
+    const urlParams = new URLSearchParams(window.location.search)
+    const convParam = urlParams.get('conv')
+    if (convParam) setSelectedConvId(convParam)
   }, [])
 
   // Fetch users when new project form opens
@@ -333,18 +346,94 @@ export default function AIAssistentPage() {
 
       {/* Content based on active tab */}
       {activeTab === 'chat' && (
-        <div
-          className="rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden transition-all duration-500 ease-in-out"
-          style={{ height: isCompactMode ? 'calc(100vh - 180px)' : 'calc(100vh - 320px)' }}
-        >
-          <ClaudeChat
-            onConversationCreated={handleConversationCreated}
-            onNewChat={() => {
-              window.history.replaceState(null, '', '/dashboard/ai')
-            }}
-            onActiveChange={setChatActive}
-            onSaveToProject={handleSaveToProject}
-          />
+        <div className="flex gap-3" style={{ height: isCompactMode ? 'calc(100vh - 180px)' : 'calc(100vh - 320px)' }}>
+          {/* Conversation history sidebar */}
+          <div className={`rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
+            showHistory ? 'w-72 opacity-100' : 'w-0 opacity-0 border-0 p-0'
+          }`}>
+            {showHistory && (
+              <>
+                <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5">
+                  <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Gesprekken</span>
+                  <button
+                    onClick={() => {
+                      setSelectedConvId(null)
+                      window.history.replaceState(null, '', '/dashboard/ai')
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime text-[11px] font-medium hover:bg-workx-lime/20 transition-colors"
+                  >
+                    <Icons.plus size={12} />
+                    Nieuw
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {recentConversations.length === 0 ? (
+                    <div className="p-4 text-center text-white/20 text-xs">Nog geen gesprekken</div>
+                  ) : (
+                    recentConversations.map((conv) => (
+                      <button
+                        key={conv.id}
+                        onClick={() => {
+                          setSelectedConvId(conv.id)
+                          window.history.replaceState(null, '', `/dashboard/ai?conv=${conv.id}`)
+                        }}
+                        className={`w-full text-left px-3 py-2.5 border-b border-white/[0.03] transition-colors ${
+                          selectedConvId === conv.id
+                            ? 'bg-workx-lime/10 border-l-2 border-l-workx-lime'
+                            : 'hover:bg-white/[0.03]'
+                        }`}
+                      >
+                        <p className="text-sm text-white/80 truncate leading-snug">{conv.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-white/25">
+                            {new Date(conv.updatedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                          </span>
+                          {conv._count?.messages && (
+                            <span className="text-[10px] text-white/20">{conv._count.messages} msg</span>
+                          )}
+                          {conv.project && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/30 truncate max-w-[100px]">
+                              {conv.project.title}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Chat area */}
+          <div className="flex-1 rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden relative">
+            {/* History toggle button */}
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="absolute top-2 left-2 z-20 p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              title={showHistory ? 'Verberg gesprekken' : 'Toon gesprekken'}
+            >
+              <Icons.menu size={14} />
+            </button>
+            <ClaudeChat
+              key={selectedConvId || 'new'}
+              conversationId={selectedConvId}
+              onConversationCreated={(id) => {
+                handleConversationCreated(id)
+                setSelectedConvId(id)
+                // Refresh conversation list
+                fetch('/api/claude/conversations').then(r => r.json()).then(data => {
+                  if (Array.isArray(data)) setRecentConversations(data)
+                }).catch(() => {})
+              }}
+              onNewChat={() => {
+                setSelectedConvId(null)
+                window.history.replaceState(null, '', '/dashboard/ai')
+              }}
+              onActiveChange={setChatActive}
+              onSaveToProject={handleSaveToProject}
+            />
+          </div>
         </div>
       )}
 
