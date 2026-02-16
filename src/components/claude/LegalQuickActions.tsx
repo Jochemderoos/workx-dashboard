@@ -56,7 +56,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     label: 'Wetsartikelen opzoeken',
-    prompt: 'Zoek de relevante wetsartikelen op voor de juridische kwestie in dit dossier. Focus op Boek 7 Burgerlijk Wetboek (arbeidsovereenkomst), Wet werk en zekerheid, en het Ontslagbesluit. Geef de volledige tekst van de meest relevante artikelen.',
+    prompt: 'Zoek de relevante wetsartikelen op voor de juridische kwestie in dit dossier. Focus op Boek 7 Burgerlijk Wetboek (arbeidsovereenkomst), Wet werk en zekerheid, en de Ontslagregeling. Geef de volledige tekst van de meest relevante artikelen.',
     icon: 'books',
     category: 'research',
   },

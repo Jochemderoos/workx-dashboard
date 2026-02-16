@@ -85,12 +85,12 @@ export default function ClaudeChat({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const streamingTextRef = useRef<HTMLSpanElement>(null) // Direct DOM node for streaming text
   const isThinkingRef = useRef(false) // Tracks thinking state inside streaming closure
   const streamBufferRef = useRef('') // Buffered streaming text
-  const scrollThrottleRef = useRef<number>(0) // Throttle scroll during streaming
   const abortControllerRef = useRef<AbortController | null>(null) // For stop button
+  const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null) // Throttled streaming markdown render
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
+  const [streamingContent, setStreamingContent] = useState('') // Throttled streaming text for markdown rendering
 
   const RESPONSE_OPTIONS = [
     { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
@@ -282,6 +282,17 @@ export default function ClaudeChat({
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px'
     }
   }, [input])
+
+  // Escape key to stop generation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isLoading) {
+        abortControllerRef.current?.abort()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isLoading])
 
   // Handle quick action prompts from parent
   useEffect(() => {
@@ -489,6 +500,16 @@ export default function ClaudeChat({
       setOptionsExpanded(false) // Collapse options to maximize answer space
       setStreamingMsgId(assistantMsgId) // Mark which message is streaming
 
+      // Start throttled markdown rendering interval (80ms — smooth incremental rendering)
+      streamBufferRef.current = ''
+      setStreamingContent('')
+      streamIntervalRef.current = setInterval(() => {
+        if (streamBufferRef.current) {
+          setStreamingContent(streamBufferRef.current)
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+        }
+      }, 80)
+
       // Add empty assistant message placeholder
       setMessages(prev => [...prev, {
         id: assistantMsgId,
@@ -542,16 +563,6 @@ export default function ClaudeChat({
               }
               streamedText += event.text
               streamBufferRef.current = streamedText
-              // Direct DOM write — bypasses React entirely, zero re-renders
-              if (streamingTextRef.current) {
-                streamingTextRef.current.textContent = streamedText
-              }
-              // Throttled scroll: max once per 300ms
-              const now = Date.now()
-              if (now - scrollThrottleRef.current > 300) {
-                scrollThrottleRef.current = now
-                messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
-              }
             } else if (event.type === 'status' && event.text) {
               setStatusText(event.text)
             } else if (event.type === 'done') {
@@ -569,6 +580,11 @@ export default function ClaudeChat({
               }
               // Final update: flush content into React state + render markdown
               setStreamingMsgId(null)
+              if (streamIntervalRef.current) {
+                clearInterval(streamIntervalRef.current)
+                streamIntervalRef.current = null
+              }
+              setStreamingContent('')
               setMessages(prev => prev.map(m =>
                 m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel } : m
               ))
@@ -621,6 +637,11 @@ export default function ClaudeChat({
       toast.error(errMsg, { duration: 15000 })
       setStatusText('')
       setStreamingMsgId(null)
+      if (streamIntervalRef.current) {
+        clearInterval(streamIntervalRef.current)
+        streamIntervalRef.current = null
+      }
+      setStreamingContent('')
       setLastFailedMessage(text) // Enable retry
 
       // If we already have streamed content, keep it and add error note
@@ -647,6 +668,10 @@ export default function ClaudeChat({
     } finally {
       setIsLoading(false)
       abortControllerRef.current = null
+      if (streamIntervalRef.current) {
+        clearInterval(streamIntervalRef.current)
+        streamIntervalRef.current = null
+      }
     }
   }
 
@@ -761,11 +786,11 @@ export default function ClaudeChat({
                   <div className="flex-1 min-w-0">
                     <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-white/[0.04] border border-white/[0.08]">
                       {isStreaming ? (
-                        // Streaming: direct DOM ref, zero React re-renders
-                        <div className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap">
-                          <span ref={streamingTextRef} />
-                          <span className="inline-block w-0.5 h-4 bg-workx-lime/60 animate-pulse ml-0.5 align-text-bottom" />
-                        </div>
+                        // Streaming: throttled markdown rendering (80ms interval)
+                        <div
+                          className="claude-response text-sm text-white/90 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(streamingContent) + '<span style="display:inline-block;width:2px;height:14px;background:rgba(249,255,133,0.6);vertical-align:text-bottom;margin-left:2px;animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite"></span>' }}
+                        />
                       ) : (
                         // Completed: full markdown rendering (strip DOCX edit blocks from display)
                         <div
