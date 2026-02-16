@@ -65,14 +65,7 @@ const workloadConfig = {
 export default function PartnersWerkPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
-  const [pageMode, setPageMode] = useState<'toewijzing' | 'werkdruk' | 'urenoverzicht'>(() => {
-    // Default to werkdruk only during the weekend window (Fri 20:00 – Mon 20:00)
-    const now = new Date()
-    const day = now.getDay()
-    const hour = now.getHours()
-    const werkdrukOpen = day === 0 || day === 6 || (day === 5 && hour >= 20) || (day === 1 && hour < 20)
-    return werkdrukOpen ? 'werkdruk' : 'toewijzing'
-  })
+  const [pageMode, setPageMode] = useState<'toewijzing' | 'werkdruk' | 'urenoverzicht'>('werkdruk')
 
   // Monthly hours state
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
@@ -99,24 +92,6 @@ export default function PartnersWerkPage() {
 
   // State for navigating history
   const [historyOffset, setHistoryOffset] = useState(0)
-
-  // Werkdruk is only available Friday 20:00 – Monday 20:00
-  const isWerkdrukOpen = useMemo(() => {
-    const now = new Date()
-    const day = now.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-    const hour = now.getHours()
-    if (day === 0 || day === 6) return true       // Saturday & Sunday: always open
-    if (day === 5 && hour >= 20) return true       // Friday from 20:00
-    if (day === 1 && hour < 20) return true        // Monday until 20:00
-    return false                                    // Tue-Thu + Mon 20:00+ + Fri before 20:00: closed
-  }, [])
-
-  // Default to toewijzing if werkdruk is closed
-  useEffect(() => {
-    if (!isWerkdrukOpen && pageMode === 'werkdruk') {
-      setPageMode('toewijzing')
-    }
-  }, [isWerkdrukOpen])
 
   // Calculate workdays with offset for navigation
   // Only show today after 20:00 CET
@@ -180,10 +155,13 @@ export default function PartnersWerkPage() {
 
   const last3Workdays = daysToDisplay
 
-  // Determine if we should show partners (Sat, Sun, Mon)
+  // Partners are only visible Friday 20:00 – Monday 20:00
   const today = new Date()
-  const currentDayOfWeek = today.getDay() // 0=Sun, 1=Mon, 6=Sat
-  const showPartners = currentDayOfWeek === 0 || currentDayOfWeek === 1 || currentDayOfWeek === 6
+  const currentDayOfWeek = today.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  const currentHourNow = today.getHours()
+  const showPartners = currentDayOfWeek === 0 || currentDayOfWeek === 6  // Sat & Sun: always
+    || (currentDayOfWeek === 5 && currentHourNow >= 20)                  // Friday from 20:00
+    || (currentDayOfWeek === 1 && currentHourNow < 20)                   // Monday until 20:00
   const peopleToShow = showPartners ? [...PARTNERS, ...ADVOCATEN] : ADVOCATEN
 
   // Helper to check if a date is a weekend
@@ -488,7 +466,6 @@ export default function PartnersWerkPage() {
         <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto">
           {/* Mode Toggle */}
           <div className="flex gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-white/5 rounded-lg sm:rounded-xl">
-            {isWerkdrukOpen && (
             <MagneticButton strength={0.2} radius={100}>
               <button
                 onClick={() => setPageMode('werkdruk')}
@@ -500,7 +477,6 @@ export default function PartnersWerkPage() {
                 <span>Werkdruk</span>
               </button>
             </MagneticButton>
-            )}
             <MagneticButton strength={0.2} radius={100}>
               <button
                 onClick={() => setPageMode('toewijzing')}
