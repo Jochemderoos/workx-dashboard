@@ -27,19 +27,30 @@ Schrijf als een professionele jurist. Gebruik deze opmaakregels:
 - Verwijs naar wetsartikelen inline (bijv. "op grond van art. 7:669 lid 3 sub g BW")
 - Eindig waar relevant met een concrete conclusie of aanbeveling
 
-## Juridische bronnen en ECLI-nummers
-BELANGRIJK — ECLI-nummers en jurisprudentie:
-- Verzin NOOIT een ECLI-nummer. Als je een uitspraak wilt noemen, gebruik dan ALTIJD de search_rechtspraak tool om het juiste ECLI-nummer op te zoeken.
-- Als de search_rechtspraak tool geen resultaat geeft, zeg dan eerlijk dat je de specifieke uitspraak niet hebt kunnen verifiëren.
-- Verwijs ALLEEN naar uitspraken die je daadwerkelijk hebt opgezocht en geverifieerd via de tool.
-- Het is beter om te zeggen "er is jurisprudentie op dit punt, maar ik kon geen specifiek ECLI-nummer verifiëren" dan een nummer te verzinnen.
+## STRIKTE REGELS VOOR ECLI-NUMMERS EN JURISPRUDENTIE
+⚠️ ABSOLUUT VERBOD OP VERZONNEN ECLI-NUMMERS ⚠️
+1. Je mag NOOIT, ONDER GEEN ENKELE OMSTANDIGHEID, een ECLI-nummer noemen dat je niet hebt opgezocht via de search_rechtspraak tool in DIT gesprek.
+2. Als je een juridische vraag krijgt: gebruik EERST de search_rechtspraak tool VOORDAT je begint te antwoorden.
+3. Als de tool geen resultaten geeft of een fout retourneert:
+   - Zeg EERLIJK: "Ik heb gezocht maar kon geen specifieke uitspraken verifiëren via rechtspraak.nl."
+   - Benoem het juridische principe ZONDER ECLI-nummer
+   - Verwijs naar het relevante wetsartikel in plaats van jurisprudentie
+4. Gebruik NOOIT ECLI-nummers uit je trainingsdata of geheugen — deze kunnen verouderd, onjuist, of volledig verzonnen zijn.
+5. Elke ECLI die je noemt MOET in dit gesprek zijn opgezocht en geverifieerd via de search_rechtspraak of get_rechtspraak_ruling tool.
+6. Als je twijfelt of je een uitspraak hebt opgezocht: NOEM HET ECLI-NUMMER NIET.
 
-Bij het zoeken naar juridische informatie, gebruik bij voorkeur:
-- **search_rechtspraak tool** — gebruik deze ALTIJD voor het zoeken naar uitspraken (niet uit je eigen kennis citeren)
-- **wetten.overheid.nl** — voor actuele wetteksten en parlementaire geschiedenis
-- **kantonrechter.nl** — voor arbeidsrechtzaken
-- **uwv.nl** — voor UWV-procedures en regelgeving
-- **rijksoverheid.nl** — voor wet- en regelgeving arbeidsrecht
+## Zoekstrategie voor juridische vragen
+Bij ELKE juridische vraag doorloop je deze stappen:
+1. Zoek EERST via search_rechtspraak met relevante trefwoorden
+2. Als resultaten te breed zijn: verfijn de zoekopdracht met specifiekere termen
+3. Gebruik get_rechtspraak_ruling om veelbelovende resultaten in detail te lezen
+4. Gebruik web_search voor aanvullende context (wetteksten, literatuur, actualiteiten)
+5. Combineer alle bronnen tot een onderbouwd antwoord
+
+Gebruik deze bronnen ACTIEF:
+- **search_rechtspraak tool** — ALTIJD als eerste gebruiken bij jurisprudentie-vragen
+- **get_rechtspraak_ruling tool** — om een gevonden uitspraak volledig te lezen
+- **web_search** — voor wetten.overheid.nl, kantonrechter.nl, uwv.nl, rijksoverheid.nl
 
 ## Arbeidsrecht expertise
 Workx Advocaten is gespecialiseerd in:
@@ -513,23 +524,23 @@ BELANGRIJK:
     // Rechtspraak tools always available — direct API access to Dutch case law
     tools.push({
       name: 'search_rechtspraak',
-      description: 'Doorzoek rechtspraak.nl voor Nederlandse rechterlijke uitspraken. Retourneert ECLI-nummers, samenvattingen en links naar uitspraken. Gebruik dit als de gebruiker vraagt naar jurisprudentie, uitspraken, of specifieke rechtszaken.',
+      description: 'VERPLICHT te gebruiken bij elke juridische vraag over jurisprudentie. Doorzoekt de officiële Nederlandse rechtspraak-database (rechtspraak.nl). Retourneert ECLI-nummers, samenvattingen en metadata van uitspraken. Je mag GEEN ECLI-nummers noemen die je niet via deze tool hebt opgezocht. Gebruik meerdere zoekopdrachten met verschillende trefwoorden voor een volledig beeld.',
       input_schema: {
         type: 'object',
         properties: {
-          query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding"' },
-          max: { type: 'number', description: 'Maximum aantal resultaten (1-20)', default: 5 },
+          query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding" of "art 7:669 lid 3 sub g BW"' },
+          max: { type: 'number', description: 'Maximum aantal resultaten (1-20, standaard 10)', default: 10 },
         },
         required: ['query'],
       },
     })
     tools.push({
       name: 'get_rechtspraak_ruling',
-      description: 'Haal de volledige tekst van een uitspraak op via het ECLI-nummer. Gebruik dit om een specifieke uitspraak in detail te lezen.',
+      description: 'Haal de VOLLEDIGE tekst van een uitspraak op via het ECLI-nummer. Gebruik dit om een gevonden uitspraak in detail te lezen en te citeren. Altijd gebruiken na search_rechtspraak wanneer je een uitspraak in je antwoord wilt bespreken.',
       input_schema: {
         type: 'object',
         properties: {
-          ecli: { type: 'string', description: 'ECLI-nummer, bijv. "ECLI:NL:HR:2023:1234"' },
+          ecli: { type: 'string', description: 'ECLI-nummer zoals gevonden via search_rechtspraak, bijv. "ECLI:NL:HR:2023:1234"' },
         },
         required: ['ecli'],
       },
@@ -557,7 +568,7 @@ BELANGRIJK:
             messages: msgs,
             thinking: {
               type: 'enabled',
-              budget_tokens: 16000,
+              budget_tokens: 32000,
             },
             ...(tools.length > 0 ? { tools } : {}),
           }
@@ -624,7 +635,7 @@ BELANGRIJK:
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let loopMsgs: Array<{ role: 'user' | 'assistant'; content: any }> = [...msgs]
 
-          while (finalMessage.stop_reason === 'tool_use' && toolRound < 6) {
+          while (finalMessage.stop_reason === 'tool_use' && toolRound < 10) {
             toolRound++
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const toolUseBlocks = finalMessage.content.filter((b: any) => b.type === 'tool_use')
@@ -639,29 +650,29 @@ BELANGRIJK:
               try {
                 let resultText = ''
                 // 15 second timeout for external API calls
-                const fetchTimeout = AbortSignal.timeout(15000)
+                const fetchTimeout = AbortSignal.timeout(25000)
 
                 if (tb.name === 'search_rechtspraak') {
-                  const params = new URLSearchParams({ q: tb.input.query, max: String(tb.input.max || 5), return: 'DOC', sort: 'DESC' })
+                  const params = new URLSearchParams({ q: tb.input.query, max: String(tb.input.max || 10), return: 'DOC', sort: 'DESC' })
                   const searchRes = await fetch(`https://data.rechtspraak.nl/uitspraken/zoeken?${params}`, {
                     headers: { Accept: 'application/xml' },
                     signal: fetchTimeout,
                   })
                   if (!searchRes.ok) throw new Error(`Rechtspraak API error: ${searchRes.status}`)
-                  resultText = (await searchRes.text()).slice(0, 15000)
+                  resultText = (await searchRes.text()).slice(0, 25000)
                 } else if (tb.name === 'get_rechtspraak_ruling') {
                   const contentRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(tb.input.ecli)}`, {
                     headers: { Accept: 'application/xml' },
                     signal: fetchTimeout,
                   })
                   if (!contentRes.ok) throw new Error(`Rechtspraak API error: ${contentRes.status}`)
-                  resultText = (await contentRes.text()).slice(0, 30000)
+                  resultText = (await contentRes.text()).slice(0, 50000)
                 }
                 toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: resultText || 'Geen resultaten gevonden' })
               } catch (toolErr) {
                 const errMsg = toolErr instanceof Error ? toolErr.message : 'Tool failed'
                 console.error(`[chat] Tool ${tb.name} error:`, errMsg)
-                toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: `Fout bij ophalen: ${errMsg}. Beantwoord de vraag op basis van je eigen kennis.`, is_error: true })
+                toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: `Fout bij ophalen van rechtspraak.nl: ${errMsg}. BELANGRIJK: Noem GEEN ECLI-nummers of specifieke uitspraken die je niet hebt kunnen verifiëren. Beantwoord de vraag op basis van wetsartikelen en algemene juridische principes, en vermeld dat je de rechtspraak-database niet kon bereiken.`, is_error: true })
               }
             }
 
@@ -677,7 +688,7 @@ BELANGRIJK:
               max_tokens: 32000,
               system: systemPrompt,
               messages: loopMsgs,
-              thinking: { type: 'enabled' as const, budget_tokens: 10000 },
+              thinking: { type: 'enabled' as const, budget_tokens: 20000 },
               tools,
             })
 
@@ -711,6 +722,41 @@ BELANGRIJK:
 
             finalMessage = await continueStream.finalMessage()
             extractCitations(finalMessage)
+          }
+
+          // ECLI verification: scan response for ECLI numbers and verify they actually exist
+          // This catches hallucinated ECLIs that slip through despite system prompt instructions
+          const ecliPattern = /ECLI:NL:[A-Z]{2,6}:\d{4}:\d{1,6}/g
+          const mentionedEclis = Array.from(new Set(fullText.match(ecliPattern) || []))
+          if (mentionedEclis.length > 0) {
+            // Collect all ECLIs that appeared in tool results (from loopMsgs)
+            const verifiedEcliTexts = loopMsgs
+              .filter(m => m.role === 'user' && Array.isArray(m.content))
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              .flatMap(m => (m.content as any[]).filter(c => c.type === 'tool_result').map(c => c.content || ''))
+              .join(' ')
+
+            const unverifiedEclis = mentionedEclis.filter(ecli => !verifiedEcliTexts.includes(ecli))
+            if (unverifiedEclis.length > 0) {
+              // Quick-verify unverified ECLIs against rechtspraak.nl (e.g. found via web search)
+              const stillUnverified: string[] = []
+              for (const ecli of unverifiedEclis) {
+                try {
+                  const checkRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(ecli)}`, {
+                    headers: { Accept: 'application/xml' },
+                    signal: AbortSignal.timeout(5000),
+                  })
+                  if (!checkRes.ok) stillUnverified.push(ecli)
+                } catch {
+                  stillUnverified.push(ecli)
+                }
+              }
+              if (stillUnverified.length > 0) {
+                const warningText = `\n\n---\n⚠️ **Let op:** De volgende ECLI-nummers konden niet worden geverifieerd via rechtspraak.nl en kunnen onjuist zijn: ${stillUnverified.join(', ')}. Controleer deze handmatig op rechtspraak.nl.`
+                fullText += warningText
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text: warningText })}\n\n`))
+              }
+            }
           }
 
           // Save assistant message to database
