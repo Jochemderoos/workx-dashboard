@@ -34,7 +34,7 @@ export function renderMarkdown(markdown: string): string {
           inList = false
         }
         inCodeBlock = true
-        codeBlockLang = line.trim().slice(3).trim()
+        codeBlockLang = line.trim().slice(3).trim().replace(/[^a-zA-Z0-9_-]/g, '') // Sanitize: only safe chars
         codeLines = []
       } else {
         const escaped = escapeHtml(codeLines.join('\n'))
@@ -163,10 +163,14 @@ function processInline(text: string): string {
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_match, text, url) => {
       const trimmed = url.trim().toLowerCase()
-      if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) {
+      // Whitelist only safe URL schemes
+      const scheme = trimmed.split(':')[0]
+      if (scheme && !['http', 'https', 'mailto', 'tel'].includes(scheme) && trimmed.includes(':')) {
         return text // Strip the link, keep just the text
       }
-      return `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`
+      // Escape any remaining quotes in URL to prevent attribute breakout
+      const safeUrl = url.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text}</a>`
     }
   )
 

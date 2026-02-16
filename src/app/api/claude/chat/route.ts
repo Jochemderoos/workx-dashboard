@@ -9,6 +9,25 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
+// Rate limiter: per-user, in-memory (resets on cold start, sufficient for small team)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+function checkRateLimit(userId: string, maxRequests = 30, windowMs = 3600000): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(userId)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + windowMs })
+    return true
+  }
+  if (entry.count >= maxRequests) return false
+  entry.count++
+  return true
+}
+
+// Token estimator for Dutch text (~3.5 chars per token)
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 3.5)
+}
+
 const SYSTEM_PROMPT = `Je bent de senior juridisch AI-medewerker van Workx Advocaten, een gespecialiseerd arbeidsrecht-advocatenkantoor in Amsterdam. Je opereert als een ervaren, analytische jurist die advocaten bijstaat met onderzoek, analyse, strategie en het opstellen van stukken.
 
 ## Jouw Rol
@@ -230,6 +249,11 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
+
+  // Rate limit: max 30 requests per user per hour
+  if (!checkRateLimit(session.user.id)) {
+    return NextResponse.json({ error: 'Te veel verzoeken. Wacht even voordat je een nieuwe vraag stelt (max 30 per uur).' }, { status: 429 })
   }
 
   const { conversationId, projectId, message, documentIds, anonymize, model: requestedModel } = await req.json()
@@ -567,6 +591,30 @@ BELANGRIJK:
       } else {
         msgs.push({ role: msg.role as 'user' | 'assistant', content })
       }
+    }
+
+    // Context window protection: estimate tokens and trim if needed
+    const MAX_CONTEXT = 170000 // Leave buffer from 200K limit
+    let totalTokens = estimateTokens(systemPrompt)
+    for (const msg of msgs) {
+      if (typeof msg.content === 'string') {
+        totalTokens += estimateTokens(msg.content)
+      } else if (Array.isArray(msg.content)) {
+        for (const block of msg.content) {
+          if (block.type === 'text') totalTokens += estimateTokens(block.text || '')
+          if (block.type === 'document') totalTokens += 5000 // Rough estimate per PDF
+        }
+      }
+    }
+    // Trim oldest messages if over limit (keep at least last 4 messages for context)
+    while (msgs.length > 4 && totalTokens > MAX_CONTEXT) {
+      const removed = msgs.shift()
+      if (removed && typeof removed.content === 'string') {
+        totalTokens -= estimateTokens(removed.content)
+      }
+    }
+    if (totalTokens > MAX_CONTEXT) {
+      console.warn(`[chat] Context still over limit after trimming: ~${totalTokens} tokens`)
     }
 
     // Check API key
