@@ -89,6 +89,8 @@ export default function ClaudeChat({
   const isThinkingRef = useRef(false) // Tracks thinking state inside streaming closure
   const streamBufferRef = useRef('') // Buffered streaming text
   const scrollThrottleRef = useRef<number>(0) // Throttle scroll during streaming
+  const abortControllerRef = useRef<AbortController | null>(null) // For stop button
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
 
   const RESPONSE_OPTIONS = [
     { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
@@ -441,8 +443,11 @@ export default function ClaudeChat({
 
     const assistantMsgId = `assistant-${Date.now()}`
 
-    // Timeout after 120 seconds (streaming keeps connection alive)
+    setLastFailedMessage(null)
+
+    // Timeout after 5 minutes (streaming keeps connection alive)
     const controller = new AbortController()
+    abortControllerRef.current = controller
     const timeoutId = setTimeout(() => controller.abort(), 300000)
 
     try {
@@ -606,7 +611,7 @@ export default function ClaudeChat({
       let errMsg = 'Onbekende fout'
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          errMsg = 'Geen reactie na 2 minuten. Probeer een kortere vraag.'
+          errMsg = 'Generatie gestopt.'
         } else {
           errMsg = error.message
         }
@@ -616,6 +621,7 @@ export default function ClaudeChat({
       toast.error(errMsg, { duration: 15000 })
       setStatusText('')
       setStreamingMsgId(null)
+      setLastFailedMessage(text) // Enable retry
 
       // If we already have streamed content, keep it and add error note
       setMessages(prev => {
@@ -640,6 +646,35 @@ export default function ClaudeChat({
       })
     } finally {
       setIsLoading(false)
+      abortControllerRef.current = null
+    }
+  }
+
+  const stopGeneration = () => {
+    abortControllerRef.current?.abort()
+    setStatusText('Gestopt')
+  }
+
+  const retryLastMessage = () => {
+    if (lastFailedMessage) {
+      // Remove the error message from the list
+      setMessages(prev => {
+        const lastAssistant = [...prev].reverse().find(m => m.role === 'assistant')
+        if (lastAssistant?.content?.startsWith('**Fout:**')) {
+          return prev.filter(m => m.id !== lastAssistant.id)
+        }
+        return prev
+      })
+      // Also remove the last user message (sendMessage will re-add it)
+      setMessages(prev => {
+        const reversed = [...prev].reverse()
+        const lastUser = reversed.find(m => m.role === 'user')
+        if (lastUser) return prev.filter(m => m.id !== lastUser.id)
+        return prev
+      })
+      const msg = lastFailedMessage
+      setLastFailedMessage(null)
+      sendMessage(msg)
     }
   }
 
@@ -1104,6 +1139,17 @@ export default function ClaudeChat({
 
         {/* Always visible: input row with inline toggle + active indicators */}
         <div className="px-4 pb-3 pt-2 space-y-2">
+          {/* Retry button after error */}
+          {lastFailedMessage && !isLoading && (
+            <button
+              onClick={retryLastMessage}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/15 hover:border-red-500/30 transition-all text-xs font-medium w-full justify-center"
+            >
+              <Icons.refresh size={14} />
+              Opnieuw proberen
+            </button>
+          )}
+
           {/* Attached documents chips */}
           {attachedDocs.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -1215,19 +1261,23 @@ export default function ClaudeChat({
                 style={{ maxHeight: '200px' }}
               />
             </div>
-            <button
-              onClick={() => sendMessage()}
-              disabled={isLoading || !input.trim()}
-              className="flex-shrink-0 w-11 h-11 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center hover:bg-workx-lime/90 transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/10"
-            >
-              {isLoading ? (
-                <div className="animate-spin">
-                  <Icons.refresh size={18} />
-                </div>
-              ) : (
+            {isLoading ? (
+              <button
+                onClick={stopGeneration}
+                className="flex-shrink-0 w-11 h-11 rounded-xl bg-red-500/80 text-white flex items-center justify-center hover:bg-red-500 transition-all shadow-lg shadow-red-500/10"
+                title="Stop generatie"
+              >
+                <div className="w-3.5 h-3.5 rounded-sm bg-white" />
+              </button>
+            ) : (
+              <button
+                onClick={() => sendMessage()}
+                disabled={!input.trim()}
+                className="flex-shrink-0 w-11 h-11 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center hover:bg-workx-lime/90 transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/10"
+              >
                 <Icons.send size={18} />
-              )}
-            </button>
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -24,14 +24,15 @@ Je bent geen generieke chatbot — je bent een gespecialiseerde juridische sparr
 
 ## Taal en Opmaak
 - Altijd in het Nederlands tenzij expliciet anders gevraagd
-- Schrijfstijl: zakelijk-juridisch, als in een intern memo of adviesbrief van een gerenommeerd kantoor
-- Gebruik genummerde paragrafen (1., 1.1., 1.2., 2., etc.) voor structuur — GEEN markdown-kopjes (# of ##)
-- Gebruik GEEN **vetgedrukte woorden** in lopende zinnen — alleen paragraaftitels mogen vet
-- Gebruik GEEN markdown-tabellen met | tekens — presenteer data als genummerde opsommingen
-- Begin met een kernachtige conclusie of samenvatting, gevolgd door de onderbouwing
+- Schrijfstijl: zakelijk-juridisch, als in een intern memo van een gerenommeerd kantoor
+- Gebruik markdown voor structuur: ## kopjes voor hoofdsecties, ### voor subsecties, **vet** alleen voor sectietitels
+- Gebruik genummerde lijsten (1., 2., etc.) en opsommingslijsten (- item) voor argumenten en bevindingen
+- Gebruik GEEN markdown-tabellen — presenteer vergelijkingsdata als genummerde opsommingen
+- Begin met een kernachtige **Conclusie** of samenvatting, gevolgd door de onderbouwing
 - Verwijs naar wetsartikelen inline: "op grond van art. 7:669 lid 3 sub g BW"
-- Eindig met concrete conclusies, aanbevelingen en vervolgstappen
+- Eindig met een ## Vervolgstappen sectie met concrete actiepunten
 - Bij inhoudelijke juridische analyses vermeld je: "Dit betreft een informatieve analyse en geen formeel juridisch advies."
+- Bij CAO-specifieke vragen: zoek de relevante CAO-tekst via web_search, of vraag de gebruiker om de CAO-bepaling als document bij te voegen
 
 ## Werkwijze — Gestructureerde Juridische Analyse
 
@@ -85,6 +86,8 @@ Bij ELKE juridische vraag doe je MEERDERE zoekopdrachten:
 6. CROSS-REFEREER: vergelijk wat je vindt in verschillende bronnen — zijn ze consistent?
 
 BELANGRIJK: Eén enkele zoekopdracht is NOOIT genoeg. Gebruik minimaal 2 verschillende zoektermen bij search_rechtspraak. Combineer rechtspraak, wettekst en (indien beschikbaar) interne kennisbronnen tot een volledig onderbouwd antwoord.
+
+Bij web_search voor juridische bronnen, geef VOORKEUR aan: wetten.overheid.nl (wetteksten), rechtspraak.nl (jurisprudentie), navigator.nl (vakliteratuur), ar-updates.nl (arbeidsrecht updates), uwv.nl (UWV-procedures).
 
 ## Arbeidsrecht Expertise
 Workx Advocaten is gespecialiseerd in:
@@ -144,7 +147,7 @@ Gebruik deze tarieven wanneer de gebruiker vraagt om een proceskostenberekening:
 - Rechtspersonen: €688 (vordering ≤€12.500), €2.889 (vordering >€12.500)
 - Hoger beroep: €361 (onvermogend), €862 (natuurlijk persoon), €6.077 (rechtspersoon)
 - Kort geding: zelfde als dagvaarding
-- Verzoekschrift arbeid (art. 7:685 BW): €90 (onvermogend), €241 (natuurlijk persoon), €688 (rechtspersoon)
+- Verzoekschrift arbeid (art. 7:671b BW): €90 (onvermogend), €241 (natuurlijk persoon), €688 (rechtspersoon)
 
 **Salaris gemachtigde (liquidatietarief kantonrechter 2025):**
 - Per punt: €200 (vordering ≤€12.500), €400 (vordering €12.500-€25.000), €500 (vordering €25.000-€100.000)
@@ -233,6 +236,9 @@ export async function POST(req: NextRequest) {
 
   if (!message?.trim()) {
     return NextResponse.json({ error: 'Bericht mag niet leeg zijn' }, { status: 400 })
+  }
+  if (message.length > 50000) {
+    return NextResponse.json({ error: 'Bericht te lang (max 50.000 tekens). Maak je vraag korter of voeg lange teksten toe als document.' }, { status: 400 })
   }
 
   const userId = session.user.id
@@ -507,6 +513,14 @@ BELANGRIJK:
 - Gebruik GEEN markdown-opmaak binnen het JSON-blok`
     }
 
+    // Reinforce critical rules at end of prompt (after all context that may dilute them)
+    systemPrompt += `\n\n## HERINNERING — Kritieke Regels
+1. Noem GEEN ECLI-nummers die je niet in DIT gesprek hebt opgezocht via search_rechtspraak of get_rechtspraak_ruling.
+2. Doe MINIMAAL 2 search_rechtspraak zoekopdrachten met VERSCHILLENDE zoektermen.
+3. Lees relevante uitspraken VOLLEDIG via get_rechtspraak_ruling voordat je ze bespreekt.
+4. Gebruik markdown-opmaak (## kopjes, **vet**, genummerde lijsten) voor leesbare structuur.
+5. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.`
+
     // Build messages — ensure alternating user/assistant roles (required by Claude API)
     // When a previous request failed, assistant messages may be missing, causing
     // consecutive user messages. We merge those to prevent API errors.
@@ -519,19 +533,24 @@ BELANGRIJK:
       const isLastUserMsg = msg.role === 'user' && i === history.length - 1
       const content = (isLastUserMsg && anonymize) ? messageForClaude : msg.content
 
-      // Merge consecutive user messages (can happen if previous assistant response failed)
+      // Merge consecutive messages of the same role (can happen if previous request failed)
       const prev = msgs[msgs.length - 1]
-      if (prev && prev.role === msg.role && msg.role === 'user') {
-        // Append to previous user message
-        if (typeof prev.content === 'string') {
-          prev.content = prev.content + '\n\n' + content
-        }
-        // If this merged msg is also the last one and has doc blocks, upgrade to multipart
-        if (isLastUserMsg && documentBlocks.length > 0) {
-          prev.content = [
-            ...documentBlocks,
-            { type: 'text', text: prev.content },
-          ]
+      if (prev && prev.role === msg.role) {
+        if (msg.role === 'user') {
+          // Append to previous user message
+          if (typeof prev.content === 'string') {
+            prev.content = prev.content + '\n\n' + content
+          }
+          // If this merged msg is also the last one and has doc blocks, upgrade to multipart
+          if (isLastUserMsg && documentBlocks.length > 0) {
+            prev.content = [
+              ...documentBlocks,
+              { type: 'text', text: prev.content },
+            ]
+          }
+        } else {
+          // Merge consecutive assistant messages (keep last one)
+          prev.content = content
         }
         continue
       }
@@ -589,6 +608,46 @@ BELANGRIJK:
       },
     })
 
+    // Parse rechtspraak.nl XML to clean text (saves 60-80% tokens vs raw XML)
+    const parseRechtspraakSearch = (xml: string): string => {
+      const entries: string[] = []
+      const entryRegex = /<entry>([\s\S]*?)<\/entry>/gi
+      let match
+      while ((match = entryRegex.exec(xml)) !== null) {
+        const entry = match[1]
+        const id = entry.match(/<id[^>]*>([\s\S]*?)<\/id>/i)?.[1]?.trim() || ''
+        const title = entry.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() || ''
+        const summary = entry.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i)?.[1]?.trim() || ''
+        const updated = entry.match(/<updated[^>]*>([\s\S]*?)<\/updated>/i)?.[1]?.trim() || ''
+        if (id) entries.push(`ECLI: ${id}\nTitel: ${title}\nDatum: ${updated}\nSamenvatting: ${summary}`)
+      }
+      return entries.length > 0
+        ? `Gevonden uitspraken (${entries.length}):\n\n${entries.join('\n\n---\n\n')}`
+        : 'Geen resultaten gevonden in de rechtspraak-database.'
+    }
+
+    const parseRechtspraakRuling = (xml: string): string => {
+      // Extract metadata
+      const identifier = xml.match(/<dcterms:identifier[^>]*>([\s\S]*?)<\/dcterms:identifier>/i)?.[1]?.trim() || ''
+      const title = xml.match(/<dcterms:title[^>]*>([\s\S]*?)<\/dcterms:title>/i)?.[1]?.trim() || ''
+      const abstract = xml.match(/<dcterms:abstract[^>]*>([\s\S]*?)<\/dcterms:abstract>/i)?.[1]?.trim() || ''
+      // Extract main text (uitspraak or conclusie body)
+      const bodyMatch = xml.match(/<(?:uitspraak|conclusie)[^>]*>([\s\S]*?)<\/(?:uitspraak|conclusie)>/i)
+      let bodyText = bodyMatch ? bodyMatch[1] : xml
+      // Strip XML tags, clean up whitespace and entities
+      bodyText = bodyText
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#\d+;/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+      let result = ''
+      if (identifier) result += `ECLI: ${identifier}\n`
+      if (title) result += `Titel: ${title}\n`
+      if (abstract) result += `Samenvatting: ${abstract}\n\n`
+      result += bodyText
+      return result.slice(0, 40000)
+    }
+
     const client = new Anthropic({ apiKey, timeout: 300000 })
     console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, tools=${tools.length}`)
 
@@ -612,7 +671,7 @@ BELANGRIJK:
             messages: msgs,
             thinking: {
               type: 'enabled',
-              budget_tokens: isOpus ? 32000 : 16000,
+              budget_tokens: isOpus ? 16000 : 10000,
             },
             ...(tools.length > 0 ? { tools } : {}),
           }
@@ -703,14 +762,16 @@ BELANGRIJK:
                     signal: fetchTimeout,
                   })
                   if (!searchRes.ok) throw new Error(`Rechtspraak API error: ${searchRes.status}`)
-                  resultText = (await searchRes.text()).slice(0, 25000)
+                  const rawXml = await searchRes.text()
+                  resultText = parseRechtspraakSearch(rawXml)
                 } else if (tb.name === 'get_rechtspraak_ruling') {
                   const contentRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(tb.input.ecli)}`, {
                     headers: { Accept: 'application/xml' },
-                    signal: fetchTimeout,
+                    signal: AbortSignal.timeout(45000), // Rulings can be large, allow more time
                   })
                   if (!contentRes.ok) throw new Error(`Rechtspraak API error: ${contentRes.status}`)
-                  resultText = (await contentRes.text()).slice(0, 50000)
+                  const rawXml = await contentRes.text()
+                  resultText = parseRechtspraakRuling(rawXml)
                 }
                 toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: resultText || 'Geen resultaten gevonden' })
               } catch (toolErr) {
@@ -722,9 +783,12 @@ BELANGRIJK:
 
             // Continue conversation with tool results
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Resultaten analyseren...' })}\n\n`))
+            // Strip thinking blocks from assistant content to save tokens in continuation
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const filteredContent = finalMessage.content.filter((b: any) => b.type !== 'thinking')
             loopMsgs = [
               ...loopMsgs,
-              { role: 'assistant' as const, content: finalMessage.content },
+              { role: 'assistant' as const, content: filteredContent },
               { role: 'user' as const, content: toolResults },
             ]
             const continueStream = client.messages.stream({
@@ -732,7 +796,7 @@ BELANGRIJK:
               max_tokens: isOpus ? 64000 : 32000,
               system: systemPrompt,
               messages: loopMsgs,
-              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 16000 : 10000 },
+              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 32000 : 16000 },
               tools,
             })
 
