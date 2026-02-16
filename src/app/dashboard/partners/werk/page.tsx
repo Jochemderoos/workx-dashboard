@@ -65,7 +65,14 @@ const workloadConfig = {
 export default function PartnersWerkPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
-  const [pageMode, setPageMode] = useState<'toewijzing' | 'werkdruk' | 'urenoverzicht'>('werkdruk')
+  const [pageMode, setPageMode] = useState<'toewijzing' | 'werkdruk' | 'urenoverzicht'>(() => {
+    // Default to werkdruk only during the weekend window (Fri 20:00 – Mon 20:00)
+    const now = new Date()
+    const day = now.getDay()
+    const hour = now.getHours()
+    const werkdrukOpen = day === 0 || day === 6 || (day === 5 && hour >= 20) || (day === 1 && hour < 20)
+    return werkdrukOpen ? 'werkdruk' : 'toewijzing'
+  })
 
   // Monthly hours state
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
