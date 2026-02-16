@@ -123,7 +123,30 @@ export default function PartnersWerkPage() {
     return days.reverse() // Oldest first
   }, [historyOffset])
 
-  const last3Workdays = workdaysToShow
+  // Include weekend days in the display if anyone has logged hours on them
+  const daysToDisplay = useMemo(() => {
+    if (workdaysToShow.length === 0) return workdaysToShow
+    const earliest = workdaysToShow[0]
+    const latest = workdaysToShow[workdaysToShow.length - 1]
+
+    // Build all calendar days in the range
+    const allDays: Date[] = []
+    const cursor = new Date(earliest)
+    while (cursor <= latest) {
+      allDays.push(new Date(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+
+    // Keep workdays always; keep weekend days only if there's data
+    return allDays.filter(day => {
+      const dow = day.getDay()
+      if (dow !== 0 && dow !== 6) return true
+      const dateStr = formatDateForAPI(day)
+      return workloadEntries.some(e => e.date === dateStr)
+    })
+  }, [workdaysToShow, workloadEntries])
+
+  const last3Workdays = daysToDisplay
 
   // Determine if we should show partners (Sat, Sun, Mon)
   const today = new Date()
@@ -131,10 +154,13 @@ export default function PartnersWerkPage() {
   const showPartners = currentDayOfWeek === 0 || currentDayOfWeek === 1 || currentDayOfWeek === 6
   const peopleToShow = showPartners ? [...PARTNERS, ...ADVOCATEN] : ADVOCATEN
 
-  // Calculate week total hours for a person
+  // Helper to check if a date is a weekend
+  const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
+
+  // Calculate week total hours for a person (include weekend days with data)
   const getWeekTotal = (person: string): number => {
     let total = 0
-    for (const day of workdaysToShow) {
+    for (const day of daysToDisplay) {
       const entry = workloadEntries.find(e => e.personName === person && e.date === formatDateForAPI(day))
       if (entry?.hours) total += entry.hours
     }
@@ -617,15 +643,19 @@ export default function PartnersWerkPage() {
               <div className="min-w-0">
                 {/* Table header */}
                 <div className="grid gap-1 px-2 sm:px-4 py-2 sm:py-3 bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider"
-                  style={{ gridTemplateColumns: showPartners ? 'minmax(56px, 130px) repeat(5, 1fr) minmax(36px, 52px)' : 'minmax(56px, 130px) repeat(5, 1fr)' }}
+                  style={{ gridTemplateColumns: showPartners ? `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` : `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr)` }}
                 >
                   <div className="text-[10px] sm:text-xs">Naam</div>
-              {last3Workdays.map(day => (
-                <div key={day.toISOString()} className="text-center text-[10px] sm:text-xs">
-                  <span className="hidden sm:inline">{day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric' })}</span>
-                  <span className="sm:hidden">{day.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '')}</span>
-                </div>
-              ))}
+              {last3Workdays.map(day => {
+                const weekend = isWeekend(day)
+                return (
+                  <div key={day.toISOString()} className={`text-center text-[10px] sm:text-xs ${weekend ? 'text-purple-400' : ''}`}>
+                    <span className="hidden sm:inline">{day.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric' })}</span>
+                    <span className="sm:hidden">{day.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '')}</span>
+                    {weekend && <span className="hidden sm:inline text-[9px] ml-0.5 opacity-60">*</span>}
+                  </div>
+                )
+              })}
               {showPartners && <div className="text-center text-[10px] sm:text-xs">Week</div>}
             </div>
 
@@ -642,7 +672,7 @@ export default function PartnersWerkPage() {
                   <ScrollRevealItem key={person}>
                   <div
                     className={`grid gap-1 px-2 sm:px-4 py-1.5 sm:py-3 items-center hover:bg-white/[0.02] transition-colors ${isPartner ? 'bg-workx-lime/[0.02]' : ''}`}
-                    style={{ gridTemplateColumns: showPartners ? 'minmax(56px, 130px) repeat(5, 1fr) minmax(36px, 52px)' : 'minmax(56px, 130px) repeat(5, 1fr)' }}
+                    style={{ gridTemplateColumns: showPartners ? `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` : `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr)` }}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <img
@@ -662,11 +692,13 @@ export default function PartnersWerkPage() {
                       const hours = entry?.hours
                       const isEditing = editingWorkload?.person === person && editingWorkload?.date === dateStr
                       const isToday = day.toDateString() === new Date().toDateString()
+                      const weekend = isWeekend(day)
 
                       return (
-                        <div key={dateStr} className="flex justify-center">
+                        <div key={dateStr} className={`flex justify-center ${weekend ? 'relative' : ''}`}>
+                          {weekend && <div className="absolute inset-0 bg-purple-500/[0.04] rounded-lg pointer-events-none" />}
                           {isEditing ? (
-                            <div className="flex items-center gap-0.5 sm:gap-1 bg-workx-dark/80 border border-white/10 rounded-lg sm:rounded-xl p-1 sm:p-2">
+                            <div className="flex items-center gap-0.5 sm:gap-1 bg-workx-dark/80 border border-white/10 rounded-lg sm:rounded-xl p-1 sm:p-2 z-10">
                               {(['green', 'yellow', 'orange', 'red'] as const).map(l => (
                                 <button
                                   key={l}
@@ -690,7 +722,7 @@ export default function PartnersWerkPage() {
                                 level
                                   ? `${workloadConfig[level].bg} ${workloadConfig[level].border} border`
                                   : 'bg-white/5 border border-dashed border-white/10 hover:border-white/20'
-                              } ${isToday ? 'ring-2 ring-workx-lime/30 ring-offset-1 sm:ring-offset-2 ring-offset-workx-dark' : ''}`}
+                              } ${isToday ? 'ring-2 ring-workx-lime/30 ring-offset-1 sm:ring-offset-2 ring-offset-workx-dark' : ''} ${weekend && !level ? 'border-purple-500/20' : ''}`}
                             >
                               {level ? (
                                 <span className={`text-xs sm:text-sm font-bold ${workloadConfig[level].text}`}>
