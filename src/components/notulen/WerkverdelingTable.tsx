@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Icons } from '@/components/ui/Icons'
-import { getPhotoUrl } from '@/lib/team-photos'
+import { getPhotoUrl, PARTNERS } from '@/lib/team-photos'
 
 interface Distribution {
   id?: string
@@ -52,10 +52,15 @@ function EmployeeDropdown({ anchorRef, employees, selectedNames, onToggle, onClo
     const spaceBelow = window.innerHeight - rect.bottom
     const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight
 
+    const minWidth = 240
+    const dropdownWidth = Math.max(rect.width, minWidth)
+    // Keep dropdown within viewport
+    const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 8)
+
     setStyle({
       position: 'fixed',
-      left: rect.left,
-      width: rect.width,
+      left: Math.max(8, left),
+      width: dropdownWidth,
       top: showAbove ? undefined : rect.bottom + 4,
       bottom: showAbove ? window.innerHeight - rect.top + 4 : undefined,
       zIndex: 9999,
@@ -125,6 +130,10 @@ function EmployeeDropdown({ anchorRef, employees, selectedNames, onToggle, onClo
 export default function WerkverdelingTable({ distributions, employees, onUpdate }: WerkverdelingTableProps) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+
+  // Filter out partners — they conduct the meetings, not attend them
+  const partnerNames = new Set(PARTNERS.map(n => n.toLowerCase()))
+  const filteredEmployees = employees.filter(e => !partnerNames.has(e.name.toLowerCase()))
 
   const handleToggleEmployee = (partnerName: string, employee: Employee) => {
     const dist = distributions.find(d => d.partnerName === partnerName)
@@ -246,7 +255,7 @@ export default function WerkverdelingTable({ distributions, employees, onUpdate 
                 {openDropdown === dist.partnerName && buttonRefs.current[dist.partnerName] && (
                   <EmployeeDropdown
                     anchorRef={{ current: buttonRefs.current[dist.partnerName] }}
-                    employees={employees}
+                    employees={filteredEmployees}
                     selectedNames={selectedNames}
                     onToggle={(emp) => handleToggleEmployee(dist.partnerName, emp)}
                     onClose={() => setOpenDropdown(null)}

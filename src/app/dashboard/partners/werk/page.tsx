@@ -126,22 +126,29 @@ export default function PartnersWerkPage() {
   // Include weekend days in the display if anyone has logged hours on them
   const daysToDisplay = useMemo(() => {
     if (workdaysToShow.length === 0) return workdaysToShow
-    const earliest = workdaysToShow[0]
-    const latest = workdaysToShow[workdaysToShow.length - 1]
 
-    // Build all calendar days in the range
+    // Extend range by 2 days on each side to catch adjacent weekends
+    // (e.g. Mon-Fri range misses Sat/Sun on both edges)
+    const rangeStart = new Date(workdaysToShow[0])
+    rangeStart.setDate(rangeStart.getDate() - 2)
+    const rangeEnd = new Date(workdaysToShow[workdaysToShow.length - 1])
+    rangeEnd.setDate(rangeEnd.getDate() + 2)
+
+    // Build all calendar days in the extended range
     const allDays: Date[] = []
-    const cursor = new Date(earliest)
-    while (cursor <= latest) {
+    const cursor = new Date(rangeStart)
+    while (cursor <= rangeEnd) {
       allDays.push(new Date(cursor))
       cursor.setDate(cursor.getDate() + 1)
     }
 
-    // Keep workdays always; keep weekend days only if there's data
+    // Keep the original workdays always; keep weekend days only if there's data
+    const workdayStrings = new Set(workdaysToShow.map(d => formatDateForAPI(d)))
     return allDays.filter(day => {
-      const dow = day.getDay()
-      if (dow !== 0 && dow !== 6) return true
       const dateStr = formatDateForAPI(day)
+      if (workdayStrings.has(dateStr)) return true
+      const dow = day.getDay()
+      if (dow !== 0 && dow !== 6) return false // Extra weekdays outside range: skip
       return workloadEntries.some(e => e.date === dateStr)
     })
   }, [workdaysToShow, workloadEntries])
