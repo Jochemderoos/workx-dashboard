@@ -333,6 +333,40 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* sources not available */ }
 
+    // Fetch available templates — so Claude knows what templates exist
+    let templatesContext = ''
+    try {
+      const templates = await prisma.aITemplate.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, category: true, description: true, content: true, placeholders: true, instructions: true },
+        orderBy: { usageCount: 'desc' },
+        take: 10,
+      })
+      if (templates.length > 0) {
+        let totalContentLen = 0
+        templatesContext = templates.map(t => {
+          let entry = `\n\n### ${t.name} (id: ${t.id}, categorie: ${t.category})`
+          if (t.description) entry += `\n${t.description}`
+          if (t.placeholders) {
+            try {
+              const fields = JSON.parse(t.placeholders)
+              if (Array.isArray(fields) && fields.length > 0) {
+                entry += `\nInvulvelden: ${fields.join(', ')}`
+              }
+            } catch { /* ignore */ }
+          }
+          if (t.instructions) entry += `\nInstructies: ${t.instructions}`
+          // Include full content for templates (up to 80K total)
+          if (t.content && totalContentLen < 80000) {
+            const contentSlice = t.content.slice(0, 20000)
+            totalContentLen += contentSlice.length
+            entry += `\n\n--- Volledige template inhoud ---\n${contentSlice}\n--- Einde template ---`
+          }
+          return entry
+        }).join('')
+      }
+    } catch { /* templates not critical */ }
+
     // Fetch project context from previous conversations (chat memory)
     let projectMemory = ''
     if (projectId) {
@@ -382,6 +416,15 @@ De volgende interne kennisbronnen zijn beschikbaar. Gebruik deze ACTIEF bij het 
 - Verwijs naar relevante informatie uit deze bronnen waar toepasselijk
 - Combineer interne kennis met externe bronnen (wetgeving, rechtspraak, web search)
 - Vermeld welke kennisbron je hebt gebruikt in je antwoord${sourcesContext}`
+    }
+    if (templatesContext) {
+      systemPrompt += `\n\n## Beschikbare templates van Workx Advocaten
+De volgende templates zijn beschikbaar in het systeem. Als de gebruiker vraagt om een document op te stellen of een template in te vullen:
+1. Herken welk template van toepassing is op basis van de naam en beschrijving
+2. Vermeld het template bij naam zodat de gebruiker weet welk template je gebruikt
+3. Als je de inhoud van het template nodig hebt om het in te vullen, vraag de gebruiker om het template als document bij te voegen of gebruik de beschrijving en invulvelden hieronder
+
+Beschikbare templates:${templatesContext}`
     }
     if (documentContext) {
       systemPrompt += `\n\n## Documenten${documentContext}`
