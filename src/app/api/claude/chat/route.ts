@@ -492,13 +492,25 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch knowledge sources using chunk-based retrieval for primary sources
+    // Wrapped in a timeout to prevent database slowness from blocking the entire chat
     let sourcesContext = ''
     const usedSourceNames: Array<{ name: string; category: string; url?: string }> = []
     try {
-      const activeSources = await prisma.aISource.findMany({
-        where: { isActive: true, isProcessed: true },
-        select: { id: true, name: true, category: true, summary: true, url: true },
-      })
+      const sourcesFetchResult = await Promise.race([
+        (async () => {
+          const activeSources = await prisma.aISource.findMany({
+            where: { isActive: true, isProcessed: true },
+            select: { id: true, name: true, category: true, summary: true, url: true },
+          })
+          return activeSources
+        })(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+      ])
+      if (!sourcesFetchResult) {
+        console.warn('[chat] Source fetch timed out after 8s — proceeding without knowledge sources')
+        throw new Error('Source fetch timeout')
+      }
+      const activeSources = sourcesFetchResult
       const isPrimary = (name: string) =>
         /tekst\s*[&en]+\s*commentaar|thematica|themata|vaan|ar.updates|arbeidsrecht|inview|\brar\b/i.test(name)
       const primarySources = activeSources.filter(s => isPrimary(s.name))
@@ -517,12 +529,19 @@ export async function POST(req: NextRequest) {
 
         if (chunkCount > 0 && (searchTerms.length > 0 || process.env.OPENAI_API_KEY)) {
           // Retrieve relevant chunks using hybrid search (semantic + keyword)
-          const relevantChunks = await retrieveRelevantChunks(
-            primarySourceIds,
-            searchTerms,
-            35, // max chunks to include (~175K chars)
-            messageForClaude // for semantic embedding
-          )
+          // Add timeout to prevent slow DB queries from blocking the response
+          const relevantChunks = await Promise.race([
+            retrieveRelevantChunks(
+              primarySourceIds,
+              searchTerms,
+              35, // max chunks to include (~175K chars)
+              messageForClaude // for semantic embedding
+            ),
+            new Promise<never[]>((resolve) => setTimeout(() => {
+              console.warn('[chat] Chunk retrieval timed out after 15s')
+              resolve([])
+            }, 15000)),
+          ])
 
           if (relevantChunks.length > 0) {
             // Group chunks by source
