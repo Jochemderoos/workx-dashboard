@@ -855,24 +855,7 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
       }
     }
 
-    // CRITICAL: Inject fake conversation prefix to enforce question-asking behavior
-    // This simulates a prior exchange where the model already AGREED to ask questions first.
-    // Most effective prompting technique: the model continues its established behavior pattern.
-    if (msgs.length === 1 && msgs[0].role === 'user') {
-      const userMsg = msgs[0]
-      msgs.length = 0
-      msgs.push(
-        {
-          role: 'user' as const,
-          content: 'Voordat we beginnen: bij open casusvragen of strategievragen wil ik dat je EERST 3-5 gerichte vragen stelt voordat je een inhoudelijk antwoord geeft. Stel ook 1 vraag over het gewenste antwoordformat (kort advies, uitgebreid memo, concept-email, etc.). Geef NOOIT direct een lang antwoord op een open vraag. Alleen bij feitelijke vragen (termijnen, bedragen, berekeningen) of vervolgvragen mag je direct antwoorden. Begin ook NOOIT met een beschrijving van je zoekproces. Geen "Ik heb gezocht naar..." of "Op basis van de bronnen...". Begin direct met de inhoud of met je vragen.',
-        },
-        {
-          role: 'assistant' as const,
-          content: 'Begrepen. Bij open casusvragen en strategievragen stel ik eerst gerichte vragen om de situatie goed te begrijpen voordat ik een antwoord geef. Ik vraag ook altijd naar het gewenste antwoordformat. Bij feitelijke vragen en vervolgvragen antwoord ik direct. Ik beschrijf mijn zoekproces niet. Stel je vraag.',
-        },
-        userMsg,
-      )
-    }
+    // No fake conversation prefix — causes API errors with extended thinking
 
     // Context window protection: estimate tokens and trim if needed
     const MAX_CONTEXT = 170000 // Leave buffer from 200K limit
