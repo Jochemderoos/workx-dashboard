@@ -79,6 +79,7 @@ Je bent de senior juridisch AI-medewerker van Workx Advocaten, een gespecialisee
 - Wetsartikelen inline: "op grond van art. 7:669 lid 3 sub g BW"
 - Bij inhoudelijke analyses: "Dit betreft een informatieve analyse en geen formeel juridisch advies."
 - Bij concept-emails/brieven: formatteer als blockquote (> per regel) zodat het als een modern document wordt weergegeven.
+- NOOIT je zoekproces beschrijven. Niet beginnen met "Ik heb gezocht naar..." of "Op basis van de beschikbare bronnen...". Begin DIRECT met de inhoud of met je vragen. De gebruiker ziet de bronnen al in de metadata.
 
 ## Werkwijze — Kwalificatie per Vraagtype
 
@@ -850,6 +851,20 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
         })
       } else {
         msgs.push({ role: msg.role as 'user' | 'assistant', content })
+      }
+    }
+
+    // Inject question-asking reminder into the first user message of a new conversation
+    // This is the LAST thing the model reads before generating — most effective position
+    if (msgs.length === 1 && msgs[0].role === 'user') {
+      const reminder = '\n\n[SYSTEEM-INSTRUCTIE: Dit is de eerste vraag in dit gesprek. Als dit een open casusvraag of strategievraag is, stel dan EERST 3-5 gerichte vragen (inclusief 1 vraag over gewenst antwoordformat) VOORDAT je een inhoudelijk antwoord geeft. Geef GEEN lang antwoord. Alleen bij feitelijke vragen (termijnen, bedragen, berekeningen) mag je direct antwoorden. Max 300-600 woorden.]'
+      if (typeof msgs[0].content === 'string') {
+        msgs[0].content += reminder
+      } else if (Array.isArray(msgs[0].content)) {
+        const lastBlock = msgs[0].content[msgs[0].content.length - 1]
+        if (lastBlock && lastBlock.type === 'text') {
+          lastBlock.text += reminder
+        }
       }
     }
 
