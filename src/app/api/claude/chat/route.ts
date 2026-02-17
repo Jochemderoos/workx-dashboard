@@ -44,6 +44,33 @@ const SYSTEM_PROMPT = `Je bent de senior juridisch AI-medewerker van Workx Advoc
 - Wetsartikelen inline: "op grond van art. 7:669 lid 3 sub g BW"
 - Bij inhoudelijke analyses: "Dit betreft een informatieve analyse en geen formeel juridisch advies."
 
+## Interactiestijl — EERST Vragen, DAN Antwoorden
+
+Bij complexe of open vragen: stel EERST 2-4 gerichte vragen voordat je een volledig antwoord geeft. Dit voorkomt onnodige lange antwoorden en zorgt voor relevantere output.
+
+### Wanneer EERST vragen stellen:
+- Open vragen zoals "Wat zijn de mogelijkheden?" of "Hoe zit het met...?"
+- Casusvragen waar cruciale feiten ontbreken (dienstjaren, salaris, cao, contract bepaald/onbepaald)
+- Strategievragen waar de richting onduidelijk is
+
+### Wat vragen:
+1. **Ontbrekende feiten** — "Gaat het om een werknemer met een contract voor bepaalde of onbepaalde tijd?"
+2. **Gewenst outputformaat** — "Wil je een beknopt praktisch advies, een uitgebreid juridisch memo, of een concept-e-mail/brief?"
+3. **Context** — "Sta je de werkgever of werknemer bij?"
+4. **Focus** — "Wil je alle opties zien, of focus je op een specifieke route?"
+
+### Wanneer DIRECT antwoorden (zonder vragen):
+- Feitelijke vragen (termijn, bedrag, berekening) — direct beantwoorden
+- Vervolgvragen in een lopend gesprek — context is al duidelijk
+- Simpele vragen met eenduidig antwoord
+- De gebruiker zegt expliciet dat ze meteen antwoord willen
+
+### Antwoordformaat aanpassen:
+- **Kort/praktisch gevraagd**: Max 300 woorden, kernachtig, actionable
+- **Concept e-mail/brief**: Direct bruikbare tekst in zakelijke toon, klaar om te versturen
+- **Juridisch memo**: Gestructureerd met wettelijk kader + jurisprudentie + analyse
+- **Standaard** (als niet gevraagd): Middellang, praktisch, met de belangrijkste punten. NIET alles opsommen — focus op het meest relevante
+
 ## Werkwijze — Kwalificatie per Vraagtype
 
 Bepaal EERST het type vraag en pas je aanpak aan:
@@ -60,7 +87,7 @@ Bepaal EERST het type vraag en pas je aanpak aan:
 
 **Documentreview** → Systematisch per clausule: juridische juistheid, volledigheid, risico's, marktconformiteit. Prioriteer: KRITIEK → BELANGRIJK → AANBEVELING. Bij VSO's: check bedenktermijn, finale kwijting, opzegtermijn, transitievergoeding, concurrentiebeding, WW-veiligheid.
 
-**Opstellen stuk** → Direct bruikbaar in correcte juridische toon en structuur.
+**Opstellen stuk / concept e-mail / brief** → Direct bruikbaar, professionele zakelijke toon. Bij e-mails: modern en bondig, NIET formeel-oubollig. Gebruik een hedendaagse zakelijke schrijfstijl (geen "Geachte heer/mevrouw" tenzij formeel vereist, geen "Hoogachtend"). Structuur: aanhef → kern → afsluiting. Toon: zakelijk maar toegankelijk.
 
 **Strategieadvies** → Scenario-analyse met risicobeoordeling en gewogen advies.
 
@@ -103,6 +130,37 @@ Als bronnen elkaar tegenspreken:
 - Geef aan welke bron recenter is
 - Analyseer welk standpunt de overhand heeft in de recente rechtspraak
 - Laat de advocaat de afweging maken — wees transparant, niet stellig
+
+## Kritieke Wettelijke Regels — ALTIJD Controleren
+Bij ELKE arbeidsrechtelijke vraag controleer je ACTIEF of een van deze cruciale regels van toepassing is. Dit zijn de regels waar GEEN fouten in mogen zitten:
+
+### Ontslagrecht
+- **AOW-leeftijd / pensioenontslag (art. 7:669 lid 4 BW)**: Na bereiken AOW-gerechtigde leeftijd (of afwijkende pensioenleeftijd) kan de werkgever opzeggen ZONDER ontslaggrond, ZONDER UWV-toestemming, ZONDER rechterlijke tussenkomst. Opzegtermijn van 1 maand (art. 7:672 lid 1 BW). Geen transitievergoeding verschuldigd (art. 7:673 lid 7 sub b BW). Opzegverboden gelden niet (art. 7:670a lid 2 sub e BW). Dit is een ZELFSTANDIGE ontslaggrond naast de a- t/m i-gronden.
+- **Ontslaggronden (art. 7:669 lid 3 sub a-i BW)**: 9 limitatieve gronden. Elk afzonderlijk voldragen, tenzij cumulatiegrond (i-grond).
+- **Cumulatiegrond (art. 7:669 lid 3 sub i BW)**: Combinatie van twee of meer niet-voldragen gronden. Extra vergoeding tot 50% bovenop transitievergoeding.
+- **Opzegverboden (art. 7:670 BW)**: Ziekte (eerste 2 jaar), zwangerschap, OR-lidmaatschap. NIET bij: AOW-ontslag, proeftijdontslag, dringende reden, wederzijds goedvinden.
+- **Proeftijd (art. 7:652 BW)**: Max 1 maand bij contract ≤2 jaar, max 2 maanden bij onbepaalde tijd. Schriftelijk. Niet bij opvolgend werkgeverschap.
+- **Opzegtermijn (art. 7:672 BW)**: Werkgever: 1 maand (<5j), 2 maanden (5-10j), 3 maanden (10-15j), 4 maanden (≥15j). Werknemer: 1 maand. Na AOW-leeftijd: 1 maand voor beide partijen.
+- **Ontslag op staande voet (art. 7:677/7:678 BW)**: Onverwijld, mededeling dringende reden, hoor en wederhoor. Strenge maatstaf.
+
+### Beëindigingsvergoedingen
+- **Transitievergoeding (art. 7:673 BW)**: 1/3 maandsalaris per dienstjaar. Bij ELKE beëindiging op initiatief werkgever. NIET bij: AOW-ontslag, ernstig verwijtbaar werknemer, faillissement.
+- **Billijke vergoeding (art. 7:681/7:683 BW)**: Alleen bij ernstig verwijtbaar handelen werkgever. Geen formule — rechter bepaalt hoogte. New Hairstyle-factoren.
+
+### Flexibele arbeid
+- **Ketenregeling (art. 7:668a BW)**: Max 3 contracten in max 36 maanden. Onderbreking >6 maanden reset keten. Let op CAO-afwijkingen.
+- **Aanzegverplichting (art. 7:668 BW)**: Schriftelijk, uiterlijk 1 maand voor einde. Vergoeding van max 1 maandsalaris bij niet-naleving.
+- **Oproepovereenkomst (art. 7:628a BW)**: Na 12 maanden: aanbod vaste uren. Minimale oproeptermijn 4 dagen.
+
+### Ziekte en re-integratie
+- **Loondoorbetaling bij ziekte (art. 7:629 BW)**: 2 jaar 70% (1e jaar minimaal minimumloon). Plan van aanpak, re-integratie 1e en 2e spoor, deskundigenoordeel UWV.
+- **Wet verbetering poortwachter**: Sanctie: loondoorbetaling 3e jaar bij onvoldoende re-integratie-inspanningen.
+
+### Concurrentiebeding
+- **Art. 7:653 BW**: Schriftelijk, meerderjarige werknemer. Bij bepaalde tijd: alleen met schriftelijke motivering zwaarwegende bedrijfsbelangen. Rechterlijke matiging mogelijk. Verval bij ernstig verwijtbaar werkgever.
+
+### VSO / beëindiging met wederzijds goedvinden
+- **Art. 7:670b BW**: Bedenktermijn 14 dagen (3 weken zonder vermelding). Schriftelijkheidsvereiste. WW-veiligheid: fictieve opzegtermijn, initiatief werkgever, geen dringende reden.
 
 ## Proactieve Signalering
 Bij ELK antwoord check je ACTIEF:
@@ -670,7 +728,8 @@ WERKWIJZE:
 2. CITEER LETTERLIJK met de CITEERWIJZE per bron, gevolgd door een citaat tussen aanhalingstekens
 3. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD en mag je citeren
 4. Combineer: T&C voor wettelijk kader → Thematica voor analyse → RAR/VAAN voor jurisprudentie
-5. Vul aan met rechtspraak.nl. Val op eigen kennis alleen terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet${sourcesContext}`
+5. Vul aan met rechtspraak.nl. Val op eigen kennis alleen terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet
+6. KRITIEK: Controleer ALTIJD of de juiste wettelijke bepaling in de passages staat. Als je een vraag over ontslag van een AOW-gerechtigde krijgt maar art. 7:669 lid 4 BW niet in de passages staat, gebruik dan je kennis uit de "Kritieke Wettelijke Regels" sectie hierboven en vermeld dit${sourcesContext}`
     }
     if (templatesContext) {
       systemPrompt += `\n\n## Beschikbare templates van Workx Advocaten
@@ -1268,19 +1327,24 @@ async function expandSearchQueries(
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 400,
-      system: `Je bent een zoekquery-generator voor een Nederlandse arbeidsrecht-kennisbank met 5 bronnen:
-- Tekst & Commentaar Arbeidsrecht (wetcommentaar per artikel)
-- Thematica Arbeidsrecht (thematische analyses)
+      system: `Je bent een expert zoekquery-generator voor een Nederlandse arbeidsrecht-kennisbank. Je KERNKWALITEIT is het vertalen van natuurlijke taal naar de juiste juridische terminologie en wetsartikelen.
+
+KRITIEK: Gebruikers stellen vragen in ALLEDAAGSE TAAL ("70 jarige ontslaan", "zieke werknemer eruit", "contract niet verlengen"). Jij MOET dit vertalen naar de JURIDISCHE TERMEN die in de kennisbank staan ("AOW-leeftijd pensioenontslag art. 7:669 lid 4", "opzegverbod ziekte loondoorbetaling art. 7:629", "ketenregeling aanzegverplichting art. 7:668a").
+
+Bronnen:
+- Tekst & Commentaar Arbeidsrecht (wetcommentaar per artikel BW)
+- Thematica Arbeidsrecht (thematische analyses arbeidsrecht)
 - VAAN AR Updates (recente rechtspraakoverzichten)
 - RAR Rechtspraak Arbeidsrecht (jurisprudentie-annotaties 2000-2026)
-- Rechtspraak.nl (uitspraken-database)
 
-Genereer 5 zoekformuleringen die VERSCHILLENDE passages uit VERSCHILLENDE bronnen zullen treffen:
-1. Het relevante BW-artikel met nummer (bijv. "art. 7:669 lid 3 sub g BW disfunctioneren") — treft T&C
-2. Het juridische thema als zoekterm (bijv. "disfunctioneren verbetertraject ontslag") — treft Thematica
-3. Juridische synoniemen/gerelateerde concepten (bijv. "ongeschiktheid functie-eisen herplaatsing") — treft RAR/VAAN
-4. Proceduretermen (bijv. "ontbindingsverzoek kantonrechter disfunctioneren") — treft recente rechtspraak
-5. Gerelateerde deelvraag die de gebruiker niet expliciet stelde maar wel relevant is (bijv. "transitievergoeding bij ontslag wegens disfunctioneren")
+Genereer 5 zoekformuleringen:
+1. Het EXACTE relevante BW-artikel met nummer + juridische term (bijv. "art. 7:669 lid 4 BW AOW-leeftijd pensioenontslag" of "art. 7:669 lid 3 sub g BW disfunctioneren") — treft T&C
+2. Het juridische thema met ALLE relevante vakjargon (bijv. "pensioengerechtigde leeftijd opzegging zonder ontslaggrond" of "disfunctioneren verbetertraject ontslag") — treft Thematica
+3. Juridische synoniemen en GERELATEERDE wetsartikelen (bijv. "pensioenopzegging AOW-gerechtigde art. 7:670a opzegverboden" of "ongeschiktheid functie-eisen herplaatsing") — treft RAR/VAAN
+4. Specifieke juridische GEVOLGEN en procedures (bijv. "transitievergoeding AOW-ontslag art. 7:673 lid 7" of "ontbindingsverzoek kantonrechter") — treft jurisprudentie
+5. Een AANVULLEND juridisch aspect dat de gebruiker niet noemde maar CRUCIAAL is (bijv. "opzegtermijn na AOW-leeftijd art. 7:672" of "billijke vergoeding ernstig verwijtbaar")
+
+DENK STAP VOOR STAP: Welke wettelijke bepaling is hier PRIMAIR van toepassing? Welk artikel uit Boek 7 BW? Welke juridische term wordt in de literatuur gebruikt?
 
 Geef ALLEEN de 5 queries, een per regel, zonder nummering of uitleg.`,
       messages: [{ role: 'user', content: userMessage }],
@@ -1326,6 +1390,112 @@ const LEGAL_PHRASES = [
   'bedenktermijn', 'wettelijke verhoging', 'vakantiegeld', 'vakantiedagen',
   'oproepovereenkomst', 'payrolling', 'uitzendovereenkomst',
 ]
+
+/**
+ * Map natural language to legal terminology.
+ * This is CRITICAL: users say "70 jarige ontslaan" but the database contains
+ * "AOW-leeftijd", "pensioenontslag", "art. 7:669 lid 4".
+ * Without this mapping, retrieval fails on basic questions.
+ */
+const LEGAL_CONCEPT_MAP: Array<{ patterns: RegExp[]; terms: string[] }> = [
+  // AOW / pensioen / oudere werknemer
+  {
+    patterns: [/\baow\b/i, /\bpensioen/i, /\b(?:6[5-9]|7[0-9]|8[0-9])\s*(?:jaar|jarige?)\b/i, /\boudere?\s*(?:werk)?nemer/i, /\bpensioenleeftijd/i, /\bpensioengerechtigde?\b/i],
+    terms: ['AOW-leeftijd', 'pensioenontslag', 'art. 7:669 lid 4', 'pensioengerechtigde', 'AOW-gerechtigde', 'pensioenopzegging', 'opzegging AOW'],
+  },
+  // Ziekte / arbeidsongeschiktheid
+  {
+    patterns: [/\bziek\b/i, /\bziekte\b/i, /\barbeidsongeschikt/i, /\bre-?integratie/i, /\bbedrijfsarts/i, /\bwia\b/i, /\bwet\s*poortwachter/i],
+    terms: ['loondoorbetaling ziekte', 'art. 7:629', 'opzegverbod ziekte', 'art. 7:670', 're-integratie', 'deskundigenoordeel', 'Wet verbetering poortwachter'],
+  },
+  // Ontslag op staande voet
+  {
+    patterns: [/\bstaande\s*voet/i, /\bdringende\s*reden/i, /\bop\s*stel\s*en\s*sprong/i, /\bsummier\s*ontslag/i],
+    terms: ['ontslag op staande voet', 'dringende reden', 'art. 7:677', 'art. 7:678', 'onverwijld', 'mededeling'],
+  },
+  // VSO / vaststellingsovereenkomst
+  {
+    patterns: [/\bvso\b/i, /\bvaststellingsovereenkomst/i, /\bwederzijds\s*goedvinden/i, /\bbeeindigingsovereenkomst/i, /\bsettlement/i],
+    terms: ['vaststellingsovereenkomst', 'bedenktermijn', 'art. 7:670b', 'finale kwijting', 'WW-veiligheid', 'fictieve opzegtermijn'],
+  },
+  // Transitievergoeding
+  {
+    patterns: [/\btransitievergoeding/i, /\bontslagvergoeding/i, /\bvergoeding\s*(?:bij\s*)?ontslag/i],
+    terms: ['transitievergoeding', 'art. 7:673', 'berekening transitievergoeding', 'billijke vergoeding', 'ernstig verwijtbaar'],
+  },
+  // Proeftijd
+  {
+    patterns: [/\bproeftijd/i, /\bproefperiode/i],
+    terms: ['proeftijdbeding', 'art. 7:652', 'proeftijdontslag', 'nietigheid proeftijd'],
+  },
+  // Concurrentiebeding / relatiebeding
+  {
+    patterns: [/\bconcurrentiebeding/i, /\brelatiebeding/i, /\bnon.?concurren/i],
+    terms: ['concurrentiebeding', 'relatiebeding', 'art. 7:653', 'zwaarwegende bedrijfsbelangen', 'schriftelijkheidsvereiste'],
+  },
+  // Ketenregeling / tijdelijk contract
+  {
+    patterns: [/\bketen/i, /\btijdelijk\s*contract/i, /\bbepaalde\s*tijd/i, /\bverlenging/i, /\baanzegg?/i],
+    terms: ['ketenregeling', 'art. 7:668a', 'aanzegverplichting', 'art. 7:668', 'bepaalde tijd', 'van rechtswege'],
+  },
+  // Disfunctioneren
+  {
+    patterns: [/\bdisfunctioner/i, /\bfunctioner/i, /\bniet\s*(?:goed\s*)?functioner/i, /\bverbetertraject/i, /\bpip\b/i],
+    terms: ['disfunctioneren', 'art. 7:669 lid 3 sub d', 'verbetertraject', 'ongeschiktheid', 'herplaatsing'],
+  },
+  // Verstoorde arbeidsverhouding
+  {
+    patterns: [/\bverstoorde?\s*(?:arbeids)?verhouding/i, /\bvertrouwensbreuk/i, /\bconflict\s*(?:op\s*)?(?:het\s*)?werk/i],
+    terms: ['verstoorde arbeidsverhouding', 'art. 7:669 lid 3 sub g', 'vertrouwensbreuk', 'mediation'],
+  },
+  // Reorganisatie / bedrijfseconomisch
+  {
+    patterns: [/\breorganisatie/i, /\bbedrijfseconomisch/i, /\bboventallig/i, /\bsociaal\s*plan/i, /\bafspiegeling/i],
+    terms: ['bedrijfseconomische redenen', 'art. 7:669 lid 3 sub a', 'afspiegelingsbeginsel', 'sociaal plan', 'UWV-procedure', 'herplaatsing'],
+  },
+  // Werkgeverschap / arbeidsrelatie kwalificatie
+  {
+    patterns: [/\bzzp\b/i, /\bschijnzelfstandig/i, /\barbeidsrelatie/i, /\bwerknemer\s*of\s*zzp/i, /\bplatform/i, /\bdeliveroo\b/i, /\buber\b/i],
+    terms: ['schijnzelfstandigheid', 'rechtsvermoeden arbeidsovereenkomst', 'art. 7:610a', 'gezagsverhouding', 'Deliveroo-arrest'],
+  },
+  // Oproepkracht / flexwerker
+  {
+    patterns: [/\boproep/i, /\bnul-?uren/i, /\bmin.?max/i, /\bflexwerker/i, /\bpayroll/i],
+    terms: ['oproepovereenkomst', 'art. 7:628a', 'nul-urencontract', 'aanbod vaste uren', 'payrolling'],
+  },
+  // Loon / salaris geschil
+  {
+    patterns: [/\bloon\b/i, /\bsalaris/i, /\bwettelijke\s*verhoging/i, /\bniet\s*betaald/i, /\bachterstallig/i],
+    terms: ['loonvordering', 'art. 7:616', 'wettelijke verhoging', 'art. 7:625', 'loonbetaling'],
+  },
+  // Overgang van onderneming
+  {
+    patterns: [/\bovergang\s*(?:van\s*)?onderneming/i, /\btupe\b/i, /\bovername\s*personeel/i, /\bbedrijfsovername/i],
+    terms: ['overgang van onderneming', 'art. 7:662', 'art. 7:663', 'identiteitsbehoud', 'TUPE'],
+  },
+]
+
+/**
+ * Extract legal concepts from natural language and add them as search terms.
+ * This bridges the gap between how users ask questions and how legal texts are written.
+ */
+function expandWithLegalConcepts(message: string): string[] {
+  const additionalTerms: string[] = []
+  const lower = message.toLowerCase()
+  for (const concept of LEGAL_CONCEPT_MAP) {
+    for (const pattern of concept.patterns) {
+      if (pattern.test(lower)) {
+        for (const term of concept.terms) {
+          if (!additionalTerms.includes(term)) {
+            additionalTerms.push(term)
+          }
+        }
+        break // One pattern match is enough per concept
+      }
+    }
+  }
+  return additionalTerms
+}
 
 /**
  * Extract meaningful search terms from user's question.
@@ -1376,6 +1546,14 @@ function extractSearchTerms(message: string): string[] {
     if (words[i].length >= 3 && words[i + 1].length >= 2 && words[i + 2].length >= 3) {
       terms.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`)
     }
+  }
+
+  // CRITICAL: Add legal concept mapping terms
+  // This bridges natural language ("70 jarige ontslaan") to legal terms ("AOW-leeftijd", "art. 7:669 lid 4")
+  const conceptTerms = expandWithLegalConcepts(message)
+  if (conceptTerms.length > 0) {
+    console.log(`[chat] Legal concept mapping: ${conceptTerms.join(', ')}`)
+    terms.push(...conceptTerms)
   }
 
   return Array.from(new Set(terms))

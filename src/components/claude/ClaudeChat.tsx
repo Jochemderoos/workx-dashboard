@@ -359,26 +359,41 @@ export default function ClaudeChat({
         doc.save(`workx-ai-${new Date().toISOString().slice(0, 10)}.pdf`)
         toast.success('PDF gedownload')
       } else {
-        // DOCX export — professional legal document styling
+        // DOCX export — professional legal document in Calibri 11pt
         const htmlContent = `
           <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
           <head><meta charset="utf-8">
+          <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:SpellingState>Clean</w:SpellingState><w:GrammarState>Clean</w:GrammarState><w:DefaultFonts><w:DefaultFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/></w:DefaultFonts></w:WordDocument></xml><![endif]-->
           <style>
-            body { font-family: 'Book Antiqua', 'Palatino Linotype', Georgia, serif; font-size: 10.5pt; line-height: 1.5; color: #1a1a1a; margin: 2cm 2.5cm; }
-            h1, h2, h3 { font-family: 'Book Antiqua', 'Palatino Linotype', Georgia, serif; font-size: 10.5pt; font-weight: normal; color: #1a1a1a; margin: 12pt 0 4pt 0; text-decoration: underline; }
-            h1 { font-size: 11pt; text-decoration: none; text-transform: uppercase; letter-spacing: 0.5pt; }
+            @page { size: A4; margin: 2.5cm 2.5cm 2cm 2.5cm; }
+            body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.4; color: #222; margin: 0; }
+            h1 { font-family: Calibri, sans-serif; font-size: 14pt; font-weight: bold; color: #1a3a5c; margin: 18pt 0 8pt 0; border-bottom: 1.5pt solid #1a3a5c; padding-bottom: 4pt; }
+            h2 { font-family: Calibri, sans-serif; font-size: 12pt; font-weight: bold; color: #1a3a5c; margin: 14pt 0 6pt 0; }
+            h3 { font-family: Calibri, sans-serif; font-size: 11pt; font-weight: bold; color: #333; margin: 10pt 0 4pt 0; }
             p { margin: 0 0 6pt 0; text-align: justify; }
-            strong { font-weight: normal; }
-            ul, ol { margin: 2pt 0 6pt 0; padding-left: 20pt; }
-            li { margin: 0 0 2pt 0; }
-            table { border-collapse: collapse; width: 100%; margin: 6pt 0; font-size: 10pt; }
-            td, th { border: 0.5pt solid #999; padding: 3pt 6pt; text-align: left; font-weight: normal; }
-            blockquote { margin: 6pt 0 6pt 20pt; padding-left: 10pt; border-left: 1.5pt solid #999; font-style: italic; }
+            strong { font-weight: bold; }
+            em { font-style: italic; }
+            ul, ol { margin: 4pt 0 8pt 0; padding-left: 24pt; }
+            li { margin: 0 0 3pt 0; }
+            table { border-collapse: collapse; width: 100%; margin: 8pt 0; font-size: 10pt; }
+            td, th { border: 1pt solid #bbb; padding: 4pt 8pt; text-align: left; }
+            th { background-color: #f0f4f8; font-weight: bold; color: #1a3a5c; }
+            blockquote { margin: 8pt 0 8pt 16pt; padding: 6pt 12pt; border-left: 3pt solid #1a3a5c; background-color: #f8f9fb; font-style: italic; color: #444; }
+            code { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; background-color: #f4f4f4; padding: 1pt 3pt; }
+            .header { margin-bottom: 16pt; padding-bottom: 8pt; border-bottom: 2pt solid #1a3a5c; }
+            .header-title { font-size: 9pt; color: #1a3a5c; font-weight: bold; letter-spacing: 0.5pt; text-transform: uppercase; margin: 0; }
+            .header-date { font-size: 9pt; color: #888; margin: 2pt 0 0 0; }
+            .footer { font-size: 8pt; color: #999; margin-top: 24pt; border-top: 1pt solid #ddd; padding-top: 8pt; }
           </style></head>
           <body>
-          <p style="font-size: 8pt; color: #888; margin-bottom: 12pt;">Workx Advocaten &mdash; ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <div class="header">
+            <p class="header-title">Workx Advocaten</p>
+            <p class="header-date">${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          </div>
           ${renderMarkdown(content)}
-          <p style="font-size: 7.5pt; color: #999; margin-top: 18pt; border-top: 0.5pt solid #ccc; padding-top: 6pt;"><em>Dit document is gegenereerd met behulp van AI en vormt geen juridisch advies. Raadpleeg uw advocaat voor een op uw situatie toegespitst advies.</em></p>
+          <div class="footer">
+            <p><em>Dit document is gegenereerd met behulp van AI en vormt geen juridisch advies. Raadpleeg uw advocaat voor een op uw situatie toegespitst advies.</em></p>
+          </div>
           </body></html>`
         const blob = new Blob([htmlContent], { type: 'application/msword' })
         const url = URL.createObjectURL(blob)
@@ -1006,46 +1021,50 @@ export default function ClaudeChat({
                     )}
 
                     {/* Action buttons: Copy, Export, Favorite, Annotate */}
-                    {msg.content && (
-                      <div className="flex items-center gap-1 mt-1.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {msg.content && !isStreaming && (
+                      <div className="flex items-center gap-0.5 mt-2.5 ml-0.5">
                         <button
                           onClick={() => copyToClipboard(msg.content, msg.id)}
-                          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/30 hover:text-white/60 transition-colors"
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                            copiedId === msg.id
+                              ? 'bg-green-500/15 text-green-400 border border-green-500/25'
+                              : 'bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08] border border-white/[0.06]'
+                          }`}
                         >
                           {copiedId === msg.id ? (
-                            <><Icons.check size={10} /> Gekopieerd</>
+                            <><Icons.check size={12} /> Gekopieerd</>
                           ) : (
-                            <><Icons.copy size={10} /> Kopieer</>
+                            <><Icons.copy size={12} /> Kopieer</>
                           )}
                         </button>
                         <button
-                          onClick={() => exportToDocument(msg.content, 'pdf')}
-                          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/30 hover:text-white/60 transition-colors"
+                          onClick={() => exportToDocument(msg.content, 'docx')}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08] border border-white/[0.06] transition-all"
                         >
-                          <Icons.download size={10} /> PDF
+                          <Icons.download size={12} /> Word
                         </button>
                         <button
-                          onClick={() => exportToDocument(msg.content, 'docx')}
-                          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-white/30 hover:text-white/60 transition-colors"
+                          onClick={() => exportToDocument(msg.content, 'pdf')}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08] border border-white/[0.06] transition-all"
                         >
-                          <Icons.download size={10} /> Word
+                          <Icons.download size={12} /> PDF
                         </button>
-                        <span className="text-white/10 mx-0.5">|</span>
+                        <div className="w-px h-4 bg-white/[0.06] mx-1" />
                         <button
                           onClick={() => toggleFavorite(msg.id)}
-                          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
-                            favoritedIds.has(msg.id) ? 'text-yellow-400' : 'text-white/30 hover:text-yellow-400'
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${
+                            favoritedIds.has(msg.id) ? 'text-yellow-400 bg-yellow-500/10' : 'text-white/30 hover:text-yellow-400 hover:bg-white/[0.04]'
                           }`}
                         >
-                          <Icons.star size={10} /> {favoritedIds.has(msg.id) ? 'Favoriet' : 'Bewaar'}
+                          <Icons.star size={12} />
                         </button>
                         <button
                           onClick={() => setAnnotatingId(annotatingId === msg.id ? null : msg.id)}
-                          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
-                            annotatingId === msg.id ? 'text-blue-400' : 'text-white/30 hover:text-blue-400'
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${
+                            annotatingId === msg.id ? 'text-blue-400 bg-blue-500/10' : 'text-white/30 hover:text-blue-400 hover:bg-white/[0.04]'
                           }`}
                         >
-                          <Icons.chat size={10} /> Annoteer
+                          <Icons.chat size={12} />
                         </button>
                       </div>
                     )}
