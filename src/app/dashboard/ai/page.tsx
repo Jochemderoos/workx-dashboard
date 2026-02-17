@@ -657,6 +657,7 @@ export default function AIAssistentPage() {
               }}
               onActiveChange={setChatActive}
               onSaveToProject={handleSaveToProject}
+              onHelpClick={() => setShowHelp(true)}
             />
           </div>
         </div>

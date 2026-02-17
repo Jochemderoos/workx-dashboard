@@ -42,6 +42,7 @@ interface ClaudeChatProps {
   onNewChat?: () => void
   onActiveChange?: (active: boolean) => void
   onSaveToProject?: (conversationId: string) => void
+  onHelpClick?: () => void
   placeholder?: string
   compact?: boolean
   quickActionPrompt?: string | null
@@ -58,6 +59,7 @@ export default function ClaudeChat({
   onNewChat,
   onActiveChange,
   onSaveToProject,
+  onHelpClick,
   placeholder,
   compact = false,
   quickActionPrompt,
@@ -824,32 +826,36 @@ export default function ClaudeChat({
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5" onClick={handleMessagesClick}>
-        {/* Empty state — clean, minimal, focus on the input bar */}
+        {/* Empty state — premium Silicon Valley welcome */}
         {messages.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-full pb-16">
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold text-white/90 tracking-tight">Stel een juridische vraag</h3>
-              <p className="text-sm text-white/30 max-w-sm mx-auto leading-relaxed">
-                Doorzoekt automatisch 48.000+ passages uit T&C Arbeidsrecht, Thematica, RAR, VAAN en Tijdschrift ArbeidsRecht
+          <div className="flex flex-col items-center justify-center h-full pb-16 relative">
+            {/* Subtle ambient glow */}
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[200px] bg-workx-lime/[0.03] rounded-full blur-[100px] pointer-events-none" />
+
+            <div className="relative text-center space-y-5">
+              <h3 className="text-2xl font-semibold tracking-tight bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
+                Stel een juridische vraag
+              </h3>
+              <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-[11px] text-white/25 max-w-md mx-auto">
+                <span className="text-white/35">Doorzoekt</span>
+                {['T&C Arbeidsrecht', 'Thematica', 'RAR', 'VAAN', 'Tijdschrift ArbeidsRecht'].map((source, i) => (
+                  <span key={source} className="inline-flex items-center">
+                    <span className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-white/40 font-medium">{source}</span>
+                    {i < 4 && <span className="ml-1.5 text-white/15">&middot;</span>}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[11px] text-white/20 tracking-wide">
+                48.000+ passages &middot; jurisprudentie &middot; wetgeving &middot; commentaar
               </p>
-            </div>
-            {/* Minimal quick suggestions */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-6 max-w-lg">
-              {[
-                'Ontslag wegens disfunctioneren',
-                'Transitievergoeding berekenen',
-                'VSO opstellen',
-                'Concurrentiebeding toetsen',
-              ].map((suggestion) => (
+              {onHelpClick && (
                 <button
-                  key={suggestion}
-                  onClick={() => sendMessage(suggestion)}
-                  disabled={isLoading}
-                  className="px-3 py-1.5 rounded-lg text-xs text-white/40 bg-white/[0.04] border border-white/[0.08] hover:text-white/70 hover:bg-white/[0.08] hover:border-white/[0.15] transition-all"
+                  onClick={onHelpClick}
+                  className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/35 bg-white/[0.03] border border-white/[0.08] hover:text-white/60 hover:bg-white/[0.06] hover:border-white/[0.15] transition-all"
                 >
-                  {suggestion}
+                  Hulp nodig?
                 </button>
-              ))}
+              )}
             </div>
           </div>
         )}
