@@ -213,8 +213,8 @@ export default function ClaudeChat({
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     const ext = file.name.split('.').pop()?.toLowerCase() || ''
-    if (!['pdf', 'docx', 'txt', 'md'].includes(ext)) {
-      toast.error(`Bestandstype .${ext} niet ondersteund. Toegestaan: pdf, docx, txt, md`)
+    if (!['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+      toast.error(`Bestandstype .${ext} niet ondersteund. Toegestaan: pdf, docx, txt, md, png, jpg`)
       return
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -746,7 +746,7 @@ export default function ClaudeChat({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.docx,.txt,.md"
+        accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
         onChange={handleFileAttach}
         className="hidden"
       />

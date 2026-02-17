@@ -434,6 +434,14 @@ export async function POST(req: NextRequest) {
             source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
             title: doc.name,
           })
+        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && doc.fileUrl?.startsWith('data:image/')) {
+          // Images: send as native image blocks for Claude vision
+          const base64Data = doc.fileUrl.split(',')[1]
+          const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
+          documentBlocks.push({
+            type: 'image',
+            source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
+          })
         } else if (doc.content) {
           // Fallback for text files and docs without fileUrl — include document ID for DOCX editing
           documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
@@ -456,6 +464,14 @@ export async function POST(req: NextRequest) {
             type: 'document',
             source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
             title: doc.name,
+          })
+        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && doc.fileUrl?.startsWith('data:image/')) {
+          if (documentBlocks.length >= 10) break
+          const base64Data = doc.fileUrl.split(',')[1]
+          const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
+          documentBlocks.push({
+            type: 'image',
+            source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
           })
         } else if (doc.content) {
           if (documentContext.length > 200000) break
