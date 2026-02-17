@@ -1449,7 +1449,7 @@ const LEGAL_CONCEPT_MAP: Array<{ patterns: RegExp[]; terms: string[] }> = [
 
   // 1. AOW / pensioen / oudere werknemer
   {
-    patterns: [/\baow\b/i, /\bpensioen/i, /\b(?:6[5-9]|7[0-9]|8[0-9])\s*(?:jaar|jarige?)\b/i, /\boudere?\s*(?:werk)?nemer/i, /\bpensioenleeftijd/i, /\bpensioengerechtigde?\b/i, /\bna\s*(?:de\s*)?pensioen/i],
+    patterns: [/\baow\b/i, /\bpensioen/i, /\b(?:6[5-9]|7[0-9]|8[0-9])[-\s]*(?:jaar|jarige?)\b/i, /\boudere?\s*(?:werk)?nemer/i, /\bpensioenleeftijd/i, /\bpensioengerechtigde?\b/i, /\bna\s*(?:de\s*)?pensioen/i],
     terms: ['AOW-leeftijd', 'pensioenontslag', 'art. 7:669 lid 4', 'pensioengerechtigde', 'AOW-gerechtigde', 'pensioenopzegging', 'opzegging AOW', 'opzegtermijn AOW'],
   },
   // 2. Ontslag op staande voet
@@ -1459,12 +1459,12 @@ const LEGAL_CONCEPT_MAP: Array<{ patterns: RegExp[]; terms: string[] }> = [
   },
   // 3. Disfunctioneren / niet functioneren
   {
-    patterns: [/\bdisfunctioner/i, /\bfunctioner/i, /\bniet\s*(?:goed\s*)?functioner/i, /\bverbetertraject/i, /\bpip\b/i, /\bslecht\s*(?:prester|werk)/i, /\bonbekwaam/i, /\bongeschikt/i],
+    patterns: [/\bdisfunctioner/i, /functionee/i, /\bfunctioner/i, /\bniet\s*(?:goed\s*)?functione/i, /\bverbetertraject/i, /\bpip\b/i, /\bslecht\s*(?:prester|werk)/i, /\bonbekwaam/i, /\bongeschikt/i],
     terms: ['disfunctioneren', 'art. 7:669 lid 3 sub d', 'verbetertraject', 'ongeschiktheid', 'herplaatsing', 'verbeterplan', 'functioneringsgesprek'],
   },
   // 4. Verstoorde arbeidsverhouding
   {
-    patterns: [/\bverstoorde?\s*(?:arbeids)?verhouding/i, /\bvertrouwensbreuk/i, /\bconflict\s*(?:op\s*)?(?:het\s*)?werk/i, /\bruzie\b/i, /\bimpasse\b/i, /\bonwerkbare?\s*situatie/i],
+    patterns: [/\bverstoorde?\s*(?:arbeids)?verhouding/i, /\bvertrouwensbreuk/i, /\bconflict\s*(?:op\s*)?(?:de\s*|het\s*)?(?:werk|werkvloer)/i, /\bruzie\b/i, /\bimpasse\b/i, /\bonwerkbare?\s*situatie/i],
     terms: ['verstoorde arbeidsverhouding', 'art. 7:669 lid 3 sub g', 'vertrouwensbreuk', 'mediation', 'onherstelbaar verstoord', 'ontbinding arbeidsovereenkomst'],
   },
   // 5. Reorganisatie / bedrijfseconomisch ontslag
@@ -1474,7 +1474,7 @@ const LEGAL_CONCEPT_MAP: Array<{ patterns: RegExp[]; terms: string[] }> = [
   },
   // 6. Verwijtbaar handelen werknemer
   {
-    patterns: [/\bverwijtbaar\s*(?:handel|gedrag)/i, /\b(?:e-?)grond\b/i, /\bintegriteit/i, /\bfraud/i, /\bstelen\b/i, /\bsteelt\b/i, /\bdiefstal/i, /\bgeheimhouding\s*(?:geschonden|overtreden)/i],
+    patterns: [/\bverwijtbaar\s*(?:handel|gedrag)/i, /\b(?:e-?)grond\b/i, /\bintegriteit/i, /\bfraud/i, /\bgestolen\b/i, /\bstelen\b/i, /\bsteelt\b/i, /\bdiefstal/i, /\bgeheimhouding\s*(?:geschonden|overtreden)/i],
     terms: ['verwijtbaar handelen', 'art. 7:669 lid 3 sub e', 'ernstig verwijtbaar', 'integriteitsschending', 'ontbinding wegens verwijtbaar handelen'],
   },
   // 7. Cumulatiegrond (i-grond)
@@ -1484,7 +1484,7 @@ const LEGAL_CONCEPT_MAP: Array<{ patterns: RegExp[]; terms: string[] }> = [
   },
   // 8. Opzegverboden
   {
-    patterns: [/\bopzegverbod/i, /\bmag\s*(?:je\s*)?niet\s*ontslaan/i, /\bbeschermd\s*(?:tegen\s*)?ontslag/i, /\bontslagbescherming/i],
+    patterns: [/\bopzegverbod/i, /\bmag\s*(?:je\s*)?niet\s*ontslaan/i, /\bbeschermd\s*(?:tegen\s*)?ontslag/i, /\bontslagbescherming/i, /\bzwanger/i],
     terms: ['opzegverbod', 'art. 7:670', 'opzegverbod ziekte', 'opzegverbod zwangerschap', 'opzegverbod OR', 'art. 7:670a', 'reflexwerking'],
   },
   // 9. Opzegtermijn
@@ -1576,7 +1576,7 @@ const LEGAL_CONCEPT_MAP: Array<{ patterns: RegExp[]; terms: string[] }> = [
   },
   // 24. Overgang van onderneming
   {
-    patterns: [/\bovergang\s*(?:van\s*)?onderneming/i, /\btupe\b/i, /\bovername\s*personeel/i, /\bbedrijfsovername/i, /\bfusie\b/i, /\bactivatransactie/i, /\basset\s*deal/i],
+    patterns: [/\bovergang\s*(?:van\s*)?onderneming/i, /\btupe\b/i, /\bovername\s*personeel/i, /\bbedrijfsovername/i, /\bfusie\b/i, /\bactivatransactie/i, /\basset\s*deal/i, /\bovernemen\b/i, /\bovername\b/i],
     terms: ['overgang van onderneming', 'art. 7:662', 'art. 7:663', 'identiteitsbehoud', 'TUPE', 'behoud arbeidsvoorwaarden', 'economische eenheid'],
   },
 
