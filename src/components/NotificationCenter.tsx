@@ -9,7 +9,7 @@ import { useNotifications } from '@/lib/hooks/useData'
 
 interface Notification {
   id: string
-  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'system'
+  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system'
   title: string
   message: string
   createdAt: Date
@@ -78,6 +78,8 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         return <Icons.chat size={16} className="text-purple-400" />
       case 'calendar':
         return <Icons.calendar size={16} className="text-green-400" />
+      case 'werkverdeling':
+        return <Icons.users size={16} className="text-yellow-400" />
       default:
         return <Icons.bell size={16} className="text-gray-400" />
     }

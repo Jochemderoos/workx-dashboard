@@ -500,6 +500,65 @@ export async function GET() {
       ? [socialEvents[0], ...otherEvents.filter((e: any) => e.id !== socialEvents[0]?.id)].slice(0, 3)
       : calendarEvents.slice(0, 3)
 
+    // Fetch conversation completions for current week
+    const weekId = currentWeekDistribution?.id
+    const completions = weekId
+      ? await prisma.conversationCompletion.findMany({ where: { weekId } })
+      : []
+
+    // Helper: check if employee name matches (supports comma-separated names like "Anna, Bob")
+    const matchesEmployee = (d: any) => {
+      if (d.employeeId === userId) return true
+      if (!d.employeeName || !currentUser?.name) return false
+      return d.employeeName.split(', ').map((n: string) => n.trim()).includes(currentUser.name)
+    }
+
+    // Build werkverdelingGesprekken array (for employees) - each entry is one partner conversation
+    const myDistributions = currentWeekDistribution?.distributions?.filter(matchesEmployee) || []
+    const werkverdelingGesprekken = myDistributions.map((d: any) => ({
+      partnerName: d.partnerName,
+      weekId: weekId,
+      weekDate: currentWeekDistribution?.meetingDate,
+      isCompleted: completions.some(
+        (c: any) => c.partnerName === d.partnerName && c.employeeId === userId
+      ),
+    }))
+
+    // Build partner overview (for partners) - all employees assigned to this partner
+    let partnerWerkverdelingOverview: any[] | null = null
+    if (currentUser?.role === 'PARTNER' && currentWeekDistribution) {
+      const partnerFirstName = currentUser.name?.split(' ')[0] || ''
+      const partnerDistributions = currentWeekDistribution.distributions?.filter(
+        (d: any) => d.partnerName === partnerFirstName
+      ) || []
+
+      // Expand comma-separated employee names into individual entries
+      const employeeEntries: any[] = []
+      for (const d of partnerDistributions) {
+        if (!d.employeeName) continue
+        const names = d.employeeName.split(', ').map((n: string) => n.trim())
+        for (const name of names) {
+          // Try to find user ID for this employee name
+          const employeeUser = await prisma.user.findFirst({
+            where: { name: { contains: name }, isActive: true },
+            select: { id: true, name: true, avatarUrl: true },
+          })
+          const empId = d.employeeId || employeeUser?.id || name
+          employeeEntries.push({
+            employeeId: empId,
+            employeeName: employeeUser?.name || name,
+            avatarUrl: employeeUser?.avatarUrl || null,
+            partnerName: d.partnerName,
+            weekId: weekId,
+            isCompleted: completions.some(
+              (c: any) => c.partnerName === d.partnerName && (c.employeeId === empId || c.employeeName === name)
+            ),
+          })
+        }
+      }
+      partnerWerkverdelingOverview = employeeEntries
+    }
+
     // Return all dashboard data in one response
     // Add cache headers: browser can cache for 30s, must revalidate after
     return NextResponse.json({
@@ -530,14 +589,12 @@ export async function GET() {
       openMeetingActions: (
         currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
       ) ? openMeetingActions : [],
-      werkverdelingGesprek: currentWeekDistribution?.distributions?.find(
-        (d: any) => d.employeeId === userId || d.employeeName === currentUser?.name
-      ) ? {
-        partnerName: currentWeekDistribution?.distributions?.find(
-          (d: any) => d.employeeId === userId || d.employeeName === currentUser?.name
-        )?.partnerName,
-        weekDate: currentWeekDistribution?.meetingDate,
-      } : null,
+      // Backwards compat: single gesprek (first incomplete, or first)
+      werkverdelingGesprek: werkverdelingGesprekken.find((g: any) => !g.isCompleted) || werkverdelingGesprekken[0] || null,
+      // New: full array with completion status
+      werkverdelingGesprekken,
+      // Partner overview with all employees
+      partnerWerkverdelingOverview,
       // Vacation request data
       pendingVacationRequests: (
         currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'

@@ -115,7 +115,7 @@ export async function GET() {
     // 4. New feedback (for admins/partners only)
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { role: true, name: true },
     })
 
     if (currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER') {
@@ -134,6 +134,90 @@ export async function GET() {
           read: dismissedKeys.has(key),
           href: '/dashboard/feedback',
         })
+      }
+    }
+
+    // 5. Werkverdelingsgesprekken - for current week
+    {
+      // Skip weekends: advance to next Monday if date falls on Saturday or Sunday
+      const todayWork = new Date(now)
+      const dayOfWeek = todayWork.getDay()
+      if (dayOfWeek === 6) todayWork.setDate(todayWork.getDate() + 2)
+      else if (dayOfWeek === 0) todayWork.setDate(todayWork.getDate() + 1)
+
+      const currentWeek = await prisma.meetingWeek.findFirst({
+        where: {
+          meetingDate: {
+            gte: new Date(todayWork.getTime() - 3 * 24 * 60 * 60 * 1000),
+            lte: new Date(todayWork.getTime() + 3 * 24 * 60 * 60 * 1000),
+          },
+        },
+        include: { distributions: true },
+        orderBy: { meetingDate: 'desc' },
+      }).catch(() => null)
+
+      if (currentWeek) {
+        const completions = await prisma.conversationCompletion.findMany({
+          where: { weekId: currentWeek.id },
+        })
+
+        if (currentUser?.role === 'PARTNER') {
+          // Partner: notification with count of remaining conversations
+          const partnerFirstName = currentUser.name?.split(' ')[0] || ''
+          const partnerDists = currentWeek.distributions.filter(
+            (d) => d.partnerName === partnerFirstName
+          )
+          // Expand comma-separated names
+          let totalEmployees = 0
+          let completedCount = 0
+          for (const d of partnerDists) {
+            if (!d.employeeName) continue
+            const names = d.employeeName.split(', ').map((n: string) => n.trim())
+            for (const name of names) {
+              totalEmployees++
+              const isComplete = completions.some(
+                (c: any) => c.partnerName === d.partnerName && c.employeeName === name
+              )
+              if (isComplete) completedCount++
+            }
+          }
+          const remaining = totalEmployees - completedCount
+          if (remaining > 0) {
+            const key = `werkverdeling-${currentWeek.id}-partner-${partnerFirstName}`
+            notifications.push({
+              id: key,
+              type: 'werkverdeling',
+              title: 'Werkverdelingsgesprekken',
+              message: `Je hebt nog ${remaining} werkverdelingsgesprek${remaining === 1 ? '' : 'ken'} in te plannen`,
+              createdAt: currentWeek.meetingDate,
+              read: dismissedKeys.has(key),
+              href: '/dashboard',
+            })
+          }
+        } else {
+          // Employee: notification per open conversation
+          for (const d of currentWeek.distributions) {
+            if (!d.employeeName) continue
+            const names = d.employeeName.split(', ').map((n: string) => n.trim())
+            if (!names.includes(currentUser?.name || '') && d.employeeId !== userId) continue
+
+            const isComplete = completions.some(
+              (c: any) => c.partnerName === d.partnerName && c.employeeId === userId
+            )
+            if (!isComplete) {
+              const key = `werkverdeling-${currentWeek.id}-${d.partnerName}-${userId}`
+              notifications.push({
+                id: key,
+                type: 'werkverdeling',
+                title: 'Werkverdelingsgesprek',
+                message: `Plan je snel een gesprek in met ${d.partnerName}`,
+                createdAt: currentWeek.meetingDate,
+                read: dismissedKeys.has(key),
+                href: '/dashboard',
+              })
+            }
+          }
+        }
       }
     }
 

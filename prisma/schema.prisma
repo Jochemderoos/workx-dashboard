@@ -1352,6 +1352,23 @@ model WorkDistribution {
   @@index([employeeId])
 }
 
+// ==================== WERKVERDELINGSGESPREKKEN COMPLETION ====================
+
+// Bijhoudt welke werkverdelingsgesprekken zijn afgerond (per individuele medewerker-partner)
+model ConversationCompletion {
+  id           String   @id @default(cuid())
+  weekId       String
+  partnerName  String
+  employeeId   String
+  employeeName String
+  completedAt  DateTime @default(now())
+  completedBy  String
+
+  @@unique([weekId, partnerName, employeeId])
+  @@index([weekId])
+  @@index([employeeId])
+}
+
 // ==================== NOTIFICATIE DISMISSALS ====================
 
 // Bijhoudt welke notificaties een gebruiker als gelezen heeft gemarkeerd

@@ -822,6 +822,8 @@ export default function DashboardHome() {
   const nextTraining = summaryData?.nextTraining || null
   const openMeetingActions: { id: string; description: string; responsibleName: string; week: { dateLabel: string } }[] = summaryData?.openMeetingActions || []
   const werkverdelingGesprek: { partnerName: string; weekDate: string } | null = summaryData?.werkverdelingGesprek || null
+  const werkverdelingGesprekken: { partnerName: string; weekId: string; weekDate: string; isCompleted: boolean }[] = summaryData?.werkverdelingGesprekken || []
+  const partnerWerkverdelingOverview: { employeeId: string; employeeName: string; avatarUrl: string | null; partnerName: string; weekId: string; isCompleted: boolean }[] | null = summaryData?.partnerWerkverdelingOverview || null
   const pendingVacationRequests: any[] = summaryData?.pendingVacationRequests || []
   const allApprovedVacations: any[] = summaryData?.allApprovedVacations || []
   const myVacationRequests: any[] = summaryData?.myVacationRequests || []
@@ -1092,6 +1094,30 @@ export default function DashboardHome() {
   }
 
   // Office attendance and vacation balance are now handled by SWR (useDashboardSummary)
+
+  // Mark werkverdelingsgesprek as completed
+  const [completingGesprek, setCompletingGesprek] = useState<string | null>(null)
+  const completeWerkverdelingGesprek = async (partnerName: string, employeeId: string, employeeName: string, weekId: string) => {
+    const key = `${partnerName}-${employeeId}`
+    setCompletingGesprek(key)
+    try {
+      const res = await fetch('/api/work-distribution/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekId, partnerName, employeeId, employeeName }),
+      })
+      if (res.ok) {
+        toast.success('Gesprek als afgerond gemarkeerd')
+        mutateSummary()
+      } else {
+        toast.error('Kon gesprek niet afvinken')
+      }
+    } catch {
+      toast.error('Fout bij afvinken gesprek')
+    } finally {
+      setCompletingGesprek(null)
+    }
+  }
 
   const toggleOfficeAttendance = async () => {
     if (!officeAttendance || isTogglingAttendance) return
@@ -1605,6 +1631,141 @@ export default function DashboardHome() {
         </ScrollRevealItem>
       </ScrollReveal>
 
+      {/* WERKVERDELINGSGESPREKKEN WIDGET - for employees (prominent, with completion) */}
+      {werkverdelingGesprekken.filter(g => !g.isCompleted).length > 0 && currentUser?.role !== 'PARTNER' && (
+        <div className="relative overflow-hidden rounded-2xl border-2 border-yellow-400 shadow-lg shadow-yellow-500/20 bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-orange-500/5 p-5">
+          <div className="absolute inset-0 rounded-2xl border-2 border-yellow-400/30 animate-pulse pointer-events-none" />
+          <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/30 flex items-center justify-center">
+                  <Icons.users className="text-yellow-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Werkverdelingsgesprekken</h3>
+                  <p className="text-xs text-gray-400">Plan je snel een gesprek in</p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-300 text-xs font-bold">
+                {werkverdelingGesprekken.filter(g => !g.isCompleted).length} open
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {werkverdelingGesprekken.filter(g => !g.isCompleted).map((gesprek) => {
+                const photoUrl = getPhotoUrl(gesprek.partnerName)
+                const isCompleting = completingGesprek === `${gesprek.partnerName}-${summaryData?.currentUser?.id}`
+                return (
+                  <div key={gesprek.partnerName} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {photoUrl ? (
+                        <Image src={photoUrl} alt={gesprek.partnerName} width={40} height={40} className="w-full h-full object-cover" />
+                      ) : (
+                        <Icons.user className="text-yellow-400" size={18} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">Plan je snel een gesprek in met <span className="text-yellow-200">{gesprek.partnerName}</span></p>
+                      <p className="text-xs text-gray-500 mt-0.5">Werkverdelingsgesprek deze week</p>
+                    </div>
+                    <button
+                      onClick={() => completeWerkverdelingGesprek(gesprek.partnerName, summaryData?.currentUser?.id, summaryData?.currentUser?.name, gesprek.weekId)}
+                      disabled={isCompleting}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-xs font-medium transition-all disabled:opacity-50"
+                    >
+                      {isCompleting ? (
+                        <div className="w-3.5 h-3.5 border-2 border-yellow-300/30 border-t-yellow-300 rounded-full animate-spin" />
+                      ) : (
+                        <Icons.check size={14} />
+                      )}
+                      Afgerond
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PARTNER WERKVERDELINGSGESPREKKEN OVERZICHT - for partners */}
+      {partnerWerkverdelingOverview && partnerWerkverdelingOverview.length > 0 && (
+        <div className="relative overflow-hidden rounded-2xl border-2 border-blue-400 shadow-lg shadow-blue-500/20 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-indigo-500/5 p-5">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/30 flex items-center justify-center">
+                  <Icons.users className="text-blue-400" size={20} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Werkverdelingsgesprekken</h3>
+                  <p className="text-xs text-gray-400">
+                    {partnerWerkverdelingOverview.filter(e => !e.isCompleted).length} van {partnerWerkverdelingOverview.length} nog in te plannen
+                  </p>
+                </div>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                partnerWerkverdelingOverview.filter(e => !e.isCompleted).length === 0
+                  ? 'bg-green-500/20 text-green-300'
+                  : 'bg-blue-500/20 text-blue-300'
+              }`}>
+                {partnerWerkverdelingOverview.filter(e => e.isCompleted).length}/{partnerWerkverdelingOverview.length}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {partnerWerkverdelingOverview.map((emp) => {
+                const photoUrl = getPhotoUrl(emp.employeeName, emp.avatarUrl)
+                const isCompleting = completingGesprek === `${emp.partnerName}-${emp.employeeId}`
+                return (
+                  <div key={emp.employeeId} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                    emp.isCompleted
+                      ? 'bg-green-500/5 border-green-500/20'
+                      : 'bg-white/5 border-white/10'
+                  }`}>
+                    <div className="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {photoUrl ? (
+                        <Image src={photoUrl} alt={emp.employeeName} width={36} height={36} className="w-full h-full object-cover" />
+                      ) : (
+                        <Icons.user className="text-blue-400" size={16} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${emp.isCompleted ? 'text-gray-400 line-through' : 'text-white'}`}>
+                        {emp.employeeName}
+                      </p>
+                    </div>
+                    {emp.isCompleted ? (
+                      <div className="flex items-center gap-1 text-green-400 text-xs">
+                        <Icons.check size={14} />
+                        <span>Afgerond</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => completeWerkverdelingGesprek(emp.partnerName, emp.employeeId, emp.employeeName, emp.weekId)}
+                        disabled={isCompleting}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-medium transition-all disabled:opacity-50"
+                      >
+                        {isCompleting ? (
+                          <div className="w-3.5 h-3.5 border-2 border-blue-300/30 border-t-blue-300 rounded-full animate-spin" />
+                        ) : (
+                          <Icons.check size={14} />
+                        )}
+                        Afgerond
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* VAKANTIEAANVRAGEN WIDGET - for admin/partner/office_manager - BEFORE What's New */}
       {isAdmin && (
         <div className={`relative overflow-hidden rounded-2xl border-2 ${pendingVacationRequests.length > 0 ? 'border-orange-400 shadow-lg shadow-orange-500/20' : 'border-orange-500/30'} bg-gradient-to-br ${pendingVacationRequests.length > 0 ? 'from-orange-500/20 via-orange-500/10 to-yellow-500/10' : 'from-orange-500/10 via-orange-500/5 to-transparent'} p-5`}>
@@ -1843,27 +2004,6 @@ export default function DashboardHome() {
 
       {/* WHAT'S NEW WIDGET */}
       <WhatsNewWidget dismissedVersion={currentUser?.whatsNewDismissed} />
-
-      {/* WERKVERDELINGSGESPREK WIDGET - for employees */}
-      {werkverdelingGesprek && (
-        <Link href="/dashboard/partners/notulen" className="block">
-          <div className="relative overflow-hidden rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 via-orange-500/5 to-transparent p-5 hover:border-yellow-500/50 transition-all group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="relative flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Icons.users className="text-yellow-400" size={22} />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-white">Werkverdelingsgesprek</p>
-                <p className="text-xs text-yellow-300/80 mt-0.5">
-                  Je hebt deze week een werkverdelingsgesprek met <span className="font-medium text-yellow-200">{werkverdelingGesprek.partnerName}</span>
-                </p>
-              </div>
-              <Icons.chevronRight size={16} className="text-yellow-400/50 group-hover:text-yellow-400 group-hover:translate-x-1 transition-all" />
-            </div>
-          </div>
-        </Link>
-      )}
 
       {/* OPEN ACTIEPUNTEN WIDGET - for partners + admin */}
       {openMeetingActions.length > 0 && (
