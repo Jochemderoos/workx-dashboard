@@ -9,7 +9,7 @@ import { useNotifications } from '@/lib/hooks/useData'
 
 interface Notification {
   id: string
-  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system'
+  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system' | 'lustrum'
   title: string
   message: string
   createdAt: Date
@@ -80,6 +80,8 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         return <Icons.calendar size={16} className="text-green-400" />
       case 'werkverdeling':
         return <Icons.users size={16} className="text-yellow-400" />
+      case 'lustrum':
+        return <span className="inline-block animate-bounce text-base">🎉</span>
       default:
         return <Icons.bell size={16} className="text-gray-400" />
     }
@@ -155,7 +157,9 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                   <div
                     key={notification.id}
                     className={`p-4 hover:bg-white/5 transition-colors cursor-pointer ${
-                      !notification.read ? 'bg-workx-lime/5' : ''
+                      notification.type === 'lustrum' && !notification.read
+                        ? 'bg-gradient-to-r from-pink-500/10 via-yellow-500/10 to-pink-500/10 border-l-2 border-yellow-400'
+                        : !notification.read ? 'bg-workx-lime/5' : ''
                     }`}
                     onClick={() => {
                       if (!notification.read) {

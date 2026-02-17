@@ -221,6 +221,22 @@ export async function GET() {
       }
     }
 
+    // 6. Lustrum verrassing — tijdelijke notificatie voor iedereen
+    {
+      const key = 'lustrum-2026'
+      if (!dismissedKeys.has(key)) {
+        notifications.unshift({
+          id: key,
+          type: 'lustrum',
+          title: 'LUSTRUM VERRASSING',
+          message: 'Haal je goodie op bij Hanna!',
+          createdAt: new Date(),
+          read: false,
+          href: '/dashboard',
+        })
+      }
+    }
+
     // Sort by createdAt (newest first)
     notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
