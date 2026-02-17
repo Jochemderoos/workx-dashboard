@@ -826,7 +826,7 @@ export default function ClaudeChat({
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-5" onClick={handleMessagesClick}>
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5" onClick={handleMessagesClick}>
         {/* Empty state — welcoming with inline quick actions */}
         {messages.length === 0 && !isLoading && (
           <div className="space-y-6 pb-4">
@@ -883,7 +883,7 @@ export default function ClaudeChat({
             key={msg.id}
             className={`flex message-fade-in ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className={`relative group ${msg.role === 'user' ? 'max-w-[85%]' : 'max-w-[95%] w-full'}`}>
+            <div className={`relative group ${msg.role === 'user' ? 'max-w-[80%]' : 'w-full'}`}>
               {/* Assistant message */}
               {msg.role === 'assistant' && (
                 <div className="flex items-start gap-3">

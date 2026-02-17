@@ -477,10 +477,10 @@ export default function AIAssistentPage() {
 
       {/* Content based on active tab */}
       {activeTab === 'chat' && (
-        <div className="flex gap-3" style={{ height: isCompactMode ? 'calc(100vh - 180px)' : 'calc(100vh - 320px)' }}>
-          {/* Conversation history sidebar */}
-          <div className={`rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
-            showHistory ? 'w-80 opacity-100' : 'w-0 opacity-0 border-0 p-0'
+        <div className="flex gap-0" style={{ height: isCompactMode ? 'calc(100vh - 180px)' : 'calc(100vh - 320px)' }}>
+          {/* Conversation history sidebar — slim, collapsible */}
+          <div className={`bg-white/[0.02] border-r border-white/[0.06] overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
+            showHistory ? 'w-64 opacity-100' : 'w-0 opacity-0 border-0 p-0'
           }`}>
             {showHistory && (
               <>
@@ -673,15 +673,20 @@ export default function AIAssistentPage() {
             )}
           </div>
 
-          {/* Chat area */}
-          <div className="flex-1 rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden relative">
-            {/* History toggle button */}
+          {/* Chat area — maximale breedte voor leesbaarheid */}
+          <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.03] to-white/[0.01] border border-white/[0.08] overflow-hidden relative">
+            {/* History toggle button — compact pill */}
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="absolute top-2 left-2 z-20 p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-              title={showHistory ? 'Verberg gesprekken' : 'Toon gesprekken'}
+              className={`absolute top-3 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-300 ${
+                showHistory
+                  ? 'left-3 bg-white/[0.04] text-white/30 hover:text-white/60 hover:bg-white/[0.08] border border-white/[0.06]'
+                  : 'left-3 bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 border border-workx-lime/20'
+              }`}
+              title={showHistory ? 'Sidebar inklappen' : 'Gesprekken tonen'}
             >
-              <Icons.menu size={14} />
+              {showHistory ? <Icons.chevronLeft size={14} /> : <Icons.menu size={14} />}
+              {!showHistory && <span>Gesprekken</span>}
             </button>
             <ClaudeChat
               key={selectedConvId || 'new'}
