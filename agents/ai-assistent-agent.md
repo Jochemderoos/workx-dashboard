@@ -160,6 +160,22 @@ Update dit bestand met een log entry onderaan.
 
 <!-- Voeg nieuwe entries bovenaan toe -->
 
+### Sessie 4 — 2026-02-17
+- **System prompt volledig herschreven**: gestroomlijnd van ~270 naar ~200 regels, duplicaties verwijderd
+- **Bronnen-combinatiestrategie**: expliciete instructie HOE de 5 bronnen samen te voegen (T&C=wettelijk kader, Thematica=analyse, RAR=jurisprudentie, VAAN=updates, rechtspraak.nl=aanvulling)
+- **Antwoordstructuur per vraagtype**: specifieke output-structuur per type vraag (feitelijk/analyse/review/stuk/strategie)
+- **Query expansion verbeterd**: van 4 naar 5 varianten, elk gericht op een ANDERE bron (T&C, Thematica, RAR, VAAN, rechtspraak.nl)
+- **Keyword scoring verbeterd**: juridische meerwoordtermen (43 bekende frases) scoren 8x, artikelverwijzingen 6x, bigrams/trigrams 4x
+- **ECLI-nummers in passages gemarkeerd als geverifieerd**: passages met ECLI worden gelabeld zodat Claude ze mag citeren
+- **ECLI-verificatie verbeterd**: ECLIs uit kennisbronnen worden niet meer onnodig geverifieerd tegen rechtspraak.nl
+- **Bronnenoverzicht met functie-hint**: per bron wordt de specifieke FUNCTIE benoemd (wettelijk kader, analyse, jurisprudentie, updates)
+- **Conflicterende bronnen**: instructie toegevoegd om BEIDE standpunten te vermelden met transparante analyse
+- **Adjacent chunks**: context verhoogd van 500 naar 800 chars, top 12 ipv top 10 chunks verrijkt
+- **MAX_PER_SOURCE**: verhoogd van 10 naar 12 voor betere dekking van grote bronnen (RAR)
+- **Max chunks**: verhoogd van 35 naar 40, semantic search per query max 50
+- **Rechtspraak ruling limiet**: verhoogd van 40K naar 50K chars
+- **Compilatie gecontroleerd**: alleen bekende e2e/ fouten
+
 ### Sessie 3 — 2026-02-17
 - Chat API timeout-bescherming: source fetch (8s), chunk retrieval (15s)
 - Graceful degradation: als bronnen niet laden, ga door zonder bronnen

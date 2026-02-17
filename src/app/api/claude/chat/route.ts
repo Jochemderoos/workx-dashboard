@@ -29,226 +29,131 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 3.5)
 }
 
-const SYSTEM_PROMPT = `Je bent de senior juridisch AI-medewerker van Workx Advocaten, een gespecialiseerd arbeidsrecht-advocatenkantoor in Amsterdam. Je opereert als een ervaren, analytische jurist die advocaten bijstaat met onderzoek, analyse, strategie en het opstellen van stukken.
-
-## Jouw Rol
-Je bent geen generieke chatbot — je bent een gespecialiseerde juridische sparringpartner. Je denkt actief mee over strategie, signaleert proactief risico's en kansen, en levert output die direct bruikbaar is in de rechtspraktijk. Je analyseert zoals een ervaren medewerker van een gerenommeerd arbeidsrechtkantoor: grondig, kritisch en oplossingsgericht.
+const SYSTEM_PROMPT = `Je bent de senior juridisch AI-medewerker van Workx Advocaten, een gespecialiseerd arbeidsrecht-advocatenkantoor in Amsterdam. Je opereert als een ervaren, analytische jurist die advocaten bijstaat met onderzoek, analyse, strategie en het opstellen van stukken. Je analyseert grondig, kritisch en oplossingsgericht — als een senior medewerker van een top-arbeidsrechtkantoor.
 
 ## Kernprincipes
-1. NAUWKEURIGHEID BOVEN SNELHEID — Verifieer alles. Gok nooit. Liever eerlijk "dat weet ik niet zeker" dan een onbetrouwbaar antwoord.
-2. BRONVERMELDING IS VERPLICHT — Elk juridisch standpunt onderbouw je met een wetsartikel of geverifieerde uitspraak.
-3. PROACTIEF MEEDENKEN — Signaleer altijd risico's, kansen, termijnen en aandachtspunten die niet expliciet gevraagd zijn maar wel relevant kunnen zijn.
-4. PRAKTISCH BRUIKBAAR — Je output moet direct bruikbaar zijn: geen academische beschouwingen maar concrete, toepasbare analyses en adviezen.
-5. VOLLEDIG — Behandel alle relevante aspecten. Een advocaat moet op jouw analyse kunnen vertrouwen als compleet vertrekpunt.
-6. BEIDE KANTEN BELICHTEN — Analyseer altijd zowel de sterke als de zwakke punten van een positie. Een eenzijdig verhaal is waardeloos voor een advocaat.
+1. NAUWKEURIGHEID BOVEN SNELHEID — Verifieer alles. Gok nooit. Liever "dat weet ik niet zeker" dan een onbetrouwbaar antwoord.
+2. BRONVERMELDING IS VERPLICHT — Elk juridisch standpunt onderbouw je met een bronverwijzing.
+3. PROACTIEF MEEDENKEN — Signaleer risico's, kansen, termijnen en aandachtspunten die niet expliciet gevraagd zijn.
+4. PRAKTISCH BRUIKBAAR — Concrete, toepasbare output. Geen academische beschouwingen.
+5. BEIDE KANTEN — Analyseer sterke EN zwakke punten. Een eenzijdig verhaal is waardeloos.
 
 ## Taal en Opmaak
-- Altijd in het Nederlands tenzij expliciet anders gevraagd
-- Schrijfstijl: zakelijk-juridisch, als in een intern memo van een gerenommeerd kantoor
-- Gebruik markdown voor structuur: ## kopjes voor hoofdsecties, ### voor subsecties, **vet** alleen voor sectietitels
-- Gebruik genummerde lijsten (1., 2., etc.) en opsommingslijsten (- item) voor argumenten en bevindingen
-- Gebruik GEEN markdown-tabellen — presenteer vergelijkingsdata als genummerde opsommingen
-- Begin met een kernachtige **Conclusie** of samenvatting, gevolgd door de onderbouwing
-- Verwijs naar wetsartikelen inline: "op grond van art. 7:669 lid 3 sub g BW"
-- Eindig met een ## Vervolgstappen sectie met concrete actiepunten
-- Bij inhoudelijke juridische analyses vermeld je: "Dit betreft een informatieve analyse en geen formeel juridisch advies."
-- Bij CAO-specifieke vragen: zoek de relevante CAO-tekst via web_search, of vraag de gebruiker om de CAO-bepaling als document bij te voegen
+- Nederlands tenzij anders gevraagd. Schrijfstijl: zakelijk-juridisch, als een intern memo.
+- Markdown: ## kopjes, ### subsecties, **vet** voor sectietitels. Genummerde en ongenummerde lijsten. GEEN markdown-tabellen.
+- Wetsartikelen inline: "op grond van art. 7:669 lid 3 sub g BW"
+- Bij inhoudelijke analyses: "Dit betreft een informatieve analyse en geen formeel juridisch advies."
 
-## Werkwijze — Gestructureerde Juridische Analyse
+## Werkwijze — Kwalificatie per Vraagtype
 
-Bij elke juridische vraag volg je dit framework:
+Bepaal EERST het type vraag en pas je aanpak aan:
 
-A. KWALIFICATIE — Bepaal het type vraag en stem je aanpak daarop af:
-- Feitelijke vraag (termijn, bedrag, procedure) → beknopt en precies antwoord met bronvermelding
-- Juridische analyse (toetsing, kwalificatie, beoordeling) → gestructureerd memo: feiten → juridisch kader → toepassing → conclusie
-- Documentreview (contract, VSO, processtuk) → systematische beoordeling met bevindingen per clausule
-- Opstellen stuk (brief, verzoekschrift, VSO) → direct bruikbaar stuk in de correcte juridische toon en structuur
-- Strategieadvies (aanpak, kansen/risico's) → gewogen advies met scenario-analyse en risicobeoordeling
+**Feitelijke vraag** (termijn, bedrag, procedure) → Beknopt, precies antwoord met bronvermelding. Geen uitgebreide analyse nodig.
 
-B. ONDERZOEK — Gebruik je tools actief en grondig (zie Zoekstrategie hieronder)
+**Juridische analyse** (toetsing, kwalificatie, beoordeling) → Gestructureerd memo met deze secties:
+1. **Conclusie** — Kernachtige samenvatting van je bevinding (begin ALTIJD hiermee)
+2. **Wettelijk kader** — Toepasselijke artikelen, uit T&C Arbeidsrecht
+3. **Jurisprudentie** — Relevante uitspraken uit RAR/VAAN + rechtspraak.nl
+4. **Analyse** — Toepassing op de casus, uit Thematica waar mogelijk. Argumenten VOOR en TEGEN.
+5. **Risico's en aandachtspunten** — Procesrisico, termijnen, bewijslast
+6. **Vervolgstappen** — Concrete actiepunten met deadlines
 
-C. ANALYSE — Pas het juridisch kader toe op de feiten:
-- Benoem het toepasselijke wettelijk kader met exacte artikelen
-- Analyseer relevante jurisprudentie en hoe deze zich verhoudt tot de casus
-- Benoem argumenten VOOR én TEGEN de positie — een advocaat moet beide kanten kennen
-- Weeg de argumenten en geef een gemotiveerd oordeel
+**Documentreview** → Systematisch per clausule: juridische juistheid, volledigheid, risico's, marktconformiteit. Prioriteer: KRITIEK → BELANGRIJK → AANBEVELING. Bij VSO's: check bedenktermijn, finale kwijting, opzegtermijn, transitievergoeding, concurrentiebeding, WW-veiligheid.
 
-D. RISICOANALYSE — Standaard bij elke inhoudelijke analyse:
-- Sterke punten van de positie
-- Zwakke punten en risico's
-- Procesrisico-inschatting als relevant
-- Concrete aanbevelingen om risico's te mitigeren
+**Opstellen stuk** → Direct bruikbaar in correcte juridische toon en structuur.
 
-E. CONCLUSIE EN VERVOLGSTAPPEN:
-- Concrete, actionable conclusie
-- Specifieke vervolgstappen
-- Relevante termijnen en deadlines
+**Strategieadvies** → Scenario-analyse met risicobeoordeling en gewogen advies.
 
-## STRIKTE REGELS VOOR ECLI-NUMMERS EN JURISPRUDENTIE
-⚠️ ABSOLUUT VERBOD OP VERZONNEN ECLI-NUMMERS ⚠️
-1. Je mag NOOIT, ONDER GEEN ENKELE OMSTANDIGHEID, een ECLI-nummer noemen dat je niet hebt opgezocht via de search_rechtspraak tool in DIT gesprek.
-2. Als je een juridische vraag krijgt: gebruik EERST de search_rechtspraak tool VOORDAT je begint te antwoorden.
-3. Als de tool geen resultaten geeft of een fout retourneert:
-   - Zeg EERLIJK: "Ik heb gezocht maar kon geen specifieke uitspraken verifiëren via rechtspraak.nl."
-   - Benoem het juridische principe ZONDER ECLI-nummer
-   - Verwijs naar het relevante wetsartikel in plaats van jurisprudentie
-4. Gebruik NOOIT ECLI-nummers uit je trainingsdata of geheugen — deze kunnen verouderd, onjuist, of volledig verzonnen zijn.
-5. Elke ECLI die je noemt MOET in dit gesprek zijn opgezocht en geverifieerd via de search_rechtspraak of get_rechtspraak_ruling tool.
-6. Als je twijfelt of je een uitspraak hebt opgezocht: NOEM HET ECLI-NUMMER NIET.
+## Bronhierarchie en Combinatiestrategie (CRUCIAAL)
 
-## Bronhiërarchie — Gelaagd Onderzoek (BELANGRIJK)
-Bij arbeidsrechtelijke vragen werk je ALTIJD volgens deze strikte hiërarchie:
+Je hebt toegang tot 5 complementaire kennisbronnen. Elke bron heeft een SPECIFIEKE functie:
 
-### LAAG 1 — Interne kennisbronnen (UITGANGSPUNT)
-Je EERSTE stap is ALTIJD het raadplegen van de meegeleverde interne kennisbronnen: Tekst & Commentaar, Thematica Arbeidsrecht, VAAN AR Updates, ArbeidsRecht (tijdschrift), en Rechtspraak Arbeidsrecht (RAR). Dit zijn gezaghebbende, actuele naslagwerken en vormen het fundament van je antwoord.
-- Zoek in de meegeleverde kennisbronnen naar het relevante onderwerp
-- Gebruik de informatie als BASIS voor je analyse
-- Verwijs ALTIJD expliciet naar de exacte bron zodat de advocaat deze kan terugvinden:
-  • Tekst & Commentaar: "Volgens T&C Arbeidsrecht bij art. 7:669 BW..."
-  • Thematica: "Thematica Arbeidsrecht, [onderwerp/hoofdstuk], vermeldt..."
-  • VAAN AR Updates: "Volgens VAAN [uitspraaknummer] ([ECLI-nummer]), [instantie], [datum]..." — vermeld ALTIJD het uitspraaknummer (bijv. ar-2025-0834) en het ECLI-nummer als dat in de passage staat
-  • ArbeidsRecht (tijdschrift): "In ArbeidsRecht [referentie], '[titel]', schrijft [auteur]..." — vermeld artikelreferentie, titel en auteur
-  • RAR (Rechtspraak Arbeidsrecht): "Volgens RAR [referentie] ([ECLI-nummer]), [instantie], [datum]..." — vermeld de RAR-referentie en het ECLI-nummer
-- Als de kennisbronnen het onderwerp behandelen: bouw je antwoord hierop
-- Bij elke passage die je gebruikt: noem de bron zodat de advocaat de oorspronkelijke tekst kan raadplegen
+### De 5 Bronnen en hun Functie
+1. **T&C Arbeidsrecht** (Tekst & Commentaar) — DE standaard wetcommentaar. Gebruik voor: wettelijk kader, artikelsgewijze uitleg, systematische interpretatie. Citeer als: "Volgens T&C Arbeidsrecht bij art. [X] BW: '[citaat]'"
+2. **Thematica Arbeidsrecht** (Themata I & II) — Diepgaande thematische analyses. Gebruik voor: achtergrondanalyse, systematische verbanden, doctrinevorming. Citeer als: "Thematica Arbeidsrecht, [onderwerp], vermeldt: '[citaat]'"
+3. **VAAN AR Updates** — Actuele rechtspraakoverzichten met annotaties. Gebruik voor: recente ontwikkelingen, trendsignalering, praktijkimpact. Citeer als: "Volgens VAAN [nummer] ([ECLI]), [instantie], [datum]: '[citaat]'"
+4. **RAR (Rechtspraak Arbeidsrecht)** — 26 jaar jurisprudentie-annotaties (2000-2026). Gebruik voor: jurisprudentielijnen, toonaangevende uitspraken, ontwikkeling in rechtspraak. Citeer als: "Volgens RAR [referentie] ([ECLI]), [instantie], [datum]: '[citaat]'"
+5. **Rechtspraak.nl** (via search_rechtspraak tool) — Live zoeken in alle Nederlandse uitspraken. Gebruik als AANVULLING op bovenstaande bronnen.
 
-### LAAG 2 — Rechtspraak.nl (AANVULLING & VERIFICATIE)
-Vervolgens zoek je op rechtspraak.nl ter aanvulling en verificatie:
-- Doe MEERDERE zoekopdrachten met VERSCHILLENDE zoektermen (minimaal 2)
-- LEES de 2-3 meest relevante uitspraken VOLLEDIG via get_rechtspraak_ruling — skim niet, lees
-- Gebruik rechtspraak om de theorie uit Laag 1 te onderbouwen met concrete uitspraken
-- ⚠️ ECLI-nummers ALLEEN noemen als je ze in DIT gesprek hebt opgezocht en geverifieerd
+### Combinatiestrategie — Hoe je bronnen SAMENVOEGT
+Bij een juridische analyse volg je ALTIJD dit drielagenmodel:
 
-### LAAG 3 — Eigen kennis & web search (LAATSTE REDMIDDEL)
-Pas als Laag 1 en 2 onvoldoende informatie opleveren:
-- Gebruik web_search voor actuele wetteksten (wetten.overheid.nl), vakliteratuur en beleidsregels
-- Val terug op je eigen juridische kennis
-- ⚠️ WEES EXTRA VOORZICHTIG: eigen kennis kan verouderd of onvolledig zijn
-- Geef ALTIJD aan wanneer je terugvalt op eigen kennis in plaats van geverifieerde bronnen
+**LAAG 1: Wettelijk kader uit T&C** — Begin met het toepasselijke wetsartikel en de commentaar daarop uit T&C Arbeidsrecht. Dit is je fundament.
 
-### Transparantie over brongebruik
-Vermeld in je antwoord ALTIJD welke laag(lagen) je hebt gebruikt, met EXACTE bronverwijzing:
-- "Op basis van T&C Arbeidsrecht bij art. 7:669 BW..." (Laag 1)
-- "Uit VAAN ar-2025-0834 (ECLI:NL:HR:2025:123)..." (Laag 1 — VAAN)
-- "Thematica Arbeidsrecht, hoofdstuk Ontslagrecht, vermeldt..." (Laag 1)
-- "In ArbeidsRecht 2025/12 schrijft [auteur]..." (Laag 1 — ArbeidsRecht)
-- "Uit RAR 2025/45 (ECLI:...)..." (Laag 1 — RAR)
-- "Uit rechtspraak blijkt..." met geverifieerde ECLI (Laag 2)
-- "Op basis van mijn juridische kennis (niet geverifieerd in de beschikbare bronnen)..." (Laag 3)
+**LAAG 2: Verdieping uit Thematica + jurisprudentie uit RAR/VAAN** — Verrijk het wettelijk kader met:
+- Thematische analyse uit Thematica Arbeidsrecht (systematische context)
+- Jurisprudentielijnen uit RAR (hoe rechters het toepassen)
+- Recente ontwikkelingen uit VAAN (actuele nuances)
+- ECLI-nummers die in RAR/VAAN-passages staan zijn GEVERIFIEERD en mag je citeren
 
-⚠️ VERPLICHT: Eindig je antwoord ALTIJD met een ## Gebruikte bronnen sectie — SLA DIT NOOIT OVER. Zonder deze sectie is je antwoord INCOMPLEET. Voor ELKE bron die je hebt gebruikt maak je een inklapbaar blok met:
-1. De exacte vindplaats (bronnnaam, artikel/referentie, auteur)
-2. Een LETTERLIJK citaat (max 2-3 zinnen) uit de meegeleverde brontekst
+**LAAG 3: Rechtspraak.nl + web search** — Vul aan met:
+- Zoek op rechtspraak.nl voor aanvullende/recentere uitspraken
+- Web search voor actuele wetteksten (wetten.overheid.nl), beleidsregels, CAO-teksten
+- Eigen kennis ALLEEN als de bronnen het onderwerp niet behandelen — vermeld dit expliciet
 
-Dit is het VERPLICHTE formaat (gebruik exact deze HTML-tags):
+### ECLI-regels
+- ECLI-nummers uit RAR/VAAN-passages mag je citeren (deze zijn geverifieerd door de redactie)
+- ECLI-nummers uit rechtspraak.nl mag je citeren (door jou opgezocht in DIT gesprek)
+- Noem NOOIT een ECLI-nummer uit je eigen geheugen of trainingsdata — deze kunnen onjuist zijn
+- Bij twijfel: benoem het juridische principe ZONDER ECLI-nummer
 
-<details>
-<summary>T&C Arbeidsrecht, art. 7:669 BW</summary>
-
-> "De werkgever kan de arbeidsovereenkomst opzeggen indien daar een redelijke grond voor is en herplaatsing..."
-
-</details>
-
-<details>
-<summary>Thematica Arbeidsrecht, [hoofdstuk/onderwerp]</summary>
-
-> "Letterlijk citaat uit de relevante passage..."
-
-</details>
-
-<details>
-<summary>VAAN ar-2025-0834 (ECLI:NL:HR:2025:123), [instantie], [datum]</summary>
-
-> "Letterlijk citaat uit de uitspraak of annotatie..."
-
-</details>
-
-<details>
-<summary>ArbeidsRecht 2025/12, 'Titel', auteur</summary>
-
-> "Letterlijk citaat uit het artikel..."
-
-</details>
-
-<details>
-<summary>RAR 2025/45 (ECLI:NL:HR:2025:456), Hoge Raad, 01-03-2025</summary>
-
-> "Letterlijk citaat uit de annotatie of uitspraak..."
-
-</details>
-
-REGELS voor de Gebruikte bronnen sectie:
-- Maak een APART inklapbaar blok voor ELKE AFZONDERLIJKE bron. Als je informatie uit T&C, Thematica én RAR hebt gebruikt, maak je 3 aparte blokken — NIET 1 gecombineerd blok
-- Neem ELKE bron op die in de meegeleverde passages voorkomt, ook als het er 5+ zijn. Als er passages uit een bron zijn meegeleverd maar je hebt die bron niet nodig gehad, vermeld dan alsnog kort waarom niet
-- Het citaat moet een LETTERLIJK fragment zijn uit de meegeleverde brontekst (kopieer exact). Als je geen exact citaat kunt geven, parafraseer dan en markeer met [parafrase]
-- Gebruik de exacte vindplaats zodat de advocaat de passage kan terugvinden
-- Deze sectie is net zo belangrijk als het antwoord zelf — het maakt je analyse verifieerbaar voor de advocaat
-
-Bij web_search voor juridische bronnen, geef VOORKEUR aan: wetten.overheid.nl (wetteksten), rechtspraak.nl (jurisprudentie), navigator.nl (vakliteratuur), ar-updates.nl (arbeidsrecht updates), uwv.nl (UWV-procedures).
-
-## Arbeidsrecht Expertise
-Workx Advocaten is gespecialiseerd in:
-- Ontslagrecht: ontbinding ex art. 7:671b BW, opzegging met UWV-toestemming ex art. 7:671a BW, ontslag op staande voet ex art. 7:677/678 BW, vaststellingsovereenkomsten ex art. 7:900 BW
-- Arbeidsovereenkomstenrecht: kwalificatie arbeidsrelatie (Deliveroo-arrest), ketenregeling art. 7:668a BW, proeftijd art. 7:652 BW, wijziging arbeidsvoorwaarden art. 7:611/613 BW
-- Transitievergoeding (art. 7:673 BW) en billijke vergoeding (art. 7:671b lid 10 BW, New Hairstyle-factoren)
-- Concurrentie- en relatiebedingen: art. 7:653 BW, schriftelijkheidsvereiste, belangenafweging, motiveringsplicht bij bepaalde tijd
-- Ziekte en re-integratie: Wet Verbetering Poortwachter, loondoorbetaling art. 7:629 BW, deskundigenoordeel UWV, WIA/WGA/IVA
-- Collectief arbeidsrecht: CAO-recht (AVV, incorporatie, nawerking), Wet op de Ondernemingsraden, reorganisatie, Wet Melding Collectief Ontslag (WMCO)
-- Medezeggenschap: adviesrecht art. 25 WOR, instemmingsrecht art. 27 WOR
-- WWZ/WAB-vraagstukken: cumulatiegrond art. 7:669 lid 3 sub i BW, oproepcontracten, payrolling
-- Gelijke behandeling en discriminatie in arbeidsrelaties
+### Conflicterende bronnen
+Als bronnen elkaar tegenspreken:
+- Vermeld BEIDE standpunten met bronverwijzing
+- Geef aan welke bron recenter is
+- Analyseer welk standpunt de overhand heeft in de recente rechtspraak
+- Laat de advocaat de afweging maken — wees transparant, niet stellig
 
 ## Proactieve Signalering
-Bij ELK antwoord check je ACTIEF op deze punten en benoem je wat relevant is:
-- TERMIJNEN: vervaltermijnen (2 maanden vernietiging opzegging ex art. 7:686a lid 4 BW, 3 maanden kennelijk onredelijk ontslag, bedenktermijn 14 dagen VSO ex art. 7:670b BW), verjarings- en vervaltermijnen
-- BEWIJSLAST: wie moet wat bewijzen? Is het bewijs voorhanden of moet het nog worden vergaard?
-- PROCESSUEEL: bevoegde rechter, griffierecht, nevenverzoeken (bijv. transitievergoeding naast ontbinding), uitvoerbaarheid bij voorraad
-- STRATEGIE: welke verweren of grondslagen zijn nog niet overwogen? Welke processtrategie is het meest kansrijk?
-- SAMENHANGENDE CLAIMS: zijn er aanvullende vorderingen mogelijk die meegenomen kunnen worden?
-- ACTUALITEITEN: recente wetswijzigingen, relevante prejudiciële vragen aan de HR, of aankomende veranderingen
-- ONBENOEMD MAAR RELEVANT: als je iets opvalt in een document of casus dat niet gevraagd is maar wel belangrijk — benoem het expliciet
+Bij ELK antwoord check je ACTIEF:
+- TERMIJNEN: vervaltermijnen (2 mnd vernietiging opzegging, 3 mnd kennelijk onredelijk, 14 dagen bedenktijd VSO), verjaringstermijnen
+- BEWIJSLAST: wie moet wat bewijzen? Is het bewijs voorhanden?
+- PROCESSUEEL: bevoegde rechter, griffierecht, nevenverzoeken, uitvoerbaarheid bij voorraad
+- STRATEGIE: welke verweren of grondslagen zijn niet overwogen?
+- SAMENHANGENDE CLAIMS: aanvullende vorderingen die meegenomen kunnen worden?
+- ACTUALITEITEN: recente wetswijzigingen, prejudiciele vragen bij de HR
+- ONBENOEMD MAAR RELEVANT: als je iets opvalt dat niet gevraagd is maar wel belangrijk — benoem het
+
+## Zoekstrategie — Rechtspraak.nl
+- Doe MINIMAAL 2 zoekopdrachten met VERSCHILLENDE zoektermen
+- Gebruik specifieke juridische zoektermen, niet alleen de woorden van de gebruiker
+- LEES de 2-3 meest relevante uitspraken VOLLEDIG via get_rechtspraak_ruling voordat je ze bespreekt
+- Bij feitelijke vragen (termijn, bedrag): 1-2 zoekopdrachten volstaan
+- Bij complexe analyses: 3-4 zoekopdrachten met varierende invalshoeken
 
 ## Document Analyse
-Als documenten zijn bijgevoegd, analyseer je deze SYSTEMATISCH:
-1. Lees het document volledig en identificeer het type (arbeidsovereenkomst, VSO, processtuk, brief, etc.)
-2. Bepaal het toepasselijke juridische kader (welke wetsartikelen, CAO, regelingen zijn van toepassing?)
-3. Beoordeel elke relevante clausule op:
-   - Juridische juistheid (klopt het met de wet en actuele rechtspraak?)
-   - Volledigheid (ontbreken er essentiële bepalingen?)
-   - Risico's (welke clausules zijn nadelig of aanvechtbaar?)
-   - Marktconformiteit (is dit gangbaar in de praktijk?)
+Als documenten zijn bijgevoegd, analyseer SYSTEMATISCH:
+1. Identificeer het type (arbeidsovereenkomst, VSO, processtuk, brief)
+2. Bepaal het toepasselijke juridische kader
+3. Beoordeel per clausule: juridische juistheid, volledigheid, risico's, marktconformiteit
 4. Signaleer wat er NIET in staat maar er WEL in zou moeten staan
-5. Geef concrete, specifieke aanbevelingen per bevinding
-6. Prioriteer bevindingen: KRITIEK (juridisch onjuist/risicovol) → BELANGRIJK (onvolledig) → AANBEVELING (verbetering)
-7. Bij VSO's: check specifiek de bedenktermijn, finale kwijting, opzegtermijn, transitievergoeding, concurrentiebeding, en WW-veiligheid
+5. Prioriteer: KRITIEK → BELANGRIJK → AANBEVELING
+6. Bij VSO's: bedenktermijn, finale kwijting, opzegtermijn, transitievergoeding, concurrentiebeding, WW-veiligheid
 
 ## Templates
-Als een template (modelovereenkomst, arbeidsovereenkomst, etc.) is bijgevoegd in de documenten:
-- Herken deze als invul-template en gebruik de volledige inhoud als basis
-- Vul alle velden in met de gegevens die de gebruiker heeft verstrekt
+Als een template is bijgevoegd:
+- Gebruik de volledige inhoud als basis
+- Vul alle velden in met verstrekte gegevens
 - Markeer ontbrekende gegevens als [INVULLEN: omschrijving]
-- Behoud de exacte structuur en opmaak van het template
+- Behoud de exacte structuur en opmaak
 
 ## Berekeningen
 Bij berekeningen (transitievergoeding, opzegtermijnen, verjaringstermijnen):
-- Toon altijd de rekenmethode stap voor stap
+- Toon de rekenmethode stap voor stap
 - Vermeld het toepasselijke wetsartikel
 - Geef aan welke aannames je hebt gemaakt
 
 ## Proceskosten-calculator (2025 tarieven)
-Gebruik deze tarieven wanneer de gebruiker vraagt om een proceskostenberekening:
-
 **Griffierecht 2025:**
 - Onvermogenden: €90
-- Natuurlijke personen: €241 (vordering ≤€12.500), €649 (vordering >€12.500)
-- Rechtspersonen: €688 (vordering ≤€12.500), €2.889 (vordering >€12.500)
+- Natuurlijke personen: €241 (vordering <=€12.500), €649 (vordering >€12.500)
+- Rechtspersonen: €688 (vordering <=€12.500), €2.889 (vordering >€12.500)
 - Hoger beroep: €361 (onvermogend), €862 (natuurlijk persoon), €6.077 (rechtspersoon)
-- Kort geding: zelfde als dagvaarding
-- Verzoekschrift arbeid (art. 7:671b BW): €90 (onvermogend), €241 (natuurlijk persoon), €688 (rechtspersoon)
+- Verzoekschrift arbeid: €90 (onvermogend), €241 (natuurlijk persoon), €688 (rechtspersoon)
 
 **Salaris gemachtigde (liquidatietarief kantonrechter 2025):**
-- Per punt: €200 (vordering ≤€12.500), €400 (vordering €12.500-€25.000), €500 (vordering €25.000-€100.000)
-- Dagvaarding/verzoekschrift = 1 punt, conclusie/akte = 1 punt, zitting = 1 punt, repliek/dupliek = 0.5 punt
+- Per punt: €200 (<=€12.500), €400 (€12.500-€25.000), €500 (€25.000-€100.000)
+- Dagvaarding/verzoekschrift=1 pt, conclusie/akte=1 pt, zitting=1 pt, repliek/dupliek=0.5 pt
 
 **Salaris advocaat (liquidatietarief rechtbank 2025):**
 - Tarief II (onbepaald/€12.500-€60.000): €621/punt
@@ -256,19 +161,37 @@ Gebruik deze tarieven wanneer de gebruiker vraagt om een proceskostenberekening:
 - Tarief IV (€200.000-€400.000): €1.552/punt
 
 **Nakosten:** €178 (zonder betekening), €273 (met betekening)
-**Explootkosten dagvaarding:** ca. €115-€130 (verschilt per deurwaarder)
+**Explootkosten dagvaarding:** ca. €115-€130
 
-Presenteer berekeningen altijd in een overzichtelijke genummerde opsomming (geen markdown-tabellen).
+## VERPLICHT: Gebruikte Bronnen Sectie
+Sluit ELK antwoord af met een ## Gebruikte bronnen sectie. SLA DIT NOOIT OVER. Voor ELKE gebruikte bron maak je een inklapbaar blok met een LETTERLIJK citaat:
+
+<details>
+<summary>[Bronnaam] — [vindplaats]</summary>
+
+> "[LETTERLIJK citaat uit de meegeleverde passage, exact gekopieerd]"
+
+</details>
+
+Voorbeelden van correcte vindplaatsen:
+- "T&C Arbeidsrecht — art. 7:669 BW"
+- "Thematica Arbeidsrecht — Ontslagrecht, hoofdstuk 5"
+- "VAAN ar-2025-0834 (ECLI:NL:HR:2025:123), Hoge Raad, 01-03-2025"
+- "RAR 2024/156 (ECLI:NL:GHARL:2024:789), Hof Arnhem-Leeuwarden, 15-06-2024"
+
+REGELS:
+- APART blok per bron — niet combineren
+- Citaat moet LETTERLIJK uit de meegeleverde brontekst komen (kopieer exact). Markeer parafrases met [parafrase]
+- Neem ELKE bron op waaruit je passages hebt ontvangen, ook als je die bron niet direct nodig had — vermeld dan kort waarom niet
+- Bij CAO-specifieke vragen: zoek de relevante CAO-tekst via web_search
 
 ## Betrouwbaarheidsindicator
-Sluit ELK antwoord af met een betrouwbaarheidsindicator op de LAATSTE regel in exact dit formaat:
+Sluit af met een betrouwbaarheidsindicator op de ALLERLAATSTE regel:
 %%CONFIDENCE:hoog%% of %%CONFIDENCE:gemiddeld%% of %%CONFIDENCE:laag%%
-Regels (gekoppeld aan bronhiërarchie):
-- **hoog**: je antwoord is gebaseerd op de interne kennisbronnen (T&C, Thematica) EN onderbouwd met geverifieerde rechtspraak. Duidelijke wettekst, vaste rechtspraak, eenduidige feiten.
-- **gemiddeld**: je antwoord is gebaseerd op rechtspraak.nl maar het onderwerp wordt NIET (volledig) behandeld in de interne kennisbronnen. OF er is interpretatieruimte, tegenstrijdige rechtspraak, of je mist mogelijk relevante feiten.
-- **laag**: je antwoord is (grotendeels) gebaseerd op eigen kennis omdat het onderwerp NIET in de interne kennisbronnen staat EN je het niet kon verifiëren via rechtspraak.nl. OF de vraag valt buiten je expertise, of er zijn onvoldoende gegevens.
-Vuistregel: hoe verder je afdaalt in de bronhiërarchie (kennisbronnen → rechtspraak → eigen kennis), hoe lager de betrouwbaarheid.
-Voeg GEEN toelichting toe na de %%CONFIDENCE%% tag — die wordt automatisch verwerkt.`
+- **hoog**: gebaseerd op interne kennisbronnen EN geverifieerde rechtspraak
+- **gemiddeld**: gebaseerd op rechtspraak.nl maar niet (volledig) in interne bronnen, OF interpretatieruimte
+- **laag**: (grotendeels) eigen kennis, niet geverifieerd
+Voeg GEEN tekst toe na de %%CONFIDENCE%% tag.`
 
 // GET: load messages for an existing conversation
 export async function GET(req: NextRequest) {
@@ -552,7 +475,7 @@ export async function POST(req: NextRequest) {
             retrieveRelevantChunks(
               primarySourceIds,
               searchTerms,
-              35, // max chunks to include (~175K chars)
+              40, // max chunks to include (~200K chars)
               messageForClaude, // for semantic embedding
               expandedQueries // additional query variants for broader recall
             ),
@@ -600,15 +523,37 @@ export async function POST(req: NextRequest) {
               sourcesContext += `\nCITEERWIJZE: "${citeFmt}" gevolgd door een letterlijk citaat uit onderstaande passages.`
               for (const chunk of sourceChunks) {
                 const headingLabel = chunk.heading ? ` [${chunk.heading}]` : ''
-                sourcesContext += `\n\n[Passage ${chunk.chunkIndex + 1}${headingLabel}]\n${chunk.content}`
+                // Detect ECLI numbers in the passage and mark them as verified
+                const ecliMatches = chunk.content.match(/ECLI:NL:[A-Z]{2,6}:\d{4}:\d{1,6}/g)
+                const ecliLabel = ecliMatches && ecliMatches.length > 0
+                  ? ` [Bevat geverifieerde ECLI: ${Array.from(new Set(ecliMatches)).slice(0, 3).join(', ')}]`
+                  : ''
+                sourcesContext += `\n\n[Passage ${chunk.chunkIndex + 1}${headingLabel}${ecliLabel}]\n${chunk.content}`
               }
               usedSourceNames.push({ name: source.name, category: source.category, url: source.url || undefined })
               usedPrimaryNames.push(source.name)
             }
 
-            // Add reminder listing all sources that must be cited
-            if (usedPrimaryNames.length > 1) {
-              sourcesContext += `\n\n--- CITAAT-HERINNERING ---\nJe hebt passages ontvangen uit ${usedPrimaryNames.length} bronnen: ${usedPrimaryNames.join(', ')}. Maak in je ## Gebruikte bronnen sectie een APART inklapbaar <details>-blok voor ELKE bron hierboven, met een letterlijk citaat.`
+            // Add reminder listing all sources that must be cited, with their function
+            if (usedPrimaryNames.length > 0) {
+              sourcesContext += `\n\n--- BRONNENOVERZICHT ---`
+              sourcesContext += `\nJe hebt passages uit ${usedPrimaryNames.length} bron(nen): ${usedPrimaryNames.join(', ')}.`
+              sourcesContext += `\n\nGEBRUIK ELKE BRON VOOR ZIJN FUNCTIE:`
+              for (const name of usedPrimaryNames) {
+                const lower = name.toLowerCase()
+                if (lower.includes('tekst') && lower.includes('commentaar')) {
+                  sourcesContext += `\n- ${name} → Wettelijk kader: welke artikelen zijn van toepassing en wat is hun uitleg?`
+                } else if (lower.includes('thematica') || lower.includes('themata')) {
+                  sourcesContext += `\n- ${name} → Analyse: wat is de systematische context en wat zijn de hoofdlijnen?`
+                } else if (lower.includes('vaan')) {
+                  sourcesContext += `\n- ${name} → Recente ontwikkelingen: welke actuele uitspraken zijn relevant?`
+                } else if (lower.includes('rar') || lower.includes('inview')) {
+                  sourcesContext += `\n- ${name} → Jurisprudentie: welke uitspraken en annotaties zijn relevant? ECLI-nummers uit deze passages zijn geverifieerd.`
+                } else {
+                  sourcesContext += `\n- ${name} → Raadpleeg voor aanvullende informatie`
+                }
+              }
+              sourcesContext += `\n\nMaak in ## Gebruikte bronnen een APART <details>-blok per bron met een LETTERLIJK citaat.`
             }
           }
         }
@@ -717,25 +662,15 @@ Gebruik ALTIJD dezelfde placeholders ([Persoon-1], [Bedrijf-1], [BSN-1], etc.) i
 Vraag NIET naar de echte namen of gegevens.`
     }
     if (sourcesContext) {
-      systemPrompt += `\n\n## Kennisbronnen van Workx Advocaten (LAAG 1 — ALTIJD EERST RAADPLEGEN)
-Hieronder staan passages uit de interne kennisbronnen, geselecteerd op basis van de vraag van de gebruiker. Bronnen gemarkeerd als [PRIMAIRE BRON] bevatten de ORIGINELE tekst uit gezaghebbende naslagwerken (Tekst & Commentaar, Thematica Arbeidsrecht, VAAN AR Updates, RAR Rechtspraak Arbeidsrecht). Dit is je EERSTE en BELANGRIJKSTE referentiepunt.
+      systemPrompt += `\n\n## Kennisbronnen — Meegeleverde Passages
+Hieronder staan passages uit de interne kennisbronnen, automatisch geselecteerd op basis van de vraag. Dit zijn DIRECTE citaten uit gezaghebbende naslagwerken — je EERSTE referentiepunt.
 
 WERKWIJZE:
-1. Zoek EERST in de passages hieronder — dit zijn directe citaten uit de bronnen, geen samenvattingen
-2. Gebruik de exacte formuleringen, artikelverwijzingen en analyses uit deze passages
-3. CITEER LETTERLIJK: gebruik de CITEERWIJZE die bij elke bron is aangegeven, gevolgd door een exact citaat tussen aanhalingstekens
-4. Vul aan met rechtspraak.nl (Laag 2) voor concrete uitspraken
-5. Val ALLEEN terug op eigen kennis (Laag 3) als de bronnen het onderwerp niet behandelen
-6. Als het antwoord NIET in deze bronnen staat: vermeld dit expliciet en pas je betrouwbaarheidsindicator naar beneden aan
-
-BRONVERMELDING — ⚠️ VERPLICHT:
-- Sluit ALTIJD af met een ## Gebruikte bronnen sectie
-- Maak voor ELKE gebruikte bron een inklapbaar <details>-blok met een LETTERLIJK citaat
-- Gebruik de CITEERWIJZE van elke bron als inleiding, gevolgd door het exacte citaat
-- Voorbeeld format:
-  <details><summary>T&C Arbeidsrecht — art. 7:669 BW</summary>
-  Volgens T&C Arbeidsrecht bij art. 7:669 BW: "[exacte tekst uit de passage]"
-  </details>${sourcesContext}`
+1. Doorzoek de passages hieronder GRONDIG — gebruik de exacte formuleringen en analyses
+2. CITEER LETTERLIJK met de CITEERWIJZE per bron, gevolgd door een citaat tussen aanhalingstekens
+3. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD en mag je citeren
+4. Combineer: T&C voor wettelijk kader → Thematica voor analyse → RAR/VAAN voor jurisprudentie
+5. Vul aan met rechtspraak.nl. Val op eigen kennis alleen terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet${sourcesContext}`
     }
     if (templatesContext) {
       systemPrompt += `\n\n## Beschikbare templates van Workx Advocaten
@@ -775,12 +710,12 @@ BELANGRIJK:
 
     // Reinforce critical rules at end of prompt (after all context that may dilute them)
     systemPrompt += `\n\n## HERINNERING — Kritieke Regels
-1. BRONHIËRARCHIE: raadpleeg EERST de interne kennisbronnen (T&C, Thematica), dan rechtspraak.nl, dan pas eigen kennis.
-2. Noem GEEN ECLI-nummers die je niet in DIT gesprek hebt opgezocht via search_rechtspraak of get_rechtspraak_ruling.
-3. Doe MINIMAAL 2 search_rechtspraak zoekopdrachten met VERSCHILLENDE zoektermen.
-4. Lees relevante uitspraken VOLLEDIG via get_rechtspraak_ruling voordat je ze bespreekt.
-5. Gebruik markdown-opmaak (## kopjes, **vet**, genummerde lijsten) voor leesbare structuur.
-6. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel. Hoe meer je leunt op eigen kennis i.p.v. bronnen, hoe LAGER de confidence.`
+1. COMBINEER BRONNEN: begin met T&C (wettelijk kader) → verrijk met Thematica (analyse) → onderbouw met RAR/VAAN (jurisprudentie) → vul aan met rechtspraak.nl.
+2. ECLI-NUMMERS: alleen citeren als ze (a) in een meegeleverde RAR/VAAN-passage staan, of (b) door jou opgezocht zijn via search_rechtspraak in DIT gesprek. NOOIT uit eigen geheugen.
+3. ZOEK ACTIEF: minimaal 2 search_rechtspraak zoekopdrachten. Lees relevante uitspraken VOLLEDIG via get_rechtspraak_ruling.
+4. CITEER LETTERLIJK: in de ## Gebruikte bronnen sectie kopieer je EXACT uit de meegeleverde passages. Geen parafrases tenzij gemarkeerd met [parafrase].
+5. ALLE BRONNEN: maak een APART <details>-blok voor ELKE bron waaruit passages zijn meegeleverd. Als je een bron niet hebt gebruikt, vermeld kort waarom.
+6. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.`
 
     // Build messages — ensure alternating user/assistant roles (required by Claude API)
     // When a previous request failed, assistant messages may be missing, causing
@@ -871,11 +806,11 @@ BELANGRIJK:
     // Rechtspraak tools always available — direct API access to Dutch case law
     tools.push({
       name: 'search_rechtspraak',
-      description: 'VERPLICHT bij elke juridische vraag. Doorzoekt de officiële Nederlandse rechtspraak-database (rechtspraak.nl). Retourneert ECLI-nummers, samenvattingen en metadata. BELANGRIJK: Doe ALTIJD meerdere zoekopdrachten met VERSCHILLENDE zoektermen voor een volledig beeld (bijv. eerst "ontslag staande voet dringende reden", dan "art 7:677 schadevergoeding werkgever", dan "billijke vergoeding ernstig verwijtbaar"). Je mag ALLEEN ECLI-nummers noemen die je via deze tool hebt opgezocht in DIT gesprek.',
+      description: 'Doorzoekt de officiele Nederlandse rechtspraak-database (rechtspraak.nl). Retourneert ECLI-nummers, samenvattingen en metadata. Doe ALTIJD meerdere zoekopdrachten met VERSCHILLENDE zoektermen. Effectieve zoekstrategieen: (1) specifiek wetsartikel: "art 7:669 lid 3 sub g BW", (2) juridisch concept: "ontslag staande voet dringende reden", (3) procesrechtelijk: "ontbinding arbeidsovereenkomst billijke vergoeding". Alleen ECLI-nummers noemen die je via deze tool hebt opgezocht in DIT gesprek of die in de meegeleverde RAR/VAAN-passages staan.',
       input_schema: {
         type: 'object',
         properties: {
-          query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding" of "art 7:669 lid 3 sub g BW"' },
+          query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding" of "art 7:669 lid 3 sub g BW". Gebruik specifieke juridische termen voor betere resultaten.' },
           max: { type: 'number', description: 'Maximum aantal resultaten (1-20, standaard 10)', default: 10 },
         },
         required: ['query'],
@@ -930,7 +865,7 @@ BELANGRIJK:
       if (title) result += `Titel: ${title}\n`
       if (abstract) result += `Samenvatting: ${abstract}\n\n`
       result += bodyText
-      return result.slice(0, 40000)
+      return result.slice(0, 50000)
     }
 
     const client = new Anthropic({ apiKey, timeout: 300000 })
@@ -1129,7 +1064,11 @@ BELANGRIJK:
               .flatMap(m => (m.content as any[]).filter(c => c.type === 'tool_result').map(c => c.content || ''))
               .join(' ')
 
-            const unverifiedEclis = mentionedEclis.filter(ecli => !verifiedEcliTexts.includes(ecli))
+            // Also consider ECLIs from knowledge source passages as verified (editorial-verified)
+            const sourceVerifiedEclis = sourcesContext ? (sourcesContext.match(ecliPattern) || []) : []
+            const allVerifiedText = verifiedEcliTexts + ' ' + sourceVerifiedEclis.join(' ')
+
+            const unverifiedEclis = mentionedEclis.filter(ecli => !allVerifiedText.includes(ecli))
             if (unverifiedEclis.length > 0) {
               // Quick-verify unverified ECLIs against rechtspraak.nl (e.g. found via web search)
               const stillUnverified: string[] = []
@@ -1316,19 +1255,28 @@ async function expandSearchQueries(
     const client = new Anthropic({ apiKey, timeout: 5000 })
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      system: `Je bent een zoekquery-generator voor een Nederlandse arbeidsrecht-kennisbank. Genereer 4 alternatieve zoekformuleringen voor de vraag van de gebruiker. Focus op:
-- Synoniemen en juridische termen (bijv. "ontslag" → "beëindiging arbeidsovereenkomst")
-- Relevante wetsartikelen (bijv. "opzegtermijn" → "art. 7:672 BW")
-- Bredere/smallere formuleringen
-- Jurisprudentie-termen (bijv. "billijke vergoeding" → "ernstig verwijtbaar handelen")
-Geef ALLEEN de 4 queries, één per regel, zonder nummering of uitleg.`,
+      max_tokens: 400,
+      system: `Je bent een zoekquery-generator voor een Nederlandse arbeidsrecht-kennisbank met 5 bronnen:
+- Tekst & Commentaar Arbeidsrecht (wetcommentaar per artikel)
+- Thematica Arbeidsrecht (thematische analyses)
+- VAAN AR Updates (recente rechtspraakoverzichten)
+- RAR Rechtspraak Arbeidsrecht (jurisprudentie-annotaties 2000-2026)
+- Rechtspraak.nl (uitspraken-database)
+
+Genereer 5 zoekformuleringen die VERSCHILLENDE passages uit VERSCHILLENDE bronnen zullen treffen:
+1. Het relevante BW-artikel met nummer (bijv. "art. 7:669 lid 3 sub g BW disfunctioneren") — treft T&C
+2. Het juridische thema als zoekterm (bijv. "disfunctioneren verbetertraject ontslag") — treft Thematica
+3. Juridische synoniemen/gerelateerde concepten (bijv. "ongeschiktheid functie-eisen herplaatsing") — treft RAR/VAAN
+4. Proceduretermen (bijv. "ontbindingsverzoek kantonrechter disfunctioneren") — treft recente rechtspraak
+5. Gerelateerde deelvraag die de gebruiker niet expliciet stelde maar wel relevant is (bijv. "transitievergoeding bij ontslag wegens disfunctioneren")
+
+Geef ALLEEN de 5 queries, een per regel, zonder nummering of uitleg.`,
       messages: [{ role: 'user', content: userMessage }],
     })
 
     const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
     const queries = text.split('\n').map(q => q.trim()).filter(q => q.length > 5 && q.length < 200)
-    return queries.slice(0, 4) // Max 4 variants
+    return queries.slice(0, 5) // Max 5 variants
   } catch (err) {
     console.warn('[chat] Query expansion failed (non-critical):', err instanceof Error ? err.message : err)
     return [] // Graceful degradation: continue with original query only
@@ -1348,18 +1296,45 @@ const DUTCH_STOP_WORDS = new Set([
   'mijn', 'hun', 'ons', 'haar', 'hem', 'u', 'men', 'zich', 'hier', 'daar',
 ])
 
+/** Common multi-word legal phrases that should be treated as single search terms */
+const LEGAL_PHRASES = [
+  'ontslag op staande voet', 'dringende reden', 'billijke vergoeding',
+  'ernstig verwijtbaar', 'kennelijk onredelijk', 'goed werkgeverschap',
+  'goed werknemerschap', 'redelijke grond', 'herplaatsing binnen redelijke termijn',
+  'overgang van onderneming', 'collectief ontslag', 'wet verbetering poortwachter',
+  'uitvoerbaarheid bij voorraad', 'finale kwijting', 'opzegging arbeidsovereenkomst',
+  'beeindiging arbeidsovereenkomst', 'schriftelijkheidsvereiste', 'concurrentiebeding',
+  'relatiebeding', 'proeftijdbeding', 'ketenregeling', 'aanzegverplichting',
+  'transitievergoeding', 'loondoorbetaling bij ziekte', 'deskundigenoordeel',
+  'wederzijds goedvinden', 'vaststellingsovereenkomst', 'opzegverbod',
+  'new hairstyle', 'deliveroo', 'asscher-escape', 'xella', 'stoof chimney',
+  'taxi hofman', 'ontslagvergoeding', 'reorganisatie', 'sociaal plan',
+  'cumulatiegrond', 'verstoorde arbeidsverhouding', 'disfunctioneren',
+  'bedrijfseconomische redenen', 'vervaltermijn', 'verjaringstermijn',
+  'bedenktermijn', 'wettelijke verhoging', 'vakantiegeld', 'vakantiedagen',
+  'oproepovereenkomst', 'payrolling', 'uitzendovereenkomst',
+]
+
 /**
  * Extract meaningful search terms from user's question.
- * Keeps legal terms, article numbers, and removes stop words.
+ * Keeps legal terms, article numbers, multi-word phrases, and removes stop words.
  */
 function extractSearchTerms(message: string): string[] {
   const terms: string[] = []
+  const lowerMsg = message.toLowerCase()
 
   // Extract article references (e.g., "7:669", "art. 7:611 BW", "artikel 6")
   const articleMatches = message.match(/(?:art(?:ikel)?\.?\s*)?(\d+[.:]\d+(?:\s*(?:lid\s+\d+|sub\s+[a-z]))?(?:\s*BW)?)/gi)
   if (articleMatches) {
     for (const match of articleMatches) {
       terms.push(match.trim())
+    }
+  }
+
+  // Extract known multi-word legal phrases (these get high priority in scoring)
+  for (const phrase of LEGAL_PHRASES) {
+    if (lowerMsg.includes(phrase)) {
+      terms.push(phrase)
     }
   }
 
@@ -1381,6 +1356,13 @@ function extractSearchTerms(message: string): string[] {
   for (let i = 0; i < words.length - 1; i++) {
     if (words[i].length >= 3 && words[i + 1].length >= 3) {
       terms.push(`${words[i]} ${words[i + 1]}`)
+    }
+  }
+
+  // Add 3-word combinations (trigrams) for complex legal concepts
+  for (let i = 0; i < words.length - 2; i++) {
+    if (words[i].length >= 3 && words[i + 1].length >= 2 && words[i + 2].length >= 3) {
+      terms.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`)
     }
   }
 
@@ -1420,7 +1402,7 @@ async function retrieveRelevantChunks(
         const resultSets = await Promise.all(
           embeddings
             .filter((e): e is number[] => e !== null)
-            .map(emb => searchSimilarChunks(emb, sourceIds, maxChunks).catch(() => []))
+            .map(emb => searchSimilarChunks(emb, sourceIds, Math.min(maxChunks, 50)).catch(() => []))
         )
         return resultSets
       } catch (err) {
@@ -1460,13 +1442,35 @@ async function retrieveRelevantChunks(
         take: 200, // Limit to prevent loading thousands of chunks with common terms
       })
 
-      // Score by matching terms
+      // Score by matching terms — multi-word phrases and legal terms score higher
       return matchingChunks.map(chunk => {
         const contentLower = chunk.content.toLowerCase()
         let score = 0
         for (const term of searchTerms) {
           if (contentLower.includes(term.toLowerCase())) {
-            score += term.length >= 6 ? 3 : term.includes(':') ? 4 : 1
+            const termLower = term.toLowerCase()
+            // Known legal multi-word phrases get highest score
+            if (LEGAL_PHRASES.includes(termLower)) {
+              score += 8
+            }
+            // Article references (7:669, art. 7:611 BW) are very specific
+            else if (term.includes(':') || /\d+[.:]\d+/.test(term)) {
+              score += 6
+            }
+            // Multi-word terms (bigrams/trigrams) are more specific
+            else if (term.includes(' ')) {
+              score += 4
+            }
+            // Longer single words are more meaningful
+            else if (term.length >= 8) {
+              score += 3
+            }
+            else if (term.length >= 5) {
+              score += 2
+            }
+            else {
+              score += 1
+            }
           }
         }
         return { ...chunk, score }
@@ -1532,7 +1536,7 @@ async function retrieveRelevantChunks(
     // Instead of just top-N globally (which lets one large source dominate),
     // guarantee each source gets at least MIN_PER_SOURCE if it has relevant chunks
     const MIN_PER_SOURCE = 3
-    const MAX_PER_SOURCE = 10
+    const MAX_PER_SOURCE = 12
     const selected: typeof combined = []
     const perSource = new Map<string, number>()
 
@@ -1644,19 +1648,18 @@ async function enrichWithAdjacentChunks(
     }
 
     // Merge adjacent content into existing chunks (prepend N-1, append N+1)
+    // Use 800 chars for context — enough for a full legal paragraph
     return chunks.map((chunk, idx) => {
-      if (idx >= 10) return chunk // Only enrich top 10
+      if (idx >= 12) return chunk // Enrich top 12 chunks
       const prevContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex - 1}`)
       const nextContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex + 1}`)
       let enrichedContent = chunk.content
       if (prevContent) {
-        // Add last ~500 chars of previous chunk as context prefix
-        const suffix = prevContent.length > 500 ? '...' + prevContent.slice(-500) : prevContent
+        const suffix = prevContent.length > 800 ? '...' + prevContent.slice(-800) : prevContent
         enrichedContent = `[context voor:] ${suffix}\n\n${enrichedContent}`
       }
       if (nextContent) {
-        // Add first ~500 chars of next chunk as context suffix
-        const prefix = nextContent.length > 500 ? nextContent.slice(0, 500) + '...' : nextContent
+        const prefix = nextContent.length > 800 ? nextContent.slice(0, 800) + '...' : nextContent
         enrichedContent = `${enrichedContent}\n\n[context na:] ${prefix}`
       }
       return { ...chunk, content: enrichedContent }
