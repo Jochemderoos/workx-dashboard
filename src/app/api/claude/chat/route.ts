@@ -335,7 +335,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Te veel verzoeken. Wacht even voordat je een nieuwe vraag stelt (max 30 per uur).' }, { status: 429 })
   }
 
-  const { conversationId, projectId, message, documentIds, anonymize, model: requestedModel } = await req.json()
+  const { conversationId, projectId, message, documentIds, anonymize, model: requestedModel, useKnowledgeSources } = await req.json()
 
   if (!message?.trim()) {
     return NextResponse.json({ error: 'Bericht mag niet leeg zijn' }, { status: 400 })
@@ -491,11 +491,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Smart routing: determine if this question needs employment law knowledge sources
+    // useKnowledgeSources=false from frontend explicitly disables; otherwise auto-detect
+    const shouldUseKnowledgeSources = useKnowledgeSources === false
+      ? false
+      : isEmploymentLawQuestion(messageForClaude)
+    console.log(`[chat] Smart routing: useKnowledgeSources=${shouldUseKnowledgeSources} (explicit=${useKnowledgeSources}, detected=${isEmploymentLawQuestion(messageForClaude)})`)
+
     // Fetch knowledge sources using chunk-based retrieval for primary sources
     // Wrapped in a timeout to prevent database slowness from blocking the entire chat
     let sourcesContext = ''
     const usedSourceNames: Array<{ name: string; category: string; url?: string }> = []
-    try {
+    if (!shouldUseKnowledgeSources) {
+      console.log('[chat] Skipping knowledge sources — not an employment law question')
+    } else try {
       const sourcesFetchResult = await Promise.race([
         (async () => {
           const activeSources = await prisma.aISource.findMany({
@@ -552,6 +561,22 @@ export async function POST(req: NextRequest) {
               chunksBySource.set(chunk.sourceId, existing)
             }
 
+            // Citation format per source for consistent referencing
+            const citationFormats: Record<string, string> = {
+              'Tekst en Commentaar': 'Volgens T&C Arbeidsrecht bij art. [X] BW:',
+              'Thematica': 'Thematica Arbeidsrecht vermeldt:',
+              'Themata': 'Thematica Arbeidsrecht vermeldt:',
+              'VAAN': 'Volgens VAAN AR Updates:',
+              'InView — RAR': 'RAR (Rechtspraak Arbeidsrecht):',
+              'InView — Tijdschrift': 'Tijdschrift ArbeidsRecht:',
+            }
+            const getCitationFormat = (name: string): string => {
+              for (const [key, format] of Object.entries(citationFormats)) {
+                if (name.toLowerCase().includes(key.toLowerCase())) return format
+              }
+              return `Volgens ${name}:`
+            }
+
             const usedPrimaryNames: string[] = []
             for (const source of primarySources) {
               const sourceChunks = chunksBySource.get(source.id)
@@ -560,7 +585,9 @@ export async function POST(req: NextRequest) {
               // Sort by chunk index for reading order
               sourceChunks.sort((a, b) => a.chunkIndex - b.chunkIndex)
 
+              const citeFmt = getCitationFormat(source.name)
               sourcesContext += `\n\n--- ${source.name} [PRIMAIRE BRON — ${sourceChunks.length} relevante passages] (${source.category}) ---`
+              sourcesContext += `\nCITEERWIJZE: "${citeFmt}" gevolgd door een letterlijk citaat uit onderstaande passages.`
               for (const chunk of sourceChunks) {
                 const headingLabel = chunk.heading ? ` [${chunk.heading}]` : ''
                 sourcesContext += `\n\n[Passage ${chunk.chunkIndex + 1}${headingLabel}]\n${chunk.content}`
@@ -681,15 +708,24 @@ Vraag NIET naar de echte namen of gegevens.`
     }
     if (sourcesContext) {
       systemPrompt += `\n\n## Kennisbronnen van Workx Advocaten (LAAG 1 — ALTIJD EERST RAADPLEGEN)
-Hieronder staan passages uit de interne kennisbronnen, geselecteerd op basis van de vraag van de gebruiker. Bronnen gemarkeerd als [PRIMAIRE BRON] bevatten de ORIGINELE tekst uit gezaghebbende naslagwerken (Tekst & Commentaar, Thematica Arbeidsrecht). Dit is je EERSTE en BELANGRIJKSTE referentiepunt.
+Hieronder staan passages uit de interne kennisbronnen, geselecteerd op basis van de vraag van de gebruiker. Bronnen gemarkeerd als [PRIMAIRE BRON] bevatten de ORIGINELE tekst uit gezaghebbende naslagwerken (Tekst & Commentaar, Thematica Arbeidsrecht, VAAN AR Updates, RAR Rechtspraak Arbeidsrecht). Dit is je EERSTE en BELANGRIJKSTE referentiepunt.
 
 WERKWIJZE:
 1. Zoek EERST in de passages hieronder — dit zijn directe citaten uit de bronnen, geen samenvattingen
 2. Gebruik de exacte formuleringen, artikelverwijzingen en analyses uit deze passages
-3. Verwijs EXPLICIET naar de bron: "Volgens Tekst & Commentaar bij art. X..." of "Thematica vermeldt..."
+3. CITEER LETTERLIJK: gebruik de CITEERWIJZE die bij elke bron is aangegeven, gevolgd door een exact citaat tussen aanhalingstekens
 4. Vul aan met rechtspraak.nl (Laag 2) voor concrete uitspraken
 5. Val ALLEEN terug op eigen kennis (Laag 3) als de bronnen het onderwerp niet behandelen
-6. Als het antwoord NIET in deze bronnen staat: vermeld dit expliciet en pas je betrouwbaarheidsindicator naar beneden aan${sourcesContext}`
+6. Als het antwoord NIET in deze bronnen staat: vermeld dit expliciet en pas je betrouwbaarheidsindicator naar beneden aan
+
+BRONVERMELDING — ⚠️ VERPLICHT:
+- Sluit ALTIJD af met een ## Gebruikte bronnen sectie
+- Maak voor ELKE gebruikte bron een inklapbaar <details>-blok met een LETTERLIJK citaat
+- Gebruik de CITEERWIJZE van elke bron als inleiding, gevolgd door het exacte citaat
+- Voorbeeld format:
+  <details><summary>T&C Arbeidsrecht — art. 7:669 BW</summary>
+  Volgens T&C Arbeidsrecht bij art. 7:669 BW: "[exacte tekst uit de passage]"
+  </details>${sourcesContext}`
     }
     if (templatesContext) {
       systemPrompt += `\n\n## Beschikbare templates van Workx Advocaten
@@ -1183,6 +1219,77 @@ BELANGRIJK:
   }
 }
 
+// ==================== SMART ROUTING ====================
+
+/** Classify whether a question is employment law related (needs knowledge sources) */
+function isEmploymentLawQuestion(message: string): boolean {
+  const lower = message.toLowerCase()
+
+  // Strong employment law indicators — if ANY match, use sources
+  const strongIndicators = [
+    // Legal terms
+    /\bontslag\b/, /\bopzeg/, /\bopzegtermijn/, /\bontslagvergoeding/,
+    /\btransitievergoeding/, /\bbillijke\s*vergoeding/, /\bvaststellingsovereenkomst/,
+    /\barbeidsovereenkomst/, /\barbeidsrecht/, /\bwerkgever/, /\bwerknemer/,
+    /\bcao\b/, /\bbw\b/, /\bburgerlijk\s*wetboek/,
+    /\b(?:art(?:ikel)?\.?\s*)?\d+[:.]6\d{2}\b/, // Art 7:6xx BW pattern
+    /\b7:\d{3}\b/, // 7:669, 7:670 etc.
+    /\buwv\b/, /\bre-?integratie/, /\barbeidsongeschikt/, /\bziektewet/,
+    /\bwia\b/, /\bwao\b/, /\bwazo\b/, /\bwulbz\b/,
+    /\bproeftijd/, /\bconcurrentiebeding/, /\brelatiebeding/,
+    /\bloonbetaling/, /\bloondoorbetaling/, /\bvakantie(?:geld|dagen|recht)/,
+    /\bwerkdruk/, /\bfunctioneringsgesprek/, /\bbeoordelingsgesprek/,
+    /\bdringende\s*reden/, /\bstaande\s*voet/, /\bop\s*staande\s*voet/,
+    /\bkennelijk\s*onredelijk/, /\bverwijtbaar/, /\bernstig\s*verwijtbaar/,
+    /\bsociale\s*zekerheid/, /\bpensioen(?:recht)?/,
+    /\bmedezeggenschap/, /\bondernemingsraad/, /\bor\b/,
+    /\bgoed\s*werkgeverschap/, /\bgoed\s*werknemerschap/,
+    /\bflexwet/, /\bwab\b/, /\bwav\b/, /\bwwz\b/, /\bwet\s*werk/,
+    /\bbedrijfsarts/, /\barbo/, /\bpreventiemedewerker/,
+    /\becli\b/, /\brechtspraak/, /\bkantonrechter/, /\bhof\b.*arbeid/,
+    /\bjurisprudentie/, /\buitspraak/, /\bvonnis\b/,
+    /\bdetachering/, /\buitzendkracht/, /\bzzp/, /\bschijnzelfstandig/,
+    /\bovergang\s*van\s*onderneming/, /\bcollectief\s*ontslag/,
+    /\bmedewerker/, /\bpersoneel/, /\bhr\b.*beleid/,
+    /\bthematica/, /\btekst\s*[&en]+\s*commentaar/, /\bt&c\b/, /\brar\b/, /\bvaan\b/,
+  ]
+
+  for (const pattern of strongIndicators) {
+    if (pattern.test(lower)) return true
+  }
+
+  // Weak indicators — need 2+ to trigger
+  const weakIndicators = [
+    /\bcontract/, /\bovereenkomst/, /\bclausule/, /\bbeding/,
+    /\bboete/, /\bschade(?:vergoeding)?/, /\baansprakelijk/,
+    /\btermijn/, /\bopzeg/, /\bproces/, /\bprocedure/,
+    /\brechter/, /\brecht(?:bank)?/, /\badvocaat/,
+    /\bwet\b/, /\bregel(?:ing|geving)?/, /\bbesluit/,
+    /\bbeleid/, /\bprotocol/, /\brichtlijn/,
+  ]
+  let weakCount = 0
+  for (const pattern of weakIndicators) {
+    if (pattern.test(lower)) weakCount++
+  }
+  if (weakCount >= 2) return true
+
+  // Explicit non-employment-law patterns
+  const nonLawPatterns = [
+    /^(hallo|hi|hey|goedemorgen|goedemiddag)\b/i,
+    /\bschrijf\s*(een\s*)?(e-?mail|brief|bericht)\b/i,
+    /\bvertaal\b/i,
+    /\brecept\b/i,
+    /\bhoofdstad\b/i,
+    /\bweer\b.*\bmorgen\b/i,
+  ]
+  for (const pattern of nonLawPatterns) {
+    if (pattern.test(lower) && weakCount === 0) return false
+  }
+
+  // Default: use sources (better safe than sorry for a law firm)
+  return true
+}
+
 // ==================== CHUNK RETRIEVAL HELPERS ====================
 
 /** Dutch stop words to filter out when extracting search terms */
@@ -1374,20 +1481,97 @@ async function retrieveRelevantChunks(
     }
 
     selected.sort((a, b) => b.score - a.score)
-    return selected.slice(0, maxChunks + 6) // Allow up to 41 for balanced sources
+    const finalSelected = selected.slice(0, maxChunks + 6) // Allow up to 41 for balanced sources
+
+    // Adjacent chunk inclusion: fetch N-1 and N+1 chunks for better context
+    return await enrichWithAdjacentChunks(finalSelected, sourceIds)
   }
 
   // Fallback: if only semantic results
   if (semanticResults.length > 0) {
-    return semanticResults.slice(0, maxChunks).map(r => ({
+    const mapped = semanticResults.slice(0, maxChunks).map(r => ({
       sourceId: r.sourceId,
       chunkIndex: r.chunkIndex,
       content: r.content,
       heading: r.heading,
       score: r.similarity,
     }))
+    return await enrichWithAdjacentChunks(mapped, sourceIds)
   }
 
   // Fallback: if only keyword results (no embeddings available)
   return keywordResults.slice(0, maxChunks)
+}
+
+/**
+ * Enrich selected chunks with adjacent chunks (N-1, N+1) for better context.
+ * Only adds adjacent chunks if they're not already in the selection.
+ * Merges adjacent content into the existing chunk to avoid bloating the count.
+ */
+async function enrichWithAdjacentChunks(
+  chunks: Array<{ sourceId: string; chunkIndex: number; content: string; heading: string | null; score: number }>,
+  sourceIds: string[]
+): Promise<typeof chunks> {
+  if (chunks.length === 0) return chunks
+
+  // Collect all adjacent chunk indices we need
+  const existingKeys = new Set(chunks.map(c => `${c.sourceId}-${c.chunkIndex}`))
+  const adjacentNeeded: Array<{ sourceId: string; chunkIndex: number }> = []
+
+  for (const chunk of chunks) {
+    // Only fetch adjacents for top-scored chunks (top 10) to limit DB queries
+    if (chunks.indexOf(chunk) >= 10) break
+    const prevKey = `${chunk.sourceId}-${chunk.chunkIndex - 1}`
+    const nextKey = `${chunk.sourceId}-${chunk.chunkIndex + 1}`
+    if (!existingKeys.has(prevKey) && chunk.chunkIndex > 0) {
+      adjacentNeeded.push({ sourceId: chunk.sourceId, chunkIndex: chunk.chunkIndex - 1 })
+    }
+    if (!existingKeys.has(nextKey)) {
+      adjacentNeeded.push({ sourceId: chunk.sourceId, chunkIndex: chunk.chunkIndex + 1 })
+    }
+  }
+
+  if (adjacentNeeded.length === 0) return chunks
+
+  // Fetch adjacent chunks in one query
+  try {
+    const adjacentChunks = await prisma.sourceChunk.findMany({
+      where: {
+        sourceId: { in: sourceIds },
+        OR: adjacentNeeded.map(a => ({
+          sourceId: a.sourceId,
+          chunkIndex: a.chunkIndex,
+        })),
+      },
+      select: { sourceId: true, chunkIndex: true, content: true },
+    })
+
+    // Build lookup map
+    const adjacentMap = new Map<string, string>()
+    for (const adj of adjacentChunks) {
+      adjacentMap.set(`${adj.sourceId}-${adj.chunkIndex}`, adj.content)
+    }
+
+    // Merge adjacent content into existing chunks (prepend N-1, append N+1)
+    return chunks.map((chunk, idx) => {
+      if (idx >= 10) return chunk // Only enrich top 10
+      const prevContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex - 1}`)
+      const nextContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex + 1}`)
+      let enrichedContent = chunk.content
+      if (prevContent) {
+        // Add last ~500 chars of previous chunk as context prefix
+        const suffix = prevContent.length > 500 ? '...' + prevContent.slice(-500) : prevContent
+        enrichedContent = `[context voor:] ${suffix}\n\n${enrichedContent}`
+      }
+      if (nextContent) {
+        // Add first ~500 chars of next chunk as context suffix
+        const prefix = nextContent.length > 500 ? nextContent.slice(0, 500) + '...' : nextContent
+        enrichedContent = `${enrichedContent}\n\n[context na:] ${prefix}`
+      }
+      return { ...chunk, content: enrichedContent }
+    })
+  } catch (err) {
+    console.error('[chat] Adjacent chunk fetch failed:', err)
+    return chunks // Return original chunks on error
+  }
 }

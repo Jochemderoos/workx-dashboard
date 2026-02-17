@@ -74,6 +74,7 @@ export default function ClaudeChat({
   const [thinkingExpanded, setThinkingExpanded] = useState(false)
   const [anonymize, setAnonymize] = useState(false)
   const [selectedModel, setSelectedModel] = useState<'sonnet' | 'opus'>('sonnet')
+  const [useKnowledgeSources, setUseKnowledgeSources] = useState(true)
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set())
   const [annotatingId, setAnnotatingId] = useState<string | null>(null)
   const [annotationText, setAnnotationText] = useState('')
@@ -505,6 +506,7 @@ export default function ClaudeChat({
           documentIds: [...documentIds, ...attachedDocs.map(d => d.id)],
           anonymize,
           model: selectedModel,
+          useKnowledgeSources,
         }),
         signal: controller.signal,
       })
@@ -1173,6 +1175,21 @@ export default function ClaudeChat({
                   Opus
                 </button>
               </div>
+
+              {/* Knowledge sources toggle */}
+              <button
+                onClick={() => setUseKnowledgeSources(!useKnowledgeSources)}
+                disabled={isLoading}
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all border ${
+                  useKnowledgeSources
+                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-400 font-medium'
+                    : 'bg-white/[0.03] border-white/10 text-white/35 hover:text-white/60 hover:bg-white/[0.06]'
+                } disabled:opacity-30`}
+                title={useKnowledgeSources ? 'Kennisbronnen AAN — zoekt in T&C, Thematica, VAAN, RAR' : 'Kennisbronnen UIT — sneller antwoord, geen bronvermelding'}
+              >
+                {useKnowledgeSources ? '\u{1F4DA}' : '\u{1F4AD}'} Bronnen {useKnowledgeSources ? 'aan' : 'uit'}
+              </button>
+
               <span className="text-white/10 text-[10px]">|</span>
               {RESPONSE_OPTIONS.map((opt) => (
                 <button
