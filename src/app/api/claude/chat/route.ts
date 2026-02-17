@@ -1374,6 +1374,7 @@ const DUTCH_STOP_WORDS = new Set([
 
 /** Common multi-word legal phrases that should be treated as single search terms */
 const LEGAL_PHRASES = [
+  // Ontslagrecht
   'ontslag op staande voet', 'dringende reden', 'billijke vergoeding',
   'ernstig verwijtbaar', 'kennelijk onredelijk', 'goed werkgeverschap',
   'goed werknemerschap', 'redelijke grond', 'herplaatsing binnen redelijke termijn',
@@ -1383,12 +1384,45 @@ const LEGAL_PHRASES = [
   'relatiebeding', 'proeftijdbeding', 'ketenregeling', 'aanzegverplichting',
   'transitievergoeding', 'loondoorbetaling bij ziekte', 'deskundigenoordeel',
   'wederzijds goedvinden', 'vaststellingsovereenkomst', 'opzegverbod',
-  'new hairstyle', 'deliveroo', 'asscher-escape', 'xella', 'stoof chimney',
-  'taxi hofman', 'ontslagvergoeding', 'reorganisatie', 'sociaal plan',
   'cumulatiegrond', 'verstoorde arbeidsverhouding', 'disfunctioneren',
   'bedrijfseconomische redenen', 'vervaltermijn', 'verjaringstermijn',
   'bedenktermijn', 'wettelijke verhoging', 'vakantiegeld', 'vakantiedagen',
   'oproepovereenkomst', 'payrolling', 'uitzendovereenkomst',
+  // Bekende arresten
+  'new hairstyle', 'deliveroo', 'asscher-escape', 'xella', 'stoof chimney',
+  'stoof mammoet', 'taxi hofman', 'mak holland', 'decor amsterdam',
+  // AOW / pensioen
+  'pensioenontslag', 'pensioengerechtigde leeftijd', 'aow-leeftijd',
+  'aow-gerechtigde', 'pensioenopzegging', 'opzegging na aow',
+  // Vergoedingen
+  'ontslagvergoeding', 'gefixeerde schadevergoeding', 'new hairstyle factoren',
+  'vergoeding wegens onregelmatige opzegging', 'hoogte billijke vergoeding',
+  // Ziekte
+  'plan van aanpak', 'spoor 1', 'spoor 2', 'eerstejaars evaluatie',
+  'wia-aanvraag', 'loonsanctie', 'deskundigenoordeel uwv',
+  // Arbeidsrelatie
+  'rechtsvermoeden arbeidsovereenkomst', 'gezagsverhouding', 'holistische toets',
+  'schijnzelfstandigheid', 'kwalificatie arbeidsrelatie', 'wet dba',
+  // Flexibel
+  'aanbod vaste uren', 'rechtsvermoeden arbeidsomvang', 'inlenersbeloning',
+  'allocatiefunctie', 'fasensysteem', 'uitzendbeding',
+  // Wijziging
+  'eenzijdig wijzigingsbeding', 'redelijk voorstel', 'zwaarwichtig belang',
+  // Integriteit
+  'grensoverschrijdend gedrag', 'seksuele intimidatie', 'vertrouwenspersoon',
+  'klachtenprocedure', 'ongewenste omgangsvormen',
+  // Collectief
+  'adviesrecht ondernemingsraad', 'instemmingsrecht', 'reorganisatie',
+  'sociaal plan', 'afspiegelingsbeginsel', 'ontslagvolgorde',
+  // Procedure
+  'ontbinding arbeidsovereenkomst', 'ontbindingsverzoek', 'tegenverzoek',
+  'kort geding arbeidsrecht', 'voorlopige voorziening', 'wedertewerkstelling',
+  // Overig
+  'studiekostenbeding', 'nevenwerkzaamhedenbeding', 'geheimhoudingsbeding',
+  'werkgeversaansprakelijkheid', 'zorgplicht werkgever', 'privacy werknemer',
+  'op non-actiefstelling', 'vrijstelling van werk', 'fictieve opzegtermijn',
+  'verwijtbare werkloosheid', 'ww-uitkering', 'loongarantieregeling',
+  'normalisering rechtspositie ambtenaren', 'statutair directeur',
 ]
 
 /**
@@ -1398,80 +1432,290 @@ const LEGAL_PHRASES = [
  * Without this mapping, retrieval fails on basic questions.
  */
 const LEGAL_CONCEPT_MAP: Array<{ patterns: RegExp[]; terms: string[] }> = [
-  // AOW / pensioen / oudere werknemer
+  // ===== ONTSLAGRECHT =====
+
+  // 1. AOW / pensioen / oudere werknemer
   {
-    patterns: [/\baow\b/i, /\bpensioen/i, /\b(?:6[5-9]|7[0-9]|8[0-9])\s*(?:jaar|jarige?)\b/i, /\boudere?\s*(?:werk)?nemer/i, /\bpensioenleeftijd/i, /\bpensioengerechtigde?\b/i],
-    terms: ['AOW-leeftijd', 'pensioenontslag', 'art. 7:669 lid 4', 'pensioengerechtigde', 'AOW-gerechtigde', 'pensioenopzegging', 'opzegging AOW'],
+    patterns: [/\baow\b/i, /\bpensioen/i, /\b(?:6[5-9]|7[0-9]|8[0-9])\s*(?:jaar|jarige?)\b/i, /\boudere?\s*(?:werk)?nemer/i, /\bpensioenleeftijd/i, /\bpensioengerechtigde?\b/i, /\bna\s*(?:de\s*)?pensioen/i],
+    terms: ['AOW-leeftijd', 'pensioenontslag', 'art. 7:669 lid 4', 'pensioengerechtigde', 'AOW-gerechtigde', 'pensioenopzegging', 'opzegging AOW', 'opzegtermijn AOW'],
   },
-  // Ziekte / arbeidsongeschiktheid
+  // 2. Ontslag op staande voet
   {
-    patterns: [/\bziek\b/i, /\bziekte\b/i, /\barbeidsongeschikt/i, /\bre-?integratie/i, /\bbedrijfsarts/i, /\bwia\b/i, /\bwet\s*poortwachter/i],
-    terms: ['loondoorbetaling ziekte', 'art. 7:629', 'opzegverbod ziekte', 'art. 7:670', 're-integratie', 'deskundigenoordeel', 'Wet verbetering poortwachter'],
+    patterns: [/\bstaande\s*voet/i, /\bdringende\s*reden/i, /\bop\s*stel\s*en\s*sprong/i, /\bsummier\s*ontslag/i, /\bsommatie.*ontslag/i, /\bontslag\s*(?:per\s*)?direct/i],
+    terms: ['ontslag op staande voet', 'dringende reden', 'art. 7:677', 'art. 7:678', 'onverwijld', 'mededeling dringende reden', 'gefixeerde schadevergoeding'],
   },
-  // Ontslag op staande voet
+  // 3. Disfunctioneren / niet functioneren
   {
-    patterns: [/\bstaande\s*voet/i, /\bdringende\s*reden/i, /\bop\s*stel\s*en\s*sprong/i, /\bsummier\s*ontslag/i],
-    terms: ['ontslag op staande voet', 'dringende reden', 'art. 7:677', 'art. 7:678', 'onverwijld', 'mededeling'],
+    patterns: [/\bdisfunctioner/i, /\bfunctioner/i, /\bniet\s*(?:goed\s*)?functioner/i, /\bverbetertraject/i, /\bpip\b/i, /\bslecht\s*(?:prester|werk)/i, /\bonbekwaam/i, /\bongeschikt/i],
+    terms: ['disfunctioneren', 'art. 7:669 lid 3 sub d', 'verbetertraject', 'ongeschiktheid', 'herplaatsing', 'verbeterplan', 'functioneringsgesprek'],
   },
-  // VSO / vaststellingsovereenkomst
+  // 4. Verstoorde arbeidsverhouding
   {
-    patterns: [/\bvso\b/i, /\bvaststellingsovereenkomst/i, /\bwederzijds\s*goedvinden/i, /\bbeeindigingsovereenkomst/i, /\bsettlement/i],
-    terms: ['vaststellingsovereenkomst', 'bedenktermijn', 'art. 7:670b', 'finale kwijting', 'WW-veiligheid', 'fictieve opzegtermijn'],
+    patterns: [/\bverstoorde?\s*(?:arbeids)?verhouding/i, /\bvertrouwensbreuk/i, /\bconflict\s*(?:op\s*)?(?:het\s*)?werk/i, /\bruzie\b/i, /\bimpasse\b/i, /\bonwerkbare?\s*situatie/i],
+    terms: ['verstoorde arbeidsverhouding', 'art. 7:669 lid 3 sub g', 'vertrouwensbreuk', 'mediation', 'onherstelbaar verstoord', 'ontbinding arbeidsovereenkomst'],
   },
-  // Transitievergoeding
+  // 5. Reorganisatie / bedrijfseconomisch ontslag
   {
-    patterns: [/\btransitievergoeding/i, /\bontslagvergoeding/i, /\bvergoeding\s*(?:bij\s*)?ontslag/i],
-    terms: ['transitievergoeding', 'art. 7:673', 'berekening transitievergoeding', 'billijke vergoeding', 'ernstig verwijtbaar'],
+    patterns: [/\breorganisatie/i, /\bbedrijfseconomisch/i, /\bboventallig/i, /\bsociaal\s*plan/i, /\bafspiegeling/i, /\binkrimping/i, /\bherstructurering/i, /\bsanering/i, /\bbezuinig/i],
+    terms: ['bedrijfseconomische redenen', 'art. 7:669 lid 3 sub a', 'afspiegelingsbeginsel', 'sociaal plan', 'UWV-procedure', 'herplaatsing', 'ontslagvolgorde', 'bedrijfsvestiging'],
   },
-  // Proeftijd
+  // 6. Verwijtbaar handelen werknemer
   {
-    patterns: [/\bproeftijd/i, /\bproefperiode/i],
-    terms: ['proeftijdbeding', 'art. 7:652', 'proeftijdontslag', 'nietigheid proeftijd'],
+    patterns: [/\bverwijtbaar\s*(?:handel|gedrag)/i, /\b(?:e-?)grond\b/i, /\bintegriteit/i, /\bfraud/i, /\bstelen\b/i, /\bsteelt\b/i, /\bdiefstal/i, /\bgeheimhouding\s*(?:geschonden|overtreden)/i],
+    terms: ['verwijtbaar handelen', 'art. 7:669 lid 3 sub e', 'ernstig verwijtbaar', 'integriteitsschending', 'ontbinding wegens verwijtbaar handelen'],
   },
-  // Concurrentiebeding / relatiebeding
+  // 7. Cumulatiegrond (i-grond)
   {
-    patterns: [/\bconcurrentiebeding/i, /\brelatiebeding/i, /\bnon.?concurren/i],
-    terms: ['concurrentiebeding', 'relatiebeding', 'art. 7:653', 'zwaarwegende bedrijfsbelangen', 'schriftelijkheidsvereiste'],
+    patterns: [/\bcumulatie/i, /\bi-?grond/i, /\bcombinatie\s*(?:van\s*)?gronden/i, /\bniet\s*voldragen/i],
+    terms: ['cumulatiegrond', 'art. 7:669 lid 3 sub i', 'extra vergoeding', 'niet-voldragen gronden', 'combinatie ontslaggronden'],
   },
-  // Ketenregeling / tijdelijk contract
+  // 8. Opzegverboden
   {
-    patterns: [/\bketen/i, /\btijdelijk\s*contract/i, /\bbepaalde\s*tijd/i, /\bverlenging/i, /\baanzegg?/i],
-    terms: ['ketenregeling', 'art. 7:668a', 'aanzegverplichting', 'art. 7:668', 'bepaalde tijd', 'van rechtswege'],
+    patterns: [/\bopzegverbod/i, /\bmag\s*(?:je\s*)?niet\s*ontslaan/i, /\bbeschermd\s*(?:tegen\s*)?ontslag/i, /\bontslagbescherming/i],
+    terms: ['opzegverbod', 'art. 7:670', 'opzegverbod ziekte', 'opzegverbod zwangerschap', 'opzegverbod OR', 'art. 7:670a', 'reflexwerking'],
   },
-  // Disfunctioneren
+  // 9. Opzegtermijn
   {
-    patterns: [/\bdisfunctioner/i, /\bfunctioner/i, /\bniet\s*(?:goed\s*)?functioner/i, /\bverbetertraject/i, /\bpip\b/i],
-    terms: ['disfunctioneren', 'art. 7:669 lid 3 sub d', 'verbetertraject', 'ongeschiktheid', 'herplaatsing'],
+    patterns: [/\bopzegtermijn/i, /\bopzeg(?:gen|ging)\b/i, /\bwanneer\s*(?:mag|kan)\s*(?:ik\s*)?opzeggen/i, /\bkunnen\s*opzeggen/i, /\beinddatum/i],
+    terms: ['opzegtermijn', 'art. 7:672', 'opzegging arbeidsovereenkomst', 'art. 7:671', 'instemming werknemer', 'opzegging UWV'],
   },
-  // Verstoorde arbeidsverhouding
+
+  // ===== BEEINDIGINGSVERGOEDINGEN =====
+
+  // 10. Transitievergoeding
   {
-    patterns: [/\bverstoorde?\s*(?:arbeids)?verhouding/i, /\bvertrouwensbreuk/i, /\bconflict\s*(?:op\s*)?(?:het\s*)?werk/i],
-    terms: ['verstoorde arbeidsverhouding', 'art. 7:669 lid 3 sub g', 'vertrouwensbreuk', 'mediation'],
+    patterns: [/\btransitievergoeding/i, /\bontslagvergoeding/i, /\bvergoeding\s*(?:bij\s*)?ontslag/i, /\bhoeveel\s*(?:krijg|kost)/i],
+    terms: ['transitievergoeding', 'art. 7:673', 'berekening transitievergoeding', 'maandsalaris', 'dienstjaren', 'art. 7:673a', 'verval transitievergoeding'],
   },
-  // Reorganisatie / bedrijfseconomisch
+  // 11. Billijke vergoeding
   {
-    patterns: [/\breorganisatie/i, /\bbedrijfseconomisch/i, /\bboventallig/i, /\bsociaal\s*plan/i, /\bafspiegeling/i],
-    terms: ['bedrijfseconomische redenen', 'art. 7:669 lid 3 sub a', 'afspiegelingsbeginsel', 'sociaal plan', 'UWV-procedure', 'herplaatsing'],
+    patterns: [/\bbillijke\s*vergoeding/i, /\bernstig\s*verwijtbaar/i, /\bnew\s*hairstyle/i, /\bfactoren\s*billijke/i],
+    terms: ['billijke vergoeding', 'art. 7:681', 'art. 7:683', 'ernstig verwijtbaar handelen werkgever', 'New Hairstyle-factoren', 'hoogte billijke vergoeding'],
   },
-  // Werkgeverschap / arbeidsrelatie kwalificatie
+
+  // ===== CONTRACT & ARBEIDSVOORWAARDEN =====
+
+  // 12. VSO / vaststellingsovereenkomst
   {
-    patterns: [/\bzzp\b/i, /\bschijnzelfstandig/i, /\barbeidsrelatie/i, /\bwerknemer\s*of\s*zzp/i, /\bplatform/i, /\bdeliveroo\b/i, /\buber\b/i],
-    terms: ['schijnzelfstandigheid', 'rechtsvermoeden arbeidsovereenkomst', 'art. 7:610a', 'gezagsverhouding', 'Deliveroo-arrest'],
+    patterns: [/\bvso\b/i, /\bvaststellingsovereenkomst/i, /\bwederzijds\s*goedvinden/i, /\bbeeindigingsovereenkomst/i, /\bsettlement/i, /\bregeling\s*treffen/i, /\bschikking/i, /\bgolden\s*handshake/i],
+    terms: ['vaststellingsovereenkomst', 'bedenktermijn', 'art. 7:670b', 'finale kwijting', 'WW-veiligheid', 'fictieve opzegtermijn', 'wederzijds goedvinden', 'verklaring geen dringende reden'],
   },
-  // Oproepkracht / flexwerker
+  // 13. Proeftijd
   {
-    patterns: [/\boproep/i, /\bnul-?uren/i, /\bmin.?max/i, /\bflexwerker/i, /\bpayroll/i],
-    terms: ['oproepovereenkomst', 'art. 7:628a', 'nul-urencontract', 'aanbod vaste uren', 'payrolling'],
+    patterns: [/\bproeftijd/i, /\bproefperiode/i, /\bontslag\s*(?:in|tijdens)\s*proeftijd/i],
+    terms: ['proeftijdbeding', 'art. 7:652', 'proeftijdontslag', 'nietigheid proeftijd', 'duur proeftijd', 'opvolgend werkgeverschap proeftijd'],
   },
-  // Loon / salaris geschil
+  // 14. Concurrentiebeding / relatiebeding
   {
-    patterns: [/\bloon\b/i, /\bsalaris/i, /\bwettelijke\s*verhoging/i, /\bniet\s*betaald/i, /\bachterstallig/i],
-    terms: ['loonvordering', 'art. 7:616', 'wettelijke verhoging', 'art. 7:625', 'loonbetaling'],
+    patterns: [/\bconcurrentiebeding/i, /\brelatiebeding/i, /\bnon.?concurren/i, /\bverbod\s*(?:om\s*)?(?:te\s*)?werken/i, /\bniet\s*(?:bij|naar)\s*concurrent/i],
+    terms: ['concurrentiebeding', 'relatiebeding', 'art. 7:653', 'zwaarwegende bedrijfsbelangen', 'schriftelijkheidsvereiste', 'gehele of gedeeltelijke vernietiging', 'belangenafweging'],
   },
-  // Overgang van onderneming
+  // 15. Ketenregeling / tijdelijk contract
   {
-    patterns: [/\bovergang\s*(?:van\s*)?onderneming/i, /\btupe\b/i, /\bovername\s*personeel/i, /\bbedrijfsovername/i],
-    terms: ['overgang van onderneming', 'art. 7:662', 'art. 7:663', 'identiteitsbehoud', 'TUPE'],
+    patterns: [/\bketen/i, /\btijdelijk\s*contract/i, /\bbepaalde\s*tijd/i, /\bverlenging/i, /\baanzegg?/i, /\bcontract\s*(?:verloopt|afloopt|eindigt)/i, /\bniet\s*verlengen/i],
+    terms: ['ketenregeling', 'art. 7:668a', 'aanzegverplichting', 'art. 7:668', 'bepaalde tijd', 'van rechtswege', 'tussenpozen', '3 contracten 36 maanden'],
+  },
+  // 16. Wijziging arbeidsvoorwaarden / eenzijdig wijzigingsbeding
+  {
+    patterns: [/\bwijziging\s*(?:arbeids)?voorwaarden/i, /\beenzijdig\s*wijzig/i, /\bfunctiewijziging/i, /\bdemotie/i, /\bsalarisverlaging/i, /\bloonsverlaging/i, /\bstandplaatswijziging/i, /\boverplaats/i],
+    terms: ['eenzijdig wijzigingsbeding', 'art. 7:613', 'Stoof/Mammoet', 'goed werknemerschap', 'art. 7:611', 'wijziging arbeidsvoorwaarden', 'redelijk voorstel'],
+  },
+  // 17. Arbeidsovereenkomst / totstandkoming
+  {
+    patterns: [/\barbeidsovereenkomst\b/i, /\barbeidscontract\b/i, /\bwat\s*staat\s*(?:er\s*)?in/i, /\bverplichte\s*bepalingen/i, /\bessentialia/i],
+    terms: ['arbeidsovereenkomst', 'art. 7:610', 'arbeid loon gezag', 'schriftelijke arbeidsovereenkomst', 'informatieplicht werkgever', 'art. 7:655'],
+  },
+
+  // ===== ZIEKTE & ARBEIDSONGESCHIKTHEID =====
+
+  // 18. Ziekte / loondoorbetaling
+  {
+    patterns: [/\bziek\b/i, /\bziekte\b/i, /\barbeidsongeschikt/i, /\bre-?integratie/i, /\bbedrijfsarts/i, /\bwia\b/i, /\bwet\s*poortwachter/i, /\bziekmelding/i, /\bverzuim/i],
+    terms: ['loondoorbetaling ziekte', 'art. 7:629', 'opzegverbod ziekte', 'art. 7:670', 're-integratie', 'deskundigenoordeel', 'Wet verbetering poortwachter', 'plan van aanpak', 'spoor 2'],
+  },
+  // 19. Burn-out / werkdruk / psychische klachten
+  {
+    patterns: [/\bburnout\b/i, /\bburn-?out\b/i, /\bwerkdruk/i, /\boverspannen/i, /\bstress\s*(?:op\s*)?werk/i, /\bpsychisch/i, /\buitgevallen/i, /\boverbelast/i],
+    terms: ['burn-out', 'psychosociale arbeidsbelasting', 'werkdruk', 'art. 7:658', 'zorgplicht werkgever', 'arbeidsongeschiktheid', 'Arbowet', 'loondoorbetaling ziekte'],
+  },
+  // 20. Frequent ziekteverzuim (c-grond)
+  {
+    patterns: [/\bfrequent\s*(?:ziekte)?verzuim/i, /\bveelvuldig\s*ziek/i, /\bvaker\s*ziek/i, /\bc-?grond/i, /\bregelmatig\s*ziek/i],
+    terms: ['frequent ziekteverzuim', 'art. 7:669 lid 3 sub c', 'regelmatig ziekteverzuim', 'deskundigenoordeel', 'onaanvaardbare gevolgen bedrijfsvoering'],
+  },
+
+  // ===== WERKGEVERSCHAP & FLEXIBELE ARBEID =====
+
+  // 21. ZZP / schijnzelfstandigheid / kwalificatie arbeidsrelatie
+  {
+    patterns: [/\bzzp\b/i, /\bschijnzelfstandig/i, /\barbeidsrelatie/i, /\bwerknemer\s*of\s*zzp/i, /\bplatform/i, /\bdeliveroo\b/i, /\buber\b/i, /\bfreelance/i, /\bopdrachtovereenkomst/i, /\bmodelovereenkomst/i, /\bdba\b/i],
+    terms: ['schijnzelfstandigheid', 'rechtsvermoeden arbeidsovereenkomst', 'art. 7:610a', 'gezagsverhouding', 'Deliveroo-arrest', 'kwalificatie arbeidsrelatie', 'Wet DBA', 'holistische toets'],
+  },
+  // 22. Oproepkracht / flexwerker
+  {
+    patterns: [/\boproep/i, /\bnul-?uren/i, /\bmin.?max/i, /\bflexwerker/i, /\bflexibel\s*contract/i, /\binvalkracht/i],
+    terms: ['oproepovereenkomst', 'art. 7:628a', 'nul-urencontract', 'aanbod vaste uren', 'rechtsvermoeden arbeidsomvang', 'art. 7:610b', 'oproeptermijn'],
+  },
+  // 23. Uitzendkracht / detachering / payrolling
+  {
+    patterns: [/\buitzend/i, /\bdetacher/i, /\bpayroll/i, /\binlen/i, /\b(?:abu|nbbu)\b/i, /\ballocatie/i, /\buitzendbureau/i],
+    terms: ['uitzendovereenkomst', 'art. 7:690', 'uitzendbeding', 'inlenersbeloning', 'payrolling', 'allocatiefunctie', 'detachering', 'WAB payroll'],
+  },
+  // 24. Overgang van onderneming
+  {
+    patterns: [/\bovergang\s*(?:van\s*)?onderneming/i, /\btupe\b/i, /\bovername\s*personeel/i, /\bbedrijfsovername/i, /\bfusie\b/i, /\bactivatransactie/i, /\basset\s*deal/i],
+    terms: ['overgang van onderneming', 'art. 7:662', 'art. 7:663', 'identiteitsbehoud', 'TUPE', 'behoud arbeidsvoorwaarden', 'economische eenheid'],
+  },
+
+  // ===== LOON & VAKANTIE =====
+
+  // 25. Loon / salaris geschil
+  {
+    patterns: [/\bloon\b/i, /\bsalaris/i, /\bwettelijke\s*verhoging/i, /\bniet\s*betaald/i, /\bachterstallig/i, /\bloonstrook/i, /\bloonspecificatie/i],
+    terms: ['loonvordering', 'art. 7:616', 'wettelijke verhoging', 'art. 7:625', 'loonbetaling', 'art. 7:626', 'loonspecificatie'],
+  },
+  // 26. Vakantie / verlof
+  {
+    patterns: [/\bvakantie(?:dag|geld|recht|uren)/i, /\bverlof\b/i, /\bouderschapsverlof/i, /\bzwangerschapsverlof/i, /\bgeboorteverlof/i, /\bcalamiteitenverlof/i, /\bvakantietoeslag/i, /\bvrije\s*dagen/i],
+    terms: ['vakantiedagen', 'art. 7:634', 'vakantiegeld', 'art. 7:639', 'wettelijke vakantiedagen', 'bovenwettelijke vakantiedagen', 'vervaltermijn vakantiedagen', 'vakantietoeslag', 'WAZO'],
+  },
+  // 27. Bonus / variabel loon / emolumenten
+  {
+    patterns: [/\bbonus/i, /\bvariabel\s*(?:loon|salaris)/i, /\btantieme/i, /\bwinstdeling/i, /\bcommissie\b/i, /\bdertiende\s*maand/i, /\b13e?\s*maand/i],
+    terms: ['bonus', 'variabel loon', 'discretionaire bevoegdheid', 'goed werkgeverschap bonus', 'verworven recht', 'eenzijdige wijziging bonus'],
+  },
+  // 28. Studiekosten / terugbetaling
+  {
+    patterns: [/\bstudiekosten/i, /\bopleidingskosten/i, /\bterugbetaling\s*(?:studie|opleiding)/i, /\bstudiekostenbeding/i, /\bscholing/i],
+    terms: ['studiekostenbeding', 'terugbetalingsregeling', 'scholingsplicht werkgever', 'art. 7:611a', 'opleidingskosten', 'Richtlijn transparante arbeidsvoorwaarden'],
+  },
+
+  // ===== GRENSOVERSCHRIJDEND GEDRAG & INTEGRITEIT =====
+
+  // 29. Grensoverschrijdend gedrag / seksuele intimidatie / #MeToo
+  {
+    patterns: [/\bgrensoverschrijdend/i, /\bseksue(?:le|el)\s*intimidatie/i, /\bmetoo\b/i, /\bongewenst\s*gedrag/i, /\bpesten\b/i, /\bmobbing/i, /\bagressie\s*(?:op\s*)?werk/i, /\bdiscriminatie/i, /\bintimidatie/i],
+    terms: ['grensoverschrijdend gedrag', 'seksuele intimidatie', 'ongewenste omgangsvormen', 'art. 7:646', 'AWGB', 'verwijtbaar handelen', 'zorgplicht werkgever', 'klachtenprocedure', 'vertrouwenspersoon'],
+  },
+  // 30. Alcohol / drugs op het werk
+  {
+    patterns: [/\balcohol/i, /\bdrug/i, /\bonder\s*invloed/i, /\bverslaving/i, /\bmiddelen\s*(?:gebruik|misbruik)/i, /\bdronken/i],
+    terms: ['alcohol op het werk', 'drugs', 'verslaving', 'dringende reden', 'ontslag op staande voet', 'verslavingsbeleid', 'ziekte verslaving'],
+  },
+  // 31. Nevenwerkzaamheden
+  {
+    patterns: [/\bnevenwerkzaamhed/i, /\bbijbaan/i, /\bneven(?:functie|activiteit)/i, /\bbijverdien/i, /\beigen\s*bedrijf\s*(?:naast|ernaast)/i],
+    terms: ['nevenwerkzaamhedenbeding', 'art. 7:653a', 'verbod nevenwerkzaamheden', 'objectieve rechtvaardiging', 'Richtlijn transparante arbeidsvoorwaarden'],
+  },
+
+  // ===== WERKGEVERSZORGPLICHT & AANSPRAKELIJKHEID =====
+
+  // 32. Werkgeversaansprakelijkheid / arbeidsongeval
+  {
+    patterns: [/\barbeidsongeval/i, /\bongeval\s*(?:op\s*)?(?:het\s*)?werk/i, /\baansprakelijk\s*(?:werkgever)?/i, /\bletsel\s*(?:op\s*)?werk/i, /\b(?:art\.?\s*)?7:658/i, /\bberoepsziekte/i, /\bveiligheid\s*(?:op\s*)?werk/i],
+    terms: ['werkgeversaansprakelijkheid', 'art. 7:658', 'zorgplicht werkgever', 'arbeidsongeval', 'bewijslast werkgever', 'beroepsziekte', 'veiligheidsnormen'],
+  },
+  // 33. Privacy / AVG op de werkvloer
+  {
+    patterns: [/\bprivacy/i, /\bavg\b/i, /\bcamera/i, /\bcontroleren\s*(?:van\s*)?(?:werk)?nemer/i, /\bmonitoring/i, /\bgps\s*track/i, /\be-?mail\s*controle/i, /\bpersoonsgegevens\s*(?:werk)?nemer/i],
+    terms: ['privacy werknemer', 'AVG', 'controle werknemer', 'cameratoezicht', 'monitoring werkplek', 'gerechtvaardigd belang', 'proportionaliteit'],
+  },
+  // 34. Klokkenluiders / whistleblowing
+  {
+    patterns: [/\bklokkenluider/i, /\bwhistleblow/i, /\bmelding\s*misstand/i, /\bintegriteitsmelding/i, /\bhuis\s*voor\s*klokkenluiders/i],
+    terms: ['klokkenluider', 'Wet bescherming klokkenluiders', 'melding misstand', 'benadelingsverbod', 'bewijslastomkering'],
+  },
+
+  // ===== MEDEZEGGENSCHAP & COLLECTIEF =====
+
+  // 35. Ondernemingsraad / medezeggenschap
+  {
+    patterns: [/\bondernemingsraad/i, /\b(?:de\s+)?or\b/i, /\bmedezeggenschap/i, /\badviesrecht/i, /\binstemmingsrecht/i, /\bpvt\b/i, /\bpersoneelsvertegenwoordiging/i],
+    terms: ['ondernemingsraad', 'WOR', 'adviesrecht', 'instemmingsrecht', 'art. 25 WOR', 'art. 27 WOR', 'ontslagbescherming OR-lid'],
+  },
+  // 36. Collectief ontslag (WMCO)
+  {
+    patterns: [/\bcollectief\s*ontslag/i, /\bwmco\b/i, /\bmassa-?ontslag/i, /\b20\s*(?:of\s*)?meer\s*(?:werk)?nemers/i, /\bgroepsontslag/i],
+    terms: ['collectief ontslag', 'WMCO', 'Wet melding collectief ontslag', 'raadpleging vakbonden', 'melding UWV', 'wachttijd 1 maand'],
+  },
+  // 37. CAO / arbeidsvoorwaarden collectief
+  {
+    patterns: [/\bcao\b/i, /\bcollectieve\s*arbeidsovereenkomst/i, /\balgemeen\s*verbindend/i, /\bavv\b/i, /\bincorporatiebeding/i, /\bnawerking/i],
+    terms: ['CAO', 'collectieve arbeidsovereenkomst', 'algemeen verbindend verklaring', 'incorporatiebeding', 'nawerking CAO', 'Wet AVV', 'WAVV'],
+  },
+
+  // ===== BIJZONDERE POSITIES =====
+
+  // 38. Statutair directeur / bestuurder
+  {
+    patterns: [/\bstatutar/i, /\bdirecteur/i, /\bbestuurder/i, /\b(?:vennootschaps)?rechtelijk\s*ontslag/i, /\bdga\b/i, /\bgrote?\s*directeur/i],
+    terms: ['statutair directeur', 'art. 2:244', 'vennootschapsrechtelijk ontslag', 'arbeidsrechtelijk ontslag bestuurder', 'ontslag directeur', '15 april-arresten', 'herstel dienstbetrekking'],
+  },
+  // 39. Ambtenaar / overheidspersoneel (Wnra)
+  {
+    patterns: [/\bambtenaar/i, /\boverheid/i, /\bwnra\b/i, /\bnormalisering/i, /\bgemeente\s*(?:als\s*)?werkgever/i, /\brijksoverheid/i],
+    terms: ['Wnra', 'normalisering rechtspositie ambtenaren', 'ambtenaar', 'overheidswerkgever', 'cao Rijk', 'cao Gemeenten'],
+  },
+
+  // ===== PROCEDURE & PROCESRECHT =====
+
+  // 40. WW-uitkering / sociale zekerheid
+  {
+    patterns: [/\bww\b/i, /\bww-?uitkering/i, /\bwerkloosheid/i, /\buitkering\s*na\s*ontslag/i, /\brecht\s*op\s*ww/i, /\bverwijtbare?\s*werkloos/i],
+    terms: ['WW-uitkering', 'werkloosheidswet', 'verwijtbare werkloosheid', 'fictieve opzegtermijn', 'benadelingshandeling', 'referte-eis', 'wekeneis'],
+  },
+  // 41. Kort geding arbeidsrecht / voorlopige voorziening
+  {
+    patterns: [/\bkort\s*geding/i, /\bvoorlopige\s*voorziening/i, /\bspoed/i, /\btewerkstelling/i, /\bwedertewerkstelling/i, /\bloonvordering\s*(?:in\s*)?kort\s*geding/i],
+    terms: ['kort geding arbeidsrecht', 'voorlopige voorziening', 'wedertewerkstelling', 'loonvordering kort geding', 'spoedeisend belang'],
+  },
+  // 42. Ontbinding door kantonrechter
+  {
+    patterns: [/\bontbinding/i, /\bkantonrechter/i, /\bontbindingsverzoek/i, /\btegenverzoek/i, /\bverzoekschrift\s*ontbinding/i, /\bverweerschrift\s*ontbinding/i],
+    terms: ['ontbinding arbeidsovereenkomst', 'art. 7:671b', 'ontbindingsverzoek', 'tegenverzoek', 'nevenverzoeken', 'ontbindingsdatum', 'kantonrechter'],
+  },
+
+  // ===== SPECIFIEKE ARBEIDSOMSTANDIGHEDEN =====
+
+  // 43. Schorsing / op non-actiefstelling
+  {
+    patterns: [/\bschors/i, /\bnon-?actief/i, /\bop\s*non-?actief/i, /\bvrijstelling\s*(?:van\s*)?werk/i, /\bsuspen/i, /\bgeschorst/i],
+    terms: ['schorsing', 'op non-actiefstelling', 'vrijstelling van werk', 'loondoorbetaling schorsing', 'goed werkgeverschap', 'art. 7:628'],
+  },
+  // 44. Getuigschrift / referenties
+  {
+    patterns: [/\bgetuigschrift/i, /\breferentie/i, /\baanbeveling/i, /\bverklaring\s*(?:van\s*)?(?:goed\s*)?gedrag/i],
+    terms: ['getuigschrift', 'art. 7:656', 'referenties', 'positieve referentieplicht', 'schadevergoeding onjuist getuigschrift'],
+  },
+  // 45. Arbeidstijden / overwerk
+  {
+    patterns: [/\barbeidstijd/i, /\boverwerk/i, /\boveruren/i, /\bwerktijd/i, /\brusttijd/i, /\bnachtdienst/i, /\bploegendienst/i, /\batw\b/i],
+    terms: ['arbeidstijdenwet', 'ATW', 'overwerk', 'maximale arbeidstijd', 'rusttijd', 'nachtarbeid', 'compensatie overwerk'],
+  },
+  // 46. Thuiswerken / hybride werken
+  {
+    patterns: [/\bthuiswerk/i, /\bhybride\s*werk/i, /\bremote\s*work/i, /\bplaatsonafhankelijk/i, /\bwet\s*flexibel\s*werk/i, /\bwerken\s*(?:op\s*)?afstand/i, /\bverzoek\s*thuiswerk/i],
+    terms: ['thuiswerken', 'Wet flexibel werken', 'aanpassing arbeidsplaats', 'arbobeleid thuiswerk', 'thuiswerkovereenkomst'],
+  },
+  // 47. Gelijke behandeling / discriminatie
+  {
+    patterns: [/\bdiscriminat/i, /\bgelijke\s*behandeling/i, /\bawgb\b/i, /\bwgbl\b/i, /\bleeftijdsdiscriminatie/i, /\bgeslachtsdiscriminatie/i, /\bgelijk\s*loon/i, /\bschwanger/i, /\bzwanger/i],
+    terms: ['gelijke behandeling', 'AWGB', 'WGBL', 'discriminatie', 'verboden onderscheid', 'College voor de Rechten van de Mens', 'bewijslastomkering discriminatie'],
+  },
+  // 48. Faillissement / surseance
+  {
+    patterns: [/\bfaillissement/i, /\bsurseance/i, /\bfailliet/i, /\bcurator/i, /\binsolvent/i, /\bbankroet/i],
+    terms: ['faillissement', 'art. 40 Fw', 'opzegging curator', 'opzegtermijn faillissement', 'boedelvorderingen', 'loongarantieregeling UWV', 'doorstart'],
+  },
+  // 49. Internationale arbeid / expats
+  {
+    patterns: [/\bexpat/i, /\binternational/i, /\bdetachering\s*buitenland/i, /\btewerkstellingsvergunning/i, /\brome\s*i+\b/i, /\bipr\b/i, /\bgrensarbeid/i, /\bbuitenlands\s*recht/i],
+    terms: ['internationaal arbeidsrecht', 'Rome I-Verordening', 'rechtskeuze', 'tewerkstellingsvergunning', 'expat', 'detachering EU', 'gewoonlijk werkland'],
+  },
+  // 50. Geheimhouding / intellectueel eigendom
+  {
+    patterns: [/\bgeheimhouding/i, /\bvertrouwelijk/i, /\bintellectueel\s*eigendom/i, /\buitvinding/i, /\boctrooirecht/i, /\bauteursrecht\s*werk/i, /\bbedrijfsgeheim/i],
+    terms: ['geheimhoudingsbeding', 'bedrijfsgeheimen', 'Wet bescherming bedrijfsgeheimen', 'intellectueel eigendom werknemer', 'art. 7:649', 'octrooirecht werknemer'],
   },
 ]
 
