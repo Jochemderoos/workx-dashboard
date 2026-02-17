@@ -1046,6 +1046,138 @@ export default function AIAssistentPage() {
           </div>
         </div>
       )}
+
+      {/* Help & uitleg modal */}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowHelp(false)} />
+          <div className="relative w-full max-w-2xl mx-4 max-h-[85vh] rounded-3xl bg-gradient-to-b from-workx-gray to-workx-dark border border-white/10 shadow-2xl overflow-hidden">
+            {/* Header with gradient */}
+            <div className="relative p-8 pb-6 overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-workx-lime/10 rounded-full blur-[80px]" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-[60px]" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-workx-lime/20 to-blue-500/20 border border-workx-lime/20 flex items-center justify-center">
+                    <Icons.sparkles size={28} className="text-workx-lime" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">AI Assistent — Handleiding</h2>
+                    <p className="text-sm text-white/40 mt-0.5">Alles wat je moet weten om het maximale eruit te halen</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowHelp(false)}
+                  className="p-2 rounded-xl text-white/30 hover:text-white hover:bg-white/10 transition-all"
+                >
+                  <Icons.x size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-8 pb-8 overflow-y-auto max-h-[calc(85vh-120px)] space-y-6">
+              {/* Feature cards */}
+              {[
+                {
+                  icon: '💬',
+                  title: 'Vragen stellen',
+                  desc: 'Stel juridische vragen in gewoon Nederlands. De AI doorzoekt automatisch 5 gezaghebbende bronnen met bijna 48.000 passages: T&C Arbeidsrecht, Thematica, VAAN AR Updates, RAR (2000-2026) en rechtspraak.nl.',
+                  tips: ['Hoe specifieker je vraag, hoe beter het antwoord', 'Noem relevante wetsartikelen als je die kent', 'Vraag expliciet om jurisprudentie als je die nodig hebt'],
+                },
+                {
+                  icon: '📄',
+                  title: 'Documenten uploaden',
+                  desc: 'Upload PDF, Word (DOCX), afbeeldingen (PNG/JPG) of tekstbestanden. De AI analyseert documenten automatisch en kan ze vergelijken.',
+                  tips: ['Upload meerdere documenten tegelijk om ze te vergelijken', 'PDFs tot 32MB worden direct door Claude gelezen', 'Word-documenten kunnen door de AI worden bewerkt — je krijgt een download-knop'],
+                },
+                {
+                  icon: '⚖️',
+                  title: 'Rechtspraak zoeken',
+                  desc: 'De AI doorzoekt automatisch rechtspraak.nl en leest relevante uitspraken volledig. Alle ECLI-nummers worden geverifieerd.',
+                  tips: ['De AI doet minimaal 2 zoekopdrachten met verschillende termen', 'ECLI-nummers uit de kennisbronnen (RAR/VAAN) zijn redactioneel geverifieerd', 'Niet-geverifieerde ECLIs worden gemarkeerd met een waarschuwing'],
+                },
+                {
+                  icon: '🧠',
+                  title: 'Model kiezen',
+                  desc: 'Kies tussen Sonnet (snel, goed voor de meeste vragen) en Opus (diepgaand, voor complexe analyses). Gebruik de model-selector rechtsonder in het chatvenster.',
+                  tips: ['Sonnet: ideaal voor snelle vragen en standaard-analyses', 'Opus: voor complexe juridische analyses met meerdere perspectieven', 'Opus denkt langer na maar geeft grondigere antwoorden'],
+                },
+                {
+                  icon: '📁',
+                  title: 'Projecten',
+                  desc: 'Organiseer gesprekken en documenten per dossier in projecten. Deel projecten met collega\'s. De AI onthoudt eerdere gesprekken binnen een project.',
+                  tips: ['Sla een gesprek op in een project via het menu (drie puntjes) in de sidebar', 'Teamleden die je toevoegt kunnen het project ook zien', 'De AI gebruikt eerdere gesprekken als context'],
+                },
+                {
+                  icon: '📝',
+                  title: 'Templates',
+                  desc: 'Gebruik juridische templates voor veelvoorkomende documenten. De AI vult ze in op basis van de informatie die je geeft.',
+                  tips: ['Ga naar het Templates-tabblad om beschikbare templates te zien', 'Upload eigen templates om ze door de AI te laten invullen', 'Geef de AI alle relevante feiten zodat het template volledig ingevuld wordt'],
+                },
+                {
+                  icon: '🔒',
+                  title: 'Privacy & Anonimisatie',
+                  desc: 'Activeer de anonimiseerfunctie om persoonsgegevens automatisch te vervangen door placeholders voordat ze naar de AI gestuurd worden.',
+                  tips: ['De schakelaar staat linksonder in het chatvenster', 'Namen, BSN-nummers en adressen worden automatisch vervangen', 'De AI antwoordt met dezelfde placeholders'],
+                },
+                {
+                  icon: '📚',
+                  title: 'Bronnen aan/uit',
+                  desc: 'De AI detecteert automatisch of je vraag arbeidsrecht betreft. Voor niet-juridische vragen worden kennisbronnen overgeslagen (sneller antwoord). Je kunt dit ook handmatig in-/uitschakelen.',
+                  tips: ['De "Bronnen" toggle staat naast de model-selector', 'Zet bronnen uit voor niet-juridische vragen zoals e-mails schrijven of vertalingen', 'Zet bronnen aan als de auto-detectie een juridische vraag mist'],
+                },
+              ].map((feature, i) => (
+                <div key={i} className="group rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/10 hover:bg-white/[0.05] transition-all duration-300 overflow-hidden">
+                  <div className="p-5">
+                    <div className="flex items-start gap-4">
+                      <span className="text-2xl flex-shrink-0 mt-0.5">{feature.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold text-white mb-1.5">{feature.title}</h3>
+                        <p className="text-xs text-white/50 leading-relaxed mb-3">{feature.desc}</p>
+                        <div className="space-y-1.5">
+                          {feature.tips.map((tip, j) => (
+                            <div key={j} className="flex items-start gap-2">
+                              <div className="w-1 h-1 rounded-full bg-workx-lime/50 mt-1.5 flex-shrink-0" />
+                              <span className="text-[11px] text-white/35 leading-relaxed">{tip}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Keyboard shortcuts */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5">
+                <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                  <span>⌨️</span> Sneltoetsen
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ['Enter', 'Vraag versturen'],
+                    ['Shift + Enter', 'Nieuwe regel'],
+                    ['Escape', 'Stop antwoord'],
+                  ].map(([key, action]) => (
+                    <div key={key} className="flex items-center gap-3 text-xs">
+                      <kbd className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-white/60 font-mono text-[10px]">{key}</kbd>
+                      <span className="text-white/40">{action}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer note */}
+              <div className="text-center pt-2 pb-1">
+                <p className="text-[11px] text-white/20">
+                  Aangedreven door Claude (Anthropic) met 47.894 passages uit 5 juridische bronnen
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
