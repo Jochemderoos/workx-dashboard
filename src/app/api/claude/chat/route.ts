@@ -1218,6 +1218,7 @@ async function retrieveRelevantChunks(
           content: true,
           heading: true,
         },
+        take: 200, // Limit to prevent loading thousands of chunks with common terms
       })
 
       // Score by matching terms
