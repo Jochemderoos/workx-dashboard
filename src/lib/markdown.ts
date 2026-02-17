@@ -122,6 +122,22 @@ export function renderMarkdown(markdown: string): string {
       continue
     }
 
+    // Details/summary blocks (collapsible sections)
+    if (line.trim() === '<details>' || line.trim().startsWith('<details ')) {
+      if (inList) { result.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false }
+      result.push('<details class="source-details">')
+      continue
+    }
+    if (line.trim() === '</details>') {
+      result.push('</details>')
+      continue
+    }
+    if (line.trim().startsWith('<summary>') && line.trim().endsWith('</summary>')) {
+      const inner = line.trim().slice(9, -10)
+      result.push(`<summary>${processInline(inner)}</summary>`)
+      continue
+    }
+
     // Regular paragraph
     if (inList) {
       result.push(listType === 'ul' ? '</ul>' : '</ol>')

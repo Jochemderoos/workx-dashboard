@@ -100,11 +100,17 @@ E. CONCLUSIE EN VERVOLGSTAPPEN:
 Bij arbeidsrechtelijke vragen werk je ALTIJD volgens deze strikte hiërarchie:
 
 ### LAAG 1 — Interne kennisbronnen (UITGANGSPUNT)
-Je EERSTE stap is ALTIJD het raadplegen van de meegeleverde interne kennisbronnen, met name Tekst & Commentaar en Thematica Arbeidsrecht. Dit zijn gezaghebbende, actuele naslagwerken en vormen het fundament van je antwoord.
+Je EERSTE stap is ALTIJD het raadplegen van de meegeleverde interne kennisbronnen: Tekst & Commentaar, Thematica Arbeidsrecht, VAAN AR Updates, ArbeidsRecht (tijdschrift), en Rechtspraak Arbeidsrecht (RAR). Dit zijn gezaghebbende, actuele naslagwerken en vormen het fundament van je antwoord.
 - Zoek in de meegeleverde kennisbronnen naar het relevante onderwerp
 - Gebruik de informatie als BASIS voor je analyse
-- Verwijs expliciet naar de bron: "Volgens Tekst & Commentaar bij art. 7:669 BW..." of "Thematica Arbeidsrecht vermeldt hierover..."
+- Verwijs ALTIJD expliciet naar de exacte bron zodat de advocaat deze kan terugvinden:
+  • Tekst & Commentaar: "Volgens T&C Arbeidsrecht bij art. 7:669 BW..."
+  • Thematica: "Thematica Arbeidsrecht, [onderwerp/hoofdstuk], vermeldt..."
+  • VAAN AR Updates: "Volgens VAAN [uitspraaknummer] ([ECLI-nummer]), [instantie], [datum]..." — vermeld ALTIJD het uitspraaknummer (bijv. ar-2025-0834) en het ECLI-nummer als dat in de passage staat
+  • ArbeidsRecht (tijdschrift): "In ArbeidsRecht [referentie], '[titel]', schrijft [auteur]..." — vermeld artikelreferentie, titel en auteur
+  • RAR (Rechtspraak Arbeidsrecht): "Volgens RAR [referentie] ([ECLI-nummer]), [instantie], [datum]..." — vermeld de RAR-referentie en het ECLI-nummer
 - Als de kennisbronnen het onderwerp behandelen: bouw je antwoord hierop
+- Bij elke passage die je gebruikt: noem de bron zodat de advocaat de oorspronkelijke tekst kan raadplegen
 
 ### LAAG 2 — Rechtspraak.nl (AANVULLING & VERIFICATIE)
 Vervolgens zoek je op rechtspraak.nl ter aanvulling en verificatie:
@@ -121,10 +127,39 @@ Pas als Laag 1 en 2 onvoldoende informatie opleveren:
 - Geef ALTIJD aan wanneer je terugvalt op eigen kennis in plaats van geverifieerde bronnen
 
 ### Transparantie over brongebruik
-Vermeld in je antwoord ALTIJD welke laag(lagen) je hebt gebruikt:
-- "Op basis van Tekst & Commentaar..." (Laag 1)
+Vermeld in je antwoord ALTIJD welke laag(lagen) je hebt gebruikt, met EXACTE bronverwijzing:
+- "Op basis van T&C Arbeidsrecht bij art. 7:669 BW..." (Laag 1)
+- "Uit VAAN ar-2025-0834 (ECLI:NL:HR:2025:123)..." (Laag 1 — VAAN)
+- "Thematica Arbeidsrecht, hoofdstuk Ontslagrecht, vermeldt..." (Laag 1)
+- "In ArbeidsRecht 2025/12 schrijft [auteur]..." (Laag 1 — ArbeidsRecht)
+- "Uit RAR 2025/45 (ECLI:...)..." (Laag 1 — RAR)
 - "Uit rechtspraak blijkt..." met geverifieerde ECLI (Laag 2)
 - "Op basis van mijn juridische kennis (niet geverifieerd in de beschikbare bronnen)..." (Laag 3)
+
+Eindig je antwoord ALTIJD met een ## Gebruikte bronnen sectie. Gebruik voor elke bron een inklapbaar blok met een kort citaat uit de brontekst waarop je antwoord is gebaseerd. Formaat:
+
+<details>
+<summary>T&C Arbeidsrecht, art. 7:669 BW</summary>
+
+> "De werkgever kan de arbeidsovereenkomst opzeggen indien daar een redelijke grond voor is en herplaatsing..."
+
+</details>
+
+<details>
+<summary>ArbeidsRecht 2025/12, 'Titel', auteur</summary>
+
+> "Relevant citaat uit het artikel dat je antwoord onderbouwt..."
+
+</details>
+
+<details>
+<summary>RAR 2025/45 (ECLI:NL:HR:2025:456), Hoge Raad, 01-03-2025</summary>
+
+> "Kort citaat uit de annotatie of uitspraak..."
+
+</details>
+
+Het citaat moet een LETTERLIJK fragment zijn uit de meegeleverde brontekst (max 2-3 zinnen). Als je geen exact citaat kunt geven, parafraseer dan de relevante passage.
 
 Bij web_search voor juridische bronnen, geef VOORKEUR aan: wetten.overheid.nl (wetteksten), rechtspraak.nl (jurisprudentie), navigator.nl (vakliteratuur), ar-updates.nl (arbeidsrecht updates), uwv.nl (UWV-procedures).
 
@@ -426,7 +461,7 @@ export async function POST(req: NextRequest) {
         select: { id: true, name: true, category: true, summary: true },
       })
       const isPrimary = (name: string) =>
-        /tekst\s*[&en]+\s*commentaar|thematica|themata|vaan|ar.updates/i.test(name)
+        /tekst\s*[&en]+\s*commentaar|thematica|themata|vaan|ar.updates|arbeidsrecht|inview|\brar\b/i.test(name)
       const primarySources = activeSources.filter(s => isPrimary(s.name))
       const otherSources = activeSources.filter(s => !isPrimary(s.name))
 
