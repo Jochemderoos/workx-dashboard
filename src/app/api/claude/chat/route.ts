@@ -513,10 +513,10 @@ export async function POST(req: NextRequest) {
           })
           return activeSources
         })(),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
       ])
       if (!sourcesFetchResult) {
-        console.warn('[chat] Source fetch timed out after 8s — proceeding without knowledge sources')
+        console.warn('[chat] Source fetch timed out after 5s — proceeding without knowledge sources')
         throw new Error('Source fetch timeout')
       }
       const activeSources = sourcesFetchResult
@@ -547,9 +547,9 @@ export async function POST(req: NextRequest) {
               messageForClaude // for semantic embedding
             ),
             new Promise<never[]>((resolve) => setTimeout(() => {
-              console.warn('[chat] Chunk retrieval timed out after 15s')
+              console.warn('[chat] Chunk retrieval timed out after 10s')
               resolve([])
-            }, 15000)),
+            }, 10000)),
           ])
 
           if (relevantChunks.length > 0) {
@@ -1533,18 +1533,24 @@ async function enrichWithAdjacentChunks(
 
   if (adjacentNeeded.length === 0) return chunks
 
-  // Fetch adjacent chunks in one query
+  // Fetch adjacent chunks in one query (with 5s timeout to avoid blocking)
   try {
-    const adjacentChunks = await prisma.sourceChunk.findMany({
-      where: {
-        sourceId: { in: sourceIds },
-        OR: adjacentNeeded.map(a => ({
-          sourceId: a.sourceId,
-          chunkIndex: a.chunkIndex,
-        })),
-      },
-      select: { sourceId: true, chunkIndex: true, content: true },
-    })
+    const adjacentChunks = await Promise.race([
+      prisma.sourceChunk.findMany({
+        where: {
+          sourceId: { in: sourceIds },
+          OR: adjacentNeeded.map(a => ({
+            sourceId: a.sourceId,
+            chunkIndex: a.chunkIndex,
+          })),
+        },
+        select: { sourceId: true, chunkIndex: true, content: true },
+      }),
+      new Promise<never[]>((resolve) => setTimeout(() => {
+        console.warn('[chat] Adjacent chunk fetch timed out after 5s — skipping')
+        resolve([])
+      }, 5000)),
+    ])
 
     // Build lookup map
     const adjacentMap = new Map<string, string>()
