@@ -581,10 +581,18 @@ ${markdownHtml}
 
     setLastFailedMessage(null)
 
-    // Timeout after 5 minutes (streaming keeps connection alive)
+    // AbortController for cancellation + timeouts
     const controller = new AbortController()
     abortControllerRef.current = controller
-    const timeoutId = setTimeout(() => controller.abort(), 300000)
+
+    // Connection timeout: if fetch doesn't complete in 20 seconds, abort
+    // This catches stale connections after a Vercel deploy
+    let connectionTimedOut = false
+    const connectionTimeoutId = setTimeout(() => {
+      connectionTimedOut = true
+      controller.abort()
+    }, 20000)
+    let streamTimeoutId: ReturnType<typeof setTimeout> | null = null
 
     try {
       setStatusText('Verzoek versturen...')
@@ -605,8 +613,12 @@ ${markdownHtml}
         signal: controller.signal,
       })
 
+      // Connection established — clear short timeout, set 5-minute streaming timeout
+      clearTimeout(connectionTimeoutId)
+      streamTimeoutId = setTimeout(() => controller.abort(), 300000)
+
       if (!response.ok) {
-        clearTimeout(timeoutId)
+        clearTimeout(streamTimeoutId)
         const rawText = await response.text()
         let errorMsg = `Server fout (${response.status})`
         try {
@@ -731,7 +743,7 @@ ${markdownHtml}
         }
       }
 
-      clearTimeout(timeoutId)
+      if (streamTimeoutId) clearTimeout(streamTimeoutId)
       setStreamingMsgId(null)
 
       // Flush final content into state if not already done by 'done' event
@@ -752,11 +764,16 @@ ${markdownHtml}
       setStatusText('')
 
     } catch (error) {
-      clearTimeout(timeoutId)
+      clearTimeout(connectionTimeoutId)
+      if (streamTimeoutId) clearTimeout(streamTimeoutId)
       let errMsg = 'Onbekende fout'
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          errMsg = 'Generatie gestopt.'
+          if (connectionTimedOut) {
+            errMsg = 'Verbinding mislukt — ververs de pagina (Ctrl+Shift+R) en probeer opnieuw.'
+          } else {
+            errMsg = 'Generatie gestopt.'
+          }
         } else {
           errMsg = error.message
         }
