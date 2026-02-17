@@ -229,21 +229,16 @@ async function main() {
     return
   }
 
-  // === APPEND content ===
-  console.log('\nContent toevoegen aan database...')
-  const newContent = allArticleTexts.map(a => a.text).join('\n---\n\n')
-  const existingContent = inviewSource.content || ''
-  const combinedContent = existingContent ? existingContent + '\n---\n\n' + newContent : newContent
-
+  // === UPDATE source metadata (skip appending huge content to prevent DB timeout) ===
+  console.log('\nSource metadata updaten...')
   await prisma.aISource.update({
     where: { id: sourceId },
     data: {
-      content: combinedContent,
       pagesCrawled: { increment: allArticleTexts.length },
       lastSynced: new Date(),
     },
   })
-  console.log(`${combinedContent.length.toLocaleString()} tekens totaal in database`)
+  console.log(`pagesCrawled +${allArticleTexts.length}`)
 
   // === APPEND chunks (don't delete existing!) ===
   console.log('\nNieuwe chunks toevoegen...')
