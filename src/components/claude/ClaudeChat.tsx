@@ -826,36 +826,35 @@ export default function ClaudeChat({
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5" onClick={handleMessagesClick}>
-        {/* Empty state — premium Silicon Valley welcome */}
+        {/* Empty state — personal intro */}
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full pb-16 relative">
             {/* Subtle ambient glow */}
             <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[200px] bg-workx-lime/[0.03] rounded-full blur-[100px] pointer-events-none" />
 
-            <div className="relative text-center space-y-5">
-              <h3 className="text-2xl font-semibold tracking-tight bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
-                Stel een juridische vraag
-              </h3>
-              <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-[11px] text-white/25 max-w-md mx-auto">
-                <span className="text-white/35">Doorzoekt</span>
-                {['T&C Arbeidsrecht', 'Thematica', 'RAR', 'VAAN', 'Tijdschrift ArbeidsRecht'].map((source, i) => (
-                  <span key={source} className="inline-flex items-center">
-                    <span className="px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-white/40 font-medium">{source}</span>
-                    {i < 4 && <span className="ml-1.5 text-white/15">&middot;</span>}
-                  </span>
-                ))}
-              </div>
-              <p className="text-[11px] text-white/20 tracking-wide">
-                48.000+ passages &middot; jurisprudentie &middot; wetgeving &middot; commentaar
+            <div className="relative text-center space-y-4 max-w-lg mx-auto">
+              <p className="text-[15px] text-white/70 leading-relaxed">
+                Ik ben de <span className="text-white font-medium">Workx AI Assistent</span>. Ik help je verder bij al je juridische vragen.
+              </p>
+              <p className="text-[13px] text-white/35 leading-relaxed">
+                Hulp nodig? Klik hieronder en ik vertel je wat ik allemaal kan.
               </p>
               {onHelpClick && (
                 <button
                   onClick={onHelpClick}
-                  className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/35 bg-white/[0.03] border border-white/[0.08] hover:text-white/60 hover:bg-white/[0.06] hover:border-white/[0.15] transition-all"
+                  className="mt-3 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium text-white/50 bg-white/[0.04] border border-white/[0.08] hover:text-workx-lime hover:bg-workx-lime/[0.08] hover:border-workx-lime/25 hover:shadow-[0_0_20px_-5px_rgba(249,255,133,0.15)] transition-all duration-300"
                 >
                   Hulp nodig?
                 </button>
               )}
+              <div className="pt-4 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-[10px] text-white/20">
+                {['T&C Arbeidsrecht', 'Thematica', 'RAR', 'VAAN', 'Tijdschrift ArbeidsRecht'].map((source, i) => (
+                  <span key={source} className="inline-flex items-center">
+                    <span className="text-white/25">{source}</span>
+                    {i < 4 && <span className="mx-1 text-white/10">&middot;</span>}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         )}
