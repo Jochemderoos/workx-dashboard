@@ -39,7 +39,11 @@ export function renderMarkdown(markdown: string): string {
   const closeBlockquote = () => {
     if (inBlockquote) {
       const content = blockquoteLines.map(l => processInline(l)).join('<br />')
-      result.push(`<blockquote>${content}</blockquote>`)
+      // Auto-detect concept documents (emails, letters) for special styling
+      const raw = blockquoteLines.join(' ').toLowerCase()
+      const isConcept = /\b(onderwerp|subject|betreft|geachte|beste|met vriendelijke groet|met collegiale groet|hoogachtend|afzender|namens|kopie aan|bijlage)\b/.test(raw)
+      const cls = isConcept ? ' class="concept-document"' : ''
+      result.push(`<blockquote${cls}>${content}</blockquote>`)
       inBlockquote = false
       blockquoteLines = []
     }
