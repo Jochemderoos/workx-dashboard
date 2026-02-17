@@ -69,9 +69,23 @@ export default function AIAssistentPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [chatActive, setChatActive] = useState(false)
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
-  const [showHistory, setShowHistory] = useState(false)
+  const [showHistory, setShowHistory] = useState(true)
   const [showNewProject, setShowNewProject] = useState(false)
   const [activeTab, setActiveTab] = useState<'chat' | 'projects' | 'bronnen' | 'templates'>('chat')
+
+  // Search and pagination
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchTimeout, setSearchTimeoutState] = useState<ReturnType<typeof setTimeout> | null>(null)
+  const [hasMoreConversations, setHasMoreConversations] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+  // Rename and delete state
+  const [editingConvId, setEditingConvId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const [contextMenuConvId, setContextMenuConvId] = useState<string | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const editInputRef = useRef<HTMLInputElement>(null)
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
@@ -86,6 +100,9 @@ export default function AIAssistentPage() {
   const [userSearchQuery, setUserSearchQuery] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Help modal state
+  const [showHelp, setShowHelp] = useState(false)
+
   // Save-to-project modal state
   const [saveModalConvId, setSaveModalConvId] = useState<string | null>(null)
   const [saveModalNewProject, setSaveModalNewProject] = useState(false)
@@ -93,24 +110,65 @@ export default function AIAssistentPage() {
   const [saveModalNewDesc, setSaveModalNewDesc] = useState('')
   const [isSavingToProject, setIsSavingToProject] = useState(false)
 
+  // Fetch conversations with search and pagination support
+  const fetchConversations = async (search = '', cursor?: string, append = false) => {
+    try {
+      const params = new URLSearchParams()
+      if (search) params.set('search', search)
+      if (cursor) params.set('cursor', cursor)
+      params.set('limit', '50')
+      const res = await fetch(`/api/claude/conversations?${params}`)
+      const data = await res.json()
+      const convs = data.conversations || data // backward compat
+      if (Array.isArray(convs)) {
+        setRecentConversations(prev => append ? [...prev, ...convs] : convs)
+      }
+      setHasMoreConversations(data.hasMore || false)
+      setNextCursor(data.nextCursor || undefined)
+    } catch { /* ignore */ }
+  }
+
   useEffect(() => {
     Promise.all([
       fetch('/api/claude/projects').then(r => r.json()),
-      fetch('/api/claude/conversations').then(r => r.json()),
-    ]).then(([projectsData, convsData]) => {
+      fetchConversations(),
+    ]).then(([projectsData]) => {
       setProjects(projectsData)
-      if (Array.isArray(convsData)) setRecentConversations(convsData)
     }).catch(() => {
       toast.error('Kon data niet laden')
     }).finally(() => {
       setIsLoading(false)
     })
 
-    // Check URL for conv parameter
+    // Check URL for conv parameter, or auto-resume last conversation
     const urlParams = new URLSearchParams(window.location.search)
     const convParam = urlParams.get('conv')
     if (convParam) setSelectedConvId(convParam)
+    // Auto-resume is handled after conversations load (see effect below)
   }, [])
+
+  // Auto-resume: select most recent conversation if none selected
+  useEffect(() => {
+    if (!isLoading && !selectedConvId && recentConversations.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (!urlParams.get('conv')) {
+        // Auto-select most recent conversation
+        const mostRecent = recentConversations[0]
+        setSelectedConvId(mostRecent.id)
+        window.history.replaceState(null, '', `/dashboard/ai?conv=${mostRecent.id}`)
+      }
+    }
+  }, [isLoading, recentConversations])
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeout) clearTimeout(searchTimeout)
+    const timeout = setTimeout(() => {
+      fetchConversations(searchQuery)
+    }, 300)
+    setSearchTimeoutState(timeout)
+    return () => clearTimeout(timeout)
+  }, [searchQuery])
 
   // Fetch users when new project form opens
   useEffect(() => {
@@ -166,6 +224,70 @@ export default function AIAssistentPage() {
   const handleConversationCreated = (id: string) => {
     window.history.replaceState(null, '', `/dashboard/ai?conv=${id}`)
   }
+
+  // Load more conversations (pagination)
+  const loadMoreConversations = async () => {
+    if (!nextCursor || isLoadingMore) return
+    setIsLoadingMore(true)
+    await fetchConversations(searchQuery, nextCursor, true)
+    setIsLoadingMore(false)
+  }
+
+  // Rename conversation
+  const startRenaming = (conv: Conversation) => {
+    setEditingConvId(conv.id)
+    setEditingTitle(conv.title)
+    setContextMenuConvId(null)
+    setTimeout(() => editInputRef.current?.focus(), 50)
+  }
+
+  const saveRename = async () => {
+    if (!editingConvId || !editingTitle.trim()) {
+      setEditingConvId(null)
+      return
+    }
+    try {
+      const res = await fetch(`/api/claude/conversations/${editingConvId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editingTitle.trim() }),
+      })
+      if (!res.ok) throw new Error()
+      setRecentConversations(prev =>
+        prev.map(c => c.id === editingConvId ? { ...c, title: editingTitle.trim() } : c)
+      )
+      toast.success('Naam gewijzigd')
+    } catch {
+      toast.error('Kon naam niet wijzigen')
+    }
+    setEditingConvId(null)
+  }
+
+  // Delete conversation
+  const deleteConversation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/claude/conversations/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      setRecentConversations(prev => prev.filter(c => c.id !== id))
+      if (selectedConvId === id) {
+        setSelectedConvId(null)
+        window.history.replaceState(null, '', '/dashboard/ai')
+      }
+      toast.success('Gesprek verwijderd')
+    } catch {
+      toast.error('Kon gesprek niet verwijderen')
+    }
+    setDeleteConfirmId(null)
+  }
+
+  // Close context menu on outside click
+  useEffect(() => {
+    const handleClick = () => setContextMenuConvId(null)
+    if (contextMenuConvId) {
+      document.addEventListener('click', handleClick)
+      return () => document.removeEventListener('click', handleClick)
+    }
+  }, [contextMenuConvId])
 
   const toggleMember = (userId: string) => {
     setSelectedMemberIds(prev =>
@@ -285,6 +407,15 @@ export default function AIAssistentPage() {
           </div>
 
           <div className="flex items-center gap-2 text-[11px] text-white/20 flex-shrink-0">
+            <button
+              onClick={() => setShowHelp(true)}
+              className={`flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 text-blue-300/70 hover:text-blue-300 hover:border-blue-500/30 hover:from-blue-500/15 hover:to-purple-500/15 transition-all duration-300 ${
+                isCompactMode ? 'px-2 py-1' : 'px-3 py-1.5'
+              }`}
+            >
+              <Icons.helpCircle size={isCompactMode ? 13 : 15} />
+              {!isCompactMode && <span>Hulp & uitleg</span>}
+            </button>
             <div className={`flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 transition-all duration-500 ${
               isCompactMode ? 'px-2 py-1' : 'px-3 py-1.5'
             }`}>
@@ -349,7 +480,7 @@ export default function AIAssistentPage() {
         <div className="flex gap-3" style={{ height: isCompactMode ? 'calc(100vh - 180px)' : 'calc(100vh - 320px)' }}>
           {/* Conversation history sidebar */}
           <div className={`rounded-2xl bg-white/[0.02] border border-white/10 overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
-            showHistory ? 'w-72 opacity-100' : 'w-0 opacity-0 border-0 p-0'
+            showHistory ? 'w-80 opacity-100' : 'w-0 opacity-0 border-0 p-0'
           }`}>
             {showHistory && (
               <>
@@ -366,39 +497,176 @@ export default function AIAssistentPage() {
                     Nieuw
                   </button>
                 </div>
+
+                {/* Search bar */}
+                <div className="px-2.5 py-2 border-b border-white/5">
+                  <div className="relative">
+                    <Icons.search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/25" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Zoek in gesprekken..."
+                      className="w-full pl-8 pr-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/25 focus:outline-none focus:border-workx-lime/30 transition-colors"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                      >
+                        <Icons.x size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex-1 overflow-y-auto">
                   {recentConversations.length === 0 ? (
-                    <div className="p-4 text-center text-white/20 text-xs">Nog geen gesprekken</div>
+                    <div className="p-4 text-center text-white/20 text-xs">
+                      {searchQuery ? 'Geen resultaten' : 'Nog geen gesprekken'}
+                    </div>
                   ) : (
-                    recentConversations.map((conv) => (
-                      <button
-                        key={conv.id}
-                        onClick={() => {
-                          setSelectedConvId(conv.id)
-                          window.history.replaceState(null, '', `/dashboard/ai?conv=${conv.id}`)
-                        }}
-                        className={`w-full text-left px-3 py-2.5 border-b border-white/[0.03] transition-colors ${
-                          selectedConvId === conv.id
-                            ? 'bg-workx-lime/10 border-l-2 border-l-workx-lime'
-                            : 'hover:bg-white/[0.03]'
-                        }`}
-                      >
-                        <p className="text-sm text-white/80 truncate leading-snug">{conv.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-white/25">
-                            {new Date(conv.updatedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
-                          </span>
-                          {conv._count?.messages && (
-                            <span className="text-[10px] text-white/20">{conv._count.messages} msg</span>
+                    <>
+                      {recentConversations.map((conv) => (
+                        <div
+                          key={conv.id}
+                          className={`group relative border-b border-white/[0.03] transition-colors ${
+                            selectedConvId === conv.id
+                              ? 'bg-workx-lime/10 border-l-2 border-l-workx-lime'
+                              : 'hover:bg-white/[0.03]'
+                          }`}
+                        >
+                          {/* Rename mode */}
+                          {editingConvId === conv.id ? (
+                            <div className="px-3 py-2.5">
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                value={editingTitle}
+                                onChange={(e) => setEditingTitle(e.target.value)}
+                                onBlur={saveRename}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveRename()
+                                  if (e.key === 'Escape') setEditingConvId(null)
+                                }}
+                                className="w-full px-2 py-1 bg-white/10 border border-workx-lime/30 rounded text-sm text-white focus:outline-none"
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedConvId(conv.id)
+                                window.history.replaceState(null, '', `/dashboard/ai?conv=${conv.id}`)
+                              }}
+                              className="w-full text-left px-3 py-2.5"
+                            >
+                              <p className="text-sm text-white/80 truncate leading-snug pr-6">{conv.title}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-white/25">
+                                  {new Date(conv.updatedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                                </span>
+                                {conv._count?.messages && (
+                                  <span className="text-[10px] text-white/20">{conv._count.messages} msg</span>
+                                )}
+                                {conv.project && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/30 truncate max-w-[100px]">
+                                    {conv.project.title}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
                           )}
-                          {conv.project && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/30 truncate max-w-[100px]">
-                              {conv.project.title}
-                            </span>
+
+                          {/* Context menu trigger (3 dots) */}
+                          {editingConvId !== conv.id && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setContextMenuConvId(contextMenuConvId === conv.id ? null : conv.id)
+                              }}
+                              className="absolute right-2 top-2.5 p-1 rounded opacity-0 group-hover:opacity-100 text-white/30 hover:text-white hover:bg-white/10 transition-all"
+                            >
+                              <Icons.moreVertical size={14} />
+                            </button>
+                          )}
+
+                          {/* Context menu dropdown */}
+                          {contextMenuConvId === conv.id && (
+                            <div className="absolute right-2 top-9 z-50 w-40 bg-workx-gray border border-white/10 rounded-lg shadow-xl overflow-hidden animate-fade-in">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  startRenaming(conv)
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                              >
+                                <Icons.edit size={13} />
+                                Hernoemen
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSaveToProject(conv.id)
+                                  setContextMenuConvId(null)
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                              >
+                                <Icons.folder size={13} />
+                                Opslaan in project
+                              </button>
+                              <div className="border-t border-white/5" />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteConfirmId(conv.id)
+                                  setContextMenuConvId(null)
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                              >
+                                <Icons.trash size={13} />
+                                Verwijderen
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Delete confirmation inline */}
+                          {deleteConfirmId === conv.id && (
+                            <div className="absolute inset-0 bg-workx-dark/95 backdrop-blur-sm flex items-center justify-center gap-2 z-50 rounded-sm">
+                              <span className="text-xs text-white/60">Verwijderen?</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  deleteConversation(conv.id)
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400 text-[11px] font-medium hover:bg-red-500/30 transition-colors"
+                              >
+                                Ja
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteConfirmId(null)
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-white/10 text-white/50 text-[11px] font-medium hover:bg-white/15 transition-colors"
+                              >
+                                Nee
+                              </button>
+                            </div>
                           )}
                         </div>
-                      </button>
-                    ))
+                      ))}
+
+                      {/* Load more button */}
+                      {hasMoreConversations && (
+                        <button
+                          onClick={loadMoreConversations}
+                          disabled={isLoadingMore}
+                          className="w-full px-3 py-2.5 text-[11px] text-white/30 hover:text-white/50 hover:bg-white/[0.03] transition-colors"
+                        >
+                          {isLoadingMore ? 'Laden...' : 'Meer gesprekken laden'}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </>
@@ -422,9 +690,7 @@ export default function AIAssistentPage() {
                 handleConversationCreated(id)
                 setSelectedConvId(id)
                 // Refresh conversation list
-                fetch('/api/claude/conversations').then(r => r.json()).then(data => {
-                  if (Array.isArray(data)) setRecentConversations(data)
-                }).catch(() => {})
+                fetchConversations(searchQuery)
               }}
               onNewChat={() => {
                 setSelectedConvId(null)
