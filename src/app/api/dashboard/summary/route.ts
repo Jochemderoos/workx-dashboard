@@ -533,6 +533,7 @@ export async function GET() {
       ) || []
 
       // Expand comma-separated employee names into individual entries
+      // IMPORTANT: use individual user IDs, not the shared distribution row employeeId
       const employeeEntries: any[] = []
       for (const d of partnerDistributions) {
         if (!d.employeeName) continue
@@ -543,7 +544,8 @@ export async function GET() {
             where: { name: { contains: name }, isActive: true },
             select: { id: true, name: true, avatarUrl: true },
           })
-          const empId = d.employeeId || employeeUser?.id || name
+          // Always prefer the individual user's ID, never the shared distribution row ID
+          const empId = employeeUser?.id || `name-${name}`
           employeeEntries.push({
             employeeId: empId,
             employeeName: employeeUser?.name || name,

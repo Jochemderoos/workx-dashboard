@@ -1099,6 +1099,7 @@ export default function DashboardHome() {
   const [completingGesprek, setCompletingGesprek] = useState<string | null>(null)
   const completeWerkverdelingGesprek = async (partnerName: string, employeeId: string, employeeName: string, weekId: string) => {
     const key = `${partnerName}-${employeeId}`
+    if (completingGesprek) return // Prevent double clicks
     setCompletingGesprek(key)
     try {
       const res = await fetch('/api/work-distribution/complete', {
@@ -1107,8 +1108,22 @@ export default function DashboardHome() {
         body: JSON.stringify({ weekId, partnerName, employeeId, employeeName }),
       })
       if (res.ok) {
-        toast.success('Gesprek als afgerond gemarkeerd')
-        mutateSummary()
+        toast.success(`Gesprek met ${employeeName || partnerName} als afgerond gemarkeerd`)
+        // Optimistic update: immediately mark as completed in local state
+        mutateSummary((current: any) => {
+          if (!current) return current
+          return {
+            ...current,
+            werkverdelingGesprekken: current.werkverdelingGesprekken?.map((g: any) =>
+              g.partnerName === partnerName ? { ...g, isCompleted: true } : g
+            ),
+            partnerWerkverdelingOverview: current.partnerWerkverdelingOverview?.map((e: any) =>
+              e.employeeId === employeeId && e.partnerName === partnerName ? { ...e, isCompleted: true } : e
+            ),
+          }
+        }, false)
+        // Also revalidate from server
+        setTimeout(() => mutateSummary(), 500)
       } else {
         toast.error('Kon gesprek niet afvinken')
       }
@@ -1690,8 +1705,8 @@ export default function DashboardHome() {
         </div>
       )}
 
-      {/* PARTNER WERKVERDELINGSGESPREKKEN OVERZICHT - for partners */}
-      {partnerWerkverdelingOverview && partnerWerkverdelingOverview.length > 0 && (
+      {/* PARTNER WERKVERDELINGSGESPREKKEN OVERZICHT - for partners (hide when all completed) */}
+      {partnerWerkverdelingOverview && partnerWerkverdelingOverview.length > 0 && partnerWerkverdelingOverview.some((e: any) => !e.isCompleted) && (
         <div className="relative overflow-hidden rounded-2xl border-2 border-blue-400 shadow-lg shadow-blue-500/20 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-indigo-500/5 p-5">
           <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
