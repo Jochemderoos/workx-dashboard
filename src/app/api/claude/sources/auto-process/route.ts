@@ -62,31 +62,55 @@ export async function POST() {
     if (!source.content || source.content.length < 50) continue
 
     try {
-      // Take first 80K chars (fits in context)
-      const content = source.content.slice(0, 80000)
+      const fullContent = source.content || ''
 
-      const response = await client.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 8000,
-        system: KNOWLEDGE_PROMPT,
-        messages: [{
-          role: 'user',
-          content: `Verwerk de volgende tekst uit "${source.name}" (${source.category}) tot een kennissamenvatting:\n\n${content}`,
-        }],
-      })
+      // Split into chunks for large documents (same approach as ingest)
+      const chunkSize = 80000
+      const chunks: string[] = []
+      let remaining = fullContent
+      while (remaining.length > 0) {
+        if (remaining.length <= chunkSize) {
+          chunks.push(remaining)
+          break
+        }
+        let splitPoint = remaining.lastIndexOf('\n\n', chunkSize)
+        if (splitPoint < chunkSize * 0.5) splitPoint = remaining.lastIndexOf('. ', chunkSize)
+        if (splitPoint < chunkSize * 0.5) splitPoint = chunkSize
+        chunks.push(remaining.slice(0, splitPoint))
+        remaining = remaining.slice(splitPoint).trim()
+      }
 
-      const textBlock = response.content.find(b => b.type === 'text')
-      if (textBlock && textBlock.type === 'text') {
+      const summaries: string[] = []
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkLabel = chunks.length > 1 ? `\n\n[Deel ${i + 1} van ${chunks.length}]` : ''
+        const response = await client.messages.create({
+          model: 'claude-sonnet-4-5-20250929',
+          max_tokens: 16000,
+          system: KNOWLEDGE_PROMPT,
+          messages: [{
+            role: 'user',
+            content: `Verwerk de volgende tekst uit "${source.name}" (${source.category}) tot een uitgebreide kennissamenvatting. Bewaar zoveel mogelijk detail:${chunkLabel}\n\n${chunks[i]}`,
+          }],
+        })
+
+        const textBlock = response.content.find(b => b.type === 'text')
+        if (textBlock && textBlock.type === 'text') {
+          summaries.push(textBlock.text)
+        }
+      }
+
+      if (summaries.length > 0) {
+        const finalSummary = summaries.join('\n\n---\n\n')
         await prisma.aISource.update({
           where: { id: source.id },
           data: {
-            summary: textBlock.text,
+            summary: finalSummary,
             isProcessed: true,
             processedAt: new Date(),
           },
         })
 
-        results.push({ id: source.id, name: source.name, success: true, summaryLength: textBlock.text.length })
+        results.push({ id: source.id, name: source.name, success: true, summaryLength: finalSummary.length })
       }
     } catch (error) {
       console.error(`Failed to process source ${source.name}:`, error)

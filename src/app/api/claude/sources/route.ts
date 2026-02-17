@@ -89,9 +89,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Limit content to prevent database issues (max ~500K chars for large legal documents)
-    if (content.length > 500000) {
-      content = content.slice(0, 500000) + '\n\n[... tekst ingekort vanwege omvang ...]'
+    // Limit content (max ~2M chars for large legal reference books like T&C, Thematica)
+    if (content.length > 2000000) {
+      content = content.slice(0, 2000000) + '\n\n[... tekst ingekort vanwege omvang ...]'
     }
 
     const source = await prisma.aISource.create({

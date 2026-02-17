@@ -112,12 +112,12 @@ export async function POST(
 
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 8000,
+        max_tokens: 16000,
         system: KNOWLEDGE_EXTRACTION_PROMPT,
         messages: [
           {
             role: 'user',
-            content: `Verwerk de volgende tekst uit de bron "${source.name}" (categorie: ${source.category}) tot een gestructureerde kennissamenvatting:${chunkLabel}\n\n---\n\n${chunks[i]}\n\n---\n\nMaak een uitgebreide, gestructureerde samenvatting van alle juridische kennis in deze tekst.`,
+            content: `Verwerk de volgende tekst uit de bron "${source.name}" (categorie: ${source.category}) tot een gestructureerde kennissamenvatting:${chunkLabel}\n\n---\n\n${chunks[i]}\n\n---\n\nMaak een UITGEBREIDE, gestructureerde samenvatting van ALLE juridische kennis in deze tekst. Bewaar zoveel mogelijk detail — wetsartikelen, ECLI-nummers, termijnen, bedragen, berekeningswijzen. Dit wordt de primaire kennisbasis voor advocaten.`,
           },
         ],
       })
@@ -128,31 +128,8 @@ export async function POST(
       }
     }
 
-    // If multiple chunks, create a combined summary
-    let finalSummary = summaries.join('\n\n---\n\n')
-
-    // If we had multiple chunks, do a final consolidation pass
-    if (summaries.length > 1) {
-      try {
-        const consolidation = await client.messages.create({
-          model: 'claude-sonnet-4-5-20250929',
-          max_tokens: 8000,
-          system: KNOWLEDGE_EXTRACTION_PROMPT,
-          messages: [
-            {
-              role: 'user',
-              content: `De volgende kennissamenvatting is gemaakt uit ${summaries.length} delen van de bron "${source.name}". Consolideer dit tot één samenhangende kennissamenvatting. Verwijder duplicaten maar bewaar alle unieke informatie:\n\n${finalSummary}`,
-            },
-          ],
-        })
-        const textBlock = consolidation.content.find((b) => b.type === 'text')
-        if (textBlock && textBlock.type === 'text') {
-          finalSummary = textBlock.text
-        }
-      } catch {
-        // Keep the concatenated summaries if consolidation fails
-      }
-    }
+    // Concatenate all chunk summaries — do NOT consolidate, to preserve maximum detail
+    const finalSummary = summaries.join('\n\n---\n\n')
 
     // Step 3: Save the processed knowledge
     const updated = await prisma.aISource.update({

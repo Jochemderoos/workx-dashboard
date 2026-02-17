@@ -95,16 +95,35 @@ E. CONCLUSIE EN VERVOLGSTAPPEN:
 5. Elke ECLI die je noemt MOET in dit gesprek zijn opgezocht en geverifieerd via de search_rechtspraak of get_rechtspraak_ruling tool.
 6. Als je twijfelt of je een uitspraak hebt opgezocht: NOEM HET ECLI-NUMMER NIET.
 
-## Zoekstrategie — Meervoudig en Grondig
-Bij ELKE juridische vraag doe je MEERDERE zoekopdrachten:
-1. EERSTE ZOEK: de hoofdvraag/het kernbegrip (bijv. "ontslag staande voet dringende reden")
-2. TWEEDE ZOEK: specifiekere termen of andere invalshoek (bijv. "art 7:677 BW schadevergoeding werkgever")
-3. OPTIONEEL: zoek op recente rechtspraak, specifieke instantie of rechtsgebied
-4. LEES de 2-3 meest relevante uitspraken VOLLEDIG via get_rechtspraak_ruling — skim niet, lees
-5. WEB SEARCH: gebruik voor actuele wetteksten (wetten.overheid.nl), vakliteratuur en beleidsregels
-6. CROSS-REFEREER: vergelijk wat je vindt in verschillende bronnen — zijn ze consistent?
+## Bronhiërarchie — Gelaagd Onderzoek (BELANGRIJK)
+Bij arbeidsrechtelijke vragen werk je ALTIJD volgens deze strikte hiërarchie:
 
-BELANGRIJK: Eén enkele zoekopdracht is NOOIT genoeg. Gebruik minimaal 2 verschillende zoektermen bij search_rechtspraak. Combineer rechtspraak, wettekst en (indien beschikbaar) interne kennisbronnen tot een volledig onderbouwd antwoord.
+### LAAG 1 — Interne kennisbronnen (UITGANGSPUNT)
+Je EERSTE stap is ALTIJD het raadplegen van de meegeleverde interne kennisbronnen, met name Tekst & Commentaar en Thematica Arbeidsrecht. Dit zijn gezaghebbende, actuele naslagwerken en vormen het fundament van je antwoord.
+- Zoek in de meegeleverde kennisbronnen naar het relevante onderwerp
+- Gebruik de informatie als BASIS voor je analyse
+- Verwijs expliciet naar de bron: "Volgens Tekst & Commentaar bij art. 7:669 BW..." of "Thematica Arbeidsrecht vermeldt hierover..."
+- Als de kennisbronnen het onderwerp behandelen: bouw je antwoord hierop
+
+### LAAG 2 — Rechtspraak.nl (AANVULLING & VERIFICATIE)
+Vervolgens zoek je op rechtspraak.nl ter aanvulling en verificatie:
+- Doe MEERDERE zoekopdrachten met VERSCHILLENDE zoektermen (minimaal 2)
+- LEES de 2-3 meest relevante uitspraken VOLLEDIG via get_rechtspraak_ruling — skim niet, lees
+- Gebruik rechtspraak om de theorie uit Laag 1 te onderbouwen met concrete uitspraken
+- ⚠️ ECLI-nummers ALLEEN noemen als je ze in DIT gesprek hebt opgezocht en geverifieerd
+
+### LAAG 3 — Eigen kennis & web search (LAATSTE REDMIDDEL)
+Pas als Laag 1 en 2 onvoldoende informatie opleveren:
+- Gebruik web_search voor actuele wetteksten (wetten.overheid.nl), vakliteratuur en beleidsregels
+- Val terug op je eigen juridische kennis
+- ⚠️ WEES EXTRA VOORZICHTIG: eigen kennis kan verouderd of onvolledig zijn
+- Geef ALTIJD aan wanneer je terugvalt op eigen kennis in plaats van geverifieerde bronnen
+
+### Transparantie over brongebruik
+Vermeld in je antwoord ALTIJD welke laag(lagen) je hebt gebruikt:
+- "Op basis van Tekst & Commentaar..." (Laag 1)
+- "Uit rechtspraak blijkt..." met geverifieerde ECLI (Laag 2)
+- "Op basis van mijn juridische kennis (niet geverifieerd in de beschikbare bronnen)..." (Laag 3)
 
 Bij web_search voor juridische bronnen, geef VOORKEUR aan: wetten.overheid.nl (wetteksten), rechtspraak.nl (jurisprudentie), navigator.nl (vakliteratuur), ar-updates.nl (arbeidsrecht updates), uwv.nl (UWV-procedures).
 
@@ -185,10 +204,11 @@ Presenteer berekeningen altijd in een overzichtelijke genummerde opsomming (geen
 ## Betrouwbaarheidsindicator
 Sluit ELK antwoord af met een betrouwbaarheidsindicator op de LAATSTE regel in exact dit formaat:
 %%CONFIDENCE:hoog%% of %%CONFIDENCE:gemiddeld%% of %%CONFIDENCE:laag%%
-Regels:
-- **hoog**: je antwoord is gebaseerd op duidelijke wettekst, vaste rechtspraak of eenduidige feiten
-- **gemiddeld**: er is interpretatieruimte, tegenstrijdige rechtspraak, of je mist mogelijk relevante feiten
-- **laag**: de vraag valt buiten je expertise, er zijn onvoldoende gegevens, of de juridische situatie is zeer onzeker
+Regels (gekoppeld aan bronhiërarchie):
+- **hoog**: je antwoord is gebaseerd op de interne kennisbronnen (T&C, Thematica) EN onderbouwd met geverifieerde rechtspraak. Duidelijke wettekst, vaste rechtspraak, eenduidige feiten.
+- **gemiddeld**: je antwoord is gebaseerd op rechtspraak.nl maar het onderwerp wordt NIET (volledig) behandeld in de interne kennisbronnen. OF er is interpretatieruimte, tegenstrijdige rechtspraak, of je mist mogelijk relevante feiten.
+- **laag**: je antwoord is (grotendeels) gebaseerd op eigen kennis omdat het onderwerp NIET in de interne kennisbronnen staat EN je het niet kon verifiëren via rechtspraak.nl. OF de vraag valt buiten je expertise, of er zijn onvoldoende gegevens.
+Vuistregel: hoe verder je afdaalt in de bronhiërarchie (kennisbronnen → rechtspraak → eigen kennis), hoe lager de betrouwbaarheid.
 Voeg GEEN toelichting toe na de %%CONFIDENCE%% tag — die wordt automatisch verwerkt.`
 
 // GET: load messages for an existing conversation
@@ -396,26 +416,89 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fetch knowledge sources — include all processed summaries
+    // Fetch knowledge sources using chunk-based retrieval for primary sources
     let sourcesContext = ''
     const usedSourceNames: Array<{ name: string; category: string }> = []
     try {
-      // Include all active sources (shared within the firm, not user-scoped)
       const activeSources = await prisma.aISource.findMany({
         where: { isActive: true, isProcessed: true },
-        select: { name: true, category: true, summary: true },
+        select: { id: true, name: true, category: true, summary: true },
       })
-      let len = 0
-      for (const source of activeSources) {
+      const isPrimary = (name: string) =>
+        /tekst\s*[&en]+\s*commentaar|thematica|themata/i.test(name)
+      const primarySources = activeSources.filter(s => isPrimary(s.name))
+      const otherSources = activeSources.filter(s => !isPrimary(s.name))
+
+      // PRIMAIRE BRONNEN: smart chunk retrieval based on user's question
+      const primarySourceIds = primarySources.map(s => s.id)
+      if (primarySourceIds.length > 0) {
+        // Extract search terms from user message
+        const searchTerms = extractSearchTerms(messageForClaude)
+
+        // Check if chunks exist for primary sources
+        const chunkCount = await prisma.sourceChunk.count({
+          where: { sourceId: { in: primarySourceIds } },
+        })
+
+        if (chunkCount > 0 && searchTerms.length > 0) {
+          // Retrieve relevant chunks using keyword matching
+          const relevantChunks = await retrieveRelevantChunks(
+            primarySourceIds,
+            searchTerms,
+            35 // max chunks to include (~175K chars)
+          )
+
+          if (relevantChunks.length > 0) {
+            // Group chunks by source
+            const chunksBySource = new Map<string, typeof relevantChunks>()
+            for (const chunk of relevantChunks) {
+              const existing = chunksBySource.get(chunk.sourceId) || []
+              existing.push(chunk)
+              chunksBySource.set(chunk.sourceId, existing)
+            }
+
+            for (const source of primarySources) {
+              const sourceChunks = chunksBySource.get(source.id)
+              if (!sourceChunks || sourceChunks.length === 0) continue
+
+              // Sort by chunk index for reading order
+              sourceChunks.sort((a, b) => a.chunkIndex - b.chunkIndex)
+
+              sourcesContext += `\n\n--- ${source.name} [PRIMAIRE BRON — ${sourceChunks.length} relevante passages] (${source.category}) ---`
+              for (const chunk of sourceChunks) {
+                const headingLabel = chunk.heading ? ` [${chunk.heading}]` : ''
+                sourcesContext += `\n\n[Passage ${chunk.chunkIndex + 1}${headingLabel}]\n${chunk.content}`
+              }
+              usedSourceNames.push({ name: source.name, category: source.category })
+            }
+          }
+        }
+
+        // Fallback: if no chunks exist yet, use summary
+        if (!sourcesContext) {
+          for (const source of primarySources) {
+            if (source.summary) {
+              sourcesContext += `\n\n--- ${source.name} [PRIMAIRE BRON — samenvatting] (${source.category}) ---\n${source.summary.slice(0, 50000)}`
+              usedSourceNames.push({ name: source.name, category: source.category })
+            }
+          }
+        }
+      }
+
+      // AANVULLENDE BRONNEN: samenvattingen (secundair)
+      let len = sourcesContext.length
+      for (const source of otherSources) {
         if (source.summary) {
           const trimmed = source.summary.slice(0, 8000)
-          if (len + trimmed.length > 50000) break
+          if (len + trimmed.length > 300000) break
           len += trimmed.length
-          sourcesContext += `\n\n--- ${source.name} (${source.category}) ---\n${trimmed}`
+          sourcesContext += `\n\n--- ${source.name} [Aanvullende bron] (${source.category}) ---\n${trimmed}`
           usedSourceNames.push({ name: source.name, category: source.category })
         }
       }
-    } catch { /* sources not available */ }
+    } catch (err) {
+      console.error('Error fetching sources:', err)
+    }
 
     // Fetch available templates — so Claude knows what templates exist
     let templatesContext = ''
@@ -495,11 +578,16 @@ Gebruik ALTIJD dezelfde placeholders ([Persoon-1], [Bedrijf-1], [BSN-1], etc.) i
 Vraag NIET naar de echte namen of gegevens.`
     }
     if (sourcesContext) {
-      systemPrompt += `\n\n## Kennisbronnen van Workx Advocaten
-De volgende interne kennisbronnen zijn beschikbaar. Gebruik deze ACTIEF bij het beantwoorden van vragen:
-- Verwijs naar relevante informatie uit deze bronnen waar toepasselijk
-- Combineer interne kennis met externe bronnen (wetgeving, rechtspraak, web search)
-- Vermeld welke kennisbron je hebt gebruikt in je antwoord${sourcesContext}`
+      systemPrompt += `\n\n## Kennisbronnen van Workx Advocaten (LAAG 1 — ALTIJD EERST RAADPLEGEN)
+Hieronder staan passages uit de interne kennisbronnen, geselecteerd op basis van de vraag van de gebruiker. Bronnen gemarkeerd als [PRIMAIRE BRON] bevatten de ORIGINELE tekst uit gezaghebbende naslagwerken (Tekst & Commentaar, Thematica Arbeidsrecht). Dit is je EERSTE en BELANGRIJKSTE referentiepunt.
+
+WERKWIJZE:
+1. Zoek EERST in de passages hieronder — dit zijn directe citaten uit de bronnen, geen samenvattingen
+2. Gebruik de exacte formuleringen, artikelverwijzingen en analyses uit deze passages
+3. Verwijs EXPLICIET naar de bron: "Volgens Tekst & Commentaar bij art. X..." of "Thematica vermeldt..."
+4. Vul aan met rechtspraak.nl (Laag 2) voor concrete uitspraken
+5. Val ALLEEN terug op eigen kennis (Laag 3) als de bronnen het onderwerp niet behandelen
+6. Als het antwoord NIET in deze bronnen staat: vermeld dit expliciet en pas je betrouwbaarheidsindicator naar beneden aan${sourcesContext}`
     }
     if (templatesContext) {
       systemPrompt += `\n\n## Beschikbare templates van Workx Advocaten
@@ -539,11 +627,12 @@ BELANGRIJK:
 
     // Reinforce critical rules at end of prompt (after all context that may dilute them)
     systemPrompt += `\n\n## HERINNERING — Kritieke Regels
-1. Noem GEEN ECLI-nummers die je niet in DIT gesprek hebt opgezocht via search_rechtspraak of get_rechtspraak_ruling.
-2. Doe MINIMAAL 2 search_rechtspraak zoekopdrachten met VERSCHILLENDE zoektermen.
-3. Lees relevante uitspraken VOLLEDIG via get_rechtspraak_ruling voordat je ze bespreekt.
-4. Gebruik markdown-opmaak (## kopjes, **vet**, genummerde lijsten) voor leesbare structuur.
-5. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.`
+1. BRONHIËRARCHIE: raadpleeg EERST de interne kennisbronnen (T&C, Thematica), dan rechtspraak.nl, dan pas eigen kennis.
+2. Noem GEEN ECLI-nummers die je niet in DIT gesprek hebt opgezocht via search_rechtspraak of get_rechtspraak_ruling.
+3. Doe MINIMAAL 2 search_rechtspraak zoekopdrachten met VERSCHILLENDE zoektermen.
+4. Lees relevante uitspraken VOLLEDIG via get_rechtspraak_ruling voordat je ze bespreekt.
+5. Gebruik markdown-opmaak (## kopjes, **vet**, genummerde lijsten) voor leesbare structuur.
+6. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel. Hoe meer je leunt op eigen kennis i.p.v. bronnen, hoe LAGER de confidence.`
 
     // Build messages — ensure alternating user/assistant roles (required by Claude API)
     // When a previous request failed, assistant messages may be missing, causing
@@ -990,4 +1079,106 @@ BELANGRIJK:
     console.error('[chat] Error:', errMsg)
     return NextResponse.json({ error: 'Er is een interne fout opgetreden. Probeer het opnieuw.' }, { status: 500 })
   }
+}
+
+// ==================== CHUNK RETRIEVAL HELPERS ====================
+
+/** Dutch stop words to filter out when extracting search terms */
+const DUTCH_STOP_WORDS = new Set([
+  'de', 'het', 'een', 'van', 'in', 'is', 'dat', 'die', 'op', 'te', 'en', 'voor',
+  'met', 'zijn', 'aan', 'er', 'maar', 'om', 'als', 'dan', 'nog', 'wel', 'geen',
+  'ook', 'al', 'naar', 'uit', 'kan', 'tot', 'bij', 'zo', 'wat', 'niet', 'wordt',
+  'door', 'over', 'dit', 'werd', 'worden', 'heeft', 'hoe', 'waar', 'wanneer',
+  'wie', 'welke', 'moet', 'mag', 'zou', 'kunnen', 'hebben', 'deze', 'meer',
+  'was', 'waren', 'veel', 'zeer', 'ben', 'je', 'jij', 'we', 'wij', 'zij', 'ik',
+  'mijn', 'hun', 'ons', 'haar', 'hem', 'u', 'men', 'zich', 'hier', 'daar',
+])
+
+/**
+ * Extract meaningful search terms from user's question.
+ * Keeps legal terms, article numbers, and removes stop words.
+ */
+function extractSearchTerms(message: string): string[] {
+  const terms: string[] = []
+
+  // Extract article references (e.g., "7:669", "art. 7:611 BW", "artikel 6")
+  const articleMatches = message.match(/(?:art(?:ikel)?\.?\s*)?(\d+[.:]\d+(?:\s*(?:lid\s+\d+|sub\s+[a-z]))?(?:\s*BW)?)/gi)
+  if (articleMatches) {
+    for (const match of articleMatches) {
+      terms.push(match.trim())
+    }
+  }
+
+  // Extract multi-word legal phrases (2-3 word combinations)
+  const words = message
+    .toLowerCase()
+    .replace(/[^\w\s:.-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !DUTCH_STOP_WORDS.has(w))
+
+  // Add individual meaningful words
+  for (const word of words) {
+    if (word.length >= 4) {
+      terms.push(word)
+    }
+  }
+
+  // Add 2-word combinations (bigrams) for better matching
+  for (let i = 0; i < words.length - 1; i++) {
+    if (words[i].length >= 3 && words[i + 1].length >= 3) {
+      terms.push(`${words[i]} ${words[i + 1]}`)
+    }
+  }
+
+  return Array.from(new Set(terms))
+}
+
+/**
+ * Retrieve the most relevant chunks from the database based on search terms.
+ * Uses PostgreSQL case-insensitive search to find matching chunks,
+ * then scores them by how many terms they match.
+ */
+async function retrieveRelevantChunks(
+  sourceIds: string[],
+  searchTerms: string[],
+  maxChunks: number
+): Promise<Array<{ sourceId: string; chunkIndex: number; content: string; heading: string | null; score: number }>> {
+  if (searchTerms.length === 0 || sourceIds.length === 0) return []
+
+  // Build OR conditions for each search term
+  const orConditions = searchTerms.slice(0, 20).map(term => ({
+    content: { contains: term, mode: 'insensitive' as const },
+  }))
+
+  // Fetch chunks that match any search term
+  const matchingChunks = await prisma.sourceChunk.findMany({
+    where: {
+      sourceId: { in: sourceIds },
+      OR: orConditions,
+    },
+    select: {
+      id: true,
+      sourceId: true,
+      chunkIndex: true,
+      content: true,
+      heading: true,
+    },
+  })
+
+  // Score each chunk by number of matching terms (more matches = higher score)
+  const scoredChunks = matchingChunks.map(chunk => {
+    const contentLower = chunk.content.toLowerCase()
+    let score = 0
+    for (const term of searchTerms) {
+      if (contentLower.includes(term.toLowerCase())) {
+        // Longer terms get more weight (article numbers, legal phrases)
+        score += term.length >= 6 ? 3 : term.includes(':') ? 4 : 1
+      }
+    }
+    return { ...chunk, score }
+  })
+
+  // Sort by score (highest first) and take top N
+  scoredChunks.sort((a, b) => b.score - a.score)
+  return scoredChunks.slice(0, maxChunks)
 }

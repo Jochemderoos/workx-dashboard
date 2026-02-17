@@ -1352,6 +1352,21 @@ model WorkDistribution {
   @@index([employeeId])
 }
 
+// ==================== AI BRON CHUNKS (voor slim ophalen) ====================
+
+// Chunks van bronmateriaal — volledige tekst opgesplitst voor retrieval
+model SourceChunk {
+  id          String   @id @default(cuid())
+  sourceId    String
+  chunkIndex  Int      // Volgorde binnen de bron
+  content     String   @db.Text // ~5000 chars per chunk
+  heading     String?  // Gedetecteerde sectie-/kopnaam
+  createdAt   DateTime @default(now())
+
+  @@index([sourceId])
+  @@index([sourceId, chunkIndex])
+}
+
 // ==================== WERKVERDELINGSGESPREKKEN COMPLETION ====================
 
 // Bijhoudt welke werkverdelingsgesprekken zijn afgerond (per individuele medewerker-partner)
