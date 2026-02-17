@@ -103,6 +103,15 @@ export async function searchSimilarChunks(
 
   // Use raw SQL for pgvector cosine similarity search
   // 1 - (a <=> b) gives cosine similarity (0-1, higher = more similar)
+  //
+  // IMPORTANT: Set hnsw.ef_search higher than default (40) because we filter
+  // by sourceId AFTER the HNSW index scan. With 47K+ chunks spread across
+  // 4 sources, a small source like VAAN (2267 chunks = 4.7%) can return 0
+  // results with default ef_search because the index only examines ~40 candidates
+  // globally and none of them may match the sourceId filter.
+  // ef_search=200 ensures the index examines enough candidates for filtered queries.
+  await prisma.$executeRawUnsafe(`SET hnsw.ef_search = 200`)
+
   const results = await prisma.$queryRawUnsafe(`
     SELECT
       id,

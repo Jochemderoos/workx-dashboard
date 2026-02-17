@@ -73,16 +73,17 @@ Update dit bestand met een log entry onderaan.
 - InView ArbeidsRecht (content in RAR source)
 
 **Retrieval kwaliteit (CRUCIAAL):**
-- Hybrid search: semantic (pgvector, 60%) + keyword (Prisma contains, 40%)
+- Per-source hybrid search: semantic (pgvector, 60%) + keyword (40%) — PER BRON apart
 - Reciprocal Rank Fusion (K=60) combineert resultaten
-- Balanced source selection: MIN_PER_SOURCE=3, MAX_PER_SOURCE=10
-- CITAAT-HERINNERING aan einde van broncontext forceert citeren uit alle bronnen
+- Balanced source selection: MIN_PER_SOURCE=4, MAX_PER_SOURCE=12
+- HNSW ef_search=200 voor correcte filtered nearest neighbor search
+- Multi-query expansion: 5 varianten gericht op verschillende bronnen
+- Adjacent chunk inclusion: N-1 en N+1 chunks voor context (800 chars, top 12)
+- CITEERWIJZE per passage + CITAAT-HERINNERING forceert citeren uit alle bronnen
 - **Verbeterkansen:**
-  - Multi-query expansion: herformuleer vraag naar 3-5 varianten voor bredere recall
-  - Adjacent chunk inclusion: haal N-1 en N+1 chunks op voor context rond matches
-  - Enhanced source labeling: voeg CITEERWIJZE per passage toe ("Volgens T&C bij art. X...")
   - Query decomposition: splits complexe vragen op in deelvragen
   - Re-ranking: herscoor chunks na initiële retrieval met een cross-encoder
+  - InView Tijdschrift ArbeidsRecht: chunks genereren (bron bestaat maar heeft 0 chunks)
 
 **Thinking budget:**
 - Sonnet: 10K (initieel) → 16K (vervolg) — overweeg verhoging naar 16K/24K
@@ -159,6 +160,41 @@ Update dit bestand met een log entry onderaan.
 ## Verbeterlog
 
 <!-- Voeg nieuwe entries bovenaan toe -->
+
+### Sessie 5 — 2026-02-17 (Diepgaande kwaliteitsanalyse)
+
+**Analyse uitgevoerd (fase 1-3):**
+- 47.894 chunks onderzocht over 4 actieve bronnen (InView Tijdschrift ArbeidsRecht had 0 chunks)
+- 8 random chunks per bron handmatig beoordeeld op kwaliteit
+- 5 testvragen uitgevoerd met volledige retrieval-pipeline analyse
+- extractSearchTerms + expandSearchQueries output geanalyseerd
+- Context window benutting berekend (~38.5% van 170K tokens)
+
+**Kritieke problemen gevonden:**
+1. **VAAN AR Updates: 0 resultaten bij semantic search** — HNSW index met default ef_search=40 miste kleine bronnen volledig. VAAN (4.7% van chunks) werd nooit gevonden door approximate nearest neighbor
+2. **RAR domineerde alles**: met 42.866 chunks (89.5%) domineerde RAR elke globale zoekactie — T&C, Thematica en VAAN kwamen niet aan bod
+3. **T&C: 97% chunks zonder heading** — 1010 van 1041 chunks hadden geen heading, waardoor niet te zien was welk wetsartikel ze behandelden
+4. **Keyword search: alleen T&C resultaten** — globale `take: 200` retourneerde alleen T&C vanwege generieke termen
+5. **0% overlap semantic + keyword** — geen enkele chunk werd door beide methoden gevonden
+
+**Verbeteringen doorgevoerd:**
+- **Per-source semantic search**: in plaats van 1 globale zoekactie op 47K chunks zoeken we nu PER BRON apart (15 per bron), waardoor elke bron een eerlijke kans krijgt. Resultaat: VAAN ging van 0 naar 15 chunks per vraag
+- **Per-source keyword search**: in plaats van 1 globale `take: 200` zoeken we nu PER BRON (50 per bron), waardoor niet alleen T&C maar alle bronnen keyword matches leveren
+- **HNSW ef_search verhoogd naar 200**: de pgvector HNSW index zocht standaard slechts ~40 candidates, waardoor kleine bronnen bij filtering op sourceId 0 resultaten gaven. Met ef_search=200 worden genoeg candidates bekeken
+- **Heading bonus bij keyword scoring**: termen die in de heading voorkomen krijgen 1.5x score bonus
+- **T&C chunk headings hersteld**: van 3% naar 94% headings door automatische detectie van wetsartikelverwijzingen in chunk-content (974 chunks geupdate)
+- **MIN_PER_SOURCE verhoogd naar 4**: elke bron krijgt minimaal 4 chunks in het resultaat
+- **Retrieval timeout verhoogd**: van 12s naar 15s voor per-source queries
+
+**Validatieresultaten (voor vs na):**
+```
+Vraag 1 (opzegtermijn):       VAAN 0→4,  Thematica 10→12, overlap 0→1
+Vraag 2 (ernstig verwijtbaar): VAAN 0→5,  Thematica 4→12,  overlap 0→1
+Vraag 3 (cumulatiegrond):     VAAN 0→4,  Thematica 3→12,  overlap 0→1
+Vraag 4 (billijke vergoeding): VAAN 0→4,  Thematica 4→12,  overlap 0→2
+Vraag 5 (disfunctioneren):    VAAN 0→4,  Thematica 1→12,  overlap 0→1
+```
+ALLE 4 bronnen met chunks nu vertegenwoordigd in ELKE testvraag.
 
 ### Sessie 4 — 2026-02-17
 - **System prompt volledig herschreven**: gestroomlijnd van ~270 naar ~200 regels, duplicaties verwijderd

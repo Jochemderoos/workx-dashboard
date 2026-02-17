@@ -480,9 +480,9 @@ export async function POST(req: NextRequest) {
               expandedQueries // additional query variants for broader recall
             ),
             new Promise<never[]>((resolve) => setTimeout(() => {
-              console.warn('[chat] Chunk retrieval timed out after 12s')
+              console.warn('[chat] Chunk retrieval timed out after 15s')
               resolve([])
-            }, 12000)),
+            }, 15000)),
           ])
 
           if (relevantChunks.length > 0) {
@@ -1370,10 +1370,14 @@ function extractSearchTerms(message: string): string[] {
 }
 
 /**
- * Retrieve the most relevant chunks using MULTI-QUERY HYBRID search:
- * 1. Multi-query semantic search: embed original + expanded queries, search each
- * 2. Keyword search via PostgreSQL text matching
+ * Retrieve the most relevant chunks using PER-SOURCE HYBRID search:
+ * 1. Per-source semantic search: search EACH source separately to prevent large sources dominating
+ * 2. Per-source keyword search: search EACH source separately for fair representation
+ * 3. Multi-query: embed original + expanded queries for broader recall
  * Results from all queries are combined using Reciprocal Rank Fusion (RRF).
+ *
+ * Key insight: with 42K RAR chunks vs 1K T&C chunks, a global search always
+ * returns 90%+ RAR. Per-source search guarantees each source gets top-N results.
  */
 async function retrieveRelevantChunks(
   sourceIds: string[],
@@ -1386,11 +1390,14 @@ async function retrieveRelevantChunks(
 
   // Build all search queries: original + expanded variants
   const allQueries = [userMessage, ...(expandedQueries || [])].filter(Boolean) as string[]
-  console.log(`[chat] Multi-query retrieval: ${allQueries.length} queries (1 original + ${(expandedQueries || []).length} expanded)`)
+  console.log(`[chat] Per-source retrieval: ${allQueries.length} queries x ${sourceIds.length} sources`)
 
-  // Run ALL semantic searches + keyword search in parallel
+  // Results per source for semantic search (top-N per source per query)
+  const SEMANTIC_PER_SOURCE = 15 // Top 15 per source guarantees diverse results
+
+  // Run ALL semantic searches + keyword searches in parallel
   const [semanticResultSets, keywordResults] = await Promise.all([
-    // 1. MULTI-QUERY SEMANTIC SEARCH — one search per query variant
+    // 1. PER-SOURCE MULTI-QUERY SEMANTIC SEARCH
     (async () => {
       if (!userMessage || !process.env.OPENAI_API_KEY) return []
       try {
@@ -1398,20 +1405,32 @@ async function retrieveRelevantChunks(
         const embeddings = await Promise.all(
           allQueries.map(q => generateEmbedding(q).catch(() => null))
         )
-        // Search for each embedding
-        const resultSets = await Promise.all(
-          embeddings
-            .filter((e): e is number[] => e !== null)
-            .map(emb => searchSimilarChunks(emb, sourceIds, Math.min(maxChunks, 50)).catch(() => []))
-        )
-        return resultSets
+        const validEmbeddings = embeddings.filter((e): e is number[] => e !== null)
+        if (validEmbeddings.length === 0) return []
+
+        // Search EACH source separately for EACH query embedding
+        const allResultSets: Array<Array<{ id: string; sourceId: string; chunkIndex: number; content: string; heading: string | null; similarity: number }>> = []
+        for (const emb of validEmbeddings) {
+          // Run per-source searches in parallel for this embedding
+          const perSourceResults = await Promise.all(
+            sourceIds.map(sid =>
+              searchSimilarChunks(emb, [sid], SEMANTIC_PER_SOURCE).catch(() => [])
+            )
+          )
+          // Flatten all per-source results into one result set for this query
+          const combined = perSourceResults.flat()
+          // Sort by similarity so RRF ranks work correctly
+          combined.sort((a, b) => b.similarity - a.similarity)
+          allResultSets.push(combined)
+        }
+        return allResultSets
       } catch (err) {
-        console.error('Multi-query semantic search fout:', err)
+        console.error('Per-source semantic search fout:', err)
         return []
       }
     })(),
 
-    // 2. KEYWORD SEARCH — exact term matching (uses terms from all queries)
+    // 2. PER-SOURCE KEYWORD SEARCH — search each source separately
     (async () => {
       // Combine search terms from original + expanded queries
       const allTerms = [...searchTerms]
@@ -1423,55 +1442,75 @@ async function retrieveRelevantChunks(
       }
       if (allTerms.length === 0) return []
 
-      const orConditions = allTerms.slice(0, 30).map(term => ({
+      // Prioritize terms: legal phrases and article refs first
+      const prioritized = allTerms.slice(0, 40).sort((a, b) => {
+        const scoreA = LEGAL_PHRASES.includes(a.toLowerCase()) ? 8 : (a.includes(':') || /\d+[.:]\d+/.test(a)) ? 6 : a.includes(' ') ? 4 : 2
+        const scoreB = LEGAL_PHRASES.includes(b.toLowerCase()) ? 8 : (b.includes(':') || /\d+[.:]\d+/.test(b)) ? 6 : b.includes(' ') ? 4 : 2
+        return scoreB - scoreA
+      })
+
+      const orConditions = prioritized.slice(0, 30).map(term => ({
         content: { contains: term, mode: 'insensitive' as const },
       }))
 
-      const matchingChunks = await prisma.sourceChunk.findMany({
-        where: {
-          sourceId: { in: sourceIds },
-          OR: orConditions,
-        },
-        select: {
-          id: true,
-          sourceId: true,
-          chunkIndex: true,
-          content: true,
-          heading: true,
-        },
-        take: 200, // Limit to prevent loading thousands of chunks with common terms
-      })
+      // Search EACH source separately with its own limit
+      const KEYWORD_PER_SOURCE = 50
+      const perSourceKeyword = await Promise.all(
+        sourceIds.map(sid =>
+          prisma.sourceChunk.findMany({
+            where: {
+              sourceId: sid,
+              OR: orConditions,
+            },
+            select: {
+              id: true,
+              sourceId: true,
+              chunkIndex: true,
+              content: true,
+              heading: true,
+            },
+            take: KEYWORD_PER_SOURCE,
+          }).catch(() => [])
+        )
+      )
+
+      // Flatten and score all keyword results
+      const allMatches = perSourceKeyword.flat()
 
       // Score by matching terms — multi-word phrases and legal terms score higher
-      return matchingChunks.map(chunk => {
+      // Use ALL terms (original + expanded) for scoring
+      return allMatches.map(chunk => {
         const contentLower = chunk.content.toLowerCase()
+        const headingLower = (chunk.heading || '').toLowerCase()
         let score = 0
-        for (const term of searchTerms) {
-          if (contentLower.includes(term.toLowerCase())) {
-            const termLower = term.toLowerCase()
-            // Known legal multi-word phrases get highest score
-            if (LEGAL_PHRASES.includes(termLower)) {
-              score += 8
-            }
-            // Article references (7:669, art. 7:611 BW) are very specific
-            else if (term.includes(':') || /\d+[.:]\d+/.test(term)) {
-              score += 6
-            }
-            // Multi-word terms (bigrams/trigrams) are more specific
-            else if (term.includes(' ')) {
-              score += 4
-            }
-            // Longer single words are more meaningful
-            else if (term.length >= 8) {
-              score += 3
-            }
-            else if (term.length >= 5) {
-              score += 2
-            }
-            else {
-              score += 1
-            }
+        for (const term of allTerms) {
+          const termLower = term.toLowerCase()
+          const inContent = contentLower.includes(termLower)
+          const inHeading = headingLower.includes(termLower)
+          if (!inContent && !inHeading) continue
+
+          // Base score by term type
+          let termScore = 0
+          if (LEGAL_PHRASES.includes(termLower)) {
+            termScore = 8
+          } else if (term.includes(':') || /\d+[.:]\d+/.test(term)) {
+            termScore = 6
+          } else if (term.includes(' ')) {
+            termScore = 4
+          } else if (term.length >= 8) {
+            termScore = 3
+          } else if (term.length >= 5) {
+            termScore = 2
+          } else {
+            termScore = 1
           }
+
+          // Heading match bonus: if a term appears in the heading, it's extra relevant
+          if (inHeading) {
+            termScore = Math.round(termScore * 1.5)
+          }
+
+          score += termScore
         }
         return { ...chunk, score }
       }).sort((a, b) => b.score - a.score)
@@ -1535,7 +1574,7 @@ async function retrieveRelevantChunks(
     // Balanced selection: ensure each source gets fair representation
     // Instead of just top-N globally (which lets one large source dominate),
     // guarantee each source gets at least MIN_PER_SOURCE if it has relevant chunks
-    const MIN_PER_SOURCE = 3
+    const MIN_PER_SOURCE = 4  // Increased: every source deserves representation
     const MAX_PER_SOURCE = 12
     const selected: typeof combined = []
     const perSource = new Map<string, number>()
@@ -1550,21 +1589,26 @@ async function retrieveRelevantChunks(
     }
 
     // Second pass: ensure minimum representation for underrepresented sources
-    const allSourceIds = Array.from(new Set(combined.map(c => c.sourceId)))
-    for (const sid of allSourceIds) {
+    const allSrcIds = Array.from(new Set(combined.map(c => c.sourceId)))
+    for (const sid of allSrcIds) {
       const currentCount = perSource.get(sid) || 0
       if (currentCount >= MIN_PER_SOURCE) continue
       const needed = MIN_PER_SOURCE - currentCount
       const candidates = combined.filter(c => c.sourceId === sid && !selected.includes(c))
       for (let i = 0; i < Math.min(needed, candidates.length); i++) {
-        if (selected.length >= maxChunks + 6) break // Allow slight overflow for balance
+        if (selected.length >= maxChunks + 8) break // Allow slight overflow for balance
         selected.push(candidates[i])
         perSource.set(sid, (perSource.get(sid) || 0) + 1)
       }
     }
 
     selected.sort((a, b) => b.score - a.score)
-    const finalSelected = selected.slice(0, maxChunks + 6) // Allow up to 41 for balanced sources
+    const finalSelected = selected.slice(0, maxChunks + 8) // Allow up to 48 for balanced sources
+
+    // Log source distribution for debugging
+    const dist = new Map<string, number>()
+    for (const c of finalSelected) dist.set(c.sourceId, (dist.get(c.sourceId) || 0) + 1)
+    console.log(`[chat] Source distribution: ${Array.from(dist.entries()).map(([k, v]) => `${k.slice(0, 8)}=${v}`).join(', ')} (total=${finalSelected.length})`)
 
     // Adjacent chunk inclusion: fetch N-1 and N+1 chunks for better context
     return await enrichWithAdjacentChunks(finalSelected, sourceIds)
