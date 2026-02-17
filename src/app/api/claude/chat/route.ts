@@ -517,6 +517,7 @@ export async function POST(req: NextRequest) {
               chunksBySource.set(chunk.sourceId, existing)
             }
 
+            const usedPrimaryNames: string[] = []
             for (const source of primarySources) {
               const sourceChunks = chunksBySource.get(source.id)
               if (!sourceChunks || sourceChunks.length === 0) continue
@@ -530,6 +531,12 @@ export async function POST(req: NextRequest) {
                 sourcesContext += `\n\n[Passage ${chunk.chunkIndex + 1}${headingLabel}]\n${chunk.content}`
               }
               usedSourceNames.push({ name: source.name, category: source.category, url: source.url || undefined })
+              usedPrimaryNames.push(source.name)
+            }
+
+            // Add reminder listing all sources that must be cited
+            if (usedPrimaryNames.length > 1) {
+              sourcesContext += `\n\n--- CITAAT-HERINNERING ---\nJe hebt passages ontvangen uit ${usedPrimaryNames.length} bronnen: ${usedPrimaryNames.join(', ')}. Maak in je ## Gebruikte bronnen sectie een APART inklapbaar <details>-blok voor ELKE bron hierboven, met een letterlijk citaat.`
             }
           }
         }
@@ -1296,10 +1303,43 @@ async function retrieveRelevantChunks(
       }
     })
 
-    // Sort by combined RRF score and return top N
+    // Sort by combined RRF score
     const combined = Array.from(rrfScores.values())
     combined.sort((a, b) => b.score - a.score)
-    return combined.slice(0, maxChunks)
+
+    // Balanced selection: ensure each source gets fair representation
+    // Instead of just top-N globally (which lets one large source dominate),
+    // guarantee each source gets at least MIN_PER_SOURCE if it has relevant chunks
+    const MIN_PER_SOURCE = 3
+    const MAX_PER_SOURCE = 10
+    const selected: typeof combined = []
+    const perSource = new Map<string, number>()
+
+    // First pass: pick top chunks but cap per source
+    for (const chunk of combined) {
+      if (selected.length >= maxChunks) break
+      const count = perSource.get(chunk.sourceId) || 0
+      if (count >= MAX_PER_SOURCE) continue
+      selected.push(chunk)
+      perSource.set(chunk.sourceId, count + 1)
+    }
+
+    // Second pass: ensure minimum representation for underrepresented sources
+    const allSourceIds = Array.from(new Set(combined.map(c => c.sourceId)))
+    for (const sid of allSourceIds) {
+      const currentCount = perSource.get(sid) || 0
+      if (currentCount >= MIN_PER_SOURCE) continue
+      const needed = MIN_PER_SOURCE - currentCount
+      const candidates = combined.filter(c => c.sourceId === sid && !selected.includes(c))
+      for (let i = 0; i < Math.min(needed, candidates.length); i++) {
+        if (selected.length >= maxChunks + 6) break // Allow slight overflow for balance
+        selected.push(candidates[i])
+        perSource.set(sid, (perSource.get(sid) || 0) + 1)
+      }
+    }
+
+    selected.sort((a, b) => b.score - a.score)
+    return selected.slice(0, maxChunks + 6) // Allow up to 41 for balanced sources
   }
 
   // Fallback: if only semantic results
