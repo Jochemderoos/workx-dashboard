@@ -53,8 +53,9 @@ export async function POST(
     return NextResponse.json({ error: 'Instructies zijn verplicht' }, { status: 400 })
   }
 
+  // Templates are shared within the firm — any authenticated user can generate
   const template = await prisma.aITemplate.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id: params.id },
   })
 
   if (!template) {

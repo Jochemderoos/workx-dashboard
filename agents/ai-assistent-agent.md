@@ -161,6 +161,38 @@ Update dit bestand met een log entry onderaan.
 
 <!-- Voeg nieuwe entries bovenaan toe -->
 
+### Sessie 6 — 2026-02-17 (Grondige QA-test alle features)
+
+**Volledig getest:**
+- Templates (6 stuks): CRUD, invulvelden, instructies, base64, content, generate endpoint
+- Document handling: upload (PDF/DOCX/TXT/PNG/JPG), text extractie, DOCX modify protocol
+- Projecten: CRUD, teamleden, toegangscontrole, chat memory, projectpagina
+- Bronnen & RAG: SourcesManager, embedding pipeline, HNSW parameters
+- Frontend UX: streaming, stop-knop, retry, kopieer, model-selector, bronnen-toggle, anonimisatie, quick actions
+- Markdown: code blocks, tabellen, details/summary, confidence indicator, DOCX_EDITS stripping
+- Export: PDF en Word export knoppen op assistant messages
+
+**Problemen gevonden en gefixt:**
+1. **Template generate endpoint: userId-filter te restrictief** — Templates zijn gedeeld binnen het kantoor, maar `generate` filterde op `userId: session.user.id`, waardoor andere gebruikers templates niet konden invullen. Gefixt: filter verwijderd
+2. **Document upload foutmelding inconsistent** — `MAX_FILE_SIZE = 32MB` maar foutmelding zei "max 10MB". Gefixt: foutmelding gecorrigeerd naar "max 32MB"
+3. **Template content afgekapt in chat** — Templates tot 35K tekens, maar chat route limiet was 20K per template. Gefixt: verhoogd naar 40K per template, 120K totaal
+4. **Markdown blockquotes: alleen single-line** — Opeenvolgende blockquote regels werden als aparte `<blockquote>` elementen gerenderd. Gefixt: multi-line blockquotes worden nu samengevoegd
+5. **Template-instructies in system prompt te vaag** — Claude wist niet wanneer en hoe templates te gebruiken. Gefixt: specifieke herkennings-, invul- en aanbevelingsinstructies toegevoegd met voorbeelden
+
+**Geen problemen gevonden in:**
+- Templates: alle 6 volledig (content, placeholders, beschrijving, instructies, base64)
+- Document DOCX modify: correct find/replace in XML met opmaakbehoud
+- Projecten CRUD: volledige eigenaar/lid-toegangscontrole
+- Project memory: 5 gesprekken, 1000 chars per gesprek (voldoende)
+- Embedding pipeline: robuust met HNSW ef_search=200
+- Streaming: 80ms throttled rendering werkt goed
+- Stop-knop: AbortController correct
+- ECLI-verificatie: post-processing check tegen rechtspraak.nl
+- Anonimisatie: BSN, telefoon, email, IBAN, postcode, bedrijf, persoon
+- Quick actions: 11 relevante acties in 4 categorieen
+
+**Compilatie:** Alleen bekende e2e/ fouten
+
 ### Sessie 5 — 2026-02-17 (Diepgaande kwaliteitsanalyse)
 
 **Analyse uitgevoerd (fase 1-3):**

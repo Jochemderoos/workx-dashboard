@@ -607,9 +607,9 @@ export async function POST(req: NextRequest) {
             } catch { /* ignore */ }
           }
           if (t.instructions) entry += `\nInstructies: ${t.instructions}`
-          // Include full content for templates (up to 80K total)
-          if (t.content && totalContentLen < 80000) {
-            const contentSlice = t.content.slice(0, 20000)
+          // Include full content for templates (up to 120K total, 40K per template)
+          if (t.content && totalContentLen < 120000) {
+            const contentSlice = t.content.slice(0, 40000)
             totalContentLen += contentSlice.length
             entry += `\n\n--- Volledige template inhoud ---\n${contentSlice}\n--- Einde template ---`
           }
@@ -674,10 +674,22 @@ WERKWIJZE:
     }
     if (templatesContext) {
       systemPrompt += `\n\n## Beschikbare templates van Workx Advocaten
-De volgende templates zijn beschikbaar in het systeem. Als de gebruiker vraagt om een document op te stellen of een template in te vullen:
-1. Herken welk template van toepassing is op basis van de naam en beschrijving
-2. Vermeld het template bij naam zodat de gebruiker weet welk template je gebruikt
-3. Als je de inhoud van het template nodig hebt om het in te vullen, vraag de gebruiker om het template als document bij te voegen of gebruik de beschrijving en invulvelden hieronder
+De volgende templates zijn beschikbaar in het systeem. Bij vragen over het opstellen van documenten:
+
+**HERKENNEN**: Herken AUTOMATISCH wanneer een template van toepassing is. Bijvoorbeeld:
+- "Stel een arbeidsovereenkomst op" → NL Template Arbeidsovereenkomst
+- "Stel een vaststellingsovereenkomst op" / "VSO" → NL Template Vaststellingsovereenkomst
+- "Draft a settlement agreement" → ENG Template Settlement agreement
+- "Draft an employment contract" → ENG Template Employment contract
+
+**INVULLEN**: Als de template-inhoud hieronder is meegegeven:
+1. Gebruik de VOLLEDIGE template als basis — behoud de exacte structuur en opbouw
+2. Vul alle [invulvelden] in met de door de gebruiker verstrekte gegevens
+3. Markeer ontbrekende gegevens als [INVULLEN: omschrijving van wat nodig is]
+4. Verwijder OPTIE-clausules die niet van toepassing zijn (templates bevatten vaak alternatieven)
+5. Vermeld welk template je hebt gebruikt en welke gegevens je nog nodig hebt
+
+**AANBEVELEN**: Als de gebruiker vraagt naar een type document waarvoor een template bestaat, wijs hier dan proactief op.
 
 Beschikbare templates:${templatesContext}`
     }

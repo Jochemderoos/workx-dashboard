@@ -23,6 +23,8 @@ export function renderMarkdown(markdown: string): string {
   let codeLines: string[] = []
   let inList = false
   let listType: 'ul' | 'ol' = 'ul'
+  let inBlockquote = false
+  let blockquoteLines: string[] = []
   let inTable = false
   let tableRows: string[][] = []
   let tableAlignments: Array<'left' | 'center' | 'right' | 'default'> = []
@@ -31,6 +33,15 @@ export function renderMarkdown(markdown: string): string {
     if (inList) {
       result.push(listType === 'ul' ? '</ul>' : '</ol>')
       inList = false
+    }
+  }
+
+  const closeBlockquote = () => {
+    if (inBlockquote) {
+      const content = blockquoteLines.map(l => processInline(l)).join('<br />')
+      result.push(`<blockquote>${content}</blockquote>`)
+      inBlockquote = false
+      blockquoteLines = []
     }
   }
 
@@ -136,18 +147,28 @@ export function renderMarkdown(markdown: string): string {
     // Empty line
     if (line.trim() === '') {
       closeList()
+      closeBlockquote()
       flushTable()
       result.push('')
       continue
     }
 
-    // Blockquotes
-    if (line.trim().startsWith('> ')) {
+    // Blockquotes (multi-line: consecutive > lines are merged)
+    if (line.trim().startsWith('> ') || line.trim() === '>') {
       closeList()
       flushTable()
-      const content = processInline(line.trim().slice(2))
-      result.push(`<blockquote>${content}</blockquote>`)
+      if (!inBlockquote) {
+        inBlockquote = true
+        blockquoteLines = []
+      }
+      const bqContent = line.trim() === '>' ? '' : line.trim().slice(2)
+      blockquoteLines.push(bqContent)
       continue
+    }
+    // Close blockquote if previous line was a blockquote but this one isn't
+    if (inBlockquote) {
+      closeBlockquote()
+      // Fall through to process this line normally
     }
 
     // Headings
@@ -226,6 +247,7 @@ export function renderMarkdown(markdown: string): string {
     result.push(`<pre class="code-block"><code>${escaped}</code></pre>`)
   }
   closeList()
+  closeBlockquote()
   flushTable()
 
   return result.join('\n')
