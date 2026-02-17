@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
+import { generateEmbeddingsBatch, storeChunkEmbedding } from '@/lib/embeddings'
 
 /**
  * Browser Agent — Crawl websites requiring authentication
@@ -95,22 +96,32 @@ export async function POST(req: NextRequest) {
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
 
         try {
-          // Step 1: Navigate to source URL
-          send('status', `Navigeren naar ${source.name}...`)
-          await page.goto(source.url!, { waitUntil: 'networkidle2', timeout: 30000 })
+          const isInView = source.url!.includes('inview.nl')
 
-          // Step 2: Handle authentication if credentials are provided
-          if (creds?.email && creds?.password) {
-            send('status', 'Inloggen...')
-            const loggedIn = await attemptLogin(page, creds, send)
-
+          // Step 1 & 2: Navigate and authenticate
+          if (isInView && creds?.email && creds?.password) {
+            // InView (Wolters Kluwer) — PingFederate SSO login flow
+            const loggedIn = await attemptInViewLogin(page, source.url!, creds, send)
             if (!loggedIn) {
-              send('status', 'Inloggen mislukt — probeer het opnieuw met andere gegevens')
-              // Continue anyway, may still get some public content
+              send('status', 'InView inloggen mislukt — probeer het opnieuw')
             } else {
-              send('status', 'Succesvol ingelogd!')
-              // Navigate back to source URL after login
-              await page.goto(source.url!, { waitUntil: 'networkidle2', timeout: 30000 })
+              send('status', 'InView succesvol ingelogd!')
+            }
+          } else {
+            // Generic flow
+            send('status', `Navigeren naar ${source.name}...`)
+            await page.goto(source.url!, { waitUntil: 'networkidle2', timeout: 30000 })
+
+            if (creds?.email && creds?.password) {
+              send('status', 'Inloggen...')
+              const loggedIn = await attemptLogin(page, creds, send)
+
+              if (!loggedIn) {
+                send('status', 'Inloggen mislukt — probeer het opnieuw met andere gegevens')
+              } else {
+                send('status', 'Succesvol ingelogd!')
+                await page.goto(source.url!, { waitUntil: 'networkidle2', timeout: 30000 })
+              }
             }
           }
 
@@ -166,7 +177,7 @@ export async function POST(req: NextRequest) {
           const rawContent = articles
             .map(a => `[${a.title}]\nURL: ${a.url}\n\n${a.content}`)
             .join('\n\n---\n\n')
-            .slice(0, 500000)
+            .slice(0, 2000000)
 
           await prisma.aISource.update({
             where: { id: source.id },
@@ -237,11 +248,56 @@ export async function POST(req: NextRequest) {
             },
           })
 
-          send('status', `Voltooid! ${articles.length} artikelen verwerkt, ${finalSummary.length} tekens kennis opgeslagen.`)
+          // Step 9: Auto-chunk for semantic search
+          send('status', 'Chunks aanmaken voor slim zoeken...')
+          await prisma.sourceChunk.deleteMany({ where: { sourceId: source.id } })
+          const searchChunks = splitIntoSmartChunks(rawContent, 5000)
+          await prisma.sourceChunk.createMany({
+            data: searchChunks.map((c, i) => ({
+              sourceId: source.id,
+              chunkIndex: i,
+              content: c.content,
+              heading: c.heading || null,
+            }))
+          })
+          send('status', `${searchChunks.length} chunks aangemaakt`)
+
+          // Step 10: Generate embeddings if OpenAI key available
+          if (process.env.OPENAI_API_KEY) {
+            send('status', 'Embeddings genereren voor semantic search...')
+            const chunkRows = await prisma.sourceChunk.findMany({
+              where: { sourceId: source.id },
+              select: { id: true, content: true, heading: true },
+              orderBy: { chunkIndex: 'asc' },
+            })
+            let embedded = 0
+            for (let i = 0; i < chunkRows.length; i += 50) {
+              const batch = chunkRows.slice(i, i + 50)
+              const texts = batch.map(c => c.heading ? `${c.heading}\n\n${c.content}` : c.content)
+              try {
+                const embeddings = await generateEmbeddingsBatch(texts)
+                for (let j = 0; j < batch.length; j++) {
+                  await storeChunkEmbedding(batch[j].id, embeddings[j])
+                }
+                embedded += batch.length
+              } catch (embErr: any) {
+                if (embErr.message?.includes('429')) {
+                  await new Promise(r => setTimeout(r, 30000))
+                  i -= 50 // retry
+                  continue
+                }
+                console.error('Embedding fout:', embErr.message)
+              }
+            }
+            send('status', `${embedded} embeddings gegenereerd`)
+          }
+
+          send('status', `Voltooid! ${articles.length} artikelen verwerkt, ${searchChunks.length} chunks met embeddings.`)
           send('result', JSON.stringify({
             articlesProcessed: articles.length,
             totalChars: rawContent.length,
             summaryLength: finalSummary.length,
+            chunksCreated: searchChunks.length,
             preview: finalSummary.slice(0, 300),
           }))
           send('done', '')
@@ -265,6 +321,118 @@ export async function POST(req: NextRequest) {
       Connection: 'keep-alive',
     },
   })
+}
+
+/**
+ * InView (Wolters Kluwer) PingFederate SSO login flow
+ * 1. Navigate to homepage to accept cookies
+ * 2. Go to SSO login URL with redirect
+ * 3. Fill username → click button → fill password → submit
+ */
+async function attemptInViewLogin(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  page: any,
+  sourceUrl: string,
+  creds: { email?: string; password?: string },
+  send: (event: string, data: string) => void
+): Promise<boolean> {
+  try {
+    // Step 1: Accept cookies on InView homepage
+    send('status', 'InView: cookies accepteren...')
+    await page.goto('https://www.inview.nl/', { waitUntil: 'networkidle2', timeout: 30000 })
+    await new Promise(r => setTimeout(r, 2000))
+
+    // Find and click cookie acceptance button
+    const cookieBtn = await page.$('button')
+    if (cookieBtn) {
+      const buttons = await page.$$('button')
+      for (const btn of buttons) {
+        const text = await btn.evaluate((el: HTMLElement) => el.textContent?.toLowerCase() || '')
+        if (text.includes('accepteer') || text.includes('accept all') || text.includes('alle cookies')) {
+          await btn.click()
+          await new Promise(r => setTimeout(r, 2000))
+          break
+        }
+      }
+    }
+
+    // Step 2: Navigate to SSO login URL
+    send('status', 'InView: naar login pagina...')
+    const ssoUrl = `https://www.inview.nl/.sso/login?redirect_uri=${encodeURIComponent(sourceUrl)}`
+    await page.goto(ssoUrl, { waitUntil: 'networkidle2', timeout: 30000 })
+    await new Promise(r => setTimeout(r, 3000))
+
+    // Step 3: Fill username (PingFederate uses pf.username)
+    send('status', 'InView: gebruikersnaam invoeren...')
+    let usernameField = await page.$('input[name="pf.username"]')
+    if (!usernameField) {
+      usernameField = await page.$('input[type="email"], input[name="username"], input[name="email"]')
+    }
+    if (!usernameField) {
+      send('status', 'InView: geen gebruikersnaam veld gevonden')
+      return false
+    }
+    await usernameField.click({ clickCount: 3 })
+    await usernameField.type(creds.email!, { delay: 30 })
+
+    // Step 4: Click first "Inloggen" button (type="button", reveals password)
+    const step1Btn = await page.$('button.wk-login-submit[type="button"]')
+    if (step1Btn) {
+      await step1Btn.click()
+    } else {
+      // Fallback: find any submit-like button
+      const submitBtn = await page.$('button[type="submit"], button[type="button"]')
+      if (submitBtn) await submitBtn.click()
+    }
+    await new Promise(r => setTimeout(r, 4000)) // Wait for password field to render
+
+    // Step 5: Fill password (PingFederate uses pf.pass)
+    send('status', 'InView: wachtwoord invoeren...')
+    let passwordField = await page.$('input[name="pf.pass"]')
+    if (!passwordField) {
+      passwordField = await page.$('input[type="password"]')
+    }
+    if (!passwordField) {
+      send('status', 'InView: geen wachtwoord veld gevonden')
+      return false
+    }
+    await passwordField.click({ clickCount: 3 })
+    await passwordField.type(creds.password!, { delay: 30 })
+
+    // Step 6: Click submit button (type="submit")
+    send('status', 'InView: inloggen...')
+    const submitBtn = await page.$('button.wk-login-submit[type="submit"]')
+    if (submitBtn) {
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+        submitBtn.click(),
+      ])
+    } else {
+      const fallbackBtn = await page.$('button[type="submit"]')
+      if (fallbackBtn) {
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+          fallbackBtn.click(),
+        ])
+      }
+    }
+    await new Promise(r => setTimeout(r, 3000))
+
+    // Step 7: Verify login
+    const currentUrl = page.url()
+    const success = currentUrl.includes('inview.nl') && !currentUrl.includes('login') && !currentUrl.includes('inloggen')
+
+    if (success) {
+      send('status', 'InView: ingelogd! Navigeren naar bron...')
+      await page.goto(sourceUrl, { waitUntil: 'networkidle2', timeout: 30000 })
+      await new Promise(r => setTimeout(r, 2000))
+    }
+
+    return success
+  } catch (error) {
+    console.error('InView login failed:', error)
+    return false
+  }
 }
 
 /**
@@ -455,6 +623,37 @@ async function extractPageContent(
 
     return { title, content }
   })
+}
+
+function splitIntoSmartChunks(
+  text: string,
+  targetSize: number
+): Array<{ content: string; heading: string | null }> {
+  const chunks: Array<{ content: string; heading: string | null }> = []
+  const lines = text.split('\n')
+  let currentChunk = ''
+  let currentHeading: string | null = null
+  const headingPattern = /^(#{1,4}\s|Artikel\s+\d|Art\.\s*\d|Afdeling\s+\d|Titel\s+\d|Boek\s+\d|Hoofdstuk\s+\d|\d+\.\d+[\s.]|[A-Z][A-Z\s]{5,}$|\[.{5,}\]$|AR-\d{4}-\d+|ECLI:)/
+
+  for (const line of lines) {
+    const isHeading = headingPattern.test(line.trim())
+    if (isHeading && currentChunk.length > targetSize * 0.3) {
+      if (currentChunk.trim()) chunks.push({ content: currentChunk.trim(), heading: currentHeading })
+      currentChunk = line + '\n'
+      currentHeading = line.trim().slice(0, 200)
+      continue
+    }
+    currentChunk += line + '\n'
+    if (currentChunk.length >= targetSize) {
+      const lp = currentChunk.lastIndexOf('\n\n', targetSize)
+      const ls = currentChunk.lastIndexOf('. ', targetSize)
+      const sp = lp > targetSize * 0.5 ? lp : ls > targetSize * 0.5 ? ls + 2 : targetSize
+      chunks.push({ content: currentChunk.slice(0, sp).trim(), heading: currentHeading })
+      currentChunk = currentChunk.slice(sp).trim() + '\n'
+    }
+  }
+  if (currentChunk.trim()) chunks.push({ content: currentChunk.trim(), heading: currentHeading })
+  return chunks
 }
 
 function splitText(text: string, maxSize: number): string[] {

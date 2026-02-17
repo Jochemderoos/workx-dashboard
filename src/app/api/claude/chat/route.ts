@@ -426,7 +426,7 @@ export async function POST(req: NextRequest) {
         select: { id: true, name: true, category: true, summary: true },
       })
       const isPrimary = (name: string) =>
-        /tekst\s*[&en]+\s*commentaar|thematica|themata/i.test(name)
+        /tekst\s*[&en]+\s*commentaar|thematica|themata|vaan|ar.updates/i.test(name)
       const primarySources = activeSources.filter(s => isPrimary(s.name))
       const otherSources = activeSources.filter(s => !isPrimary(s.name))
 
