@@ -416,9 +416,11 @@ export default function ClaudeChat({
     }
   }
 
-  // Event delegation for code block copy buttons (rendered via dangerouslySetInnerHTML)
+  // Event delegation for code block copy buttons and details toggle (rendered via dangerouslySetInnerHTML)
   const handleMessagesClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement
+
+    // Code copy buttons
     const copyBtn = target.closest('.code-copy-btn') as HTMLElement | null
     if (copyBtn) {
       e.preventDefault()
@@ -429,6 +431,17 @@ export default function ClaudeChat({
         copyBtn.textContent = 'Gekopieerd!'
         copyBtn.style.color = 'rgba(249,255,133,0.8)'
         setTimeout(() => { copyBtn.textContent = original; copyBtn.style.color = '' }, 2000)
+      }
+      return
+    }
+
+    // Explicit details/summary toggle (fallback for native behavior)
+    const summary = target.closest('summary') as HTMLElement | null
+    if (summary) {
+      const details = summary.parentElement as HTMLDetailsElement | null
+      if (details && details.tagName === 'DETAILS') {
+        e.preventDefault()
+        details.open = !details.open
       }
     }
   }, [])
