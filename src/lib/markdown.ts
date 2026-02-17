@@ -39,7 +39,7 @@ export function renderMarkdown(markdown: string): string {
       } else {
         const escaped = escapeHtml(codeLines.join('\n'))
         result.push(
-          `<pre class="code-block"><code${codeBlockLang ? ` class="language-${codeBlockLang}"` : ''}>${escaped}</code></pre>`
+          `<div style="position:relative"><button class="code-copy-btn" style="position:absolute;top:6px;right:6px;padding:2px 8px;font-size:11px;border-radius:4px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.1);cursor:pointer;z-index:1">Kopieer</button><pre class="code-block"><code${codeBlockLang ? ` class="language-${codeBlockLang}"` : ''}>${escaped}</code></pre></div>`
         )
         inCodeBlock = false
         codeBlockLang = ''

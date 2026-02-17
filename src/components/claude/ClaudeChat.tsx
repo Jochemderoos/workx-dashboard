@@ -416,6 +416,23 @@ export default function ClaudeChat({
     }
   }
 
+  // Event delegation for code block copy buttons (rendered via dangerouslySetInnerHTML)
+  const handleMessagesClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const copyBtn = target.closest('.code-copy-btn') as HTMLElement | null
+    if (copyBtn) {
+      e.preventDefault()
+      const codeBlock = copyBtn.parentElement?.querySelector('code')
+      if (codeBlock) {
+        navigator.clipboard.writeText(codeBlock.textContent || '')
+        const original = copyBtn.textContent
+        copyBtn.textContent = 'Gekopieerd!'
+        copyBtn.style.color = 'rgba(249,255,133,0.8)'
+        setTimeout(() => { copyBtn.textContent = original; copyBtn.style.color = '' }, 2000)
+      }
+    }
+  }, [])
+
   const copyToClipboard = async (content: string, id: string) => {
     try {
       await navigator.clipboard.writeText(content)
@@ -751,7 +768,7 @@ export default function ClaudeChat({
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" onClick={handleMessagesClick}>
         {/* Empty state */}
         {messages.length === 0 && !isLoading && (
           <div className="flex items-center justify-center h-full">
