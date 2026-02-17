@@ -454,11 +454,11 @@ export async function POST(req: NextRequest) {
 
     // Fetch knowledge sources using chunk-based retrieval for primary sources
     let sourcesContext = ''
-    const usedSourceNames: Array<{ name: string; category: string }> = []
+    const usedSourceNames: Array<{ name: string; category: string; url?: string }> = []
     try {
       const activeSources = await prisma.aISource.findMany({
         where: { isActive: true, isProcessed: true },
-        select: { id: true, name: true, category: true, summary: true },
+        select: { id: true, name: true, category: true, summary: true, url: true },
       })
       const isPrimary = (name: string) =>
         /tekst\s*[&en]+\s*commentaar|thematica|themata|vaan|ar.updates|arbeidsrecht|inview|\brar\b/i.test(name)
@@ -506,7 +506,7 @@ export async function POST(req: NextRequest) {
                 const headingLabel = chunk.heading ? ` [${chunk.heading}]` : ''
                 sourcesContext += `\n\n[Passage ${chunk.chunkIndex + 1}${headingLabel}]\n${chunk.content}`
               }
-              usedSourceNames.push({ name: source.name, category: source.category })
+              usedSourceNames.push({ name: source.name, category: source.category, url: source.url || undefined })
             }
           }
         }
@@ -516,7 +516,7 @@ export async function POST(req: NextRequest) {
           for (const source of primarySources) {
             if (source.summary) {
               sourcesContext += `\n\n--- ${source.name} [PRIMAIRE BRON — samenvatting] (${source.category}) ---\n${source.summary.slice(0, 50000)}`
-              usedSourceNames.push({ name: source.name, category: source.category })
+              usedSourceNames.push({ name: source.name, category: source.category, url: source.url || undefined })
             }
           }
         }
@@ -530,7 +530,7 @@ export async function POST(req: NextRequest) {
           if (len + trimmed.length > 300000) break
           len += trimmed.length
           sourcesContext += `\n\n--- ${source.name} [Aanvullende bron] (${source.category}) ---\n${trimmed}`
-          usedSourceNames.push({ name: source.name, category: source.category })
+          usedSourceNames.push({ name: source.name, category: source.category, url: source.url || undefined })
         }
       }
     } catch (err) {
