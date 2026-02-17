@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
 import { anonymizeText } from '@/lib/anonymize'
+import { generateEmbedding, searchSimilarChunks } from '@/lib/embeddings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -440,12 +441,13 @@ export async function POST(req: NextRequest) {
           where: { sourceId: { in: primarySourceIds } },
         })
 
-        if (chunkCount > 0 && searchTerms.length > 0) {
-          // Retrieve relevant chunks using keyword matching
+        if (chunkCount > 0 && (searchTerms.length > 0 || process.env.OPENAI_API_KEY)) {
+          // Retrieve relevant chunks using hybrid search (semantic + keyword)
           const relevantChunks = await retrieveRelevantChunks(
             primarySourceIds,
             searchTerms,
-            35 // max chunks to include (~175K chars)
+            35, // max chunks to include (~175K chars)
+            messageForClaude // for semantic embedding
           )
 
           if (relevantChunks.length > 0) {
@@ -1134,51 +1136,124 @@ function extractSearchTerms(message: string): string[] {
 }
 
 /**
- * Retrieve the most relevant chunks from the database based on search terms.
- * Uses PostgreSQL case-insensitive search to find matching chunks,
- * then scores them by how many terms they match.
+ * Retrieve the most relevant chunks using HYBRID search:
+ * 1. Semantic search via embeddings (pgvector cosine similarity)
+ * 2. Keyword search via PostgreSQL text matching
+ * Results are combined using Reciprocal Rank Fusion (RRF) for best results.
  */
 async function retrieveRelevantChunks(
   sourceIds: string[],
   searchTerms: string[],
-  maxChunks: number
+  maxChunks: number,
+  userMessage?: string
 ): Promise<Array<{ sourceId: string; chunkIndex: number; content: string; heading: string | null; score: number }>> {
-  if (searchTerms.length === 0 || sourceIds.length === 0) return []
+  if (sourceIds.length === 0) return []
 
-  // Build OR conditions for each search term
-  const orConditions = searchTerms.slice(0, 20).map(term => ({
-    content: { contains: term, mode: 'insensitive' as const },
-  }))
-
-  // Fetch chunks that match any search term
-  const matchingChunks = await prisma.sourceChunk.findMany({
-    where: {
-      sourceId: { in: sourceIds },
-      OR: orConditions,
-    },
-    select: {
-      id: true,
-      sourceId: true,
-      chunkIndex: true,
-      content: true,
-      heading: true,
-    },
-  })
-
-  // Score each chunk by number of matching terms (more matches = higher score)
-  const scoredChunks = matchingChunks.map(chunk => {
-    const contentLower = chunk.content.toLowerCase()
-    let score = 0
-    for (const term of searchTerms) {
-      if (contentLower.includes(term.toLowerCase())) {
-        // Longer terms get more weight (article numbers, legal phrases)
-        score += term.length >= 6 ? 3 : term.includes(':') ? 4 : 1
+  // Run semantic search and keyword search in parallel
+  const [semanticResults, keywordResults] = await Promise.all([
+    // 1. SEMANTIC SEARCH — meaning-based via embeddings
+    (async () => {
+      if (!userMessage || !process.env.OPENAI_API_KEY) return []
+      try {
+        const queryEmbedding = await generateEmbedding(userMessage)
+        return await searchSimilarChunks(queryEmbedding, sourceIds, maxChunks * 2)
+      } catch (err) {
+        console.error('Semantic search fout:', err)
+        return []
       }
-    }
-    return { ...chunk, score }
-  })
+    })(),
 
-  // Sort by score (highest first) and take top N
-  scoredChunks.sort((a, b) => b.score - a.score)
-  return scoredChunks.slice(0, maxChunks)
+    // 2. KEYWORD SEARCH — exact term matching (existing approach)
+    (async () => {
+      if (searchTerms.length === 0) return []
+
+      const orConditions = searchTerms.slice(0, 20).map(term => ({
+        content: { contains: term, mode: 'insensitive' as const },
+      }))
+
+      const matchingChunks = await prisma.sourceChunk.findMany({
+        where: {
+          sourceId: { in: sourceIds },
+          OR: orConditions,
+        },
+        select: {
+          id: true,
+          sourceId: true,
+          chunkIndex: true,
+          content: true,
+          heading: true,
+        },
+      })
+
+      // Score by matching terms
+      return matchingChunks.map(chunk => {
+        const contentLower = chunk.content.toLowerCase()
+        let score = 0
+        for (const term of searchTerms) {
+          if (contentLower.includes(term.toLowerCase())) {
+            score += term.length >= 6 ? 3 : term.includes(':') ? 4 : 1
+          }
+        }
+        return { ...chunk, score }
+      }).sort((a, b) => b.score - a.score)
+    })(),
+  ])
+
+  // If we have both semantic and keyword results, combine with Reciprocal Rank Fusion
+  if (semanticResults.length > 0 && keywordResults.length > 0) {
+    const K = 60 // RRF constant
+    const rrfScores = new Map<string, {
+      sourceId: string; chunkIndex: number; content: string; heading: string | null; score: number
+    }>()
+
+    // Add semantic results with RRF scores (weighted 0.6 — semantic is primary)
+    semanticResults.forEach((result, rank) => {
+      const key = `${result.sourceId}-${result.chunkIndex}`
+      const rrfScore = 0.6 / (K + rank + 1)
+      rrfScores.set(key, {
+        sourceId: result.sourceId,
+        chunkIndex: result.chunkIndex,
+        content: result.content,
+        heading: result.heading,
+        score: rrfScore,
+      })
+    })
+
+    // Add keyword results with RRF scores (weighted 0.4 — keyword is secondary)
+    keywordResults.forEach((result, rank) => {
+      const key = `${result.sourceId}-${result.chunkIndex}`
+      const rrfScore = 0.4 / (K + rank + 1)
+      const existing = rrfScores.get(key)
+      if (existing) {
+        existing.score += rrfScore // Chunk found by both methods gets higher score
+      } else {
+        rrfScores.set(key, {
+          sourceId: result.sourceId,
+          chunkIndex: result.chunkIndex,
+          content: result.content,
+          heading: result.heading,
+          score: rrfScore,
+        })
+      }
+    })
+
+    // Sort by combined RRF score and return top N
+    const combined = Array.from(rrfScores.values())
+    combined.sort((a, b) => b.score - a.score)
+    return combined.slice(0, maxChunks)
+  }
+
+  // Fallback: if only semantic results
+  if (semanticResults.length > 0) {
+    return semanticResults.slice(0, maxChunks).map(r => ({
+      sourceId: r.sourceId,
+      chunkIndex: r.chunkIndex,
+      content: r.content,
+      heading: r.heading,
+      score: r.similarity,
+    }))
+  }
+
+  // Fallback: if only keyword results (no embeddings available)
+  return keywordResults.slice(0, maxChunks)
 }

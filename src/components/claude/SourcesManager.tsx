@@ -103,6 +103,8 @@ export default function SourcesManager() {
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [processingStatus, setProcessingStatus] = useState<string | null>(null)
+  const [embeddingStats, setEmbeddingStats] = useState<Record<string, { totalChunks: number; withEmbedding: number; percentage: number }>>({})
+  const [embeddingId, setEmbeddingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { confirm, ConfirmDialogComponent } = useConfirm()
 
@@ -121,7 +123,44 @@ export default function SourcesManager() {
 
   useEffect(() => {
     fetchSources()
+    fetchEmbeddingStats()
   }, [])
+
+  const fetchEmbeddingStats = async () => {
+    try {
+      const res = await fetch('/api/claude/sources/embed')
+      if (res.ok) {
+        const data = await res.json()
+        const statsMap: Record<string, { totalChunks: number; withEmbedding: number; percentage: number }> = {}
+        for (const s of data.sources) {
+          statsMap[s.id] = { totalChunks: s.totalChunks, withEmbedding: s.withEmbedding, percentage: s.percentage }
+        }
+        setEmbeddingStats(statsMap)
+      }
+    } catch { /* ignore */ }
+  }
+
+  const generateEmbeddings = async (sourceId: string) => {
+    setEmbeddingId(sourceId)
+    try {
+      const res = await fetch('/api/claude/sources/embed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceId }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`${data.processed} embeddings gegenereerd`)
+        fetchEmbeddingStats()
+      } else {
+        toast.error(data.error || 'Fout bij genereren embeddings')
+      }
+    } catch {
+      toast.error('Fout bij genereren embeddings')
+    } finally {
+      setEmbeddingId(null)
+    }
+  }
 
   const fetchSources = async () => {
     try {
@@ -823,6 +862,22 @@ export default function SourcesManager() {
                           Verwerkt
                         </div>
                       )}
+                      {embeddingStats[source.id] && embeddingStats[source.id].totalChunks > 0 && (
+                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium shrink-0 ${
+                          embeddingStats[source.id].percentage === 100
+                            ? 'bg-purple-500/10 text-purple-400'
+                            : embeddingStats[source.id].percentage > 0
+                              ? 'bg-yellow-500/10 text-yellow-400'
+                              : 'bg-white/5 text-white/30'
+                        }`}>
+                          <Icons.search size={9} />
+                          {embeddingStats[source.id].percentage === 100
+                            ? 'Semantic'
+                            : embeddingStats[source.id].percentage > 0
+                              ? `Semantic ${embeddingStats[source.id].percentage}%`
+                              : 'Geen embeddings'}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-white/30">
                       {source.description && <span className="truncate max-w-[200px]">{source.description}</span>}
@@ -903,6 +958,21 @@ export default function SourcesManager() {
                       >
                         <Icons.refresh size={12} />
                         <span>Herverwerk</span>
+                      </button>
+                    )}
+                    {embeddingStats[source.id] && embeddingStats[source.id].percentage < 100 && embeddingStats[source.id].totalChunks > 0 && (
+                      <button
+                        onClick={() => generateEmbeddings(source.id)}
+                        disabled={embeddingId === source.id}
+                        className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] text-white/30 hover:text-purple-400 hover:bg-purple-400/10 transition-colors disabled:opacity-50"
+                        title="Semantic search embeddings genereren"
+                      >
+                        {embeddingId === source.id ? (
+                          <div className="w-3 h-3 rounded-full border-2 border-purple-400/30 border-t-purple-400 animate-spin" />
+                        ) : (
+                          <Icons.search size={12} />
+                        )}
+                        <span>Embed</span>
                       </button>
                     )}
                     <button

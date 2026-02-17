@@ -1361,6 +1361,7 @@ model SourceChunk {
   chunkIndex  Int      // Volgorde binnen de bron
   content     String   @db.Text // ~5000 chars per chunk
   heading     String?  // Gedetecteerde sectie-/kopnaam
+  embedding   Unsupported("vector(1536)")? // OpenAI text-embedding-3-small
   createdAt   DateTime @default(now())
 
   @@index([sourceId])
