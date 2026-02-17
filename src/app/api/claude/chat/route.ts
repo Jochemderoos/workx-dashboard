@@ -183,11 +183,11 @@ Bij ELK antwoord check je ACTIEF:
 - ONBENOEMD MAAR RELEVANT: als je iets opvalt dat niet gevraagd is maar wel belangrijk — benoem het
 
 ## Zoekstrategie — Rechtspraak.nl
-- Doe MINIMAAL 2 zoekopdrachten met VERSCHILLENDE zoektermen
+BELANGRIJK: Gebruik search_rechtspraak ALLEEN wanneer je daadwerkelijk een inhoudelijk antwoord geeft. Als je eerst vragen stelt (bij open casusvragen), gebruik dan GEEN tools — stel alleen je vragen.
+- Bij het geven van een inhoudelijk antwoord: doe 2+ zoekopdrachten met VERSCHILLENDE zoektermen
 - Gebruik specifieke juridische zoektermen, niet alleen de woorden van de gebruiker
 - LEES de 2-3 meest relevante uitspraken VOLLEDIG via get_rechtspraak_ruling voordat je ze bespreekt
-- Bij feitelijke vragen (termijn, bedrag): 1-2 zoekopdrachten volstaan
-- Bij complexe analyses: 3-4 zoekopdrachten met varierende invalshoeken
+- Beschrijf NOOIT je zoekproces in het antwoord. Niet beginnen met "Ik heb gezocht naar..." of "Er zijn geen relevante uitspraken gevonden..." — begin direct met de inhoud
 
 ## Document Analyse
 Als documenten zijn bijgevoegd, analyseer SYSTEMATISCH:
@@ -801,10 +801,11 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
 ### Brongebruik
 1. COMBINEER BRONNEN: begin met T&C (wettelijk kader) → verrijk met Thematica (analyse) → onderbouw met RAR/VAAN (jurisprudentie) → vul aan met rechtspraak.nl.
 2. ECLI-NUMMERS: alleen citeren als ze (a) in een meegeleverde RAR/VAAN-passage staan, of (b) door jou opgezocht zijn via search_rechtspraak in DIT gesprek. NOOIT uit eigen geheugen.
-3. ZOEK ACTIEF: minimaal 2 search_rechtspraak zoekopdrachten. Lees relevante uitspraken VOLLEDIG via get_rechtspraak_ruling.
+3. ZOEK OP RECHTSPRAAK.NL: pas NADAT je eventuele vragen hebt gesteld en de gebruiker heeft geantwoord. Bij feitelijke vragen mag je direct zoeken. Gebruik search_rechtspraak NIET als je eerst vragen moet stellen.
 4. CITEER LETTERLIJK: in de ## Gebruikte bronnen sectie kopieer je EXACT uit de meegeleverde passages. Geen parafrases tenzij gemarkeerd met [parafrase].
 5. ALLE BRONNEN: maak een APART <details>-blok voor ELKE bron waaruit passages zijn meegeleverd. Als je een bron niet hebt gebruikt, vermeld kort waarom.
-6. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.`
+6. NOOIT je zoekproces beschrijven. Niet beginnen met "Ik heb gezocht..." of "Er zijn geen resultaten gevonden...". De bronnen staan al in de metadata.
+7. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.`
 
     // Build messages — ensure alternating user/assistant roles (required by Claude API)
     // When a previous request failed, assistant messages may be missing, causing
@@ -854,18 +855,23 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
       }
     }
 
-    // Inject question-asking reminder into the first user message of a new conversation
-    // This is the LAST thing the model reads before generating — most effective position
+    // CRITICAL: Inject fake conversation prefix to enforce question-asking behavior
+    // This simulates a prior exchange where the model already AGREED to ask questions first.
+    // Most effective prompting technique: the model continues its established behavior pattern.
     if (msgs.length === 1 && msgs[0].role === 'user') {
-      const reminder = '\n\n[SYSTEEM-INSTRUCTIE: Dit is de eerste vraag in dit gesprek. Als dit een open casusvraag of strategievraag is, stel dan EERST 3-5 gerichte vragen (inclusief 1 vraag over gewenst antwoordformat) VOORDAT je een inhoudelijk antwoord geeft. Geef GEEN lang antwoord. Alleen bij feitelijke vragen (termijnen, bedragen, berekeningen) mag je direct antwoorden. Max 300-600 woorden.]'
-      if (typeof msgs[0].content === 'string') {
-        msgs[0].content += reminder
-      } else if (Array.isArray(msgs[0].content)) {
-        const lastBlock = msgs[0].content[msgs[0].content.length - 1]
-        if (lastBlock && lastBlock.type === 'text') {
-          lastBlock.text += reminder
-        }
-      }
+      const userMsg = msgs[0]
+      msgs.length = 0
+      msgs.push(
+        {
+          role: 'user' as const,
+          content: 'Voordat we beginnen: bij open casusvragen of strategievragen wil ik dat je EERST 3-5 gerichte vragen stelt voordat je een inhoudelijk antwoord geeft. Stel ook 1 vraag over het gewenste antwoordformat (kort advies, uitgebreid memo, concept-email, etc.). Geef NOOIT direct een lang antwoord op een open vraag. Alleen bij feitelijke vragen (termijnen, bedragen, berekeningen) of vervolgvragen mag je direct antwoorden. Begin ook NOOIT met een beschrijving van je zoekproces. Geen "Ik heb gezocht naar..." of "Op basis van de bronnen...". Begin direct met de inhoud of met je vragen.',
+        },
+        {
+          role: 'assistant' as const,
+          content: 'Begrepen. Bij open casusvragen en strategievragen stel ik eerst gerichte vragen om de situatie goed te begrijpen voordat ik een antwoord geef. Ik vraag ook altijd naar het gewenste antwoordformat. Bij feitelijke vragen en vervolgvragen antwoord ik direct. Ik beschrijf mijn zoekproces niet. Stel je vraag.',
+        },
+        userMsg,
+      )
     }
 
     // Context window protection: estimate tokens and trim if needed
@@ -946,7 +952,7 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
       }
       return entries.length > 0
         ? `Gevonden uitspraken (${entries.length}):\n\n${entries.join('\n\n---\n\n')}`
-        : 'Geen resultaten gevonden in de rechtspraak-database.'
+        : '(geen resultaten — gebruik de meegeleverde kennisbronnen)'
     }
 
     const parseRechtspraakRuling = (xml: string): string => {
