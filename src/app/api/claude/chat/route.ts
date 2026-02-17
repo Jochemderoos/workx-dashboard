@@ -898,7 +898,7 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
     // Rechtspraak tools always available — direct API access to Dutch case law
     tools.push({
       name: 'search_rechtspraak',
-      description: 'Doorzoekt de officiele Nederlandse rechtspraak-database (rechtspraak.nl). Retourneert ECLI-nummers, samenvattingen en metadata. Doe ALTIJD meerdere zoekopdrachten met VERSCHILLENDE zoektermen. Effectieve zoekstrategieen: (1) specifiek wetsartikel: "art 7:669 lid 3 sub g BW", (2) juridisch concept: "ontslag staande voet dringende reden", (3) procesrechtelijk: "ontbinding arbeidsovereenkomst billijke vergoeding". Alleen ECLI-nummers noemen die je via deze tool hebt opgezocht in DIT gesprek of die in de meegeleverde RAR/VAAN-passages staan.',
+      description: 'BELANGRIJK: Gebruik deze tool NIET als dit het eerste bericht in het gesprek is en het een open casusvraag of strategievraag betreft. Stel dan EERST vragen aan de gebruiker. Gebruik deze tool pas nadat de gebruiker je vragen heeft beantwoord, of bij feitelijke vragen (termijnen, bedragen). --- Doorzoekt de officiele Nederlandse rechtspraak-database (rechtspraak.nl). Retourneert ECLI-nummers, samenvattingen en metadata. Doe meerdere zoekopdrachten met VERSCHILLENDE zoektermen. Beschrijf NOOIT je zoekproces in het antwoord.',
       input_schema: {
         type: 'object',
         properties: {
@@ -975,12 +975,6 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
           // Model selection: default Sonnet, optionally Opus for deep analysis
           const modelId = requestedModel === 'opus' ? 'claude-opus-4-6' : 'claude-sonnet-4-5-20250929'
           const isOpus = modelId.includes('opus')
-          // On the first message of a new conversation, do NOT provide tools.
-          // This forces the model to ask questions instead of immediately searching.
-          // Tools become available on follow-up messages (after user answers questions).
-          const isFirstMessage = history.length <= 1
-          const useTools = !isFirstMessage && tools.length > 0
-
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const streamParams: any = {
             model: modelId,
@@ -991,7 +985,7 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
               type: 'enabled',
               budget_tokens: isOpus ? 32000 : 16000,
             },
-            ...(useTools ? { tools } : {}),
+            ...(tools.length > 0 ? { tools } : {}),
           }
 
           const anthropicStream = client.messages.stream(streamParams)
