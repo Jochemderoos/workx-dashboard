@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast'
 import dynamic from 'next/dynamic'
 const ConsoleEasterEgg = dynamic(() => import('@/components/ui/ConsoleEasterEgg'), { ssr: false })
 const PWARegister = dynamic(() => import('@/components/PWARegister'), { ssr: false })
+const StaleVersionGuard = dynamic(() => import('@/components/StaleVersionGuard'), { ssr: false })
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-workx-dark text-white antialiased`}>
         <Providers>
           <PWARegister />
+          <StaleVersionGuard />
           <ConsoleEasterEgg />
           {children}
           <Toaster

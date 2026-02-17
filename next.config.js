@@ -20,9 +20,14 @@ const nextConfig = {
       },
     ],
   },
+  // Expose build ID to client for stale-version detection
+  generateBuildId: async () => {
+    return Date.now().toString()
+  },
   async headers() {
     return [
       {
+        // Security headers for all routes
         source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -42,6 +47,13 @@ const nextConfig = {
               "base-uri 'self'",
             ].join('; '),
           },
+        ],
+      },
+      {
+        // Dashboard pages: no-cache ensures browser revalidates with server after deploy
+        source: '/dashboard/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
         ],
       },
     ]
