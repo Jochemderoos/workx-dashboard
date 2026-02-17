@@ -378,7 +378,7 @@ export default function ClaudeChat({
             table { border-collapse: collapse; width: 100%; margin: 8pt 0; font-size: 10pt; }
             td, th { border: 1pt solid #bbb; padding: 4pt 8pt; text-align: left; }
             th { background-color: #f0f4f8; font-weight: bold; color: #1a3a5c; }
-            blockquote { margin: 8pt 0 8pt 16pt; padding: 6pt 12pt; border-left: 3pt solid #1a3a5c; background-color: #f8f9fb; font-style: italic; color: #444; }
+            blockquote { margin: 10pt 0 10pt 0; padding: 10pt 16pt; border: 1pt solid #d0d5dd; border-left: 3pt solid #1a3a5c; background-color: #f8f9fb; font-style: normal; color: #333; }
             code { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; background-color: #f4f4f4; padding: 1pt 3pt; }
             .header { margin-bottom: 16pt; padding-bottom: 8pt; border-bottom: 2pt solid #1a3a5c; }
             .header-title { font-size: 9pt; color: #1a3a5c; font-weight: bold; letter-spacing: 0.5pt; text-transform: uppercase; margin: 0; }
@@ -868,7 +868,7 @@ export default function ClaudeChat({
               {msg.role === 'assistant' && (
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-transparent flex items-center justify-center mt-0.5 border border-workx-lime/10">
-                    <Icons.sparkles size={13} className="text-workx-lime" />
+                    <span className="text-[11px] font-bold text-workx-lime">W</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     {/* Saved thinking content (collapsible, persists after streaming) */}
@@ -897,7 +897,7 @@ export default function ClaudeChat({
                         </div>
                       </div>
                     )}
-                    <div className="assistant-bubble rounded-2xl rounded-tl-md px-5 py-4">
+                    <div className={`assistant-bubble rounded-2xl rounded-tl-md px-5 py-4 ${isStreaming ? 'assistant-bubble-streaming' : ''}`}>
                       {isStreaming ? (
                         // Streaming: throttled markdown rendering (80ms interval)
                         <div
@@ -947,7 +947,6 @@ export default function ClaudeChat({
                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white/50 hover:text-workx-lime hover:border-workx-lime/30 transition-all"
                               title={citation.url}
                             >
-                              <Icons.globe size={10} />
                               <span className="truncate max-w-[200px]">{citation.title || (() => { try { return new URL(citation.url).hostname } catch { return citation.url } })()}</span>
                             </a>
                           ))}
@@ -991,7 +990,6 @@ export default function ClaudeChat({
                               key={idx}
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[10px] text-white/35"
                             >
-                              <Icons.database size={8} />
                               {source.name}
                               <span className="text-white/15">({source.category})</span>
                             </span>
@@ -1011,40 +1009,19 @@ export default function ClaudeChat({
                               : 'bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08] border border-white/[0.06]'
                           }`}
                         >
-                          {copiedId === msg.id ? (
-                            <><Icons.check size={12} /> Gekopieerd</>
-                          ) : (
-                            <><Icons.copy size={12} /> Kopieer</>
-                          )}
+                          {copiedId === msg.id ? 'Gekopieerd' : 'Kopieer'}
                         </button>
                         <button
                           onClick={() => exportToDocument(msg.content, 'docx')}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08] border border-white/[0.06] transition-all"
                         >
-                          <Icons.download size={12} /> Word
+                          Word
                         </button>
                         <button
                           onClick={() => exportToDocument(msg.content, 'pdf')}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08] border border-white/[0.06] transition-all"
                         >
-                          <Icons.download size={12} /> PDF
-                        </button>
-                        <div className="w-px h-4 bg-white/[0.06] mx-1" />
-                        <button
-                          onClick={() => toggleFavorite(msg.id)}
-                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${
-                            favoritedIds.has(msg.id) ? 'text-yellow-400 bg-yellow-500/10' : 'text-white/30 hover:text-yellow-400 hover:bg-white/[0.04]'
-                          }`}
-                        >
-                          <Icons.star size={12} />
-                        </button>
-                        <button
-                          onClick={() => setAnnotatingId(annotatingId === msg.id ? null : msg.id)}
-                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] transition-all ${
-                            annotatingId === msg.id ? 'text-blue-400 bg-blue-500/10' : 'text-white/30 hover:text-blue-400 hover:bg-white/[0.04]'
-                          }`}
-                        >
-                          <Icons.chat size={12} />
+                          PDF
                         </button>
                       </div>
                     )}
@@ -1187,10 +1164,10 @@ export default function ClaudeChat({
           <div className="flex justify-start message-fade-in">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-transparent flex items-center justify-center border border-workx-lime/10">
-                <Icons.sparkles size={13} className="text-workx-lime" />
+                <span className="text-[11px] font-bold text-workx-lime">W</span>
               </div>
               <div className="space-y-2">
-                <div className="assistant-bubble rounded-2xl rounded-tl-md px-5 py-4">
+                <div className="assistant-bubble assistant-bubble-streaming rounded-2xl rounded-tl-md px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
                       <div className="w-2 h-2 rounded-full bg-workx-lime/60 typing-dot" />

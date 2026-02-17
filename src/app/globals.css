@@ -1418,6 +1418,7 @@ textarea::-webkit-scrollbar-thumb:hover {
   border: 1px solid rgba(255, 255, 255, 0.10);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
 }
 
 .assistant-bubble::before {
@@ -1429,6 +1430,30 @@ textarea::-webkit-scrollbar-thumb:hover {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
   pointer-events: none;
+}
+
+/* Streaming glow effect on assistant bubble */
+.assistant-bubble-streaming {
+  border-color: rgba(249, 255, 133, 0.2);
+  box-shadow:
+    0 0 20px -5px rgba(249, 255, 133, 0.12),
+    0 0 40px -10px rgba(249, 255, 133, 0.06);
+  animation: assistantStreamGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes assistantStreamGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 20px -5px rgba(249, 255, 133, 0.12),
+      0 0 40px -10px rgba(249, 255, 133, 0.06);
+    border-color: rgba(249, 255, 133, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 30px -5px rgba(249, 255, 133, 0.2),
+      0 0 60px -10px rgba(249, 255, 133, 0.1);
+    border-color: rgba(249, 255, 133, 0.25);
+  }
 }
 
 /* User message bubble with gradient */
@@ -1558,7 +1583,7 @@ textarea::-webkit-scrollbar-thumb:hover {
 }
 
 .claude-response li::marker {
-  color: rgba(249, 255, 133, 0.5);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .claude-response hr {
@@ -1630,15 +1655,20 @@ textarea::-webkit-scrollbar-thumb:hover {
   border-color: rgba(249, 255, 133, 0.2);
 }
 
-/* Blockquotes */
+/* Blockquotes — modern concept document card style */
 .claude-response blockquote {
-  border-left: 3px solid rgba(249, 255, 133, 0.3);
-  background: rgba(249, 255, 133, 0.03);
-  padding: 0.75em 1em;
-  margin: 1em 0;
-  border-radius: 0 8px 8px 0;
-  color: rgba(255, 255, 255, 0.7);
-  font-style: italic;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-left: 3px solid rgba(249, 255, 133, 0.35);
+  padding: 1.25em 1.5em;
+  margin: 1.25em 0;
+  border-radius: 4px 12px 12px 4px;
+  color: rgba(255, 255, 255, 0.85);
+  font-style: normal;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px -4px rgba(0, 0, 0, 0.15);
+  line-height: 1.75;
+  letter-spacing: 0.01em;
 }
 
 /* Tables */
@@ -3891,18 +3921,19 @@ textarea::-webkit-scrollbar-thumb:hover {
 .claude-response em { color: rgba(255,255,255,0.85); font-style: italic; }
 
 .claude-response a {
-  color: var(--workx-lime);
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: underline;
   text-underline-offset: 2px;
-  transition: opacity 0.2s;
+  text-decoration-color: rgba(255, 255, 255, 0.25);
+  transition: all 0.2s;
 }
-.claude-response a:hover { opacity: 0.8; }
+.claude-response a:hover { color: white; text-decoration-color: rgba(255, 255, 255, 0.5); }
 
-/* Lists */
-.claude-response ul { list-style-type: disc; padding-left: 1.25rem; margin: 0.375rem 0; }
-.claude-response ol { list-style-type: decimal; padding-left: 1.25rem; margin: 0.375rem 0; }
-.claude-response li { margin: 0.125rem 0; line-height: 1.6; color: rgba(255,255,255,0.85); }
-.claude-response li::marker { color: rgba(249, 255, 133, 0.5); }
+/* Lists — clean professional dashboard style */
+.claude-response ul { list-style-type: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
+.claude-response ol { list-style-type: decimal; padding-left: 1.25rem; margin: 0.5rem 0; }
+.claude-response li { margin: 0.2rem 0; line-height: 1.65; color: rgba(255,255,255,0.85); }
+.claude-response li::marker { color: rgba(255, 255, 255, 0.35); }
 
 /* Code blocks */
 .claude-response pre.code-block {
@@ -3932,25 +3963,31 @@ textarea::-webkit-scrollbar-thumb:hover {
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 
-/* Blockquotes */
+/* Blockquotes — concept document card */
 .claude-response blockquote {
-  border-left: 3px solid rgba(249, 255, 133, 0.3);
-  padding-left: 0.875rem;
-  margin: 0.5rem 0;
-  color: rgba(255, 255, 255, 0.6);
-  font-style: italic;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-left: 3px solid rgba(249, 255, 133, 0.35);
+  padding: 1.25em 1.5em;
+  margin: 1em 0;
+  border-radius: 4px 12px 12px 4px;
+  color: rgba(255, 255, 255, 0.85);
+  font-style: normal;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px -4px rgba(0, 0, 0, 0.15);
+  line-height: 1.75;
 }
 
 /* Collapsible source citations */
 .claude-response details.source-details {
   margin: 0.375rem 0;
-  border-left: 3px solid rgba(249, 255, 133, 0.2);
+  border-left: 3px solid rgba(255, 255, 255, 0.15);
   padding-left: 0.75rem;
 }
 
 .claude-response details.source-details summary {
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.6);
   font-weight: 500;
   font-size: 0.9em;
   padding: 0.25rem 0.5rem;
@@ -3966,7 +4003,7 @@ textarea::-webkit-scrollbar-thumb:hover {
 .claude-response details.source-details summary::before {
   content: '▶ ';
   font-size: 0.7em;
-  color: rgba(249, 255, 133, 0.5);
+  color: rgba(255, 255, 255, 0.3);
   margin-right: 0.25rem;
   display: inline-block;
 }
