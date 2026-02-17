@@ -531,25 +531,35 @@ export async function POST(req: NextRequest) {
         // Extract search terms from user message
         const searchTerms = extractSearchTerms(messageForClaude)
 
+        // Multi-query expansion: generate alternative search formulations
+        const apiKey = process.env.ANTHROPIC_API_KEY
+        const expandedQueries = apiKey
+          ? await expandSearchQueries(messageForClaude, apiKey).catch(() => [])
+          : []
+        if (expandedQueries.length > 0) {
+          console.log(`[chat] Query expansion: ${expandedQueries.map(q => q.slice(0, 60)).join(' | ')}`)
+        }
+
         // Check if chunks exist for primary sources
         const chunkCount = await prisma.sourceChunk.count({
           where: { sourceId: { in: primarySourceIds } },
         })
 
         if (chunkCount > 0 && (searchTerms.length > 0 || process.env.OPENAI_API_KEY)) {
-          // Retrieve relevant chunks using hybrid search (semantic + keyword)
+          // Retrieve relevant chunks using multi-query hybrid search
           // Add timeout to prevent slow DB queries from blocking the response
           const relevantChunks = await Promise.race([
             retrieveRelevantChunks(
               primarySourceIds,
               searchTerms,
               35, // max chunks to include (~175K chars)
-              messageForClaude // for semantic embedding
+              messageForClaude, // for semantic embedding
+              expandedQueries // additional query variants for broader recall
             ),
             new Promise<never[]>((resolve) => setTimeout(() => {
-              console.warn('[chat] Chunk retrieval timed out after 10s')
+              console.warn('[chat] Chunk retrieval timed out after 12s')
               resolve([])
-            }, 10000)),
+            }, 12000)),
           ])
 
           if (relevantChunks.length > 0) {
@@ -946,7 +956,7 @@ BELANGRIJK:
             messages: msgs,
             thinking: {
               type: 'enabled',
-              budget_tokens: isOpus ? 16000 : 10000,
+              budget_tokens: isOpus ? 32000 : 16000,
             },
             ...(tools.length > 0 ? { tools } : {}),
           }
@@ -1071,7 +1081,7 @@ BELANGRIJK:
               max_tokens: isOpus ? 64000 : 32000,
               system: systemPrompt,
               messages: loopMsgs,
-              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 32000 : 16000 },
+              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 50000 : 24000 },
               tools,
             })
 
@@ -1290,6 +1300,41 @@ function isEmploymentLawQuestion(message: string): boolean {
   return true
 }
 
+// ==================== MULTI-QUERY EXPANSION ====================
+
+/**
+ * Generate multiple search query variants from the user's question.
+ * Uses Claude Haiku for fast, cheap query expansion (~500ms, ~$0.0002).
+ * This dramatically improves retrieval recall: different phrasings
+ * surface different relevant passages from the 47K+ chunk knowledge base.
+ */
+async function expandSearchQueries(
+  userMessage: string,
+  apiKey: string
+): Promise<string[]> {
+  try {
+    const client = new Anthropic({ apiKey, timeout: 5000 })
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      system: `Je bent een zoekquery-generator voor een Nederlandse arbeidsrecht-kennisbank. Genereer 4 alternatieve zoekformuleringen voor de vraag van de gebruiker. Focus op:
+- Synoniemen en juridische termen (bijv. "ontslag" → "beëindiging arbeidsovereenkomst")
+- Relevante wetsartikelen (bijv. "opzegtermijn" → "art. 7:672 BW")
+- Bredere/smallere formuleringen
+- Jurisprudentie-termen (bijv. "billijke vergoeding" → "ernstig verwijtbaar handelen")
+Geef ALLEEN de 4 queries, één per regel, zonder nummering of uitleg.`,
+      messages: [{ role: 'user', content: userMessage }],
+    })
+
+    const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
+    const queries = text.split('\n').map(q => q.trim()).filter(q => q.length > 5 && q.length < 200)
+    return queries.slice(0, 4) // Max 4 variants
+  } catch (err) {
+    console.warn('[chat] Query expansion failed (non-critical):', err instanceof Error ? err.message : err)
+    return [] // Graceful degradation: continue with original query only
+  }
+}
+
 // ==================== CHUNK RETRIEVAL HELPERS ====================
 
 /** Dutch stop words to filter out when extracting search terms */
@@ -1343,38 +1388,60 @@ function extractSearchTerms(message: string): string[] {
 }
 
 /**
- * Retrieve the most relevant chunks using HYBRID search:
- * 1. Semantic search via embeddings (pgvector cosine similarity)
+ * Retrieve the most relevant chunks using MULTI-QUERY HYBRID search:
+ * 1. Multi-query semantic search: embed original + expanded queries, search each
  * 2. Keyword search via PostgreSQL text matching
- * Results are combined using Reciprocal Rank Fusion (RRF) for best results.
+ * Results from all queries are combined using Reciprocal Rank Fusion (RRF).
  */
 async function retrieveRelevantChunks(
   sourceIds: string[],
   searchTerms: string[],
   maxChunks: number,
-  userMessage?: string
+  userMessage?: string,
+  expandedQueries?: string[]
 ): Promise<Array<{ sourceId: string; chunkIndex: number; content: string; heading: string | null; score: number }>> {
   if (sourceIds.length === 0) return []
 
-  // Run semantic search and keyword search in parallel
-  const [semanticResults, keywordResults] = await Promise.all([
-    // 1. SEMANTIC SEARCH — meaning-based via embeddings
+  // Build all search queries: original + expanded variants
+  const allQueries = [userMessage, ...(expandedQueries || [])].filter(Boolean) as string[]
+  console.log(`[chat] Multi-query retrieval: ${allQueries.length} queries (1 original + ${(expandedQueries || []).length} expanded)`)
+
+  // Run ALL semantic searches + keyword search in parallel
+  const [semanticResultSets, keywordResults] = await Promise.all([
+    // 1. MULTI-QUERY SEMANTIC SEARCH — one search per query variant
     (async () => {
       if (!userMessage || !process.env.OPENAI_API_KEY) return []
       try {
-        const queryEmbedding = await generateEmbedding(userMessage)
-        return await searchSimilarChunks(queryEmbedding, sourceIds, maxChunks * 2)
+        // Generate embeddings for all queries in parallel
+        const embeddings = await Promise.all(
+          allQueries.map(q => generateEmbedding(q).catch(() => null))
+        )
+        // Search for each embedding
+        const resultSets = await Promise.all(
+          embeddings
+            .filter((e): e is number[] => e !== null)
+            .map(emb => searchSimilarChunks(emb, sourceIds, maxChunks).catch(() => []))
+        )
+        return resultSets
       } catch (err) {
-        console.error('Semantic search fout:', err)
+        console.error('Multi-query semantic search fout:', err)
         return []
       }
     })(),
 
-    // 2. KEYWORD SEARCH — exact term matching (existing approach)
+    // 2. KEYWORD SEARCH — exact term matching (uses terms from all queries)
     (async () => {
-      if (searchTerms.length === 0) return []
+      // Combine search terms from original + expanded queries
+      const allTerms = [...searchTerms]
+      for (const query of expandedQueries || []) {
+        const extraTerms = extractSearchTerms(query)
+        for (const t of extraTerms) {
+          if (!allTerms.includes(t)) allTerms.push(t)
+        }
+      }
+      if (allTerms.length === 0) return []
 
-      const orConditions = searchTerms.slice(0, 20).map(term => ({
+      const orConditions = allTerms.slice(0, 30).map(term => ({
         content: { contains: term, mode: 'insensitive' as const },
       }))
 
@@ -1407,25 +1474,37 @@ async function retrieveRelevantChunks(
     })(),
   ])
 
-  // If we have both semantic and keyword results, combine with Reciprocal Rank Fusion
-  if (semanticResults.length > 0 && keywordResults.length > 0) {
+  // Flatten all semantic result sets into one for the has-results check
+  const hasSemanticResults = semanticResultSets.length > 0 && semanticResultSets.some(s => s.length > 0)
+
+  // Combine all results with Reciprocal Rank Fusion (multi-query aware)
+  if (hasSemanticResults && keywordResults.length > 0) {
     const K = 60 // RRF constant
     const rrfScores = new Map<string, {
       sourceId: string; chunkIndex: number; content: string; heading: string | null; score: number
     }>()
 
-    // Add semantic results with RRF scores (weighted 0.6 — semantic is primary)
-    semanticResults.forEach((result, rank) => {
-      const key = `${result.sourceId}-${result.chunkIndex}`
-      const rrfScore = 0.6 / (K + rank + 1)
-      rrfScores.set(key, {
-        sourceId: result.sourceId,
-        chunkIndex: result.chunkIndex,
-        content: result.content,
-        heading: result.heading,
-        score: rrfScore,
+    // Add semantic results from ALL query variants
+    // Each variant contributes independently — chunks found by multiple variants get boosted
+    const semanticWeight = 0.6 / Math.max(semanticResultSets.length, 1)
+    for (const resultSet of semanticResultSets) {
+      resultSet.forEach((result, rank) => {
+        const key = `${result.sourceId}-${result.chunkIndex}`
+        const rrfScore = semanticWeight / (K + rank + 1)
+        const existing = rrfScores.get(key)
+        if (existing) {
+          existing.score += rrfScore // Found by multiple query variants → higher score
+        } else {
+          rrfScores.set(key, {
+            sourceId: result.sourceId,
+            chunkIndex: result.chunkIndex,
+            content: result.content,
+            heading: result.heading,
+            score: rrfScore,
+          })
+        }
       })
-    })
+    }
 
     // Add keyword results with RRF scores (weighted 0.4 — keyword is secondary)
     keywordResults.forEach((result, rank) => {
@@ -1487,16 +1566,22 @@ async function retrieveRelevantChunks(
     return await enrichWithAdjacentChunks(finalSelected, sourceIds)
   }
 
-  // Fallback: if only semantic results
-  if (semanticResults.length > 0) {
-    const mapped = semanticResults.slice(0, maxChunks).map(r => ({
-      sourceId: r.sourceId,
-      chunkIndex: r.chunkIndex,
-      content: r.content,
-      heading: r.heading,
-      score: r.similarity,
-    }))
-    return await enrichWithAdjacentChunks(mapped, sourceIds)
+  // Fallback: if only semantic results (no keyword matches)
+  if (hasSemanticResults) {
+    // Merge all semantic result sets, deduplicating by chunk key
+    const seen = new Set<string>()
+    const allSemantic: Array<{ sourceId: string; chunkIndex: number; content: string; heading: string | null; score: number }> = []
+    for (const resultSet of semanticResultSets) {
+      for (const r of resultSet) {
+        const key = `${r.sourceId}-${r.chunkIndex}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          allSemantic.push({ sourceId: r.sourceId, chunkIndex: r.chunkIndex, content: r.content, heading: r.heading, score: r.similarity })
+        }
+      }
+    }
+    allSemantic.sort((a, b) => b.score - a.score)
+    return await enrichWithAdjacentChunks(allSemantic.slice(0, maxChunks), sourceIds)
   }
 
   // Fallback: if only keyword results (no embeddings available)
