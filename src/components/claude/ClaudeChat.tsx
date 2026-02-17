@@ -288,6 +288,30 @@ export default function ClaudeChat({
     setAttachedDocs([])
   }, [initialConvId])
 
+  // Load messages from API when mounting with an existing conversation ID
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  useEffect(() => {
+    if (initialConvId && initialMessages.length === 0) {
+      setIsLoadingHistory(true)
+      fetch(`/api/claude/conversations/${initialConvId}`)
+        .then(r => {
+          if (!r.ok) throw new Error('Kon gesprek niet laden')
+          return r.json()
+        })
+        .then(data => {
+          if (data.messages?.length > 0) {
+            setMessages(data.messages)
+          }
+        })
+        .catch(err => {
+          console.error('[ClaudeChat] Failed to load conversation:', err)
+        })
+        .finally(() => {
+          setIsLoadingHistory(false)
+        })
+    }
+  }, [initialConvId])
+
   const scrollToBottom = useCallback((instant?: boolean) => {
     messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' })
   }, [])
@@ -324,80 +348,112 @@ export default function ClaudeChat({
     }
   }, [quickActionPrompt])
 
+  /** Clean renderMarkdown HTML for document export (strip web-only elements) */
+  const cleanHtmlForExport = (html: string): string => {
+    return html
+      .replace(/<button class="code-copy-btn">.*?<\/button>/g, '') // Remove copy buttons
+      .replace(/<span style="position:absolute[^"]*">[^<]*<\/span>/g, '') // Remove floating lang labels
+      .replace(/ class="code-block"/g, '') // Remove web-specific classes
+      .replace(/ class="inline-code"/g, '') // Remove web-specific classes
+      .replace(/ class="concept-document"/g, '') // Remove web-specific classes
+      .replace(/ class="source-details"/g, '') // Remove web-specific classes
+      .replace(/<div class="table-wrapper">/g, '<div>') // Simplify table wrapper
+  }
+
+  /** Shared document CSS for both PDF and Word export */
+  const getDocumentStyles = () => `
+    @page { size: A4; margin: 2.5cm 2.5cm 2cm 2.5cm; }
+    body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #222; margin: 0; padding: 0; }
+    h1 { font-size: 16pt; font-weight: bold; color: #1a3a5c; margin: 20pt 0 10pt 0; border-bottom: 2pt solid #1a3a5c; padding-bottom: 6pt; }
+    h2 { font-size: 13pt; font-weight: bold; color: #1a3a5c; margin: 16pt 0 8pt 0; }
+    h3 { font-size: 11pt; font-weight: bold; color: #333; margin: 12pt 0 6pt 0; }
+    h4, h5, h6 { font-size: 11pt; font-weight: bold; color: #444; margin: 10pt 0 4pt 0; }
+    p { margin: 0 0 8pt 0; text-align: justify; }
+    strong { font-weight: bold; }
+    em { font-style: italic; }
+    ul, ol { margin: 6pt 0 10pt 0; padding-left: 28pt; }
+    li { margin: 0 0 4pt 0; line-height: 1.5; }
+    hr { border: none; border-top: 1pt solid #ddd; margin: 16pt 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10pt 0; font-size: 10pt; }
+    td, th { border: 1pt solid #bbb; padding: 6pt 10pt; text-align: left; vertical-align: top; }
+    th { background-color: #f0f4f8; font-weight: bold; color: #1a3a5c; }
+    blockquote { margin: 12pt 0; padding: 12pt 18pt; border: 1pt solid #d0d5dd; border-left: 3pt solid #1a3a5c; background-color: #f8f9fb; font-style: normal; color: #333; }
+    code { font-family: 'Consolas', 'Courier New', monospace; font-size: 9.5pt; background-color: #f4f4f4; padding: 1pt 4pt; border-radius: 2pt; }
+    pre { background-color: #f4f4f4; padding: 10pt 14pt; border-radius: 4pt; overflow-x: auto; margin: 8pt 0; font-size: 9pt; line-height: 1.4; }
+    pre code { background: none; padding: 0; }
+    a { color: #1a3a5c; text-decoration: underline; }
+    del { text-decoration: line-through; color: #888; }
+    details { margin: 8pt 0; padding: 8pt 12pt; border: 1pt solid #e0e0e0; border-radius: 4pt; background: #fafafa; }
+    summary { font-weight: bold; cursor: pointer; color: #1a3a5c; }
+    .header { margin-bottom: 20pt; padding-bottom: 10pt; border-bottom: 2.5pt solid #1a3a5c; }
+    .header-title { font-size: 9pt; color: #1a3a5c; font-weight: bold; letter-spacing: 0.5pt; text-transform: uppercase; margin: 0; }
+    .header-date { font-size: 9pt; color: #888; margin: 3pt 0 0 0; }
+    .footer { font-size: 8pt; color: #999; margin-top: 28pt; border-top: 1pt solid #ddd; padding-top: 10pt; }
+  `
+
+  /** Generate full HTML document for export */
+  const generateExportHtml = (content: string, isWord = false): string => {
+    const date = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+    const markdownHtml = cleanHtmlForExport(renderMarkdown(content))
+    const wordXml = isWord ? `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DefaultFonts><w:DefaultFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/></w:DefaultFonts></w:WordDocument></xml><![endif]-->` : ''
+    const printStyles = !isWord ? `
+      @media print {
+        body { margin: 0; }
+        .no-print { display: none !important; }
+        @page { margin: 2cm 2.5cm; }
+      }
+    ` : ''
+
+    return `<!DOCTYPE html>
+<html${isWord ? ' xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"' : ''}>
+<head>
+<meta charset="utf-8">
+<title>Workx Advocaten — AI Assistent</title>
+${wordXml}
+<style>${getDocumentStyles()}${printStyles}</style>
+</head>
+<body>
+<div class="header">
+  <p class="header-title">Workx Advocaten</p>
+  <p class="header-date">${date}</p>
+</div>
+${markdownHtml}
+<div class="footer">
+  <p><em>Dit document is gegenereerd met behulp van AI en vormt geen juridisch advies. Raadpleeg uw advocaat voor een op uw situatie toegespitst advies.</em></p>
+</div>
+</body>
+</html>`
+  }
+
   const exportToDocument = async (content: string, format: 'pdf' | 'docx') => {
     try {
+      const exportContent = stripDocxEdits(content)
+
       if (format === 'pdf') {
-        // Dynamic import jsPDF
-        const { default: jsPDF } = await import('jspdf')
-        const doc = new jsPDF({ format: 'a4', unit: 'mm' })
-        doc.setFont('helvetica')
-        doc.setFontSize(10)
-        // Header
-        doc.setFontSize(8)
-        doc.setTextColor(150)
-        doc.text('Workx Advocaten — AI Assistent', 15, 12)
-        doc.text(new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), 195, 12, { align: 'right' })
-        doc.setDrawColor(230)
-        doc.line(15, 15, 195, 15)
-        // Content
-        doc.setFontSize(10)
-        doc.setTextColor(30)
-        const cleaned = content
-          .replace(/#{1,6}\s/g, '')
-          .replace(/\*\*(.*?)\*\*/g, '$1')
-          .replace(/\*(.*?)\*/g, '$1')
-          .replace(/`([^`]+)`/g, '$1')
-        const lines = doc.splitTextToSize(cleaned, 175)
-        doc.text(lines, 15, 22)
-        // Footer
-        const pageCount = doc.getNumberOfPages()
-        for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i)
-          doc.setFontSize(7)
-          doc.setTextColor(180)
-          doc.text('Dit document is gegenereerd door AI en vormt geen juridisch advies.', 15, 287)
-          doc.text(`Pagina ${i} van ${pageCount}`, 195, 287, { align: 'right' })
+        // PDF: open styled HTML in print window — produces high-quality PDF via browser print
+        const html = generateExportHtml(exportContent, false)
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) {
+          toast.error('Pop-up geblokkeerd. Sta pop-ups toe voor deze site.')
+          return
         }
-        doc.save(`workx-ai-${new Date().toISOString().slice(0, 10)}.pdf`)
-        toast.success('PDF gedownload')
+        printWindow.document.write(html)
+        printWindow.document.close()
+        // Wait for content to render, then trigger print
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print()
+          }, 300)
+        }
+        // Fallback if onload doesn't fire
+        setTimeout(() => {
+          try { printWindow.print() } catch { /* ignore */ }
+        }, 1000)
+        toast.success('Print-venster geopend — kies "Opslaan als PDF"')
       } else {
-        // DOCX export — professional legal document in Calibri 11pt
-        const htmlContent = `
-          <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-          <head><meta charset="utf-8">
-          <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:SpellingState>Clean</w:SpellingState><w:GrammarState>Clean</w:GrammarState><w:DefaultFonts><w:DefaultFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/></w:DefaultFonts></w:WordDocument></xml><![endif]-->
-          <style>
-            @page { size: A4; margin: 2.5cm 2.5cm 2cm 2.5cm; }
-            body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.4; color: #222; margin: 0; }
-            h1 { font-family: Calibri, sans-serif; font-size: 14pt; font-weight: bold; color: #1a3a5c; margin: 18pt 0 8pt 0; border-bottom: 1.5pt solid #1a3a5c; padding-bottom: 4pt; }
-            h2 { font-family: Calibri, sans-serif; font-size: 12pt; font-weight: bold; color: #1a3a5c; margin: 14pt 0 6pt 0; }
-            h3 { font-family: Calibri, sans-serif; font-size: 11pt; font-weight: bold; color: #333; margin: 10pt 0 4pt 0; }
-            p { margin: 0 0 6pt 0; text-align: justify; }
-            strong { font-weight: bold; }
-            em { font-style: italic; }
-            ul, ol { margin: 4pt 0 8pt 0; padding-left: 24pt; }
-            li { margin: 0 0 3pt 0; }
-            table { border-collapse: collapse; width: 100%; margin: 8pt 0; font-size: 10pt; }
-            td, th { border: 1pt solid #bbb; padding: 4pt 8pt; text-align: left; }
-            th { background-color: #f0f4f8; font-weight: bold; color: #1a3a5c; }
-            blockquote { margin: 10pt 0 10pt 0; padding: 10pt 16pt; border: 1pt solid #d0d5dd; border-left: 3pt solid #1a3a5c; background-color: #f8f9fb; font-style: normal; color: #333; }
-            code { font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; background-color: #f4f4f4; padding: 1pt 3pt; }
-            .header { margin-bottom: 16pt; padding-bottom: 8pt; border-bottom: 2pt solid #1a3a5c; }
-            .header-title { font-size: 9pt; color: #1a3a5c; font-weight: bold; letter-spacing: 0.5pt; text-transform: uppercase; margin: 0; }
-            .header-date { font-size: 9pt; color: #888; margin: 2pt 0 0 0; }
-            .footer { font-size: 8pt; color: #999; margin-top: 24pt; border-top: 1pt solid #ddd; padding-top: 8pt; }
-          </style></head>
-          <body>
-          <div class="header">
-            <p class="header-title">Workx Advocaten</p>
-            <p class="header-date">${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-          </div>
-          ${renderMarkdown(content)}
-          <div class="footer">
-            <p><em>Dit document is gegenereerd met behulp van AI en vormt geen juridisch advies. Raadpleeg uw advocaat voor een op uw situatie toegespitst advies.</em></p>
-          </div>
-          </body></html>`
-        const blob = new Blob([htmlContent], { type: 'application/msword' })
+        // Word: download as HTML with .doc extension
+        const html = generateExportHtml(exportContent, true)
+        const blob = new Blob([html], { type: 'application/msword' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
@@ -826,8 +882,22 @@ export default function ClaudeChat({
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5" onClick={handleMessagesClick}>
+        {/* Loading conversation history */}
+        {isLoadingHistory && messages.length === 0 && (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex items-center gap-3 text-white/40">
+              <div className="flex gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-workx-lime/40 typing-dot" />
+                <div className="w-2 h-2 rounded-full bg-workx-lime/40 typing-dot" />
+                <div className="w-2 h-2 rounded-full bg-workx-lime/40 typing-dot" />
+              </div>
+              <span className="text-sm">Gesprek laden...</span>
+            </div>
+          </div>
+        )}
+
         {/* Empty state — personal intro */}
-        {messages.length === 0 && !isLoading && (
+        {messages.length === 0 && !isLoading && !isLoadingHistory && (
           <div className="flex flex-col items-center justify-center h-full pb-16 relative">
             {/* Subtle ambient glow */}
             <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[200px] bg-workx-lime/[0.03] rounded-full blur-[100px] pointer-events-none" />

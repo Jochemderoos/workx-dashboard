@@ -838,7 +838,25 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
       }
     }
 
-    // No fake conversation prefix — causes API errors with extended thinking
+    // QUESTION-ASKING ENFORCEMENT: On first message, inject instruction directly into user message
+    // This is more effective than system prompt alone because it's right next to the user's question
+    const isFirstMessage = history.length <= 1
+    if (isFirstMessage && msgs.length > 0) {
+      const lastMsg = msgs[msgs.length - 1]
+      if (lastMsg && lastMsg.role === 'user') {
+        const questionInstruction = `[SYSTEEM: Dit is het EERSTE bericht in dit gesprek. REAGEER MET 3-5 GERICHTE VRAGEN — geef GEEN inhoudelijk antwoord. Stel vragen om de casus te begrijpen, vraag naar het gewenste antwoordformat, en vraag of er relevante documenten zijn. UITZONDERING: alleen bij puur feitelijke vragen over termijnen, bedragen of berekeningen mag je direct antwoorden.]\n\n`
+        if (typeof lastMsg.content === 'string') {
+          lastMsg.content = questionInstruction + lastMsg.content
+        } else if (Array.isArray(lastMsg.content)) {
+          for (const block of lastMsg.content) {
+            if (block.type === 'text') {
+              block.text = questionInstruction + block.text
+              break
+            }
+          }
+        }
+      }
+    }
 
     // Context window protection: estimate tokens and trim if needed
     const MAX_CONTEXT = 170000 // Leave buffer from 200K limit
