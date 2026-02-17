@@ -992,6 +992,12 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
           // Model selection: default Sonnet, optionally Opus for deep analysis
           const modelId = requestedModel === 'opus' ? 'claude-opus-4-6' : 'claude-sonnet-4-5-20250929'
           const isOpus = modelId.includes('opus')
+          // On the first message of a new conversation, do NOT provide tools.
+          // This forces the model to ask questions instead of immediately searching.
+          // Tools become available on follow-up messages (after user answers questions).
+          const isFirstMessage = history.length <= 1
+          const useTools = !isFirstMessage && tools.length > 0
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const streamParams: any = {
             model: modelId,
@@ -1002,7 +1008,7 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
               type: 'enabled',
               budget_tokens: isOpus ? 32000 : 16000,
             },
-            ...(tools.length > 0 ? { tools } : {}),
+            ...(useTools ? { tools } : {}),
           }
 
           const anthropicStream = client.messages.stream(streamParams)
