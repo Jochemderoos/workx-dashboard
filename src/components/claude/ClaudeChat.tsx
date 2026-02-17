@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import { renderMarkdown } from '@/lib/markdown'
 import toast from 'react-hot-toast'
+import LegalQuickActions from './LegalQuickActions'
 
 interface Message {
   id: string
@@ -810,18 +811,50 @@ export default function ClaudeChat({
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" onClick={handleMessagesClick}>
-        {/* Empty state */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-5" onClick={handleMessagesClick}>
+        {/* Empty state — welcoming with inline quick actions */}
         {messages.length === 0 && !isLoading && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-3">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center border border-workx-lime/20">
-                <Icons.sparkles size={24} className="text-workx-lime" />
+          <div className="space-y-6 pb-4">
+            {/* Welcome header */}
+            <div className="text-center space-y-3 pt-4 chat-welcome-glow relative">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-blue-500/5 flex items-center justify-center border border-workx-lime/15 shadow-lg shadow-workx-lime/5">
+                <Icons.sparkles size={28} className="text-workx-lime" />
               </div>
-              <h3 className="text-base font-medium text-white">AI Assistent</h3>
-              <p className="text-xs text-white/30">
-                Stel je vraag hieronder
-              </p>
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold text-white tracking-tight">Waar kan ik je mee helpen?</h3>
+                <p className="text-sm text-white/35 max-w-md mx-auto leading-relaxed">
+                  Doorzoekt automatisch 5 juridische bronnen met 48.000 passages.
+                  Upload een document of kies een snelactie.
+                </p>
+              </div>
+
+              {/* Subtle onboarding hints */}
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1 text-[11px] text-white/20">
+                <span className="flex items-center gap-1.5">
+                  <Icons.paperclip size={11} className="text-white/25" />
+                  Upload een document
+                </span>
+                <span className="text-white/10">|</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400/50" />
+                  Kies Opus voor diepere analyse
+                </span>
+                <span className="text-white/10">|</span>
+                <span className="flex items-center gap-1.5">
+                  <Icons.shield size={11} className="text-white/25" />
+                  Anonimiseer persoonsgegevens
+                </span>
+              </div>
+            </div>
+
+            {/* Inline quick actions grid */}
+            <div className="max-w-4xl mx-auto">
+              <LegalQuickActions
+                onAction={sendMessage}
+                disabled={isLoading}
+                hasDocuments={attachedDocs.length > 0}
+                inline
+              />
             </div>
           </div>
         )}
@@ -833,14 +866,14 @@ export default function ClaudeChat({
           return (
           <div
             key={msg.id}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex message-fade-in ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div className={`relative group ${msg.role === 'user' ? 'max-w-[85%]' : 'max-w-[95%] w-full'}`}>
               {/* Assistant message */}
               {msg.role === 'assistant' && (
-                <div className="flex items-start gap-2.5">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/10 flex items-center justify-center mt-1">
-                    <Icons.sparkles size={12} className="text-workx-lime" />
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-transparent flex items-center justify-center mt-0.5 border border-workx-lime/10">
+                    <Icons.sparkles size={13} className="text-workx-lime" />
                   </div>
                   <div className="flex-1 min-w-0">
                     {/* Saved thinking content (collapsible, persists after streaming) */}
@@ -869,17 +902,17 @@ export default function ClaudeChat({
                         </div>
                       </div>
                     )}
-                    <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-white/[0.04] border border-white/[0.08]">
+                    <div className="assistant-bubble rounded-2xl rounded-tl-md px-5 py-4">
                       {isStreaming ? (
                         // Streaming: throttled markdown rendering (80ms interval)
                         <div
-                          className="claude-response text-sm text-white/90 leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(streamingContent) + '<span style="display:inline-block;width:2px;height:14px;background:rgba(249,255,133,0.6);vertical-align:text-bottom;margin-left:2px;animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite"></span>' }}
+                          className="claude-response text-sm text-white/90"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(streamingContent) + '<span class="streaming-cursor"></span>' }}
                         />
                       ) : (
                         // Completed: full markdown rendering (strip DOCX edit blocks from display)
                         <div
-                          className="claude-response text-sm text-white/90 leading-relaxed"
+                          className="claude-response text-sm text-white/90"
                           dangerouslySetInnerHTML={{ __html: renderMarkdown(stripDocxEdits(msg.content)) }}
                         />
                       )}
@@ -1082,7 +1115,7 @@ export default function ClaudeChat({
 
               {/* User message */}
               {msg.role === 'user' && (
-                <div className="rounded-2xl rounded-tr-md px-4 py-3 bg-workx-lime text-workx-dark">
+                <div className="user-bubble rounded-2xl rounded-tr-md px-5 py-3.5 text-workx-dark">
                   {/* Attachment indicators */}
                   {msg.attachments && msg.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-2">
@@ -1116,21 +1149,21 @@ export default function ClaudeChat({
 
         {/* Thinking display - subtle collapsible reasoning */}
         {thinkingText && isLoading && (
-          <div className="flex justify-start">
+          <div className="flex justify-start message-fade-in">
             <div className="max-w-[85%] ml-10">
               {/* Collapsed: tiny label. Expanded: reasoning text */}
               <button
                 onClick={() => setThinkingExpanded(!thinkingExpanded)}
-                className="flex items-center gap-1.5 py-1 text-[10px] text-white/25 hover:text-white/40 transition-colors"
+                className="flex items-center gap-1.5 py-1.5 text-[11px] text-white/30 hover:text-white/50 transition-colors"
               >
                 <Icons.chevronRight size={10} className={`transition-transform duration-200 ${thinkingExpanded ? 'rotate-90' : ''}`} />
                 {isThinking ? (
                   <>
-                    <span>Claude overweegt</span>
-                    <div className="flex gap-0.5 ml-0.5">
-                      <div className="w-1 h-1 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '0s' }} />
-                      <div className="w-1 h-1 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '0.15s' }} />
-                      <div className="w-1 h-1 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '0.3s' }} />
+                    <span className="font-medium">Claude overweegt</span>
+                    <div className="flex gap-0.5 ml-1">
+                      <div className="w-1 h-1 rounded-full bg-workx-lime/40 typing-dot" />
+                      <div className="w-1 h-1 rounded-full bg-workx-lime/40 typing-dot" />
+                      <div className="w-1 h-1 rounded-full bg-workx-lime/40 typing-dot" />
                     </div>
                   </>
                 ) : (
@@ -1152,24 +1185,25 @@ export default function ClaudeChat({
 
         {/* Loading indicator (only when not thinking) */}
         {isLoading && !isThinking && !thinkingText && (
-          <div className="flex justify-start">
+          <div className="flex justify-start message-fade-in">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/10 flex items-center justify-center">
-                <div className="animate-spin">
-                  <Icons.refresh size={14} className="text-workx-lime" />
-                </div>
+              <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-transparent flex items-center justify-center border border-workx-lime/10">
+                <Icons.sparkles size={13} className="text-workx-lime" />
               </div>
-              <div className="px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08]">
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-workx-lime/60 animate-bounce" style={{ animationDelay: '0s' }} />
-                    <div className="w-2 h-2 rounded-full bg-workx-lime/60 animate-bounce" style={{ animationDelay: '0.15s' }} />
-                    <div className="w-2 h-2 rounded-full bg-workx-lime/60 animate-bounce" style={{ animationDelay: '0.3s' }} />
+              <div className="space-y-2">
+                <div className="assistant-bubble rounded-2xl rounded-tl-md px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-workx-lime/60 typing-dot" />
+                      <div className="w-2 h-2 rounded-full bg-workx-lime/60 typing-dot" />
+                      <div className="w-2 h-2 rounded-full bg-workx-lime/60 typing-dot" />
+                    </div>
+                    <span className="text-sm text-white/40">
+                      {statusText || 'Claude denkt na...'}
+                    </span>
                   </div>
-                  <span className="text-sm text-white/50">
-                    {statusText || 'Claude denkt na...'}
-                  </span>
                 </div>
+                <div className="thinking-shimmer ml-2 w-32" />
               </div>
             </div>
           </div>
@@ -1179,7 +1213,7 @@ export default function ClaudeChat({
       </div>
 
       {/* Input area — compact when options collapsed, expanded when shown */}
-      <div className="flex-shrink-0 border-t border-white/5">
+      <div className="flex-shrink-0 border-t border-white/[0.06] chat-input-area">
         {/* Collapsible options panel */}
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out ${
@@ -1272,10 +1306,10 @@ export default function ClaudeChat({
                   key={opt.id}
                   onClick={() => toggleOption(opt.id)}
                   disabled={isLoading}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] transition-all border ${
+                  className={`option-chip px-2.5 py-1 rounded-lg text-[11px] border ${
                     activeOptions.has(opt.id)
                       ? 'bg-workx-lime/15 border-workx-lime/30 text-workx-lime font-medium'
-                      : 'bg-white/[0.03] border-white/10 text-white/35 hover:text-white/60 hover:bg-white/[0.06]'
+                      : 'bg-white/[0.03] border-white/[0.08] text-white/35 hover:text-white/60 hover:bg-white/[0.06]'
                   } disabled:opacity-30`}
                 >
                   {opt.label}
@@ -1377,13 +1411,13 @@ export default function ClaudeChat({
             </button>
           )}
 
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2.5">
             {/* Attach document button */}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading || isUploading}
               title="Bestanden bijvoegen (PDF, DOCX, TXT, afbeeldingen)"
-              className="flex-shrink-0 w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-white/40 flex items-center justify-center hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+              className="attach-btn flex-shrink-0 w-11 h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/40 flex items-center justify-center hover:text-workx-lime hover:border-workx-lime/25 hover:bg-workx-lime/5 disabled:opacity-20 disabled:cursor-not-allowed"
             >
               {isUploading ? (
                 <div className="animate-spin">
@@ -1394,26 +1428,26 @@ export default function ClaudeChat({
               )}
             </button>
 
-            <div className="flex-1 relative">
+            <div className="flex-1 chat-input-wrapper">
               <textarea
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={placeholder || 'Typ je vraag...'}
+                placeholder={placeholder || 'Stel een juridische vraag...'}
                 disabled={isLoading}
                 spellCheck={false}
                 autoComplete="off"
                 rows={1}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-base placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/40 focus:bg-white/[0.07] transition-all disabled:opacity-50"
+                className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-2xl text-white text-[15px] placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/30 focus:bg-white/[0.06] transition-all duration-300 disabled:opacity-50"
                 style={{ maxHeight: '200px' }}
               />
             </div>
             {isLoading ? (
               <button
                 onClick={stopGeneration}
-                className="flex-shrink-0 w-11 h-11 rounded-xl bg-red-500/80 text-white flex items-center justify-center hover:bg-red-500 transition-all shadow-lg shadow-red-500/10"
-                title="Stop generatie"
+                className="stop-btn flex-shrink-0 w-11 h-11 rounded-xl bg-red-500/80 text-white flex items-center justify-center hover:bg-red-500 shadow-lg shadow-red-500/10"
+                title="Stop generatie (Esc)"
               >
                 <div className="w-3.5 h-3.5 rounded-sm bg-white" />
               </button>
@@ -1421,7 +1455,7 @@ export default function ClaudeChat({
               <button
                 onClick={() => sendMessage()}
                 disabled={!input.trim()}
-                className="flex-shrink-0 w-11 h-11 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center hover:bg-workx-lime/90 transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/10"
+                className="send-btn flex-shrink-0 w-11 h-11 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/10"
               >
                 <Icons.send size={18} />
               </button>

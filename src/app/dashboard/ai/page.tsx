@@ -499,15 +499,15 @@ export default function AIAssistentPage() {
                 </div>
 
                 {/* Search bar */}
-                <div className="px-2.5 py-2 border-b border-white/5">
+                <div className="px-2.5 py-2 border-b border-white/[0.04]">
                   <div className="relative">
-                    <Icons.search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/25" />
+                    <Icons.search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/20" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Zoek in gesprekken..."
-                      className="w-full pl-8 pr-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/25 focus:outline-none focus:border-workx-lime/30 transition-colors"
+                      className="w-full pl-8 pr-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-xs text-white placeholder-white/25 focus:outline-none focus:border-workx-lime/25 focus:bg-white/[0.05] transition-all duration-200"
                     />
                     {searchQuery && (
                       <button
@@ -530,10 +530,10 @@ export default function AIAssistentPage() {
                       {recentConversations.map((conv) => (
                         <div
                           key={conv.id}
-                          className={`group relative border-b border-white/[0.03] transition-colors ${
+                          className={`group relative border-b border-white/[0.03] conv-item ${
                             selectedConvId === conv.id
-                              ? 'bg-workx-lime/10 border-l-2 border-l-workx-lime'
-                              : 'hover:bg-white/[0.03]'
+                              ? 'active'
+                              : ''
                           }`}
                         >
                           {/* Rename mode */}
@@ -592,7 +592,7 @@ export default function AIAssistentPage() {
 
                           {/* Context menu dropdown */}
                           {contextMenuConvId === conv.id && (
-                            <div className="absolute right-2 top-9 z-50 w-40 bg-workx-gray border border-white/10 rounded-lg shadow-xl overflow-hidden animate-fade-in">
+                            <div className="absolute right-2 top-9 z-50 w-40 bg-workx-gray border border-white/10 rounded-xl shadow-2xl overflow-hidden context-menu-animate backdrop-blur-sm">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()

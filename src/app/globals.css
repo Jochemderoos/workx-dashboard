@@ -1347,6 +1347,536 @@ textarea::-webkit-scrollbar-thumb:hover {
   background: rgba(249, 255, 133, 0.3);
 }
 
+/* ==================== CLAUDE CHAT PREMIUM STYLING ==================== */
+
+/* Chat input wrapper with gradient glow on focus */
+.chat-input-wrapper {
+  position: relative;
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-input-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  background: linear-gradient(
+    135deg,
+    rgba(249, 255, 133, 0.0) 0%,
+    rgba(249, 255, 133, 0.0) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-input-wrapper:focus-within::before {
+  background: linear-gradient(
+    135deg,
+    rgba(249, 255, 133, 0.25) 0%,
+    rgba(100, 200, 255, 0.12) 50%,
+    rgba(249, 255, 133, 0.15) 100%
+  );
+}
+
+.chat-input-wrapper:focus-within {
+  box-shadow:
+    0 0 30px -8px rgba(249, 255, 133, 0.12),
+    0 0 60px -15px rgba(249, 255, 133, 0.06);
+}
+
+.chat-input-wrapper textarea {
+  position: relative;
+  z-index: 1;
+}
+
+/* Message fade-in animation */
+@keyframes messageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-fade-in {
+  animation: messageFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Assistant message bubble with subtle glass effect */
+.assistant-bubble {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.assistant-bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  pointer-events: none;
+}
+
+/* User message bubble with gradient */
+.user-bubble {
+  background: linear-gradient(135deg, #f9ff85 0%, #e8ee7a 100%);
+  box-shadow:
+    0 4px 15px -3px rgba(249, 255, 133, 0.25),
+    0 0 0 1px rgba(249, 255, 133, 0.1);
+}
+
+/* Shimmer loading effect for AI thinking */
+@keyframes aiShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.ai-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(249, 255, 133, 0.04) 0%,
+    rgba(249, 255, 133, 0.1) 20%,
+    rgba(249, 255, 133, 0.04) 40%,
+    rgba(249, 255, 133, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: aiShimmer 2s ease-in-out infinite;
+}
+
+/* Typing indicator pulse */
+@keyframes typingPulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.typing-dot {
+  animation: typingPulse 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* Streaming cursor blink */
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 16px;
+  background: rgba(249, 255, 133, 0.7);
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  animation: cursorBlink 1s ease-in-out infinite;
+  border-radius: 1px;
+}
+
+/* Claude response markdown styling */
+.claude-response {
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+.claude-response h1,
+.claude-response h2,
+.claude-response h3,
+.claude-response h4 {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.claude-response h1 { font-size: 1.25em; }
+.claude-response h2 { font-size: 1.15em; }
+.claude-response h3 { font-size: 1.05em; }
+.claude-response h4 { font-size: 1em; color: rgba(255, 255, 255, 0.8); }
+
+.claude-response h1:first-child,
+.claude-response h2:first-child,
+.claude-response h3:first-child {
+  margin-top: 0;
+}
+
+.claude-response p {
+  margin-bottom: 0.75em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.claude-response p:last-child {
+  margin-bottom: 0;
+}
+
+.claude-response strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+.claude-response em {
+  color: rgba(255, 255, 255, 0.75);
+  font-style: italic;
+}
+
+.claude-response a {
+  color: rgba(249, 255, 133, 0.85);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(249, 255, 133, 0.25);
+  transition: all 0.2s ease;
+}
+
+.claude-response a:hover {
+  color: #f9ff85;
+  border-bottom-color: rgba(249, 255, 133, 0.6);
+}
+
+.claude-response ul,
+.claude-response ol {
+  margin: 0.75em 0;
+  padding-left: 1.5em;
+}
+
+.claude-response li {
+  margin-bottom: 0.35em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.claude-response li::marker {
+  color: rgba(249, 255, 133, 0.5);
+}
+
+.claude-response hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  margin: 1.5em 0;
+}
+
+/* Inline code */
+.claude-response .inline-code {
+  background: rgba(249, 255, 133, 0.08);
+  border: 1px solid rgba(249, 255, 133, 0.12);
+  color: rgba(249, 255, 133, 0.9);
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+  font-size: 0.88em;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* Code blocks */
+.claude-response .code-block {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.25) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 1em 0;
+  tab-size: 2;
+  position: relative;
+}
+
+.claude-response .code-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+}
+
+.claude-response .code-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  z-index: 1;
+  transition: all 0.2s ease;
+  font-family: 'PP Neue Montreal', system-ui, sans-serif;
+  backdrop-filter: blur(4px);
+}
+
+.claude-response .code-copy-btn:hover {
+  background: rgba(249, 255, 133, 0.1);
+  color: rgba(249, 255, 133, 0.8);
+  border-color: rgba(249, 255, 133, 0.2);
+}
+
+/* Blockquotes */
+.claude-response blockquote {
+  border-left: 3px solid rgba(249, 255, 133, 0.3);
+  background: rgba(249, 255, 133, 0.03);
+  padding: 0.75em 1em;
+  margin: 1em 0;
+  border-radius: 0 8px 8px 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+/* Tables */
+.claude-response .table-wrapper {
+  overflow-x: auto;
+  margin: 1em 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.claude-response table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.claude-response thead {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.claude-response th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.claude-response td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.claude-response tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.claude-response tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Details/Summary (source citations) */
+.claude-response .source-details {
+  margin: 1em 0;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.2s ease;
+}
+
+.claude-response .source-details:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.claude-response .source-details summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  font-size: 0.9em;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.claude-response .source-details summary:hover {
+  color: rgba(249, 255, 133, 0.8);
+  background: rgba(249, 255, 133, 0.03);
+}
+
+.claude-response .source-details summary::before {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.claude-response .source-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.claude-response .source-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.claude-response .source-details > :not(summary) {
+  padding: 0 14px 12px;
+}
+
+/* Empty state welcome gradient */
+.chat-welcome-glow {
+  position: relative;
+}
+
+.chat-welcome-glow::before {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(249, 255, 133, 0.06) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* Conversation sidebar item hover */
+.conv-item {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.conv-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.conv-item.active {
+  background: rgba(249, 255, 133, 0.06);
+  border-left: 2px solid #f9ff85;
+}
+
+.conv-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(249, 255, 133, 0.04), transparent);
+  pointer-events: none;
+}
+
+/* Input area bottom bar glass effect */
+.chat-input-area {
+  background: linear-gradient(
+    to top,
+    rgba(30, 30, 30, 0.98) 0%,
+    rgba(30, 30, 30, 0.95) 60%,
+    rgba(30, 30, 30, 0.85) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Send button pulse on hover */
+.send-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow:
+    0 6px 20px -4px rgba(249, 255, 133, 0.4),
+    0 0 40px -10px rgba(249, 255, 133, 0.2);
+}
+
+.send-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* Stop button glow */
+.stop-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stop-btn:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 6px 20px -4px rgba(239, 68, 68, 0.4),
+    0 0 40px -10px rgba(239, 68, 68, 0.2);
+}
+
+/* Attach button micro-interaction */
+.attach-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.attach-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(249, 255, 133, 0.3);
+  box-shadow: 0 4px 12px -2px rgba(249, 255, 133, 0.15);
+}
+
+/* Option chip micro-interaction */
+.option-chip {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.option-chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.option-chip:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Context menu smooth entrance */
+@keyframes contextMenuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.context-menu-animate {
+  animation: contextMenuIn 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Thinking indicator shimmer bar */
+.thinking-shimmer {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(249, 255, 133, 0.1) 0%,
+    rgba(249, 255, 133, 0.4) 50%,
+    rgba(249, 255, 133, 0.1) 100%
+  );
+  background-size: 200% 100%;
+  animation: aiShimmer 1.5s ease-in-out infinite;
+}
+
 /* ==================== PREMIUM ICON HOVER ANIMATIONS ==================== */
 
 /* Calendar icon - pages flip */

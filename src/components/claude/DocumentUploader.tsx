@@ -146,31 +146,39 @@ export default function DocumentUploader({ projectId, onUpload, compact = false 
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onClick={() => inputRef.current?.click()}
-        className={`relative rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-all
+        className={`relative rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-300
           ${isDragging
-            ? 'border-workx-lime bg-workx-lime/5'
-            : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
+            ? 'border-workx-lime bg-workx-lime/[0.06] scale-[1.01]'
+            : 'border-white/[0.08] hover:border-white/15 hover:bg-white/[0.02]'
           }
           ${isUploading ? 'pointer-events-none opacity-60' : ''}
         `}
       >
-        <div className="space-y-2">
+        <div className="space-y-3">
           {isUploading ? (
             <>
-              <div className="w-10 h-10 mx-auto rounded-xl bg-workx-lime/10 flex items-center justify-center animate-pulse">
-                <Icons.upload size={20} className="text-workx-lime" />
+              <div className="w-12 h-12 mx-auto rounded-xl bg-workx-lime/10 flex items-center justify-center border border-workx-lime/15">
+                <div className="animate-spin">
+                  <Icons.refresh size={20} className="text-workx-lime" />
+                </div>
               </div>
               <p className="text-sm text-white/60">{uploadProgress}</p>
             </>
           ) : (
             <>
-              <div className="w-10 h-10 mx-auto rounded-xl bg-white/5 flex items-center justify-center">
-                <Icons.upload size={20} className="text-white/40" />
+              <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center transition-all duration-300 ${
+                isDragging
+                  ? 'bg-workx-lime/15 border border-workx-lime/20'
+                  : 'bg-white/[0.04] border border-white/[0.06]'
+              }`}>
+                <Icons.upload size={22} className={`transition-colors duration-300 ${isDragging ? 'text-workx-lime' : 'text-white/35'}`} />
               </div>
-              <p className="text-sm text-white/60">
-                Sleep een bestand hierheen of <span className="text-workx-lime">klik om te selecteren</span>
-              </p>
-              <p className="text-[11px] text-white/30">PDF, DOCX, TXT, MD, afbeeldingen — max 32MB (PDF) / 10MB (overig)</p>
+              <div className="space-y-1">
+                <p className="text-sm text-white/55">
+                  Sleep een bestand hierheen of <span className="text-workx-lime font-medium">klik om te selecteren</span>
+                </p>
+                <p className="text-[11px] text-white/25">PDF, DOCX, TXT, MD, afbeeldingen — max 32MB (PDF) / 10MB (overig)</p>
+              </div>
             </>
           )}
         </div>
