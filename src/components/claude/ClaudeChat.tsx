@@ -830,7 +830,7 @@ export default function ClaudeChat({
             <div className="text-center space-y-2">
               <h3 className="text-xl font-semibold text-white/90 tracking-tight">Stel een juridische vraag</h3>
               <p className="text-sm text-white/30 max-w-sm mx-auto leading-relaxed">
-                Doorzoekt automatisch 48.000+ passages uit T&C, Thematica, RAR en VAAN
+                Doorzoekt automatisch 48.000+ passages uit T&C Arbeidsrecht, Thematica, RAR, VAAN en Tijdschrift ArbeidsRecht
               </p>
             </div>
             {/* Minimal quick suggestions */}
