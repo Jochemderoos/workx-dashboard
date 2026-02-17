@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Icons } from '@/components/ui/Icons'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 interface Source {
@@ -103,6 +104,7 @@ export default function SourcesManager() {
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [processingStatus, setProcessingStatus] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { confirm, ConfirmDialogComponent } = useConfirm()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -325,6 +327,14 @@ export default function SourcesManager() {
   }
 
   const deleteSource = async (id: string) => {
+    const source = sources.find(s => s.id === id)
+    const confirmed = await confirm({
+      title: 'Bron verwijderen',
+      message: `Weet je zeker dat je "${source?.name || 'deze bron'}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`,
+      confirmText: 'Verwijderen',
+      type: 'danger',
+    })
+    if (!confirmed) return
     try {
       await fetch(`/api/claude/sources/${id}`, { method: 'DELETE' })
       setSources(sources.filter(s => s.id !== id))
@@ -997,6 +1007,8 @@ export default function SourcesManager() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialogComponent />
     </div>
   )
 }

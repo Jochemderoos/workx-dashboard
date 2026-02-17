@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Icons } from '@/components/ui/Icons'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 interface Template {
@@ -39,6 +40,7 @@ export default function TemplatesManager() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { confirm, ConfirmDialogComponent } = useConfirm()
 
   const [uploadForm, setUploadForm] = useState({
     name: '',
@@ -155,6 +157,14 @@ export default function TemplatesManager() {
   }
 
   const deleteTemplate = async (id: string) => {
+    const template = templates.find(t => t.id === id)
+    const confirmed = await confirm({
+      title: 'Template verwijderen',
+      message: `Weet je zeker dat je "${template?.name || 'dit template'}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`,
+      confirmText: 'Verwijderen',
+      type: 'danger',
+    })
+    if (!confirmed) return
     try {
       await fetch(`/api/claude/templates/${id}`, { method: 'DELETE' })
       setTemplates(templates.filter(t => t.id !== id))
@@ -554,6 +564,8 @@ export default function TemplatesManager() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialogComponent />
     </div>
   )
 }
