@@ -178,10 +178,11 @@ Dit is het VERPLICHTE formaat (gebruik exact deze HTML-tags):
 </details>
 
 REGELS voor de Gebruikte bronnen sectie:
-- Neem ELKE bron op die je hebt geraadpleegd, ook als het er 5+ zijn
-- Het citaat moet een LETTERLIJK fragment zijn uit de meegeleverde brontekst. Als je geen exact citaat kunt geven, parafraseer dan de relevante passage en markeer dit met [parafrase]
+- Maak een APART inklapbaar blok voor ELKE AFZONDERLIJKE bron. Als je informatie uit T&C, Thematica én RAR hebt gebruikt, maak je 3 aparte blokken — NIET 1 gecombineerd blok
+- Neem ELKE bron op die in de meegeleverde passages voorkomt, ook als het er 5+ zijn. Als er passages uit een bron zijn meegeleverd maar je hebt die bron niet nodig gehad, vermeld dan alsnog kort waarom niet
+- Het citaat moet een LETTERLIJK fragment zijn uit de meegeleverde brontekst (kopieer exact). Als je geen exact citaat kunt geven, parafraseer dan en markeer met [parafrase]
 - Gebruik de exacte vindplaats zodat de advocaat de passage kan terugvinden
-- Deze sectie is net zo belangrijk als het antwoord zelf — het maakt je analyse verifieerbaar
+- Deze sectie is net zo belangrijk als het antwoord zelf — het maakt je analyse verifieerbaar voor de advocaat
 
 Bij web_search voor juridische bronnen, geef VOORKEUR aan: wetten.overheid.nl (wetteksten), rechtspraak.nl (jurisprudentie), navigator.nl (vakliteratuur), ar-updates.nl (arbeidsrecht updates), uwv.nl (UWV-procedures).
 
