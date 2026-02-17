@@ -584,15 +584,7 @@ ${markdownHtml}
     // AbortController for cancellation + timeouts
     const controller = new AbortController()
     abortControllerRef.current = controller
-
-    // Connection timeout: if fetch doesn't complete in 20 seconds, abort
-    // This catches stale connections after a Vercel deploy
-    let connectionTimedOut = false
-    const connectionTimeoutId = setTimeout(() => {
-      connectionTimedOut = true
-      controller.abort()
-    }, 20000)
-    let streamTimeoutId: ReturnType<typeof setTimeout> | null = null
+    const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 min overall timeout
 
     try {
       setStatusText('Verzoek versturen...')
@@ -613,12 +605,8 @@ ${markdownHtml}
         signal: controller.signal,
       })
 
-      // Connection established — clear short timeout, set 5-minute streaming timeout
-      clearTimeout(connectionTimeoutId)
-      streamTimeoutId = setTimeout(() => controller.abort(), 300000)
-
       if (!response.ok) {
-        clearTimeout(streamTimeoutId)
+        clearTimeout(timeoutId)
         const rawText = await response.text()
         let errorMsg = `Server fout (${response.status})`
         try {
@@ -743,7 +731,7 @@ ${markdownHtml}
         }
       }
 
-      if (streamTimeoutId) clearTimeout(streamTimeoutId)
+      clearTimeout(timeoutId)
       setStreamingMsgId(null)
 
       // Flush final content into state if not already done by 'done' event
@@ -764,16 +752,11 @@ ${markdownHtml}
       setStatusText('')
 
     } catch (error) {
-      clearTimeout(connectionTimeoutId)
-      if (streamTimeoutId) clearTimeout(streamTimeoutId)
+      clearTimeout(timeoutId)
       let errMsg = 'Onbekende fout'
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          if (connectionTimedOut) {
-            errMsg = 'Verbinding mislukt — ververs de pagina (Ctrl+Shift+R) en probeer opnieuw.'
-          } else {
-            errMsg = 'Generatie gestopt.'
-          }
+          errMsg = 'Generatie gestopt.'
         } else {
           errMsg = error.message
         }
