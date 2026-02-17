@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = 32 * 1024 * 1024 // 32MB (Claude ondersteunt PDFs tot 32MB)
 const ALLOWED_TYPES = ['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp']
 
 // GET: lijst documenten (optioneel filter op projectId)
@@ -127,9 +127,14 @@ export async function POST(req: NextRequest) {
     textContent = `[Afbeelding: ${file.name}]`
   }
 
-  // Store file as base64 data URL for small files, or just text for larger ones
+  // Store file as base64 data URL for native API support (PDFs, images)
+  // PDFs up to 32MB: stored as base64 for native Claude document blocks
+  // Images up to 10MB: stored as base64 for native Claude vision blocks
+  // Other files: text content only, no base64 needed
   let fileUrl: string | null = null
-  if (file.size <= 5 * 1024 * 1024) {
+  const isPdfOrImage = extension === 'pdf' || ['png', 'jpg', 'jpeg', 'webp'].includes(extension)
+  const maxBase64Size = isPdfOrImage ? 32 * 1024 * 1024 : 5 * 1024 * 1024
+  if (file.size <= maxBase64Size) {
     const mimeType = file.type || `application/${extension}`
     fileUrl = `data:${mimeType};base64,${buffer.toString('base64')}`
   }

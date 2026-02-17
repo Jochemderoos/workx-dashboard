@@ -18,8 +18,8 @@ interface UploadedDocument {
   createdAt: string
 }
 
-const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt', 'md']
-const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp']
+const MAX_SIZE = 32 * 1024 * 1024 // 32MB (PDFs tot 32MB, overige tot 10MB)
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -38,8 +38,9 @@ export default function DocumentUploader({ projectId, onUpload, compact = false 
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return `Bestandstype .${ext} niet ondersteund. Toegestaan: ${ALLOWED_EXTENSIONS.join(', ')}`
     }
-    if (file.size > MAX_SIZE) {
-      return 'Bestand is te groot (max 10MB)'
+    const maxForType = ext === 'pdf' ? 32 * 1024 * 1024 : 10 * 1024 * 1024
+    if (file.size > maxForType) {
+      return `Bestand is te groot (max ${ext === 'pdf' ? '32' : '10'}MB)`
     }
     return null
   }
@@ -108,7 +109,7 @@ export default function DocumentUploader({ projectId, onUpload, compact = false 
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.docx,.txt,.md"
+          accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
           onChange={handleFileSelect}
           className="hidden"
         />
@@ -135,7 +136,7 @@ export default function DocumentUploader({ projectId, onUpload, compact = false 
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.docx,.txt,.md"
+        accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -169,7 +170,7 @@ export default function DocumentUploader({ projectId, onUpload, compact = false 
               <p className="text-sm text-white/60">
                 Sleep een bestand hierheen of <span className="text-workx-lime">klik om te selecteren</span>
               </p>
-              <p className="text-[11px] text-white/30">PDF, DOCX, TXT, MD — max 10MB</p>
+              <p className="text-[11px] text-white/30">PDF, DOCX, TXT, MD, afbeeldingen — max 32MB (PDF) / 10MB (overig)</p>
             </>
           )}
         </div>

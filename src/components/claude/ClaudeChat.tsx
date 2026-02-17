@@ -15,6 +15,8 @@ interface Message {
   confidence?: 'hoog' | 'gemiddeld' | 'laag'
   model?: string
   createdAt?: string
+  attachments?: Array<{ name: string; fileType: string }>
+  thinkingContent?: string
 }
 
 interface AttachedDoc {
@@ -87,11 +89,13 @@ export default function ClaudeChat({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isThinkingRef = useRef(false) // Tracks thinking state inside streaming closure
+  const thinkingTextRef = useRef('') // Tracks accumulated thinking text for saving after stream ends
   const streamBufferRef = useRef('') // Buffered streaming text
   const abortControllerRef = useRef<AbortController | null>(null) // For stop button
   const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null) // Throttled streaming markdown render
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
   const [streamingContent, setStreamingContent] = useState('') // Throttled streaming text for markdown rendering
+  const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(new Set()) // Per-message thinking expansion
 
   const RESPONSE_OPTIONS = [
     { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
@@ -208,38 +212,52 @@ export default function ClaudeChat({
   }
 
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = e.target.files
+    if (!files || files.length === 0) return
     // Reset input so same file can be selected again
     if (fileInputRef.current) fileInputRef.current.value = ''
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || ''
-    if (!['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
-      toast.error(`Bestandstype .${ext} niet ondersteund. Toegestaan: pdf, docx, txt, md, png, jpg`)
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Bestand is te groot (max 10MB)')
-      return
+    const filesToUpload = Array.from(files)
+
+    // Validate all files first
+    for (const file of filesToUpload) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || ''
+      if (!['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+        toast.error(`Bestandstype .${ext} niet ondersteund. Toegestaan: pdf, docx, txt, md, png, jpg`)
+        return
+      }
+      const maxSize = ext === 'pdf' ? 32 * 1024 * 1024 : 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        toast.error(`${file.name} is te groot (max ${ext === 'pdf' ? '32' : '10'}MB)`)
+        return
+      }
     }
 
     setIsUploading(true)
+    let uploadedCount = 0
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      if (projectId) formData.append('projectId', projectId)
+      for (const file of filesToUpload) {
+        const formData = new FormData()
+        formData.append('file', file)
+        if (projectId) formData.append('projectId', projectId)
 
-      const res = await fetch('/api/claude/documents', {
-        method: 'POST',
-        body: formData,
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Upload mislukt')
+        const res = await fetch('/api/claude/documents', {
+          method: 'POST',
+          body: formData,
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || `Upload mislukt: ${file.name}`)
+        }
+        const doc = await res.json()
+        setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])
+        uploadedCount++
       }
-      const doc = await res.json()
-      setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])
-      toast.success(`${file.name} bijgevoegd`)
+      if (uploadedCount === 1) {
+        toast.success(`${filesToUpload[0].name} bijgevoegd`)
+      } else {
+        toast.success(`${uploadedCount} bestanden bijgevoegd`)
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload mislukt')
     } finally {
@@ -464,10 +482,14 @@ export default function ClaudeChat({
     const fullMessage = instructions ? instructions + text : text
 
     // Add user message (show only the user's text, not the instructions)
+    const currentAttachments = attachedDocs.length > 0
+      ? attachedDocs.map(d => ({ name: d.name, fileType: d.fileType }))
+      : undefined
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: text,
+      attachments: currentAttachments,
     }
     setMessages(prev => [...prev, userMessage])
     setInput('')
@@ -475,6 +497,7 @@ export default function ClaudeChat({
     setIsThinking(false)
     isThinkingRef.current = false
     setThinkingText('')
+    thinkingTextRef.current = ''
     setThinkingExpanded(false)
     setStatusText('Verbinden met Claude...')
 
@@ -584,6 +607,7 @@ export default function ClaudeChat({
               isThinkingRef.current = true
               setStatusText('Claude overweegt...')
             } else if (event.type === 'thinking' && event.text) {
+              thinkingTextRef.current += event.text
               setThinkingText(prev => prev + event.text)
             } else if (event.type === 'delta' && event.text) {
               // First text delta means thinking is done — auto-collapse
@@ -617,8 +641,10 @@ export default function ClaudeChat({
                 streamIntervalRef.current = null
               }
               setStreamingContent('')
+              // Capture thinking text so it persists after streaming ends
+              const savedThinking = thinkingTextRef.current || undefined
               setMessages(prev => prev.map(m =>
-                m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel } : m
+                m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel, thinkingContent: savedThinking } : m
               ))
             } else if (event.type === 'error') {
               throw new Error(event.error || 'Onbekende fout')
@@ -750,6 +776,7 @@ export default function ClaudeChat({
         type="file"
         accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
         onChange={handleFileAttach}
+        multiple
         className="hidden"
       />
 
@@ -816,6 +843,32 @@ export default function ClaudeChat({
                     <Icons.sparkles size={12} className="text-workx-lime" />
                   </div>
                   <div className="flex-1 min-w-0">
+                    {/* Saved thinking content (collapsible, persists after streaming) */}
+                    {!isStreaming && msg.thinkingContent && (
+                      <div className="mb-1.5">
+                        <button
+                          onClick={() => setExpandedThinkingIds(prev => {
+                            const next = new Set(prev)
+                            if (next.has(msg.id)) next.delete(msg.id)
+                            else next.add(msg.id)
+                            return next
+                          })}
+                          className="flex items-center gap-1.5 py-1 text-[10px] text-white/25 hover:text-white/40 transition-colors"
+                        >
+                          <Icons.chevronRight size={10} className={`transition-transform duration-200 ${expandedThinkingIds.has(msg.id) ? 'rotate-90' : ''}`} />
+                          <span>Overwegingen bekijken</span>
+                        </button>
+                        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                          expandedThinkingIds.has(msg.id) ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+                        }`}>
+                          <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[180px] mb-2">
+                            <p className="text-[11px] text-white/25 leading-relaxed whitespace-pre-wrap">
+                              {msg.thinkingContent}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-white/[0.04] border border-white/[0.08]">
                       {isStreaming ? (
                         // Streaming: throttled markdown rendering (80ms interval)
@@ -1030,6 +1083,29 @@ export default function ClaudeChat({
               {/* User message */}
               {msg.role === 'user' && (
                 <div className="rounded-2xl rounded-tr-md px-4 py-3 bg-workx-lime text-workx-dark">
+                  {/* Attachment indicators */}
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {msg.attachments.map((att, idx) => {
+                        const isImage = ['png', 'jpg', 'jpeg', 'webp'].includes(att.fileType)
+                        return (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-workx-dark/10 text-[11px] text-workx-dark/80"
+                          >
+                            {isImage ? (
+                              <Icons.image size={11} />
+                            ) : att.fileType === 'pdf' ? (
+                              <Icons.file size={11} />
+                            ) : (
+                              <Icons.paperclip size={11} />
+                            )}
+                            <span className="truncate max-w-[150px]">{att.name}</span>
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
                   <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                 </div>
               )}
@@ -1306,7 +1382,7 @@ export default function ClaudeChat({
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading || isUploading}
-              title="Document bijvoegen (PDF, DOCX, TXT, MD)"
+              title="Bestanden bijvoegen (PDF, DOCX, TXT, afbeeldingen)"
               className="flex-shrink-0 w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-white/40 flex items-center justify-center hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
             >
               {isUploading ? (

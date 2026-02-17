@@ -3462,6 +3462,47 @@ textarea::-webkit-scrollbar-thumb:hover {
   margin: 0.75rem 0;
 }
 
+/* Tables */
+.claude-response .table-wrapper {
+  overflow-x: auto;
+  margin: 0.5rem 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.claude-response table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.claude-response thead {
+  background: rgba(255, 255, 255, 0.04);
+}
+.claude-response th {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+.claude-response td {
+  padding: 0.4rem 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.claude-response tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+.claude-response tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Strikethrough */
+.claude-response del {
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: line-through;
+}
+
 /* AI sparkle glow effect for sidebar item */
 .ai-glow {
   position: relative;
