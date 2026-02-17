@@ -890,22 +890,16 @@ export default function ClaudeChat({
                       <div className="mt-1.5 ml-1">
                         <p className="text-[10px] uppercase tracking-wider text-white/20 mb-1 font-medium">Kennisbronnen gebruikt</p>
                         <div className="flex flex-wrap gap-1">
-                          {msg.sources.map((source, idx) => {
-                            const Tag = source.url ? 'a' : 'span'
-                            const linkProps = source.url ? { href: source.url, target: '_blank', rel: 'noopener noreferrer' } : {}
-                            return (
-                              <Tag
-                                key={idx}
-                                {...linkProps}
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[10px] text-white/40 ${source.url ? 'hover:bg-white/[0.08] hover:text-white/60 hover:border-white/[0.15] cursor-pointer transition-colors' : ''}`}
-                              >
-                                <Icons.database size={8} />
-                                {source.name}
-                                <span className="text-white/20">({source.category})</span>
-                                {source.url && <Icons.externalLink size={7} className="ml-0.5 opacity-50" />}
-                              </Tag>
-                            )
-                          })}
+                          {msg.sources.map((source, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[10px] text-white/35"
+                            >
+                              <Icons.database size={8} />
+                              {source.name}
+                              <span className="text-white/15">({source.category})</span>
+                            </span>
+                          ))}
                         </div>
                       </div>
                     )}
