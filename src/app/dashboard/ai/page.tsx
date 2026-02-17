@@ -69,7 +69,7 @@ export default function AIAssistentPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [chatActive, setChatActive] = useState(false)
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
-  const [showHistory, setShowHistory] = useState(true)
+  const [showHistory, setShowHistory] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [activeTab, setActiveTab] = useState<'chat' | 'projects' | 'bronnen' | 'templates'>('chat')
 
@@ -377,107 +377,61 @@ export default function AIAssistentPage() {
 
   return (
     <div className={`transition-all duration-500 ease-in-out ${isCompactMode ? 'space-y-2' : 'space-y-6'}`}>
-      {/* Hero Header - collapses when chat is active */}
-      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-workx-gray via-workx-dark to-workx-gray border border-white/10 transition-all duration-500 ease-in-out ${
-        isCompactMode ? 'p-3' : 'p-8'
+      {/* Header — compact, minimal */}
+      <div className={`flex items-center justify-between transition-all duration-500 ease-in-out ${
+        isCompactMode ? 'py-1' : 'py-2'
       }`}>
-        <div className={`absolute top-0 right-0 w-96 h-96 bg-workx-lime/5 rounded-full blur-[100px] transition-opacity duration-500 ${isCompactMode ? 'opacity-0' : 'opacity-100'}`} />
-        <div className={`absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] transition-opacity duration-500 ${isCompactMode ? 'opacity-0' : 'opacity-100'}`} />
-
-        <div className="relative flex items-center justify-between">
-          <div className={`flex items-center gap-3 transition-all duration-500`}>
-            <div className={`rounded-2xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center border border-workx-lime/20 transition-all duration-500 ${
-              isCompactMode ? 'w-8 h-8 rounded-xl' : 'w-12 h-12'
-            }`}>
-              <Icons.sparkles size={isCompactMode ? 16 : 24} className="text-workx-lime" />
-            </div>
-            <div>
-              <h1 className={`font-semibold text-white transition-all duration-500 ${isCompactMode ? 'text-base' : 'text-2xl'}`}>AI Assistent</h1>
-              <p className={`text-white/40 transition-all duration-500 overflow-hidden ${isCompactMode ? 'text-[0px] opacity-0 h-0' : 'text-sm opacity-100'}`}>
-                Juridische AI voor Workx Advocaten
-              </p>
-            </div>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center border border-workx-lime/20">
+            <Icons.sparkles size={16} className="text-workx-lime" />
           </div>
-
-          {/* Description - hidden when compact */}
-          <div className={`transition-all duration-500 overflow-hidden ${isCompactMode ? 'max-w-0 opacity-0' : 'max-w-xl opacity-100'}`}>
-            <p className="text-sm text-white/30 leading-relaxed whitespace-nowrap">
-              Stel vragen, analyseer documenten, zoek rechtspraak
-            </p>
+          <div>
+            <h1 className="text-base font-semibold text-white">AI Assistent</h1>
           </div>
-
-          <div className="flex items-center gap-2 text-[11px] text-white/20 flex-shrink-0">
-            <button
-              onClick={() => setShowHelp(true)}
-              className={`flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 text-blue-300/70 hover:text-blue-300 hover:border-blue-500/30 hover:from-blue-500/15 hover:to-purple-500/15 transition-all duration-300 ${
-                isCompactMode ? 'px-2 py-1' : 'px-3 py-1.5'
-              }`}
-            >
-              <Icons.helpCircle size={isCompactMode ? 13 : 15} />
-              {!isCompactMode && <span>Hulp & uitleg</span>}
-            </button>
-            <div className={`flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 transition-all duration-500 ${
-              isCompactMode ? 'px-2 py-1' : 'px-3 py-1.5'
-            }`}>
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              Claude Sonnet 4.5
-            </div>
+        </div>
+        <div className="flex items-center gap-2 text-[11px]">
+          <button
+            onClick={() => setShowHelp(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/[0.05] hover:border-white/20 transition-all"
+          >
+            <Icons.helpCircle size={14} />
+            <span>Hulp</span>
+          </button>
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/25">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            Sonnet 4.5
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation - shrinks when chat is active */}
-      <div className={`grid grid-cols-4 gap-2 sticky top-0 z-30 bg-workx-dark transition-all duration-500 ease-in-out ${
-        isCompactMode ? 'py-1 -my-1' : 'py-2 -my-2'
-      }`}>
+      {/* Tab Navigation — compact inline pills */}
+      <div className="flex items-center gap-1.5 sticky top-0 z-30 bg-workx-dark py-1.5">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`relative flex items-center justify-center rounded-xl text-center transition-all duration-300 ${
-              isCompactMode
-                ? 'flex-row gap-1.5 px-2 py-2'
-                : 'flex-col gap-1.5 px-3 py-3.5'
-            } ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
               activeTab === tab.id
-                ? 'bg-workx-lime text-workx-dark shadow-lg shadow-workx-lime/20'
-                : 'bg-white/[0.03] border border-white/10 text-white/50 hover:text-white hover:bg-white/[0.06] hover:border-white/20'
+                ? 'bg-workx-lime text-workx-dark'
+                : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
             }`}
           >
-            <tab.icon size={isCompactMode ? 16 : 20} />
-            <div className="flex items-center gap-1.5">
-              <span className={`transition-all duration-300 ${
-                isCompactMode ? 'text-xs' : 'text-sm'
-              } ${activeTab === tab.id ? 'font-semibold' : 'font-medium'}`}>
-                {tab.label}
+            <tab.icon size={14} />
+            <span>{tab.label}</span>
+            {tab.count !== undefined && tab.count > 0 && (
+              <span className={`text-[9px] px-1 py-0.5 rounded-full font-medium ${
+                activeTab === tab.id ? 'bg-workx-dark/20 text-workx-dark' : 'bg-white/10 text-white/30'
+              }`}>
+                {tab.count}
               </span>
-              {tab.count !== undefined && tab.count > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                  activeTab === tab.id
-                    ? 'bg-workx-dark/20 text-workx-dark'
-                    : 'bg-white/10 text-white/40'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
-            </div>
-            {/* Description - hidden in compact mode */}
-            <span className={`text-[10px] leading-tight transition-all duration-300 overflow-hidden ${
-              isCompactMode
-                ? 'max-h-0 opacity-0 w-0'
-                : 'max-h-6 opacity-100'
-            } ${
-              activeTab === tab.id ? 'text-workx-dark/60' : 'text-white/25'
-            }`}>
-              {tab.desc}
-            </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Content based on active tab */}
       {activeTab === 'chat' && (
-        <div className="flex gap-0" style={{ height: isCompactMode ? 'calc(100vh - 180px)' : 'calc(100vh - 320px)' }}>
+        <div className="flex gap-0" style={{ height: isCompactMode ? 'calc(100vh - 140px)' : 'calc(100vh - 200px)' }}>
           {/* Conversation history sidebar — slim, collapsible */}
           <div className={`bg-white/[0.02] border-r border-white/[0.06] overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
             showHistory ? 'w-64 opacity-100' : 'w-0 opacity-0 border-0 p-0'

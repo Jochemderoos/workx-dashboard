@@ -84,7 +84,7 @@ export default function ClaudeChat({
   const [annotationType, setAnnotationType] = useState<'comment' | 'correction' | 'warning'>('comment')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [annotations, setAnnotations] = useState<Record<string, any[]>>({})
-  const [optionsExpanded, setOptionsExpanded] = useState(true)
+  const [optionsExpanded, setOptionsExpanded] = useState(false)
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -470,14 +470,11 @@ export default function ClaudeChat({
       return
     }
 
-    // Explicit details/summary toggle (fallback for native behavior)
+    // Details/summary: let native browser behavior handle the toggle
+    // Do NOT preventDefault — that breaks the native <details> open/close
     const summary = target.closest('summary') as HTMLElement | null
     if (summary) {
-      const details = summary.parentElement as HTMLDetailsElement | null
-      if (details && details.tagName === 'DETAILS') {
-        e.preventDefault()
-        details.open = !details.open
-      }
+      return // Let the browser handle it natively
     }
   }, [])
 
@@ -827,49 +824,32 @@ export default function ClaudeChat({
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5" onClick={handleMessagesClick}>
-        {/* Empty state — welcoming with inline quick actions */}
+        {/* Empty state — clean, minimal, focus on the input bar */}
         {messages.length === 0 && !isLoading && (
-          <div className="space-y-6 pb-4">
-            {/* Welcome header */}
-            <div className="text-center space-y-3 pt-4 chat-welcome-glow relative">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-blue-500/5 flex items-center justify-center border border-workx-lime/15 shadow-lg shadow-workx-lime/5">
-                <Icons.sparkles size={28} className="text-workx-lime" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-white tracking-tight">Waar kan ik je mee helpen?</h3>
-                <p className="text-sm text-white/35 max-w-md mx-auto leading-relaxed">
-                  Doorzoekt automatisch 5 juridische bronnen met 48.000 passages.
-                  Upload een document of kies een snelactie.
-                </p>
-              </div>
-
-              {/* Subtle onboarding hints */}
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-1 text-[11px] text-white/20">
-                <span className="flex items-center gap-1.5">
-                  <Icons.paperclip size={11} className="text-white/25" />
-                  Upload een document
-                </span>
-                <span className="text-white/10">|</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400/50" />
-                  Kies Opus voor diepere analyse
-                </span>
-                <span className="text-white/10">|</span>
-                <span className="flex items-center gap-1.5">
-                  <Icons.shield size={11} className="text-white/25" />
-                  Anonimiseer persoonsgegevens
-                </span>
-              </div>
+          <div className="flex flex-col items-center justify-center h-full pb-16">
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold text-white/90 tracking-tight">Stel een juridische vraag</h3>
+              <p className="text-sm text-white/30 max-w-sm mx-auto leading-relaxed">
+                Doorzoekt automatisch 48.000+ passages uit T&C, Thematica, RAR en VAAN
+              </p>
             </div>
-
-            {/* Inline quick actions grid */}
-            <div className="max-w-4xl mx-auto">
-              <LegalQuickActions
-                onAction={sendMessage}
-                disabled={isLoading}
-                hasDocuments={attachedDocs.length > 0}
-                inline
-              />
+            {/* Minimal quick suggestions */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-6 max-w-lg">
+              {[
+                'Ontslag wegens disfunctioneren',
+                'Transitievergoeding berekenen',
+                'VSO opstellen',
+                'Concurrentiebeding toetsen',
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => sendMessage(suggestion)}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 rounded-lg text-xs text-white/40 bg-white/[0.04] border border-white/[0.08] hover:text-white/70 hover:bg-white/[0.08] hover:border-white/[0.15] transition-all"
+                >
+                  {suggestion}
+                </button>
+              ))}
             </div>
           </div>
         )}
