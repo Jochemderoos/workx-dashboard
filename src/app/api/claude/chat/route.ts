@@ -409,204 +409,11 @@ export async function POST(req: NextRequest) {
     })
     const history = historyDesc.reverse()
 
-    // Determine native block budget: generous when knowledge sources are off,
-    // conservative when they'll add ~80K+ tokens of source passages.
-    const willUseKnowledgeSources = useKnowledgeSources === false
-      ? false
-      : isEmploymentLawQuestion(message)
-    const maxNativeBlockTokens = willUseKnowledgeSources
-      ? NATIVE_BLOCK_BUDGET_WITH_SOURCES
-      : NATIVE_BLOCK_BUDGET_WITHOUT_SOURCES
-    console.log(`[chat] Native block budget: ${maxNativeBlockTokens} tokens (sources=${willUseKnowledgeSources})`)
-
-    // Build context from documents — use native PDF support when available
-    // For large PDFs, fall back to extracted text (cheaper and always fits in context)
-    let documentContext = ''
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const documentBlocks: any[] = []  // Native document blocks for Claude API
-    let hasDocxAttachments = false
-    let pdfTextFallback = '' // Text for PDFs sent as native blocks (used if API rejects payload)
-    let nativeBlockTokens = 0 // Running total of estimated tokens from native blocks
-
-    // Helper: check if document has usable extracted text (not empty/placeholder)
-    const hasUsableContent = (d: { content: string | null }) =>
-      d.content != null && d.content.length > 50 && !d.content.startsWith('[')
-
-    if (documentIds?.length) {
-      // Step 1: Load metadata + content only (skip fileUrl to avoid loading 10MB+ base64 from DB)
-      const docs = await prisma.aIDocument.findMany({
-        where: {
-          id: { in: documentIds },
-          OR: [
-            { userId },
-            { project: { members: { some: { userId } } } },
-          ],
-        },
-        select: { id: true, name: true, fileType: true, fileSize: true, content: true },
-      })
-
-      // Step 2: Load fileUrl for files that need native blocks:
-      // - Small PDFs (≤5MB): always native (best quality)
-      // - Images: always native (Claude vision)
-      // - Large PDFs WITHOUT extracted text: native is the ONLY way to analyze them
-      //   (scanned/secured PDFs where text extraction failed)
-      const nativeCandidateIds = docs
-        .filter(d =>
-          (d.fileType === 'pdf' && (d.fileSize || 0) <= 5 * 1024 * 1024) ||
-          (d.fileType === 'pdf' && !hasUsableContent(d)) ||
-          (['png', 'jpg', 'jpeg', 'webp'].includes(d.fileType || ''))
-        )
-        .map(d => d.id)
-      const nativeDocsMap = new Map<string, string | null>()
-      if (nativeCandidateIds.length > 0) {
-        const nativeDocs = await prisma.aIDocument.findMany({
-          where: { id: { in: nativeCandidateIds } },
-          select: { id: true, fileUrl: true },
-        })
-        for (const nd of nativeDocs) nativeDocsMap.set(nd.id, nd.fileUrl)
-      }
-
-      for (const doc of docs) {
-        if (doc.fileType === 'docx') hasDocxAttachments = true
-        const fileUrl = nativeDocsMap.get(doc.id) || null
-
-        if (doc.fileType === 'pdf') {
-          const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
-            ? fileUrl.split(',')[1]
-            : null
-          const blockTokens = base64Data ? estimatePdfBlockTokens(base64Data.length) : 0
-          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
-            // Small/medium PDF within budget: native block (best quality)
-            documentBlocks.push({
-              type: 'document',
-              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-              title: doc.name,
-            })
-            nativeBlockTokens += blockTokens
-            if (doc.content) {
-              pdfTextFallback += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
-            }
-          } else if (hasUsableContent(doc)) {
-            // Large PDF or budget exceeded, with good extracted text: use text
-            documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-          } else if (base64Data && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
-            // Scanned PDF WITHOUT text: native if it fits in budget
-            console.log(`[chat] Scanned PDF ${doc.name}: sending native (~${Math.ceil(base64Data.length / 50000)} pages, ~${blockTokens} tokens)`)
-            documentBlocks.push({
-              type: 'document',
-              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-              title: doc.name,
-            })
-            nativeBlockTokens += blockTokens
-          } else if (base64Data) {
-            const estimatedPages = Math.ceil(base64Data.length / 50000)
-            console.warn(`[chat] PDF ${doc.name} exceeds native budget (~${estimatedPages} pages, budget: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
-            documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n[Dit is een gescand PDF-document van ~${estimatedPages} pagina's. De tekst kon niet automatisch worden geëxtraheerd. Het document is te groot om in zijn geheel te verwerken. Upload het document opnieuw in kleinere delen, of lever het als tekstbestand aan.]\n--- Einde ---`
-          }
-        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
-          const base64Data = fileUrl.split(',')[1]
-          const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
-          documentBlocks.push({
-            type: 'image',
-            source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
-          })
-          nativeBlockTokens += 1600
-        } else if (doc.content) {
-          documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
-        }
-      }
-    }
-
-    if (projectId) {
-      // Step 1: metadata + content only (skip fileUrl for large files)
-      const projectDocs = await prisma.aIDocument.findMany({
-        where: { projectId },
-        take: 20,
-        select: { id: true, name: true, fileType: true, fileSize: true, content: true },
-      })
-      // Step 2: only load fileUrl for native-eligible files (including scanned PDFs without text)
-      const projNativeIds = projectDocs
-        .filter(d =>
-          !documentIds?.includes(d.id) && (
-            (d.fileType === 'pdf' && (d.fileSize || 0) <= 5 * 1024 * 1024) ||
-            (d.fileType === 'pdf' && !hasUsableContent(d)) ||
-            (['png', 'jpg', 'jpeg', 'webp'].includes(d.fileType || ''))
-          )
-        )
-        .map(d => d.id)
-      const projNativeMap = new Map<string, string | null>()
-      if (projNativeIds.length > 0) {
-        const projNativeDocs = await prisma.aIDocument.findMany({
-          where: { id: { in: projNativeIds } },
-          select: { id: true, fileUrl: true },
-        })
-        for (const nd of projNativeDocs) projNativeMap.set(nd.id, nd.fileUrl)
-      }
-
-      for (const doc of projectDocs) {
-        if (documentIds?.includes(doc.id)) continue
-        if (doc.fileType === 'docx') hasDocxAttachments = true
-        const fileUrl = projNativeMap.get(doc.id) || null
-
-        if (doc.fileType === 'pdf') {
-          const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
-            ? fileUrl.split(',')[1]
-            : null
-          const blockTokens = base64Data ? estimatePdfBlockTokens(base64Data.length) : 0
-          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
-            documentBlocks.push({
-              type: 'document',
-              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-              title: doc.name,
-            })
-            nativeBlockTokens += blockTokens
-            if (doc.content) {
-              pdfTextFallback += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
-            }
-          } else if (hasUsableContent(doc)) {
-            if (documentContext.length > 200000) break
-            documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-          } else if (base64Data && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
-            // Scanned PDF: send native if it fits in budget
-            documentBlocks.push({
-              type: 'document',
-              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-              title: doc.name,
-            })
-            nativeBlockTokens += blockTokens
-          } else if (base64Data) {
-            const estimatedPages = Math.ceil(base64Data.length / 50000)
-            console.warn(`[chat] Project PDF ${doc.name} skipped: budget full (${nativeBlockTokens}/${maxNativeBlockTokens})`)
-            documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n[PDF-document van ~${estimatedPages} pagina's. Kon niet worden meegestuurd vanwege contextlimieten. De tekst is niet geëxtraheerd bij upload. Vraag de gebruiker om het document opnieuw te uploaden of als tekstbestand aan te leveren als de inhoud nodig is.]\n--- Einde ---`
-          } else if (!base64Data && !hasUsableContent(doc)) {
-            // PDF without base64 data AND without text — still mention it exists
-            documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n[PDF-document waarvan de inhoud niet beschikbaar is. De tekst is niet geëxtraheerd bij upload en de bestandsgegevens ontbreken.]\n--- Einde ---`
-          }
-        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
-          if (nativeBlockTokens + 1600 > maxNativeBlockTokens) break
-          const base64Data = fileUrl.split(',')[1]
-          const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
-          documentBlocks.push({
-            type: 'image',
-            source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
-          })
-          nativeBlockTokens += 1600
-        } else if (doc.content) {
-          if (documentContext.length > 200000) break
-          documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
-        }
-      }
-    }
-
-    // Anonymize message and document context if requested
+    // Anonymize message for knowledge source detection (document context anonymized later, inside stream)
     let messageForClaude = message
     if (anonymize) {
       const anonMessage = anonymizeText(message)
       messageForClaude = anonMessage.text
-      if (documentContext) {
-        const anonDocs = anonymizeText(documentContext)
-        documentContext = anonDocs.text
-      }
     }
 
     // Check API key early (before starting stream)
@@ -615,10 +422,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ANTHROPIC_API_KEY niet geconfigureerd' }, { status: 500 })
     }
 
+    // Determine native block budget: generous when knowledge sources are off,
+    // conservative when they'll add ~80K+ tokens of source passages.
+    const willUseKnowledgeSources = useKnowledgeSources === false
+      ? false
+      : isEmploymentLawQuestion(message)
+    const maxNativeBlockTokens = willUseKnowledgeSources
+      ? NATIVE_BLOCK_BUDGET_WITH_SOURCES
+      : NATIVE_BLOCK_BUDGET_WITHOUT_SOURCES
+
     // Start SSE stream IMMEDIATELY so client fetch() resolves in <1 second.
-    // Heavy processing (RAG, embeddings) runs INSIDE the stream with status updates.
-    // This prevents the 30+ second wait before response headers, and ensures
-    // stale connections after a Vercel deploy fail fast instead of hanging.
+    // ALL heavy processing (document loading, RAG, embeddings, Claude API) runs
+    // INSIDE the stream with status updates. This prevents Vercel gateway timeouts.
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
@@ -629,6 +444,156 @@ export async function POST(req: NextRequest) {
         try {
           // Notify client immediately that connection is alive
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start', conversationId: convId })}\n\n`))
+
+          // === DOCUMENT LOADING (inside stream to prevent gateway timeout) ===
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Documenten laden...' })}\n\n`))
+
+          let documentContext = ''
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const documentBlocks: any[] = []
+          let hasDocxAttachments = false
+          let pdfTextFallback = ''
+          let nativeBlockTokens = 0
+          console.log(`[chat] Native block budget: ${maxNativeBlockTokens} tokens (sources=${willUseKnowledgeSources})`)
+
+          const hasUsableContent = (d: { content: string | null }) =>
+            d.content != null && d.content.length > 50 && !d.content.startsWith('[')
+
+          // Helper: load fileUrl for a single document (one at a time to control memory)
+          const loadFileUrl = async (docId: string): Promise<string | null> => {
+            try {
+              const result = await Promise.race([
+                prisma.aIDocument.findUnique({
+                  where: { id: docId },
+                  select: { fileUrl: true },
+                }),
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+              ])
+              return result?.fileUrl || null
+            } catch {
+              console.warn(`[chat] Failed to load fileUrl for ${docId}`)
+              return null
+            }
+          }
+
+          // Process a single PDF document: decide native block vs text vs placeholder
+          const processPdfDoc = async (
+            doc: { id: string; name: string; fileType: string; fileSize: number; content: string | null },
+            prefix: string,
+          ) => {
+            const needsNative =
+              (doc.fileSize || 0) <= 5 * 1024 * 1024 || !hasUsableContent(doc)
+
+            if (needsNative) {
+              // Only load base64 if it might fit in budget
+              const estimatedTokens = estimatePdfBlockTokens(Math.ceil((doc.fileSize || 0) * 1.37)) // file→base64 overhead
+              if (nativeBlockTokens + estimatedTokens <= maxNativeBlockTokens) {
+                const fileUrl = await loadFileUrl(doc.id)
+                const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
+                  ? fileUrl.split(',')[1]
+                  : null
+                if (base64Data) {
+                  const blockTokens = estimatePdfBlockTokens(base64Data.length)
+                  if (base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
+                    documentBlocks.push({
+                      type: 'document',
+                      source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+                      title: doc.name,
+                    })
+                    nativeBlockTokens += blockTokens
+                    if (doc.content) {
+                      pdfTextFallback += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+                    }
+                    console.log(`[chat] PDF ${doc.name}: native block (~${blockTokens} tokens, total: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
+                    return
+                  }
+                }
+              }
+            }
+
+            // Fallback: use extracted text if available
+            if (hasUsableContent(doc)) {
+              documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+            } else {
+              // No text, couldn't send as native — inform Claude the document exists
+              documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[PDF-document waarvan de inhoud niet beschikbaar is. De tekst kon niet worden geëxtraheerd bij upload. Vraag de gebruiker om het document opnieuw te uploaden of als tekstbestand aan te leveren.]\n--- Einde ---`
+              console.warn(`[chat] PDF ${doc.name}: no text, no native — added placeholder`)
+            }
+          }
+
+          if (documentIds?.length) {
+            const docs = await prisma.aIDocument.findMany({
+              where: {
+                id: { in: documentIds },
+                OR: [
+                  { userId },
+                  { project: { members: { some: { userId } } } },
+                ],
+              },
+              select: { id: true, name: true, fileType: true, fileSize: true, content: true },
+            })
+
+            for (const doc of docs) {
+              if (doc.fileType === 'docx') hasDocxAttachments = true
+              if (doc.fileType === 'pdf') {
+                await processPdfDoc(doc, 'Document: ')
+              } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
+                const fileUrl = await loadFileUrl(doc.id)
+                if (fileUrl?.startsWith('data:image/')) {
+                  const base64Data = fileUrl.split(',')[1]
+                  const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
+                  documentBlocks.push({
+                    type: 'image',
+                    source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
+                  })
+                  nativeBlockTokens += 1600
+                }
+              } else if (doc.content) {
+                documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+              }
+            }
+          }
+
+          if (projectId) {
+            const projectDocs = await prisma.aIDocument.findMany({
+              where: { projectId },
+              take: 20,
+              select: { id: true, name: true, fileType: true, fileSize: true, content: true },
+            })
+
+            for (const doc of projectDocs) {
+              if (documentIds?.includes(doc.id)) continue
+              if (doc.fileType === 'docx') hasDocxAttachments = true
+              if (doc.fileType === 'pdf') {
+                await processPdfDoc(doc, '')
+              } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
+                if (nativeBlockTokens + 1600 > maxNativeBlockTokens) continue
+                const fileUrl = await loadFileUrl(doc.id)
+                if (fileUrl?.startsWith('data:image/')) {
+                  const base64Data = fileUrl.split(',')[1]
+                  const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
+                  documentBlocks.push({
+                    type: 'image',
+                    source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
+                  })
+                  nativeBlockTokens += 1600
+                }
+              } else if (doc.content) {
+                if (documentContext.length > 200000) break
+                documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+              }
+            }
+          }
+
+          // Anonymize document context if requested
+          if (anonymize && documentContext) {
+            const anonDocs = anonymizeText(documentContext)
+            documentContext = anonDocs.text
+          }
+
+          console.log(`[chat] Documents loaded: ${documentBlocks.length} native blocks (~${nativeBlockTokens} tokens), ${documentContext.length} chars text`)
+
+          // === KNOWLEDGE SOURCES ===
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Kennisbronnen doorzoeken...' })}\n\n`))
 
     // Smart routing: determine if this question needs employment law knowledge sources
