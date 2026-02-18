@@ -701,7 +701,7 @@ export default function AIAssistentPage() {
 
           {/* New project form */}
           {showNewProject && (
-            <div className="rounded-xl bg-white/5 border border-white/10 p-6 space-y-4 animate-fade-in">
+            <div className="relative z-10 rounded-xl bg-white/5 border border-white/10 p-6 space-y-4 animate-fade-in overflow-visible">
               <h3 className="text-sm font-medium text-white">Nieuw project aanmaken</h3>
 
               <div className="space-y-3">
