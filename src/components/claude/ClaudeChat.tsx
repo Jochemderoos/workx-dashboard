@@ -273,11 +273,15 @@ export default function ClaudeChat({
     setAttachedDocs(prev => prev.filter(d => d.id !== docId))
   }
 
+  // Track isLoading in ref so effects can check without re-triggering
+  const isLoadingRef = useRef(false)
+  useEffect(() => { isLoadingRef.current = isLoading }, [isLoading])
+
   // Only sync from parent when initialMessages actually has content
   // (prevents wiping local messages when parent re-renders with empty default [])
   const initialMsgCount = initialMessages.length
   useEffect(() => {
-    if (initialMsgCount > 0) {
+    if (initialMsgCount > 0 && !isLoadingRef.current) {
       setMessages(initialMessages)
     }
   }, [initialMsgCount])
@@ -293,6 +297,10 @@ export default function ClaudeChat({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   useEffect(() => {
     if (initialConvId && initialMessages.length === 0) {
+      // CRITICAL: never overwrite messages while a chat stream is active!
+      // The onConversationCreated callback can trigger initialConvId to change mid-stream,
+      // which would cause this effect to fetch & overwrite the in-progress messages.
+      if (isLoadingRef.current) return
       setIsLoadingHistory(true)
       fetch(`/api/claude/conversations/${initialConvId}`)
         .then(r => {
@@ -300,6 +308,8 @@ export default function ClaudeChat({
           return r.json()
         })
         .then(data => {
+          // Double-check: don't overwrite if chat started loading while we were fetching
+          if (isLoadingRef.current) return
           if (data.messages?.length > 0) {
             setMessages(data.messages)
           }
