@@ -216,10 +216,64 @@ export default function ClaudeChat({
     onNewChat?.()
   }
 
+  // Convert a Blob/File slice to base64
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        resolve(result.split(',')[1]) // Remove data:...;base64, prefix
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  // Upload large file in chunks (for Vercel 4.5MB body limit)
+  const uploadFileChunked = async (file: File, ext: string): Promise<{ id: string; name: string; fileType: string }> => {
+    const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB binary = ~2.7MB base64 (safe under 4.5MB with JSON overhead)
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
+    const uploadId = crypto.randomUUID()
+
+    toast(`Groot bestand: uploaden in ${totalChunks} delen...`, { icon: '\u{1F4E4}', duration: 3000 })
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE
+      const end = Math.min(start + CHUNK_SIZE, file.size)
+      const chunk = file.slice(start, end)
+      const base64 = await blobToBase64(chunk)
+
+      const res = await fetch('/api/claude/documents/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uploadId,
+          chunkIndex: i,
+          totalChunks,
+          data: base64,
+          ...(i === 0 ? { fileName: file.name, fileSize: file.size, fileType: ext, projectId: projectId || undefined } : {}),
+        }),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Upload mislukt' }))
+        throw new Error(errData.error || `Chunk ${i + 1}/${totalChunks} mislukt`)
+      }
+
+      const result = await res.json()
+
+      // Last chunk returns the complete document
+      if (result.id) {
+        return { id: result.id, name: result.name, fileType: result.fileType }
+      }
+    }
+
+    throw new Error('Upload voltooid maar geen document ontvangen')
+  }
+
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    // Reset input so same file can be selected again
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     const filesToUpload = Array.from(files)
@@ -242,6 +296,17 @@ export default function ClaudeChat({
     let uploadedCount = 0
     try {
       for (const file of filesToUpload) {
+        const ext = file.name.split('.').pop()?.toLowerCase() || ''
+
+        // Large files (>3MB): use chunked upload to bypass Vercel 4.5MB body limit
+        if (file.size > 3 * 1024 * 1024) {
+          const doc = await uploadFileChunked(file, ext)
+          setAttachedDocs(prev => [...prev, doc])
+          uploadedCount++
+          continue
+        }
+
+        // Small files: direct FormData upload
         const formData = new FormData()
         formData.append('file', file)
         if (projectId) formData.append('projectId', projectId)
@@ -251,8 +316,12 @@ export default function ClaudeChat({
           body: formData,
         })
         if (!res.ok) {
-          const data = await res.json()
-          throw new Error(data.error || `Upload mislukt: ${file.name}`)
+          const contentType = res.headers.get('content-type') || ''
+          if (contentType.includes('json')) {
+            const data = await res.json()
+            throw new Error(data.error || `Upload mislukt: ${file.name}`)
+          }
+          throw new Error(`Upload mislukt: ${file.name} (${res.status})`)
         }
         const doc = await res.json()
         setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])

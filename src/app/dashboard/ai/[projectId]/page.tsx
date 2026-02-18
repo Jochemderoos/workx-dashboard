@@ -6,7 +6,7 @@ import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
 import ClaudeChat from '@/components/claude/ClaudeChat'
 import DocumentUploader from '@/components/claude/DocumentUploader'
-import LegalQuickActions from '@/components/claude/LegalQuickActions'
+import { useSidebar } from '@/lib/sidebar-context'
 
 interface ProjectMember {
   id: string
@@ -62,10 +62,10 @@ interface TeamUser {
 }
 
 const PROJECT_ICONS: Record<string, string> = {
-  folder: '📁', briefcase: '💼', scale: '⚖️', document: '📄',
-  gavel: '🔨', shield: '🛡️', building: '🏢', people: '👥',
-  contract: '📝', money: '💰', clock: '⏰', warning: '⚠️',
-  star: '⭐', fire: '🔥', lock: '🔒',
+  folder: '\u{1F4C1}', briefcase: '\u{1F4BC}', scale: '\u2696\uFE0F', document: '\u{1F4C4}',
+  gavel: '\u{1F528}', shield: '\u{1F6E1}\uFE0F', building: '\u{1F3E2}', people: '\u{1F465}',
+  contract: '\u{1F4DD}', money: '\u{1F4B0}', clock: '\u23F0', warning: '\u26A0\uFE0F',
+  star: '\u2B50', fire: '\u{1F525}', lock: '\u{1F512}',
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -78,33 +78,49 @@ export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as string
+  const { setCollapsed: setSidebarCollapsed } = useSidebar()
 
   const [project, setProject] = useState<Project | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
+  const [chatInstance, setChatInstance] = useState(0)
   const [messages, setMessages] = useState<Message[]>([])
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([])
+  const [chatActive, setChatActive] = useState(false)
+
+  // Dropdowns
   const [showSettings, setShowSettings] = useState(false)
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [showDocs, setShowDocs] = useState(false)
+  const settingsRef = useRef<HTMLDivElement>(null)
+  const docsRef = useRef<HTMLDivElement>(null)
+
+  // Settings editing
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
 
-  // Team management state
+  // Team management
   const [allUsers, setAllUsers] = useState<TeamUser[]>([])
   const [showAddMember, setShowAddMember] = useState(false)
   const [memberSearchQuery, setMemberSearchQuery] = useState('')
-  const memberDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Auto-collapse main sidebar when on project page
+  useEffect(() => {
+    setSidebarCollapsed(true)
+  }, [setSidebarCollapsed])
 
   // Fetch project data
   useEffect(() => {
     fetchProject()
   }, [projectId])
 
-  // Close member dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (memberDropdownRef.current && !memberDropdownRef.current.contains(e.target as Node)) {
-        setShowAddMember(false)
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setShowSettings(false)
+      }
+      if (docsRef.current && !docsRef.current.contains(e.target as Node)) {
+        setShowDocs(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -122,13 +138,11 @@ export default function ProjectDetailPage() {
       setProject(data)
       setEditTitle(data.title)
       setEditDescription(data.description || '')
-
-      // Auto-select all document IDs for context
       setSelectedDocIds(data.documents.map((d: ProjectDocument) => d.id))
 
-      // Load most recent conversation if exists
       if (data.conversations.length > 0 && !activeConvId) {
-        loadConversation(data.conversations[0].id)
+        setActiveConvId(data.conversations[0].id)
+        setChatInstance(prev => prev + 1)
       }
     } catch {
       toast.error('Kon project niet laden')
@@ -137,33 +151,6 @@ export default function ProjectDetailPage() {
       setIsLoading(false)
     }
   }
-
-  const loadConversation = async (convId: string) => {
-    setActiveConvId(convId)
-    setMessages([]) // Clear while loading
-
-    try {
-      const res = await fetch(`/api/claude/chat?conversationId=${convId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setMessages(data.messages || [])
-      }
-    } catch {
-      setMessages([])
-    }
-  }
-
-  const startNewConversation = () => {
-    setActiveConvId(null)
-    setMessages([])
-  }
-
-  const handleConversationCreated = (id: string) => {
-    setActiveConvId(id)
-    fetchProject()
-  }
-
-  const [quickActionPrompt, setQuickActionPrompt] = useState<string | null>(null)
 
   const updateProject = async () => {
     if (!editTitle.trim()) {
@@ -179,7 +166,7 @@ export default function ProjectDetailPage() {
       if (res.ok) {
         const updated = await res.json()
         setProject(prev => prev ? { ...prev, ...updated } : null)
-        setIsEditingTitle(false)
+        setShowSettings(false)
         toast.success('Project bijgewerkt')
       }
     } catch {
@@ -188,8 +175,7 @@ export default function ProjectDetailPage() {
   }
 
   const deleteProject = async () => {
-    if (!confirm('Weet je zeker dat je dit project wilt verwijderen? Alle gesprekken en documenten worden verwijderd.')) return
-
+    if (!confirm('Weet je zeker dat je dit project wilt verwijderen?')) return
     try {
       await fetch(`/api/claude/projects/${projectId}`, { method: 'DELETE' })
       toast.success('Project verwijderd')
@@ -227,13 +213,11 @@ export default function ProjectDetailPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  // Team management functions
   const fetchUsersIfNeeded = async () => {
     if (allUsers.length === 0) {
       try {
         const res = await fetch('/api/claude/users')
-        const data = await res.json()
-        setAllUsers(data)
+        setAllUsers(await res.json())
       } catch { /* ignore */ }
     }
   }
@@ -247,14 +231,8 @@ export default function ProjectDetailPage() {
       })
       if (res.ok) {
         const member = await res.json()
-        setProject(prev => prev ? {
-          ...prev,
-          members: [...prev.members, member],
-        } : null)
+        setProject(prev => prev ? { ...prev, members: [...prev.members, member] } : null)
         toast.success('Teamlid toegevoegd')
-      } else {
-        const err = await res.json()
-        toast.error(err.error || 'Kon teamlid niet toevoegen')
       }
     } catch {
       toast.error('Kon teamlid niet toevoegen')
@@ -280,8 +258,6 @@ export default function ProjectDetailPage() {
     }
   }
 
-  // Note: remove-member button is always visible; the API enforces owner-only access
-
   const filteredUsersForAdd = allUsers.filter(u => {
     const alreadyMember = project?.members.some(m => m.user.id === u.id)
     const matchesSearch = u.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
@@ -293,9 +269,7 @@ export default function ProjectDetailPage() {
     return (
       <div className="flex items-center justify-center h-[80vh]">
         <div className="flex items-center gap-3 text-white/40">
-          <div className="animate-spin">
-            <Icons.refresh size={20} />
-          </div>
+          <div className="animate-spin"><Icons.refresh size={20} /></div>
           <span>Project laden...</span>
         </div>
       </div>
@@ -307,299 +281,239 @@ export default function ProjectDetailPage() {
   const displayIcon = PROJECT_ICONS[project.icon] || project.icon
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] gap-0 -mx-6 -mt-6">
-      {/* Left Sidebar: Conversations */}
-      <div className="w-64 flex-shrink-0 border-r border-white/5 flex flex-col bg-white/[0.01]">
-        {/* Project header */}
-        <div className="p-4 border-b border-white/5">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 110px)' }}>
+      {/* Compact project bar */}
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/[0.06] flex-shrink-0">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/dashboard/ai')}
-            className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 transition-colors mb-3"
+            className="flex items-center gap-1 text-[11px] text-white/30 hover:text-white/60 transition-colors"
           >
             <Icons.chevronLeft size={12} />
-            Alle projecten
+            Terug
           </button>
-
+          <div className="w-px h-4 bg-white/10" />
           <div className="flex items-center gap-2">
-            <span className="text-lg">{displayIcon}</span>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-medium text-white truncate">{project.title}</h2>
-              {project.description && (
-                <p className="text-[11px] text-white/30 truncate">{project.description}</p>
-              )}
-            </div>
+            <span className="text-sm">{displayIcon}</span>
+            <span className="text-[13px] font-medium text-white">{project.title}</span>
+            {project.documents.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-white/30">
+                {project.documents.length} doc{project.documents.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {/* Documents dropdown */}
+          <div className="relative" ref={docsRef}>
             <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="p-1.5 rounded-lg text-white/20 hover:text-white/60 hover:bg-white/5 transition-colors"
+              onClick={() => setShowDocs(!showDocs)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all border ${
+                showDocs
+                  ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                  : 'border-white/10 text-white/35 hover:text-white/60 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Icons.file size={12} />
+              Documenten
+            </button>
+
+            {showDocs && (
+              <div className="absolute right-0 top-full mt-1.5 w-80 bg-workx-gray border border-white/10 rounded-xl shadow-2xl z-50 backdrop-blur-sm overflow-hidden animate-fade-in">
+                <div className="p-3 border-b border-white/5">
+                  <DocumentUploader
+                    projectId={projectId}
+                    onUpload={(doc) => {
+                      setProject(prev => prev ? {
+                        ...prev,
+                        documents: [doc as unknown as ProjectDocument, ...prev.documents],
+                      } : null)
+                      setSelectedDocIds(prev => [...prev, doc.id])
+                    }}
+                    compact
+                  />
+                </div>
+                <div className="max-h-64 overflow-y-auto p-2">
+                  {project.documents.length === 0 ? (
+                    <p className="text-[11px] text-white/20 text-center py-4">Nog geen documenten</p>
+                  ) : (
+                    project.documents.map((doc) => (
+                      <div key={doc.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group">
+                        <button
+                          onClick={() => toggleDocSelection(doc.id)}
+                          className={`flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center ${
+                            selectedDocIds.includes(doc.id)
+                              ? 'bg-workx-lime border-workx-lime'
+                              : 'border-white/20 hover:border-white/40'
+                          }`}
+                        >
+                          {selectedDocIds.includes(doc.id) && (
+                            <Icons.check size={10} className="text-workx-dark" />
+                          )}
+                        </button>
+                        <Icons.file size={12} className="text-white/25 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-white/60 truncate">{doc.name}</p>
+                          <p className="text-[9px] text-white/20">{formatFileSize(doc.fileSize)}</p>
+                        </div>
+                        <button
+                          onClick={() => deleteDocument(doc.id)}
+                          className="p-1 rounded text-white/10 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Icons.trash size={11} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {project.documents.length > 0 && (
+                  <p className="text-[9px] text-white/15 px-3 pb-2">
+                    Aangevinkte documenten worden als context meegestuurd
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Settings dropdown */}
+          <div className="relative" ref={settingsRef}>
+            <button
+              onClick={() => { setShowSettings(!showSettings); fetchUsersIfNeeded() }}
+              className={`p-1.5 rounded-lg transition-all ${
+                showSettings
+                  ? 'bg-white/10 text-white/60'
+                  : 'text-white/25 hover:text-white/50 hover:bg-white/[0.04]'
+              }`}
             >
               <Icons.settings size={14} />
             </button>
-          </div>
-        </div>
 
-        {/* Settings panel */}
-        {showSettings && (
-          <div className="p-4 border-b border-white/5 space-y-3 bg-white/[0.02] animate-fade-in overflow-y-auto max-h-[60vh]">
-            <div>
-              <label className="text-[10px] text-white/30 block mb-1">Titel</label>
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-workx-lime/40"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-white/30 block mb-1">Beschrijving</label>
-              <textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={2}
-                className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white resize-none focus:outline-none focus:border-workx-lime/40"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={updateProject}
-                className="px-3 py-1.5 rounded-lg bg-workx-lime text-workx-dark text-[11px] font-medium hover:bg-workx-lime/90 transition-colors"
-              >
-                Opslaan
-              </button>
-              <button
-                onClick={deleteProject}
-                className="px-3 py-1.5 rounded-lg text-[11px] text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-              >
-                Verwijderen
-              </button>
-            </div>
-
-            {/* Team members section */}
-            <div className="pt-2 border-t border-white/5">
-              <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2">
-                Teamleden ({project.members.length})
-              </p>
-
-              <div className="space-y-1">
-                {project.members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group"
-                  >
-                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-medium text-white/60 flex-shrink-0">
-                      {member.user.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] text-white/60 truncate">{member.user.name}</p>
-                    </div>
-                    {member.role === 'owner' && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-workx-lime/10 text-workx-lime flex-shrink-0">
-                        Eigenaar
-                      </span>
-                    )}
-                    {member.role !== 'owner' && (
-                      <button
-                        onClick={() => removeMember(member.user.id)}
-                        className="p-1 rounded text-white/10 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Verwijderen"
-                      >
-                        <Icons.x size={10} />
-                      </button>
-                    )}
+            {showSettings && (
+              <div className="absolute right-0 top-full mt-1.5 w-72 bg-workx-gray border border-white/10 rounded-xl shadow-2xl z-50 backdrop-blur-sm overflow-hidden animate-fade-in">
+                <div className="p-3 space-y-3">
+                  <div>
+                    <label className="text-[10px] text-white/30 block mb-1">Titel</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-workx-lime/40"
+                    />
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <label className="text-[10px] text-white/30 block mb-1">Beschrijving</label>
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={2}
+                      className="w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white resize-none focus:outline-none focus:border-workx-lime/40"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={updateProject} className="px-3 py-1.5 rounded-lg bg-workx-lime text-workx-dark text-[11px] font-medium hover:bg-workx-lime/90 transition-colors">
+                      Opslaan
+                    </button>
+                    <button onClick={deleteProject} className="px-3 py-1.5 rounded-lg text-[11px] text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition-colors">
+                      Verwijderen
+                    </button>
+                  </div>
 
-              {/* Add member */}
-              <div className="relative mt-2" ref={memberDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddMember(!showAddMember)
-                    fetchUsersIfNeeded()
-                  }}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/[0.07] transition-all w-full"
-                >
-                  <Icons.userPlus size={12} />
-                  Teamlid toevoegen
-                </button>
-
-                {showAddMember && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-workx-gray border border-white/10 rounded-lg shadow-xl z-50 max-h-48 overflow-hidden">
-                    <div className="p-1.5 border-b border-white/5">
-                      <input
-                        type="text"
-                        value={memberSearchQuery}
-                        onChange={(e) => setMemberSearchQuery(e.target.value)}
-                        placeholder="Zoek..."
-                        className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-[10px] text-white placeholder-white/25 focus:outline-none focus:border-workx-lime/40"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="overflow-y-auto max-h-36">
-                      {filteredUsersForAdd.map(user => (
-                        <button
-                          key={user.id}
-                          onClick={() => {
-                            addMember(user.id)
-                            setShowAddMember(false)
-                            setMemberSearchQuery('')
-                          }}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-[10px] text-white/50 hover:bg-white/5 hover:text-white transition-colors"
-                        >
-                          <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-medium flex-shrink-0">
-                            {user.name.charAt(0)}
+                  {/* Team members */}
+                  <div className="pt-2 border-t border-white/5">
+                    <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2">
+                      Teamleden ({project.members.length})
+                    </p>
+                    <div className="space-y-1">
+                      {project.members.map((member) => (
+                        <div key={member.id} className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/5 transition-colors group">
+                          <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-medium text-white/60 flex-shrink-0">
+                            {member.user.name.charAt(0)}
                           </div>
-                          <span className="truncate flex-1">{user.name}</span>
-                          <span className="text-[8px] text-white/20 flex-shrink-0">
-                            {ROLE_LABELS[user.role] || user.role}
-                          </span>
-                        </button>
+                          <span className="text-[11px] text-white/60 truncate flex-1">{member.user.name}</span>
+                          {member.role === 'owner' && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-workx-lime/10 text-workx-lime">Eigenaar</span>
+                          )}
+                          {member.role !== 'owner' && (
+                            <button onClick={() => removeMember(member.user.id)} className="p-1 rounded text-white/10 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
+                              <Icons.x size={10} />
+                            </button>
+                          )}
+                        </div>
                       ))}
-                      {filteredUsersForAdd.length === 0 && (
-                        <p className="px-2.5 py-3 text-[10px] text-white/20 text-center">
-                          {allUsers.length === 0 ? 'Laden...' : 'Geen gebruikers gevonden'}
-                        </p>
-                      )}
                     </div>
+                    <button
+                      onClick={() => setShowAddMember(!showAddMember)}
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white/30 hover:text-white/60 hover:bg-white/[0.07] transition-all w-full mt-2"
+                    >
+                      <Icons.userPlus size={12} />
+                      Teamlid toevoegen
+                    </button>
+                    {showAddMember && (
+                      <div className="mt-1 border border-white/10 rounded-lg overflow-hidden">
+                        <input
+                          type="text"
+                          value={memberSearchQuery}
+                          onChange={(e) => setMemberSearchQuery(e.target.value)}
+                          placeholder="Zoek..."
+                          className="w-full px-2 py-1.5 bg-white/5 text-[10px] text-white placeholder-white/25 focus:outline-none border-b border-white/5"
+                          autoFocus
+                        />
+                        <div className="max-h-32 overflow-y-auto">
+                          {filteredUsersForAdd.map(user => (
+                            <button
+                              key={user.id}
+                              onClick={() => { addMember(user.id); setShowAddMember(false); setMemberSearchQuery('') }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-[10px] text-white/50 hover:bg-white/5 hover:text-white transition-colors"
+                            >
+                              <span className="truncate flex-1">{user.name}</span>
+                              <span className="text-[8px] text-white/20">{ROLE_LABELS[user.role] || user.role}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
 
-        {/* Conversations list */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-          <p className="px-2 py-1.5 text-[10px] text-white/25 uppercase tracking-wider font-medium">
-            Gesprekken ({project.conversations.length})
-          </p>
-
-          {project.conversations.map((conv) => (
-            <button
-              key={conv.id}
-              onClick={() => loadConversation(conv.id)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
-                activeConvId === conv.id
-                  ? 'bg-white/10 text-white border border-white/10'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-              }`}
-            >
-              <p className="truncate">{conv.title}</p>
-              <p className="text-[10px] text-white/20 mt-0.5">
-                {conv._count.messages} berichten
-              </p>
-            </button>
-          ))}
-        </div>
-
-        {/* New conversation button */}
-        <div className="p-3 border-t border-white/5">
+          {/* New chat button */}
           <button
-            onClick={startNewConversation}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 hover:text-white hover:bg-white/10 transition-all"
+            onClick={() => {
+              setActiveConvId(null)
+              setMessages([])
+              setChatInstance(prev => prev + 1)
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all bg-workx-lime/10 text-workx-lime border border-workx-lime/20 hover:bg-workx-lime/20 hover:border-workx-lime/40 hover:shadow-[0_0_12px_rgba(249,255,133,0.15)]"
           >
             <Icons.plus size={14} />
-            Nieuw gesprek
+            Nieuwe chat
           </button>
         </div>
       </div>
 
-      {/* Center: Chat */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Full-width chat */}
+      <div className="flex-1 rounded-2xl bg-gradient-to-b from-white/[0.03] to-white/[0.01] border border-white/[0.08] overflow-hidden mt-1">
         <ClaudeChat
+          key={chatInstance}
           conversationId={activeConvId}
           projectId={projectId}
           documentIds={selectedDocIds}
           initialMessages={messages}
-          onConversationCreated={handleConversationCreated}
-          onNewMessage={fetchProject}
+          onConversationCreated={(id) => {
+            setActiveConvId(id)
+            fetchProject()
+          }}
+          onNewChat={() => {
+            setActiveConvId(null)
+            setMessages([])
+            setChatInstance(prev => prev + 1)
+          }}
+          onActiveChange={setChatActive}
           placeholder={`Stel een vraag over ${project.title}...`}
-          quickActionPrompt={quickActionPrompt}
-          onQuickActionHandled={() => setQuickActionPrompt(null)}
         />
-      </div>
-
-      {/* Right Sidebar: Documents & Quick Actions */}
-      <div className="w-72 flex-shrink-0 border-l border-white/5 flex flex-col bg-white/[0.01] overflow-y-auto">
-        {/* Project documents */}
-        <div className="p-4 border-b border-white/5">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] text-white/25 uppercase tracking-wider font-medium">
-              Documenten ({project.documents.length})
-            </p>
-          </div>
-
-          {/* Upload */}
-          <DocumentUploader
-            projectId={projectId}
-            onUpload={(doc) => {
-              setProject(prev => prev ? {
-                ...prev,
-                documents: [doc as unknown as ProjectDocument, ...prev.documents],
-              } : null)
-              setSelectedDocIds(prev => [...prev, doc.id])
-            }}
-            compact
-          />
-
-          {/* Document list */}
-          <div className="mt-3 space-y-1">
-            {project.documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group"
-              >
-                <button
-                  onClick={() => toggleDocSelection(doc.id)}
-                  className={`flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center ${
-                    selectedDocIds.includes(doc.id)
-                      ? 'bg-workx-lime border-workx-lime'
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
-                >
-                  {selectedDocIds.includes(doc.id) && (
-                    <Icons.check size={10} className="text-workx-dark" />
-                  )}
-                </button>
-                <Icons.file size={13} className="text-white/25 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-white/60 truncate">{doc.name}</p>
-                  <p className="text-[9px] text-white/20">{formatFileSize(doc.fileSize)}</p>
-                </div>
-                <button
-                  onClick={() => deleteDocument(doc.id)}
-                  className="p-1 rounded text-white/10 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <Icons.trash size={11} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {project.documents.length > 0 && (
-            <p className="text-[9px] text-white/15 mt-2 px-1">
-              Vink documenten aan om ze als context mee te sturen in de chat
-            </p>
-          )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="p-4 flex-1">
-          <LegalQuickActions
-            onAction={(prompt) => setQuickActionPrompt(prompt)}
-            hasDocuments={selectedDocIds.length > 0}
-          />
-        </div>
-
-        {/* Disclaimer */}
-        <div className="p-4 border-t border-white/5">
-          <div className="rounded-lg bg-white/[0.02] border border-white/5 p-3">
-            <p className="text-[10px] text-white/20 leading-relaxed">
-              <span className="text-white/30 font-medium">Disclaimer:</span> AI-antwoorden vormen geen juridisch advies.
-              Verifieer altijd wetsartikelen en rechtspraak bij de officiële bronnen.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -1397,3 +1397,21 @@ model NotificationDismissal {
   @@unique([userId, notificationKey])
   @@index([userId])
 }
+
+// Tijdelijke opslag voor chunked file uploads (Vercel 4.5MB body limiet)
+model FileUploadChunk {
+  id          String   @id @default(cuid())
+  uploadId    String
+  chunkIndex  Int
+  totalChunks Int
+  data        String   @db.Text    // base64 chunk data
+  fileName    String?
+  fileSize    Int?
+  fileType    String?
+  projectId   String?
+  userId      String
+  createdAt   DateTime @default(now())
+
+  @@unique([uploadId, chunkIndex])
+  @@index([uploadId])
+}
