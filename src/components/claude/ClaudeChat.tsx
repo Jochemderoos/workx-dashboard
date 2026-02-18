@@ -944,6 +944,7 @@ ${markdownHtml}
       }
 
       // Read the stream (works when Claude responds fast enough)
+      let lastDataEvent = Date.now()
       try {
         while (true) {
           let done = false, value: Uint8Array | undefined
@@ -958,8 +959,10 @@ ${markdownHtml}
           const lines = buffer.split('\n\n')
           buffer = lines.pop() || ''
 
+          let hadDataEvent = false
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue
+            hadDataEvent = true
             const jsonStr = line.slice(6)
             try {
               const event = JSON.parse(jsonStr)
@@ -1016,6 +1019,13 @@ ${markdownHtml}
             }
           }
           if (finished) break
+          if (hadDataEvent) lastDataEvent = Date.now()
+          // If no data events for 10s and no streamed content, switch to DB polling
+          if (!streamedText && Date.now() - lastDataEvent > 10000) {
+            console.log('[ClaudeChat] Stream idle for 10s, switching to DB polling')
+            try { reader.cancel() } catch { /* ignore */ }
+            break
+          }
         }
       } catch {
         // Stream read error — polling fallback will handle
