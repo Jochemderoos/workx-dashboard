@@ -440,6 +440,7 @@ export async function POST(req: NextRequest) {
         let fullText = ''
         let hasWebSearch = false
         const citations: Array<{ url: string; title: string }> = []
+        const docLoadErrors: string[] = []
 
         try {
           // Notify client immediately that connection is alive
@@ -470,8 +471,10 @@ export async function POST(req: NextRequest) {
                 new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
               ])
               return result?.fileUrl || null
-            } catch {
-              console.warn(`[chat] Failed to load fileUrl for ${docId}`)
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e)
+              console.warn(`[chat] Failed to load fileUrl for ${docId}: ${msg}`)
+              docLoadErrors.push(`loadFileUrl(${docId}): ${msg}`)
               return null
             }
           }
@@ -481,46 +484,61 @@ export async function POST(req: NextRequest) {
             doc: { id: string; name: string; fileType: string; fileSize: number; content: string | null },
             prefix: string,
           ) => {
-            const needsNative =
-              (doc.fileSize || 0) <= 5 * 1024 * 1024 || !hasUsableContent(doc)
+            try {
+              // Prefer extracted text when available — much faster & more reliable than
+              // loading multi-MB base64 blobs from the database in a serverless function.
+              // Only use native blocks when text extraction failed.
+              const needsNative = !hasUsableContent(doc)
 
-            if (needsNative) {
-              // Only load base64 if it might fit in budget
-              const estimatedTokens = estimatePdfBlockTokens(Math.ceil((doc.fileSize || 0) * 1.37)) // file→base64 overhead
-              if (nativeBlockTokens + estimatedTokens <= maxNativeBlockTokens) {
-                const fileUrl = await loadFileUrl(doc.id)
-                const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
-                  ? fileUrl.split(',')[1]
-                  : null
-                if (base64Data) {
-                  const blockTokens = estimatePdfBlockTokens(base64Data.length)
-                  if (base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
-                    documentBlocks.push({
-                      type: 'document',
-                      source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-                      title: doc.name,
-                    })
-                    nativeBlockTokens += blockTokens
-                    if (doc.content) {
-                      pdfTextFallback += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+              if (needsNative) {
+                // Only load base64 if it might fit in budget
+                const estimatedTokens = estimatePdfBlockTokens(Math.ceil((doc.fileSize || 0) * 1.37)) // file→base64 overhead
+                if (nativeBlockTokens + estimatedTokens <= maxNativeBlockTokens) {
+                  const fileUrl = await loadFileUrl(doc.id)
+                  const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
+                    ? fileUrl.split(',')[1]
+                    : null
+                  if (base64Data) {
+                    const blockTokens = estimatePdfBlockTokens(base64Data.length)
+                    if (base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
+                      documentBlocks.push({
+                        type: 'document',
+                        source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+                        title: doc.name,
+                      })
+                      nativeBlockTokens += blockTokens
+                      console.log(`[chat] PDF ${doc.name}: native block (~${blockTokens} tokens, total: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
+                      return
                     }
-                    console.log(`[chat] PDF ${doc.name}: native block (~${blockTokens} tokens, total: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
-                    return
                   }
+                } else {
+                  console.log(`[chat] PDF ${doc.name}: skip native — would exceed budget (~${estimatedTokens} tokens, used: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
                 }
               }
-            }
 
-            // Fallback: use extracted text if available
-            if (hasUsableContent(doc)) {
-              documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-            } else {
-              // No text, couldn't send as native — inform Claude the document exists
-              documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[PDF-document waarvan de inhoud niet beschikbaar is. De tekst kon niet worden geëxtraheerd bij upload. Vraag de gebruiker om het document opnieuw te uploaden of als tekstbestand aan te leveren.]\n--- Einde ---`
-              console.warn(`[chat] PDF ${doc.name}: no text, no native — added placeholder`)
+              // Use extracted text if available
+              if (hasUsableContent(doc)) {
+                documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                if (needsNative) {
+                  // Keep text as fallback if we also tried native but it didn't fit
+                  pdfTextFallback += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                }
+                console.log(`[chat] PDF ${doc.name}: using extracted text (${doc.content!.length} chars)`)
+              } else {
+                // No text, couldn't send as native — inform Claude the document exists
+                documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[PDF-document (${Math.round((doc.fileSize || 0) / 1024)}KB) waarvan de inhoud niet beschikbaar is. De tekst kon niet worden geëxtraheerd bij upload. Vraag de gebruiker om het document opnieuw te uploaden of als tekstbestand aan te leveren.]\n--- Einde ---`
+                console.warn(`[chat] PDF ${doc.name}: no text, no native — added placeholder`)
+              }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e)
+              console.error(`[chat] processPdfDoc error for ${doc.name}: ${msg}`)
+              docLoadErrors.push(`processPdf(${doc.name}): ${msg}`)
+              // Still add a placeholder so Claude knows the document exists
+              documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Fout bij laden van dit document: ${msg.slice(0, 100)}]\n--- Einde ---`
             }
           }
 
+          try {
           if (documentIds?.length) {
             const docs = await prisma.aIDocument.findMany({
               where: {
@@ -532,6 +550,7 @@ export async function POST(req: NextRequest) {
               },
               select: { id: true, name: true, fileType: true, fileSize: true, content: true },
             })
+            console.log(`[chat] Attached docs found: ${docs.length} (requested: ${documentIds.length})`)
 
             for (const doc of docs) {
               if (doc.fileType === 'docx') hasDocxAttachments = true
@@ -560,6 +579,7 @@ export async function POST(req: NextRequest) {
               take: 20,
               select: { id: true, name: true, fileType: true, fileSize: true, content: true },
             })
+            console.log(`[chat] Project docs found: ${projectDocs.length} (projectId: ${projectId})`)
 
             for (const doc of projectDocs) {
               if (documentIds?.includes(doc.id)) continue
@@ -584,6 +604,12 @@ export async function POST(req: NextRequest) {
               }
             }
           }
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            console.error(`[chat] Document loading failed: ${msg}`)
+            docLoadErrors.push(`docLoading: ${msg}`)
+            // Continue without documents rather than crashing the entire stream
+          }
 
           // Anonymize document context if requested
           if (anonymize && documentContext) {
@@ -591,7 +617,10 @@ export async function POST(req: NextRequest) {
             documentContext = anonDocs.text
           }
 
-          console.log(`[chat] Documents loaded: ${documentBlocks.length} native blocks (~${nativeBlockTokens} tokens), ${documentContext.length} chars text`)
+          console.log(`[chat] Documents loaded: ${documentBlocks.length} native blocks (~${nativeBlockTokens} tokens), ${documentContext.length} chars text, errors: ${docLoadErrors.length}`)
+          if (docLoadErrors.length > 0) {
+            console.warn(`[chat] Document load errors:`, docLoadErrors)
+          }
 
           // === KNOWLEDGE SOURCES ===
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Kennisbronnen doorzoeken...' })}\n\n`))
@@ -1408,7 +1437,8 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
 
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error)
-          console.error('[chat] Stream error:', errMsg)
+          const errStack = error instanceof Error ? error.stack?.split('\n').slice(0, 3).join(' > ') : ''
+          console.error('[chat] Stream error:', errMsg, errStack)
 
           // Save partial response or error placeholder to keep history alternation intact
           // Without this, the next request would have consecutive user messages → API error
@@ -1434,7 +1464,9 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             userError = 'De API-limieten zijn bereikt. Neem contact op met de beheerder.'
           }
 
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: userError })}\n\n`))
+          // Include technical details so we can debug — visible in error event
+          const debugInfo = `[DEBUG: ${errMsg.slice(0, 150)}${docLoadErrors.length > 0 ? ` | docErrors: ${docLoadErrors.join('; ').slice(0, 100)}` : ''}]`
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: `${userError}\n\n${debugInfo}` })}\n\n`))
         } finally {
           controller.close()
         }
