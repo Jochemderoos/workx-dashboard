@@ -15,6 +15,10 @@ export default function StaleVersionGuard() {
   useEffect(() => {
     // Safe refresh with cooldown to prevent infinite loops
     function safeRefresh(storageKey: string, cooldownMs = 30000) {
+      // Never refresh if a chat is actively loading (prevents killing in-progress requests)
+      const lastVersionRefresh = parseInt(sessionStorage.getItem('workx-last-version-refresh') || '0')
+      if (Date.now() - lastVersionRefresh < 30000) return // Recently refreshed by chat component
+
       const lastRefresh = sessionStorage.getItem(storageKey)
       const now = Date.now()
       if (!lastRefresh || now - parseInt(lastRefresh) > cooldownMs) {

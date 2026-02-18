@@ -367,14 +367,15 @@ export default function ClaudeChat({
     }
   }, [quickActionPrompt])
 
-  // Restore and auto-submit pending message after version-mismatch refresh
+  // Restore pending message after version-mismatch refresh (put in input, user presses Enter)
   useEffect(() => {
     try {
       const pending = sessionStorage.getItem('workx-pending-message')
       if (pending) {
         sessionStorage.removeItem('workx-pending-message')
-        // Auto-submit after brief delay to ensure component is fully mounted
-        setTimeout(() => sendMessage(pending), 500)
+        sessionStorage.removeItem('workx-skip-version-check')
+        setInput(pending)
+        toast('Je vraag is hersteld na een update. Druk op Enter om te versturen.', { duration: 6000 })
       }
     } catch { /* ignore */ }
   }, [])
@@ -581,13 +582,10 @@ ${markdownHtml}
 
     // Pre-flight version check: detect stale client code after Vercel deploy
     const clientBuildId = process.env.NEXT_PUBLIC_BUILD_ID
-    let skipVersionCheck = false
-    try {
-      if (sessionStorage.getItem('workx-skip-version-check')) {
-        sessionStorage.removeItem('workx-skip-version-check')
-        skipVersionCheck = true
-      }
-    } catch { /* ignore */ }
+
+    // Skip if recently refreshed (cooldown: 30 seconds)
+    const lastVersionRefresh = parseInt(sessionStorage.getItem('workx-last-version-refresh') || '0')
+    const skipVersionCheck = (Date.now() - lastVersionRefresh) < 30000
 
     if (clientBuildId && !skipVersionCheck) {
       try {
@@ -598,7 +596,7 @@ ${markdownHtml}
             console.log(`[ClaudeChat] Build mismatch: client=${clientBuildId} server=${serverBuildId} — reloading`)
             try {
               sessionStorage.setItem('workx-pending-message', text)
-              sessionStorage.setItem('workx-skip-version-check', '1')
+              sessionStorage.setItem('workx-last-version-refresh', Date.now().toString())
             } catch { /* ignore */ }
             // Show user's message + thinking animation while page reloads
             setMessages(prev => [...prev, { id: `user-${Date.now()}`, role: 'user', content: text }])
@@ -673,12 +671,13 @@ ${markdownHtml}
 
       // Stale-version detection (fallback): if server build ID differs from client, auto-refresh
       const serverBuildId = response.headers.get('X-Build-Id')
-      if (serverBuildId && clientBuildId && serverBuildId !== clientBuildId) {
+      const recentRefresh = (Date.now() - parseInt(sessionStorage.getItem('workx-last-version-refresh') || '0')) < 30000
+      if (serverBuildId && clientBuildId && serverBuildId !== clientBuildId && !recentRefresh) {
         console.log(`[ClaudeChat] Build mismatch (response): client=${clientBuildId} server=${serverBuildId} — reloading`)
         clearTimeout(timeoutId)
         try {
           sessionStorage.setItem('workx-pending-message', text)
-          sessionStorage.setItem('workx-skip-version-check', '1')
+          sessionStorage.setItem('workx-last-version-refresh', Date.now().toString())
         } catch { /* ignore */ }
         setStatusText('De AI Assistent wordt bijgewerkt...')
         setTimeout(() => window.location.reload(), 1500)
