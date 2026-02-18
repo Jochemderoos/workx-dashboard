@@ -65,7 +65,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function AIAssistentPage() {
   const router = useRouter()
-  const { collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed } = useSidebar()
+  const { setCollapsed: setSidebarCollapsed } = useSidebar()
   const [projects, setProjects] = useState<Project[]>([])
   const [recentConversations, setRecentConversations] = useState<Conversation[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -383,11 +383,12 @@ export default function AIAssistentPage() {
   const prevChatActiveRef = useRef(false)
   useEffect(() => {
     if (chatActive && !prevChatActiveRef.current && activeTab === 'chat') {
-      // AI just started generating — collapse sidebar
+      // AI just started generating — collapse conversation history sidebar + main dashboard sidebar
       setShowHistory(false)
+      setSidebarCollapsed(true)
     }
     prevChatActiveRef.current = chatActive
-  }, [chatActive, activeTab])
+  }, [chatActive, activeTab, setSidebarCollapsed])
 
   // Whether to use compact layout (chat active on chat tab)
   const isCompactMode = chatActive && activeTab === 'chat'
@@ -432,18 +433,6 @@ export default function AIAssistentPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 text-[11px]">
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all border ${
-              sidebarCollapsed
-                ? 'bg-workx-lime/10 border-workx-lime/20 text-workx-lime hover:bg-workx-lime/20'
-                : 'border-white/10 text-white/30 hover:text-white/60 hover:bg-white/[0.06]'
-            }`}
-            title={sidebarCollapsed ? 'Sidebar tonen' : 'Focus mode — sidebar verbergen'}
-          >
-            {sidebarCollapsed ? <Icons.chevronRight size={13} /> : <Icons.chevronLeft size={13} />}
-            <span className="text-[10px]">{sidebarCollapsed ? 'Sidebar' : 'Focus'}</span>
-          </button>
           <button
             onClick={() => setShowHelp(true)}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-white/30 hover:text-white/60 transition-all"
