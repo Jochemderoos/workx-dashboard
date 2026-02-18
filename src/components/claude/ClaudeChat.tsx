@@ -285,9 +285,10 @@ export default function ClaudeChat({
       console.log('[Upload] No files selected, returning early')
       return
     }
-    if (fileInputRef.current) fileInputRef.current.value = ''
 
+    // IMPORTANT: copy files BEFORE clearing input (clearing empties the FileList)
     const filesToUpload = Array.from(files)
+    if (fileInputRef.current) fileInputRef.current.value = ''
 
     // Validate all files first
     for (const file of filesToUpload) {
