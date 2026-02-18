@@ -2290,6 +2290,302 @@ const LEGAL_CONCEPT_MAP: Array<{ patterns: RegExp[]; terms: string[] }> = [
     patterns: [/\buitbetaling\s*vakantie(?:dagen)?/i, /\bvakantiedagen\s*(?:uitbet|uitkeren|geld)/i, /\bniet-?genoten\s*(?:vakantie)?dagen/i, /\bvakantiedagen\s*(?:bij\s*)?(?:einde|ontslag|uit\s*dienst)/i, /\btegoed\s*(?:aan\s*)?vakantiedagen/i],
     terms: ['uitbetaling vakantiedagen', 'art. 7:641', 'niet-genoten vakantiedagen', 'eindafrekening', 'vervaltermijn vakantiedagen', 'bovenwettelijke vakantiedagen'],
   },
+
+  // ===== MODERNE WERKPLEK =====
+
+  // 151. AI / algoritmes op de werkvloer
+  {
+    patterns: [/\b(?:ai|kunstmatige\s*intelligentie)\s*(?:op\s*)?(?:de\s*)?(?:werk|werkvloer)/i, /\balgoritm(?:e|isch)\s*(?:management|aansturing|beslissing|selectie)/i, /\bai\s*(?:bij\s*)?(?:sollicitatie|werving|selectie|ontslag|beoordeling)/i, /\bchatgpt\s*(?:op\s*)?werk/i, /\bautomatische?\s*(?:besluit|beslissing)(?:vorming)?/i, /\bai-?tool\s*(?:op\s*)?werk/i],
+    terms: ['AI op de werkvloer', 'algoritmisch management', 'AVG', 'geautomatiseerde besluitvorming', 'art. 22 AVG', 'menselijke tussenkomst', 'EU AI Act', 'transparantie algoritme'],
+  },
+  // 152. Quiet quitting / stille ontkoppeling
+  {
+    patterns: [/\bquiet\s*quitting/i, /\bstille?\s*(?:ontkoppel|ontslag)/i, /\bminimum\s*(?:doen|presteren|werken)/i, /\balleen\s*(?:doen\s*)?(?:wat|waarvoor)\s*(?:ik\s*)?(?:betaald|moet)/i, /\bgeen\s*extra\s*(?:inzet|moeite)/i, /\bact\s*(?:your\s*)?wage/i, /\bniet\s*meer\s*(?:gemotiveerd|betrokken)/i],
+    terms: ['goed werknemerschap', 'art. 7:611', 'instructierecht', 'art. 7:660', 'functieomschrijving', 'disfunctioneren', 'verbetertraject'],
+  },
+  // 153. Digitale nomaden / werken vanuit het buitenland
+  {
+    patterns: [/\bdigitale?\s*nomad/i, /\bwerken\s*(?:vanuit|in)\s*(?:het\s*)?buitenland/i, /\bremote\s*(?:werken\s*)?(?:vanuit|in)\s*(?:het\s*)?buitenland/i, /\bworkation/i, /\bwerk(?:en)?\s*(?:vanuit|in)\s*(?:spanje|portugal|thailand|bali|griekenland)/i, /\bwerken\s*(?:op\s*)?afstand\s*(?:vanuit\s*)?(?:het\s*)?buitenland/i],
+    terms: ['werken vanuit buitenland', 'sociale zekerheid', 'A1-verklaring', 'belastingplicht', 'Rome I-Verordening', 'toepasselijk recht', 'thuiswerkland', 'Raamovereenkomst telewerk'],
+  },
+  // 154. Platformwerk uitbreiding / gig-economie rechten
+  {
+    patterns: [/\bgig\s*(?:werk|worker|economie|economy)/i, /\bplatform(?:werk|arbeid)(?:er)?\s*(?:recht|bescherm|status)/i, /\bbezorger\s*(?:recht|status|werknemer|zzp)/i, /\bmaaltijdbezorg/i, /\btaxichauffeur\s*(?:app|platform|zzp)/i, /\beu-?richtlijn\s*platform/i, /\brechtsvermoeden\s*platform/i],
+    terms: ['platformarbeid', 'EU-richtlijn platformwerk', 'rechtsvermoeden arbeidsovereenkomst', 'art. 7:610a', 'Deliveroo-arrest', 'algoritmisch management', 'schijnzelfstandigheid', 'bewijsvermoeden platformwerk'],
+  },
+  // 155. Remote monitoring / digitale controle werknemers
+  {
+    patterns: [/\bremote\s*monitor/i, /\bdigitale?\s*(?:controle|surveillance|toezicht)/i, /\bemployee\s*monitor/i, /\bscreen\s*(?:monitoring|recording|capture)/i, /\bkeylogg/i, /\bwebcam\s*(?:controle|aan|verplicht)/i, /\bmuis(?:beweging|activiteit)\s*(?:bijhouden|track|volg)/i, /\bbossware/i],
+    terms: ['digitale monitoring', 'privacy werknemer', 'AVG', 'gerechtvaardigd belang', 'proportionaliteit', 'subsidiariteit', 'DPIA', 'gegevensbeschermingseffectbeoordeling', 'instemmingsrecht OR', 'art. 27 WOR'],
+  },
+  // 156. Werkdruk / psychosociale arbeidsbelasting (PSA)
+  {
+    patterns: [/\bpsychosociale?\s*arbeidsbelasting/i, /\bpsa\b/i, /\bwerkdruk\s*(?:te\s*)?hoog/i, /\bwerk(?:stress|belasting|druk)\s*(?:klacht|melding)/i, /\bte\s*(?:veel|hoge?)\s*werkdruk/i, /\bonredelijke?\s*werkdruk/i, /\bstructurele?\s*overbelast/i, /\bri&?e\s*(?:psa|werkdruk)/i],
+    terms: ['psychosociale arbeidsbelasting', 'PSA', 'Arbowet', 'art. 3 Arbowet', 'RI&E', 'werkdruk', 'arbeidsinspectie', 'zorgplicht werkgever', 'burn-out preventie', 'plan van aanpak werkdruk'],
+  },
+  // 157. Recht op onbereikbaarheid / disconnectie
+  {
+    patterns: [/\brecht\s*(?:op\s*)?onbereikbaarheid/i, /\bonbereikbaar(?:heid)?\s*(?:buiten\s*)?(?:werk|kantoor)/i, /\bdisconnect(?:ie|ierecht)/i, /\brecht\s*(?:om\s*)?(?:niet\s*)?(?:te\s*)?bereikbaar/i, /\b(?:s\s*avonds|weekend|vakantie)\s*(?:niet\s*)?(?:bereikbaar|mailen|bellen|appen)/i, /\bverplicht\s*(?:bereikbaar|telefoon\s*aan)/i, /\b(?:mail|app|whatsapp)\s*(?:buiten\s*)?(?:werk)?(?:tijd|uren)/i],
+    terms: ['recht op onbereikbaarheid', 'disconnectierecht', 'Arbeidstijdenwet', 'rusttijd', 'art. 7:611', 'goed werkgeverschap', 'Wet flexibel werken', 'SER-advies', 'instemmingsrecht OR'],
+  },
+  // 158. Hybride werken / thuiswerkbeleid
+  {
+    patterns: [/\bhybride\s*werk(?:en|beleid|regeling|model)/i, /\bthuis(?:werk)?beleid/i, /\bkantoor(?:plicht|dagen|verplichting)/i, /\bverplicht\s*(?:op\s*)?kantoor/i, /\b(?:2|3|twee|drie)\s*dagen\s*(?:thuis|kantoor)/i, /\bterug\s*(?:naar\s*)?(?:het\s*)?kantoor/i, /\breturn\s*to\s*office/i],
+    terms: ['hybride werken', 'thuiswerkbeleid', 'Wet flexibel werken', 'aanpassing arbeidsplaats', 'eenzijdig wijzigingsbeding', 'art. 7:613', 'instructierecht', 'art. 7:660', 'arbobeleid thuiswerk'],
+  },
+  // 159. Bring your own device (BYOD) / ICT-beleid
+  {
+    patterns: [/\bbyod\b/i, /\bbring\s*your\s*own\s*device/i, /\beigen\s*(?:laptop|telefoon|device)\s*(?:voor\s*)?werk/i, /\bict-?beleid/i, /\bwerk(?:telefoon|laptop)\s*(?:prive|controleren|inleveren)/i, /\bprive\s*(?:gebruik\s*)?(?:werk)?(?:laptop|telefoon)/i, /\bdata\s*(?:op\s*)?(?:prive|eigen)\s*(?:device|apparaat)/i],
+    terms: ['BYOD', 'ICT-beleid', 'privacy werknemer', 'AVG', 'instructierecht', 'art. 7:660', 'eigendomsrecht', 'inleverplicht bedrijfsmiddelen', 'kostenvergoeding'],
+  },
+  // 160. Algoritmische aansturing / geautomatiseerd HR
+  {
+    patterns: [/\balgoritm(?:e|isch)\s*(?:aanstur|hr|personeels)/i, /\bgeautomatiseerde?\s*(?:hr|personeels|rooster|planning)/i, /\brobot\s*(?:baas|manager)/i, /\bai\s*(?:hr|personeels|beoordelings)/i, /\bautomatisch\s*(?:rooster|planning|beoordeling|ontslag)/i],
+    terms: ['algoritmisch management', 'geautomatiseerde besluitvorming', 'art. 22 AVG', 'transparantie', 'EU AI Act', 'instemmingsrecht OR', 'art. 27 WOR', 'menselijke tussenkomst'],
+  },
+
+  // ===== MENTALE GEZONDHEID SPECIFIEK =====
+
+  // 161. PTSD werkgerelateerd / posttraumatische stress
+  {
+    patterns: [/\bptsd\b/i, /\bptss\b/i, /\bposttraumatisch/i, /\btrauma\s*(?:op|door|van(?:wege)?)\s*(?:het\s*)?werk/i, /\btraumatische?\s*(?:ervaring|gebeurtenis)\s*(?:op\s*)?werk/i, /\boverval\s*(?:op\s*)?werk/i, /\bgeweld(?:sincident)?\s*(?:op\s*)?werk/i, /\bbedrijfsongeval\s*(?:en\s*)?(?:trauma|ptsd|ptss)/i],
+    terms: ['PTSD werkgerelateerd', 'posttraumatische stressstoornis', 'beroepsziekte', 'art. 7:658', 'werkgeversaansprakelijkheid', 'arbeidsongeschiktheid', 'smartengeld', 'bedrijfsongeval'],
+  },
+  // 162. Depressie vs burnout / onderscheid psychische klachten
+  {
+    patterns: [/\bdepressie\s*(?:of|vs|versus|en)\s*burn-?out/i, /\bburn-?out\s*(?:of|vs|versus|en)\s*depressie/i, /\bdepressie\s*(?:op|door|van(?:wege)?)\s*(?:het\s*)?werk/i, /\bdepressief\s*(?:door|van(?:wege)?)\s*werk/i, /\bwerkgerelateerde?\s*depressie/i, /\bdepressieve?\s*(?:klacht|stoornis)\s*(?:en\s*)?werk/i],
+    terms: ['depressie', 'burn-out', 'arbeidsongeschiktheid', 'loondoorbetaling ziekte', 'art. 7:629', 'bedrijfsarts', 'psychische klachten', 're-integratie', 'beroepsziekte'],
+  },
+  // 163. Angststoornis en werk
+  {
+    patterns: [/\bangststoornis\s*(?:en|op|door)\s*werk/i, /\bangst\s*(?:op|voor|van(?:wege)?)\s*(?:het\s*)?werk/i, /\bpaniek(?:aanval|stoornis)\s*(?:op|door)\s*werk/i, /\bsociale?\s*(?:angst|fobie)\s*(?:op\s*)?werk/i, /\bangst\s*(?:voor\s*)?(?:baas|werkgever|collega|werkvloer)/i],
+    terms: ['angststoornis', 'arbeidsongeschiktheid', 'psychische klachten', 'bedrijfsarts', 'loondoorbetaling ziekte', 'art. 7:629', 'werkgeversaansprakelijkheid', 'art. 7:658', 're-integratie psychisch'],
+  },
+  // 164. Psychische revalidatie en werkhervatting
+  {
+    patterns: [/\bpsychische?\s*revalidatie/i, /\bwerkhervatting\s*(?:na|bij)\s*(?:psychische?|mentale?)/i, /\bterugkeer\s*(?:na\s*)?(?:psychische?|mentale?|burn-?out|depressie)/i, /\bopbouw(?:schema)?\s*(?:na\s*)?(?:burn-?out|psychisch|mentaal)/i, /\barbeidstherapeutisch\s*(?:werken|opbouw|hervatten)/i],
+    terms: ['re-integratie psychische klachten', 'arbeidstherapeutisch werken', 'opbouwschema', 'bedrijfsarts', 'plan van aanpak', 'Wet verbetering poortwachter', 'belastbaarheid', 'werkhervatting'],
+  },
+  // 165. Werkgerelateerde stress claims / aansprakelijkheid psychisch
+  {
+    patterns: [/\bstress\s*claim/i, /\bschadeclaim\s*(?:werkdruk|stress|burn-?out|psychisch)/i, /\baansprakelijk(?:heid)?\s*(?:burn-?out|stress|psychisch|werkdruk)/i, /\bschade(?:vergoeding)?\s*(?:burn-?out|stress|werkdruk)/i, /\bwerkgever\s*aansprakelijk\s*(?:voor\s*)?(?:burn-?out|stress|psychisch)/i],
+    terms: ['werkgeversaansprakelijkheid psychisch', 'art. 7:658', 'zorgplicht werkgever', 'psychosociale arbeidsbelasting', 'bewijslast', 'schadevergoeding burn-out', 'smartengeld', 'causaal verband'],
+  },
+  // 166. Arbeidsongeschiktheid psychisch / WIA psychisch
+  {
+    patterns: [/\barbeidsongeschikt(?:heid)?\s*psychisch/i, /\bwia\s*(?:aanvraag\s*)?(?:psychisch|mentaal|depressie|burn-?out)/i, /\bpsychische?\s*arbeidsongeschiktheid/i, /\bkeuring\s*(?:psychisch|mentaal)/i, /\bverzekeringsarts\s*(?:psychisch|mentaal)/i, /\bbeperk(?:ing|t)\s*(?:psychisch|mentaal)/i],
+    terms: ['arbeidsongeschiktheid psychisch', 'WIA', 'WGA', 'IVA', 'verzekeringsarts', 'FML', 'functionele mogelijkhedenlijst', 'psychische beperkingen', 'bezwaar WIA-beschikking'],
+  },
+  // 167. EMDR / behandeling en werk / therapeutische afspraken
+  {
+    patterns: [/\bemdr\b/i, /\btherapie\s*(?:en|tijdens|onder)\s*(?:werk|werktijd)/i, /\bbehandeling\s*(?:tijdens|onder)\s*(?:werk|werktijd)/i, /\bpsycholoog\s*(?:tijdens|onder)\s*(?:werk|werktijd)/i, /\bverlof\s*(?:voor\s*)?(?:therapie|behandeling|psycholoog)/i, /\btherapeutische?\s*(?:afspraak|sessie)\s*(?:en\s*)?werk/i],
+    terms: ['therapie en werk', 'behandeling werktijd', 'ziekteverzuim', 're-integratie', 'bedrijfsarts', 'plan van aanpak', 'medisch beroepsgeheim', 'privacy medische gegevens'],
+  },
+  // 168. Re-integratie bij psychische klachten (specifiek)
+  {
+    patterns: [/\bre-?integratie\s*(?:bij|na|psychisch|mentaal|burn-?out|depressie|angst)/i, /\bspoor\s*(?:1|2|een|twee)\s*(?:psychisch|mentaal|burn-?out)/i, /\bpassend\s*werk\s*(?:psychisch|mentaal)/i, /\bbelastbaarheid\s*(?:psychisch|mentaal)/i, /\bstecr\b/i, /\bwerkwijzer\s*(?:psychisch|arbeidsconflict)/i],
+    terms: ['re-integratie psychische klachten', 'STECR-werkwijzer', 'belastbaarheid', 'functionele mogelijkhedenlijst', 'spoor 1', 'spoor 2', 'passend werk', 'bedrijfsarts', 'plan van aanpak'],
+  },
+
+  // ===== DIVERSITEIT & INCLUSIE =====
+
+  // 169. Neurodiversiteit / ADHD / autisme op het werk
+  {
+    patterns: [/\bneurodiversiteit/i, /\badhd\s*(?:op|en|bij)\s*(?:het\s*)?werk/i, /\bautisme\s*(?:op|en|bij)\s*(?:het\s*)?werk/i, /\bautistisch\s*(?:en\s*)?werk/i, /\badd\s*(?:op|en)\s*werk/i, /\basperger\s*(?:en\s*)?werk/i, /\bdyslexie\s*(?:op|en)\s*werk/i, /\bhoogbegaafd(?:heid)?\s*(?:en|op)\s*werk/i, /\bneurodivergent/i],
+    terms: ['neurodiversiteit', 'ADHD op het werk', 'autisme', 'redelijke aanpassing', 'Wet gelijke behandeling handicap', 'WGBH/CZ', 'doeltreffende aanpassing', 'discriminatie handicap', 'chronische aandoening'],
+  },
+  // 170. Religieuze accommodatie op het werk
+  {
+    patterns: [/\breligieu(?:ze|s)\s*(?:accommodatie|aanpassing|vrijheid|uiting)/i, /\bhoofdoek\s*(?:op|bij|en)\s*werk/i, /\bgebed(?:sruimte|stijd)?\s*(?:op|bij)\s*werk/i, /\bramadan\s*(?:en|op)\s*werk/i, /\breligieuze?\s*(?:feestdag|vrij|verlof|kleding)/i, /\bgeloof\s*(?:en|op)\s*(?:het\s*)?werk/i, /\bkruisje\s*(?:op|bij)\s*werk/i],
+    terms: ['religieuze discriminatie', 'AWGB', 'godsdienstvrijheid', 'art. 6 Grondwet', 'art. 9 EVRM', 'redelijke aanpassing', 'indirect onderscheid', 'objectieve rechtvaardiging', 'kledingvoorschrift'],
+  },
+  // 171. Etnische discriminatie op het werk
+  {
+    patterns: [/\betnische?\s*discriminatie/i, /\bracisme\s*(?:op|bij)\s*(?:het\s*)?werk/i, /\bracistisch\s*(?:op|bij)\s*(?:het\s*)?werk/i, /\bdiscriminatie\s*(?:huidskleur|afkomst|ras|nationaliteit)/i, /\bherkomst\s*(?:discriminatie|onderscheid)/i, /\bnaam\s*(?:discriminatie|afgewezen|achternaam)/i, /\ballochto(?:on|nen)\s*(?:discriminatie|kans)/i],
+    terms: ['etnische discriminatie', 'AWGB', 'rassendiscriminatie', 'art. 1 Grondwet', 'verboden onderscheid', 'College voor de Rechten van de Mens', 'indirect onderscheid', 'bewijslast discriminatie'],
+  },
+  // 172. LHBTQ+ rechten op de werkvloer
+  {
+    patterns: [/\blhbt(?:q|i|qi?\+?|iq?\+?)?\s*(?:recht|discriminatie|werk)/i, /\bhomoseksu(?:eel|aliteit)\s*(?:en\s*)?(?:werk|discriminatie|ontslag)/i, /\btransgender\s*(?:en|op)\s*(?:het\s*)?werk/i, /\bgenderidentiteit\s*(?:en\s*)?werk/i, /\bseksuele?\s*(?:geaardheid|orientatie)\s*(?:discriminatie|werk)/i, /\bcoming\s*out\s*(?:op\s*)?werk/i],
+    terms: ['discriminatie seksuele geaardheid', 'AWGB', 'genderidentiteit', 'transgenderrechten', 'verboden onderscheid', 'College voor de Rechten van de Mens', 'gelijke behandeling'],
+  },
+  // 173. Zwangerschapsdiscriminatie specifiek
+  {
+    patterns: [/\bzwangerschapsdiscriminatie/i, /\bafgewezen\s*(?:vanwege|wegens|om)\s*(?:mijn\s*)?zwangerschap/i, /\bniet\s*(?:aangenomen|verlengd|bevorderd)\s*(?:vanwege|wegens|door)\s*(?:mijn\s*)?zwangerschap/i, /\bcontract\s*(?:niet\s*)?(?:verlengd\s*)?(?:vanwege|wegens)\s*zwanger/i, /\bontslag\s*(?:vanwege|wegens|door)\s*zwanger/i, /\bzwanger\s*(?:en\s*)?(?:niet\s*)?(?:aangenomen|geweigerd)/i],
+    terms: ['zwangerschapsdiscriminatie', 'art. 7:646', 'opzegverbod zwangerschap', 'art. 7:670 lid 2', 'AWGB', 'gelijke behandeling', 'College voor de Rechten van de Mens', 'bewijslast discriminatie'],
+  },
+  // 174. Leeftijdsdiscriminatie (WGBL) detail
+  {
+    patterns: [/\bwgbl\s*(?:procedure|klacht|melding)/i, /\bleeftijds?(?:discriminatie|onderscheid)\s*(?:bij\s*)?(?:sollicitatie|werving|ontslag|promotie)/i, /\bte\s*(?:oud|jong)\s*(?:voor\s*)?(?:de\s*)?(?:functie|baan|werk|promotie)/i, /\bmaximum\s*leeftijd\s*(?:vacature|functie)/i, /\bjongere\s*(?:werknemer\s*)?(?:voorkeur|aangenomen|goedkoper)/i, /\b(?:50|55|60)\s*(?:plus|\+)\s*(?:discriminatie|kansen)/i],
+    terms: ['leeftijdsdiscriminatie', 'WGBL', 'Wet gelijke behandeling op grond van leeftijd', 'verboden onderscheid', 'objectieve rechtvaardiging', 'College voor de Rechten van de Mens', 'sollicitatiediscriminatie'],
+  },
+  // 175. Handicap / chronische ziekte accommodatie
+  {
+    patterns: [/\bhandicap\s*(?:en|op)\s*(?:het\s*)?werk/i, /\bchronische?\s*(?:ziekte|aandoening)\s*(?:en|op)\s*(?:het\s*)?werk/i, /\baanpassing\s*(?:voor\s*)?(?:handicap|beperking|chronisch)/i, /\bwgbh\b/i, /\bdoeltreffende?\s*aanpassing/i, /\brolstoel\s*(?:op|bij)\s*werk/i, /\btoegankelijkheid\s*(?:werk|kantoor)/i, /\bergo(?:nomische?)?\s*(?:aanpassing|werkplek)/i, /\bdoof\s*(?:en|op)\s*werk/i, /\bblind\s*(?:en|op)\s*werk/i],
+    terms: ['handicap discriminatie', 'WGBH/CZ', 'Wet gelijke behandeling handicap', 'doeltreffende aanpassing', 'redelijke aanpassing', 'chronische ziekte', 'participatiewet', 'loonkostensubsidie', 'no-riskpolis'],
+  },
+  // 176. Taalvereisten op het werk / taaldiscriminatie
+  {
+    patterns: [/\btaalvereist/i, /\btaal(?:eis|beleid)\s*(?:op\s*)?werk/i, /\bnederlands\s*(?:spreken\s*)?(?:verplicht|eis|vereist)/i, /\bengels\s*(?:spreken\s*)?(?:verplicht|eis|voertaal)/i, /\bvoertaal\s*(?:op\s*)?(?:het\s*)?werk/i, /\btaaldiscriminatie/i, /\beigen\s*taal\s*(?:spreken\s*)?(?:op\s*)?werk/i, /\bgeen\s*(?:goed\s*)?nederlands\s*(?:spreken|kunnen)/i],
+    terms: ['taalvereisten', 'indirect onderscheid', 'AWGB', 'objectieve rechtvaardiging', 'instructierecht', 'art. 7:660', 'proportionaliteit', 'discriminatie nationaliteit'],
+  },
+
+  // ===== SECTOR-SPECIFIEK =====
+
+  // 177. Zorg / verpleging sector
+  {
+    patterns: [/\b(?:zorg|verpleeg|verpleging|verplegend)\s*(?:en\s*)?(?:arbeidsrecht|ontslag|contract|cao)/i, /\bcao\s*(?:zorg|vvt|ggz|ziekenhuis|umc)/i, /\b(?:verpleegkundige?|verzorgende?|arts)\s*(?:ontslag|contract|recht)/i, /\bonregelmatig(?:heids)?(?:toeslag)?/i, /\bbig-?registratie/i, /\bdienst(?:rooster)?\s*(?:zorg|verpleging)/i, /\bnachtdienst\s*(?:zorg|verpleging)/i],
+    terms: ['CAO zorg', 'CAO VVT', 'CAO GGZ', 'onregelmatigheidstoeslag', 'BIG-registratie', 'arbeidstijdenwet zorg', 'nachtdienst', 'zorgplicht', 'dienstrooster'],
+  },
+  // 178. Bouw / veiligheid sector
+  {
+    patterns: [/\bbouw\s*(?:sector|cao|veiligheid|arbeidsrecht|ontslag)/i, /\bcao\s*(?:bouw|bouwend\s*nederland)/i, /\bveiligheid\s*(?:op\s*)?(?:de\s*)?bouw/i, /\bvca\b/i, /\bhelm(?:plicht)?/i, /\bsteiger/i, /\bval(?:gevaar|bescherming|beveiliging)/i, /\basbest\s*(?:en\s*)?werk/i, /\bbouw(?:vak|plaats)\s*(?:veiligheid|ongeval)/i],
+    terms: ['CAO bouw', 'Arbobesluit bouw', 'VCA', 'veiligheidsvoorschriften', 'arbeidsinspectie', 'arbeidsongeval bouw', 'aansprakelijkheid', 'art. 7:658', 'Arbowet', 'bouwplaatsveiligheid'],
+  },
+  // 179. Transport / chauffeurs sector
+  {
+    patterns: [/\btransport\s*(?:sector|cao|arbeidsrecht|chauffeur)/i, /\bcao\s*(?:transport|beroepsgoederenvervoer|taxi)/i, /\bchauffeur\s*(?:ontslag|contract|recht|rij(?:bewijs|tijd))/i, /\brij-?\s*en\s*rusttijd/i, /\btachograaf/i, /\brijbewijs\s*(?:kwijt|ingetrokken|verlopen)\s*(?:en\s*)?(?:ontslag|werk)/i, /\badr\b/i, /\bvrachtwagenchauffeur/i],
+    terms: ['CAO transport', 'rij- en rusttijden', 'tachograaf', 'Arbeidstijdenwet vervoer', 'rijbewijs ontslag', 'art. 7:669 lid 3 sub h', 'chauffeur arbeidsrecht', 'rijtijdenwet'],
+  },
+  // 180. Onderwijs sector
+  {
+    patterns: [/\bonderwijs\s*(?:sector|cao|arbeidsrecht|ontslag)/i, /\bcao\s*(?:onderwijs|po|vo|mbo|hbo|universiteit)/i, /\bleraar\s*(?:ontslag|contract|recht)/i, /\bdocent\s*(?:ontslag|contract|recht)/i, /\bleerkracht\s*(?:ontslag|contract|tijdelijk)/i, /\bonderwijspersoneel/i, /\bbij(?:les)?baan\s*leraar/i, /\bnormjaartaak/i],
+    terms: ['CAO onderwijs', 'CAO PO', 'CAO VO', 'onderwijspersoneel', 'tijdelijke aanstelling onderwijs', 'bovenwettelijke uitkering', 'normjaartaak', 'Participatiefonds'],
+  },
+  // 181. Horeca sector
+  {
+    patterns: [/\bhoreca\s*(?:sector|cao|arbeidsrecht|ontslag|contract)/i, /\bcao\s*horeca/i, /\bkok\s*(?:ontslag|contract)/i, /\bkelner\s*(?:ontslag|contract)/i, /\bfooien\s*(?:en\s*)?(?:loon|belasting|recht)/i, /\bnul-?uren\s*(?:contract\s*)?horeca/i, /\bhorecawerknemer/i, /\bcatering\s*(?:personeel|sector)/i],
+    terms: ['CAO horeca', 'nul-urencontract', 'oproepovereenkomst', 'fooien', 'seizoensarbeid', 'arbeidstijden horeca', 'ketenregeling', 'minimumloon horeca'],
+  },
+  // 182. Detailhandel sector
+  {
+    patterns: [/\bdetailhandel\s*(?:sector|cao|arbeidsrecht|ontslag)/i, /\bcao\s*detailhandel/i, /\bwinkel(?:personeel|medewerker)\s*(?:ontslag|contract|recht)/i, /\bkoopavond(?:en)?\s*(?:werken|verplicht)/i, /\bzondag\s*(?:werken\s*)?(?:winkel|detailhandel|verplicht)/i, /\bkassamedewerker/i, /\bwinkelsluiting/i],
+    terms: ['CAO detailhandel', 'koopzondag', 'zondagstoeslag', 'arbeidstijden detailhandel', 'instructierecht', 'oproepovereenkomst', 'gewetensbezwaar zondagswerk'],
+  },
+  // 183. IT / tech sector
+  {
+    patterns: [/\bit-?sector\s*(?:arbeidsrecht|cao|ontslag|contract)/i, /\btech\s*(?:sector|bedrijf|startup)\s*(?:arbeidsrecht|ontslag|contract)/i, /\bsoftware\s*(?:developer|ontwikkelaar)\s*(?:ontslag|contract)/i, /\bstock\s*options?\s*(?:en\s*)?(?:ontslag|werk)/i, /\bintellectueel\s*eigendom\s*(?:it|software|code)/i, /\b(?:saa|startup)\s*(?:en\s*)?(?:ontslag|arbeidsrecht)/i, /\bgarden\s*leave\s*(?:it|tech)/i],
+    terms: ['IT-sector arbeidsrecht', 'concurrentiebeding IT', 'intellectueel eigendom', 'stock options', 'vesting', 'geheimhoudingsbeding', 'garden leave', 'auteursrecht software'],
+  },
+  // 184. Overheid / semi-overheid sector
+  {
+    patterns: [/\boverheid\s*(?:sector|cao|arbeidsrecht|ontslag)/i, /\bsemi-?overheid/i, /\bcao\s*(?:rijk|gemeenten|provincies|waterschappen)/i, /\bgemeente(?:ambtenaar|personeel)\s*(?:ontslag|recht)/i, /\brijks(?:ambtenaar|overheid)\s*(?:ontslag|recht)/i, /\bintegriteit\s*(?:overheid|ambtenaar)/i, /\bwnra\s*(?:ontslag|procedure)/i, /\bnormalisering\s*(?:en\s*)?ontslag/i],
+    terms: ['Wnra', 'CAO Rijk', 'CAO Gemeenten', 'normalisering rechtspositie ambtenaren', 'integriteit overheid', 'bovenwettelijke uitkering', 'van-werk-naar-werktraject', 'ambtelijke status'],
+  },
+
+  // ===== FINANCIEEL / SCHULDEN =====
+
+  // 185. Loonbeslag details / beslagvrije voet
+  {
+    patterns: [/\bloonbeslag\s*(?:hoeveel|wat|berekening|bedrag)/i, /\bbeslagvrije\s*voet\s*(?:berekening|hoeveel|hoogte|aanpassing)/i, /\bdeurwaarder\s*(?:op\s*)?(?:mijn\s*)?loon/i, /\bhoeveel\s*(?:mogen|kunnen)\s*(?:ze\s*)?(?:inhouden|beslag)/i, /\bloonbeslag\s*(?:meerdere|twee|drie)\s*(?:schuldeisers|deurwaarders)/i, /\bvereenvoudiging\s*beslagvrije\s*voet/i],
+    terms: ['loonbeslag', 'beslagvrije voet', 'Wet vereenvoudiging beslagvrije voet', 'art. 475c Rv', 'art. 475d Rv', 'verplichtingen werkgever loonbeslag', 'derdenverklaring', 'preferente vorderingen'],
+  },
+  // 186. Schuldsanering en werk / WSNP
+  {
+    patterns: [/\bschuldsanering\s*(?:en\s*)?werk/i, /\bwsnp\b/i, /\bwettelijke?\s*schuldsanering/i, /\bschuldhulp(?:verlening)?\s*(?:en\s*)?werk/i, /\bschulden\s*(?:en\s*)?werk(?:gever)?/i, /\bsollicitatieplicht\s*(?:wsnp|schuldsanering)/i, /\bschone?\s*lei/i],
+    terms: ['WSNP', 'Wet schuldsanering natuurlijke personen', 'schuldsanering', 'schone lei', 'sollicitatieplicht WSNP', 'bewindvoerder', 'schuldhulpverlening', 'loonbeslag'],
+  },
+  // 187. Faillissement werkgever / loongarantie detail
+  {
+    patterns: [/\bloongarantie(?:regeling)?/i, /\bfaillissement\s*(?:werkgever\s*)?(?:loon|uitkering|recht)/i, /\buwv\s*(?:overneemt|overname|betaalt)\s*(?:loon|salaris)/i, /\buitkering\s*(?:wegens|na|bij)\s*faillissement/i, /\bcurator\s*(?:en\s*)?(?:loon|salaris|opzegging)/i, /\bdoorstart\s*(?:en\s*)?(?:loon|personeel|contract)/i],
+    terms: ['loongarantieregeling UWV', 'art. 61-68 WW', 'faillissement werkgever', 'overneming betalingsverplichtingen', 'curator opzegging', 'opzegtermijn faillissement', 'doorstart', 'pre-pack'],
+  },
+  // 188. Bijzonder beslag / beslag op specifieke looncomponenten
+  {
+    patterns: [/\bbijzonder\s*beslag/i, /\bbeslag\s*(?:op\s*)?(?:vakantiegeld|bonus|13e?\s*maand|dertiende|overwerk)/i, /\bvakantiegeld\s*(?:en\s*)?beslag/i, /\bbeslag\s*(?:op\s*)?(?:eindejaars|uitkering|ontslagvergoeding|transitie)/i, /\bontslagvergoeding\s*(?:en\s*)?beslag/i, /\btransitievergoeding\s*(?:en\s*)?beslag/i],
+    terms: ['bijzonder beslag', 'beslag vakantiegeld', 'beslag ontslagvergoeding', 'beslagvrije voet', 'art. 475c Rv', 'beslagobject', 'beslag transitievergoeding', 'executoriaal beslag'],
+  },
+  // 189. Verrekening schulden met eindafrekening
+  {
+    patterns: [/\bverrekenin?g\s*(?:met\s*)?(?:eind)?afrekening/i, /\bwerkgever\s*(?:houdt\s*)?(?:in|verrekent)\s*(?:bij\s*)?(?:einde|eindafrekening)/i, /\bschade\s*(?:verrekenen|inhouden)\s*(?:bij\s*)?einde/i, /\bstudiekosten\s*(?:verrekenen|inhouden|terugbetalen)\s*(?:bij\s*)?einde/i, /\bteveel\s*(?:genoten|opgenomen)\s*(?:vakantie)?dagen\s*(?:verrekenen|terugbetalen)/i],
+    terms: ['verrekening eindafrekening', 'art. 7:632', 'studiekostenbeding', 'schadevergoeding', 'teveel genoten vakantiedagen', 'onverschuldigde betaling', 'verrekeningsverklaring'],
+  },
+
+  // ===== INTERNATIONAAL UITGEBREID =====
+
+  // 190. Detachering EU / specifiek Posted Workers
+  {
+    patterns: [/\bdetachering\s*(?:naar|in|vanuit)\s*(?:eu|europa|duitsland|belgie|frankrijk)/i, /\bgedetacheerd\s*(?:naar|in)\s*(?:het\s*)?buitenland/i, /\bposted\s*worker\s*(?:recht|richtlijn|nederland)/i, /\bwagweu\b/i, /\bkernarbeidsvoorwaarden\s*(?:detachering|buitenland)/i, /\bmelding(?:splicht)?\s*detachering/i],
+    terms: ['detachering EU', 'Detacheringsrichtlijn', 'WagwEU', 'kernarbeidsvoorwaarden', 'meldingsplicht detachering', 'A1-verklaring', 'Posted Workers Directive', 'harde kern arbeidsvoorwaarden'],
+  },
+  // 191. Sociale zekerheid coordinatie EU
+  {
+    patterns: [/\bsociale?\s*zekerheid\s*(?:eu|europa|coordinatie|buitenland)/i, /\ba1-?verklaring/i, /\bverordening\s*(?:883|987)/i, /\bverzekerings(?:plicht|positie)\s*(?:buitenland|eu)/i, /\bwelk\s*land\s*(?:sociale?\s*)?(?:zekerheid|verzekerd)/i, /\bpremie(?:plicht|heffing)\s*(?:buitenland|eu)/i],
+    terms: ['sociale zekerheidscoordinatie', 'Verordening 883/2004', 'Verordening 987/2009', 'A1-verklaring', 'toepasselijke wetgeving', 'SVB', 'detachering sociale zekerheid', 'multi-state workers'],
+  },
+  // 192. Rijnvarenden
+  {
+    patterns: [/\brijnvar(?:end|enden|aar)/i, /\bbinnenvaart\s*(?:arbeidsrecht|sociale?\s*zekerheid|recht)/i, /\brijnvaart(?:akte|verdrag)/i, /\bscheepvaart\s*(?:arbeidsrecht|sociale?\s*zekerheid)/i, /\bbemanning(?:slid)?\s*(?:binnenvaart|schip)/i],
+    terms: ['Rijnvarenden', 'Rijnvarendenovereenkomst', 'Verordening 883/2004', 'sociale zekerheid binnenvaart', 'A1-verklaring Rijnvarenden', 'SVB', 'exploitantenland'],
+  },
+  // 193. Grensarbeiders / frontaliers
+  {
+    patterns: [/\bgrensarbeider/i, /\bfrontalier/i, /\bwerken\s*(?:in\s*)?(?:belgie|duitsland|buitenland)\s*(?:wonen\s*)?(?:in\s*)?nederland/i, /\bwonen\s*(?:in\s*)?(?:belgie|duitsland|buitenland)\s*(?:werken\s*)?(?:in\s*)?nederland/i, /\bbelasting(?:verdrag)?\s*(?:grens|belgie|duitsland)/i, /\bthuiswerkdag(?:en)?\s*(?:grens|belgie|duitsland)/i],
+    terms: ['grensarbeiders', 'belastingverdrag', 'sociale zekerheidscoordinatie', 'Verordening 883/2004', 'woonland-werklandbeginsel', 'compensatieregeling grensarbeiders', 'thuiswerkdagen grensarbeiders'],
+  },
+  // 194. 30%-regeling / expat faciliteit
+  {
+    patterns: [/\b30\s*(?:procent|%)\s*(?:regeling|ruling)/i, /\bexpat\s*(?:regeling|faciliteit|belasting)/i, /\b30-?(?:procent)?regeling\s*(?:voorwaarden|duur|afbouw|einde)/i, /\binkomende?\s*werknemer\s*(?:belasting|faciliteit)/i, /\bextraterritoriale?\s*kosten/i, /\bschaars(?:e)?\s*(?:specifieke?)?\s*deskundig/i],
+    terms: ['30%-regeling', 'extraterritoriale kosten', 'inkomende werknemer', 'schaarse specifieke deskundigheid', '150-kilometergrens', 'belastingvoordeel expat', 'looptijd 30%-regeling'],
+  },
+
+  // ===== AANVULLENDE MODERNE THEMAS =====
+
+  // 195. Werkvergunning / verblijfsvergunning en werk
+  {
+    patterns: [/\bwerkvergunning/i, /\btewerkstellingsvergunning\s*(?:aanvraag|nodig|vereist)/i, /\btwv\b/i, /\bgecombineerde?\s*vergunning/i, /\bverblijfsvergunning\s*(?:en\s*)?werk/i, /\bkennismigrant/i, /\bvergunning\s*(?:voor\s*)?(?:werk|arbeid)\s*(?:buitenland|vreemdeling)/i, /\bonderdaan\s*(?:derde\s*)?land/i],
+    terms: ['tewerkstellingsvergunning', 'TWV', 'gecombineerde vergunning GVVA', 'Wet arbeid vreemdelingen', 'kennismigrant', 'werkvergunning', 'verblijfsvergunning arbeid', 'illegale tewerkstelling'],
+  },
+  // 196. Gendergelijkheid / loonkloof
+  {
+    patterns: [/\bloonkloof/i, /\bgender\s*(?:pay\s*)?gap/i, /\bgelijk\s*loon\s*(?:man|vrouw|geslacht)/i, /\bloonverschil\s*(?:man|vrouw|gender|geslacht)/i, /\bgendergelijkheid\s*(?:op\s*)?werk/i, /\bman\s*(?:en\s*)?vrouw\s*(?:gelijk|verschil|loon)/i, /\bglazen\s*plafond/i, /\bloon(?:transparantie|rapportage)/i],
+    terms: ['gelijke beloning', 'art. 7:646', 'loonkloof', 'gendergelijkheid', 'EU-richtlijn loontransparantie', 'verboden onderscheid geslacht', 'College voor de Rechten van de Mens'],
+  },
+  // 197. Zelfstandigenaftrek / wet DBA / handhaving
+  {
+    patterns: [/\bwet\s*dba\b/i, /\bhandhaving\s*(?:schijn)?zelfstandig/i, /\bbelastingdienst\s*(?:zzp|zelfstandig|schijnzelfstandig)/i, /\bmodelovereenkomst\s*(?:dba|belastingdienst)/i, /\bvrijwaring(?:sbrief)?\s*dba/i, /\bwet\s*(?:verduidelijking\s*)?beoordeling\s*(?:arbeids)?relatie/i, /\bvban\b/i],
+    terms: ['Wet DBA', 'schijnzelfstandigheid', 'handhaving Belastingdienst', 'modelovereenkomst', 'gezagsverhouding', 'kwalificatie arbeidsrelatie', 'boete schijnzelfstandigheid', 'VBAR'],
+  },
+  // 198. Bedrijfsarts geschil / klachtprocedure bedrijfsarts
+  {
+    patterns: [/\bklacht\s*(?:over|tegen|bij)\s*(?:de\s*)?bedrijfsarts/i, /\bbedrijfsarts\s*(?:klacht|tucht|fout|onterecht)/i, /\btuchtrecht\s*(?:bedrijfs)?arts/i, /\bonterecht\s*(?:arbeids)?geschikt\s*(?:verklaard|gemeld)/i, /\bbedrijfsarts\s*(?:luistert|doet)\s*niet/i, /\bbedrijfsarts\s*(?:is\s*)?(?:partijdig|bevooroordeeld)/i],
+    terms: ['klacht bedrijfsarts', 'tuchtrecht', 'deskundigenoordeel UWV', 'second opinion', 'art. 7:629a', 'NVAB-richtlijn', 'klachtenprocedure arbodienst', 'medisch tuchtcollege'],
+  },
+  // 199. Arbeidsmarktdiscriminatie / sollicitatiediscriminatie
+  {
+    patterns: [/\bsollicitatie(?:discriminatie|afwijzing)\b/i, /\bafgewezen\s*(?:op\s*)?(?:basis\s*(?:van\s*)?)?(?:leeftijd|afkomst|geslacht|handicap|naam|uiterlijk)/i, /\bdiscriminatie\s*(?:bij|tijdens)\s*(?:sollicitatie|werving|selectie)/i, /\barbeidsmarktdiscriminatie/i, /\bselect(?:ie|eren)\s*(?:op\s*)?(?:leeftijd|afkomst|geslacht)/i, /\bnaam\s*(?:en\s*)?kans(?:en)?/i],
+    terms: ['arbeidsmarktdiscriminatie', 'sollicitatiediscriminatie', 'AWGB', 'WGBL', 'verboden onderscheid', 'College voor de Rechten van de Mens', 'bewijslast', 'anoniem solliciteren'],
+  },
+  // 200. Werkgever weigert re-integratie / re-integratiegeschil
+  {
+    patterns: [/\bwerkgever\s*(?:weigert|werkt\s*(?:niet\s*)?mee)\s*(?:aan\s*)?re-?integratie/i, /\bre-?integratie\s*(?:geschil|conflict|probleem|stagneert)/i, /\bgeen\s*(?:passend\s*)?werk\s*(?:aangeboden|beschikbaar)/i, /\bwerkgever\s*(?:doet|biedt)\s*(?:niets|niks)\s*(?:aan\s*)?re-?integratie/i, /\bstagner(?:end|ende)\s*re-?integratie/i],
+    terms: ['re-integratiegeschil', 'deskundigenoordeel UWV', 'art. 7:658a', 'passende arbeid', 'loonsanctie werkgever', 'spoor 2', 'Wet verbetering poortwachter', 'plan van aanpak'],
+  },
+  // 201. Werknemer en privacy (personeelsdossier / dataportabiliteit)
+  {
+    patterns: [/\bpersoneelsdossier\s*(?:inzage|recht|opvragen|verwijderen)/i, /\binzage(?:recht|verzoek)\s*(?:personeels)?dossier/i, /\bdataportabiliteit\s*(?:werknemer|personeel)/i, /\bverwijdering\s*(?:personeels)?gegevens/i, /\brecht\s*(?:op\s*)?(?:inzage|vergetelheid|rectificatie)\s*(?:personeels)?dossier/i, /\bpersoneelsgegevens\s*(?:bewaren|vernietigen|overdragen)/i],
+    terms: ['inzagerecht personeelsdossier', 'AVG', 'art. 15 AVG', 'recht op inzage', 'recht op vergetelheid', 'dataportabiliteit', 'bewaartermijn personeelsdossier', 'Autoriteit Persoonsgegevens'],
+  },
+  // 202. Payrolling en uitzendconstructie misbruik
+  {
+    patterns: [/\bpayroll\s*(?:constructie|misbruik|rechten|gelijk)/i, /\bpayroll(?:werknemer|kracht|overeenkomst)/i, /\bgelijke?\s*(?:behandeling|rechten)\s*payroll/i, /\buitzend(?:constructie|misbruik)\b/i, /\bdraaideur(?:constructie)?\b/i, /\bverschil\s*(?:uitzend|payroll)\s*(?:en\s*)?(?:vast|direct)/i],
+    terms: ['payrolling', 'WAB payroll', 'gelijke behandeling payroll', 'allocatiefunctie', 'adequate pensioenregeling', 'inlenersbeloning', 'draaideurconstructie', 'misbruik uitzendconstructie'],
+  },
+  // 203. Vakantie weigeren / vakantieaanvraag weigering
+  {
+    patterns: [/\bvakantie\s*(?:geweigerd|afgewezen|niet\s*goedgekeurd)/i, /\bwerkgever\s*(?:weigert|keurt\s*(?:niet\s*)?goed)\s*(?:mijn\s*)?vakantie/i, /\bmag\s*(?:werkgever\s*)?vakantie\s*(?:weigeren|afwijzen)/i, /\bvakantie(?:aanvraag)?\s*(?:weiger|afwijs)/i, /\bverplicht\s*vakantie\s*(?:opnemen|op)/i, /\bcollectieve?\s*(?:vakantie|sluiting|bedrijfssluiting)/i],
+    terms: ['vakantieaanvraag', 'art. 7:638', 'gewichtige redenen', 'vaststelling vakantie', 'collectieve vakantie', 'verplichte vrije dagen', 'art. 7:636', 'opnemen vakantiedagen'],
+  },
+  // 204. Detentie en ontslag / strafrechtelijk en werk
+  {
+    patterns: [/\bgevangenschap\s*(?:en\s*)?werk/i, /\bhechtenis\s*(?:en\s*)?(?:ontslag|werk|loon)/i, /\bstrafrechtelijke?\s*(?:vervolging|veroordeling)\s*(?:en\s*)?(?:ontslag|werk)/i, /\bverdacht\s*(?:en\s*)?(?:ontslag|werk|schorsing)/i, /\bstrafzaak\s*(?:en\s*)?(?:werk|ontslag)/i, /\bgedetineerd\s*(?:en\s*)?(?:werk|loon|ontslag)/i],
+    terms: ['detentie ontslag', 'art. 7:669 lid 3 sub h', 'dringende reden', 'onschuldpresumptie', 'schorsing bij verdenking', 'loondoorbetaling detentie', 'goed werknemerschap'],
+  },
+  // 205. Arbeidsongeschiktheidsverzekering / WIA-hiaat
+  {
+    patterns: [/\barbeidsongeschiktheidsverzekering/i, /\baov\b/i, /\bwia-?(?:hiaat|excedent|aanvulling|gat)/i, /\bwga-?(?:hiaat|verzekering|eigen\s*risico)/i, /\beigen\s*risico(?:drager)?\s*(?:wga|ziektewet)/i, /\bverzekering\s*(?:bij\s*)?arbeidsongeschiktheid/i, /\binkomens(?:verzekering|bescherming)/i],
+    terms: ['arbeidsongeschiktheidsverzekering', 'WIA-hiaatverzekering', 'WGA-excedent', 'eigenrisicodrager WGA', 'eigenrisicodrager Ziektewet', 'AOV', 'inkomensbescherming', 'premieplicht'],
+  },
 ]
 
 /**

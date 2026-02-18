@@ -925,8 +925,8 @@ ${markdownHtml}
         </div>
       </div>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5" onClick={handleMessagesClick}>
+      {/* Messages area — ambient glow when AI is active */}
+      <div className={`flex-1 overflow-y-auto px-6 py-6 space-y-5 transition-all duration-1000 ${isLoading ? 'chat-area-active' : messages.length > 0 ? 'chat-area-ambient' : ''}`} onClick={handleMessagesClick}>
         {/* Loading conversation history */}
         {isLoadingHistory && messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
@@ -1009,7 +1009,7 @@ ${markdownHtml}
                         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
                           expandedThinkingIds.has(msg.id) ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
                         }`}>
-                          <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[180px] mb-2">
+                          <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[180px] mb-2 thinking-section-glow">
                             <p className="text-[11px] text-white/25 leading-relaxed whitespace-pre-wrap">
                               {msg.thinkingContent}
                             </p>
@@ -1017,7 +1017,7 @@ ${markdownHtml}
                         </div>
                       </div>
                     )}
-                    <div className={`assistant-bubble rounded-2xl rounded-tl-md px-5 py-4 ${isStreaming ? 'assistant-bubble-streaming' : ''}`}>
+                    <div className={`assistant-bubble rounded-2xl rounded-tl-md px-5 py-4 ${isStreaming ? 'assistant-bubble-streaming' : (msg.content ? 'assistant-bubble-complete' : '')}`}>
                       {isStreaming ? (
                         // Streaming: throttled markdown rendering (80ms interval)
                         <div
@@ -1064,7 +1064,7 @@ ${markdownHtml}
                               href={citation.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white/50 hover:text-workx-lime hover:border-workx-lime/30 transition-all"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-white/50 hover:text-workx-lime hover:border-workx-lime/30 transition-all citation-web"
                               title={citation.url}
                             >
                               <span className="truncate max-w-[200px]">{citation.title || (() => { try { return new URL(citation.url).hostname } catch { return citation.url } })()}</span>
@@ -1108,7 +1108,7 @@ ${markdownHtml}
                           {msg.sources.map((source, idx) => (
                             <span
                               key={idx}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[10px] text-white/35"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[10px] text-white/35 citation-legal"
                             >
                               {source.name}
                               <span className="text-white/15">({source.category})</span>
@@ -1269,7 +1269,7 @@ ${markdownHtml}
               <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
                 thinkingExpanded || isThinking ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
               }`}>
-                <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[180px] mb-2">
+                <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[180px] mb-2 thinking-section-glow">
                   <p className="text-[11px] text-white/25 leading-relaxed whitespace-pre-wrap">
                     {thinkingText}
                   </p>
@@ -1291,7 +1291,7 @@ ${markdownHtml}
                   {/* Progress bar */}
                   <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-3">
                     <div
-                      className="h-full bg-gradient-to-r from-workx-lime/30 via-workx-lime/60 to-workx-lime rounded-full transition-all duration-700 ease-out"
+                      className="h-full bg-gradient-to-r from-workx-lime/30 via-workx-lime/60 to-workx-lime rounded-full transition-all duration-700 ease-out progress-bar-glow"
                       style={{ width: `${loadingProgress}%` }}
                     />
                   </div>

@@ -1407,7 +1407,7 @@ textarea::-webkit-scrollbar-thumb:hover {
   animation: messageFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Assistant message bubble with subtle glass effect */
+/* Assistant message bubble with subtle glass effect + ambient lime glow */
 .assistant-bubble {
   position: relative;
   background: linear-gradient(
@@ -1415,9 +1415,12 @@ textarea::-webkit-scrollbar-thumb:hover {
     rgba(255, 255, 255, 0.07) 0%,
     rgba(255, 255, 255, 0.04) 100%
   );
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(249, 255, 133, 0.06);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 12px -4px rgba(249, 255, 133, 0.05),
+    0 0 24px -8px rgba(249, 255, 133, 0.03);
   transition: box-shadow 0.4s ease, border-color 0.4s ease;
 }
 
@@ -1456,12 +1459,47 @@ textarea::-webkit-scrollbar-thumb:hover {
   }
 }
 
+/* Completion flash — brief glow intensification when answer finishes */
+.assistant-bubble-complete {
+  animation: assistantCompleteFlash 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes assistantCompleteFlash {
+  0% {
+    box-shadow:
+      0 0 25px -5px rgba(249, 255, 133, 0.18),
+      0 0 50px -10px rgba(249, 255, 133, 0.10);
+    border-color: rgba(249, 255, 133, 0.20);
+  }
+  30% {
+    box-shadow:
+      0 0 35px -5px rgba(249, 255, 133, 0.22),
+      0 0 70px -10px rgba(249, 255, 133, 0.12);
+    border-color: rgba(249, 255, 133, 0.25);
+  }
+  100% {
+    box-shadow:
+      0 0 12px -4px rgba(249, 255, 133, 0.05),
+      0 0 24px -8px rgba(249, 255, 133, 0.03);
+    border-color: rgba(249, 255, 133, 0.06);
+  }
+}
+
 /* User message bubble with gradient */
 .user-bubble {
   background: linear-gradient(135deg, #f9ff85 0%, #e8ee7a 100%);
   box-shadow:
     0 4px 15px -3px rgba(249, 255, 133, 0.25),
     0 0 0 1px rgba(249, 255, 133, 0.1);
+  transition: box-shadow 0.4s ease, transform 0.3s ease;
+}
+
+.user-bubble:hover {
+  box-shadow:
+    0 4px 20px -3px rgba(249, 255, 133, 0.35),
+    0 0 30px -5px rgba(249, 255, 133, 0.12),
+    0 0 0 1px rgba(249, 255, 133, 0.15);
+  transform: translateY(-1px);
 }
 
 /* Shimmer loading effect for AI thinking */
@@ -4085,4 +4123,120 @@ textarea::-webkit-scrollbar-thumb:hover {
 
 .ai-glow:hover::before {
   opacity: 1;
+}
+
+/* ==================== AI CHAT AREA AMBIENT GLOW ==================== */
+
+/* Subtle ambient glow when chat has messages — the AI feels "on" */
+.chat-area-ambient {
+  background: radial-gradient(
+    ellipse 80% 60% at 30% 20%,
+    rgba(249, 255, 133, 0.015) 0%,
+    transparent 70%
+  );
+}
+
+/* Stronger glow when AI is actively generating — the AI is "thinking" */
+.chat-area-active {
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 25% 30%,
+      rgba(249, 255, 133, 0.04) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 70% 70%,
+      rgba(100, 200, 255, 0.015) 0%,
+      transparent 60%
+    );
+  animation: chatAreaPulse 4s ease-in-out infinite;
+}
+
+@keyframes chatAreaPulse {
+  0%, 100% {
+    background:
+      radial-gradient(
+        ellipse 80% 50% at 25% 30%,
+        rgba(249, 255, 133, 0.04) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 50% 40% at 70% 70%,
+        rgba(100, 200, 255, 0.015) 0%,
+        transparent 60%
+      );
+  }
+  50% {
+    background:
+      radial-gradient(
+        ellipse 85% 55% at 30% 25%,
+        rgba(249, 255, 133, 0.06) 0%,
+        transparent 65%
+      ),
+      radial-gradient(
+        ellipse 55% 45% at 65% 65%,
+        rgba(100, 200, 255, 0.025) 0%,
+        transparent 65%
+      );
+  }
+}
+
+/* ==================== AI CHAT GLOW ACCENTS ==================== */
+
+/* Citation badge: web search — soft cyan accent */
+.citation-web {
+  border-color: rgba(100, 200, 255, 0.12) !important;
+  box-shadow: 0 0 8px -2px rgba(100, 200, 255, 0.08);
+  transition: all 0.3s ease;
+}
+
+.citation-web:hover {
+  border-color: rgba(100, 200, 255, 0.30) !important;
+  box-shadow: 0 0 14px -3px rgba(100, 200, 255, 0.15);
+  color: rgba(100, 200, 255, 0.9) !important;
+}
+
+/* Citation badge: legal knowledge sources — soft purple accent */
+.citation-legal {
+  border-color: rgba(180, 130, 255, 0.10) !important;
+  box-shadow: 0 0 8px -2px rgba(180, 130, 255, 0.06);
+  transition: all 0.3s ease;
+}
+
+.citation-legal:hover {
+  border-color: rgba(180, 130, 255, 0.28) !important;
+  box-shadow: 0 0 14px -3px rgba(180, 130, 255, 0.12);
+  color: rgba(180, 130, 255, 0.9) !important;
+}
+
+/* Thinking section — warm amber tint */
+.thinking-section-glow {
+  border-color: rgba(255, 190, 100, 0.08) !important;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 190, 100, 0.03) 0%,
+    rgba(255, 190, 100, 0.01) 100%
+  ) !important;
+  box-shadow: 0 0 10px -4px rgba(255, 190, 100, 0.06);
+}
+
+/* Progress bar fill — glow halo */
+.progress-bar-glow {
+  box-shadow:
+    0 0 8px 0px rgba(249, 255, 133, 0.25),
+    0 0 16px -2px rgba(249, 255, 133, 0.15);
+  position: relative;
+}
+
+.progress-bar-glow::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  right: -2px;
+  bottom: -3px;
+  width: 12px;
+  border-radius: 50%;
+  background: rgba(249, 255, 133, 0.35);
+  filter: blur(4px);
+  pointer-events: none;
 }
