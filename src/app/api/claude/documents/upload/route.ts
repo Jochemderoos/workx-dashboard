@@ -105,6 +105,33 @@ export async function POST(req: NextRequest) {
       fileUrl = `data:${mimeType};base64,${fullBase64}`
     }
 
+    // Auto-split large scanned PDFs into pages so Claude can read them via vision
+    const isScannedPdf = ext === 'pdf' && (
+      !textContent ||
+      textContent.length < 100 ||
+      textContent.startsWith('[')
+    )
+    if (isScannedPdf && actualSize > 2 * 1024 * 1024 && fileUrl) {
+      console.log(`[upload] Scanned PDF detected (${(actualSize / 1024 / 1024).toFixed(1)}MB). Auto-splitting...`)
+      try {
+        const splitDocs = await autoSplitPdf(buffer, meta.fileName || 'upload', meta.projectId, session.user.id)
+        if (splitDocs.length > 0) {
+          await prisma.fileUploadChunk.deleteMany({ where: { uploadId } })
+          console.log(`[upload] Auto-split into ${splitDocs.length} pages`)
+          return NextResponse.json({
+            ...splitDocs[0],
+            autoSplit: true,
+            splitDocuments: splitDocs,
+            totalPages: splitDocs.length,
+            message: `PDF is automatisch opgesplitst in ${splitDocs.length} pagina's.`,
+          }, { status: 201 })
+        }
+      } catch (splitErr) {
+        console.error(`[upload] Auto-split failed:`, splitErr instanceof Error ? splitErr.message : splitErr)
+        // Fall through to normal document creation
+      }
+    }
+
     // Create the document
     const document = await prisma.aIDocument.create({
       data: {
@@ -198,4 +225,61 @@ async function extractTextFromDocx(buffer: Buffer): Promise<string> {
   } catch {
     return '[DOCX parsing mislukt]'
   }
+}
+
+/** Auto-split a scanned PDF into individual pages for better Claude processing */
+async function autoSplitPdf(
+  buffer: Buffer,
+  originalName: string,
+  projectId: string | null,
+  userId: string,
+): Promise<Array<{ id: string; name: string; fileType: string; fileSize: number; createdAt: Date }>> {
+  const { PDFDocument } = await import('pdf-lib')
+  const pdfBytes = new Uint8Array(buffer)
+  const sourcePdf = await PDFDocument.load(pdfBytes)
+  const totalPages = sourcePdf.getPageCount()
+
+  const pagesPerChunk = totalPages > 20 ? 3 : 1
+  const baseName = originalName.replace(/\.pdf$/i, '')
+  const createdDocs: Array<{ id: string; name: string; fileType: string; fileSize: number; createdAt: Date }> = []
+
+  for (let startPage = 0; startPage < totalPages; startPage += pagesPerChunk) {
+    const endPage = Math.min(startPage + pagesPerChunk, totalPages)
+    const newPdf = await PDFDocument.create()
+    const pageIndices = Array.from({ length: endPage - startPage }, (_, i) => startPage + i)
+    const copiedPages = await newPdf.copyPages(sourcePdf, pageIndices)
+    for (const page of copiedPages) {
+      newPdf.addPage(page)
+    }
+
+    const newPdfBytes = await newPdf.save()
+    const newBase64 = Buffer.from(newPdfBytes).toString('base64')
+    const newFileUrl = `data:application/pdf;base64,${newBase64}`
+
+    let textContent = ''
+    try {
+      textContent = await extractTextFromPdfDirect(Buffer.from(newPdfBytes))
+    } catch { /* best-effort */ }
+
+    const label = pagesPerChunk === 1
+      ? `p${startPage + 1}`
+      : `p${startPage + 1}-${endPage}`
+    const newName = `${baseName} (${label}).pdf`
+
+    const doc = await prisma.aIDocument.create({
+      data: {
+        name: newName,
+        fileType: 'pdf',
+        fileSize: newPdfBytes.length,
+        content: textContent || null,
+        fileUrl: newFileUrl,
+        projectId: projectId || null,
+        userId,
+      },
+    })
+
+    createdDocs.push(doc)
+  }
+
+  return createdDocs
 }

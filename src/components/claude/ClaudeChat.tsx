@@ -266,6 +266,12 @@ export default function ClaudeChat({
 
       // Last chunk returns the complete document
       if (result.id) {
+        if (result.autoSplit && result.splitDocuments?.length > 0) {
+          // Auto-split: add all page documents
+          const splitDocs = result.splitDocuments as Array<{ id: string; name: string; fileType: string }>
+          setAttachedDocs(prev => [...prev, ...splitDocs.slice(1).map((d: { id: string; name: string; fileType: string }) => ({ id: d.id, name: d.name, fileType: d.fileType }))])
+          toast.success(`${file.name} automatisch opgesplitst in ${splitDocs.length} delen`)
+        }
         return { id: result.id, name: result.name, fileType: result.fileType }
       }
     }
@@ -322,6 +328,7 @@ export default function ClaudeChat({
               ? `${shortName} (${fi + 1}/${totalFiles}) — deel ${sent}/${total}...`
               : `${shortName} — deel ${sent}/${total}...`)
           })
+          // uploadFileChunked returns a single doc; auto-split is handled by the upload route
           setAttachedDocs(prev => [...prev, doc])
           uploadedSize += file.size
           uploadedCount++
@@ -350,7 +357,14 @@ export default function ClaudeChat({
           throw new Error(`Upload mislukt: ${file.name} (${res.status})`)
         }
         const doc = await res.json()
-        setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])
+        if (doc.autoSplit && doc.splitDocuments?.length > 0) {
+          // PDF was auto-split into pages — attach all pages
+          const splitDocs = doc.splitDocuments as Array<{ id: string; name: string; fileType: string }>
+          setAttachedDocs(prev => [...prev, ...splitDocs.map((d: { id: string; name: string; fileType: string }) => ({ id: d.id, name: d.name, fileType: d.fileType }))])
+          toast.success(`${file.name} automatisch opgesplitst in ${splitDocs.length} delen`)
+        } else {
+          setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])
+        }
         uploadedSize += file.size
         uploadedCount++
         setUploadProgress(Math.round((uploadedSize / totalSize) * 100))

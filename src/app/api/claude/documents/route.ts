@@ -3,8 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+export const maxDuration = 60
+
 const MAX_FILE_SIZE = 32 * 1024 * 1024 // 32MB (Claude ondersteunt PDFs tot 32MB)
 const ALLOWED_TYPES = ['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp']
+// PDFs over this size AND scanned get auto-split into pages
+const AUTO_SPLIT_THRESHOLD = 2 * 1024 * 1024 // 2MB
 
 // GET: lijst documenten (optioneel filter op projectId)
 export async function GET(req: NextRequest) {
@@ -139,6 +143,34 @@ export async function POST(req: NextRequest) {
     fileUrl = `data:${mimeType};base64,${buffer.toString('base64')}`
   }
 
+  // Auto-split large scanned PDFs into individual pages.
+  // This ensures each page is small enough for Claude's native document blocks,
+  // allowing Claude to "see" scanned content via vision.
+  const isScannedPdf = extension === 'pdf' && (
+    !textContent ||
+    textContent.length < 100 ||
+    textContent.startsWith('[')
+  )
+  if (isScannedPdf && file.size > AUTO_SPLIT_THRESHOLD && fileUrl) {
+    console.log(`[documents] Scanned PDF detected (${(file.size / 1024 / 1024).toFixed(1)}MB, ${textContent.length} chars text). Auto-splitting into pages...`)
+    try {
+      const splitDocs = await autoSplitPdf(buffer, file.name, fileUrl, projectId, session.user.id)
+      if (splitDocs.length > 0) {
+        console.log(`[documents] Auto-split ${file.name} into ${splitDocs.length} pages`)
+        return NextResponse.json({
+          ...splitDocs[0], // Return first page as the "main" document
+          autoSplit: true,
+          splitDocuments: splitDocs,
+          totalPages: splitDocs.length,
+          message: `PDF is automatisch opgesplitst in ${splitDocs.length} pagina's voor betere verwerking.`,
+        }, { status: 201 })
+      }
+    } catch (splitErr) {
+      console.error(`[documents] Auto-split failed for ${file.name}:`, splitErr instanceof Error ? splitErr.message : splitErr)
+      // Fall through to normal document creation
+    }
+  }
+
   const document = await prisma.aIDocument.create({
     data: {
       name: file.name,
@@ -255,4 +287,65 @@ async function extractTextFromDocx(buffer: Buffer): Promise<string> {
   } catch {
     return '[DOCX parsing mislukt]'
   }
+}
+
+/** Auto-split a scanned PDF into individual pages for better Claude processing */
+async function autoSplitPdf(
+  buffer: Buffer,
+  originalName: string,
+  _originalFileUrl: string,
+  projectId: string | null,
+  userId: string,
+): Promise<Array<{ id: string; name: string; fileType: string; fileSize: number; createdAt: Date }>> {
+  const { PDFDocument } = await import('pdf-lib')
+  const pdfBytes = new Uint8Array(buffer)
+  const sourcePdf = await PDFDocument.load(pdfBytes)
+  const totalPages = sourcePdf.getPageCount()
+
+  // For very large PDFs, group pages (e.g., 3 per chunk) to keep document count manageable
+  const pagesPerChunk = totalPages > 20 ? 3 : 1
+  const baseName = originalName.replace(/\.pdf$/i, '')
+
+  const createdDocs: Array<{ id: string; name: string; fileType: string; fileSize: number; createdAt: Date }> = []
+
+  for (let startPage = 0; startPage < totalPages; startPage += pagesPerChunk) {
+    const endPage = Math.min(startPage + pagesPerChunk, totalPages)
+    const newPdf = await PDFDocument.create()
+    const pageIndices = Array.from({ length: endPage - startPage }, (_, i) => startPage + i)
+    const copiedPages = await newPdf.copyPages(sourcePdf, pageIndices)
+    for (const page of copiedPages) {
+      newPdf.addPage(page)
+    }
+
+    const newPdfBytes = await newPdf.save()
+    const newBase64 = Buffer.from(newPdfBytes).toString('base64')
+    const newFileUrl = `data:application/pdf;base64,${newBase64}`
+
+    // Try to extract text from this chunk
+    let textContent = ''
+    try {
+      textContent = await extractTextFromPdfDirect(Buffer.from(newPdfBytes))
+    } catch { /* best-effort */ }
+
+    const label = pagesPerChunk === 1
+      ? `p${startPage + 1}`
+      : `p${startPage + 1}-${endPage}`
+    const newName = `${baseName} (${label}).pdf`
+
+    const doc = await prisma.aIDocument.create({
+      data: {
+        name: newName,
+        fileType: 'pdf',
+        fileSize: newPdfBytes.length,
+        content: textContent || null,
+        fileUrl: newFileUrl,
+        projectId: projectId && projectId !== 'null' ? projectId : null,
+        userId,
+      },
+    })
+
+    createdDocs.push(doc)
+  }
+
+  return createdDocs
 }

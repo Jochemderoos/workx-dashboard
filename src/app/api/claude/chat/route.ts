@@ -546,23 +546,43 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Process a single PDF document: use extracted text or placeholder.
-          // NOTE: Native PDF blocks (base64) are disabled — loading multi-MB blobs from
-          // PostgreSQL during streaming is unreliable in Vercel serverless (causes timeouts
-          // and crashes). Scanned PDFs without extractable text get a helpful placeholder.
+          // Process a single PDF document: use extracted text, or send as native
+          // document block so Claude can "see" scanned PDFs via vision.
           const processPdfDoc = async (
             doc: { id: string; name: string; fileType: string; fileSize: number; content: string | null },
             prefix: string,
           ) => {
             try {
               if (hasUsableContent(doc)) {
+                // Text-based PDF: use extracted text (fast, no base64 needed)
                 documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
                 console.log(`[chat] PDF ${doc.name}: using extracted text (${doc.content!.length} chars)`)
               } else {
-                // Scanned PDF without extractable text
-                const sizeMB = ((doc.fileSize || 0) / (1024 * 1024)).toFixed(1)
-                documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF-DOCUMENT (${sizeMB}MB) — de tekst kon niet automatisch worden uitgelezen. Dit is waarschijnlijk een ingescand/image-based document. De gebruiker kan dit oplossen door:\n1. Het document op te splitsen via het schaartje-icoon (✂️) bij Documenten — kleinere stukken worden beter verwerkt\n2. De tekst handmatig te kopiëren en in het chatbericht te plakken\n3. Het document te laten OCR'en (bijv. via Adobe Acrobat) en opnieuw te uploaden]\n--- Einde ---`
-                console.log(`[chat] PDF ${doc.name}: scanned PDF without text (${sizeMB}MB) — added placeholder with instructions`)
+                // Scanned PDF: send as native document block so Claude can read it via vision.
+                // Only for PDFs under 5MB to avoid Vercel memory issues.
+                const sizeMB = (doc.fileSize || 0) / (1024 * 1024)
+                const estimatedTokens = estimatePdfBlockTokens(Math.ceil(sizeMB * 1.37 * 1_000_000)) // base64 is ~37% larger
+                if (sizeMB <= 5 && nativeBlockTokens + estimatedTokens <= maxNativeBlockTokens) {
+                  const fileUrl = await loadFileUrl(doc.id)
+                  const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
+                  if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN) {
+                    documentBlocks.push({
+                      type: 'document',
+                      source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+                    })
+                    nativeBlockTokens += estimatedTokens
+                    console.log(`[chat] PDF ${doc.name}: scanned — sent as native document block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
+                  } else {
+                    // Base64 load failed or too large
+                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF (${sizeMB.toFixed(1)}MB) — kon niet worden geladen als document block. Splits het document op in kleinere stukken via het schaartje-icoon (✂️) bij Documenten.]\n--- Einde ---`
+                    console.log(`[chat] PDF ${doc.name}: scanned — base64 load failed or too large (${sizeMB.toFixed(1)}MB)`)
+                  }
+                } else {
+                  // Too large for native blocks — give clear instructions
+                  documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF (${sizeMB.toFixed(1)}MB) — te groot om als geheel te verwerken. Splits het document op in kleinere stukken via het schaartje-icoon (✂️) bij Documenten.]\n--- Einde ---`
+                  console.log(`[chat] PDF ${doc.name}: scanned PDF too large for native block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
+                }
               }
             } catch (e) {
               const msg = e instanceof Error ? e.message : String(e)
