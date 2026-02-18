@@ -606,6 +606,9 @@ ${markdownHtml}
     setThinkingExpanded(false)
     setStatusText('Verbinden met Claude...')
 
+    // Signal to StaleVersionGuard: do NOT refresh while chat is active
+    try { sessionStorage.setItem('workx-last-version-refresh', Date.now().toString()) } catch { /* ignore */ }
+
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -688,11 +691,20 @@ ${markdownHtml}
       let hasWebSearch = false
       let citations: Array<{ url: string; title: string }> = []
 
+      let readCount = 0
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        readCount++
+        if (done) {
+          console.log(`[ClaudeChat] Stream done after ${readCount} reads, streamedText length: ${streamedText.length}`)
+          break
+        }
 
-        buffer += decoder.decode(value, { stream: true })
+        const chunk = decoder.decode(value, { stream: true })
+        buffer += chunk
+        if (readCount <= 3) {
+          console.log(`[ClaudeChat] Read #${readCount}: ${chunk.length} bytes, first 200:`, chunk.slice(0, 200))
+        }
 
         // Process complete SSE events from buffer
         const lines = buffer.split('\n\n')
@@ -704,6 +716,9 @@ ${markdownHtml}
 
           try {
             const event = JSON.parse(jsonStr)
+            if (readCount <= 5) {
+              console.log(`[ClaudeChat] Event:`, event.type, event.text?.slice(0, 50) || '')
+            }
 
             if (event.type === 'start' && event.conversationId) {
               if (!convId) {
@@ -789,6 +804,7 @@ ${markdownHtml}
       setStatusText('')
 
     } catch (error) {
+      console.error('[ClaudeChat] Error in sendMessage:', error)
       clearTimeout(timeoutId)
       let errMsg = 'Onbekende fout'
       if (error instanceof Error) {
