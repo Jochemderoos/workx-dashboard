@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
+const BUILD_ID = Date.now().toString()
+
 const nextConfig = {
   poweredByHeader: false,
+  // Expose build ID to client-side code for stale-version detection
+  env: {
+    NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+  },
   experimental: {
     serverComponentsExternalPackages: ['puppeteer-core', 'pdfjs-dist', '@vercel/blob'],
   },

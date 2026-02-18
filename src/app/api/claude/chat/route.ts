@@ -1272,6 +1272,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
         'X-Accel-Buffering': 'no',
+        'X-Build-Id': process.env.NEXT_PUBLIC_BUILD_ID || '',
       },
     })
   } catch (error) {

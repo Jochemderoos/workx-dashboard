@@ -348,6 +348,17 @@ export default function ClaudeChat({
     }
   }, [quickActionPrompt])
 
+  // Restore pending message after auto-refresh (from stale-version detection)
+  useEffect(() => {
+    try {
+      const pending = sessionStorage.getItem('workx-pending-message')
+      if (pending) {
+        sessionStorage.removeItem('workx-pending-message')
+        setInput(pending)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
   /** Clean renderMarkdown HTML for document export (strip web-only elements) */
   const cleanHtmlForExport = (html: string): string => {
     return html
@@ -604,6 +615,18 @@ ${markdownHtml}
         }),
         signal: controller.signal,
       })
+
+      // Stale-version detection: if server build ID differs from client, auto-refresh
+      const serverBuildId = response.headers.get('X-Build-Id')
+      const clientBuildId = process.env.NEXT_PUBLIC_BUILD_ID
+      if (serverBuildId && clientBuildId && serverBuildId !== clientBuildId) {
+        console.log(`[ClaudeChat] Build mismatch: client=${clientBuildId} server=${serverBuildId} — refreshing`)
+        clearTimeout(timeoutId)
+        // Save the user's message so they don't lose it
+        try { sessionStorage.setItem('workx-pending-message', text) } catch { /* ignore */ }
+        window.location.reload()
+        return
+      }
 
       if (!response.ok) {
         clearTimeout(timeoutId)
