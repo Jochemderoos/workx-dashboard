@@ -497,7 +497,7 @@ export async function POST(req: NextRequest) {
         try {
           // Notify client immediately that connection is alive
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start', conversationId: convId })}\n\n`))
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Bronnen doorzoeken...' })}\n\n`))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Kennisbronnen doorzoeken...' })}\n\n`))
 
     // Smart routing: determine if this question needs employment law knowledge sources
     // useKnowledgeSources=false from frontend explicitly disables; otherwise auto-detect
