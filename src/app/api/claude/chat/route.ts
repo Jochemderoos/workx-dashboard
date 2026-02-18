@@ -1341,10 +1341,6 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           // Helper: set up stream event listeners and await final message
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const runStream = async (params: any): Promise<any> => {
-            // Enable PDF document blocks via beta header when we have native blocks
-            if (documentBlocks.length > 0) {
-              params.betas = ['pdfs-2024-09-25']
-            }
             const stream = client.messages.stream(params)
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1390,11 +1386,19 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             finalMessage = await runStream(streamParams)
           } catch (apiErr) {
             const apiErrMsg = apiErr instanceof Error ? apiErr.message : String(apiErr)
-            const isDocError = (apiErrMsg.includes('base64') || apiErrMsg.includes('Invalid') || apiErrMsg.includes('document'))
-              && documentBlocks.length > 0 && !fullText
+            // Only retry without document blocks for errors clearly related to document/image content.
+            // Do NOT catch generic 'Invalid' — that strips blocks for unrelated API errors.
+            const isDocError = documentBlocks.length > 0 && !fullText && (
+              apiErrMsg.includes('base64') ||
+              apiErrMsg.includes('Could not process') ||
+              apiErrMsg.includes('media_type') ||
+              apiErrMsg.includes('too many images') ||
+              apiErrMsg.includes('image size') ||
+              apiErrMsg.includes('document is too large')
+            )
             if (!isDocError) throw apiErr // Re-throw non-document errors
 
-            console.log(`[chat] API error with native blocks: ${apiErrMsg.slice(0, 100)}. Retrying without ${documentBlocks.length} blocks...`)
+            console.log(`[chat] API error with native blocks (retrying without): ${apiErrMsg.slice(0, 200)}. Blocks: ${documentBlocks.length}`)
             await send(JSON.stringify({ type: 'status', text: 'Documenten opnieuw verwerken...' }))
 
             // Strip document blocks from messages
