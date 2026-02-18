@@ -503,6 +503,68 @@ export default function ClaudeChat({
     try { sessionStorage.removeItem('workx-skip-version-check') } catch { /* ignore */ }
   }, [])
 
+  // Safety net: if loading with an empty assistant message, poll DB for response
+  // This is independent of stream/polling logic and catches ALL failure modes
+  useEffect(() => {
+    if (!isLoading || !convId) return
+    const lastMsg = messages[messages.length - 1]
+    if (!lastMsg || lastMsg.role !== 'assistant' || lastMsg.content) return
+
+    const emptyMsgId = lastMsg.id
+    let cancelled = false
+
+    const poll = async () => {
+      // Wait 5s before first check — give stream a chance
+      await new Promise(r => setTimeout(r, 5000))
+      while (!cancelled) {
+        try {
+          const r = await fetch(`/api/claude/conversations/${convId}`)
+          if (!r.ok || cancelled) { await new Promise(r => setTimeout(r, 3000)); continue }
+          const data = await r.json()
+          const dbMsgs = data.messages || []
+          const lastDb = dbMsgs[dbMsgs.length - 1]
+          if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
+            if (cancelled) break
+            // Check the message is still empty before overwriting
+            let shouldUpdate = false
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === emptyMsgId)
+              if (existing && !existing.content) { shouldUpdate = true }
+              return prev
+            })
+            if (!shouldUpdate || cancelled) break
+            // Parse confidence
+            let content = lastDb.content as string
+            let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
+            const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+            if (confMatch) {
+              confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
+              content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+            }
+            console.log('[ClaudeChat] Safety net: response found via DB polling')
+            setStreamingMsgId(null)
+            if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
+            setStreamingContent('')
+            setMessages(prev => prev.map(m =>
+              m.id === emptyMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
+            ))
+            setStatusText('')
+            setIsLoading(false)
+            setAttachedDocs([])
+            abortControllerRef.current?.abort() // Stop the stream
+            onNewMessage?.()
+            break
+          }
+        } catch { /* ignore */ }
+        await new Promise(r => setTimeout(r, 3000))
+      }
+    }
+
+    poll()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, convId, messages.length])
+
   /** Clean renderMarkdown HTML for document export (strip web-only elements) */
   const cleanHtmlForExport = (html: string): string => {
     return html
