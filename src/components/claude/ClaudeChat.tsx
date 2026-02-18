@@ -237,14 +237,11 @@ export default function ClaudeChat({
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
     const uploadId = crypto.randomUUID()
 
-    console.log('[Upload Chunked] Starting:', file.name, 'size:', file.size, 'chunks:', totalChunks, 'uploadId:', uploadId)
-
     for (let i = 0; i < totalChunks; i++) {
       const start = i * CHUNK_SIZE
       const end = Math.min(start + CHUNK_SIZE, file.size)
       const chunk = file.slice(start, end)
       const base64 = await blobToBase64(chunk)
-      console.log(`[Upload Chunked] Sending chunk ${i + 1}/${totalChunks}, base64 length: ${base64.length}`)
       onChunkProgress?.(i, totalChunks)
 
       const res = await fetch('/api/claude/documents/upload', {
@@ -259,20 +256,16 @@ export default function ClaudeChat({
         }),
       })
 
-      console.log(`[Upload Chunked] Chunk ${i + 1} response:`, res.status, res.statusText)
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: 'Upload mislukt' }))
-        console.error('[Upload Chunked] Chunk failed:', errData)
         throw new Error(errData.error || `Chunk ${i + 1}/${totalChunks} mislukt`)
       }
 
       const result = await res.json()
-      console.log(`[Upload Chunked] Chunk ${i + 1} result:`, result)
       onChunkProgress?.(i + 1, totalChunks)
 
       // Last chunk returns the complete document
       if (result.id) {
-        console.log('[Upload Chunked] Complete! Document:', result.id)
         return { id: result.id, name: result.name, fileType: result.fileType }
       }
     }
@@ -281,13 +274,8 @@ export default function ClaudeChat({
   }
 
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[Upload] handleFileAttach triggered')
     const files = e.target.files
-    console.log('[Upload] files from input:', files?.length, files ? Array.from(files).map(f => `${f.name} (${f.size} bytes)`) : 'null')
-    if (!files || files.length === 0) {
-      console.log('[Upload] No files selected, returning early')
-      return
-    }
+    if (!files || files.length === 0) return
 
     // IMPORTANT: copy files BEFORE clearing input (clearing empties the FileList)
     const filesToUpload = Array.from(files)
@@ -297,19 +285,16 @@ export default function ClaudeChat({
     for (const file of filesToUpload) {
       const ext = file.name.split('.').pop()?.toLowerCase() || ''
       if (!['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
-        console.log('[Upload] Rejected file type:', ext, file.name)
         toast.error(`Bestandstype .${ext} niet ondersteund. Toegestaan: pdf, docx, txt, md, png, jpg`)
         return
       }
       const maxSize = ext === 'pdf' ? 32 * 1024 * 1024 : 10 * 1024 * 1024
       if (file.size > maxSize) {
-        console.log('[Upload] File too large:', file.name, file.size)
         toast.error(`${file.name} is te groot (max ${ext === 'pdf' ? '32' : '10'}MB)`)
         return
       }
     }
 
-    console.log('[Upload] Validation passed, starting uploads for', filesToUpload.length, 'files')
     setIsUploading(true)
     setUploadProgress(0)
     setUploadStatusText('')
@@ -329,7 +314,6 @@ export default function ClaudeChat({
 
         // Large files (>3MB): use chunked upload to bypass Vercel 4.5MB body limit
         if (file.size > 3 * 1024 * 1024) {
-          console.log('[Upload] Large file, using chunked upload:', file.name, file.size)
           const doc = await uploadFileChunked(file, ext, (sent, total) => {
             const chunkBytes = (sent / total) * file.size
             const pct = Math.round(((uploadedSize + chunkBytes) / totalSize) * 100)
@@ -338,7 +322,6 @@ export default function ClaudeChat({
               ? `${shortName} (${fi + 1}/${totalFiles}) — deel ${sent}/${total}...`
               : `${shortName} — deel ${sent}/${total}...`)
           })
-          console.log('[Upload] Chunked upload success:', doc)
           setAttachedDocs(prev => [...prev, doc])
           uploadedSize += file.size
           uploadedCount++
@@ -347,7 +330,6 @@ export default function ClaudeChat({
         }
 
         // Small files: direct FormData upload
-        console.log('[Upload] Small file, using direct upload:', file.name, file.size)
         const formData = new FormData()
         formData.append('file', file)
         if (projectId) formData.append('projectId', projectId)
@@ -359,27 +341,20 @@ export default function ClaudeChat({
           method: 'POST',
           body: formData,
         })
-        console.log('[Upload] Response status:', res.status, res.statusText)
         if (!res.ok) {
           const contentType = res.headers.get('content-type') || ''
-          console.log('[Upload] Upload failed, content-type:', contentType)
           if (contentType.includes('json')) {
             const data = await res.json()
-            console.log('[Upload] Error response:', data)
             throw new Error(data.error || `Upload mislukt: ${file.name}`)
           }
-          const text = await res.text()
-          console.log('[Upload] Error response text:', text.substring(0, 500))
           throw new Error(`Upload mislukt: ${file.name} (${res.status})`)
         }
         const doc = await res.json()
-        console.log('[Upload] Upload success:', doc.id, doc.name)
         setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])
         uploadedSize += file.size
         uploadedCount++
         setUploadProgress(Math.round((uploadedSize / totalSize) * 100))
       }
-      console.log('[Upload] All done, uploadedCount:', uploadedCount)
       setUploadProgress(100)
       setUploadStatusText('Voltooid!')
       if (uploadedCount === 1) {
@@ -388,7 +363,6 @@ export default function ClaudeChat({
         toast.success(`${uploadedCount} bestanden bijgevoegd`)
       }
     } catch (err) {
-      console.error('[Upload] Error:', err)
       toast.error(err instanceof Error ? err.message : 'Upload mislukt')
     } finally {
       setIsUploading(false)
