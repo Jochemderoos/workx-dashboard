@@ -45,6 +45,55 @@ export default function DocumentUploader({ projectId, onUpload, compact = false 
     return null
   }
 
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        resolve(result.split(',')[1])
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  const uploadFileChunked = async (file: File): Promise<UploadedDocument> => {
+    const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB chunks
+    const ext = file.name.split('.').pop()?.toLowerCase() || ''
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
+    const uploadId = crypto.randomUUID()
+
+    for (let i = 0; i < totalChunks; i++) {
+      setUploadProgress(`Uploaden: deel ${i + 1} van ${totalChunks}...`)
+      const start = i * CHUNK_SIZE
+      const end = Math.min(start + CHUNK_SIZE, file.size)
+      const chunk = file.slice(start, end)
+      const base64 = await blobToBase64(chunk)
+
+      const res = await fetch('/api/claude/documents/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uploadId,
+          chunkIndex: i,
+          totalChunks,
+          data: base64,
+          ...(i === 0 ? { fileName: file.name, fileSize: file.size, fileType: ext, projectId: projectId || undefined } : {}),
+        }),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Upload mislukt' }))
+        throw new Error(errData.error || `Chunk ${i + 1}/${totalChunks} mislukt`)
+      }
+
+      const result = await res.json()
+      if (result.id) return result as UploadedDocument
+    }
+
+    throw new Error('Upload voltooid maar geen document ontvangen')
+  }
+
   const uploadFile = async (file: File) => {
     const error = validateFile(file)
     if (error) {
@@ -56,6 +105,15 @@ export default function DocumentUploader({ projectId, onUpload, compact = false 
     setUploadProgress(`Uploaden: ${file.name}...`)
 
     try {
+      // Large files: chunked upload (Vercel 4.5MB body limit)
+      if (file.size > 3 * 1024 * 1024) {
+        const doc = await uploadFileChunked(file)
+        toast.success(`${file.name} geüpload!`)
+        onUpload?.(doc)
+        return
+      }
+
+      // Small files: direct FormData upload
       const formData = new FormData()
       formData.append('file', file)
       if (projectId) formData.append('projectId', projectId)
@@ -66,8 +124,12 @@ export default function DocumentUploader({ projectId, onUpload, compact = false 
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Upload mislukt')
+        const contentType = res.headers.get('content-type') || ''
+        if (contentType.includes('json')) {
+          const data = await res.json()
+          throw new Error(data.error || 'Upload mislukt')
+        }
+        throw new Error(`Upload mislukt (${res.status})`)
       }
 
       const doc = await res.json()
