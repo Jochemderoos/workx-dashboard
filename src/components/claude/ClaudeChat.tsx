@@ -503,8 +503,8 @@ export default function ClaudeChat({
     try { sessionStorage.removeItem('workx-skip-version-check') } catch { /* ignore */ }
   }, [])
 
-  // Safety net: if loading with an empty assistant message, poll DB for response
-  // This is independent of stream/polling logic and catches ALL failure modes
+  // Safety net: if loading with an empty assistant message for >15s, poll DB for response.
+  // This is a backup in case the main polling for-loop fails for any reason.
   useEffect(() => {
     if (!isLoading || !convId) return
     const lastMsg = messages[messages.length - 1]
@@ -514,21 +514,19 @@ export default function ClaudeChat({
     let cancelled = false
 
     const poll = async () => {
-      // Wait 2s before first check — give stream a brief chance
-      await new Promise(r => setTimeout(r, 2000))
+      // Wait 15s — give the main for-loop a chance first
+      await new Promise(r => setTimeout(r, 15000))
       if (cancelled) return
-      setStatusText('Antwoord ophalen...')
       while (!cancelled) {
         try {
           const r = await fetch(`/api/claude/conversations/${convId}`)
           if (cancelled) break
-          if (!r.ok) { await new Promise(r => setTimeout(r, 2000)); continue }
+          if (!r.ok) { await new Promise(r => setTimeout(r, 3000)); continue }
           const data = await r.json()
           const dbMsgs = data.messages || []
           const lastDb = dbMsgs[dbMsgs.length - 1]
           if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
             if (cancelled) break
-            // Parse confidence
             let content = lastDb.content as string
             let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
             const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
@@ -536,22 +534,23 @@ export default function ClaudeChat({
               confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
               content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
             }
-            console.log('[ClaudeChat] Safety net: response found via DB polling')
+            console.log('[ClaudeChat] Safety net: antwoord gevonden via backup polling')
             setStreamingMsgId(null)
             if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
             setStreamingContent('')
+            setIsThinking(false)
+            setThinkingText('')
             setMessages(prev => prev.map(m =>
               m.id === emptyMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
             ))
             setStatusText('')
             setIsLoading(false)
             setAttachedDocs([])
-            abortControllerRef.current?.abort() // Stop the stream
             onNewMessage?.()
             break
           }
         } catch { /* ignore */ }
-        await new Promise(r => setTimeout(r, 2000))
+        await new Promise(r => setTimeout(r, 3000))
       }
     }
 
@@ -801,8 +800,6 @@ ${markdownHtml}
     abortControllerRef.current = controller
     const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 min overall timeout
 
-    let pollTimer: ReturnType<typeof setInterval> | null = null
-
     try {
       setStatusText('Verzoek versturen...')
 
@@ -867,13 +864,6 @@ ${markdownHtml}
         content: '',
       }])
 
-      // Track the number of messages BEFORE this request so polling can detect NEW responses.
-      // The server saves: user message + assistant response = expectedCount + 2
-      const msgCountBefore = await fetch(`/api/claude/conversations/${headerConvId || convId}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => d?.messages?.length || 0)
-        .catch(() => 0)
-
       // === STREAM READING + POLLING FALLBACK ===
       // Vercel buffers SSE responses, so streaming often fails for slow requests.
       // Strategy: try to read the stream, but also poll the DB in parallel.
@@ -885,63 +875,6 @@ ${markdownHtml}
       let citations: Array<{ url: string; title: string }> = []
       let finished = false // Set when EITHER stream or polling delivers the response
       let activeConvId = headerConvId || convId
-
-      // Helper: display a polled response
-      const displayPolledResponse = (content: string, webSearch?: boolean) => {
-        if (finished) return
-        finished = true
-        let finalText = content
-        let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
-        const confMatch = finalText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
-        if (confMatch) {
-          confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
-          finalText = finalText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
-        }
-        setStreamingMsgId(null)
-        if (streamIntervalRef.current) {
-          clearInterval(streamIntervalRef.current)
-          streamIntervalRef.current = null
-        }
-        setStreamingContent('')
-        setMessages(prev => prev.map(m =>
-          m.id === assistantMsgId ? { ...m, content: finalText, confidence, hasWebSearch: webSearch } : m
-        ))
-        setStatusText('')
-        onNewMessage?.()
-        setAttachedDocs([])
-        try { reader.cancel() } catch { /* ignore */ }
-      }
-
-      // Start polling immediately in parallel with the stream.
-      // Uses message count to detect NEW responses (not old ones from previous questions).
-      const pollConvId = activeConvId
-      pollTimer = pollConvId ? setInterval(async () => {
-        if (finished || streamedText.length > 50) { clearInterval(pollTimer!); return }
-        try {
-          const r = await fetch(`/api/claude/conversations/${pollConvId}`)
-          if (!r.ok || finished) return
-          const data = await r.json()
-          const allMsgs = data.messages || []
-          // Only accept if there are MORE messages than before (new response saved)
-          if (allMsgs.length > msgCountBefore) {
-            const last = allMsgs[allMsgs.length - 1]
-            if (last?.role === 'assistant' && last.content?.length > 10 && !last.content.startsWith('[Fout:')) {
-              console.log('[ClaudeChat] Got response via polling')
-              clearInterval(pollTimer!)
-              displayPolledResponse(last.content, last.hasWebSearch)
-            }
-          }
-        } catch { /* non-fatal */ }
-      }, 3000) : null
-
-      // Show polling status after short delay
-      if (pollConvId) {
-        setTimeout(() => {
-          if (!finished && !streamedText.length) {
-            setStatusText('Claude verwerkt je vraag...')
-          }
-        }, 2000)
-      }
 
       // Read the stream (works when Claude responds fast enough)
       // Hard fallback: cancel reader after 10s if no streamed content
@@ -999,7 +932,6 @@ ${markdownHtml}
                 setStatusText(event.text)
               } else if (event.type === 'done') {
                 finished = true
-                if (pollTimer) clearInterval(pollTimer)
                 hasWebSearch = event.hasWebSearch || false
                 citations = event.citations || []
                 const sources = event.sources || []
@@ -1039,26 +971,34 @@ ${markdownHtml}
         if (!finished) console.warn('[ClaudeChat] Stream ended unexpectedly, relying on polling')
       }
 
-      // Clean up timers
+      // Clean up stream timer
       clearTimeout(streamFallbackTimer)
-      if (pollTimer) clearInterval(pollTimer)
 
-      // Stream ended. If no response yet, poll DB directly with a simple for loop.
+      // Stream ended. If no response yet, switch to DB polling.
+      // CRITICAL: reset thinking state so the loading indicator becomes visible again.
+      // Without this, isThinking=true hides the loading bar during the entire polling phase.
       if (!finished && !streamedText) {
+        setIsThinking(false)
+        isThinkingRef.current = false
+        setThinkingText('')
+        thinkingTextRef.current = ''
+
         const pollId = headerConvId || convId
-        console.log('[ClaudeChat] Starting DB polling. pollId:', pollId, 'finished:', finished, 'streamedText.length:', streamedText.length)
+        console.log('[ClaudeChat] Stream leverde geen inhoud — start DB polling. pollId:', pollId)
         if (pollId) {
           setStatusText('Claude verwerkt je vraag...')
+          setLoadingProgress(30) // Show some progress
           for (let attempt = 0; attempt < 60; attempt++) { // 60 * 2s = 120s max
             await new Promise(r => setTimeout(r, 2000))
             const elapsed = (attempt + 1) * 2
+            // Gradually increase progress bar to show activity
+            setLoadingProgress(Math.min(30 + elapsed, 90))
             setStatusText(`Claude verwerkt je vraag... (${elapsed}s)`)
             try {
               const resp = await fetch(`/api/claude/conversations/${pollId}`)
-              if (!resp.ok) { console.log('[ClaudeChat] Poll', attempt, 'status:', resp.status); continue }
+              if (!resp.ok) continue
               const data = await resp.json()
               const dbMsgs = data.messages || []
-              console.log('[ClaudeChat] Poll', attempt, ':', dbMsgs.length, 'messages, last role:', dbMsgs[dbMsgs.length - 1]?.role)
               const lastDb = dbMsgs[dbMsgs.length - 1]
               if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
                 let content = lastDb.content as string
@@ -1068,21 +1008,16 @@ ${markdownHtml}
                   confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
                   content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
                 }
-                console.log('[ClaudeChat] Response found via direct DB polling, content length:', content.length)
+                console.log('[ClaudeChat] Antwoord gevonden via DB polling na', elapsed, 'seconden')
                 setLoadingProgress(100)
                 setStreamingMsgId(null)
                 if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
                 setStreamingContent('')
-                setMessages(prev => {
-                  const updated = prev.map(m =>
-                    m.id === assistantMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
-                  )
-                  console.log('[ClaudeChat] Messages updated, assistant msg found:', updated.some(m => m.id === assistantMsgId && m.content))
-                  return updated
-                })
+                setMessages(prev => prev.map(m =>
+                  m.id === assistantMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
+                ))
                 setStatusText('')
                 setIsLoading(false)
-                // Scroll to show the response
                 setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 100)
                 finished = true
                 break
@@ -1113,7 +1048,6 @@ ${markdownHtml}
 
     } catch (error) {
       clearTimeout(timeoutId)
-      if (pollTimer) clearInterval(pollTimer)
       let errMsg = 'Onbekende fout'
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
@@ -1157,6 +1091,9 @@ ${markdownHtml}
       })
     } finally {
       setIsLoading(false)
+      setIsThinking(false)
+      isThinkingRef.current = false
+      setThinkingText('')
       abortControllerRef.current = null
       if (streamIntervalRef.current) {
         clearInterval(streamIntervalRef.current)
@@ -1588,8 +1525,8 @@ ${markdownHtml}
           </div>
         )}
 
-        {/* Loading indicator (only when not thinking) */}
-        {isLoading && !isThinking && !thinkingText && (
+        {/* Loading indicator — visible when loading and not actively streaming thinking */}
+        {isLoading && !isThinking && (
           <div className="flex justify-start message-fade-in">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-transparent flex items-center justify-center border border-workx-lime/10">
