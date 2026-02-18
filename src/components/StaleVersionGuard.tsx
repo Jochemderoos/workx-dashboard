@@ -5,10 +5,11 @@ import { useEffect } from 'react'
 /**
  * Detects stale JavaScript after Vercel deployments and auto-refreshes.
  *
- * Two strategies:
+ * Three strategies:
  * 1. Chunk load error detection: catches errors when old JS references missing chunks
- * 2. Tab-visibility refresh: when user returns after 5+ minutes away, auto-refresh
- *    to ensure fresh code after a deploy that happened while tab was inactive
+ * 2. Tab-visibility refresh: checks build ID when tab becomes visible after 30s+,
+ *    or auto-refreshes after 5+ minutes hidden
+ * 3. Periodic build-ID check: polls /api/version every 2 minutes to detect deploys
  */
 export default function StaleVersionGuard() {
   useEffect(() => {
@@ -51,20 +52,47 @@ export default function StaleVersionGuard() {
 
     // --- Strategy 2: Tab-visibility auto-refresh ---
     let hiddenAt: number | null = null
+    const clientBuildId = process.env.NEXT_PUBLIC_BUILD_ID
 
-    const handleVisibility = () => {
+    const checkBuildVersion = async (): Promise<boolean> => {
+      if (!clientBuildId) return false
+      try {
+        const res = await fetch('/api/version', { cache: 'no-store' })
+        if (!res.ok) return false
+        const { buildId } = await res.json()
+        if (buildId && buildId !== clientBuildId) {
+          console.log(`[StaleVersionGuard] Version mismatch: client=${clientBuildId} server=${buildId}`)
+          return true
+        }
+      } catch { /* ignore network errors */ }
+      return false
+    }
+
+    const handleVisibility = async () => {
       if (document.hidden) {
         hiddenAt = Date.now()
       } else if (hiddenAt) {
         const hiddenDuration = Date.now() - hiddenAt
         hiddenAt = null
-        // If tab was hidden for more than 5 minutes, auto-refresh to get fresh code
-        // This catches the case where a Vercel deploy happened while the tab was inactive
+        // If tab was hidden for more than 5 minutes, auto-refresh
         if (hiddenDuration > 5 * 60 * 1000) {
           safeRefresh('workx-stale-refresh', 60000)
+          return
+        }
+        // If tab was hidden for more than 30 seconds, check build ID
+        if (hiddenDuration > 30000) {
+          const stale = await checkBuildVersion()
+          if (stale) safeRefresh('workx-version-refresh', 120000)
         }
       }
     }
+
+    // --- Strategy 3: Periodic build-ID version check (every 2 minutes) ---
+    const periodicCheck = setInterval(async () => {
+      if (document.hidden) return
+      const stale = await checkBuildVersion()
+      if (stale) safeRefresh('workx-version-refresh', 120000)
+    }, 120000)
 
     window.addEventListener('error', handleError)
     window.addEventListener('unhandledrejection', handleRejection)
@@ -74,6 +102,7 @@ export default function StaleVersionGuard() {
       window.removeEventListener('error', handleError)
       window.removeEventListener('unhandledrejection', handleRejection)
       document.removeEventListener('visibilitychange', handleVisibility)
+      clearInterval(periodicCheck)
     }
   }, [])
 

@@ -98,6 +98,7 @@ export default function ClaudeChat({
   const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null) // Throttled streaming markdown render
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
   const [streamingContent, setStreamingContent] = useState('') // Throttled streaming text for markdown rendering
+  const [loadingProgress, setLoadingProgress] = useState(0) // Progress bar during loading (0-100)
   const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(new Set()) // Per-message thinking expansion
 
   const RESPONSE_OPTIONS = [
@@ -340,6 +341,24 @@ export default function ClaudeChat({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isLoading])
 
+  // Progress bar animation during loading phase
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingProgress(0)
+      return
+    }
+    const startTime = Date.now()
+    setLoadingProgress(5)
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const t = Math.min(elapsed / 35000, 1) // fills to ~92% over 35 seconds
+      const progress = 5 + 87 * (1 - Math.pow(1 - t, 3)) // cubic ease-out
+      setLoadingProgress(Math.min(Math.round(progress), 92))
+      if (t >= 1) clearInterval(timer)
+    }, 300)
+    return () => clearInterval(timer)
+  }, [isLoading])
+
   // Handle quick action prompts from parent
   useEffect(() => {
     if (quickActionPrompt && !isLoading) {
@@ -348,13 +367,14 @@ export default function ClaudeChat({
     }
   }, [quickActionPrompt])
 
-  // Restore pending message after auto-refresh (from stale-version detection)
+  // Restore and auto-submit pending message after version-mismatch refresh
   useEffect(() => {
     try {
       const pending = sessionStorage.getItem('workx-pending-message')
       if (pending) {
         sessionStorage.removeItem('workx-pending-message')
-        setInput(pending)
+        // Auto-submit after brief delay to ensure component is fully mounted
+        setTimeout(() => sendMessage(pending), 500)
       }
     } catch { /* ignore */ }
   }, [])
@@ -559,6 +579,41 @@ ${markdownHtml}
     const text = overrideMessage || input.trim()
     if (!text || isLoading) return
 
+    // Pre-flight version check: detect stale client code after Vercel deploy
+    const clientBuildId = process.env.NEXT_PUBLIC_BUILD_ID
+    let skipVersionCheck = false
+    try {
+      if (sessionStorage.getItem('workx-skip-version-check')) {
+        sessionStorage.removeItem('workx-skip-version-check')
+        skipVersionCheck = true
+      }
+    } catch { /* ignore */ }
+
+    if (clientBuildId && !skipVersionCheck) {
+      try {
+        const vRes = await fetch('/api/version', { cache: 'no-store' })
+        if (vRes.ok) {
+          const { buildId: serverBuildId } = await vRes.json()
+          if (serverBuildId && serverBuildId !== clientBuildId) {
+            console.log(`[ClaudeChat] Build mismatch: client=${clientBuildId} server=${serverBuildId} — reloading`)
+            try {
+              sessionStorage.setItem('workx-pending-message', text)
+              sessionStorage.setItem('workx-skip-version-check', '1')
+            } catch { /* ignore */ }
+            // Show user's message + thinking animation while page reloads
+            setMessages(prev => [...prev, { id: `user-${Date.now()}`, role: 'user', content: text }])
+            setInput('')
+            setIsLoading(true)
+            setStatusText('De AI Assistent bedenkt vragen voor een grondig advies...')
+            setTimeout(() => window.location.reload(), 2000)
+            return
+          }
+        }
+      } catch {
+        console.warn('[ClaudeChat] Version pre-flight failed, proceeding')
+      }
+    }
+
     // Build the full message with option instructions prepended
     const instructions = buildInstructions()
     const fullMessage = instructions ? instructions + text : text
@@ -616,15 +671,17 @@ ${markdownHtml}
         signal: controller.signal,
       })
 
-      // Stale-version detection: if server build ID differs from client, auto-refresh
+      // Stale-version detection (fallback): if server build ID differs from client, auto-refresh
       const serverBuildId = response.headers.get('X-Build-Id')
-      const clientBuildId = process.env.NEXT_PUBLIC_BUILD_ID
       if (serverBuildId && clientBuildId && serverBuildId !== clientBuildId) {
-        console.log(`[ClaudeChat] Build mismatch: client=${clientBuildId} server=${serverBuildId} — refreshing`)
+        console.log(`[ClaudeChat] Build mismatch (response): client=${clientBuildId} server=${serverBuildId} — reloading`)
         clearTimeout(timeoutId)
-        // Save the user's message so they don't lose it
-        try { sessionStorage.setItem('workx-pending-message', text) } catch { /* ignore */ }
-        window.location.reload()
+        try {
+          sessionStorage.setItem('workx-pending-message', text)
+          sessionStorage.setItem('workx-skip-version-check', '1')
+        } catch { /* ignore */ }
+        setStatusText('De AI Assistent wordt bijgewerkt...')
+        setTimeout(() => window.location.reload(), 1500)
         return
       }
 
@@ -1264,8 +1321,15 @@ ${markdownHtml}
               <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-transparent flex items-center justify-center border border-workx-lime/10">
                 <span className="text-[11px] font-bold text-workx-lime">W</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1 max-w-md">
                 <div className="assistant-bubble assistant-bubble-streaming rounded-2xl rounded-tl-md px-5 py-4">
+                  {/* Progress bar */}
+                  <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-3">
+                    <div
+                      className="h-full bg-gradient-to-r from-workx-lime/30 via-workx-lime/60 to-workx-lime rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${loadingProgress}%` }}
+                    />
+                  </div>
                   <div className="flex items-center gap-3">
                     <div className="flex gap-1.5">
                       <div className="w-2 h-2 rounded-full bg-workx-lime/60 typing-dot" />
