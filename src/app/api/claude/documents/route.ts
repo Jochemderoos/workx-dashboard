@@ -7,8 +7,9 @@ export const maxDuration = 60
 
 const MAX_FILE_SIZE = 32 * 1024 * 1024 // 32MB (Claude ondersteunt PDFs tot 32MB)
 const ALLOWED_TYPES = ['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp']
-// PDFs over this size AND scanned get auto-split into pages
-const AUTO_SPLIT_THRESHOLD = 2 * 1024 * 1024 // 2MB
+// PDFs over this size AND scanned get auto-split into pages.
+// Native PDF document blocks work up to ~5MB (7MB base64), so only split larger files.
+const AUTO_SPLIT_THRESHOLD = 5 * 1024 * 1024 // 5MB
 
 // GET: lijst documenten (optioneel filter op projectId)
 export async function GET(req: NextRequest) {

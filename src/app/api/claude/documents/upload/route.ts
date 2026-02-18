@@ -120,7 +120,8 @@ export async function POST(req: NextRequest) {
       textContent.length < 100 ||
       textContent.startsWith('[')
     )
-    if (isScannedPdf && actualSize > 2 * 1024 * 1024 && fileUrl) {
+    // Only auto-split very large scanned PDFs. Native PDF blocks work up to ~5MB.
+    if (isScannedPdf && actualSize > 5 * 1024 * 1024 && fileUrl) {
       console.log(`[upload] Scanned PDF detected (${(actualSize / 1024 / 1024).toFixed(1)}MB). Auto-splitting...`)
       try {
         const splitDocs = await autoSplitPdf(buffer, meta.fileName || 'upload', meta.projectId, session.user.id)
