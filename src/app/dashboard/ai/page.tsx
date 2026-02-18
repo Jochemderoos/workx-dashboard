@@ -381,62 +381,61 @@ export default function AIAssistentPage() {
   const isCompactMode = chatActive && activeTab === 'chat'
 
   return (
-    <div className={`transition-all duration-500 ease-in-out ${isCompactMode ? 'space-y-2' : 'space-y-6'}`}>
-      {/* Header — compact, minimal */}
+    <div className={`transition-all duration-500 ease-in-out ${isCompactMode ? 'space-y-0' : 'space-y-4'}`}>
+      {/* Header + Tabs — single compact row */}
       <div className={`flex items-center justify-between transition-all duration-500 ease-in-out ${
-        isCompactMode ? 'py-1' : 'py-2'
+        isCompactMode ? 'py-0.5' : 'py-1'
       }`}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center border border-workx-lime/20">
-            <Icons.sparkles size={16} className="text-workx-lime" />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center border border-workx-lime/20">
+              <Icons.sparkles size={12} className="text-workx-lime" />
+            </div>
+            <h1 className="text-sm font-semibold text-white">AI Assistent</h1>
           </div>
-          <div>
-            <h1 className="text-base font-semibold text-white">AI Assistent</h1>
+          <div className="w-px h-4 bg-white/10" />
+          {/* Tabs inline next to title */}
+          <div className="flex items-center gap-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'bg-workx-lime text-workx-dark'
+                    : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
+                }`}
+              >
+                <tab.icon size={13} />
+                <span>{tab.label}</span>
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className={`text-[9px] px-1 py-0.5 rounded-full font-medium ${
+                    activeTab === tab.id ? 'bg-workx-dark/20 text-workx-dark' : 'bg-white/10 text-white/30'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
         <div className="flex items-center gap-2 text-[11px]">
           <button
             onClick={() => setShowHelp(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white/70 hover:bg-white/[0.05] hover:border-white/20 transition-all"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-white/30 hover:text-white/60 transition-all"
           >
-            <Icons.helpCircle size={14} />
-            <span>Hulp</span>
+            <Icons.helpCircle size={13} />
           </button>
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/25">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.03] text-white/20 text-[10px]">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             Sonnet 4.5
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation — compact inline pills */}
-      <div className="flex items-center gap-1.5 sticky top-0 z-30 bg-workx-dark py-1.5">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-              activeTab === tab.id
-                ? 'bg-workx-lime text-workx-dark'
-                : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
-            }`}
-          >
-            <tab.icon size={14} />
-            <span>{tab.label}</span>
-            {tab.count !== undefined && tab.count > 0 && (
-              <span className={`text-[9px] px-1 py-0.5 rounded-full font-medium ${
-                activeTab === tab.id ? 'bg-workx-dark/20 text-workx-dark' : 'bg-white/10 text-white/30'
-              }`}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
       {/* Content based on active tab */}
       {activeTab === 'chat' && (
-        <div className="flex gap-0" style={{ height: isCompactMode ? 'calc(100vh - 140px)' : 'calc(100vh - 200px)' }}>
+        <div className="flex gap-0" style={{ height: isCompactMode ? 'calc(100vh - 110px)' : 'calc(100vh - 140px)' }}>
           {/* Conversation history sidebar — slim, collapsible */}
           <div className={`bg-white/[0.02] border-r border-white/[0.06] overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
             showHistory ? 'w-64 opacity-100' : 'w-0 opacity-0 border-0 p-0'

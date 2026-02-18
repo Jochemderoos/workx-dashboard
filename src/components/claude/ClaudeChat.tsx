@@ -896,33 +896,28 @@ ${markdownHtml}
         className="hidden"
       />
 
-      {/* Top bar with New Chat + Save to Project buttons */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-white/5">
-        <div className="flex items-center gap-2 text-[11px] text-white/30">
-          {convId && messages.length > 0 && (
-            <span>{messages.filter(m => m.role === 'user').length} berichten</span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Save to project — only when conversation exists and is NOT already in a project */}
-          {convId && !projectId && onSaveToProject && (
-            <button
-              onClick={() => onSaveToProject(convId)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/[0.05] border border-white/10 text-white/50 hover:text-blue-400 hover:border-blue-400/30 hover:bg-blue-400/5"
-            >
-              <Icons.folder size={14} />
-              Opslaan in project
-            </button>
-          )}
+      {/* Top bar with New Chat + Save to Project buttons — compact */}
+      <div className="flex-shrink-0 flex items-center justify-end px-4 py-1.5 gap-2">
+        {convId && messages.length > 0 && (
+          <span className="text-[10px] text-white/20 mr-auto">{messages.filter(m => m.role === 'user').length} berichten</span>
+        )}
+        {convId && !projectId && onSaveToProject && (
           <button
-            onClick={startNewChat}
-            disabled={isLoading || (messages.length === 0 && !convId)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-white/[0.05] border border-white/10 text-white/50 hover:text-workx-lime hover:border-workx-lime/30 hover:bg-workx-lime/5 disabled:opacity-20 disabled:cursor-not-allowed"
+            onClick={() => onSaveToProject(convId)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all text-white/35 hover:text-blue-400 hover:bg-blue-400/5"
           >
-            <Icons.plus size={14} />
-            Nieuwe chat
+            <Icons.folder size={12} />
+            Project
           </button>
-        </div>
+        )}
+        <button
+          onClick={startNewChat}
+          disabled={isLoading || (messages.length === 0 && !convId)}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all text-white/35 hover:text-workx-lime hover:bg-workx-lime/5 disabled:opacity-20 disabled:cursor-not-allowed"
+        >
+          <Icons.plus size={12} />
+          Nieuw
+        </button>
       </div>
 
       {/* Messages area — ambient glow when AI is active */}
