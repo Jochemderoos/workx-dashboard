@@ -34,9 +34,11 @@ function estimateTokens(text: string): number {
 // 7MB base64 ≈ 5MB file ≈ 80-100 pages — fits comfortably with system prompt.
 const MAX_NATIVE_PDF_BASE64_LEN = 7_000_000
 
-// Token budget for native PDF/image blocks. System prompt + knowledge sources +
-// templates + conversation can use 100K+ tokens, so cap native blocks to leave room.
-const MAX_NATIVE_BLOCK_TOKENS = 80_000
+// Token budget for native PDF/image blocks — dynamically adjusted in POST handler
+// based on whether knowledge sources are active. With sources: conservative (80K).
+// Without sources (or document-focused projects): generous (140K).
+const NATIVE_BLOCK_BUDGET_WITH_SOURCES = 80_000
+const NATIVE_BLOCK_BUDGET_WITHOUT_SOURCES = 140_000
 
 function estimatePdfBlockTokens(base64Len: number): number {
   const estimatedPages = Math.max(1, Math.ceil(base64Len / 50000))
@@ -407,6 +409,16 @@ export async function POST(req: NextRequest) {
     })
     const history = historyDesc.reverse()
 
+    // Determine native block budget: generous when knowledge sources are off,
+    // conservative when they'll add ~80K+ tokens of source passages.
+    const willUseKnowledgeSources = useKnowledgeSources === false
+      ? false
+      : isEmploymentLawQuestion(message)
+    const maxNativeBlockTokens = willUseKnowledgeSources
+      ? NATIVE_BLOCK_BUDGET_WITH_SOURCES
+      : NATIVE_BLOCK_BUDGET_WITHOUT_SOURCES
+    console.log(`[chat] Native block budget: ${maxNativeBlockTokens} tokens (sources=${willUseKnowledgeSources})`)
+
     // Build context from documents — use native PDF support when available
     // For large PDFs, fall back to extracted text (cheaper and always fits in context)
     let documentContext = ''
@@ -463,7 +475,7 @@ export async function POST(req: NextRequest) {
             ? fileUrl.split(',')[1]
             : null
           const blockTokens = base64Data ? estimatePdfBlockTokens(base64Data.length) : 0
-          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= MAX_NATIVE_BLOCK_TOKENS) {
+          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
             // Small/medium PDF within budget: native block (best quality)
             documentBlocks.push({
               type: 'document',
@@ -477,7 +489,7 @@ export async function POST(req: NextRequest) {
           } else if (hasUsableContent(doc)) {
             // Large PDF or budget exceeded, with good extracted text: use text
             documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-          } else if (base64Data && nativeBlockTokens + blockTokens <= MAX_NATIVE_BLOCK_TOKENS) {
+          } else if (base64Data && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
             // Scanned PDF WITHOUT text: native if it fits in budget
             console.log(`[chat] Scanned PDF ${doc.name}: sending native (~${Math.ceil(base64Data.length / 50000)} pages, ~${blockTokens} tokens)`)
             documentBlocks.push({
@@ -488,7 +500,7 @@ export async function POST(req: NextRequest) {
             nativeBlockTokens += blockTokens
           } else if (base64Data) {
             const estimatedPages = Math.ceil(base64Data.length / 50000)
-            console.warn(`[chat] PDF ${doc.name} exceeds native budget (~${estimatedPages} pages, budget: ${nativeBlockTokens}/${MAX_NATIVE_BLOCK_TOKENS})`)
+            console.warn(`[chat] PDF ${doc.name} exceeds native budget (~${estimatedPages} pages, budget: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
             documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n[Dit is een gescand PDF-document van ~${estimatedPages} pagina's. De tekst kon niet automatisch worden geëxtraheerd. Het document is te groot om in zijn geheel te verwerken. Upload het document opnieuw in kleinere delen, of lever het als tekstbestand aan.]\n--- Einde ---`
           }
         } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
@@ -541,7 +553,7 @@ export async function POST(req: NextRequest) {
             ? fileUrl.split(',')[1]
             : null
           const blockTokens = base64Data ? estimatePdfBlockTokens(base64Data.length) : 0
-          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= MAX_NATIVE_BLOCK_TOKENS) {
+          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
             documentBlocks.push({
               type: 'document',
               source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
@@ -554,7 +566,7 @@ export async function POST(req: NextRequest) {
           } else if (hasUsableContent(doc)) {
             if (documentContext.length > 200000) break
             documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-          } else if (base64Data && nativeBlockTokens + blockTokens <= MAX_NATIVE_BLOCK_TOKENS) {
+          } else if (base64Data && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
             // Scanned PDF: send native if it fits in budget
             documentBlocks.push({
               type: 'document',
@@ -563,10 +575,15 @@ export async function POST(req: NextRequest) {
             })
             nativeBlockTokens += blockTokens
           } else if (base64Data) {
-            console.warn(`[chat] Project PDF ${doc.name} skipped: budget full (${nativeBlockTokens}/${MAX_NATIVE_BLOCK_TOKENS})`)
+            const estimatedPages = Math.ceil(base64Data.length / 50000)
+            console.warn(`[chat] Project PDF ${doc.name} skipped: budget full (${nativeBlockTokens}/${maxNativeBlockTokens})`)
+            documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n[PDF-document van ~${estimatedPages} pagina's. Kon niet worden meegestuurd vanwege contextlimieten. De tekst is niet geëxtraheerd bij upload. Vraag de gebruiker om het document opnieuw te uploaden of als tekstbestand aan te leveren als de inhoud nodig is.]\n--- Einde ---`
+          } else if (!base64Data && !hasUsableContent(doc)) {
+            // PDF without base64 data AND without text — still mention it exists
+            documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n[PDF-document waarvan de inhoud niet beschikbaar is. De tekst is niet geëxtraheerd bij upload en de bestandsgegevens ontbreken.]\n--- Einde ---`
           }
         } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
-          if (nativeBlockTokens + 1600 > MAX_NATIVE_BLOCK_TOKENS) break
+          if (nativeBlockTokens + 1600 > maxNativeBlockTokens) break
           const base64Data = fileUrl.split(',')[1]
           const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
           documentBlocks.push({
