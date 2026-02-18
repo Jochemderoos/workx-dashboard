@@ -367,15 +367,23 @@ export default function ClaudeChat({
     }
   }, [quickActionPrompt])
 
-  // Restore pending message after version-mismatch refresh (put in input, user presses Enter)
+  // Clean up cache-busting URL parameter after version refresh
+  useEffect(() => {
+    if (window.location.search.includes('_v=')) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('_v')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [])
+
+  // Restore and auto-submit pending message after version-mismatch refresh
   useEffect(() => {
     try {
       const pending = sessionStorage.getItem('workx-pending-message')
       if (pending) {
         sessionStorage.removeItem('workx-pending-message')
-        sessionStorage.removeItem('workx-skip-version-check')
-        setInput(pending)
-        toast('Je vraag is hersteld na een update. Druk op Enter om te versturen.', { duration: 6000 })
+        // Auto-submit seamlessly: user sees their question + loading animation
+        setTimeout(() => sendMessage(pending), 600)
       }
     } catch { /* ignore */ }
   }, [])
@@ -598,12 +606,22 @@ ${markdownHtml}
               sessionStorage.setItem('workx-pending-message', text)
               sessionStorage.setItem('workx-last-version-refresh', Date.now().toString())
             } catch { /* ignore */ }
-            // Show user's message + thinking animation while page reloads
+            // Show user's message + thinking animation while doing cache-busting refresh
             setMessages(prev => [...prev, { id: `user-${Date.now()}`, role: 'user', content: text }])
             setInput('')
             setIsLoading(true)
             setStatusText('De AI Assistent bedenkt vragen voor een grondig advies...')
-            setTimeout(() => window.location.reload(), 2000)
+            setTimeout(async () => {
+              // Clear all caches to ensure fresh code
+              if ('caches' in window) {
+                const names = await caches.keys()
+                await Promise.all(names.map(name => caches.delete(name)))
+              }
+              // Navigate to cache-busting URL (bypasses HTTP cache + service worker)
+              const url = new URL(window.location.href)
+              url.searchParams.set('_v', Date.now().toString())
+              window.location.replace(url.toString())
+            }, 2000)
             return
           }
         }
@@ -680,7 +698,15 @@ ${markdownHtml}
           sessionStorage.setItem('workx-last-version-refresh', Date.now().toString())
         } catch { /* ignore */ }
         setStatusText('De AI Assistent wordt bijgewerkt...')
-        setTimeout(() => window.location.reload(), 1500)
+        setTimeout(async () => {
+          if ('caches' in window) {
+            const names = await caches.keys()
+            await Promise.all(names.map(name => caches.delete(name)))
+          }
+          const url = new URL(window.location.href)
+          url.searchParams.set('_v', Date.now().toString())
+          window.location.replace(url.toString())
+        }, 1500)
         return
       }
 

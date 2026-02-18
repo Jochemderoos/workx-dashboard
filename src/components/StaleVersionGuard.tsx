@@ -23,7 +23,17 @@ export default function StaleVersionGuard() {
       const now = Date.now()
       if (!lastRefresh || now - parseInt(lastRefresh) > cooldownMs) {
         sessionStorage.setItem(storageKey, now.toString())
-        window.location.reload()
+        // Cache-busting refresh: clear caches + navigate to unique URL
+        // This ensures fresh code even when service worker is active
+        if ('caches' in self) {
+          caches.keys().then(names => Promise.all(names.map(name => caches.delete(name)))).then(() => {
+            const url = new URL(window.location.href)
+            url.searchParams.set('_v', Date.now().toString())
+            window.location.replace(url.toString())
+          })
+        } else {
+          window.location.reload()
+        }
       }
     }
 

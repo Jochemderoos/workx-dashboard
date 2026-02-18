@@ -37,6 +37,10 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
+  // Skip navigation requests — always go directly to the network
+  // This ensures page reloads after Vercel deploys get fresh code
+  if (event.request.mode === 'navigate') return;
+
   // Skip API calls and auth - always go to network
   if (event.request.url.includes('/api/') ||
       event.request.url.includes('/auth/')) {
