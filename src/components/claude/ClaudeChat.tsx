@@ -744,6 +744,8 @@ ${markdownHtml}
     abortControllerRef.current = controller
     const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 min overall timeout
 
+    let pollTimer: ReturnType<typeof setInterval> | null = null
+
     try {
       setStatusText('Verzoek versturen...')
 
@@ -808,252 +810,199 @@ ${markdownHtml}
         content: '',
       }])
 
-      // Read SSE stream with polling fallback.
-      // Vercel's proxy sometimes buffers SSE responses, so if we don't receive
-      // any content within 8 seconds, we fall back to polling the database.
+      // Track the number of messages BEFORE this request so polling can detect NEW responses.
+      // The server saves: user message + assistant response = expectedCount + 2
+      const msgCountBefore = await fetch(`/api/claude/conversations/${headerConvId || convId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => d?.messages?.length || 0)
+        .catch(() => 0)
+
+      // === STREAM READING + POLLING FALLBACK ===
+      // Vercel buffers SSE responses, so streaming often fails for slow requests.
+      // Strategy: try to read the stream, but also poll the DB in parallel.
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
       let streamedText = ''
       let hasWebSearch = false
       let citations: Array<{ url: string; title: string }> = []
-      let receivedContent = false // true once we get a delta or done event
-      let pollingStopped = false
-      let activeConvId = headerConvId || convId // Use header value (always available) or existing convId
+      let finished = false // Set when EITHER stream or polling delivers the response
+      let activeConvId = headerConvId || convId
 
-      // Polling fallback: if stream doesn't deliver content, poll DB for the response.
-      // Starts after just 3 seconds — Vercel's SSE buffering means stream rarely works.
-      let pollInterval: ReturnType<typeof setInterval> | null = null
-      const pollFallbackTimer = setTimeout(() => {
-        if (receivedContent || pollingStopped || !activeConvId) return
-        console.log('[ClaudeChat] No stream content after 3s — falling back to polling')
-        setStatusText('Claude verwerkt je vraag...')
-
-        pollInterval = setInterval(async () => {
-          if (receivedContent || pollingStopped) {
-            if (pollInterval) clearInterval(pollInterval)
-            return
-          }
-          try {
-            const pollRes = await fetch(`/api/claude/conversations/${activeConvId}`)
-            if (!pollRes.ok) return
-            const data = await pollRes.json()
-            const msgs = data.messages || []
-            // Find the latest assistant message
-            const lastAssistant = [...msgs].reverse().find((m: { role: string }) => m.role === 'assistant')
-            if (lastAssistant?.content && lastAssistant.content.length > 10 && !lastAssistant.content.startsWith('[Fout:')) {
-              // Got a response from DB! Display it.
-              console.log('[ClaudeChat] Got response via polling:', lastAssistant.content.slice(0, 50))
-              pollingStopped = true
-              receivedContent = true
-              if (pollInterval) clearInterval(pollInterval)
-              streamedText = lastAssistant.content
-
-              // Parse confidence
-              let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
-              const confMatch = streamedText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
-              if (confMatch) {
-                confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
-                streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
-              }
-
-              setStreamingMsgId(null)
-              if (streamIntervalRef.current) {
-                clearInterval(streamIntervalRef.current)
-                streamIntervalRef.current = null
-              }
-              setStreamingContent('')
-              setMessages(prev => prev.map(m =>
-                m.id === assistantMsgId ? { ...m, content: streamedText, confidence, hasWebSearch: lastAssistant.hasWebSearch } : m
-              ))
-              setStatusText('')
-              setIsLoading(false)
-              onActiveChange?.(false)
-              onNewMessage?.()
-              setAttachedDocs([])
-              try { reader.cancel() } catch { /* ignore */ }
-            }
-          } catch {
-            // Poll errors are non-fatal
-          }
-        }, 3000)
-      }, 3000)
-
-      try {
-      while (!pollingStopped) {
-        let done = false, value: Uint8Array | undefined
-        try {
-          const result = await reader.read()
-          done = result.done
-          value = result.value
-        } catch {
-          // reader.cancel() from polling fallback causes read() to reject — that's OK
-          break
+      // Helper: display a polled response
+      const displayPolledResponse = (content: string, webSearch?: boolean) => {
+        if (finished) return
+        finished = true
+        let finalText = content
+        let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
+        const confMatch = finalText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+        if (confMatch) {
+          confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
+          finalText = finalText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
         }
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-
-        // Process complete SSE events from buffer
-        const lines = buffer.split('\n\n')
-        buffer = lines.pop() || '' // Keep incomplete event in buffer
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const jsonStr = line.slice(6)
-
-          try {
-            const event = JSON.parse(jsonStr)
-
-            if (event.type === 'start' && event.conversationId) {
-              if (!activeConvId) {
-                activeConvId = event.conversationId
-                setConvId(event.conversationId)
-                onConversationCreated?.(event.conversationId)
-              }
-            } else if (event.type === 'thinking_start') {
-              receivedContent = true // Thinking counts as content
-              setIsThinking(true)
-              isThinkingRef.current = true
-              setStatusText('Claude overweegt...')
-            } else if (event.type === 'thinking' && event.text) {
-              thinkingTextRef.current += event.text
-              setThinkingText(prev => prev + event.text)
-            } else if (event.type === 'delta' && event.text) {
-              receivedContent = true
-              // First text delta means thinking is done — auto-collapse
-              if (isThinkingRef.current) {
-                isThinkingRef.current = false
-                setIsThinking(false)
-                setThinkingExpanded(false)
-                setStatusText('Claude schrijft...')
-              }
-              streamedText += event.text
-              streamBufferRef.current = streamedText
-            } else if (event.type === 'status' && event.text) {
-              setStatusText(event.text)
-            } else if (event.type === 'done') {
-              receivedContent = true
-              hasWebSearch = event.hasWebSearch || false
-              citations = event.citations || []
-              const sources = event.sources || []
-              const eventModel = event.model || ''
-              // Parse confidence from response content
-              let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
-              const confMatch = streamedText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
-              if (confMatch) {
-                confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
-                // Strip the confidence tag from displayed text
-                streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
-              }
-              // Final update: flush content into React state + render markdown
-              setStreamingMsgId(null)
-              if (streamIntervalRef.current) {
-                clearInterval(streamIntervalRef.current)
-                streamIntervalRef.current = null
-              }
-              setStreamingContent('')
-              // Capture thinking text so it persists after streaming ends
-              const savedThinking = thinkingTextRef.current || undefined
-              setMessages(prev => prev.map(m =>
-                m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel, thinkingContent: savedThinking } : m
-              ))
-            } else if (event.type === 'error') {
-              throw new Error(event.error || 'Onbekende fout')
-            }
-          } catch (parseErr) {
-            // Re-throw application errors (from event.type === 'error')
-            if (parseErr instanceof Error && parseErr.message && parseErr.message !== jsonStr) {
-              throw parseErr
-            }
-            // JSON parse errors are just warnings (e.g. incomplete chunk)
-            console.warn('[ClaudeChat] SSE parse warning:', jsonStr.slice(0, 100))
-          }
-        }
-      }
-      } finally {
-        // Clean up polling
-        clearTimeout(pollFallbackTimer)
-        if (pollInterval) clearInterval(pollInterval)
-      }
-
-      if (pollingStopped) return // Polling already handled everything
-
-      clearTimeout(timeoutId)
-
-      // Stream ended — check if we got content
-      if (streamedText) {
         setStreamingMsgId(null)
-        // Flush final content into state if not already done by 'done' event
+        if (streamIntervalRef.current) {
+          clearInterval(streamIntervalRef.current)
+          streamIntervalRef.current = null
+        }
+        setStreamingContent('')
+        setMessages(prev => prev.map(m =>
+          m.id === assistantMsgId ? { ...m, content: finalText, confidence, hasWebSearch: webSearch } : m
+        ))
+        setStatusText('')
+        onNewMessage?.()
+        setAttachedDocs([])
+        try { reader.cancel() } catch { /* ignore */ }
+      }
+
+      // Start polling immediately in parallel with the stream.
+      // Uses message count to detect NEW responses (not old ones from previous questions).
+      const pollConvId = activeConvId
+      pollTimer = pollConvId ? setInterval(async () => {
+        if (finished || streamedText.length > 50) { clearInterval(pollTimer!); return }
+        try {
+          const r = await fetch(`/api/claude/conversations/${pollConvId}`)
+          if (!r.ok || finished) return
+          const data = await r.json()
+          const allMsgs = data.messages || []
+          // Only accept if there are MORE messages than before (new response saved)
+          if (allMsgs.length > msgCountBefore) {
+            const last = allMsgs[allMsgs.length - 1]
+            if (last?.role === 'assistant' && last.content?.length > 10 && !last.content.startsWith('[Fout:')) {
+              console.log('[ClaudeChat] Got response via polling')
+              clearInterval(pollTimer!)
+              displayPolledResponse(last.content, last.hasWebSearch)
+            }
+          }
+        } catch { /* non-fatal */ }
+      }, 3000) : null
+
+      // Show polling status after short delay
+      if (pollConvId) {
+        setTimeout(() => {
+          if (!finished && !streamedText.length) {
+            setStatusText('Claude verwerkt je vraag...')
+          }
+        }, 2000)
+      }
+
+      // Read the stream (works when Claude responds fast enough)
+      try {
+        while (true) {
+          let done = false, value: Uint8Array | undefined
+          try {
+            const result = await reader.read()
+            done = result.done
+            value = result.value
+          } catch { break } // reader.cancel() from polling
+          if (done || finished) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const jsonStr = line.slice(6)
+            try {
+              const event = JSON.parse(jsonStr)
+              if (event.type === 'start' && event.conversationId) {
+                if (!activeConvId) {
+                  activeConvId = event.conversationId
+                  setConvId(event.conversationId)
+                  onConversationCreated?.(event.conversationId)
+                }
+              } else if (event.type === 'thinking_start') {
+                setIsThinking(true)
+                isThinkingRef.current = true
+                setStatusText('Claude overweegt...')
+              } else if (event.type === 'thinking' && event.text) {
+                thinkingTextRef.current += event.text
+                setThinkingText(prev => prev + event.text)
+              } else if (event.type === 'delta' && event.text) {
+                if (isThinkingRef.current) {
+                  isThinkingRef.current = false
+                  setIsThinking(false)
+                  setThinkingExpanded(false)
+                  setStatusText('Claude schrijft...')
+                }
+                streamedText += event.text
+                streamBufferRef.current = streamedText
+              } else if (event.type === 'status' && event.text) {
+                setStatusText(event.text)
+              } else if (event.type === 'done') {
+                finished = true
+                if (pollTimer) clearInterval(pollTimer)
+                hasWebSearch = event.hasWebSearch || false
+                citations = event.citations || []
+                const sources = event.sources || []
+                const eventModel = event.model || ''
+                let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
+                const confMatch = streamedText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+                if (confMatch) {
+                  confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
+                  streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+                }
+                setStreamingMsgId(null)
+                if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
+                setStreamingContent('')
+                const savedThinking = thinkingTextRef.current || undefined
+                setMessages(prev => prev.map(m =>
+                  m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel, thinkingContent: savedThinking } : m
+                ))
+              } else if (event.type === 'error') {
+                throw new Error(event.error || 'Onbekende fout')
+              }
+            } catch (parseErr) {
+              if (parseErr instanceof Error && parseErr.message && parseErr.message !== jsonStr) throw parseErr
+              console.warn('[ClaudeChat] SSE parse warning:', jsonStr.slice(0, 100))
+            }
+          }
+          if (finished) break
+        }
+      } catch {
+        // Stream read error — polling fallback will handle
+        if (!finished) console.warn('[ClaudeChat] Stream ended unexpectedly, relying on polling')
+      }
+
+      // Stream ended. If no response yet, wait for polling to deliver.
+      if (!finished && !streamedText && pollTimer) {
+        setStatusText('Antwoord ophalen...')
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => resolve(), 90000) // 90s max
+          const check = setInterval(() => {
+            if (finished) { clearInterval(check); clearTimeout(timeout); resolve() }
+          }, 500)
+        })
+      }
+
+      // Clean up polling timer
+      if (pollTimer) clearInterval(pollTimer)
+
+      if (finished) {
+        clearTimeout(timeoutId)
+        // Response already displayed by done handler or displayPolledResponse
+      } else if (streamedText) {
+        // Partial stream content — show what we have
+        clearTimeout(timeoutId)
+        setStreamingMsgId(null)
+        if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
+        setStreamingContent('')
         setMessages(prev => prev.map(m =>
           m.id === assistantMsgId && !m.content ? { ...m, content: streamedText } : m
         ))
-      } else if (activeConvId) {
-        // Stream closed without content — Vercel buffered the response.
-        // Fall back to polling: the server is still processing and will save to DB.
-        console.log('[ClaudeChat] Stream ended without content — starting poll fallback')
-        setStatusText('Claude verwerkt je vraag...')
-        await new Promise<void>((resolve) => {
-          const endTime = Date.now() + 300000 // Max 5 minutes
-          const poll = setInterval(async () => {
-            if (Date.now() > endTime) {
-              clearInterval(poll)
-              setStreamingMsgId(null)
-              setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
-              setStatusText('')
-              toast.error('Claude deed er te lang over. Probeer het opnieuw.', { duration: 10000 })
-              resolve()
-              return
-            }
-            try {
-              const pollRes = await fetch(`/api/claude/conversations/${activeConvId}`)
-              if (!pollRes.ok) return
-              const data = await pollRes.json()
-              const msgs = data.messages || []
-              const lastAssistant = [...msgs].reverse().find((m: { role: string }) => m.role === 'assistant')
-              if (lastAssistant?.content && lastAssistant.content.length > 10 && !lastAssistant.content.startsWith('[Fout:')) {
-                clearInterval(poll)
-                console.log('[ClaudeChat] Got response via polling')
-
-                let finalText = lastAssistant.content
-                let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
-                const confMatch = finalText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
-                if (confMatch) {
-                  confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
-                  finalText = finalText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
-                }
-
-                setStreamingMsgId(null)
-                if (streamIntervalRef.current) {
-                  clearInterval(streamIntervalRef.current)
-                  streamIntervalRef.current = null
-                }
-                setStreamingContent('')
-                setMessages(prev => prev.map(m =>
-                  m.id === assistantMsgId ? { ...m, content: finalText, confidence, hasWebSearch: lastAssistant.hasWebSearch } : m
-                ))
-                setStatusText('')
-                onNewMessage?.()
-                setAttachedDocs([])
-                resolve()
-              }
-            } catch { /* poll errors non-fatal */ }
-          }, 3000)
-        })
-        return // Polling handled everything
       } else {
-        // No convId and no content — can't poll
-        setStreamingMsgId(null)
         setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
         throw new Error('Claude gaf een leeg antwoord')
       }
 
       onNewMessage?.()
-      setAttachedDocs([]) // Clear attached docs after successful send
+      setAttachedDocs([])
       setStatusText('')
 
     } catch (error) {
       clearTimeout(timeoutId)
+      if (pollTimer) clearInterval(pollTimer)
       let errMsg = 'Onbekende fout'
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
