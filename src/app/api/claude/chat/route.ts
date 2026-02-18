@@ -34,15 +34,18 @@ function estimateTokens(text: string): number {
 // 7MB base64 ≈ 5MB file ≈ 80-100 pages — fits comfortably with system prompt.
 const MAX_NATIVE_PDF_BASE64_LEN = 7_000_000
 
-// Token budget for native PDF/image blocks — dynamically adjusted in POST handler
-// based on whether knowledge sources are active. With sources: conservative (80K).
-// Without sources (or document-focused projects): generous (140K).
-const NATIVE_BLOCK_BUDGET_WITH_SOURCES = 80_000
-const NATIVE_BLOCK_BUDGET_WITHOUT_SOURCES = 140_000
+// Token budget for native PDF/image blocks — dynamically adjusted in POST handler.
+// Generous budget: Claude's 200K context window can handle multiple large PDFs.
+// Knowledge sources add ~30-60K tokens, so we leave room for both.
+const NATIVE_BLOCK_BUDGET_WITH_SOURCES = 120_000
+const NATIVE_BLOCK_BUDGET_WITHOUT_SOURCES = 160_000
 
 function estimatePdfBlockTokens(base64Len: number): number {
-  const estimatedPages = Math.max(1, Math.ceil(base64Len / 50000))
-  return estimatedPages * 1500
+  // Scanned PDFs: large base64 (~200-500KB/page) but only ~1500-3000 tokens/page.
+  // Text PDFs: smaller base64 (~30-80KB/page) with similar token cost.
+  // Use 150KB/page as a middle-ground estimate for base64 → page count.
+  const estimatedPages = Math.max(1, Math.ceil(base64Len / 150000))
+  return estimatedPages * 2000 // ~2000 tokens/page average (conservative but realistic)
 }
 
 const SYSTEM_PROMPT = `# REGEL 1 — LEES DIT ALLEREERST — STEL VRAGEN VOOR JE ANTWOORD GEEFT
