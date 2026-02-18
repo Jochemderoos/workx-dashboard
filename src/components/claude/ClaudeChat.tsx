@@ -898,9 +898,6 @@ ${markdownHtml}
 
       {/* Top bar with New Chat + Save to Project buttons — compact */}
       <div className="flex-shrink-0 flex items-center justify-end px-4 py-1.5 gap-2">
-        {convId && messages.length > 0 && (
-          <span className="text-[10px] text-white/20 mr-auto">{messages.filter(m => m.role === 'user').length} berichten</span>
-        )}
         {convId && !projectId && onSaveToProject && (
           <button
             onClick={() => onSaveToProject(convId)}
