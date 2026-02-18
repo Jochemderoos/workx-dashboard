@@ -434,9 +434,20 @@ export async function POST(req: NextRequest) {
     // Start SSE stream IMMEDIATELY so client fetch() resolves in <1 second.
     // ALL heavy processing (document loading, RAG, embeddings, Claude API) runs
     // INSIDE the stream with status updates. This prevents Vercel gateway timeouts.
+    //
+    // Uses TransformStream (not ReadableStream) for reliable streaming on Vercel.
+    // The readable side is returned immediately; the writable side is written to
+    // asynchronously from a background task. This ensures Vercel's proxy forwards
+    // each chunk to the client as soon as it's written.
     const encoder = new TextEncoder()
-    const stream = new ReadableStream({
-      async start(controller) {
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+
+    // Helper: write an SSE event and flush immediately
+    const send = (data: string) => writer.write(encoder.encode(`data: ${data}\n\n`))
+
+    // Start the async processing in the background (not awaited — response returns immediately)
+    ;(async () => {
         let fullText = ''
         let hasWebSearch = false
         const citations: Array<{ url: string; title: string }> = []
@@ -444,27 +455,26 @@ export async function POST(req: NextRequest) {
         let lastStep = 'init'
 
         // Watchdog: if stream hasn't produced delta content within 45s, send diagnostic error
-        // This ensures the user ALWAYS gets feedback, even if the function hangs or crashes silently
         let watchdogFired = false
-        const watchdog = setTimeout(() => {
+        const watchdog = setTimeout(async () => {
           watchdogFired = true
           console.error(`[chat] Watchdog fired at step: ${lastStep}`)
           try {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            await send(JSON.stringify({
               type: 'error',
               error: `Het laden duurde te lang (>45s). Laatste stap: "${lastStep}". ${docLoadErrors.length > 0 ? `Fouten: ${docLoadErrors.join('; ').slice(0, 150)}` : 'Geen fouten gelogd.'} Probeer het opnieuw.`,
-            })}\n\n`))
-            controller.close()
+            }))
+            await writer.close()
           } catch { /* stream may already be closed */ }
         }, 45000)
 
         try {
           // Notify client immediately that connection is alive
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start', conversationId: convId })}\n\n`))
+          await send(JSON.stringify({ type: 'start', conversationId: convId }))
           lastStep = 'start'
 
           // === DOCUMENT LOADING (inside stream to prevent gateway timeout) ===
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Documenten laden...' })}\n\n`))
+          await send(JSON.stringify({ type: 'status', text: 'Documenten laden...' }))
           lastStep = 'doc-load-start'
 
           let documentContext = ''
@@ -642,7 +652,7 @@ export async function POST(req: NextRequest) {
           lastStep = 'doc-load-done'
 
           // === KNOWLEDGE SOURCES ===
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Kennisbronnen doorzoeken...' })}\n\n`))
+          await send(JSON.stringify({ type: 'status', text: 'Kennisbronnen doorzoeken...' }))
           lastStep = 'sources-start'
 
     // Smart routing: determine if this question needs employment law knowledge sources
@@ -1222,7 +1232,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
     const client = new Anthropic({ apiKey, timeout: 300000 })
     console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, tools=${tools.length}, native blocks=${documentBlocks.length} (~${nativeBlockTokens} tokens), est total=~${totalTokens} tokens`)
 
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Claude starten...' })}\n\n`))
+          await send(JSON.stringify({ type: 'status', text: 'Claude starten...' }))
           lastStep = 'claude-api-start'
 
           // Model selection: default Sonnet, optionally Opus for deep analysis
@@ -1249,12 +1259,12 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             try {
               if (event.type === 'content_block_start') {
                 if (event.content_block?.type === 'thinking') {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking_start' })}\n\n`))
+                  writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'thinking_start' })}\n\n`))
                 }
               }
               if (event.type === 'content_block_delta') {
                 if (event.delta?.type === 'thinking_delta' && event.delta.thinking) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', text: event.delta.thinking })}\n\n`))
+                  writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', text: event.delta.thinking })}\n\n`))
                 }
               }
             } catch { /* ignore thinking stream errors */ }
@@ -1267,7 +1277,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
               clearTimeout(watchdog)
               lastStep = 'claude-streaming'
             }
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
+            writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
           })
 
           // Listen for content blocks for web search detection
@@ -1275,7 +1285,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             const blockType = (block as { type: string }).type
             if (blockType === 'web_search_tool_use' || blockType === 'server_tool_use') {
               hasWebSearch = true
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'AI Search...' })}\n\n`))
+              writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'AI Search...' })}\n\n`))
             }
           })
 
@@ -1315,7 +1325,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             for (const toolBlock of toolUseBlocks) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const tb = toolBlock as any
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: `Rechtspraak.nl doorzoeken... (${toolRound})` })}\n\n`))
+              await send(JSON.stringify({ type: 'status', text: `Rechtspraak.nl doorzoeken... (${toolRound})` }))
 
               try {
                 let resultText = ''
@@ -1349,7 +1359,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             }
 
             // Continue conversation with tool results
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Resultaten analyseren...' })}\n\n`))
+            await send(JSON.stringify({ type: 'status', text: 'Resultaten analyseren...' }))
             // Strip thinking blocks from assistant content to save tokens in continuation
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const filteredContent = finalMessage.content.filter((b: any) => b.type !== 'thinking')
@@ -1372,18 +1382,18 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             continueStream.on('streamEvent' as any, (event: any) => {
               try {
                 if (event.type === 'content_block_start' && event.content_block?.type === 'thinking') {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking_start' })}\n\n`))
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Claude analyseert resultaten...' })}\n\n`))
+                  writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'thinking_start' })}\n\n`))
+                  writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Claude analyseert resultaten...' })}\n\n`))
                 }
                 if (event.type === 'content_block_delta' && event.delta?.type === 'thinking_delta' && event.delta.thinking) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', text: event.delta.thinking })}\n\n`))
+                  writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', text: event.delta.thinking })}\n\n`))
                 }
               } catch { /* ignore */ }
             })
 
             continueStream.on('text', (text) => {
               fullText += text
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
+              writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
             })
 
             // Detect web search in continuation
@@ -1391,7 +1401,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
               const blockType = (block as { type: string }).type
               if (blockType === 'web_search_tool_use' || blockType === 'server_tool_use') {
                 hasWebSearch = true
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'AI Search...' })}\n\n`))
+                writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'AI Search...' })}\n\n`))
               }
             })
 
@@ -1433,7 +1443,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
               if (stillUnverified.length > 0) {
                 const warningText = `\n\n---\n⚠️ **Let op:** De volgende ECLI-nummers konden niet worden geverifieerd via rechtspraak.nl en kunnen onjuist zijn: ${stillUnverified.join(', ')}. Controleer deze handmatig op rechtspraak.nl.`
                 fullText += warningText
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text: warningText })}\n\n`))
+                await send(JSON.stringify({ type: 'delta', text: warningText }))
               }
             }
           }
@@ -1458,13 +1468,13 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           }
 
           // Send final event with citations and source names
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+          await send(JSON.stringify({
             type: 'done',
             hasWebSearch,
             citations,
             sources: usedSourceNames,
             model: modelId,
-          })}\n\n`))
+          }))
 
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error)
@@ -1497,19 +1507,19 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
 
           // Include technical details so we can debug — visible in error event
           const debugInfo = `[DEBUG: ${errMsg.slice(0, 150)}${docLoadErrors.length > 0 ? ` | docErrors: ${docLoadErrors.join('; ').slice(0, 100)}` : ''}]`
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: `${userError}\n\n${debugInfo}` })}\n\n`))
+          await send(JSON.stringify({ type: 'error', error: `${userError}\n\n${debugInfo}` }))
         } finally {
           clearTimeout(watchdog)
-          if (!watchdogFired) controller.close()
+          if (!watchdogFired) {
+            try { await writer.close() } catch { /* may already be closed */ }
+          }
         }
-      },
-    })
+    })() // End of async IIFE — runs in background, not awaited
 
-    return new Response(stream, {
+    return new Response(readable, {
       headers: {
         'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache, no-transform',
         'X-Accel-Buffering': 'no',
         'X-Build-Id': process.env.NEXT_PUBLIC_BUILD_ID || '',
       },
