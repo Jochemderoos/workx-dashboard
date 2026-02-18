@@ -98,11 +98,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Store as base64 for native Claude document/image blocks
+    // IMPORTANT: Re-encode from buffer — concatenated chunk base64 has internal
+    // padding characters (==) that make it invalid. buffer.toString('base64')
+    // produces clean, valid base64.
     const actualSize = meta.fileSize || buffer.length
     const mimeType = ext === 'pdf' ? 'application/pdf' : `image/${ext}`
     let fileUrl: string | null = null
     if (actualSize <= 32 * 1024 * 1024) {
-      fileUrl = `data:${mimeType};base64,${fullBase64}`
+      const cleanBase64 = buffer.toString('base64')
+      fileUrl = `data:${mimeType};base64,${cleanBase64}`
     }
 
     // Auto-split large scanned PDFs into pages so Claude can read them via vision

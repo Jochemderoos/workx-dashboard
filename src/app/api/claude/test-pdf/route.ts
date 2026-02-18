@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  const info: Record<string, unknown> = { docId }
+
   try {
     // Load document
     const doc = await prisma.aIDocument.findUnique({
@@ -50,8 +52,7 @@ export async function GET(req: NextRequest) {
     })
     if (!doc) return NextResponse.json({ error: 'Document niet gevonden' }, { status: 404 })
 
-    const info: Record<string, unknown> = {
-      docId: doc.id,
+    Object.assign(info, {
       name: doc.name,
       fileType: doc.fileType,
       fileSize: doc.fileSize,
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
       contentPreview: doc.content?.slice(0, 200) ?? null,
       hasFileUrl: !!doc.fileUrl,
       fileUrlPrefix: doc.fileUrl?.slice(0, 80) ?? null,
-    }
+    })
 
     if (!doc.fileUrl) {
       return NextResponse.json({ ...info, error: 'Geen fileUrl in database — base64 data ontbreekt' })
@@ -70,15 +71,26 @@ export async function GET(req: NextRequest) {
     if (commaIdx === -1 || commaIdx > 100) {
       return NextResponse.json({ ...info, error: 'fileUrl is geen data URL (geen comma gevonden)' })
     }
-    const base64Data = doc.fileUrl.slice(commaIdx + 1).replace(/[\s\r\n]/g, '')
+    const rawBase64 = doc.fileUrl.slice(commaIdx + 1).replace(/[\s\r\n]/g, '')
 
-    info.base64Length = base64Data.length
-    info.base64SizeMB = (base64Data.length / (1024 * 1024)).toFixed(1)
+    info.rawBase64Length = rawBase64.length
+    info.rawBase64SizeMB = (rawBase64.length / (1024 * 1024)).toFixed(1)
 
-    // Simple validation
-    if (base64Data.length < 100) {
-      return NextResponse.json({ ...info, error: 'Base64 data te kort' })
+    // Check for internal padding (corruption from chunked uploads)
+    const internalPadding = (rawBase64.match(/=(?=[A-Za-z0-9+/])/g) || []).length
+    info.internalPaddingChars = internalPadding
+    info.hasCorruptedBase64 = internalPadding > 0
+
+    // Re-encode through Buffer to fix corrupted base64 from chunked uploads
+    const buffer = Buffer.from(rawBase64, 'base64')
+    if (buffer.length < 100) {
+      return NextResponse.json({ ...info, error: 'Buffer te klein na decode', bufferSize: buffer.length })
     }
+    const base64Data = buffer.toString('base64')
+
+    info.cleanBase64Length = base64Data.length
+    info.bufferSize = buffer.length
+    info.bufferSizeMB = (buffer.length / (1024 * 1024)).toFixed(1)
 
     // Send to Claude API — simplest possible call, no streaming, no thinking
     const apiKey = process.env.ANTHROPIC_API_KEY
@@ -126,6 +138,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({
+      ...info,
       error: msg,
       errorType: err instanceof Error ? err.constructor.name : typeof err,
       stack: err instanceof Error ? err.stack?.slice(0, 500) : undefined,

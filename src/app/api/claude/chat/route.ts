@@ -55,14 +55,16 @@ function extractBase64FromDataUrl(dataUrl: string): string | null {
     data = data.replace(/[\s\r\n]/g, '')
   }
 
-  // Fix padding if needed
-  const padNeeded = data.length % 4
-  if (padNeeded) data += '='.repeat(4 - padNeeded)
-
-  // Quick validation: check a sample of characters (full regex on multi-MB string is slow)
-  const sample = data.slice(0, 200) + data.slice(-200)
-  if (!/^[A-Za-z0-9+/=]+$/.test(sample)) {
-    console.warn(`[chat] Base64 validation failed — invalid chars in sample: ${sample.slice(0, 50)}...`)
+  // Re-encode through Buffer to fix corrupted base64 from chunked uploads.
+  // Chunked uploads concatenate independently base64-encoded chunks, producing
+  // internal padding characters (==) that make the base64 invalid for the API.
+  // Buffer.from() is lenient and handles this; toString('base64') produces clean output.
+  try {
+    const buf = Buffer.from(data, 'base64')
+    if (buf.length < 100) return null
+    data = buf.toString('base64')
+  } catch {
+    console.warn(`[chat] Base64 re-encode failed`)
     return null
   }
 
