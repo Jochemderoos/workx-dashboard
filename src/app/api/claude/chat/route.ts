@@ -595,9 +595,11 @@ export async function POST(req: NextRequest) {
           }
 
           try {
-          // Collect all docs first, then pre-load base64 for scanned PDFs in parallel
+          // Collect all docs first, then pre-load base64 for scanned PDFs in parallel.
+          // Track isAttached: true for explicitly selected docs, false for auto-included project docs.
+          // Only attached scanned PDFs get base64-loaded (project scanned PDFs are too slow to load every time).
           type DocInfo = { id: string; name: string; fileType: string; fileSize: number; content: string | null }
-          let allDocs: Array<{ doc: DocInfo; prefix: string }> = []
+          let allDocs: Array<{ doc: DocInfo; prefix: string; isAttached: boolean }> = []
 
           if (documentIds?.length) {
             const docs = await prisma.aIDocument.findMany({
@@ -612,7 +614,7 @@ export async function POST(req: NextRequest) {
             })
             console.log(`[chat] Attached docs found: ${docs.length} (requested: ${documentIds.length})`)
             for (const doc of docs) {
-              allDocs.push({ doc, prefix: 'Document: ' })
+              allDocs.push({ doc, prefix: 'Document: ', isAttached: true })
             }
           }
 
@@ -625,12 +627,15 @@ export async function POST(req: NextRequest) {
             console.log(`[chat] Project docs found: ${projectDocs.length} (projectId: ${projectId})`)
             for (const doc of projectDocs) {
               if (documentIds?.includes(doc.id)) continue
-              allDocs.push({ doc, prefix: '' })
+              allDocs.push({ doc, prefix: '', isAttached: false })
             }
           }
 
-          // Pre-load base64 for scanned PDFs and images IN PARALLEL (much faster than sequential)
-          const docsNeedingBase64 = allDocs.filter(({ doc }) => {
+          // Pre-load base64 ONLY for ATTACHED scanned PDFs and images (not project docs).
+          // Project scanned PDFs are skipped: loading multi-MB base64 from Postgres for
+          // every question is too slow (causes 30-40s delays on cold starts).
+          const docsNeedingBase64 = allDocs.filter(({ doc, isAttached }) => {
+            if (!isAttached) return false // Never pre-load project docs
             if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) return true
             if (doc.fileType === 'pdf' && !hasUsableContent(doc) && (doc.fileSize || 0) <= 5 * 1024 * 1024) return true
             return false
@@ -651,11 +656,16 @@ export async function POST(req: NextRequest) {
           }
 
           // Now process all docs using pre-loaded base64 data
-          for (const { doc, prefix } of allDocs) {
+          for (const { doc, prefix, isAttached } of allDocs) {
             if (doc.fileType === 'docx') hasDocxAttachments = true
             if (doc.fileType === 'pdf') {
-              // Use pre-loaded base64 for scanned PDFs
-              if (!hasUsableContent(doc) && base64Map.has(doc.id)) {
+              if (hasUsableContent(doc)) {
+                // Text-based PDF (attached or project): always include extracted text (fast)
+                documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                console.log(`[chat] PDF ${doc.name}: text (${doc.content!.length} chars)`)
+              } else if (isAttached && base64Map.has(doc.id)) {
+                // Attached scanned PDF: use pre-loaded base64 as native document block
                 const fileUrl = base64Map.get(doc.id)
                 const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
                 const sizeMB = (doc.fileSize || 0) / (1024 * 1024)
@@ -666,17 +676,24 @@ export async function POST(req: NextRequest) {
                     source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                   })
                   nativeBlockTokens += estimatedTokens
-                  console.log(`[chat] PDF ${doc.name}: scanned — native document block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
+                  console.log(`[chat] PDF ${doc.name}: attached scanned — native block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
                 } else {
                   documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF (${sizeMB.toFixed(1)}MB) — splits het document op via ✂️ bij Documenten.]\n--- Einde ---`
-                  console.log(`[chat] PDF ${doc.name}: scanned — too large or over budget`)
+                  console.log(`[chat] PDF ${doc.name}: attached scanned — too large or over budget`)
                 }
-              } else {
+              } else if (isAttached) {
+                // Attached scanned PDF without pre-loaded base64: try loading (sequential fallback)
                 await processPdfDoc(doc, prefix)
+              } else {
+                // Project scanned PDF (NOT attached): skip base64 loading entirely.
+                // Loading multi-MB base64 for every question is too slow.
+                const sizeMB = (doc.fileSize || 0) / (1024 * 1024)
+                documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n[Gescand PDF-document (${sizeMB.toFixed(1)}MB) — niet automatisch geladen. Upload het document opnieuw om het te laten splitsen, of voeg het expliciet toe aan je vraag.]\n--- Einde ---`
+                console.log(`[chat] PDF ${doc.name}: project scanned — skipped (${sizeMB.toFixed(1)}MB, not attached)`)
               }
             } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
+              if (!isAttached) continue // Skip project images (not attached)
               if (nativeBlockTokens + 1600 > maxNativeBlockTokens) continue
-              // Use pre-loaded base64
               const fileUrl = base64Map.get(doc.id) ?? await loadFileUrl(doc.id)
               const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
               if (base64Data) {
