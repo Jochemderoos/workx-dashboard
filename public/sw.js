@@ -1,10 +1,10 @@
-const CACHE_NAME = 'workx-v1';
+const CACHE_NAME = 'workx-v2';
 
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [
   '/workx-logo.svg',
-  '/icons/icon-192.svg',
-  '/icons/icon-512.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
   '/apple-touch-icon.png'
 ];
 
@@ -81,8 +81,8 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     const options = {
       body: data.body || '',
-      icon: '/icons/icon-192.svg',
-      badge: '/icons/icon-192.svg',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
       tag: data.tag || 'workx-notification',
       data: {
         url: data.url || '/dashboard/werk'
