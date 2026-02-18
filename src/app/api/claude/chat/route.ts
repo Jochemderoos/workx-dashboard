@@ -29,6 +29,11 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 3.5)
 }
 
+// Large PDFs as native document blocks can overflow the 200K context window
+// (~1500 tokens/page). For files over this threshold, use extracted text instead.
+// 7MB base64 ≈ 5MB file ≈ 80-100 pages — fits comfortably with system prompt.
+const MAX_NATIVE_PDF_BASE64_LEN = 7_000_000
+
 const SYSTEM_PROMPT = `# REGEL 1 — LEES DIT ALLEREERST — STEL VRAGEN VOOR JE ANTWOORD GEEFT
 
 Bij ELKE open casusvraag, strategievraag of vraag waarbij feiten ontbreken:
@@ -394,10 +399,12 @@ export async function POST(req: NextRequest) {
     const history = historyDesc.reverse()
 
     // Build context from documents — use native PDF support when available
+    // For large PDFs, fall back to extracted text (cheaper and always fits in context)
     let documentContext = ''
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const documentBlocks: any[] = []  // Native document blocks for Claude API
     let hasDocxAttachments = false
+    let pdfTextFallback = '' // Text for PDFs sent as native blocks (used if API rejects payload)
 
     if (documentIds?.length) {
       const docs = await prisma.aIDocument.findMany({
@@ -412,14 +419,36 @@ export async function POST(req: NextRequest) {
       for (const doc of docs) {
         // Track DOCX attachments for edit instructions
         if (doc.fileType === 'docx') hasDocxAttachments = true
-        // Prefer native PDF support: send base64 PDF directly to Claude
-        if (doc.fileType === 'pdf' && doc.fileUrl?.startsWith('data:application/pdf;base64,')) {
-          const base64Data = doc.fileUrl.split(',')[1]
-          documentBlocks.push({
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-            title: doc.name,
-          })
+
+        if (doc.fileType === 'pdf') {
+          const base64Data = doc.fileUrl?.startsWith('data:application/pdf;base64,')
+            ? doc.fileUrl.split(',')[1]
+            : null
+          // Native PDF for small/medium files (best quality: Claude sees layout, tables, images)
+          // Text fallback for large files (avoids context overflow — still accurate for content)
+          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN) {
+            documentBlocks.push({
+              type: 'document',
+              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+              title: doc.name,
+            })
+            // Keep text ready in case we need to downgrade later (context overflow)
+            if (doc.content) {
+              pdfTextFallback += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+            }
+          } else if (doc.content) {
+            // Large PDF: use extracted text (more token-efficient, always fits)
+            console.log(`[chat] PDF ${doc.name} too large for native (${((base64Data?.length || 0) / 1_000_000).toFixed(1)}MB base64), using text`)
+            documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+          } else if (base64Data) {
+            // Large PDF without extracted text: try native as last resort (better than nothing)
+            console.warn(`[chat] Large PDF ${doc.name} has no extracted text, sending native despite size`)
+            documentBlocks.push({
+              type: 'document',
+              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+              title: doc.name,
+            })
+          }
         } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && doc.fileUrl?.startsWith('data:image/')) {
           // Images: send as native image blocks for Claude vision
           const base64Data = doc.fileUrl.split(',')[1]
@@ -430,7 +459,7 @@ export async function POST(req: NextRequest) {
           })
         } else if (doc.content) {
           // Fallback for text files and docs without fileUrl — include document ID for DOCX editing
-          documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
+          documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
         }
       }
     }
@@ -443,14 +472,24 @@ export async function POST(req: NextRequest) {
       for (const doc of projectDocs) {
         if (documentIds?.includes(doc.id)) continue
         if (doc.fileType === 'docx') hasDocxAttachments = true
-        if (doc.fileType === 'pdf' && doc.fileUrl?.startsWith('data:application/pdf;base64,')) {
-          if (documentBlocks.length >= 5) break  // Max 5 PDF attachments
-          const base64Data = doc.fileUrl.split(',')[1]
-          documentBlocks.push({
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-            title: doc.name,
-          })
+
+        if (doc.fileType === 'pdf') {
+          const base64Data = doc.fileUrl?.startsWith('data:application/pdf;base64,')
+            ? doc.fileUrl.split(',')[1]
+            : null
+          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && documentBlocks.length < 5) {
+            documentBlocks.push({
+              type: 'document',
+              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+              title: doc.name,
+            })
+            if (doc.content) {
+              pdfTextFallback += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+            }
+          } else if (doc.content) {
+            if (documentContext.length > 200000) break
+            documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+          }
         } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && doc.fileUrl?.startsWith('data:image/')) {
           if (documentBlocks.length >= 10) break
           const base64Data = doc.fileUrl.split(',')[1]
@@ -461,7 +500,7 @@ export async function POST(req: NextRequest) {
           })
         } else if (doc.content) {
           if (documentContext.length > 200000) break
-          documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 20000)}\n--- Einde ---`
+          documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
         }
       }
     }
@@ -902,7 +941,13 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
       } else if (Array.isArray(msg.content)) {
         for (const block of msg.content) {
           if (block.type === 'text') totalTokens += estimateTokens(block.text || '')
-          if (block.type === 'document') totalTokens += 5000 // Rough estimate per PDF
+          if (block.type === 'document') {
+            // Estimate tokens from base64 size: ~1500 tokens/page, ~50KB base64/page
+            const b64Len = block.source?.data?.length || 0
+            const estimatedPages = Math.max(1, Math.ceil(b64Len / 50000))
+            totalTokens += estimatedPages * 1500
+          }
+          if (block.type === 'image') totalTokens += 1600
         }
       }
     }
@@ -912,6 +957,46 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
       if (removed && typeof removed.content === 'string') {
         totalTokens -= estimateTokens(removed.content)
       }
+    }
+    // If still over limit and we have native PDF blocks, convert them to text
+    // This is seamless for the user — the document is still fully analyzed, just as text
+    if (totalTokens > MAX_CONTEXT && documentBlocks.length > 0 && pdfTextFallback) {
+      console.log(`[chat] Context over limit (~${totalTokens} tokens). Converting PDF blocks to text.`)
+      // Remove document blocks from messages (keep images)
+      for (const msg of msgs) {
+        if (Array.isArray(msg.content)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          msg.content = msg.content.filter((b: any) => b.type !== 'document')
+          // If only text blocks remain, simplify back to string
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const textParts = msg.content.filter((b: any) => b.type === 'text')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const nonTextParts = msg.content.filter((b: any) => b.type !== 'text')
+          if (nonTextParts.length === 0 && textParts.length === 1) {
+            msg.content = textParts[0].text
+          }
+        }
+      }
+      // Add PDF text to system prompt
+      if (systemPrompt.includes('## Documenten')) {
+        systemPrompt += pdfTextFallback
+      } else {
+        systemPrompt += `\n\n## Documenten${pdfTextFallback}`
+      }
+      documentBlocks.length = 0 // Clear so they're not re-attached
+      // Recalculate tokens
+      totalTokens = estimateTokens(systemPrompt)
+      for (const msg of msgs) {
+        if (typeof msg.content === 'string') {
+          totalTokens += estimateTokens(msg.content)
+        } else if (Array.isArray(msg.content)) {
+          for (const block of msg.content) {
+            if (block.type === 'text') totalTokens += estimateTokens(block.text || '')
+            if (block.type === 'image') totalTokens += 1600
+          }
+        }
+      }
+      console.log(`[chat] After text conversion: ~${totalTokens} tokens`)
     }
     if (totalTokens > MAX_CONTEXT) {
       console.warn(`[chat] Context still over limit after trimming: ~${totalTokens} tokens`)
@@ -1246,13 +1331,13 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
 
           let userError = 'Er ging iets mis bij het verwerken van je vraag. Probeer het opnieuw.'
           if (errMsg.includes('timeout') || errMsg.includes('abort')) {
-            userError = 'Claude had meer tijd nodig dan verwacht. Probeer een kortere of eenvoudigere vraag.'
+            userError = 'De analyse duurde langer dan verwacht. Probeer het opnieuw — het lukt vaak bij een tweede poging.'
           } else if (errMsg.includes('rate_limit') || errMsg.includes('429')) {
             userError = 'Even rustig aan — te veel verzoeken tegelijk. Wacht een minuut en probeer het opnieuw.'
           } else if (errMsg.includes('overloaded') || errMsg.includes('529')) {
             userError = 'Claude is momenteel overbelast. Probeer het over een paar seconden opnieuw.'
-          } else if (errMsg.includes('invalid_request') || errMsg.includes('max_tokens') || errMsg.includes('400')) {
-            userError = 'Er was een technisch probleem met het verzoek. Probeer het opnieuw — als het blijft falen, probeer een kortere vraag.'
+          } else if (errMsg.includes('invalid_request') || errMsg.includes('max_tokens') || errMsg.includes('too large') || errMsg.includes('400')) {
+            userError = 'Het verzoek was te groot om in één keer te verwerken. Probeer het opnieuw — het document wordt automatisch geoptimaliseerd.'
           } else if (errMsg.includes('authentication') || errMsg.includes('401') || errMsg.includes('api_key')) {
             userError = 'Er is een probleem met de API-configuratie. Neem contact op met de beheerder.'
           } else if (errMsg.includes('credit') || errMsg.includes('billing') || errMsg.includes('402')) {
