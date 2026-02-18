@@ -367,25 +367,17 @@ export default function ClaudeChat({
     }
   }, [quickActionPrompt])
 
-  // Clean up cache-busting URL parameter after version refresh
+  // Clean up cache-busting URL parameter if present
   useEffect(() => {
     if (window.location.search.includes('_v=')) {
       const url = new URL(window.location.href)
       url.searchParams.delete('_v')
       window.history.replaceState({}, '', url.toString())
     }
-  }, [])
-
-  // Restore and auto-submit pending message after version-mismatch refresh
-  useEffect(() => {
-    try {
-      const pending = sessionStorage.getItem('workx-pending-message')
-      if (pending) {
-        sessionStorage.removeItem('workx-pending-message')
-        // Auto-submit seamlessly: user sees their question + loading animation
-        setTimeout(() => sendMessage(pending), 600)
-      }
-    } catch { /* ignore */ }
+    // Clean up any stale pending messages
+    try { sessionStorage.removeItem('workx-pending-message') } catch { /* ignore */ }
+    try { sessionStorage.removeItem('workx-last-version-refresh') } catch { /* ignore */ }
+    try { sessionStorage.removeItem('workx-skip-version-check') } catch { /* ignore */ }
   }, [])
 
   /** Clean renderMarkdown HTML for document export (strip web-only elements) */
@@ -588,47 +580,7 @@ ${markdownHtml}
     const text = overrideMessage || input.trim()
     if (!text || isLoading) return
 
-    // Pre-flight version check: detect stale client code after Vercel deploy
-    const clientBuildId = process.env.NEXT_PUBLIC_BUILD_ID
-
-    // Skip if recently refreshed (cooldown: 30 seconds)
-    const lastVersionRefresh = parseInt(sessionStorage.getItem('workx-last-version-refresh') || '0')
-    const skipVersionCheck = (Date.now() - lastVersionRefresh) < 30000
-
-    if (clientBuildId && !skipVersionCheck) {
-      try {
-        const vRes = await fetch('/api/version', { cache: 'no-store' })
-        if (vRes.ok) {
-          const { buildId: serverBuildId } = await vRes.json()
-          if (serverBuildId && serverBuildId !== clientBuildId) {
-            console.log(`[ClaudeChat] Build mismatch: client=${clientBuildId} server=${serverBuildId} — reloading`)
-            try {
-              sessionStorage.setItem('workx-pending-message', text)
-              sessionStorage.setItem('workx-last-version-refresh', Date.now().toString())
-            } catch { /* ignore */ }
-            // Show user's message + thinking animation while doing cache-busting refresh
-            setMessages(prev => [...prev, { id: `user-${Date.now()}`, role: 'user', content: text }])
-            setInput('')
-            setIsLoading(true)
-            setStatusText('De AI Assistent bedenkt vragen voor een grondig advies...')
-            setTimeout(async () => {
-              // Clear all caches to ensure fresh code
-              if ('caches' in window) {
-                const names = await caches.keys()
-                await Promise.all(names.map(name => caches.delete(name)))
-              }
-              // Navigate to cache-busting URL (bypasses HTTP cache + service worker)
-              const url = new URL(window.location.href)
-              url.searchParams.set('_v', Date.now().toString())
-              window.location.replace(url.toString())
-            }, 2000)
-            return
-          }
-        }
-      } catch {
-        console.warn('[ClaudeChat] Version pre-flight failed, proceeding')
-      }
-    }
+    console.log('[ClaudeChat] sendMessage started:', text.slice(0, 50))
 
     // Build the full message with option instructions prepended
     const instructions = buildInstructions()
@@ -687,28 +639,7 @@ ${markdownHtml}
         signal: controller.signal,
       })
 
-      // Stale-version detection (fallback): if server build ID differs from client, auto-refresh
-      const serverBuildId = response.headers.get('X-Build-Id')
-      const recentRefresh = (Date.now() - parseInt(sessionStorage.getItem('workx-last-version-refresh') || '0')) < 30000
-      if (serverBuildId && clientBuildId && serverBuildId !== clientBuildId && !recentRefresh) {
-        console.log(`[ClaudeChat] Build mismatch (response): client=${clientBuildId} server=${serverBuildId} — reloading`)
-        clearTimeout(timeoutId)
-        try {
-          sessionStorage.setItem('workx-pending-message', text)
-          sessionStorage.setItem('workx-last-version-refresh', Date.now().toString())
-        } catch { /* ignore */ }
-        setStatusText('De AI Assistent wordt bijgewerkt...')
-        setTimeout(async () => {
-          if ('caches' in window) {
-            const names = await caches.keys()
-            await Promise.all(names.map(name => caches.delete(name)))
-          }
-          const url = new URL(window.location.href)
-          url.searchParams.set('_v', Date.now().toString())
-          window.location.replace(url.toString())
-        }, 1500)
-        return
-      }
+      console.log('[ClaudeChat] Response received:', response.status, response.statusText)
 
       if (!response.ok) {
         clearTimeout(timeoutId)
@@ -727,7 +658,8 @@ ${markdownHtml}
         throw new Error('Server gaf geen stream terug')
       }
 
-      setStatusText('Claude schrijft...')
+      console.log('[ClaudeChat] Stream started, reading events...')
+      setStatusText('Antwoord ontvangen...')
       setOptionsExpanded(false) // Collapse options to maximize answer space
       setStreamingMsgId(assistantMsgId) // Mark which message is streaming
 
