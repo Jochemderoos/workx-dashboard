@@ -997,6 +997,10 @@ ${markdownHtml}
 
         const pollId = headerConvId || convId
         console.log('[ClaudeChat] Stream leverde geen inhoud — start DB polling. pollId:', pollId)
+        // Clear streaming cursor — no content was streamed, so hide the empty bubble
+        setStreamingMsgId(null)
+        if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
+        setStreamingContent('')
         if (pollId) {
           setStatusText('Claude verwerkt je vraag...')
           setLoadingProgress(30) // Show some progress
@@ -1008,10 +1012,14 @@ ${markdownHtml}
             setStatusText(`Claude verwerkt je vraag... (${elapsed}s)`)
             try {
               const resp = await fetch(`/api/claude/conversations/${pollId}`)
-              if (!resp.ok) continue
+              if (!resp.ok) {
+                console.log(`[ClaudeChat] Poll ${attempt}: HTTP ${resp.status}`)
+                continue
+              }
               const data = await resp.json()
               const dbMsgs = data.messages || []
               const lastDb = dbMsgs[dbMsgs.length - 1]
+              console.log(`[ClaudeChat] Poll ${attempt} (${elapsed}s): ${dbMsgs.length} berichten, laatste rol: ${lastDb?.role || 'geen'}, content len: ${lastDb?.content?.length || 0}`)
               if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
                 let content = lastDb.content as string
                 let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
@@ -1243,7 +1251,7 @@ ${markdownHtml}
           >
             <div className={`relative group ${msg.role === 'user' ? 'max-w-[80%]' : 'w-full'}`}>
               {/* Assistant message */}
-              {msg.role === 'assistant' && (
+              {msg.role === 'assistant' && (isStreaming || msg.content) && (
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-transparent flex items-center justify-center mt-0.5 border border-workx-lime/10">
                     <span className="text-[11px] font-bold text-workx-lime">W</span>
