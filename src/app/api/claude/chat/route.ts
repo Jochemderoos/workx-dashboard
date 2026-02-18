@@ -574,11 +574,14 @@ export async function POST(req: NextRequest) {
                       source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                     })
                     nativeBlockTokens += estimatedTokens
+                    // Also add fallback text so Claude knows the doc exists even if native block is stripped
+                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Dit gescande PDF-document is als native PDF bijgevoegd. Analyseer de visuele inhoud van het PDF-document hierboven.]\n--- Einde ---`
+                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[Gescand PDF-document — geen tekst beschikbaar.]\n--- Einde ---`
                     console.log(`[chat] PDF ${doc.name}: scanned — sent as native document block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
                   } else {
                     // Base64 load failed or too large
                     documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF (${sizeMB.toFixed(1)}MB) — kon niet worden geladen als document block. Splits het document op in kleinere stukken via het schaartje-icoon (✂️) bij Documenten.]\n--- Einde ---`
-                    console.log(`[chat] PDF ${doc.name}: scanned — base64 load failed or too large (${sizeMB.toFixed(1)}MB)`)
+                    console.log(`[chat] PDF ${doc.name}: scanned — base64 load failed or too large (${sizeMB.toFixed(1)}MB, base64: ${base64Data ? base64Data.length : 'null'})`)
                   }
                 } else {
                   // Too large for native blocks — give clear instructions
@@ -676,10 +679,14 @@ export async function POST(req: NextRequest) {
                     source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                   })
                   nativeBlockTokens += estimatedTokens
+                  // ALSO add note to documentContext + pdfTextFallback so Claude knows the doc exists
+                  // even if native blocks are stripped during retry
+                  documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Dit gescande PDF-document is als native PDF bijgevoegd. Analyseer de visuele inhoud van het PDF-document hierboven.]\n--- Einde ---`
+                  pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[Gescand PDF-document — geen tekst beschikbaar. Het document kon niet als afbeelding worden verwerkt.]\n--- Einde ---`
                   console.log(`[chat] PDF ${doc.name}: attached scanned — native block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
                 } else {
                   documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF (${sizeMB.toFixed(1)}MB) — splits het document op via ✂️ bij Documenten.]\n--- Einde ---`
-                  console.log(`[chat] PDF ${doc.name}: attached scanned — too large or over budget`)
+                  console.log(`[chat] PDF ${doc.name}: attached scanned — too large or over budget (base64: ${base64Data ? 'ok' : 'null'}, size: ${sizeMB.toFixed(1)}MB)`)
                 }
               } else if (isAttached) {
                 // Attached scanned PDF without pre-loaded base64: try loading (sequential fallback)
@@ -722,7 +729,10 @@ export async function POST(req: NextRequest) {
             documentContext = anonDocs.text
           }
 
-          console.log(`[chat] Documents loaded: ${documentBlocks.length} native blocks (~${nativeBlockTokens} tokens), ${documentContext.length} chars text, errors: ${docLoadErrors.length}`)
+          const docSummary = `${documentBlocks.length} native blocks (~${nativeBlockTokens} tokens), ${documentContext.length} chars text, ${docLoadErrors.length} errors`
+          console.log(`[chat] Documents loaded: ${docSummary}`)
+          // Send diagnostic info to client via SSE so user can see what happened
+          await send(JSON.stringify({ type: 'status', text: `Documenten: ${documentBlocks.length} als PDF block, ${Math.round(documentContext.length / 1000)}K chars tekst${docLoadErrors.length > 0 ? `, ${docLoadErrors.length} fouten` : ''}` }))
           if (docLoadErrors.length > 0) {
             console.warn(`[chat] Document load errors:`, docLoadErrors)
           }
