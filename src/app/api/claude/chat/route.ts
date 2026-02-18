@@ -593,6 +593,10 @@ export async function POST(req: NextRequest) {
           }
 
           try {
+          // Collect all docs first, then pre-load base64 for scanned PDFs in parallel
+          type DocInfo = { id: string; name: string; fileType: string; fileSize: number; content: string | null }
+          let allDocs: Array<{ doc: DocInfo; prefix: string }> = []
+
           if (documentIds?.length) {
             const docs = await prisma.aIDocument.findMany({
               where: {
@@ -605,25 +609,8 @@ export async function POST(req: NextRequest) {
               select: { id: true, name: true, fileType: true, fileSize: true, content: true },
             })
             console.log(`[chat] Attached docs found: ${docs.length} (requested: ${documentIds.length})`)
-
             for (const doc of docs) {
-              if (doc.fileType === 'docx') hasDocxAttachments = true
-              if (doc.fileType === 'pdf') {
-                await processPdfDoc(doc, 'Document: ')
-              } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
-                const fileUrl = await loadFileUrl(doc.id)
-                const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
-                if (base64Data) {
-                  const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
-                  documentBlocks.push({
-                    type: 'image',
-                    source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
-                  })
-                  nativeBlockTokens += 1600
-                }
-              } else if (doc.content) {
-                documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
-              }
+              allDocs.push({ doc, prefix: 'Document: ' })
             }
           }
 
@@ -634,28 +621,73 @@ export async function POST(req: NextRequest) {
               select: { id: true, name: true, fileType: true, fileSize: true, content: true },
             })
             console.log(`[chat] Project docs found: ${projectDocs.length} (projectId: ${projectId})`)
-
             for (const doc of projectDocs) {
               if (documentIds?.includes(doc.id)) continue
-              if (doc.fileType === 'docx') hasDocxAttachments = true
-              if (doc.fileType === 'pdf') {
-                await processPdfDoc(doc, '')
-              } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
-                if (nativeBlockTokens + 1600 > maxNativeBlockTokens) continue
-                const fileUrl = await loadFileUrl(doc.id)
+              allDocs.push({ doc, prefix: '' })
+            }
+          }
+
+          // Pre-load base64 for scanned PDFs and images IN PARALLEL (much faster than sequential)
+          const docsNeedingBase64 = allDocs.filter(({ doc }) => {
+            if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) return true
+            if (doc.fileType === 'pdf' && !hasUsableContent(doc) && (doc.fileSize || 0) <= 5 * 1024 * 1024) return true
+            return false
+          })
+          const base64Map = new Map<string, string | null>()
+          if (docsNeedingBase64.length > 0) {
+            console.log(`[chat] Pre-loading base64 for ${docsNeedingBase64.length} docs in parallel...`)
+            const results = await Promise.all(
+              docsNeedingBase64.map(async ({ doc }) => {
+                const url = await loadFileUrl(doc.id)
+                return [doc.id, url] as const
+              })
+            )
+            for (const [id, url] of results) {
+              base64Map.set(id, url || null)
+            }
+            console.log(`[chat] Base64 pre-load done: ${base64Map.size} docs`)
+          }
+
+          // Now process all docs using pre-loaded base64 data
+          for (const { doc, prefix } of allDocs) {
+            if (doc.fileType === 'docx') hasDocxAttachments = true
+            if (doc.fileType === 'pdf') {
+              // Use pre-loaded base64 for scanned PDFs
+              if (!hasUsableContent(doc) && base64Map.has(doc.id)) {
+                const fileUrl = base64Map.get(doc.id)
                 const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
-                if (base64Data) {
-                  const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
+                const sizeMB = (doc.fileSize || 0) / (1024 * 1024)
+                const estimatedTokens = estimatePdfBlockTokens(Math.ceil(sizeMB * 1.37 * 1_000_000))
+                if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + estimatedTokens <= maxNativeBlockTokens) {
                   documentBlocks.push({
-                    type: 'image',
-                    source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
+                    type: 'document',
+                    source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                   })
-                  nativeBlockTokens += 1600
+                  nativeBlockTokens += estimatedTokens
+                  console.log(`[chat] PDF ${doc.name}: scanned — native document block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
+                } else {
+                  documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF (${sizeMB.toFixed(1)}MB) — splits het document op via ✂️ bij Documenten.]\n--- Einde ---`
+                  console.log(`[chat] PDF ${doc.name}: scanned — too large or over budget`)
                 }
-              } else if (doc.content) {
-                if (documentContext.length > 200000) break
-                documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+              } else {
+                await processPdfDoc(doc, prefix)
               }
+            } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
+              if (nativeBlockTokens + 1600 > maxNativeBlockTokens) continue
+              // Use pre-loaded base64
+              const fileUrl = base64Map.get(doc.id) ?? await loadFileUrl(doc.id)
+              const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
+              if (base64Data) {
+                const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
+                documentBlocks.push({
+                  type: 'image',
+                  source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
+                })
+                nativeBlockTokens += 1600
+              }
+            } else if (doc.content) {
+              if (documentContext.length > 200000) continue
+              documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
             }
           }
           } catch (e) {
