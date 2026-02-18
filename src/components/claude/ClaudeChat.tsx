@@ -572,7 +572,8 @@ export default function ClaudeChat({
             ))
             setStatusText('')
             setIsLoading(false)
-            setAttachedDocs([])
+            // Keep attachedDocs — they stay available for the entire conversation
+            // so Claude can re-read documents on follow-up questions
             onNewMessage?.()
             break
           }
@@ -1091,7 +1092,7 @@ ${markdownHtml}
       }
 
       onNewMessage?.()
-      setAttachedDocs([])
+      // Keep attachedDocs — they stay available for the entire conversation
       setStatusText('')
 
     } catch (error) {
