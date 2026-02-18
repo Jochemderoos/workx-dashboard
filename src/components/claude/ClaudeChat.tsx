@@ -74,6 +74,8 @@ export default function ClaudeChat({
   const [activeOptions, setActiveOptions] = useState<Set<string>>(new Set())
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadStatusText, setUploadStatusText] = useState('')
   const [thinkingText, setThinkingText] = useState('')
   const [isThinking, setIsThinking] = useState(false)
   const [thinkingExpanded, setThinkingExpanded] = useState(true)
@@ -230,13 +232,12 @@ export default function ClaudeChat({
   }
 
   // Upload large file in chunks (for Vercel 4.5MB body limit)
-  const uploadFileChunked = async (file: File, ext: string): Promise<{ id: string; name: string; fileType: string }> => {
+  const uploadFileChunked = async (file: File, ext: string, onChunkProgress?: (sent: number, total: number) => void): Promise<{ id: string; name: string; fileType: string }> => {
     const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB binary = ~2.7MB base64 (safe under 4.5MB with JSON overhead)
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
     const uploadId = crypto.randomUUID()
 
     console.log('[Upload Chunked] Starting:', file.name, 'size:', file.size, 'chunks:', totalChunks, 'uploadId:', uploadId)
-    toast(`Groot bestand: uploaden in ${totalChunks} delen...`, { icon: '\u{1F4E4}', duration: 3000 })
 
     for (let i = 0; i < totalChunks; i++) {
       const start = i * CHUNK_SIZE
@@ -244,6 +245,7 @@ export default function ClaudeChat({
       const chunk = file.slice(start, end)
       const base64 = await blobToBase64(chunk)
       console.log(`[Upload Chunked] Sending chunk ${i + 1}/${totalChunks}, base64 length: ${base64.length}`)
+      onChunkProgress?.(i, totalChunks)
 
       const res = await fetch('/api/claude/documents/upload', {
         method: 'POST',
@@ -266,6 +268,7 @@ export default function ClaudeChat({
 
       const result = await res.json()
       console.log(`[Upload Chunked] Chunk ${i + 1} result:`, result)
+      onChunkProgress?.(i + 1, totalChunks)
 
       // Last chunk returns the complete document
       if (result.id) {
@@ -308,18 +311,38 @@ export default function ClaudeChat({
 
     console.log('[Upload] Validation passed, starting uploads for', filesToUpload.length, 'files')
     setIsUploading(true)
+    setUploadProgress(0)
+    setUploadStatusText('')
     let uploadedCount = 0
+    const totalFiles = filesToUpload.length
+    const totalSize = filesToUpload.reduce((sum, f) => sum + f.size, 0)
+    let uploadedSize = 0
     try {
-      for (const file of filesToUpload) {
+      for (let fi = 0; fi < filesToUpload.length; fi++) {
+        const file = filesToUpload[fi]
         const ext = file.name.split('.').pop()?.toLowerCase() || ''
+        const shortName = file.name.length > 30 ? file.name.substring(0, 27) + '...' : file.name
+
+        setUploadStatusText(totalFiles > 1
+          ? `${shortName} (${fi + 1}/${totalFiles})...`
+          : `${shortName} uploaden...`)
 
         // Large files (>3MB): use chunked upload to bypass Vercel 4.5MB body limit
         if (file.size > 3 * 1024 * 1024) {
           console.log('[Upload] Large file, using chunked upload:', file.name, file.size)
-          const doc = await uploadFileChunked(file, ext)
+          const doc = await uploadFileChunked(file, ext, (sent, total) => {
+            const chunkBytes = (sent / total) * file.size
+            const pct = Math.round(((uploadedSize + chunkBytes) / totalSize) * 100)
+            setUploadProgress(Math.min(pct, 95))
+            setUploadStatusText(totalFiles > 1
+              ? `${shortName} (${fi + 1}/${totalFiles}) — deel ${sent}/${total}...`
+              : `${shortName} — deel ${sent}/${total}...`)
+          })
           console.log('[Upload] Chunked upload success:', doc)
           setAttachedDocs(prev => [...prev, doc])
+          uploadedSize += file.size
           uploadedCount++
+          setUploadProgress(Math.round((uploadedSize / totalSize) * 100))
           continue
         }
 
@@ -328,6 +351,9 @@ export default function ClaudeChat({
         const formData = new FormData()
         formData.append('file', file)
         if (projectId) formData.append('projectId', projectId)
+
+        // Show indeterminate progress for small file API call
+        setUploadProgress(Math.min(Math.round(((uploadedSize + file.size * 0.5) / totalSize) * 100), 95))
 
         const res = await fetch('/api/claude/documents', {
           method: 'POST',
@@ -349,9 +375,13 @@ export default function ClaudeChat({
         const doc = await res.json()
         console.log('[Upload] Upload success:', doc.id, doc.name)
         setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])
+        uploadedSize += file.size
         uploadedCount++
+        setUploadProgress(Math.round((uploadedSize / totalSize) * 100))
       }
       console.log('[Upload] All done, uploadedCount:', uploadedCount)
+      setUploadProgress(100)
+      setUploadStatusText('Voltooid!')
       if (uploadedCount === 1) {
         toast.success(`${filesToUpload[0].name} bijgevoegd`)
       } else {
@@ -362,6 +392,8 @@ export default function ClaudeChat({
       toast.error(err instanceof Error ? err.message : 'Upload mislukt')
     } finally {
       setIsUploading(false)
+      setUploadProgress(0)
+      setUploadStatusText('')
     }
   }
 
@@ -1556,6 +1588,26 @@ ${markdownHtml}
                   </button>
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Upload progress bar */}
+          {isUploading && (
+            <div className="rounded-xl bg-white/[0.04] border border-workx-lime/15 px-4 py-3 space-y-2 message-fade-in">
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-workx-lime/30 via-workx-lime/60 to-workx-lime rounded-full transition-all duration-500 ease-out progress-bar-glow"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="animate-spin">
+                  <Icons.refresh size={12} className="text-workx-lime/60" />
+                </div>
+                <span className="text-[12px] text-white/40">
+                  {uploadStatusText || 'Bestand uploaden...'}
+                </span>
+              </div>
             </div>
           )}
 
