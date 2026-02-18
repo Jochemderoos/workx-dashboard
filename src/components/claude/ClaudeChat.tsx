@@ -514,25 +514,20 @@ export default function ClaudeChat({
     let cancelled = false
 
     const poll = async () => {
-      // Wait 5s before first check — give stream a chance
-      await new Promise(r => setTimeout(r, 5000))
+      // Wait 2s before first check — give stream a brief chance
+      await new Promise(r => setTimeout(r, 2000))
+      if (cancelled) return
+      setStatusText('Antwoord ophalen...')
       while (!cancelled) {
         try {
           const r = await fetch(`/api/claude/conversations/${convId}`)
-          if (!r.ok || cancelled) { await new Promise(r => setTimeout(r, 3000)); continue }
+          if (cancelled) break
+          if (!r.ok) { await new Promise(r => setTimeout(r, 2000)); continue }
           const data = await r.json()
           const dbMsgs = data.messages || []
           const lastDb = dbMsgs[dbMsgs.length - 1]
           if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
             if (cancelled) break
-            // Check the message is still empty before overwriting
-            let shouldUpdate = false
-            setMessages(prev => {
-              const existing = prev.find(m => m.id === emptyMsgId)
-              if (existing && !existing.content) { shouldUpdate = true }
-              return prev
-            })
-            if (!shouldUpdate || cancelled) break
             // Parse confidence
             let content = lastDb.content as string
             let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
@@ -556,7 +551,7 @@ export default function ClaudeChat({
             break
           }
         } catch { /* ignore */ }
-        await new Promise(r => setTimeout(r, 3000))
+        await new Promise(r => setTimeout(r, 2000))
       }
     }
 
