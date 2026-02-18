@@ -801,17 +801,80 @@ ${markdownHtml}
         content: '',
       }])
 
-      // Read SSE stream
+      // Read SSE stream with polling fallback.
+      // Vercel's proxy sometimes buffers SSE responses, so if we don't receive
+      // any content within 8 seconds, we fall back to polling the database.
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
       let streamedText = ''
       let hasWebSearch = false
       let citations: Array<{ url: string; title: string }> = []
+      let receivedContent = false // true once we get a delta or done event
+      let pollingStopped = false
+      let activeConvId = convId // Track convId (might be set by start event)
 
+      // Polling fallback: if stream doesn't deliver content, poll DB for the response
+      let pollInterval: ReturnType<typeof setInterval> | null = null
+      const pollFallbackTimer = setTimeout(() => {
+        if (receivedContent || pollingStopped || !activeConvId) return
+        console.log('[ClaudeChat] No stream content after 8s — falling back to polling')
+        setStatusText('Antwoord ophalen...')
+
+        pollInterval = setInterval(async () => {
+          if (receivedContent || pollingStopped) {
+            if (pollInterval) clearInterval(pollInterval)
+            return
+          }
+          try {
+            const pollRes = await fetch(`/api/claude/conversations/${activeConvId}`)
+            if (!pollRes.ok) return
+            const data = await pollRes.json()
+            const msgs = data.messages || []
+            // Find the latest assistant message
+            const lastAssistant = [...msgs].reverse().find((m: { role: string }) => m.role === 'assistant')
+            if (lastAssistant?.content && lastAssistant.content.length > 10 && !lastAssistant.content.startsWith('[Fout:')) {
+              // Got a response from DB! Display it.
+              console.log('[ClaudeChat] Got response via polling:', lastAssistant.content.slice(0, 50))
+              pollingStopped = true
+              receivedContent = true
+              if (pollInterval) clearInterval(pollInterval)
+              streamedText = lastAssistant.content
+
+              // Parse confidence
+              let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
+              const confMatch = streamedText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+              if (confMatch) {
+                confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
+                streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+              }
+
+              setStreamingMsgId(null)
+              if (streamIntervalRef.current) {
+                clearInterval(streamIntervalRef.current)
+                streamIntervalRef.current = null
+              }
+              setStreamingContent('')
+              setMessages(prev => prev.map(m =>
+                m.id === assistantMsgId ? { ...m, content: streamedText, confidence, hasWebSearch: lastAssistant.hasWebSearch } : m
+              ))
+              setStatusText('')
+              setIsLoading(false)
+              onActiveChange?.(false)
+              onNewMessage?.()
+              setAttachedDocs([])
+              try { reader.cancel() } catch { /* ignore */ }
+            }
+          } catch {
+            // Poll errors are non-fatal
+          }
+        }, 3000)
+      }, 8000)
+
+      try {
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done || pollingStopped) break
 
         buffer += decoder.decode(value, { stream: true })
 
@@ -827,11 +890,13 @@ ${markdownHtml}
             const event = JSON.parse(jsonStr)
 
             if (event.type === 'start' && event.conversationId) {
-              if (!convId) {
+              if (!activeConvId) {
+                activeConvId = event.conversationId
                 setConvId(event.conversationId)
                 onConversationCreated?.(event.conversationId)
               }
             } else if (event.type === 'thinking_start') {
+              receivedContent = true // Thinking counts as content
               setIsThinking(true)
               isThinkingRef.current = true
               setStatusText('Claude overweegt...')
@@ -839,6 +904,7 @@ ${markdownHtml}
               thinkingTextRef.current += event.text
               setThinkingText(prev => prev + event.text)
             } else if (event.type === 'delta' && event.text) {
+              receivedContent = true
               // First text delta means thinking is done — auto-collapse
               if (isThinkingRef.current) {
                 isThinkingRef.current = false
@@ -851,6 +917,7 @@ ${markdownHtml}
             } else if (event.type === 'status' && event.text) {
               setStatusText(event.text)
             } else if (event.type === 'done') {
+              receivedContent = true
               hasWebSearch = event.hasWebSearch || false
               citations = event.citations || []
               const sources = event.sources || []
@@ -888,6 +955,13 @@ ${markdownHtml}
           }
         }
       }
+      } finally {
+        // Clean up polling
+        clearTimeout(pollFallbackTimer)
+        if (pollInterval) clearInterval(pollInterval)
+      }
+
+      if (pollingStopped) return // Polling already handled everything
 
       clearTimeout(timeoutId)
       setStreamingMsgId(null)
