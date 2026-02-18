@@ -407,6 +407,7 @@ export async function POST(req: NextRequest) {
     let pdfTextFallback = '' // Text for PDFs sent as native blocks (used if API rejects payload)
 
     if (documentIds?.length) {
+      // Step 1: Load metadata + content only (skip fileUrl to avoid loading 10MB+ base64 from DB)
       const docs = await prisma.aIDocument.findMany({
         where: {
           id: { in: documentIds },
@@ -415,14 +416,32 @@ export async function POST(req: NextRequest) {
             { project: { members: { some: { userId } } } },
           ],
         },
+        select: { id: true, name: true, fileType: true, fileSize: true, content: true },
       })
+
+      // Step 2: Only load fileUrl for files small enough for native blocks (PDFs ≤5MB, images ≤10MB)
+      const nativeCandidateIds = docs
+        .filter(d =>
+          (d.fileType === 'pdf' && (d.fileSize || 0) <= 5 * 1024 * 1024) ||
+          (['png', 'jpg', 'jpeg', 'webp'].includes(d.fileType || ''))
+        )
+        .map(d => d.id)
+      const nativeDocsMap = new Map<string, string | null>()
+      if (nativeCandidateIds.length > 0) {
+        const nativeDocs = await prisma.aIDocument.findMany({
+          where: { id: { in: nativeCandidateIds } },
+          select: { id: true, fileUrl: true },
+        })
+        for (const nd of nativeDocs) nativeDocsMap.set(nd.id, nd.fileUrl)
+      }
+
       for (const doc of docs) {
-        // Track DOCX attachments for edit instructions
         if (doc.fileType === 'docx') hasDocxAttachments = true
+        const fileUrl = nativeDocsMap.get(doc.id) || null
 
         if (doc.fileType === 'pdf') {
-          const base64Data = doc.fileUrl?.startsWith('data:application/pdf;base64,')
-            ? doc.fileUrl.split(',')[1]
+          const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
+            ? fileUrl.split(',')[1]
             : null
           // Native PDF for small/medium files (best quality: Claude sees layout, tables, images)
           // Text fallback for large files (avoids context overflow — still accurate for content)
@@ -432,50 +451,59 @@ export async function POST(req: NextRequest) {
               source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
               title: doc.name,
             })
-            // Keep text ready in case we need to downgrade later (context overflow)
             if (doc.content) {
               pdfTextFallback += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
             }
           } else if (doc.content) {
-            // Large PDF: use extracted text (more token-efficient, always fits)
-            console.log(`[chat] PDF ${doc.name} too large for native (${((base64Data?.length || 0) / 1_000_000).toFixed(1)}MB base64), using text`)
+            // Large PDF or no native data: use extracted text
             documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
-          } else if (base64Data) {
-            // Large PDF without extracted text: try native as last resort (better than nothing)
-            console.warn(`[chat] Large PDF ${doc.name} has no extracted text, sending native despite size`)
-            documentBlocks.push({
-              type: 'document',
-              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-              title: doc.name,
-            })
           }
-        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && doc.fileUrl?.startsWith('data:image/')) {
-          // Images: send as native image blocks for Claude vision
-          const base64Data = doc.fileUrl.split(',')[1]
+        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
+          const base64Data = fileUrl.split(',')[1]
           const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
           documentBlocks.push({
             type: 'image',
             source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
           })
         } else if (doc.content) {
-          // Fallback for text files and docs without fileUrl — include document ID for DOCX editing
           documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
         }
       }
     }
 
     if (projectId) {
+      // Step 1: metadata + content only (skip fileUrl for large files)
       const projectDocs = await prisma.aIDocument.findMany({
         where: { projectId },
         take: 20,
+        select: { id: true, name: true, fileType: true, fileSize: true, content: true },
       })
+      // Step 2: only load fileUrl for native-eligible files
+      const projNativeIds = projectDocs
+        .filter(d =>
+          !documentIds?.includes(d.id) && (
+            (d.fileType === 'pdf' && (d.fileSize || 0) <= 5 * 1024 * 1024) ||
+            (['png', 'jpg', 'jpeg', 'webp'].includes(d.fileType || ''))
+          )
+        )
+        .map(d => d.id)
+      const projNativeMap = new Map<string, string | null>()
+      if (projNativeIds.length > 0) {
+        const projNativeDocs = await prisma.aIDocument.findMany({
+          where: { id: { in: projNativeIds } },
+          select: { id: true, fileUrl: true },
+        })
+        for (const nd of projNativeDocs) projNativeMap.set(nd.id, nd.fileUrl)
+      }
+
       for (const doc of projectDocs) {
         if (documentIds?.includes(doc.id)) continue
         if (doc.fileType === 'docx') hasDocxAttachments = true
+        const fileUrl = projNativeMap.get(doc.id) || null
 
         if (doc.fileType === 'pdf') {
-          const base64Data = doc.fileUrl?.startsWith('data:application/pdf;base64,')
-            ? doc.fileUrl.split(',')[1]
+          const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
+            ? fileUrl.split(',')[1]
             : null
           if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && documentBlocks.length < 5) {
             documentBlocks.push({
@@ -490,9 +518,9 @@ export async function POST(req: NextRequest) {
             if (documentContext.length > 200000) break
             documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
           }
-        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && doc.fileUrl?.startsWith('data:image/')) {
+        } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
           if (documentBlocks.length >= 10) break
-          const base64Data = doc.fileUrl.split(',')[1]
+          const base64Data = fileUrl.split(',')[1]
           const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
           documentBlocks.push({
             type: 'image',
