@@ -574,9 +574,8 @@ export async function POST(req: NextRequest) {
                       source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                     })
                     nativeBlockTokens += estimatedTokens
-                    // Also add fallback text so Claude knows the doc exists even if native block is stripped
-                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Dit gescande PDF-document is als native PDF bijgevoegd. Analyseer de visuele inhoud van het PDF-document hierboven.]\n--- Einde ---`
-                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[Gescand PDF-document — geen tekst beschikbaar.]\n--- Einde ---`
+                    // Don't add misleading system prompt text — let the native block speak for itself
+                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[PDF-document — de inhoud is alleen beschikbaar als bijgevoegd document.]\n--- Einde ---`
                     console.log(`[chat] PDF ${doc.name}: scanned — sent as native document block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
                   } else {
                     // Base64 load failed or too large
@@ -678,13 +677,16 @@ export async function POST(req: NextRequest) {
                     source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                   })
                   nativeBlockTokens += estimatedTokens
-                  // Include extracted text too if available (gives Claude both vision + text)
+                  // Do NOT add system prompt text about this doc being "scanned" or "native" —
+                  // that misleads Claude into thinking the document is unreadable.
+                  // The native block in the user message speaks for itself.
                   if (hasText) {
-                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Dit document is ook als native PDF bijgevoegd voor visuele analyse.]\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                    // Include extracted text as additional context (useful for search/fallback)
+                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
                     pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
                   } else {
-                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Dit document is als native PDF bijgevoegd voor visuele analyse.]\n--- Einde ---`
-                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[Gescand PDF-document — geen tekst beschikbaar.]\n--- Einde ---`
+                    // No text fallback for retry (native block is the only representation)
+                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[PDF-document — de inhoud is alleen beschikbaar als bijgevoegd document.]\n--- Einde ---`
                   }
                   console.log(`[chat] PDF ${doc.name}: native block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens, text=${hasText ? doc.content!.length : 0})`)
                 } else if (hasText) {
