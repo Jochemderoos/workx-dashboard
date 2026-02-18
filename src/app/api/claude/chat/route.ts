@@ -574,8 +574,8 @@ export async function POST(req: NextRequest) {
                       source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                     })
                     nativeBlockTokens += estimatedTokens
-                    // Don't add misleading system prompt text — let the native block speak for itself
-                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[PDF-document — de inhoud is alleen beschikbaar als bijgevoegd document.]\n--- Einde ---`
+                    // Don't add to documentContext — let the native block speak for itself
+                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[PDF-document — geen tekst beschikbaar.]\n--- Einde ---`
                     console.log(`[chat] PDF ${doc.name}: scanned — sent as native document block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
                   } else {
                     // Base64 load failed or too large
@@ -677,16 +677,14 @@ export async function POST(req: NextRequest) {
                     source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                   })
                   nativeBlockTokens += estimatedTokens
-                  // Do NOT add system prompt text about this doc being "scanned" or "native" —
-                  // that misleads Claude into thinking the document is unreadable.
-                  // The native block in the user message speaks for itself.
+                  // When native block is sent: do NOT add extracted text to documentContext.
+                  // Poor OCR text in the system prompt misleads Claude into thinking the
+                  // document is corrupted. Let the native block speak for itself entirely.
+                  // Only save text to pdfTextFallback (for retry if API rejects native blocks).
                   if (hasText) {
-                    // Include extracted text as additional context (useful for search/fallback)
-                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
                     pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
                   } else {
-                    // No text fallback for retry (native block is the only representation)
-                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[PDF-document — de inhoud is alleen beschikbaar als bijgevoegd document.]\n--- Einde ---`
+                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[PDF-document — geen tekst beschikbaar.]\n--- Einde ---`
                   }
                   console.log(`[chat] PDF ${doc.name}: native block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens, text=${hasText ? doc.content!.length : 0})`)
                 } else if (hasText) {
@@ -1042,6 +1040,10 @@ Beschikbare templates:${templatesContext}`
     }
     if (documentContext) {
       systemPrompt += `\n\n## Documenten${documentContext}`
+    }
+    if (documentBlocks.length > 0) {
+      systemPrompt += `\n\n## Bijgevoegde PDF-documenten
+Er zijn ${documentBlocks.length} PDF-document(en) als bijlage meegestuurd in het gebruikersbericht. Je kunt de pagina's van deze documenten DIRECT LEZEN en analyseren — ze zijn als afbeeldingen beschikbaar. Lees de inhoud en beantwoord de vraag van de gebruiker op basis van wat je in het document ziet.`
     }
     if (hasDocxAttachments) {
       systemPrompt += `\n\n## Word-document bewerking
