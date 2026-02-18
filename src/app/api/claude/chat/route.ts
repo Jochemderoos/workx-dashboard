@@ -477,6 +477,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Check API key early (before starting stream)
+    const apiKey = process.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'ANTHROPIC_API_KEY niet geconfigureerd' }, { status: 500 })
+    }
+
+    // Start SSE stream IMMEDIATELY so client fetch() resolves in <1 second.
+    // Heavy processing (RAG, embeddings) runs INSIDE the stream with status updates.
+    // This prevents the 30+ second wait before response headers, and ensures
+    // stale connections after a Vercel deploy fail fast instead of hanging.
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        let fullText = ''
+        let hasWebSearch = false
+        const citations: Array<{ url: string; title: string }> = []
+
+        try {
+          // Notify client immediately that connection is alive
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start', conversationId: convId })}\n\n`))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Bronnen doorzoeken...' })}\n\n`))
+
     // Smart routing: determine if this question needs employment law knowledge sources
     // useKnowledgeSources=false from frontend explicitly disables; otherwise auto-detect
     const shouldUseKnowledgeSources = useKnowledgeSources === false
@@ -895,12 +917,6 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
       console.warn(`[chat] Context still over limit after trimming: ~${totalTokens} tokens`)
     }
 
-    // Check API key
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY niet geconfigureerd' }, { status: 500 })
-    }
-
     // Web search always available — Claude decides when to search (like Claude.ai)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tools: any[] = [{
@@ -977,15 +993,8 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
     const client = new Anthropic({ apiKey, timeout: 300000 })
     console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, tools=${tools.length}`)
 
-    // Stream the response
-    const encoder = new TextEncoder()
-    const stream = new ReadableStream({
-      async start(controller) {
-        let fullText = ''
-        let hasWebSearch = false
-        const citations: Array<{ url: string; title: string }> = []
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Claude starten...' })}\n\n`))
 
-        try {
           // Model selection: default Sonnet, optionally Opus for deep analysis
           const modelId = requestedModel === 'opus' ? 'claude-opus-4-6' : 'claude-sonnet-4-5-20250929'
           const isOpus = modelId.includes('opus')
@@ -1003,9 +1012,6 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           }
 
           const anthropicStream = client.messages.stream(streamParams)
-
-          // Send conversationId immediately
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start', conversationId: convId })}\n\n`))
 
           // Stream thinking and text via raw stream events
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1265,6 +1271,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
       },
     })
   } catch (error) {
