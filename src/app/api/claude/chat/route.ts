@@ -1341,6 +1341,10 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           // Helper: set up stream event listeners and await final message
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const runStream = async (params: any): Promise<any> => {
+            // Enable PDF document blocks via beta header when we have native blocks
+            if (documentBlocks.length > 0) {
+              params.betas = ['pdfs-2024-09-25']
+            }
             const stream = client.messages.stream(params)
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
