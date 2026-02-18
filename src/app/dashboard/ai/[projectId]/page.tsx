@@ -103,6 +103,13 @@ export default function ProjectDetailPage() {
   const [showAddMember, setShowAddMember] = useState(false)
   const [memberSearchQuery, setMemberSearchQuery] = useState('')
 
+  // PDF split modal
+  const [splitDoc, setSplitDoc] = useState<ProjectDocument | null>(null)
+  const [splitPageCount, setSplitPageCount] = useState<number>(0)
+  const [splitRangesInput, setSplitRangesInput] = useState('')
+  const [isSplitting, setIsSplitting] = useState(false)
+  const [splitLoading, setSplitLoading] = useState(false)
+
   // Auto-collapse main sidebar when on project page
   useEffect(() => {
     setSidebarCollapsed(true)
@@ -205,6 +212,83 @@ export default function ProjectDetailPage() {
         ? prev.filter(id => id !== docId)
         : [...prev, docId]
     )
+  }
+
+  const openSplitModal = async (doc: ProjectDocument) => {
+    setSplitDoc(doc)
+    setSplitRangesInput('')
+    setSplitLoading(true)
+    try {
+      const res = await fetch(`/api/claude/documents/${doc.id}/split`)
+      if (!res.ok) throw new Error('Kon PDF niet laden')
+      const data = await res.json()
+      setSplitPageCount(data.pageCount)
+      // Default: split per page
+      setSplitRangesInput(
+        Array.from({ length: data.pageCount }, (_, i) => String(i + 1)).join(', ')
+      )
+    } catch {
+      toast.error('Kon paginatelling niet ophalen')
+      setSplitDoc(null)
+    } finally {
+      setSplitLoading(false)
+    }
+  }
+
+  const parsePageRanges = (input: string, totalPages: number): { start: number; end: number; label: string }[] | null => {
+    const ranges: { start: number; end: number; label: string }[] = []
+    const parts = input.split(',').map(s => s.trim()).filter(Boolean)
+    for (const part of parts) {
+      const dashMatch = part.match(/^(\d+)\s*-\s*(\d+)$/)
+      if (dashMatch) {
+        const start = parseInt(dashMatch[1])
+        const end = parseInt(dashMatch[2])
+        if (start < 1 || end > totalPages || start > end) return null
+        ranges.push({ start, end, label: `p${start}-${end}` })
+      } else if (/^\d+$/.test(part)) {
+        const page = parseInt(part)
+        if (page < 1 || page > totalPages) return null
+        ranges.push({ start: page, end: page, label: `p${page}` })
+      } else {
+        return null
+      }
+    }
+    return ranges.length > 0 ? ranges : null
+  }
+
+  const executeSplit = async () => {
+    if (!splitDoc || !splitPageCount) return
+    const ranges = parsePageRanges(splitRangesInput, splitPageCount)
+    if (!ranges) {
+      toast.error('Ongeldig paginaformaat. Gebruik bijv. "1-3, 4-6" of "1, 2, 3"')
+      return
+    }
+    setIsSplitting(true)
+    try {
+      const res = await fetch(`/api/claude/documents/${splitDoc.id}/split`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageRanges: ranges }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Splitsen mislukt' }))
+        throw new Error(data.error)
+      }
+      const { documents: newDocs } = await res.json()
+      // Add new documents to project state
+      setProject(prev => prev ? {
+        ...prev,
+        documents: [...(newDocs as ProjectDocument[]), ...prev.documents],
+      } : null)
+      // Select new documents
+      setSelectedDocIds(prev => [...prev, ...newDocs.map((d: ProjectDocument) => d.id)])
+      toast.success(`PDF gesplitst in ${newDocs.length} documenten`)
+      setSplitDoc(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Splitsen mislukt')
+    } finally {
+      setIsSplitting(false)
+    }
   }
 
   const formatFileSize = (bytes: number) => {
@@ -357,6 +441,15 @@ export default function ProjectDetailPage() {
                           <p className="text-[11px] text-white/60 truncate">{doc.name}</p>
                           <p className="text-[9px] text-white/20">{formatFileSize(doc.fileSize)}</p>
                         </div>
+                        {doc.fileType === 'pdf' && (
+                          <button
+                            onClick={() => openSplitModal(doc)}
+                            title="PDF splitsen"
+                            className="p-1 rounded text-white/10 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <Icons.scissors size={11} />
+                          </button>
+                        )}
                         <button
                           onClick={() => deleteDocument(doc.id)}
                           className="p-1 rounded text-white/10 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
@@ -515,6 +608,127 @@ export default function ProjectDetailPage() {
           placeholder={`Stel een vraag over ${project.title}...`}
         />
       </div>
+
+      {/* PDF Split Modal */}
+      {splitDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => !isSplitting && setSplitDoc(null)}>
+          <div className="bg-workx-gray border border-white/10 rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Icons.scissors size={16} className="text-blue-400" />
+                <h3 className="text-sm font-medium text-white">PDF splitsen</h3>
+              </div>
+              <button onClick={() => !isSplitting && setSplitDoc(null)} className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors">
+                <Icons.x size={16} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <p className="text-[11px] text-white/40 mb-1">Document</p>
+                <p className="text-sm text-white/80 truncate">{splitDoc.name}</p>
+              </div>
+
+              {splitLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="animate-spin"><Icons.refresh size={18} className="text-white/30" /></div>
+                  <span className="ml-2 text-xs text-white/30">PDF laden...</span>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-[11px] text-white/40 mb-1">Aantal pagina&apos;s: {splitPageCount}</p>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] text-white/40 block mb-1.5">
+                      Paginabereiken (gescheiden door komma&apos;s)
+                    </label>
+                    <input
+                      type="text"
+                      value={splitRangesInput}
+                      onChange={(e) => setSplitRangesInput(e.target.value)}
+                      placeholder="bijv. 1-3, 4-6, 7"
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-blue-500/40"
+                      disabled={isSplitting}
+                    />
+                    <p className="text-[10px] text-white/20 mt-1.5">
+                      Gebruik &quot;1-3&quot; voor een bereik of &quot;5&quot; voor een losse pagina. Meerdere bereiken scheiden met komma&apos;s.
+                    </p>
+                  </div>
+
+                  {/* Quick split buttons */}
+                  {splitPageCount > 1 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => setSplitRangesInput(
+                          Array.from({ length: splitPageCount }, (_, i) => String(i + 1)).join(', ')
+                        )}
+                        className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors"
+                        disabled={isSplitting}
+                      >
+                        Per pagina
+                      </button>
+                      {splitPageCount > 2 && (
+                        <button
+                          onClick={() => {
+                            const half = Math.ceil(splitPageCount / 2)
+                            setSplitRangesInput(`1-${half}, ${half + 1}-${splitPageCount}`)
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors"
+                          disabled={isSplitting}
+                        >
+                          In tweeen
+                        </button>
+                      )}
+                      {splitPageCount > 3 && (
+                        <button
+                          onClick={() => {
+                            const third = Math.ceil(splitPageCount / 3)
+                            const twoThirds = Math.ceil(2 * splitPageCount / 3)
+                            setSplitRangesInput(`1-${third}, ${third + 1}-${twoThirds}, ${twoThirds + 1}-${splitPageCount}`)
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors"
+                          disabled={isSplitting}
+                        >
+                          In drieen
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 px-4 py-3 border-t border-white/5">
+              <button
+                onClick={() => setSplitDoc(null)}
+                disabled={isSplitting}
+                className="px-3 py-1.5 rounded-lg text-[11px] text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={executeSplit}
+                disabled={isSplitting || splitLoading || !splitRangesInput.trim()}
+                className="px-4 py-1.5 rounded-lg bg-blue-500 text-white text-[11px] font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isSplitting ? (
+                  <>
+                    <div className="animate-spin"><Icons.refresh size={12} /></div>
+                    Splitsen...
+                  </>
+                ) : (
+                  <>
+                    <Icons.scissors size={12} />
+                    Splitsen
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

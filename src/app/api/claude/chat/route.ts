@@ -34,6 +34,15 @@ function estimateTokens(text: string): number {
 // 7MB base64 ≈ 5MB file ≈ 80-100 pages — fits comfortably with system prompt.
 const MAX_NATIVE_PDF_BASE64_LEN = 7_000_000
 
+// Token budget for native PDF/image blocks. System prompt + knowledge sources +
+// templates + conversation can use 100K+ tokens, so cap native blocks to leave room.
+const MAX_NATIVE_BLOCK_TOKENS = 80_000
+
+function estimatePdfBlockTokens(base64Len: number): number {
+  const estimatedPages = Math.max(1, Math.ceil(base64Len / 50000))
+  return estimatedPages * 1500
+}
+
 const SYSTEM_PROMPT = `# REGEL 1 — LEES DIT ALLEREERST — STEL VRAGEN VOOR JE ANTWOORD GEEFT
 
 Bij ELKE open casusvraag, strategievraag of vraag waarbij feiten ontbreken:
@@ -405,6 +414,7 @@ export async function POST(req: NextRequest) {
     const documentBlocks: any[] = []  // Native document blocks for Claude API
     let hasDocxAttachments = false
     let pdfTextFallback = '' // Text for PDFs sent as native blocks (used if API rejects payload)
+    let nativeBlockTokens = 0 // Running total of estimated tokens from native blocks
 
     // Helper: check if document has usable extracted text (not empty/placeholder)
     const hasUsableContent = (d: { content: string | null }) =>
@@ -452,36 +462,34 @@ export async function POST(req: NextRequest) {
           const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
             ? fileUrl.split(',')[1]
             : null
-          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN) {
-            // Small/medium PDF: native block (best quality — Claude sees layout, tables, images)
+          const blockTokens = base64Data ? estimatePdfBlockTokens(base64Data.length) : 0
+          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= MAX_NATIVE_BLOCK_TOKENS) {
+            // Small/medium PDF within budget: native block (best quality)
             documentBlocks.push({
               type: 'document',
               source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
               title: doc.name,
             })
+            nativeBlockTokens += blockTokens
             if (doc.content) {
               pdfTextFallback += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
             }
           } else if (hasUsableContent(doc)) {
-            // Large PDF with good extracted text: use text (efficient, always fits)
+            // Large PDF or budget exceeded, with good extracted text: use text
             documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+          } else if (base64Data && nativeBlockTokens + blockTokens <= MAX_NATIVE_BLOCK_TOKENS) {
+            // Scanned PDF WITHOUT text: native if it fits in budget
+            console.log(`[chat] Scanned PDF ${doc.name}: sending native (~${Math.ceil(base64Data.length / 50000)} pages, ~${blockTokens} tokens)`)
+            documentBlocks.push({
+              type: 'document',
+              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+              title: doc.name,
+            })
+            nativeBlockTokens += blockTokens
           } else if (base64Data) {
-            // Large PDF WITHOUT text (scanned/secured): must send native — only way to read it
-            // Check if it fits in context budget (~1500 tokens/page, ~50KB base64/page)
             const estimatedPages = Math.ceil(base64Data.length / 50000)
-            const estimatedTokens = estimatedPages * 1500
-            const systemTokens = estimateTokens(SYSTEM_PROMPT) + 10000 // system prompt + buffer
-            if (estimatedTokens + systemTokens < 190000) {
-              console.log(`[chat] Scanned PDF ${doc.name}: sending native (~${estimatedPages} pages, ~${estimatedTokens} tokens)`)
-              documentBlocks.push({
-                type: 'document',
-                source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-                title: doc.name,
-              })
-            } else {
-              console.warn(`[chat] Scanned PDF ${doc.name} too large even for native (~${estimatedPages} pages)`)
-              documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n[Dit is een gescand PDF-document van ~${estimatedPages} pagina's. De tekst kon niet automatisch worden geëxtraheerd. Het document is te groot om in zijn geheel te verwerken. Upload het document opnieuw in kleinere delen, of lever het als tekstbestand aan.]\n--- Einde ---`
-            }
+            console.warn(`[chat] PDF ${doc.name} exceeds native budget (~${estimatedPages} pages, budget: ${nativeBlockTokens}/${MAX_NATIVE_BLOCK_TOKENS})`)
+            documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n[Dit is een gescand PDF-document van ~${estimatedPages} pagina's. De tekst kon niet automatisch worden geëxtraheerd. Het document is te groot om in zijn geheel te verwerken. Upload het document opnieuw in kleinere delen, of lever het als tekstbestand aan.]\n--- Einde ---`
           }
         } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
           const base64Data = fileUrl.split(',')[1]
@@ -490,6 +498,7 @@ export async function POST(req: NextRequest) {
             type: 'image',
             source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
           })
+          nativeBlockTokens += 1600
         } else if (doc.content) {
           documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
         }
@@ -531,38 +540,40 @@ export async function POST(req: NextRequest) {
           const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
             ? fileUrl.split(',')[1]
             : null
-          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && documentBlocks.length < 5) {
+          const blockTokens = base64Data ? estimatePdfBlockTokens(base64Data.length) : 0
+          if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= MAX_NATIVE_BLOCK_TOKENS) {
             documentBlocks.push({
               type: 'document',
               source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
               title: doc.name,
             })
+            nativeBlockTokens += blockTokens
             if (doc.content) {
               pdfTextFallback += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
             }
           } else if (hasUsableContent(doc)) {
             if (documentContext.length > 200000) break
             documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-          } else if (base64Data && documentBlocks.length < 5) {
-            // Scanned PDF: send native if it fits
-            const estimatedPages = Math.ceil(base64Data.length / 50000)
-            const estimatedTokens = estimatedPages * 1500
-            if (estimatedTokens + estimateTokens(SYSTEM_PROMPT) + 10000 < 190000) {
-              documentBlocks.push({
-                type: 'document',
-                source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-                title: doc.name,
-              })
-            }
+          } else if (base64Data && nativeBlockTokens + blockTokens <= MAX_NATIVE_BLOCK_TOKENS) {
+            // Scanned PDF: send native if it fits in budget
+            documentBlocks.push({
+              type: 'document',
+              source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+              title: doc.name,
+            })
+            nativeBlockTokens += blockTokens
+          } else if (base64Data) {
+            console.warn(`[chat] Project PDF ${doc.name} skipped: budget full (${nativeBlockTokens}/${MAX_NATIVE_BLOCK_TOKENS})`)
           }
         } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
-          if (documentBlocks.length >= 10) break
+          if (nativeBlockTokens + 1600 > MAX_NATIVE_BLOCK_TOKENS) break
           const base64Data = fileUrl.split(',')[1]
           const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
           documentBlocks.push({
             type: 'image',
             source: { type: 'base64', media_type: mimeMap[doc.fileType || 'png'] || 'image/png', data: base64Data },
           })
+          nativeBlockTokens += 1600
         } else if (doc.content) {
           if (documentContext.length > 200000) break
           documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
@@ -1063,8 +1074,40 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
       }
       console.log(`[chat] After text conversion: ~${totalTokens} tokens`)
     }
+    // If still over limit, aggressively trim system prompt (knowledge sources are largest contributor)
     if (totalTokens > MAX_CONTEXT) {
-      console.warn(`[chat] Context still over limit after trimming: ~${totalTokens} tokens`)
+      console.warn(`[chat] Context still over limit (~${totalTokens} tokens). Trimming system prompt.`)
+      // Trim sources context: keep only first 100K chars (most relevant passages)
+      const sourceMarker = '## Kennisbronnen — Meegeleverde Passages'
+      const sourceIdx = systemPrompt.indexOf(sourceMarker)
+      if (sourceIdx > -1) {
+        const beforeSources = systemPrompt.slice(0, sourceIdx)
+        const afterSourcesMatch = systemPrompt.indexOf('\n\n## ', sourceIdx + sourceMarker.length)
+        const sourcesSection = afterSourcesMatch > -1
+          ? systemPrompt.slice(sourceIdx, afterSourcesMatch)
+          : systemPrompt.slice(sourceIdx)
+        const restOfPrompt = afterSourcesMatch > -1 ? systemPrompt.slice(afterSourcesMatch) : ''
+        // Keep only first 100K chars of sources (vs up to 300K+ normally)
+        const trimmedSources = sourcesSection.slice(0, 100000)
+        systemPrompt = beforeSources + trimmedSources + (trimmedSources.length < sourcesSection.length ? '\n\n[Kennisbronnen ingekort wegens documentgrootte]' : '') + restOfPrompt
+        // Recalculate
+        totalTokens = estimateTokens(systemPrompt)
+        for (const msg of msgs) {
+          if (typeof msg.content === 'string') {
+            totalTokens += estimateTokens(msg.content)
+          } else if (Array.isArray(msg.content)) {
+            for (const block of msg.content) {
+              if (block.type === 'text') totalTokens += estimateTokens(block.text || '')
+              if (block.type === 'document') totalTokens += estimatePdfBlockTokens(block.source?.data?.length || 0)
+              if (block.type === 'image') totalTokens += 1600
+            }
+          }
+        }
+        console.log(`[chat] After source trimming: ~${totalTokens} tokens`)
+      }
+    }
+    if (totalTokens > MAX_CONTEXT) {
+      console.warn(`[chat] Context still over limit after all trimming: ~${totalTokens} tokens`)
     }
 
     // Web search always available — Claude decides when to search (like Claude.ai)
@@ -1141,7 +1184,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
     }
 
     const client = new Anthropic({ apiKey, timeout: 300000 })
-    console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, tools=${tools.length}`)
+    console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, tools=${tools.length}, native blocks=${documentBlocks.length} (~${nativeBlockTokens} tokens), est total=~${totalTokens} tokens`)
 
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Claude starten...' })}\n\n`))
 
