@@ -980,17 +980,70 @@ ${markdownHtml}
       if (pollingStopped) return // Polling already handled everything
 
       clearTimeout(timeoutId)
-      setStreamingMsgId(null)
 
-      // Flush final content into state if not already done by 'done' event
+      // Stream ended — check if we got content
       if (streamedText) {
+        setStreamingMsgId(null)
+        // Flush final content into state if not already done by 'done' event
         setMessages(prev => prev.map(m =>
           m.id === assistantMsgId && !m.content ? { ...m, content: streamedText } : m
         ))
-      }
+      } else if (activeConvId) {
+        // Stream closed without content — Vercel buffered the response.
+        // Fall back to polling: the server is still processing and will save to DB.
+        console.log('[ClaudeChat] Stream ended without content — starting poll fallback')
+        setStatusText('Claude verwerkt je vraag...')
+        await new Promise<void>((resolve) => {
+          const endTime = Date.now() + 300000 // Max 5 minutes
+          const poll = setInterval(async () => {
+            if (Date.now() > endTime) {
+              clearInterval(poll)
+              setStreamingMsgId(null)
+              setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
+              setStatusText('')
+              toast.error('Claude deed er te lang over. Probeer het opnieuw.', { duration: 10000 })
+              resolve()
+              return
+            }
+            try {
+              const pollRes = await fetch(`/api/claude/conversations/${activeConvId}`)
+              if (!pollRes.ok) return
+              const data = await pollRes.json()
+              const msgs = data.messages || []
+              const lastAssistant = [...msgs].reverse().find((m: { role: string }) => m.role === 'assistant')
+              if (lastAssistant?.content && lastAssistant.content.length > 10 && !lastAssistant.content.startsWith('[Fout:')) {
+                clearInterval(poll)
+                console.log('[ClaudeChat] Got response via polling')
 
-      if (!streamedText) {
-        // Remove empty assistant message
+                let finalText = lastAssistant.content
+                let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
+                const confMatch = finalText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+                if (confMatch) {
+                  confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
+                  finalText = finalText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+                }
+
+                setStreamingMsgId(null)
+                if (streamIntervalRef.current) {
+                  clearInterval(streamIntervalRef.current)
+                  streamIntervalRef.current = null
+                }
+                setStreamingContent('')
+                setMessages(prev => prev.map(m =>
+                  m.id === assistantMsgId ? { ...m, content: finalText, confidence, hasWebSearch: lastAssistant.hasWebSearch } : m
+                ))
+                setStatusText('')
+                onNewMessage?.()
+                setAttachedDocs([])
+                resolve()
+              }
+            } catch { /* poll errors non-fatal */ }
+          }, 3000)
+        })
+        return // Polling handled everything
+      } else {
+        // No convId and no content — can't poll
+        setStreamingMsgId(null)
         setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
         throw new Error('Claude gaf een leeg antwoord')
       }
