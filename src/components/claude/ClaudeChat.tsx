@@ -1048,9 +1048,11 @@ ${markdownHtml}
         const pollId = headerConvId || convId
         console.log('[ClaudeChat] Starting DB polling. pollId:', pollId, 'finished:', finished, 'streamedText.length:', streamedText.length)
         if (pollId) {
-          setStatusText('Antwoord ophalen...')
+          setStatusText('Claude verwerkt je vraag...')
           for (let attempt = 0; attempt < 60; attempt++) { // 60 * 2s = 120s max
             await new Promise(r => setTimeout(r, 2000))
+            const elapsed = (attempt + 1) * 2
+            setStatusText(`Claude verwerkt je vraag... (${elapsed}s)`)
             try {
               const resp = await fetch(`/api/claude/conversations/${pollId}`)
               if (!resp.ok) { console.log('[ClaudeChat] Poll', attempt, 'status:', resp.status); continue }
@@ -1067,6 +1069,7 @@ ${markdownHtml}
                   content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
                 }
                 console.log('[ClaudeChat] Response found via direct DB polling, content length:', content.length)
+                setLoadingProgress(100)
                 setStreamingMsgId(null)
                 if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
                 setStreamingContent('')
