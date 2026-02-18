@@ -944,6 +944,13 @@ ${markdownHtml}
       }
 
       // Read the stream (works when Claude responds fast enough)
+      // Hard fallback: cancel reader after 10s if no streamed content
+      const streamFallbackTimer = setTimeout(() => {
+        if (!streamedText && !finished) {
+          console.log('[ClaudeChat] No stream content after 10s — switching to DB polling')
+          try { reader.cancel() } catch { /* ignore */ }
+        }
+      }, 10000)
       let lastDataEvent = Date.now()
       try {
         while (true) {
@@ -1032,21 +1039,24 @@ ${markdownHtml}
         if (!finished) console.warn('[ClaudeChat] Stream ended unexpectedly, relying on polling')
       }
 
-      // Clean up parallel polling timer
+      // Clean up timers
+      clearTimeout(streamFallbackTimer)
       if (pollTimer) clearInterval(pollTimer)
 
       // Stream ended. If no response yet, poll DB directly with a simple for loop.
       if (!finished && !streamedText) {
         const pollId = headerConvId || convId
+        console.log('[ClaudeChat] Starting DB polling. pollId:', pollId, 'finished:', finished, 'streamedText.length:', streamedText.length)
         if (pollId) {
           setStatusText('Antwoord ophalen...')
-          for (let attempt = 0; attempt < 45; attempt++) { // 45 * 2s = 90s max
+          for (let attempt = 0; attempt < 60; attempt++) { // 60 * 2s = 120s max
             await new Promise(r => setTimeout(r, 2000))
             try {
               const resp = await fetch(`/api/claude/conversations/${pollId}`)
-              if (!resp.ok) continue
+              if (!resp.ok) { console.log('[ClaudeChat] Poll', attempt, 'status:', resp.status); continue }
               const data = await resp.json()
               const dbMsgs = data.messages || []
+              console.log('[ClaudeChat] Poll', attempt, ':', dbMsgs.length, 'messages, last role:', dbMsgs[dbMsgs.length - 1]?.role)
               const lastDb = dbMsgs[dbMsgs.length - 1]
               if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
                 let content = lastDb.content as string
