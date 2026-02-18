@@ -86,7 +86,7 @@ export default function ClaudeChat({
   const [annotationType, setAnnotationType] = useState<'comment' | 'correction' | 'warning'>('comment')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [annotations, setAnnotations] = useState<Record<string, any[]>>({})
-  const [optionsExpanded, setOptionsExpanded] = useState(false)
+  const [optionsExpanded, setOptionsExpanded] = useState(true)
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const thinkingContainerRef = useRef<HTMLDivElement>(null)
@@ -1368,31 +1368,31 @@ ${markdownHtml}
 
             {/* Model selector + Response option chips */}
             <div className="flex flex-wrap items-center gap-1.5">
-              {/* Model toggle */}
-              <div className="flex items-center rounded-lg border border-white/10 overflow-hidden mr-1">
+              {/* Model toggle — prominent with glow */}
+              <div className="flex items-center rounded-xl overflow-hidden mr-1.5 border border-white/10">
                 <button
                   onClick={() => setSelectedModel('sonnet')}
                   disabled={isLoading}
-                  className={`px-3 py-1.5 text-[11px] transition-all ${
+                  className={`px-3.5 py-2 text-[12px] font-medium transition-all ${
                     selectedModel === 'sonnet'
-                      ? 'bg-workx-lime/15 text-workx-lime font-medium'
-                      : 'bg-transparent text-white/35 hover:text-white/60'
+                      ? 'bg-workx-lime/20 text-workx-lime shadow-[inset_0_0_12px_rgba(249,255,133,0.1)]'
+                      : 'bg-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
                   } disabled:opacity-30`}
                   title="Sonnet — snel en slim, ideaal voor dagelijkse vragen"
                 >
-                  Sonnet <span className="text-[9px] opacity-60 ml-0.5">snel</span>
+                  Sonnet <span className="text-[9px] opacity-50 ml-0.5">snel</span>
                 </button>
                 <button
                   onClick={() => setSelectedModel('opus')}
                   disabled={isLoading}
-                  className={`px-3 py-1.5 text-[11px] transition-all border-l border-white/10 ${
+                  className={`px-3.5 py-2 text-[12px] font-medium transition-all border-l border-white/10 ${
                     selectedModel === 'opus'
-                      ? 'bg-purple-500/15 text-purple-400 font-medium'
-                      : 'bg-transparent text-white/35 hover:text-white/60'
+                      ? 'bg-purple-500/20 text-purple-300 shadow-[inset_0_0_12px_rgba(168,85,247,0.15)]'
+                      : 'bg-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
                   } disabled:opacity-30`}
                   title="Opus — diepste analyse, beste voor complexe juridische vragen"
                 >
-                  Opus <span className="text-[9px] opacity-60 ml-0.5">diep</span>
+                  Opus <span className="text-[9px] opacity-50 ml-0.5">diep</span>
                 </button>
               </div>
 
