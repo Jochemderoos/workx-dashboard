@@ -1022,25 +1022,48 @@ ${markdownHtml}
         if (!finished) console.warn('[ClaudeChat] Stream ended unexpectedly, relying on polling')
       }
 
-      // Stream ended. If no response yet, wait for polling to deliver.
-      if (!finished && !streamedText && pollTimer) {
-        setStatusText('Antwoord ophalen...')
-        await new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => resolve(), 90000) // 90s max
-          const check = setInterval(() => {
-            if (finished) { clearInterval(check); clearTimeout(timeout); resolve() }
-          }, 500)
-        })
-      }
-
-      // Clean up polling timer
+      // Clean up parallel polling timer
       if (pollTimer) clearInterval(pollTimer)
+
+      // Stream ended. If no response yet, poll DB directly with a simple for loop.
+      if (!finished && !streamedText) {
+        const pollId = headerConvId || convId
+        if (pollId) {
+          setStatusText('Antwoord ophalen...')
+          for (let attempt = 0; attempt < 45; attempt++) { // 45 * 2s = 90s max
+            await new Promise(r => setTimeout(r, 2000))
+            try {
+              const resp = await fetch(`/api/claude/conversations/${pollId}`)
+              if (!resp.ok) continue
+              const data = await resp.json()
+              const dbMsgs = data.messages || []
+              const lastDb = dbMsgs[dbMsgs.length - 1]
+              if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
+                let content = lastDb.content as string
+                let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
+                const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+                if (confMatch) {
+                  confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
+                  content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+                }
+                console.log('[ClaudeChat] Response found via direct DB polling')
+                setStreamingMsgId(null)
+                if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
+                setStreamingContent('')
+                setMessages(prev => prev.map(m =>
+                  m.id === assistantMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
+                ))
+                finished = true
+                break
+              }
+            } catch { /* ignore */ }
+          }
+        }
+      }
 
       if (finished) {
         clearTimeout(timeoutId)
-        // Response already displayed by done handler or displayPolledResponse
       } else if (streamedText) {
-        // Partial stream content — show what we have
         clearTimeout(timeoutId)
         setStreamingMsgId(null)
         if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
@@ -1050,7 +1073,7 @@ ${markdownHtml}
         ))
       } else {
         setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
-        throw new Error('Claude gaf een leeg antwoord')
+        throw new Error('Claude gaf geen antwoord. Probeer het opnieuw.')
       }
 
       onNewMessage?.()
