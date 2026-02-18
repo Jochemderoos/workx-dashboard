@@ -441,13 +441,31 @@ export async function POST(req: NextRequest) {
         let hasWebSearch = false
         const citations: Array<{ url: string; title: string }> = []
         const docLoadErrors: string[] = []
+        let lastStep = 'init'
+
+        // Watchdog: if stream hasn't produced delta content within 45s, send diagnostic error
+        // This ensures the user ALWAYS gets feedback, even if the function hangs or crashes silently
+        let watchdogFired = false
+        const watchdog = setTimeout(() => {
+          watchdogFired = true
+          console.error(`[chat] Watchdog fired at step: ${lastStep}`)
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+              type: 'error',
+              error: `Het laden duurde te lang (>45s). Laatste stap: "${lastStep}". ${docLoadErrors.length > 0 ? `Fouten: ${docLoadErrors.join('; ').slice(0, 150)}` : 'Geen fouten gelogd.'} Probeer het opnieuw.`,
+            })}\n\n`))
+            controller.close()
+          } catch { /* stream may already be closed */ }
+        }, 45000)
 
         try {
           // Notify client immediately that connection is alive
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'start', conversationId: convId })}\n\n`))
+          lastStep = 'start'
 
           // === DOCUMENT LOADING (inside stream to prevent gateway timeout) ===
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Documenten laden...' })}\n\n`))
+          lastStep = 'doc-load-start'
 
           let documentContext = ''
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -621,9 +639,11 @@ export async function POST(req: NextRequest) {
           if (docLoadErrors.length > 0) {
             console.warn(`[chat] Document load errors:`, docLoadErrors)
           }
+          lastStep = 'doc-load-done'
 
           // === KNOWLEDGE SOURCES ===
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Kennisbronnen doorzoeken...' })}\n\n`))
+          lastStep = 'sources-start'
 
     // Smart routing: determine if this question needs employment law knowledge sources
     // useKnowledgeSources=false from frontend explicitly disables; otherwise auto-detect
@@ -793,7 +813,9 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error('Error fetching sources:', err)
+      docLoadErrors.push(`sources: ${err instanceof Error ? err.message : String(err)}`)
     }
+    lastStep = 'sources-done'
 
     // Fetch available templates — so Claude knows what templates exist
     let templatesContext = ''
@@ -828,6 +850,7 @@ export async function POST(req: NextRequest) {
         }).join('')
       }
     } catch { /* templates not critical */ }
+    lastStep = 'templates-done'
 
     // Fetch project context from previous conversations (chat memory)
     let projectMemory = ''
@@ -860,6 +883,7 @@ export async function POST(req: NextRequest) {
         }
       } catch { /* project memory not critical */ }
     }
+    lastStep = 'memory-done'
 
     // Build system prompt
     let systemPrompt = SYSTEM_PROMPT
@@ -1194,10 +1218,12 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
       return result.slice(0, 50000)
     }
 
+    lastStep = 'build-messages-done'
     const client = new Anthropic({ apiKey, timeout: 300000 })
     console.log(`[chat] Streaming: ${systemPrompt.length} chars, ${msgs.length} messages, tools=${tools.length}, native blocks=${documentBlocks.length} (~${nativeBlockTokens} tokens), est total=~${totalTokens} tokens`)
 
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'Claude starten...' })}\n\n`))
+          lastStep = 'claude-api-start'
 
           // Model selection: default Sonnet, optionally Opus for deep analysis
           const modelId = requestedModel === 'opus' ? 'claude-opus-4-6' : 'claude-sonnet-4-5-20250929'
@@ -1236,6 +1262,11 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
 
           anthropicStream.on('text', (text) => {
             fullText += text
+            // Clear watchdog once we get actual content from Claude
+            if (fullText.length === text.length) {
+              clearTimeout(watchdog)
+              lastStep = 'claude-streaming'
+            }
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
           })
 
@@ -1468,7 +1499,8 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           const debugInfo = `[DEBUG: ${errMsg.slice(0, 150)}${docLoadErrors.length > 0 ? ` | docErrors: ${docLoadErrors.join('; ').slice(0, 100)}` : ''}]`
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', error: `${userError}\n\n${debugInfo}` })}\n\n`))
         } finally {
-          controller.close()
+          clearTimeout(watchdog)
+          if (!watchdogFired) controller.close()
         }
       },
     })
