@@ -65,8 +65,13 @@ export async function POST(req: NextRequest) {
 
     // Get metadata from first chunk
     const meta = chunks[0]
-    const fullBase64 = chunks.map(c => c.data).join('')
-    const buffer = Buffer.from(fullBase64, 'base64')
+    // IMPORTANT: Decode each chunk separately and concatenate buffers.
+    // Each chunk is independently base64-encoded, so concatenating the base64
+    // strings produces invalid base64 (internal padding chars). Decoding each
+    // chunk individually and concatenating the resulting buffers gives the
+    // correct full file.
+    const chunkBuffers = chunks.map(c => Buffer.from(c.data, 'base64'))
+    const buffer = Buffer.concat(chunkBuffers)
     const ext = (meta.fileType || 'pdf').toLowerCase()
 
     console.log(`[upload] Assembled ${chunks.length} chunks: ${buffer.length} bytes for ${meta.fileName}`)

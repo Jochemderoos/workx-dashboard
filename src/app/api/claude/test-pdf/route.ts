@@ -81,8 +81,17 @@ export async function GET(req: NextRequest) {
     info.internalPaddingChars = internalPadding
     info.hasCorruptedBase64 = internalPadding > 0
 
-    // Re-encode through Buffer to fix corrupted base64 from chunked uploads
-    const buffer = Buffer.from(rawBase64, 'base64')
+    // Fix corrupted base64 from chunked uploads: split at internal padding
+    // boundaries, decode each segment separately, then re-encode
+    let buffer: Buffer
+    if (internalPadding > 0) {
+      const segments = rawBase64.split(/(?<==)(?=[A-Za-z0-9+/])/)
+      info.segments = segments.length
+      const buffers = segments.map(seg => Buffer.from(seg, 'base64'))
+      buffer = Buffer.concat(buffers)
+    } else {
+      buffer = Buffer.from(rawBase64, 'base64')
+    }
     if (buffer.length < 100) {
       return NextResponse.json({ ...info, error: 'Buffer te klein na decode', bufferSize: buffer.length })
     }
