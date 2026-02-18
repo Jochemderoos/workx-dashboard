@@ -634,13 +634,13 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Pre-load base64 ONLY for ATTACHED scanned PDFs and images (not project docs).
-          // Project scanned PDFs are skipped: loading multi-MB base64 from Postgres for
-          // every question is too slow (causes 30-40s delays on cold starts).
+          // Pre-load base64 for ALL ATTACHED PDFs and images (not project docs).
+          // This ensures native document blocks work for ALL attached PDFs —
+          // including PDFs with some OCR text that would otherwise skip the native path.
           const docsNeedingBase64 = allDocs.filter(({ doc, isAttached }) => {
             if (!isAttached) return false // Never pre-load project docs
             if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) return true
-            if (doc.fileType === 'pdf' && !hasUsableContent(doc) && (doc.fileSize || 0) <= 5 * 1024 * 1024) return true
+            if (doc.fileType === 'pdf' && (doc.fileSize || 0) <= 5 * 1024 * 1024) return true
             return false
           })
           const base64Map = new Map<string, string | null>()
@@ -662,13 +662,12 @@ export async function POST(req: NextRequest) {
           for (const { doc, prefix, isAttached } of allDocs) {
             if (doc.fileType === 'docx') hasDocxAttachments = true
             if (doc.fileType === 'pdf') {
-              if (hasUsableContent(doc)) {
-                // Text-based PDF (attached or project): always include extracted text (fast)
-                documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-                pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-                console.log(`[chat] PDF ${doc.name}: text (${doc.content!.length} chars)`)
-              } else if (isAttached && base64Map.has(doc.id)) {
-                // Attached scanned PDF: use pre-loaded base64 as native document block
+              const hasText = hasUsableContent(doc)
+
+              // ATTACHED PDFs with pre-loaded base64: ALWAYS send as native block.
+              // This ensures Claude can "see" the actual pages — even if the PDF has
+              // some OCR text, the native block gives vision access to the full document.
+              if (isAttached && base64Map.has(doc.id)) {
                 const fileUrl = base64Map.get(doc.id)
                 const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
                 const sizeMB = (doc.fileSize || 0) / (1024 * 1024)
@@ -679,21 +678,34 @@ export async function POST(req: NextRequest) {
                     source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
                   })
                   nativeBlockTokens += estimatedTokens
-                  // ALSO add note to documentContext + pdfTextFallback so Claude knows the doc exists
-                  // even if native blocks are stripped during retry
-                  documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Dit gescande PDF-document is als native PDF bijgevoegd. Analyseer de visuele inhoud van het PDF-document hierboven.]\n--- Einde ---`
-                  pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[Gescand PDF-document — geen tekst beschikbaar. Het document kon niet als afbeelding worden verwerkt.]\n--- Einde ---`
-                  console.log(`[chat] PDF ${doc.name}: attached scanned — native block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens)`)
+                  // Include extracted text too if available (gives Claude both vision + text)
+                  if (hasText) {
+                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Dit document is ook als native PDF bijgevoegd voor visuele analyse.]\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                  } else {
+                    documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Dit document is als native PDF bijgevoegd voor visuele analyse.]\n--- Einde ---`
+                    pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n[Gescand PDF-document — geen tekst beschikbaar.]\n--- Einde ---`
+                  }
+                  console.log(`[chat] PDF ${doc.name}: native block (${sizeMB.toFixed(1)}MB, ~${estimatedTokens} tokens, text=${hasText ? doc.content!.length : 0})`)
+                } else if (hasText) {
+                  // Too large for native block but has text: use text
+                  documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                  pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                  console.log(`[chat] PDF ${doc.name}: too large for native block, using text (${doc.content!.length} chars)`)
                 } else {
                   documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF (${sizeMB.toFixed(1)}MB) — splits het document op via ✂️ bij Documenten.]\n--- Einde ---`
-                  console.log(`[chat] PDF ${doc.name}: attached scanned — too large or over budget (base64: ${base64Data ? 'ok' : 'null'}, size: ${sizeMB.toFixed(1)}MB)`)
+                  console.log(`[chat] PDF ${doc.name}: too large for native block, no text (${sizeMB.toFixed(1)}MB)`)
                 }
+              } else if (hasText) {
+                // Text-based PDF (not in base64Map or project doc): use extracted text
+                documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                pdfTextFallback += `\n\n--- ${prefix}${doc.name} ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+                console.log(`[chat] PDF ${doc.name}: text (${doc.content!.length} chars)`)
               } else if (isAttached) {
-                // Attached scanned PDF without pre-loaded base64: try loading (sequential fallback)
+                // Attached PDF without pre-loaded base64: try loading (sequential fallback)
                 await processPdfDoc(doc, prefix)
               } else {
                 // Project scanned PDF (NOT attached): skip base64 loading entirely.
-                // Loading multi-MB base64 for every question is too slow.
                 const sizeMB = (doc.fileSize || 0) / (1024 * 1024)
                 documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n[Gescand PDF-document (${sizeMB.toFixed(1)}MB) — niet automatisch geladen. Upload het document opnieuw om het te laten splitsen, of voeg het expliciet toe aan je vraag.]\n--- Einde ---`
                 console.log(`[chat] PDF ${doc.name}: project scanned — skipped (${sizeMB.toFixed(1)}MB, not attached)`)
