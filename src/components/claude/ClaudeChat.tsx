@@ -926,7 +926,8 @@ ${markdownHtml}
       </div>
 
       {/* Messages area — ambient glow when AI is active */}
-      <div className={`flex-1 overflow-y-auto px-6 py-6 space-y-5 transition-all duration-1000 ${isLoading ? 'chat-area-active' : messages.length > 0 ? 'chat-area-ambient' : ''}`} onClick={handleMessagesClick}>
+      <div className={`flex-1 overflow-y-auto py-6 space-y-5 transition-all duration-1000 ${isLoading ? 'chat-area-active' : messages.length > 0 ? 'chat-area-ambient' : ''}`} onClick={handleMessagesClick}>
+      <div className="max-w-3xl mx-auto px-6">
         {/* Loading conversation history */}
         {isLoadingHistory && messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
@@ -1313,6 +1314,7 @@ ${markdownHtml}
         )}
 
         <div ref={messagesEndRef} />
+      </div>
       </div>
 
       {/* Input area — compact when options collapsed, expanded when shown */}

@@ -3941,19 +3941,51 @@ textarea::-webkit-scrollbar-thumb:hover {
 
 /* ==================== CLAUDE AI CHAT STYLING ==================== */
 
-/* Claude response markdown rendering */
-.claude-response h1 { font-size: 1.25rem; font-weight: 600; color: white; margin: 1rem 0 0.5rem; }
-.claude-response h2 { font-size: 1.1rem; font-weight: 600; color: white; margin: 0.875rem 0 0.375rem; }
-.claude-response h3 { font-size: 1rem; font-weight: 600; color: rgba(255,255,255,0.9); margin: 0.75rem 0 0.25rem; }
+/* Claude response markdown rendering — premium law firm styling */
+
+/* H1: main title with lime accent underline */
+.claude-response h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  margin: 1.25rem 0 0.625rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(249, 255, 133, 0.15);
+  letter-spacing: -0.01em;
+}
+
+/* H2: section headers with left accent */
+.claude-response h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  margin: 1rem 0 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgba(249, 255, 133, 0.35);
+}
+
+/* H3: subsection with subtle styling */
+.claude-response h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.95);
+  margin: 0.875rem 0 0.375rem;
+}
+
 .claude-response h4,
 .claude-response h5,
 .claude-response h6 { font-size: 0.875rem; font-weight: 600; color: rgba(255,255,255,0.8); margin: 0.5rem 0 0.25rem; }
 
-.claude-response p { margin: 0.375rem 0; line-height: 1.65; }
+.claude-response p { margin: 0.375rem 0; line-height: 1.7; }
 .claude-response p:first-child { margin-top: 0; }
 .claude-response p:last-child { margin-bottom: 0; }
 
-.claude-response strong { color: white; font-weight: 600; }
+/* Bold text gets a subtle lime tint */
+.claude-response strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  text-shadow: 0 0 20px rgba(249, 255, 133, 0.08);
+}
 .claude-response em { color: rgba(255,255,255,0.85); font-style: italic; }
 
 .claude-response a {
@@ -3965,11 +3997,12 @@ textarea::-webkit-scrollbar-thumb:hover {
 }
 .claude-response a:hover { color: white; text-decoration-color: rgba(255, 255, 255, 0.5); }
 
-/* Lists — clean professional dashboard style */
+/* Lists — professional with lime markers */
 .claude-response ul { list-style-type: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
 .claude-response ol { list-style-type: decimal; padding-left: 1.25rem; margin: 0.5rem 0; }
-.claude-response li { margin: 0.2rem 0; line-height: 1.65; color: rgba(255,255,255,0.85); }
-.claude-response li::marker { color: rgba(255, 255, 255, 0.35); }
+.claude-response li { margin: 0.25rem 0; line-height: 1.7; color: rgba(255,255,255,0.87); }
+.claude-response li::marker { color: rgba(249, 255, 133, 0.4); }
+.claude-response ol li::marker { color: rgba(249, 255, 133, 0.5); font-weight: 600; }
 
 /* Code blocks */
 .claude-response pre.code-block {
@@ -3999,76 +4032,127 @@ textarea::-webkit-scrollbar-thumb:hover {
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 
-/* Blockquotes — dark theme with lime accent */
+/* Blockquotes — glowing conclusion/highlight box */
 .claude-response blockquote {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-left: 3px solid rgba(249, 255, 133, 0.4);
+  background: linear-gradient(135deg, rgba(249, 255, 133, 0.04) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(100, 200, 255, 0.02) 100%);
+  border: 1px solid rgba(249, 255, 133, 0.12);
+  border-left: 3px solid rgba(249, 255, 133, 0.5);
   padding: 1.25em 1.5em;
   margin: 1.25em 0;
-  border-radius: 4px 10px 10px 4px;
-  color: rgba(255, 255, 255, 0.85);
+  border-radius: 4px 12px 12px 4px;
+  color: rgba(255, 255, 255, 0.9);
   font-style: normal;
   line-height: 1.75;
+  box-shadow:
+    0 0 20px -6px rgba(249, 255, 133, 0.08),
+    0 0 40px -12px rgba(249, 255, 133, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
 }
 
-/* Collapsible source citations */
+.claude-response blockquote::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 3px;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(249, 255, 133, 0.2), transparent 60%);
+}
+
+/* Collapsible source citations — premium card style with glow */
 .claude-response details.source-details {
-  margin: 0.375rem 0;
-  border-left: 3px solid rgba(255, 255, 255, 0.15);
-  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.claude-response details.source-details:hover {
+  border-color: rgba(180, 130, 255, 0.15);
+  box-shadow: 0 0 15px -5px rgba(180, 130, 255, 0.08);
 }
 
 .claude-response details.source-details summary {
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 500;
-  font-size: 0.9em;
-  padding: 0.25rem 0.5rem;
+  font-size: 0.875em;
+  padding: 0.625rem 0.875rem;
   list-style: none;
-  border-radius: 4px;
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .claude-response details.source-details summary:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .claude-response details.source-details summary::before {
-  content: '▶ ';
-  font-size: 0.7em;
-  color: rgba(255, 255, 255, 0.3);
-  margin-right: 0.25rem;
-  display: inline-block;
+  content: '▸';
+  font-size: 0.8em;
+  color: rgba(180, 130, 255, 0.5);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .claude-response details.source-details[open] summary::before {
-  content: '▼ ';
+  content: '▾';
+  color: rgba(180, 130, 255, 0.7);
 }
 
 .claude-response details.source-details[open] summary {
-  margin-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.claude-response details.source-details[open] {
+  border-color: rgba(180, 130, 255, 0.12);
+  box-shadow: 0 0 20px -6px rgba(180, 130, 255, 0.06);
 }
 
 .claude-response details.source-details blockquote {
-  margin-top: 0.25rem;
+  margin: 0.5rem 0.75rem 0.625rem;
   font-size: 0.85em;
-  border-left-color: rgba(249, 255, 133, 0.15);
+  border-left-color: rgba(249, 255, 133, 0.25);
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px 8px 8px 4px;
 }
 
-/* Horizontal rule */
+/* Source attribution text within details */
+.claude-response details.source-details > p {
+  padding: 0 0.875rem 0.5rem;
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Horizontal rule — glowing separator */
 .claude-response hr {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  margin: 0.75rem 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(249, 255, 133, 0.2) 20%,
+    rgba(249, 255, 133, 0.3) 50%,
+    rgba(249, 255, 133, 0.2) 80%,
+    transparent
+  );
+  margin: 1.25rem 0;
+  box-shadow: 0 0 8px rgba(249, 255, 133, 0.1);
 }
 
-/* Tables */
+/* Tables — premium glassmorphic */
 .claude-response .table-wrapper {
   overflow-x: auto;
-  margin: 0.5rem 0;
-  border-radius: 8px;
+  margin: 0.75rem 0;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 15px -5px rgba(0, 0, 0, 0.3);
 }
 .claude-response table {
   width: 100%;
@@ -4076,23 +4160,26 @@ textarea::-webkit-scrollbar-thumb:hover {
   font-size: 0.8125rem;
 }
 .claude-response thead {
-  background: rgba(255, 255, 255, 0.04);
+  background: linear-gradient(135deg, rgba(249, 255, 133, 0.06) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
 .claude-response th {
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 0.875rem;
   text-align: left;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(249, 255, 133, 0.12);
   white-space: nowrap;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 .claude-response td {
-  padding: 0.4rem 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
+  padding: 0.5rem 0.875rem;
+  color: rgba(255, 255, 255, 0.75);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 .claude-response tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(249, 255, 133, 0.02);
 }
 .claude-response tbody tr:last-child td {
   border-bottom: none;
