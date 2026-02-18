@@ -1066,13 +1066,21 @@ ${markdownHtml}
                   confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
                   content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
                 }
-                console.log('[ClaudeChat] Response found via direct DB polling')
+                console.log('[ClaudeChat] Response found via direct DB polling, content length:', content.length)
                 setStreamingMsgId(null)
                 if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
                 setStreamingContent('')
-                setMessages(prev => prev.map(m =>
-                  m.id === assistantMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
-                ))
+                setMessages(prev => {
+                  const updated = prev.map(m =>
+                    m.id === assistantMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
+                  )
+                  console.log('[ClaudeChat] Messages updated, assistant msg found:', updated.some(m => m.id === assistantMsgId && m.content))
+                  return updated
+                })
+                setStatusText('')
+                setIsLoading(false)
+                // Scroll to show the response
+                setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 100)
                 finished = true
                 break
               }
