@@ -40,6 +40,35 @@ const MAX_NATIVE_PDF_BASE64_LEN = 7_000_000
 const NATIVE_BLOCK_BUDGET_WITH_SOURCES = 120_000
 const NATIVE_BLOCK_BUDGET_WITHOUT_SOURCES = 160_000
 
+// Extract and validate base64 data from a data URL (e.g. "data:application/pdf;base64,...")
+function extractBase64FromDataUrl(dataUrl: string): string | null {
+  const commaIdx = dataUrl.indexOf(',')
+  if (commaIdx === -1 || commaIdx > 100) return null // prefix should be short
+  const prefix = dataUrl.slice(0, commaIdx)
+  if (!prefix.includes('base64')) return null
+
+  // Use slice instead of split to avoid allocating huge arrays
+  let data = dataUrl.slice(commaIdx + 1)
+
+  // Strip any whitespace/newlines that may have been introduced during storage
+  if (/\s/.test(data.slice(0, 1000))) {
+    data = data.replace(/[\s\r\n]/g, '')
+  }
+
+  // Fix padding if needed
+  const padNeeded = data.length % 4
+  if (padNeeded) data += '='.repeat(4 - padNeeded)
+
+  // Quick validation: check a sample of characters (full regex on multi-MB string is slow)
+  const sample = data.slice(0, 200) + data.slice(-200)
+  if (!/^[A-Za-z0-9+/=]+$/.test(sample)) {
+    console.warn(`[chat] Base64 validation failed — invalid chars in sample: ${sample.slice(0, 50)}...`)
+    return null
+  }
+
+  return data.length > 100 ? data : null // Minimum size sanity check
+}
+
 function estimatePdfBlockTokens(base64Len: number): number {
   // Scanned PDFs: large base64 (~200-500KB/page) but only ~1500-3000 tokens/page.
   // Text PDFs: smaller base64 (~30-80KB/page) with similar token cost.
@@ -526,11 +555,10 @@ export async function POST(req: NextRequest) {
                 const estimatedTokens = estimatePdfBlockTokens(Math.ceil((doc.fileSize || 0) * 1.37)) // file→base64 overhead
                 if (nativeBlockTokens + estimatedTokens <= maxNativeBlockTokens) {
                   const fileUrl = await loadFileUrl(doc.id)
-                  const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
-                    ? fileUrl.split(',')[1]
-                    : null
+                  const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
                   if (base64Data) {
                     const blockTokens = estimatePdfBlockTokens(base64Data.length)
+                    console.log(`[chat] PDF ${doc.name}: base64 len=${base64Data.length}, first16=${base64Data.slice(0, 16)}, last16=${base64Data.slice(-16)}`)
                     if (base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
                       documentBlocks.push({
                         type: 'document',
@@ -541,6 +569,8 @@ export async function POST(req: NextRequest) {
                       console.log(`[chat] PDF ${doc.name}: native block (~${blockTokens} tokens, total: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
                       return
                     }
+                  } else {
+                    console.log(`[chat] PDF ${doc.name}: base64 extraction failed (fileUrl ${fileUrl ? `starts with: ${fileUrl.slice(0, 40)}` : 'null'})`)
                   }
                 } else {
                   console.log(`[chat] PDF ${doc.name}: skip native — would exceed budget (~${estimatedTokens} tokens, used: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
@@ -589,8 +619,8 @@ export async function POST(req: NextRequest) {
                 await processPdfDoc(doc, 'Document: ')
               } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
                 const fileUrl = await loadFileUrl(doc.id)
-                if (fileUrl?.startsWith('data:image/')) {
-                  const base64Data = fileUrl.split(',')[1]
+                const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
+                if (base64Data) {
                   const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
                   documentBlocks.push({
                     type: 'image',
@@ -620,8 +650,8 @@ export async function POST(req: NextRequest) {
               } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
                 if (nativeBlockTokens + 1600 > maxNativeBlockTokens) continue
                 const fileUrl = await loadFileUrl(doc.id)
-                if (fileUrl?.startsWith('data:image/')) {
-                  const base64Data = fileUrl.split(',')[1]
+                const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
+                if (base64Data) {
                   const mimeMap: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }
                   documentBlocks.push({
                     type: 'image',
@@ -1254,46 +1284,83 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             ...(tools.length > 0 ? { tools } : {}),
           }
 
-          const anthropicStream = client.messages.stream(streamParams)
-
-          // Stream thinking and text via raw stream events
+          // Helper: set up stream event listeners and await final message
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          anthropicStream.on('streamEvent' as any, (event: any) => {
-            try {
-              if (event.type === 'content_block_start') {
-                if (event.content_block?.type === 'thinking') {
-                  writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'thinking_start' })}\n\n`))
+          const runStream = async (params: any): Promise<any> => {
+            const stream = client.messages.stream(params)
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            stream.on('streamEvent' as any, (event: any) => {
+              try {
+                if (event.type === 'content_block_start') {
+                  if (event.content_block?.type === 'thinking') {
+                    writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'thinking_start' })}\n\n`))
+                  }
+                }
+                if (event.type === 'content_block_delta') {
+                  if (event.delta?.type === 'thinking_delta' && event.delta.thinking) {
+                    writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', text: event.delta.thinking })}\n\n`))
+                  }
+                }
+              } catch { /* ignore thinking stream errors */ }
+            })
+
+            stream.on('text', (text: string) => {
+              fullText += text
+              if (fullText.length === text.length) {
+                clearTimeout(watchdog)
+                lastStep = 'claude-streaming'
+              }
+              writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
+            })
+
+            stream.on('contentBlock', (block: { type: string }) => {
+              if (block.type === 'web_search_tool_use' || block.type === 'server_tool_use') {
+                hasWebSearch = true
+                writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'AI Search...' })}\n\n`))
+              }
+            })
+
+            return await stream.finalMessage()
+          }
+
+          // Try streaming with native blocks; auto-retry without if base64 fails
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let finalMessage: any
+          try {
+            finalMessage = await runStream(streamParams)
+          } catch (apiErr) {
+            const apiErrMsg = apiErr instanceof Error ? apiErr.message : String(apiErr)
+            const isDocError = (apiErrMsg.includes('base64') || apiErrMsg.includes('Invalid') || apiErrMsg.includes('document'))
+              && documentBlocks.length > 0 && !fullText
+            if (!isDocError) throw apiErr // Re-throw non-document errors
+
+            console.log(`[chat] API error with native blocks: ${apiErrMsg.slice(0, 100)}. Retrying without ${documentBlocks.length} blocks...`)
+            await send(JSON.stringify({ type: 'status', text: 'Documenten opnieuw verwerken...' }))
+
+            // Strip document blocks from messages
+            for (const msg of msgs) {
+              if (Array.isArray(msg.content)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                msg.content = msg.content.filter((b: any) => b.type !== 'document')
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const textParts = msg.content.filter((b: any) => b.type === 'text')
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const nonTextParts = msg.content.filter((b: any) => b.type !== 'text')
+                if (nonTextParts.length === 0 && textParts.length === 1) {
+                  msg.content = textParts[0].text
                 }
               }
-              if (event.type === 'content_block_delta') {
-                if (event.delta?.type === 'thinking_delta' && event.delta.thinking) {
-                  writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', text: event.delta.thinking })}\n\n`))
-                }
-              }
-            } catch { /* ignore thinking stream errors */ }
-          })
-
-          anthropicStream.on('text', (text) => {
-            fullText += text
-            // Clear watchdog once we get actual content from Claude
-            if (fullText.length === text.length) {
-              clearTimeout(watchdog)
-              lastStep = 'claude-streaming'
             }
-            writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
-          })
-
-          // Listen for content blocks for web search detection
-          anthropicStream.on('contentBlock', (block) => {
-            const blockType = (block as { type: string }).type
-            if (blockType === 'web_search_tool_use' || blockType === 'server_tool_use') {
-              hasWebSearch = true
-              writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'status', text: 'AI Search...' })}\n\n`))
+            // Add text fallback for documents that were native blocks
+            if (pdfTextFallback) {
+              streamParams.system += `\n\n## DOCUMENTEN (als tekst)\n${pdfTextFallback}`
             }
-          })
+            streamParams.messages = msgs
+            documentBlocks.length = 0
 
-          // Wait for the full response
-          let finalMessage = await anthropicStream.finalMessage()
+            finalMessage = await runStream(streamParams)
+          }
 
           // Extract citations from any response (web search results, etc.)
           const extractCitations = (message: typeof finalMessage) => {
