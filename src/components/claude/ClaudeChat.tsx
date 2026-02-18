@@ -590,8 +590,6 @@ ${markdownHtml}
     const text = overrideMessage || input.trim()
     if (!text || isLoading) return
 
-    console.log('[ClaudeChat] sendMessage started:', text.slice(0, 50))
-
     // Build the full message with option instructions prepended
     const instructions = buildInstructions()
     const fullMessage = instructions ? instructions + text : text
@@ -652,8 +650,6 @@ ${markdownHtml}
         signal: controller.signal,
       })
 
-      console.log('[ClaudeChat] Response received:', response.status, response.statusText)
-
       if (!response.ok) {
         clearTimeout(timeoutId)
         const rawText = await response.text()
@@ -671,7 +667,6 @@ ${markdownHtml}
         throw new Error('Server gaf geen stream terug')
       }
 
-      console.log('[ClaudeChat] Stream started, reading events...')
       setStatusText('Antwoord ontvangen...')
       setOptionsExpanded(false) // Collapse options to maximize answer space
       setStreamingMsgId(assistantMsgId) // Mark which message is streaming
@@ -701,20 +696,11 @@ ${markdownHtml}
       let hasWebSearch = false
       let citations: Array<{ url: string; title: string }> = []
 
-      let readCount = 0
       while (true) {
         const { done, value } = await reader.read()
-        readCount++
-        if (done) {
-          console.log(`[ClaudeChat] Stream done after ${readCount} reads, streamedText length: ${streamedText.length}`)
-          break
-        }
+        if (done) break
 
-        const chunk = decoder.decode(value, { stream: true })
-        buffer += chunk
-        if (readCount <= 3) {
-          console.log(`[ClaudeChat] Read #${readCount}: ${chunk.length} bytes, first 200:`, chunk.slice(0, 200))
-        }
+        buffer += decoder.decode(value, { stream: true })
 
         // Process complete SSE events from buffer
         const lines = buffer.split('\n\n')
@@ -726,9 +712,6 @@ ${markdownHtml}
 
           try {
             const event = JSON.parse(jsonStr)
-            if (readCount <= 5) {
-              console.log(`[ClaudeChat] Event:`, event.type, event.text?.slice(0, 50) || '')
-            }
 
             if (event.type === 'start' && event.conversationId) {
               if (!convId) {
@@ -814,7 +797,6 @@ ${markdownHtml}
       setStatusText('')
 
     } catch (error) {
-      console.error('[ClaudeChat] Error in sendMessage:', error)
       clearTimeout(timeoutId)
       let errMsg = 'Onbekende fout'
       if (error instanceof Error) {
