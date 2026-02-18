@@ -406,6 +406,10 @@ export async function POST(req: NextRequest) {
     let hasDocxAttachments = false
     let pdfTextFallback = '' // Text for PDFs sent as native blocks (used if API rejects payload)
 
+    // Helper: check if document has usable extracted text (not empty/placeholder)
+    const hasUsableContent = (d: { content: string | null }) =>
+      d.content != null && d.content.length > 50 && !d.content.startsWith('[')
+
     if (documentIds?.length) {
       // Step 1: Load metadata + content only (skip fileUrl to avoid loading 10MB+ base64 from DB)
       const docs = await prisma.aIDocument.findMany({
@@ -419,10 +423,15 @@ export async function POST(req: NextRequest) {
         select: { id: true, name: true, fileType: true, fileSize: true, content: true },
       })
 
-      // Step 2: Only load fileUrl for files small enough for native blocks (PDFs ≤5MB, images ≤10MB)
+      // Step 2: Load fileUrl for files that need native blocks:
+      // - Small PDFs (≤5MB): always native (best quality)
+      // - Images: always native (Claude vision)
+      // - Large PDFs WITHOUT extracted text: native is the ONLY way to analyze them
+      //   (scanned/secured PDFs where text extraction failed)
       const nativeCandidateIds = docs
         .filter(d =>
           (d.fileType === 'pdf' && (d.fileSize || 0) <= 5 * 1024 * 1024) ||
+          (d.fileType === 'pdf' && !hasUsableContent(d)) ||
           (['png', 'jpg', 'jpeg', 'webp'].includes(d.fileType || ''))
         )
         .map(d => d.id)
@@ -443,9 +452,8 @@ export async function POST(req: NextRequest) {
           const base64Data = fileUrl?.startsWith('data:application/pdf;base64,')
             ? fileUrl.split(',')[1]
             : null
-          // Native PDF for small/medium files (best quality: Claude sees layout, tables, images)
-          // Text fallback for large files (avoids context overflow — still accurate for content)
           if (base64Data && base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN) {
+            // Small/medium PDF: native block (best quality — Claude sees layout, tables, images)
             documentBlocks.push({
               type: 'document',
               source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
@@ -454,9 +462,26 @@ export async function POST(req: NextRequest) {
             if (doc.content) {
               pdfTextFallback += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
             }
-          } else if (doc.content) {
-            // Large PDF or no native data: use extracted text
-            documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+          } else if (hasUsableContent(doc)) {
+            // Large PDF with good extracted text: use text (efficient, always fits)
+            documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+          } else if (base64Data) {
+            // Large PDF WITHOUT text (scanned/secured): must send native — only way to read it
+            // Check if it fits in context budget (~1500 tokens/page, ~50KB base64/page)
+            const estimatedPages = Math.ceil(base64Data.length / 50000)
+            const estimatedTokens = estimatedPages * 1500
+            const systemTokens = estimateTokens(SYSTEM_PROMPT) + 10000 // system prompt + buffer
+            if (estimatedTokens + systemTokens < 190000) {
+              console.log(`[chat] Scanned PDF ${doc.name}: sending native (~${estimatedPages} pages, ~${estimatedTokens} tokens)`)
+              documentBlocks.push({
+                type: 'document',
+                source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+                title: doc.name,
+              })
+            } else {
+              console.warn(`[chat] Scanned PDF ${doc.name} too large even for native (~${estimatedPages} pages)`)
+              documentContext += `\n\n--- Document: ${doc.name} (id: ${doc.id}) ---\n[Dit is een gescand PDF-document van ~${estimatedPages} pagina's. De tekst kon niet automatisch worden geëxtraheerd. Het document is te groot om in zijn geheel te verwerken. Upload het document opnieuw in kleinere delen, of lever het als tekstbestand aan.]\n--- Einde ---`
+            }
           }
         } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
           const base64Data = fileUrl.split(',')[1]
@@ -478,11 +503,12 @@ export async function POST(req: NextRequest) {
         take: 20,
         select: { id: true, name: true, fileType: true, fileSize: true, content: true },
       })
-      // Step 2: only load fileUrl for native-eligible files
+      // Step 2: only load fileUrl for native-eligible files (including scanned PDFs without text)
       const projNativeIds = projectDocs
         .filter(d =>
           !documentIds?.includes(d.id) && (
             (d.fileType === 'pdf' && (d.fileSize || 0) <= 5 * 1024 * 1024) ||
+            (d.fileType === 'pdf' && !hasUsableContent(d)) ||
             (['png', 'jpg', 'jpeg', 'webp'].includes(d.fileType || ''))
           )
         )
@@ -514,9 +540,20 @@ export async function POST(req: NextRequest) {
             if (doc.content) {
               pdfTextFallback += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
             }
-          } else if (doc.content) {
+          } else if (hasUsableContent(doc)) {
             if (documentContext.length > 200000) break
-            documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+            documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
+          } else if (base64Data && documentBlocks.length < 5) {
+            // Scanned PDF: send native if it fits
+            const estimatedPages = Math.ceil(base64Data.length / 50000)
+            const estimatedTokens = estimatedPages * 1500
+            if (estimatedTokens + estimateTokens(SYSTEM_PROMPT) + 10000 < 190000) {
+              documentBlocks.push({
+                type: 'document',
+                source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+                title: doc.name,
+              })
+            }
           }
         } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '') && fileUrl?.startsWith('data:image/')) {
           if (documentBlocks.length >= 10) break
