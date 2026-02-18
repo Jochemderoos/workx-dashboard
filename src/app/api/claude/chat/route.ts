@@ -501,12 +501,11 @@ export async function POST(req: NextRequest) {
         }, 45000)
 
         // Heartbeat: send periodic keepalive events to prevent Vercel/browser idle timeout.
-        // Without this, long document loading (20-40s for large PDFs) causes connection drops.
+        // Uses .catch() to swallow async rejections — without this, writer.write()
+        // on a closed stream causes unhandled promise rejection that crashes the process.
         const heartbeat = setInterval(() => {
-          try {
-            writer.write(encoder.encode(`: heartbeat\n\n`))
-          } catch { /* stream may be closed */ }
-        }, 8000) // Every 8 seconds — well within Vercel's ~25s idle timeout
+          writer.write(encoder.encode(`: heartbeat\n\n`)).catch(() => {})
+        }, 8000)
 
         try {
           // Notify client immediately that connection is alive
@@ -547,73 +546,29 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Process a single PDF document: decide native block vs text vs placeholder
+          // Process a single PDF document: use extracted text or placeholder.
+          // NOTE: Native PDF blocks (base64) are disabled — loading multi-MB blobs from
+          // PostgreSQL during streaming is unreliable in Vercel serverless (causes timeouts
+          // and crashes). Scanned PDFs without extractable text get a helpful placeholder.
           const processPdfDoc = async (
             doc: { id: string; name: string; fileType: string; fileSize: number; content: string | null },
             prefix: string,
           ) => {
             try {
-              const sizeMB = ((doc.fileSize || 0) / (1024 * 1024)).toFixed(1)
-              const needsNative = !hasUsableContent(doc)
-              await send(JSON.stringify({ type: 'status', text: `${doc.name} (${sizeMB}MB)${needsNative ? ' — PDF laden...' : ' — tekst gevonden'}` }))
-
-              if (needsNative) {
-                // Only load base64 if it might fit in budget
-                const estimatedTokens = estimatePdfBlockTokens(Math.ceil((doc.fileSize || 0) * 1.37)) // file→base64 overhead
-                if (nativeBlockTokens + estimatedTokens <= maxNativeBlockTokens) {
-                  const fileUrl = await loadFileUrl(doc.id)
-                  const fileUrlLen = fileUrl?.length || 0
-                  const fileUrlPrefix = fileUrl?.slice(0, 50) || 'null'
-                  console.log(`[chat] PDF ${doc.name}: fileUrl loaded, length=${fileUrlLen}, prefix=${fileUrlPrefix}`)
-
-                  const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
-                  if (base64Data) {
-                    const blockTokens = estimatePdfBlockTokens(base64Data.length)
-                    console.log(`[chat] PDF ${doc.name}: base64 len=${base64Data.length}, first16=${base64Data.slice(0, 16)}, last16=${base64Data.slice(-16)}`)
-                    if (base64Data.length <= MAX_NATIVE_PDF_BASE64_LEN && nativeBlockTokens + blockTokens <= maxNativeBlockTokens) {
-                      documentBlocks.push({
-                        type: 'document',
-                        source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
-                        title: doc.name,
-                      })
-                      nativeBlockTokens += blockTokens
-                      await send(JSON.stringify({ type: 'status', text: `${doc.name} — als PDF naar Claude (~${blockTokens} tokens)` }))
-                      console.log(`[chat] PDF ${doc.name}: native block (~${blockTokens} tokens, total: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
-                      return
-                    } else {
-                      console.log(`[chat] PDF ${doc.name}: base64 too large or over budget (b64len=${base64Data.length}, blockTokens=${blockTokens})`)
-                    }
-                  } else {
-                    // Send diagnostic info to client so we can debug
-                    const diagMsg = `${doc.name}: PDF data niet bruikbaar (url=${fileUrlLen > 0 ? fileUrlLen + ' bytes' : 'leeg'}, prefix=${fileUrlPrefix.slice(0, 30)})`
-                    await send(JSON.stringify({ type: 'status', text: diagMsg }))
-                    console.log(`[chat] PDF ${doc.name}: base64 extraction failed (fileUrl len=${fileUrlLen}, prefix=${fileUrlPrefix})`)
-                    docLoadErrors.push(`base64-fail(${doc.name}): urlLen=${fileUrlLen}`)
-                  }
-                } else {
-                  console.log(`[chat] PDF ${doc.name}: skip native — would exceed budget (~${estimatedTokens} tokens, used: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
-                }
-              }
-
-              // Use extracted text if available
               if (hasUsableContent(doc)) {
                 documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-                if (needsNative) {
-                  // Keep text as fallback if we also tried native but it didn't fit
-                  pdfTextFallback += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n${doc.content!.slice(0, 50000)}\n--- Einde ---`
-                }
                 console.log(`[chat] PDF ${doc.name}: using extracted text (${doc.content!.length} chars)`)
               } else {
-                // No text, couldn't send as native — inform Claude the document exists
-                documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[PDF-document (${Math.round((doc.fileSize || 0) / 1024)}KB) waarvan de inhoud niet beschikbaar is. De tekst kon niet worden geëxtraheerd bij upload. Vraag de gebruiker om het document opnieuw te uploaden of als tekstbestand aan te leveren.]\n--- Einde ---`
-                console.warn(`[chat] PDF ${doc.name}: no text, no native — added placeholder`)
+                // Scanned PDF without extractable text
+                const sizeMB = ((doc.fileSize || 0) / (1024 * 1024)).toFixed(1)
+                documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[GESCAND PDF-DOCUMENT (${sizeMB}MB) — de tekst kon niet automatisch worden uitgelezen. Dit is waarschijnlijk een ingescand/image-based document. De gebruiker kan dit oplossen door:\n1. Het document op te splitsen via het schaartje-icoon (✂️) bij Documenten — kleinere stukken worden beter verwerkt\n2. De tekst handmatig te kopiëren en in het chatbericht te plakken\n3. Het document te laten OCR'en (bijv. via Adobe Acrobat) en opnieuw te uploaden]\n--- Einde ---`
+                console.log(`[chat] PDF ${doc.name}: scanned PDF without text (${sizeMB}MB) — added placeholder with instructions`)
               }
             } catch (e) {
               const msg = e instanceof Error ? e.message : String(e)
               console.error(`[chat] processPdfDoc error for ${doc.name}: ${msg}`)
               docLoadErrors.push(`processPdf(${doc.name}): ${msg}`)
-              // Still add a placeholder so Claude knows the document exists
-              documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Fout bij laden van dit document: ${msg.slice(0, 100)}]\n--- Einde ---`
+              documentContext += `\n\n--- ${prefix}${doc.name} (id: ${doc.id}) ---\n[Fout bij laden: ${msg.slice(0, 100)}]\n--- Einde ---`
             }
           }
 
