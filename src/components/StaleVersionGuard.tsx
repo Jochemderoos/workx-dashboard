@@ -17,7 +17,7 @@ export default function StaleVersionGuard() {
     function safeRefresh(storageKey: string, cooldownMs = 30000) {
       // Never refresh if a chat is actively loading (prevents killing in-progress requests)
       const lastVersionRefresh = parseInt(sessionStorage.getItem('workx-last-version-refresh') || '0')
-      if (Date.now() - lastVersionRefresh < 300000) return // Chat active in last 5 minutes
+      if (Date.now() - lastVersionRefresh < 600000) return // Chat active in last 10 minutes
 
       const lastRefresh = sessionStorage.getItem(storageKey)
       const now = Date.now()

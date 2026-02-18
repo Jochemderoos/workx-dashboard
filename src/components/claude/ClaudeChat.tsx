@@ -511,10 +511,8 @@ export default function ClaudeChat({
       url.searchParams.delete('_v')
       window.history.replaceState({}, '', url.toString())
     }
-    // Clean up any stale pending messages
+    // Clean up any stale pending messages (but KEEP version-refresh protection!)
     try { sessionStorage.removeItem('workx-pending-message') } catch { /* ignore */ }
-    try { sessionStorage.removeItem('workx-last-version-refresh') } catch { /* ignore */ }
-    try { sessionStorage.removeItem('workx-skip-version-check') } catch { /* ignore */ }
   }, [])
 
   // Safety net: if loading with an empty assistant message for >15s, poll DB for response.
