@@ -780,6 +780,13 @@ ${markdownHtml}
         throw new Error('Server gaf geen stream terug')
       }
 
+      // Read conversation ID from response header (for polling fallback)
+      const headerConvId = response.headers.get('X-Conversation-Id')
+      if (headerConvId && !convId) {
+        setConvId(headerConvId)
+        onConversationCreated?.(headerConvId)
+      }
+
       setStatusText('Antwoord ontvangen...')
       setOptionsExpanded(false) // Collapse options to maximize answer space
       setStreamingMsgId(assistantMsgId) // Mark which message is streaming
@@ -812,14 +819,15 @@ ${markdownHtml}
       let citations: Array<{ url: string; title: string }> = []
       let receivedContent = false // true once we get a delta or done event
       let pollingStopped = false
-      let activeConvId = convId // Track convId (might be set by start event)
+      let activeConvId = headerConvId || convId // Use header value (always available) or existing convId
 
-      // Polling fallback: if stream doesn't deliver content, poll DB for the response
+      // Polling fallback: if stream doesn't deliver content, poll DB for the response.
+      // Starts after just 3 seconds — Vercel's SSE buffering means stream rarely works.
       let pollInterval: ReturnType<typeof setInterval> | null = null
       const pollFallbackTimer = setTimeout(() => {
         if (receivedContent || pollingStopped || !activeConvId) return
-        console.log('[ClaudeChat] No stream content after 8s — falling back to polling')
-        setStatusText('Antwoord ophalen...')
+        console.log('[ClaudeChat] No stream content after 3s — falling back to polling')
+        setStatusText('Claude verwerkt je vraag...')
 
         pollInterval = setInterval(async () => {
           if (receivedContent || pollingStopped) {
@@ -869,12 +877,20 @@ ${markdownHtml}
             // Poll errors are non-fatal
           }
         }, 3000)
-      }, 8000)
+      }, 3000)
 
       try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done || pollingStopped) break
+      while (!pollingStopped) {
+        let done = false, value: Uint8Array | undefined
+        try {
+          const result = await reader.read()
+          done = result.done
+          value = result.value
+        } catch {
+          // reader.cancel() from polling fallback causes read() to reject — that's OK
+          break
+        }
+        if (done) break
 
         buffer += decoder.decode(value, { stream: true })
 

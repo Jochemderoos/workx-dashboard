@@ -1566,6 +1566,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
         'Cache-Control': 'no-cache, no-transform',
         'X-Accel-Buffering': 'no',
         'X-Build-Id': process.env.NEXT_PUBLIC_BUILD_ID || '',
+        'X-Conversation-Id': convId, // Client reads this for polling fallback
       },
     })
   } catch (error) {
