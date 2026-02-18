@@ -500,6 +500,14 @@ export async function POST(req: NextRequest) {
           } catch { /* stream may already be closed */ }
         }, 45000)
 
+        // Heartbeat: send periodic keepalive events to prevent Vercel/browser idle timeout.
+        // Without this, long document loading (20-40s for large PDFs) causes connection drops.
+        const heartbeat = setInterval(() => {
+          try {
+            writer.write(encoder.encode(`: heartbeat\n\n`))
+          } catch { /* stream may be closed */ }
+        }, 8000) // Every 8 seconds — well within Vercel's ~25s idle timeout
+
         try {
           // Notify client immediately that connection is alive
           await send(JSON.stringify({ type: 'start', conversationId: convId }))
@@ -528,7 +536,7 @@ export async function POST(req: NextRequest) {
                   where: { id: docId },
                   select: { fileUrl: true },
                 }),
-                new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), 15000)),
               ])
               return result?.fileUrl || null
             } catch (e) {
@@ -545,16 +553,19 @@ export async function POST(req: NextRequest) {
             prefix: string,
           ) => {
             try {
-              // Prefer extracted text when available — much faster & more reliable than
-              // loading multi-MB base64 blobs from the database in a serverless function.
-              // Only use native blocks when text extraction failed.
+              const sizeMB = ((doc.fileSize || 0) / (1024 * 1024)).toFixed(1)
               const needsNative = !hasUsableContent(doc)
+              await send(JSON.stringify({ type: 'status', text: `${doc.name} (${sizeMB}MB)${needsNative ? ' — PDF laden...' : ' — tekst gevonden'}` }))
 
               if (needsNative) {
                 // Only load base64 if it might fit in budget
                 const estimatedTokens = estimatePdfBlockTokens(Math.ceil((doc.fileSize || 0) * 1.37)) // file→base64 overhead
                 if (nativeBlockTokens + estimatedTokens <= maxNativeBlockTokens) {
                   const fileUrl = await loadFileUrl(doc.id)
+                  const fileUrlLen = fileUrl?.length || 0
+                  const fileUrlPrefix = fileUrl?.slice(0, 50) || 'null'
+                  console.log(`[chat] PDF ${doc.name}: fileUrl loaded, length=${fileUrlLen}, prefix=${fileUrlPrefix}`)
+
                   const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
                   if (base64Data) {
                     const blockTokens = estimatePdfBlockTokens(base64Data.length)
@@ -566,11 +577,18 @@ export async function POST(req: NextRequest) {
                         title: doc.name,
                       })
                       nativeBlockTokens += blockTokens
+                      await send(JSON.stringify({ type: 'status', text: `${doc.name} — als PDF naar Claude (~${blockTokens} tokens)` }))
                       console.log(`[chat] PDF ${doc.name}: native block (~${blockTokens} tokens, total: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
                       return
+                    } else {
+                      console.log(`[chat] PDF ${doc.name}: base64 too large or over budget (b64len=${base64Data.length}, blockTokens=${blockTokens})`)
                     }
                   } else {
-                    console.log(`[chat] PDF ${doc.name}: base64 extraction failed (fileUrl ${fileUrl ? `starts with: ${fileUrl.slice(0, 40)}` : 'null'})`)
+                    // Send diagnostic info to client so we can debug
+                    const diagMsg = `${doc.name}: PDF data niet bruikbaar (url=${fileUrlLen > 0 ? fileUrlLen + ' bytes' : 'leeg'}, prefix=${fileUrlPrefix.slice(0, 30)})`
+                    await send(JSON.stringify({ type: 'status', text: diagMsg }))
+                    console.log(`[chat] PDF ${doc.name}: base64 extraction failed (fileUrl len=${fileUrlLen}, prefix=${fileUrlPrefix})`)
+                    docLoadErrors.push(`base64-fail(${doc.name}): urlLen=${fileUrlLen}`)
                   }
                 } else {
                   console.log(`[chat] PDF ${doc.name}: skip native — would exceed budget (~${estimatedTokens} tokens, used: ${nativeBlockTokens}/${maxNativeBlockTokens})`)
@@ -1580,6 +1598,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           await send(JSON.stringify({ type: 'error', error: `${userError}\n\n${debugInfo}` }))
         } finally {
           clearTimeout(watchdog)
+          clearInterval(heartbeat)
           if (!watchdogFired) {
             try { await writer.close() } catch { /* may already be closed */ }
           }
