@@ -69,6 +69,7 @@ export default function AIAssistentPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [chatActive, setChatActive] = useState(false)
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
+  const [chatInstance, setChatInstance] = useState(0) // Increments only on explicit conversation switch
   const [showHistory, setShowHistory] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [activeTab, setActiveTab] = useState<'chat' | 'projects' | 'bronnen' | 'templates'>('chat')
@@ -143,7 +144,10 @@ export default function AIAssistentPage() {
     // Check URL for conv parameter, or auto-resume last conversation
     const urlParams = new URLSearchParams(window.location.search)
     const convParam = urlParams.get('conv')
-    if (convParam) setSelectedConvId(convParam)
+    if (convParam) {
+      setSelectedConvId(convParam)
+      setChatInstance(prev => prev + 1)
+    }
     // Auto-resume is handled after conversations load (see effect below)
   }, [])
 
@@ -155,6 +159,7 @@ export default function AIAssistentPage() {
         // Auto-select most recent conversation
         const mostRecent = recentConversations[0]
         setSelectedConvId(mostRecent.id)
+        setChatInstance(prev => prev + 1)
         window.history.replaceState(null, '', `/dashboard/ai?conv=${mostRecent.id}`)
       }
     }
@@ -443,6 +448,7 @@ export default function AIAssistentPage() {
                   <button
                     onClick={() => {
                       setSelectedConvId(null)
+                      setChatInstance(prev => prev + 1)
                       window.history.replaceState(null, '', '/dashboard/ai')
                     }}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime text-[11px] font-medium hover:bg-workx-lime/20 transition-colors"
@@ -510,6 +516,7 @@ export default function AIAssistentPage() {
                             <button
                               onClick={() => {
                                 setSelectedConvId(conv.id)
+                                setChatInstance(prev => prev + 1)
                                 window.history.replaceState(null, '', `/dashboard/ai?conv=${conv.id}`)
                               }}
                               className="w-full text-left px-3 py-2.5"
@@ -643,16 +650,17 @@ export default function AIAssistentPage() {
               {!showHistory && <span>Gesprekken</span>}
             </button>
             <ClaudeChat
-              key={selectedConvId || 'new'}
+              key={chatInstance}
               conversationId={selectedConvId}
               onConversationCreated={(id) => {
                 handleConversationCreated(id)
-                setSelectedConvId(id)
+                setSelectedConvId(id) // Updates state but does NOT change key (no remount!)
                 // Refresh conversation list
                 fetchConversations(searchQuery)
               }}
               onNewChat={() => {
                 setSelectedConvId(null)
+                setChatInstance(prev => prev + 1)
                 window.history.replaceState(null, '', '/dashboard/ai')
               }}
               onActiveChange={setChatActive}
