@@ -377,6 +377,16 @@ export default function AIAssistentPage() {
     { id: 'templates' as const, label: 'Templates', desc: 'Document sjablonen', icon: Icons.fileText },
   ]
 
+  // Auto-collapse sidebar when AI starts generating
+  const prevChatActiveRef = useRef(false)
+  useEffect(() => {
+    if (chatActive && !prevChatActiveRef.current && activeTab === 'chat') {
+      // AI just started generating — collapse sidebar
+      setShowHistory(false)
+    }
+    prevChatActiveRef.current = chatActive
+  }, [chatActive, activeTab])
+
   // Whether to use compact layout (chat active on chat tab)
   const isCompactMode = chatActive && activeTab === 'chat'
 
@@ -436,9 +446,9 @@ export default function AIAssistentPage() {
       {/* Content based on active tab */}
       {activeTab === 'chat' && (
         <div className="flex gap-0" style={{ height: isCompactMode ? 'calc(100vh - 110px)' : 'calc(100vh - 140px)' }}>
-          {/* Conversation history sidebar — auto-collapses when chat is active */}
+          {/* Conversation history sidebar — auto-collapses when AI is generating */}
           <div className={`bg-white/[0.02] border-r border-white/[0.06] overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
-            showHistory && !isCompactMode ? 'w-64 opacity-100' : 'w-0 opacity-0 border-0 p-0'
+            showHistory ? 'w-64 opacity-100' : 'w-0 opacity-0 border-0 p-0'
           }`}>
             {showHistory && (
               <>
@@ -450,9 +460,9 @@ export default function AIAssistentPage() {
                       setChatInstance(prev => prev + 1)
                       window.history.replaceState(null, '', '/dashboard/ai')
                     }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime text-[11px] font-medium hover:bg-workx-lime/20 transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-workx-lime/15 text-workx-lime text-[12px] font-semibold hover:bg-workx-lime/25 hover:shadow-[0_0_10px_rgba(249,255,133,0.2)] border border-workx-lime/20 transition-all"
                   >
-                    <Icons.plus size={12} />
+                    <Icons.plus size={13} />
                     Nieuw
                   </button>
                 </div>

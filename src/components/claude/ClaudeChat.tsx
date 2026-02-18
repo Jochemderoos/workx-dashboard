@@ -76,7 +76,7 @@ export default function ClaudeChat({
   const [isUploading, setIsUploading] = useState(false)
   const [thinkingText, setThinkingText] = useState('')
   const [isThinking, setIsThinking] = useState(false)
-  const [thinkingExpanded, setThinkingExpanded] = useState(false)
+  const [thinkingExpanded, setThinkingExpanded] = useState(true)
   const [anonymize, setAnonymize] = useState(false)
   const [selectedModel, setSelectedModel] = useState<'sonnet' | 'opus'>('sonnet')
   const [useKnowledgeSources, setUseKnowledgeSources] = useState(true)
@@ -89,6 +89,7 @@ export default function ClaudeChat({
   const [optionsExpanded, setOptionsExpanded] = useState(false)
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const thinkingContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isThinkingRef = useRef(false) // Tracks thinking state inside streaming closure
@@ -331,6 +332,17 @@ export default function ClaudeChat({
     // During streaming: instant scroll to avoid jittery smooth-scroll conflicts
     scrollToBottom(isLoading)
   }, [messages, scrollToBottom, isLoading])
+
+  // Auto-scroll thinking container so user can read along as Claude thinks
+  useEffect(() => {
+    if (thinkingContainerRef.current && thinkingText) {
+      thinkingContainerRef.current.scrollTop = thinkingContainerRef.current.scrollHeight
+    }
+    // Also keep the main messages area scrolled to bottom during thinking
+    if (thinkingText && isLoading) {
+      scrollToBottom(true)
+    }
+  }, [thinkingText, isLoading, scrollToBottom])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -901,19 +913,19 @@ ${markdownHtml}
         {convId && !projectId && onSaveToProject && (
           <button
             onClick={() => onSaveToProject(convId)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all text-white/35 hover:text-blue-400 hover:bg-blue-400/5"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all text-white/40 border border-white/10 hover:text-blue-400 hover:bg-blue-400/10 hover:border-blue-400/25"
           >
-            <Icons.folder size={12} />
+            <Icons.folder size={13} />
             Project
           </button>
         )}
         <button
           onClick={startNewChat}
           disabled={isLoading || (messages.length === 0 && !convId)}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all text-white/35 hover:text-workx-lime hover:bg-workx-lime/5 disabled:opacity-20 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all bg-workx-lime/10 text-workx-lime border border-workx-lime/20 hover:bg-workx-lime/20 hover:border-workx-lime/40 hover:shadow-[0_0_12px_rgba(249,255,133,0.15)] disabled:opacity-20 disabled:cursor-not-allowed"
         >
-          <Icons.plus size={12} />
-          Nieuw
+          <Icons.plus size={14} />
+          Nieuwe chat
         </button>
       </div>
 
@@ -1000,9 +1012,9 @@ ${markdownHtml}
                           <span>Overwegingen bekijken</span>
                         </button>
                         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                          expandedThinkingIds.has(msg.id) ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+                          expandedThinkingIds.has(msg.id) ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'
                         }`}>
-                          <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[180px] mb-2 thinking-section-glow">
+                          <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[360px] mb-2 thinking-section-glow">
                             <p className="text-[11px] text-white/25 leading-relaxed whitespace-pre-wrap">
                               {msg.thinkingContent}
                             </p>
@@ -1260,9 +1272,9 @@ ${markdownHtml}
                 )}
               </button>
               <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                thinkingExpanded || isThinking ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+                thinkingExpanded || isThinking ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'
               }`}>
-                <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[180px] mb-2 thinking-section-glow">
+                <div ref={thinkingContainerRef} className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.04] overflow-y-auto max-h-[360px] mb-2 thinking-section-glow">
                   <p className="text-[11px] text-white/25 leading-relaxed whitespace-pre-wrap">
                     {thinkingText}
                   </p>
@@ -1361,25 +1373,26 @@ ${markdownHtml}
                 <button
                   onClick={() => setSelectedModel('sonnet')}
                   disabled={isLoading}
-                  className={`px-2.5 py-1 text-[11px] transition-all ${
+                  className={`px-3 py-1.5 text-[11px] transition-all ${
                     selectedModel === 'sonnet'
                       ? 'bg-workx-lime/15 text-workx-lime font-medium'
                       : 'bg-transparent text-white/35 hover:text-white/60'
                   } disabled:opacity-30`}
+                  title="Sonnet — snel en slim, ideaal voor dagelijkse vragen"
                 >
-                  Sonnet
+                  Sonnet <span className="text-[9px] opacity-60 ml-0.5">snel</span>
                 </button>
                 <button
                   onClick={() => setSelectedModel('opus')}
                   disabled={isLoading}
-                  className={`px-2.5 py-1 text-[11px] transition-all border-l border-white/10 ${
+                  className={`px-3 py-1.5 text-[11px] transition-all border-l border-white/10 ${
                     selectedModel === 'opus'
                       ? 'bg-purple-500/15 text-purple-400 font-medium'
                       : 'bg-transparent text-white/35 hover:text-white/60'
                   } disabled:opacity-30`}
-                  title="Opus — diepgaandere analyse, langzamer"
+                  title="Opus — diepste analyse, beste voor complexe juridische vragen"
                 >
-                  Opus
+                  Opus <span className="text-[9px] opacity-60 ml-0.5">diep</span>
                 </button>
               </div>
 
