@@ -537,8 +537,23 @@ export default function ClaudeChat({
           const data = await r.json()
           const dbMsgs = data.messages || []
           const lastDb = dbMsgs[dbMsgs.length - 1]
-          if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
+          if (lastDb?.role === 'assistant' && lastDb.content?.length > 10) {
             if (cancelled) break
+            // Server error placeholder — show as error
+            if (lastDb.content.startsWith('[Fout:')) {
+              console.warn('[ClaudeChat] Safety net: server-fout gevonden:', lastDb.content.slice(0, 100))
+              const errText = lastDb.content.replace(/^\[Fout:\s*/, '').replace(/\]$/, '')
+              setStreamingMsgId(null)
+              setStreamingContent('')
+              setIsThinking(false)
+              setThinkingText('')
+              setMessages(prev => prev.map(m =>
+                m.id === emptyMsgId ? { ...m, content: `**Fout:** ${errText}\n\nProbeer het opnieuw.` } : m
+              ))
+              setStatusText('')
+              setIsLoading(false)
+              break
+            }
             let content = lastDb.content as string
             let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
             const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
@@ -1020,7 +1035,20 @@ ${markdownHtml}
               const dbMsgs = data.messages || []
               const lastDb = dbMsgs[dbMsgs.length - 1]
               console.log(`[ClaudeChat] Poll ${attempt} (${elapsed}s): ${dbMsgs.length} berichten, laatste rol: ${lastDb?.role || 'geen'}, content len: ${lastDb?.content?.length || 0}`)
-              if (lastDb?.role === 'assistant' && lastDb.content?.length > 10 && !lastDb.content.startsWith('[Fout:')) {
+              if (lastDb?.role === 'assistant' && lastDb.content?.length > 10) {
+                // Server saved an error placeholder — show it as an error
+                if (lastDb.content.startsWith('[Fout:')) {
+                  const errText = lastDb.content.replace(/^\[Fout:\s*/, '').replace(/\]$/, '')
+                  console.warn('[ClaudeChat] Server-fout gevonden via polling:', errText.slice(0, 100))
+                  setMessages(prev => prev.map(m =>
+                    m.id === assistantMsgId ? { ...m, content: `**Fout:** ${errText}\n\nProbeer het opnieuw — bij een tweede poging lukt het meestal wel (serverless cold start).` } : m
+                  ))
+                  setStatusText('')
+                  setIsLoading(false)
+                  setLastFailedMessage(text)
+                  finished = true
+                  break
+                }
                 let content = lastDb.content as string
                 let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
                 const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)

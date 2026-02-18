@@ -486,19 +486,21 @@ export async function POST(req: NextRequest) {
         const docLoadErrors: string[] = []
         let lastStep = 'init'
 
-        // Watchdog: if stream hasn't produced delta content within 45s, send diagnostic error
+        // Watchdog: if stream hasn't produced ANY delta content within 120s, send diagnostic error.
+        // 120s is generous to handle cold starts + heavy document loading + knowledge sources.
+        // The watchdog is CANCELLED when the first delta arrives (Claude started responding).
         let watchdogFired = false
-        const watchdog = setTimeout(async () => {
+        let watchdogTimer: ReturnType<typeof setTimeout> | null = setTimeout(async () => {
           watchdogFired = true
           console.error(`[chat] Watchdog fired at step: ${lastStep}`)
           try {
             await send(JSON.stringify({
               type: 'error',
-              error: `Het laden duurde te lang (>45s). Laatste stap: "${lastStep}". ${docLoadErrors.length > 0 ? `Fouten: ${docLoadErrors.join('; ').slice(0, 150)}` : 'Geen fouten gelogd.'} Probeer het opnieuw.`,
+              error: `Het laden duurde te lang (>120s). Laatste stap: "${lastStep}". ${docLoadErrors.length > 0 ? `Fouten: ${docLoadErrors.join('; ').slice(0, 150)}` : 'Geen fouten gelogd.'} Probeer het opnieuw.`,
             }))
             await writer.close()
           } catch { /* stream may already be closed */ }
-        }, 45000)
+        }, 120000)
 
         // Heartbeat: send periodic keepalive events to prevent Vercel/browser idle timeout.
         // Uses .catch() to swallow async rejections — without this, writer.write()
@@ -1333,7 +1335,8 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             stream.on('text', (text: string) => {
               fullText += text
               if (fullText.length === text.length) {
-                clearTimeout(watchdog)
+                // First delta arrived — Claude is responding. Cancel the watchdog.
+                if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null }
                 lastStep = 'claude-streaming'
               }
               writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`))
@@ -1604,7 +1607,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           const debugInfo = `[DEBUG: ${errMsg.slice(0, 150)}${docLoadErrors.length > 0 ? ` | docErrors: ${docLoadErrors.join('; ').slice(0, 100)}` : ''}]`
           await send(JSON.stringify({ type: 'error', error: `${userError}\n\n${debugInfo}` }))
         } finally {
-          clearTimeout(watchdog)
+          if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null }
           clearInterval(heartbeat)
           if (!watchdogFired) {
             try { await writer.close() } catch { /* may already be closed */ }
