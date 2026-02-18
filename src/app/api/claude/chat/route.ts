@@ -1150,10 +1150,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
         for (const block of msg.content) {
           if (block.type === 'text') totalTokens += estimateTokens(block.text || '')
           if (block.type === 'document') {
-            // Estimate tokens from base64 size: ~1500 tokens/page, ~50KB base64/page
-            const b64Len = block.source?.data?.length || 0
-            const estimatedPages = Math.max(1, Math.ceil(b64Len / 50000))
-            totalTokens += estimatedPages * 1500
+            totalTokens += estimatePdfBlockTokens(block.source?.data?.length || 0)
           }
           if (block.type === 'image') totalTokens += 1600
         }
