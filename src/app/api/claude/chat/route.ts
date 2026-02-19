@@ -966,7 +966,7 @@ export async function POST(req: NextRequest) {
         // queries target specific topics IN the document, not just the user's question
         const apiKey = process.env.ANTHROPIC_API_KEY
         const docSummaryForSearch = documentContext.length > 100
-          ? documentContext.slice(0, 4000)
+          ? documentContext.slice(0, 12000)
           : ''
         const expandedQueries = apiKey
           ? await expandSearchQueries(messageForClaude, apiKey, docSummaryForSearch).catch(() => [])
@@ -983,8 +983,8 @@ export async function POST(req: NextRequest) {
         if (chunkCount > 0 && (searchTerms.length > 0 || process.env.OPENAI_API_KEY)) {
           // Retrieve relevant chunks using multi-query hybrid search
           // More chunks when documents are attached (more diverse topics to cover)
-          const maxChunks = docSummaryForSearch ? 65 : 45
-          const retrievalTimeout = docSummaryForSearch ? 20000 : 15000
+          const maxChunks = docSummaryForSearch ? 90 : 45
+          const retrievalTimeout = docSummaryForSearch ? 25000 : 15000
           const relevantChunks = await Promise.race([
             retrieveRelevantChunks(
               primarySourceIds,
@@ -1072,14 +1072,19 @@ export async function POST(req: NextRequest) {
               const passageEclis = Array.from(new Set(sourcesContext.match(passageEcliPattern) || []))
 
               sourcesContext += `\n\nKRITIEKE INSTRUCTIE BRONGEBRUIK:
-- Verwerk ALLE relevante passages in je antwoord — niet slechts 1-2 bronnen. Je hebt ${usedPrimaryNames.length} bronnen met tientallen passages — gebruik ze ALLEMAAL waar relevant.
+- Verwerk ALLE relevante passages in je antwoord — niet slechts 1-2 bronnen. Je hebt ${usedPrimaryNames.length} bronnen met TIENTALLEN passages — gebruik ze ALLEMAAL waar relevant. De passages hieronder zijn SPECIAAL GESELECTEERD voor jouw vraag uit 48.000+ chunks.
+- ELKE BRON HEEFT EEN UNIEKE FUNCTIE — gebruik ze complementair:
+  * T&C → WELK WETSARTIKEL is van toepassing + wat zegt het commentaar?
+  * Thematica → WAT ZIJN de hoofdlijnen, systematiek, uitzonderingen?
+  * RAR → WELKE RECHTERLIJKE UITSPRAKEN zijn er over dit onderwerp? (ECLIs, rechtsregels, toepassingen)
+  * VAAN → WELKE RECENTE ONTWIKKELINGEN zijn relevant? (uitspraken 2024-2026)
 - Gebruik RAR-annotaties en VAAN-updates voor SPECIFIEKE jurisprudentie — niet alleen bekende arresten (zoals New Hairstyle). Zoek in de passages naar relevante lagere rechtspraak, specifieke toepassingen, en recente ontwikkelingen.
 - Bij juridische analyses: onderbouw ELK argument met minstens 1 specifieke passage (verwijs naar [Passage X]). Gebruik ALLEEN ECLIs die letterlijk in de passages staan — nooit uit je geheugen. Geen ECLI is beter dan een verkeerde ECLI.
-- Bij documentanalyse: zoek in de passages naar relevante jurisprudentie voor ELK specifiek onderwerp in het document.
+- Bij DOCUMENTANALYSE (verweerschrift, dagvaarding, etc.): doorloop ALLE passages hieronder en koppel ze aan de specifieke gronden/argumenten in het document. Voor ELKE juridische grond: zoek het relevante wetsartikel (T&C), de systematische analyse (Thematica), de relevante jurisprudentie (RAR), en recente ontwikkelingen (VAAN). Als een passage relevant is voor meerdere gronden, gebruik hem bij elke grond.
 - In ## Gebruikte bronnen: maak een APART <details>-blok per bron met een LETTERLIJK citaat (kopieer EXACT uit de passage).
 - VERBODEN: citaten parafraseren en presenteren als letterlijk. Als je parafraseert, gebruik dan GEEN aanhalingstekens.
 - VERBODEN: ECLI-nummers noemen die NIET in de passages staan en NIET via rechtspraak.nl zijn geverifieerd.
-- Tel aan het einde na: als je minder dan ${Math.min(usedPrimaryNames.length, 3)} van de ${usedPrimaryNames.length} bronnen hebt gebruikt, ga terug en zoek relevante passages die je hebt gemist.`
+- KWALITEITSCONTROLE: tel aan het einde na hoeveel van de ${usedPrimaryNames.length} bronnen je hebt gebruikt. Als je minder dan ${Math.min(usedPrimaryNames.length, 3)} bronnen hebt gebruikt, ga TERUG en doorzoek ALLE passages opnieuw — er zijn er honderden en je mist relevante informatie.`
 
               // ECLI WHITELIST with context: compact reference table.
               // Max 20 entries with short context to save ~3K-4K tokens vs previous 40x150.
@@ -1102,7 +1107,7 @@ export async function POST(req: NextRequest) {
                 ecliContextMap.forEach((context, ecli) => {
                   ecliEntries.push([ecli, context])
                 })
-                const limitedEntries = ecliEntries.slice(0, 20)
+                const limitedEntries = ecliEntries.slice(0, 35)
                 let ecliTable = ''
                 for (const [ecli, context] of limitedEntries) {
                   ecliTable += `\n- ${ecli}: "${context.slice(0, 100)}"`
@@ -1257,7 +1262,7 @@ Vraag NIET naar de echte namen of gegevens.`
       systemPrompt += `\n\n## Kennisbronnen — Meegeleverde Passages
 Hieronder staan passages uit de interne kennisbronnen, automatisch geselecteerd op basis van de vraag. Dit zijn DIRECTE citaten uit gezaghebbende naslagwerken — je EERSTE en BELANGRIJKSTE referentiepunt.
 
-⚠️ ANTI-HALLUCINATIE REGELS (ABSOLUUT):
+ANTI-HALLUCINATIE REGELS (ABSOLUUT):
 - CITEER NOOIT een passage, paragraaf, of tekst die NIET letterlijk in onderstaande passages staat
 - VERZIN NOOIT ECLI-nummers — gebruik ALLEEN ECLIs die hieronder in de passages staan${useRechtspraak ? ' of via rechtspraak.nl tools zijn gevonden' : '. Rechtspraak.nl is NIET beschikbaar — de passages zijn je ENIGE bron voor ECLIs'}
 - Als je twijfelt of iets in de passages staat: CITEER HET DAN NIET. Zeg liever "uit eigen juridische kennis" dan een valse bron citeren
@@ -1349,6 +1354,9 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
 
 ### DOCUMENTINHOUD — NOOIT HALLUCINEREN
 Wanneer je feedback geeft op een bijgevoegd document (juridisch, taalkundig, stilistisch of anderszins): verwijs UITSLUITEND naar tekst die LETTERLIJK in het document staat. CITEER de exacte passage. Verzin NOOIT woorden of zinnen die niet in het document voorkomen. Dit is een absolute regel — schending hiervan maakt je output waardeloos en gevaarlijk.
+
+### GEEN VERIFICATIEWAARSCHUWINGEN
+Voeg NOOIT verificatieblokken, disclaimers of waarschuwingen toe over ECLIs, citaten of bronnen. Geen "Let op", "Verificatiemelding", "niet geverifieerd", "kon niet worden teruggevonden", "controleer op rechtspraak.nl", of vergelijkbare teksten. De verificatie gebeurt AUTOMATISCH door het systeem. Jouw taak is ALLEEN het inhoudelijke antwoord leveren — schoon, professioneel, zonder meta-opmerkingen over verificatie.
 
 ### GEEN EMOJI'S — ABSOLUUT VERBOD
 Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, ❌, ✅, 💡, 📌, ⚖️ of welk symbool dan ook. OOK NIET als bullet-marker of voor nadruk. Alleen letters, cijfers en standaard leestekens (.,:;-!?).`
@@ -1631,10 +1639,10 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             messages: msgs,
             thinking: {
               type: 'enabled',
-              // Sonnet 10K is sufficient for employment law questions (was 16K).
+              // Sonnet: 10K for normal questions, 16K when documents are attached (needs to analyze per grond).
               // Opus stays at 32K for complex multi-document analyses.
               // Continuation streams use even lower budgets (see tool-use loop below).
-              budget_tokens: isOpus ? 32000 : 10000,
+              budget_tokens: isOpus ? 32000 : (documentContext.length > 500 ? 16000 : 10000),
             },
             ...(tools.length > 0 ? { tools } : {}),
           }
@@ -2141,6 +2149,28 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             }
           }
 
+          // Strip any verification warnings Claude generated in its own text
+          // These should never appear in output — verification is silent server-side only
+          {
+            const beforeStrip = fullText
+            // Remove "Let op — ECLI-verificatie..." blocks
+            fullText = fullText.replace(/\n*Let op\s*[-—]\s*ECLI-verificatie[^\n]*(?:\n[^\n]*?rechtspraak\.nl[^\n]*)?/gi, '')
+            // Remove "Let op: X citaat/citaten..." blocks
+            fullText = fullText.replace(/\n*Let op:\s*\d+\s*citaa?t\/citaten[^\n]*/gi, '')
+            // Remove "⚠️ Verificatiemelding..." blocks
+            fullText = fullText.replace(/\n*[⚠️]*\s*Verificatiemelding[^\n]*/gi, '')
+            // Remove "Controleer jurisprudentie altijd op rechtspraak.nl" lines
+            fullText = fullText.replace(/\n*Controleer (?:jurisprudentie|de exactheid)[^\n]*/gi, '')
+            // Remove "niet geverifieerd" or "niet teruggevonden" warning lines
+            fullText = fullText.replace(/\n*\*?\*?(?:Opmerking|Disclaimer|Waarschuwing)\*?\*?:\s*(?:De|Dit|Bovenstaande)[^\n]*(?:geverifieerd|teruggevonden|gecontroleerd)[^\n]*/gi, '')
+            // Clean up resulting multiple blank lines
+            fullText = fullText.replace(/\n{3,}/g, '\n\n').trim()
+            if (fullText !== beforeStrip) {
+              console.log(`[chat] Stripped Claude-generated verification warnings from output`)
+              await send(JSON.stringify({ type: 'replace_full', text: fullText }))
+            }
+          }
+
           // Save assistant message to database
           await prisma.aIMessage.create({
             data: {
@@ -2309,15 +2339,18 @@ async function expandSearchQueries(
   documentSummary?: string
 ): Promise<string[]> {
   try {
-    const client = new Anthropic({ apiKey, timeout: 8000 })
-
     // When documents are attached, generate MORE queries targeting specific topics
     const hasDocument = documentSummary && documentSummary.length > 100
-    const maxQueries = hasDocument ? 10 : 5
-    const maxTokens = hasDocument ? 800 : 400
+    const client = new Anthropic({ apiKey, timeout: hasDocument ? 15000 : 8000 })
+    const maxQueries = hasDocument ? 15 : 5
+    const maxTokens = hasDocument ? 1200 : 400
 
     const documentInstruction = hasDocument
-      ? `\n\nBELANGRIJK: Er is een document bijgevoegd. Hieronder een samenvatting. Genereer queries voor ELKE afzonderlijke juridische kwestie in het document — niet alleen het overkoepelende thema. Elke specifieke claim, argument of juridische grond verdient een eigen zoekquery.\n\nDocumentinhoud:\n${documentSummary}`
+      ? `\n\nBELANGRIJK: Er is een juridisch document bijgevoegd met meerdere gronden/argumenten. Je MOET queries genereren voor ELKE AFZONDERLIJKE juridische grond, vordering of argument — niet alleen het overkoepelende thema. Lees het document hieronder GRONDIG en identificeer ALLE specifieke juridische kwesties.
+
+Per juridische grond/kwestie in het document: genereer minstens 1 query met het relevante BW-artikel en juridische term.
+
+Documentinhoud (eerste ${Math.round(documentSummary.length / 1000)}K tekens):\n${documentSummary}`
       : ''
 
     const response = await client.messages.create({
@@ -2339,7 +2372,13 @@ Genereer ${maxQueries} zoekformuleringen:
 3. Juridische synoniemen en GERELATEERDE wetsartikelen (bijv. "pensioenopzegging AOW-gerechtigde art. 7:670a opzegverboden" of "ongeschiktheid functie-eisen herplaatsing") — treft RAR/VAAN
 4. Specifieke juridische GEVOLGEN en procedures (bijv. "transitievergoeding AOW-ontslag art. 7:673 lid 7" of "ontbindingsverzoek kantonrechter") — treft jurisprudentie
 5. Een AANVULLEND juridisch aspect dat de gebruiker niet noemde maar CRUCIAAL is (bijv. "opzegtermijn na AOW-leeftijd art. 7:672" of "billijke vergoeding ernstig verwijtbaar")
-${hasDocument ? `6-${maxQueries}. EXTRA queries voor specifieke onderwerpen uit het document die niet door queries 1-5 gedekt worden. Denk aan: elke afzonderlijke vordering, elke juridische grond, elke schadeclaim, elk verweer.` : ''}
+${hasDocument ? `6-${maxQueries}. EXTRA queries voor ELKE SPECIFIEKE juridische grond/argument in het document dat NIET door queries 1-5 gedekt wordt. CRUCIAAL: analyseer het document op ALLE afzonderlijke onderwerpen:
+- Elke genoemde ontslaggrond (e-grond, g-grond, h-grond, i-grond, etc.)
+- Elke vordering (billijke vergoeding, transitievergoeding, schadevergoeding, etc.)
+- Elke betwiste feitelijke kwestie (declaraties, overwerk, ploegentoeslag, schorsing, etc.)
+- Elk procedureel verweer (hoor en wederhoor, CAO-bepalingen, mandaat, vertrouwensbeginsel, etc.)
+- Elke genoemd wetsartikel met juridische context
+Genereer voor ELK onderwerp een aparte query met het relevante BW-artikel + juridische term.` : ''}
 
 DENK STAP VOOR STAP: Welke wettelijke bepaling is hier PRIMAIR van toepassing? Welk artikel uit Boek 7 BW? Welke juridische term wordt in de literatuur gebruikt?
 
@@ -4174,7 +4213,7 @@ async function retrieveRelevantChunks(
   console.log(`[chat] Per-source retrieval: ${allQueries.length} queries x ${sourceIds.length} sources`)
 
   // Results per source for semantic search (top-N per source per query)
-  const SEMANTIC_PER_SOURCE = 15 // Top 15 per source for balanced coverage
+  const SEMANTIC_PER_SOURCE = 20 // Top 20 per source for deep coverage
 
   // Run ALL semantic searches + keyword searches in parallel
   const [semanticResultSets, keywordResults] = await Promise.all([
@@ -4242,7 +4281,7 @@ async function retrieveRelevantChunks(
       }))
       const allOrConditions = [...orConditions, ...headingConditions]
 
-      const KEYWORD_PER_SOURCE = 50
+      const KEYWORD_PER_SOURCE = 60
       const perSourceKeyword = await Promise.all(
         sourceIds.map(sid =>
           prisma.sourceChunk.findMany({
@@ -4362,8 +4401,8 @@ async function retrieveRelevantChunks(
     // Balanced selection: ensure each source gets fair representation
     // Instead of just top-N globally (which lets one large source dominate),
     // guarantee each source gets at least MIN_PER_SOURCE if it has relevant chunks
-    const MIN_PER_SOURCE = 6  // Guarantee deep coverage per source
-    const MAX_PER_SOURCE = 15
+    const MIN_PER_SOURCE = 8  // Guarantee deep coverage per source
+    const MAX_PER_SOURCE = 22
     const selected: typeof combined = []
     const perSource = new Map<string, number>()
 
@@ -4439,10 +4478,10 @@ async function enrichWithAdjacentChunks(
   const existingKeys = new Set(chunks.map(c => `${c.sourceId}-${c.chunkIndex}`))
   const adjacentNeeded: Array<{ sourceId: string; chunkIndex: number }> = []
 
-  // Fetch adjacents for top 20 chunks (was 10) — this ensures MIN_PER_SOURCE
-  // guaranteed chunks from underrepresented sources also get context enrichment.
-  // Cost is minimal: at most 40 extra OR conditions in one DB query.
-  const ADJACENT_FETCH_LIMIT = 20
+  // Fetch adjacents for top 35 chunks — ensures MIN_PER_SOURCE
+  // guaranteed chunks from all sources get context enrichment.
+  // Cost is minimal: at most 70 extra OR conditions in one DB query.
+  const ADJACENT_FETCH_LIMIT = 35
   for (let i = 0; i < Math.min(chunks.length, ADJACENT_FETCH_LIMIT); i++) {
     const chunk = chunks[i]
     const prevKey = `${chunk.sourceId}-${chunk.chunkIndex - 1}`
