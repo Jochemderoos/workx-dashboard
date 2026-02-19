@@ -1176,6 +1176,20 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
     // SKIP when documents are attached: user wants document analysis, not more questions
     const isFirstMessage = history.length <= 1
     const hasDocumentAttachments = documentBlocks.length > 0 || (documentIds?.length ?? 0) > 0
+
+    // When documents were requested but failed to load: tell Claude explicitly, don't let it hallucinate
+    if (hasDocumentAttachments && documentBlocks.length === 0 && documentContext.length < 100) {
+      const failNote = `[SYSTEEM: De gebruiker heeft ${documentIds?.length || 0} document(en) bijgevoegd, maar deze konden niet geladen worden (technisch probleem). Meld dit aan de gebruiker en vraag om de pagina te verversen (Ctrl+Shift+R) en het opnieuw te proberen. Geef GEEN inhoudelijk antwoord op basis van aannames — je hebt de documenten NIET gezien.]`
+      if (msgs.length > 0) {
+        const lastMsg = msgs[msgs.length - 1]
+        if (lastMsg && lastMsg.role === 'user') {
+          if (typeof lastMsg.content === 'string') {
+            lastMsg.content = failNote + '\n\n' + lastMsg.content
+          }
+        }
+      }
+    }
+
     if (isFirstMessage && !hasDocumentAttachments && msgs.length > 0) {
       const lastMsg = msgs[msgs.length - 1]
       if (lastMsg && lastMsg.role === 'user') {
