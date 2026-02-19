@@ -24,6 +24,7 @@ interface AttachedDoc {
   id: string
   name: string
   fileType: string
+  splitIds?: string[] // When auto-split: all page document IDs (id is the first page)
 }
 
 interface DocxEditBlock {
@@ -233,7 +234,7 @@ export default function ClaudeChat({
   }
 
   // Upload large file in chunks (for Vercel 4.5MB body limit)
-  const uploadFileChunked = async (file: File, ext: string, onChunkProgress?: (sent: number, total: number) => void): Promise<{ id: string; name: string; fileType: string }> => {
+  const uploadFileChunked = async (file: File, ext: string, onChunkProgress?: (sent: number, total: number) => void): Promise<AttachedDoc> => {
     const CHUNK_SIZE = 2 * 1024 * 1024 // 2MB binary = ~2.7MB base64 (safe under 4.5MB with JSON overhead)
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
     const uploadId = crypto.randomUUID()
@@ -268,10 +269,10 @@ export default function ClaudeChat({
       // Last chunk returns the complete document
       if (result.id) {
         if (result.autoSplit && result.splitDocuments?.length > 0) {
-          // Auto-split: add all page documents
+          // Auto-split: return single doc with all split IDs bundled
           const splitDocs = result.splitDocuments as Array<{ id: string; name: string; fileType: string }>
-          setAttachedDocs(prev => [...prev, ...splitDocs.slice(1).map((d: { id: string; name: string; fileType: string }) => ({ id: d.id, name: d.name, fileType: d.fileType }))])
           toast.success(`${file.name} automatisch opgesplitst in ${splitDocs.length} delen`)
+          return { id: result.id, name: result.name, fileType: result.fileType, splitIds: splitDocs.map(d => d.id) }
         }
         return { id: result.id, name: result.name, fileType: result.fileType }
       }
@@ -305,6 +306,8 @@ export default function ClaudeChat({
     setIsUploading(true)
     setUploadProgress(0)
     setUploadStatusText('')
+    // Prevent StaleVersionGuard from auto-refreshing during upload
+    try { sessionStorage.setItem('workx-last-version-refresh', Date.now().toString()) } catch { /* ignore */ }
     let uploadedCount = 0
     const totalFiles = filesToUpload.length
     const totalSize = filesToUpload.reduce((sum, f) => sum + f.size, 0)
@@ -359,9 +362,9 @@ export default function ClaudeChat({
         }
         const doc = await res.json()
         if (doc.autoSplit && doc.splitDocuments?.length > 0) {
-          // PDF was auto-split into pages — attach all pages
+          // PDF was auto-split into pages — show single chip with all split IDs
           const splitDocs = doc.splitDocuments as Array<{ id: string; name: string; fileType: string }>
-          setAttachedDocs(prev => [...prev, ...splitDocs.map((d: { id: string; name: string; fileType: string }) => ({ id: d.id, name: d.name, fileType: d.fileType }))])
+          setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType, splitIds: splitDocs.map((d: { id: string; name: string; fileType: string }) => d.id) }])
           toast.success(`${file.name} automatisch opgesplitst in ${splitDocs.length} delen`)
         } else {
           setAttachedDocs(prev => [...prev, { id: doc.id, name: doc.name, fileType: doc.fileType }])
@@ -868,7 +871,7 @@ ${markdownHtml}
           conversationId: convId,
           projectId,
           message: fullMessage,
-          documentIds: [...documentIds, ...attachedDocs.map(d => d.id)],
+          documentIds: [...documentIds, ...attachedDocs.flatMap(d => d.splitIds || [d.id])],
           anonymize,
           model: selectedModel,
           useKnowledgeSources,
@@ -1854,7 +1857,10 @@ ${markdownHtml}
                 >
                   {anonymize && <Icons.shield size={9} className="text-workx-lime" />}
                   <Icons.paperclip size={10} />
-                  <span className="truncate max-w-[150px]">{doc.name}</span>
+                  <span className="truncate max-w-[200px]">{doc.name}</span>
+                  {doc.splitIds && doc.splitIds.length > 1 && (
+                    <span className="text-blue-400/50 text-[9px]">({doc.splitIds.length} delen)</span>
+                  )}
                   <button
                     onClick={() => removeAttachedDoc(doc.id)}
                     className="hover:text-white transition-colors"
