@@ -717,16 +717,17 @@ ${markdownHtml}
           document.body.removeChild(container)
         }
       } else {
-        // Word: download as HTML with .docx extension (Word auto-detects HTML content)
-        const html = generateExportHtml(exportContent, true)
-        const blob = new Blob([html], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+        // Word: generate real .docx using the docx library (native Office Open XML)
+        toast.loading('Word-document genereren...', { id: 'docx-export' })
+        const { generateDocx } = await import('@/lib/export-docx')
+        const blob = await generateDocx(exportContent)
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
         a.download = `workx-ai-${new Date().toISOString().slice(0, 10)}.docx`
         a.click()
         URL.revokeObjectURL(url)
-        toast.success('Word-document gedownload')
+        toast.success('Word-document gedownload', { id: 'docx-export' })
       }
     } catch (err) {
       console.error('Export error:', err)
