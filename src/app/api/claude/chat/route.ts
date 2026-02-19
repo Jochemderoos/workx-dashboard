@@ -266,13 +266,19 @@ Als een template is bijgevoegd:
 - Markeer ontbrekende gegevens als [INVULLEN: omschrijving]
 - Behoud de exacte structuur en opmaak
 
-## ECLI-nummers en Jurisprudentie — ABSOLUTE REGEL
+## ECLI-nummers en Jurisprudentie — ABSOLUTE REGEL (schending = waardeloos advies)
+ELKE ECLI die je noemt wordt AUTOMATISCH geverifieerd tegen rechtspraak.nl. Onjuiste ECLIs worden gemarkeerd.
+
 - VERZIN NOOIT een ECLI-nummer. Elk ECLI-nummer dat je noemt MOET afkomstig zijn uit:
-  1. De meegeleverde kennisbronpassages (hieronder), OF
-  2. Een resultaat van de rechtspraak.nl zoektool
-- Als je geen specifieke ECLI kunt vinden: verwijs naar het juridische principe ZONDER ECLI. Schrijf bijv. "Vaste rechtspraak leert dat..." in plaats van een verzonnen ECLI te citeren
-- NOOIT een ECLI-nummer "reconstrueren" of "herinneren" uit je training. Je training bevat GEEN betrouwbare ECLI-database
-- Bij twijfel: gebruik de rechtspraak.nl zoektool om het te verifiëren
+  1. De meegeleverde kennisbronpassages (hieronder) — citeer dan EXACT wat de passage over deze uitspraak zegt, OF
+  2. Een resultaat van search_rechtspraak of get_rechtspraak_ruling in DIT gesprek
+- WAT JE BEWEERT over een ECLI MOET KLOPPEN met de bron:
+  - Als een passage zegt "In ECLI:NL:HR:2020:1234 oordeelde de HR dat X", dan mag je ALLEEN zeggen dat deze uitspraak over X gaat — niet over Y
+  - Als je niet precies weet wat een uitspraak inhoudt: gebruik get_rechtspraak_ruling om de volledige tekst op te halen VOORDAT je erover schrijft
+- Als je geen specifieke ECLI kunt vinden: verwijs naar het juridische principe ZONDER ECLI. "Vaste rechtspraak leert dat..." is 100x beter dan een verkeerde ECLI
+- NOOIT een ECLI "reconstrueren" of "herinneren" uit je training. Je training bevat GEEN betrouwbare ECLI-database
+- NOOIT een ECLI uit de ene passage toeschrijven aan een uitspraak die in een andere passage staat
+- Bij twijfel: gebruik get_rechtspraak_ruling om de uitspraak op te halen en te lezen
 
 ## Citaten en Bronverwijzingen — ABSOLUTE REGEL
 - Tekst tussen aanhalingstekens ("...") MOET LETTERLIJK en EXACT overeenkomen met de bron
@@ -1137,9 +1143,10 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
 ### Brongebruik
 1. PRIMAIRE BRON: de meegeleverde passages uit T&C, Thematica, RAR en VAAN. Dit is je fundament.
 2. search_rechtspraak is OPTIONEEL — alleen als aanvulling. NIET verplicht.
-3. ECLI-NUMMERS: alleen uit meegeleverde passages of via search_rechtspraak in DIT gesprek. NOOIT uit eigen geheugen.
-4. NOOIT je zoekproces beschrijven. Begin DIRECT met de inhoud.
-5. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.
+3. ECLI-NUMMERS — STRENGE REGEL: alleen uit meegeleverde passages of via search_rechtspraak/get_rechtspraak_ruling in DIT gesprek. NOOIT uit eigen geheugen. Wat je BEWEERT over een ECLI moet EXACT overeenkomen met wat de bron zegt. Alle ECLIs worden automatisch gecontroleerd.
+4. Als je een ECLI uit de passages citeert: vermeld het passagenummer [Passage X] zodat het verifieerbaar is.
+5. NOOIT je zoekproces beschrijven. Begin DIRECT met de inhoud.
+6. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.
 
 ### DOCUMENTINHOUD — NOOIT HALLUCINEREN
 Wanneer je feedback geeft op een bijgevoegd document (juridisch, taalkundig, stilistisch of anderszins): verwijs UITSLUITEND naar tekst die LETTERLIJK in het document staat. CITEER de exacte passage. Verzin NOOIT woorden of zinnen die niet in het document voorkomen. Dit is een absolute regel — schending hiervan maakt je output waardeloos en gevaarlijk.
@@ -1635,42 +1642,109 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             extractCitations(finalMessage)
           }
 
-          // ECLI verification: scan response for ECLI numbers and verify they actually exist
-          // This catches hallucinated ECLIs that slip through despite system prompt instructions
-          const ecliPattern = /ECLI:NL:[A-Z]{2,6}:\d{4}:\d{1,6}/g
+          // ECLI VERIFICATION — INHOUDELIJKE CONTROLE
+          // Not just existence checks, but content verification:
+          // 1. Check if ECLI exists in source passages or tool results
+          // 2. For ECLIs from source passages: verify Claude's claims match the passage
+          // 3. For unknown ECLIs: fetch from rechtspraak.nl and compare content
+          const ecliPattern = /ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+/g
           const mentionedEclis = Array.from(new Set(fullText.match(ecliPattern) || []))
           if (mentionedEclis.length > 0) {
-            // Collect all ECLIs that appeared in tool results (from loopMsgs)
-            const verifiedEcliTexts = loopMsgs
+            // Collect ECLIs from tool results (Claude actually read these rulings — trustworthy)
+            const toolResultTexts = loopMsgs
               .filter(m => m.role === 'user' && Array.isArray(m.content))
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               .flatMap(m => (m.content as any[]).filter(c => c.type === 'tool_result').map(c => c.content || ''))
               .join(' ')
+            const toolVerifiedEclis = new Set(toolResultTexts.match(ecliPattern) || [])
 
-            // Also consider ECLIs from knowledge source passages as verified (editorial-verified)
-            const sourceVerifiedEclis = sourcesContext ? (sourcesContext.match(ecliPattern) || []) : []
-            const allVerifiedText = verifiedEcliTexts + ' ' + sourceVerifiedEclis.join(' ')
+            // Collect ECLIs from source passages (editorial content — ECLI exists but need context check)
+            const sourceEclis = new Set(sourcesContext ? (sourcesContext.match(ecliPattern) || []) : [])
 
-            const unverifiedEclis = mentionedEclis.filter(ecli => !allVerifiedText.includes(ecli))
-            if (unverifiedEclis.length > 0) {
-              // Quick-verify unverified ECLIs against rechtspraak.nl (e.g. found via web search)
-              const stillUnverified: string[] = []
-              for (const ecli of unverifiedEclis) {
-                try {
-                  const checkRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(ecli)}`, {
-                    headers: { Accept: 'application/xml' },
-                    signal: AbortSignal.timeout(5000),
-                  })
-                  if (!checkRes.ok) stillUnverified.push(ecli)
-                } catch {
-                  stillUnverified.push(ecli)
+            const problems: string[] = []
+
+            for (const ecli of mentionedEclis) {
+              // Category 1: ECLI found via tool (get_rechtspraak_ruling) — Claude read the full ruling
+              if (toolVerifiedEclis.has(ecli)) continue
+
+              // Extract what Claude claims about this ECLI (the sentence containing it)
+              const ecliEscaped = ecli.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              const claimMatch = fullText.match(new RegExp(`[^.]*${ecliEscaped}[^.]*\\.`, 's'))
+              const claimText = claimMatch ? claimMatch[0].toLowerCase() : ''
+
+              // Category 2: ECLI in source passages — verify context matches
+              if (sourceEclis.has(ecli)) {
+                if (claimText && sourcesContext) {
+                  // Extract the passage text around this ECLI in sourcesContext
+                  const srcMatch = sourcesContext.match(new RegExp(`[^\\n]*${ecliEscaped}[^\\n]*`, 'gs'))
+                  const passageContext = srcMatch ? srcMatch.join(' ').toLowerCase() : ''
+                  if (passageContext) {
+                    // Check if Claude's claim roughly matches the passage (key legal terms)
+                    const claimWords = claimText.split(/\s+/).filter(w => w.length > 4)
+                    const matchingWords = claimWords.filter(w => passageContext.includes(w))
+                    const matchRatio = claimWords.length > 0 ? matchingWords.length / claimWords.length : 1
+                    if (matchRatio < 0.35) {
+                      problems.push(`${ecli} (bron: kennispassage, maar inhoud komt niet overeen met passage)`)
+                      console.warn(`[chat] ECLI context mismatch: ${ecli} — claim match ratio: ${matchRatio.toFixed(2)}`)
+                    }
+                  }
                 }
+                continue
               }
-              if (stillUnverified.length > 0) {
-                const warningText = `\n\n---\n⚠️ **Let op:** De volgende ECLI-nummers konden niet worden geverifieerd via rechtspraak.nl en kunnen onjuist zijn: ${stillUnverified.join(', ')}. Controleer deze handmatig op rechtspraak.nl.`
-                fullText += warningText
-                await send(JSON.stringify({ type: 'delta', text: warningText }))
+
+              // Category 3: ECLI NOT in any source — fetch from rechtspraak.nl and verify
+              try {
+                const checkRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(ecli)}`, {
+                  headers: { Accept: 'application/xml' },
+                  signal: AbortSignal.timeout(8000),
+                })
+                if (!checkRes.ok) {
+                  problems.push(`${ecli} (niet gevonden op rechtspraak.nl — waarschijnlijk verzonnen)`)
+                } else {
+                  // ECLI exists — do content + domain verification
+                  const xml = await checkRes.text()
+                  if (xml.includes('<error>') || xml.length < 200) {
+                    problems.push(`${ecli} (niet beschikbaar op rechtspraak.nl)`)
+                  } else {
+                    const title = (xml.match(/<dcterms:title[^>]*>([\s\S]*?)<\/dcterms:title>/i)?.[1] || '').replace(/<[^>]+>/g, '').toLowerCase()
+                    const abstract = (xml.match(/<dcterms:abstract[^>]*>([\s\S]*?)<\/dcterms:abstract>/i)?.[1] || '').replace(/<[^>]+>/g, '').toLowerCase()
+                    const subjects = (xml.match(/<dcterms:subject[^>]*>([\s\S]*?)<\/dcterms:subject>/gi) || []).map(s => s.replace(/<[^>]+>/g, '').trim().toLowerCase()).join(' ')
+                    // Also read first 1000 chars of body text for richer comparison
+                    const bodyMatch = xml.match(/<(?:uitspraak|conclusie)[^>]*>([\s\S]*?)<\/(?:uitspraak|conclusie)>/i)
+                    const bodyText = bodyMatch ? bodyMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1000).toLowerCase() : ''
+                    const rulingContext = `${title} ${abstract} ${subjects} ${bodyText}`
+
+                    // Check 1: Domain mismatch (strafrecht vs arbeidsrecht)
+                    const isArbeidsrecht = claimText.includes('arbeid') || claimText.includes('werkgever') || claimText.includes('werknemer') || claimText.includes('ontslag') || claimText.includes('ontbinding') || claimText.includes('fraude') || claimText.includes('declaratie')
+                    const rulingIsStrafrecht = subjects.includes('strafrecht') && !subjects.includes('arbeidsrecht') && !subjects.includes('civiel')
+                    if (isArbeidsrecht && rulingIsStrafrecht) {
+                      problems.push(`${ecli} (VERKEERD RECHTSGEBIED: uitspraak is strafrecht, maar wordt gepresenteerd als arbeidsrecht)`)
+                      console.warn(`[chat] ECLI domain mismatch: ${ecli} — claim is arbeidsrecht, ruling is strafrecht`)
+                    } else if (claimText) {
+                      // Check 2: Content match — does Claude's claim match the ruling?
+                      const claimWords = claimText.split(/\s+/).filter(w => w.length > 4)
+                      const matchingWords = claimWords.filter(w => rulingContext.includes(w))
+                      const matchRatio = claimWords.length > 0 ? matchingWords.length / claimWords.length : 1
+                      if (matchRatio < 0.25) {
+                        problems.push(`${ecli} (bestaat op rechtspraak.nl, maar beschreven inhoud komt niet overeen met de uitspraak)`)
+                        console.warn(`[chat] ECLI content mismatch: ${ecli} — claim vs ruling match: ${matchRatio.toFixed(2)}`)
+                      }
+                    }
+                  }
+                }
+              } catch {
+                problems.push(`${ecli} (kon niet worden geverifieerd — mogelijk onjuist)`)
               }
+            }
+
+            if (problems.length > 0) {
+              const severity = problems.length >= 3 ? 'WAARSCHUWING' : 'Let op'
+              const severityMsg = problems.length >= 3
+                ? `\n\n**${problems.length} van ${mentionedEclis.length} ECLI-nummers in dit advies konden niet worden geverifieerd of bevatten onjuistheden. Vertrouw NIET blindelings op de genoemde jurisprudentie — controleer elk ECLI-nummer handmatig.**`
+                : ''
+              const warningText = `\n\n---\n**${severity} — ECLI-verificatie (automatisch):**\n${problems.map(p => `- ${p}`).join('\n')}${severityMsg}\n\nControleer deze ECLI-nummers op [rechtspraak.nl](https://www.rechtspraak.nl).`
+              fullText += warningText
+              await send(JSON.stringify({ type: 'delta', text: warningText }))
             }
           }
 
