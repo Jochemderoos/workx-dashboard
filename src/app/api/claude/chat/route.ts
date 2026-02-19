@@ -1081,36 +1081,35 @@ export async function POST(req: NextRequest) {
 - VERBODEN: ECLI-nummers noemen die NIET in de passages staan en NIET via rechtspraak.nl zijn geverifieerd.
 - Tel aan het einde na: als je minder dan ${Math.min(usedPrimaryNames.length, 3)} van de ${usedPrimaryNames.length} bronnen hebt gebruikt, ga terug en zoek relevante passages die je hebt gemist.`
 
-              // ECLI WHITELIST with context: list verified ECLIs + what the passage says
+              // ECLI WHITELIST with context: compact reference table.
+              // Max 20 entries with short context to save ~3K-4K tokens vs previous 40x150.
+              // ECLIs already appear in the passages; this is a quick-reference summary.
+              // Post-processing ECLI verification (layer 0-4) catches hallucinated ECLIs.
               if (passageEclis.length > 0) {
-                // Build ECLI reference table with surrounding context from passages
                 const ecliContextMap = new Map<string, string>()
                 const ecliContextPattern = /ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+/g
                 let ecliCtxMatch
                 while ((ecliCtxMatch = ecliContextPattern.exec(sourcesContext)) !== null) {
                   const ecli = ecliCtxMatch[0]
                   if (ecliContextMap.has(ecli)) continue
-                  // Get surrounding context (~150 chars before and after)
-                  const start = Math.max(0, ecliCtxMatch.index - 100)
-                  const end = Math.min(sourcesContext.length, ecliCtxMatch.index + ecli.length + 150)
+                  const start = Math.max(0, ecliCtxMatch.index - 60)
+                  const end = Math.min(sourcesContext.length, ecliCtxMatch.index + ecli.length + 100)
                   const context = sourcesContext.slice(start, end).replace(/\n/g, ' ').trim()
                   ecliContextMap.set(ecli, context)
                 }
 
-                // Limit table to 40 most relevant ECLIs to prevent prompt bloat
                 const ecliEntries: Array<[string, string]> = []
                 ecliContextMap.forEach((context, ecli) => {
                   ecliEntries.push([ecli, context])
                 })
-                const limitedEntries = ecliEntries.slice(0, 40)
+                const limitedEntries = ecliEntries.slice(0, 20)
                 let ecliTable = ''
                 for (const [ecli, context] of limitedEntries) {
-                  ecliTable += `\n- ${ecli}: "${context.slice(0, 150)}"`
+                  ecliTable += `\n- ${ecli}: "${context.slice(0, 100)}"`
                 }
 
-                sourcesContext += `\n\n--- GEVERIFIEERDE ECLI-REFERENTIETABEL ---
-De volgende ${limitedEntries.length} ECLI-nummers (van ${passageEclis.length} totaal) staan in de passages en zijn GEVERIFIEERD.
-Gebruik ALLEEN ECLIs uit deze tabel of uit tool-resultaten. Elk ander ECLI-nummer wordt DOORGESTREEPT.
+                sourcesContext += `\n\n--- GEVERIFIEERDE ECLI-REFERENTIETABEL (${limitedEntries.length} van ${passageEclis.length}) ---
+Gebruik ALLEEN ECLIs uit de passages of uit tool-resultaten. Elk ander ECLI-nummer wordt DOORGESTREEPT.
 ${ecliTable}
 Een argument ZONDER ECLI is altijd beter dan een argument met een verkeerde ECLI.`
               }
@@ -1269,7 +1268,12 @@ WERKWIJZE (verplicht voor elk antwoord):
 2. Gebruik ELKE relevante passage — niet slechts 2-3 bronnen. De passages zijn SPECIAAL GESELECTEERD voor deze vraag
 3. CITEER LETTERLIJK met de CITEERWIJZE per bron, gevolgd door een exact citaat tussen aanhalingstekens dat WOORD VOOR WOORD in de passage staat
 4. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD — deze mag je citeren met passagenummer
-5. Combineer bronnen systematisch: T&C voor wettelijk kader → Thematica voor analyse → RAR/VAAN voor jurisprudentie
+5. INTEGREER bronnen systematisch in deze VASTE VOLGORDE:
+   a. T&C Arbeidsrecht → begin met het wettelijk kader: welk artikel is van toepassing, wat zegt het commentaar?
+   b. Thematica Arbeidsrecht → verdiep met de systematische analyse: wat zijn de hoofdlijnen, uitzonderingen, aandachtspunten?
+   c. RAR → onderbouw met concrete jurisprudentie: welke uitspraken zijn relevant, wat oordeelde de rechter?
+   d. VAAN AR Updates → actualiseer met recente ontwikkelingen: zijn er recente uitspraken die het beeld veranderen of bevestigen?
+   Als een bron GEEN relevante passages bevat, sla die bron dan over — maar controleer ALTIJD alle 4 de bronnen
 6. ${useRechtspraak ? 'Gebruik search_rechtspraak ALLEEN als de passages onvoldoende jurisprudentie bevatten — de passages zijn je PRIMAIRE bron, niet rechtspraak.nl.' : 'De passages zijn je ENIGE bron voor ECLIs en jurisprudentie. Rechtspraak.nl is NIET beschikbaar.'} Val op eigen kennis ALLEEN terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet met "Op basis van eigen juridische kennis (niet uit meegeleverde bronnen):"
 7. KRITIEK: Controleer ALTIJD of de juiste wettelijke bepaling in de passages staat. Als je een vraag over ontslag van een AOW-gerechtigde krijgt maar art. 7:669 lid 4 BW niet in de passages staat, gebruik dan je kennis uit de "Kritieke Wettelijke Regels" sectie hierboven en vermeld dit
 8. Bij elk argument: verwijs naar het PASSAGENUMMER [Passage X] zodat de citaten verifieerbaar zijn${sourcesContext}`
@@ -1627,7 +1631,10 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             messages: msgs,
             thinking: {
               type: 'enabled',
-              budget_tokens: isOpus ? 32000 : 16000,
+              // Sonnet 10K is sufficient for employment law questions (was 16K).
+              // Opus stays at 32K for complex multi-document analyses.
+              // Continuation streams use even lower budgets (see tool-use loop below).
+              budget_tokens: isOpus ? 32000 : 10000,
             },
             ...(tools.length > 0 ? { tools } : {}),
           }
@@ -1796,13 +1803,17 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
               { role: 'assistant' as const, content: filteredContent },
               { role: 'user' as const, content: toolResults },
             ]
+            // Continuation stream: lower budgets than initial stream.
+            // Claude only needs to process tool results and finish the response,
+            // not start a full new analysis. This saves ~50% on thinking tokens
+            // and reduces timeout risk significantly.
             const continueStream = client.messages.stream({
               model: modelId,
-              max_tokens: isOpus ? 64000 : 32000,
+              max_tokens: isOpus ? 32000 : 16000,
               temperature: 1,
               system: systemPrompt,
               messages: loopMsgs,
-              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 40000 : 24000 },
+              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 16000 : 10000 },
               tools,
             })
 
@@ -4224,13 +4235,20 @@ async function retrieveRelevantChunks(
       }))
 
       // Search EACH source separately with its own limit
+      // Also match terms against headings for better recall — chunks whose heading
+      // matches the query are often the most relevant (e.g., heading = article number)
+      const headingConditions = prioritized.slice(0, 15).map(term => ({
+        heading: { contains: term, mode: 'insensitive' as const },
+      }))
+      const allOrConditions = [...orConditions, ...headingConditions]
+
       const KEYWORD_PER_SOURCE = 50
       const perSourceKeyword = await Promise.all(
         sourceIds.map(sid =>
           prisma.sourceChunk.findMany({
             where: {
               sourceId: sid,
-              OR: orConditions,
+              OR: allOrConditions,
             },
             select: {
               id: true,
@@ -4421,9 +4439,12 @@ async function enrichWithAdjacentChunks(
   const existingKeys = new Set(chunks.map(c => `${c.sourceId}-${c.chunkIndex}`))
   const adjacentNeeded: Array<{ sourceId: string; chunkIndex: number }> = []
 
-  for (const chunk of chunks) {
-    // Only fetch adjacents for top-scored chunks (top 10) to limit DB queries
-    if (chunks.indexOf(chunk) >= 10) break
+  // Fetch adjacents for top 20 chunks (was 10) — this ensures MIN_PER_SOURCE
+  // guaranteed chunks from underrepresented sources also get context enrichment.
+  // Cost is minimal: at most 40 extra OR conditions in one DB query.
+  const ADJACENT_FETCH_LIMIT = 20
+  for (let i = 0; i < Math.min(chunks.length, ADJACENT_FETCH_LIMIT); i++) {
+    const chunk = chunks[i]
     const prevKey = `${chunk.sourceId}-${chunk.chunkIndex - 1}`
     const nextKey = `${chunk.sourceId}-${chunk.chunkIndex + 1}`
     if (!existingKeys.has(prevKey) && chunk.chunkIndex > 0) {
@@ -4463,8 +4484,9 @@ async function enrichWithAdjacentChunks(
 
     // Merge adjacent content into existing chunks (prepend N-1, append N+1)
     // Use 800 chars for context — enough for a full legal paragraph
+    // Enrich top 20 chunks (matching ADJACENT_FETCH_LIMIT) to cover MIN_PER_SOURCE chunks
     return chunks.map((chunk, idx) => {
-      if (idx >= 12) return chunk // Enrich top 12 chunks
+      if (idx >= ADJACENT_FETCH_LIMIT) return chunk
       const prevContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex - 1}`)
       const nextContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex + 1}`)
       let enrichedContent = chunk.content
