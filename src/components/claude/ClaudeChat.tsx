@@ -560,10 +560,10 @@ export default function ClaudeChat({
             }
             let content = lastDb.content as string
             let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
-            const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+            const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/i)
             if (confMatch) {
-              confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
-              content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+              confidence = confMatch[1].toLowerCase() as 'hoog' | 'gemiddeld' | 'laag'
+              content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*/gi, '')
             }
             console.log('[ClaudeChat] Safety net: antwoord gevonden via backup polling')
             setStreamingMsgId(null)
@@ -997,10 +997,10 @@ ${markdownHtml}
                 const sources = event.sources || []
                 const eventModel = event.model || ''
                 let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
-                const confMatch = streamedText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+                const confMatch = streamedText.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/i)
                 if (confMatch) {
-                  confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
-                  streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+                  confidence = confMatch[1].toLowerCase() as 'hoog' | 'gemiddeld' | 'laag'
+                  streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*/gi, '')
                 }
                 setStreamingMsgId(null)
                 if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
@@ -1114,10 +1114,10 @@ ${markdownHtml}
                 }
                 let content = lastDb.content as string
                 let confidence: 'hoog' | 'gemiddeld' | 'laag' | undefined
-                const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/)
+                const confMatch = content.match(/%%CONFIDENCE:(hoog|gemiddeld|laag)%%/i)
                 if (confMatch) {
-                  confidence = confMatch[1] as 'hoog' | 'gemiddeld' | 'laag'
-                  content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*$/, '')
+                  confidence = confMatch[1].toLowerCase() as 'hoog' | 'gemiddeld' | 'laag'
+                  content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*/gi, '')
                 }
                 console.log('[ClaudeChat] Antwoord gevonden via DB polling na', elapsed, 'seconden')
                 setLoadingProgress(100)
