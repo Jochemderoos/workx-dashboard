@@ -267,18 +267,23 @@ Als een template is bijgevoegd:
 - Behoud de exacte structuur en opmaak
 
 ## ECLI-nummers en Jurisprudentie — ABSOLUTE REGEL (schending = waardeloos advies)
-ELKE ECLI die je noemt wordt AUTOMATISCH geverifieerd tegen rechtspraak.nl. Onjuiste ECLIs worden gemarkeerd.
+ELKE ECLI die je noemt wordt AUTOMATISCH geverifieerd tegen rechtspraak.nl. Onjuiste ECLIs worden zichtbaar gemarkeerd voor de gebruiker. Dit is een advocatenkantoor — verkeerde ECLIs zijn een beroepsfout.
 
-- VERZIN NOOIT een ECLI-nummer. Elk ECLI-nummer dat je noemt MOET afkomstig zijn uit:
-  1. De meegeleverde kennisbronpassages (hieronder) — citeer dan EXACT wat de passage over deze uitspraak zegt, OF
-  2. Een resultaat van search_rechtspraak of get_rechtspraak_ruling in DIT gesprek
-- WAT JE BEWEERT over een ECLI MOET KLOPPEN met de bron:
-  - Als een passage zegt "In ECLI:NL:HR:2020:1234 oordeelde de HR dat X", dan mag je ALLEEN zeggen dat deze uitspraak over X gaat — niet over Y
-  - Als je niet precies weet wat een uitspraak inhoudt: gebruik get_rechtspraak_ruling om de volledige tekst op te halen VOORDAT je erover schrijft
-- Als je geen specifieke ECLI kunt vinden: verwijs naar het juridische principe ZONDER ECLI. "Vaste rechtspraak leert dat..." is 100x beter dan een verkeerde ECLI
-- NOOIT een ECLI "reconstrueren" of "herinneren" uit je training. Je training bevat GEEN betrouwbare ECLI-database
-- NOOIT een ECLI uit de ene passage toeschrijven aan een uitspraak die in een andere passage staat
-- Bij twijfel: gebruik get_rechtspraak_ruling om de uitspraak op te halen en te lezen
+TOEGESTANE BRONNEN VOOR ECLI-NUMMERS (geen uitzonderingen):
+1. Letterlijk gekopieerd uit de meegeleverde kennisbronpassages hieronder — citeer dan EXACT wat de passage over deze uitspraak zegt
+2. Gevonden via search_rechtspraak in DIT gesprek EN daarna opgehaald met get_rechtspraak_ruling
+3. GEEN ANDERE BRONNEN. Niet uit je training, niet uit je geheugen, niet "gereconstrueerd"
+
+PROCEDURE VOOR JURISPRUDENTIE:
+- Als je een juridisch argument wilt onderbouwen met een uitspraak:
+  1. EERST: zoek in de meegeleverde passages — staat er een relevante ECLI?
+  2. ZO JA: citeer die ECLI met EXACT de context uit de passage
+  3. ZO NEE: gebruik search_rechtspraak om relevante uitspraken te vinden
+  4. NA ZOEKEN: gebruik get_rechtspraak_ruling om de uitspraak op te halen en te lezen VOORDAT je erover schrijft
+  5. NOOIT: een ECLI noemen zonder dat je de uitspraak hebt gelezen (in passage of via tool)
+- Als je geen specifieke ECLI kunt vinden: verwijs naar het juridische principe ZONDER ECLI. "Vaste rechtspraak leert dat..." of "Op grond van [wetsartikel]..." is 100x beter dan een verkeerde ECLI
+- NOOIT een bekende zaaknaam (bijv. "Stoof/Mammoet", "New Hairstyle", "Briljant Schoenen") koppelen aan een ECLI tenzij die koppeling LETTERLIJK in een passage staat of via get_rechtspraak_ruling is bevestigd
+- Bij twijfel: LAAT DE ECLI WEG. Een goed juridisch argument zonder ECLI is oneindig veel beter dan een argument met een verkeerde ECLI
 
 ## Citaten en Bronverwijzingen — ABSOLUTE REGEL
 - Tekst tussen aanhalingstekens ("...") MOET LETTERLIJK en EXACT overeenkomen met de bron
@@ -1361,7 +1366,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
     })
     tools.push({
       name: 'get_rechtspraak_ruling',
-      description: 'Haal de VOLLEDIGE tekst van een uitspraak op via het ECLI-nummer. ALTIJD gebruiken wanneer je een uitspraak wilt citeren of bespreken — lees de uitspraak VOLLEDIG voordat je erover schrijft. Gebruik dit voor de 2-3 meest relevante zoekresultaten van search_rechtspraak. Zo kun je de exacte overwegingen van de rechter citeren in je analyse.',
+      description: 'Haal de VOLLEDIGE tekst van een uitspraak op via het ECLI-nummer. VERPLICHT: gebruik deze tool ALTIJD voordat je een ECLI citeert die je via search_rechtspraak hebt gevonden. Noem NOOIT een ECLI zonder de uitspraak eerst te hebben gelezen (in de passages of via deze tool). Alle ECLIs worden automatisch geverifieerd — onjuiste ECLIs worden zichtbaar gemarkeerd.',
       input_schema: {
         type: 'object',
         properties: {
