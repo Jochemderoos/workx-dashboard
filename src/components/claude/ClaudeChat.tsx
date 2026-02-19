@@ -83,6 +83,7 @@ export default function ClaudeChat({
   const [anonymize, setAnonymize] = useState(false)
   const [selectedModel, setSelectedModel] = useState<'sonnet' | 'opus'>('sonnet')
   const [useKnowledgeSources, setUseKnowledgeSources] = useState(true)
+  const [useRechtspraak, setUseRechtspraak] = useState(false) // Default OFF — knowledge sources are primary
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set())
   const [annotatingId, setAnnotatingId] = useState<string | null>(null)
   const [annotationText, setAnnotationText] = useState('')
@@ -875,6 +876,7 @@ ${markdownHtml}
           anonymize,
           model: selectedModel,
           useKnowledgeSources,
+          useRechtspraak,
         }),
         signal: controller.signal,
       })
@@ -1849,6 +1851,22 @@ ${markdownHtml}
                 </button>
               </div>
 
+              {/* 4. Rechtspraak.nl toggle — off by default */}
+              <button
+                onClick={() => setUseRechtspraak(!useRechtspraak)}
+                disabled={isLoading || !useKnowledgeSources}
+                className={`px-3 py-2 rounded-xl text-[12px] font-medium transition-all border ${
+                  useRechtspraak
+                    ? 'bg-orange-500/20 border-orange-500/30 text-orange-300 shadow-[inset_0_0_12px_rgba(249,115,22,0.12)]'
+                    : 'bg-white/[0.03] border-white/10 text-white/30 hover:text-white/50 hover:bg-white/[0.05]'
+                } disabled:opacity-20`}
+                title={useRechtspraak
+                  ? 'Rechtspraak.nl actief — zoekt extra uitspraken buiten kennisbronnen (langzamer)'
+                  : 'Klik om ook op rechtspraak.nl te zoeken (duurt langer, meestal niet nodig)'}
+              >
+                {useRechtspraak ? 'Rechtspraak.nl aan' : 'Rechtspraak.nl uit'}
+              </button>
+
               {/* Extra options as small chips */}
               {RESPONSE_OPTIONS.filter(o => o.id !== 'kort' && o.id !== 'uitgebreid').map((opt) => (
                 <button
@@ -1962,6 +1980,11 @@ ${markdownHtml}
               }`}>
                 {activeOptions.has('uitgebreid') ? 'Uitgebreid' : 'Beknopt'}
               </span>
+              {useRechtspraak && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 text-[10px] text-orange-400">
+                  Rechtspraak.nl
+                </span>
+              )}
               {Array.from(activeOptions).filter(id => id !== 'kort' && id !== 'uitgebreid').map(optId => {
                 const opt = RESPONSE_OPTIONS.find(o => o.id === optId)
                 return opt ? (

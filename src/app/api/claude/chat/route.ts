@@ -337,12 +337,19 @@ REGELS:
 - Neem ELKE bron op waaruit je passages hebt ontvangen, ook als je die bron niet direct nodig had — vermeld dan kort waarom niet
 - Bij CAO-specifieke vragen: zoek de relevante CAO-tekst via web_search
 
+## DENKSTAP VOOR ELKE ECLI (voer uit in je extended thinking)
+Voordat je een ECLI-nummer in je antwoord schrijft, doorloop deze checklist in je denken:
+1. Kan ik deze ECLI LETTERLIJK zien in een van de meegeleverde passages? → Zo ja: OK, citeer met passagenummer
+2. Heb ik deze ECLI gevonden via search_rechtspraak EN opgehaald via get_rechtspraak_ruling in DIT gesprek? → Zo ja: OK
+3. "Ken" ik deze ECLI uit mijn training? → STOP. NIET GEBRUIKEN. Dit leidt tot fouten. Schrijf het argument ZONDER ECLI.
+Als je niet met zekerheid "ja" kunt antwoorden op vraag 1 of 2: GEBRUIK DE ECLI NIET.
+
 ## Betrouwbaarheidsindicator
 Sluit af met een betrouwbaarheidsindicator op de ALLERLAATSTE regel:
 %%CONFIDENCE:hoog%% of %%CONFIDENCE:gemiddeld%% of %%CONFIDENCE:laag%%
-- **hoog**: gebaseerd op interne kennisbronnen EN geverifieerde rechtspraak
+- **hoog**: gebaseerd op interne kennisbronnen EN geverifieerde rechtspraak (alleen ECLIs uit passages of tools)
 - **gemiddeld**: gebaseerd op rechtspraak.nl maar niet (volledig) in interne bronnen, OF interpretatieruimte
-- **laag**: (grotendeels) eigen kennis, niet geverifieerd
+- **laag**: (grotendeels) eigen kennis, niet geverifieerd, of ECLIs uit geheugen gebruikt
 Voeg GEEN tekst toe na de %%CONFIDENCE%% tag.`
 
 // GET: load messages for an existing conversation
@@ -410,7 +417,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Te veel verzoeken. Wacht even voordat je een nieuwe vraag stelt (max 30 per uur).' }, { status: 429 })
   }
 
-  const { conversationId, projectId, message, documentIds, anonymize, model: requestedModel, useKnowledgeSources } = await req.json()
+  const { conversationId, projectId, message, documentIds, anonymize, model: requestedModel, useKnowledgeSources, useRechtspraak } = await req.json()
 
   if (!message?.trim()) {
     return NextResponse.json({ error: 'Bericht mag niet leeg zijn' }, { status: 400 })
@@ -859,7 +866,7 @@ export async function POST(req: NextRequest) {
         if (chunkCount > 0 && (searchTerms.length > 0 || process.env.OPENAI_API_KEY)) {
           // Retrieve relevant chunks using multi-query hybrid search
           // More chunks when documents are attached (more diverse topics to cover)
-          const maxChunks = docSummaryForSearch ? 75 : 50
+          const maxChunks = docSummaryForSearch ? 65 : 45
           const retrievalTimeout = docSummaryForSearch ? 20000 : 15000
           const relevantChunks = await Promise.race([
             retrieveRelevantChunks(
@@ -973,21 +980,22 @@ export async function POST(req: NextRequest) {
                   ecliContextMap.set(ecli, context)
                 }
 
-                let ecliTable = ''
+                // Limit table to 40 most relevant ECLIs to prevent prompt bloat
+                const ecliEntries: Array<[string, string]> = []
                 ecliContextMap.forEach((context, ecli) => {
-                  ecliTable += `\n- ${ecli}: "${context.slice(0, 200)}"`
+                  ecliEntries.push([ecli, context])
                 })
+                const limitedEntries = ecliEntries.slice(0, 40)
+                let ecliTable = ''
+                for (const [ecli, context] of limitedEntries) {
+                  ecliTable += `\n- ${ecli}: "${context.slice(0, 150)}"`
+                }
 
                 sourcesContext += `\n\n--- GEVERIFIEERDE ECLI-REFERENTIETABEL ---
-De volgende ${passageEclis.length} ECLI-nummers staan in de meegeleverde passages en zijn GEVERIFIEERD.
-Dit zijn de ENIGE ECLIs die je mag gebruiken zonder search_rechtspraak/get_rechtspraak_ruling.
+De volgende ${limitedEntries.length} ECLI-nummers (van ${passageEclis.length} totaal) staan in de passages en zijn GEVERIFIEERD.
+Gebruik ALLEEN ECLIs uit deze tabel of uit tool-resultaten. Elk ander ECLI-nummer wordt DOORGESTREEPT.
 ${ecliTable}
-
-REGELS:
-1. Gebruik ALLEEN ECLIs uit deze tabel of uit tool-resultaten in dit gesprek.
-2. Citeer bij elke ECLI EXACT wat de passage erover zegt — niet je eigen interpretatie.
-3. Elk ECLI-nummer dat NIET in deze tabel staat en NIET via tools is gevonden wordt automatisch DOORGESTREEPT in je antwoord.
-4. Een argument ZONDER ECLI is altijd beter dan een argument met een verkeerde ECLI.`
+Een argument ZONDER ECLI is altijd beter dan een argument met een verkeerde ECLI.`
               }
             }
           }
@@ -1091,6 +1099,35 @@ REGELS:
 
     // Build system prompt
     let systemPrompt = SYSTEM_PROMPT
+    // When rechtspraak.nl is disabled: simplify ECLI rules to ONLY use knowledge sources
+    if (!useRechtspraak) {
+      systemPrompt = systemPrompt
+        .replace(
+          '2. SECUNDAIR (alleen als passages onvoldoende): Via search_rechtspraak in DIT gesprek, gevolgd door get_rechtspraak_ruling om de uitspraak te lezen\n3. VERBODEN: Alles uit je training, je geheugen, of "gereconstrueerd". ELKE ECLI die niet uit bron 1 of 2 komt wordt automatisch doorgestreept in de output.',
+          '2. VERBODEN: Alles uit je training, je geheugen, of "gereconstrueerd". ELKE ECLI die niet uit de passages komt wordt automatisch doorgestreept in de output.\nRechtspraak.nl is NIET beschikbaar in deze modus. Gebruik UITSLUITEND ECLIs uit de kennisbronpassages.'
+        )
+        .replace(
+          '  3. ALLEEN als de passages geen relevante ECLI bevatten: gebruik search_rechtspraak + get_rechtspraak_ruling\n',
+          ''
+        )
+        .replace(
+          '2. Heb ik deze ECLI gevonden via search_rechtspraak EN opgehaald via get_rechtspraak_ruling in DIT gesprek? → Zo ja: OK\n',
+          ''
+        )
+        // Remove rechtspraak.nl tool references from knowledge sources section
+        .replace(
+          '### Aanvullende tools (OPTIONEEL, NIET verplicht)\n- **search_rechtspraak**: zoekt op rechtspraak.nl. Alleen gebruiken als AANVULLING wanneer de meegeleverde passages onvoldoende zijn. NIET verplicht bij elk antwoord.\n- **web_search**: voor actuele wetteksten, CAO-teksten, beleidsregels.',
+          '### Aanvullende tools (OPTIONEEL)\n- **web_search**: voor actuele wetteksten, CAO-teksten, beleidsregels.\n- Rechtspraak.nl is NIET beschikbaar — de kennisbronnen bevatten voldoende jurisprudentie.'
+        )
+        .replace(
+          '3. search_rechtspraak is ZELDEN nodig — de passages bevatten al tientallen geverifieerde ECLIs. Alleen gebruiken als de passages een specifiek onderwerp niet dekken',
+          '3. De passages bevatten tientallen geverifieerde ECLIs — gebruik UITSLUITEND deze. Rechtspraak.nl is niet beschikbaar'
+        )
+        .replace(
+          '- search_rechtspraak is OPTIONEEL — alleen als aanvulling wanneer de passages niet genoeg dekken.\n',
+          ''
+        )
+    }
     if (projectMemory) {
       systemPrompt += `\n\n## Dossiergeheugen — Eerdere gesprekken in dit project\nHieronder staan samenvattingen van eerdere gesprekken in dit dossier. Gebruik deze context om consistent te antwoorden en niet te herhalen wat al besproken is.${projectMemory}`
     }
@@ -1106,7 +1143,7 @@ Hieronder staan passages uit de interne kennisbronnen, automatisch geselecteerd 
 
 ⚠️ ANTI-HALLUCINATIE REGELS (ABSOLUUT):
 - CITEER NOOIT een passage, paragraaf, of tekst die NIET letterlijk in onderstaande passages staat
-- VERZIN NOOIT ECLI-nummers — gebruik ALLEEN ECLIs die hieronder staan of via rechtspraak.nl zijn gevonden
+- VERZIN NOOIT ECLI-nummers — gebruik ALLEEN ECLIs die hieronder in de passages staan${useRechtspraak ? ' of via rechtspraak.nl tools zijn gevonden' : '. Rechtspraak.nl is NIET beschikbaar — de passages zijn je ENIGE bron voor ECLIs'}
 - Als je twijfelt of iets in de passages staat: CITEER HET DAN NIET. Zeg liever "uit eigen juridische kennis" dan een valse bron citeren
 - ELKE bewering die je toeschrijft aan een bron MOET verifieerbaar zijn in de passages hieronder
 
@@ -1116,7 +1153,7 @@ WERKWIJZE (verplicht voor elk antwoord):
 3. CITEER LETTERLIJK met de CITEERWIJZE per bron, gevolgd door een exact citaat tussen aanhalingstekens dat WOORD VOOR WOORD in de passage staat
 4. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD — deze mag je citeren met passagenummer
 5. Combineer bronnen systematisch: T&C voor wettelijk kader → Thematica voor analyse → RAR/VAAN voor jurisprudentie
-6. Gebruik search_rechtspraak ALLEEN als de passages onvoldoende jurisprudentie bevatten — de passages zijn je PRIMAIRE bron, niet rechtspraak.nl. Val op eigen kennis ALLEEN terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet met "Op basis van eigen juridische kennis (niet uit meegeleverde bronnen):"
+6. ${useRechtspraak ? 'Gebruik search_rechtspraak ALLEEN als de passages onvoldoende jurisprudentie bevatten — de passages zijn je PRIMAIRE bron, niet rechtspraak.nl.' : 'De passages zijn je ENIGE bron voor ECLIs en jurisprudentie. Rechtspraak.nl is NIET beschikbaar.'} Val op eigen kennis ALLEEN terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet met "Op basis van eigen juridische kennis (niet uit meegeleverde bronnen):"
 7. KRITIEK: Controleer ALTIJD of de juiste wettelijke bepaling in de passages staat. Als je een vraag over ontslag van een AOW-gerechtigde krijgt maar art. 7:669 lid 4 BW niet in de passages staat, gebruik dan je kennis uit de "Kritieke Wettelijke Regels" sectie hierboven en vermeld dit
 8. Bij elk argument: verwijs naar het PASSAGENUMMER [Passage X] zodat de citaten verifieerbaar zijn${sourcesContext}`
     }
@@ -1183,8 +1220,8 @@ Wanneer je een concept-email, concept-brief of ander concept-document schrijft, 
 
 ### Brongebruik
 1. PRIMAIRE BRON: de meegeleverde passages uit T&C, Thematica, RAR en VAAN. Dit is je fundament.
-2. search_rechtspraak is OPTIONEEL — alleen als aanvulling. NIET verplicht.
-3. ECLI-NUMMERS — STRENGE REGEL: alleen uit meegeleverde passages of via search_rechtspraak/get_rechtspraak_ruling in DIT gesprek. NOOIT uit eigen geheugen. Wat je BEWEERT over een ECLI moet EXACT overeenkomen met wat de bron zegt. Alle ECLIs worden automatisch gecontroleerd.
+2. ${useRechtspraak ? 'search_rechtspraak is OPTIONEEL — alleen als aanvulling. NIET verplicht.' : 'Rechtspraak.nl is NIET beschikbaar. De passages zijn je ENIGE bron voor ECLIs.'}
+3. ECLI-NUMMERS — STRENGE REGEL: alleen uit meegeleverde passages${useRechtspraak ? ' of via search_rechtspraak/get_rechtspraak_ruling in DIT gesprek' : ''}. NOOIT uit eigen geheugen. Wat je BEWEERT over een ECLI moet EXACT overeenkomen met wat de bron zegt. Alle ECLIs worden automatisch gecontroleerd.
 4. Als je een ECLI uit de passages citeert: vermeld het passagenummer [Passage X] zodat het verifieerbaar is.
 5. NOOIT je zoekproces beschrijven. Begin DIRECT met de inhoud.
 6. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.
@@ -1387,30 +1424,32 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
       max_uses: 20,
     }]
 
-    // Rechtspraak tools always available — direct API access to Dutch case law
-    tools.push({
-      name: 'search_rechtspraak',
-      description: 'LAATSTE REDMIDDEL: Gebruik deze tool ALLEEN als de meegeleverde kennisbronpassages ONVOLDOENDE jurisprudentie bevatten voor het onderwerp. De passages bevatten al tientallen geverifieerde ECLIs — gebruik die EERST. Gebruik deze tool NIET bij het eerste bericht als het een open casusvraag betreft (stel dan EERST vragen). Beschrijf NOOIT je zoekproces.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding" of "art 7:669 lid 3 sub g BW". Gebruik specifieke juridische termen voor betere resultaten.' },
-          max: { type: 'number', description: 'Maximum aantal resultaten (1-20, standaard 10)', default: 10 },
+    // Rechtspraak tools — only available when user explicitly enables them
+    if (useRechtspraak) {
+      tools.push({
+        name: 'search_rechtspraak',
+        description: 'Zoek op rechtspraak.nl naar uitspraken. Gebruik dit ALLEEN als de meegeleverde passages onvoldoende jurisprudentie bevatten. Beschrijf NOOIT je zoekproces.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Zoektermen, bijv. "ontslag op staande voet billijke vergoeding" of "art 7:669 lid 3 sub g BW"' },
+            max: { type: 'number', description: 'Maximum aantal resultaten (1-20, standaard 10)', default: 10 },
+          },
+          required: ['query'],
         },
-        required: ['query'],
-      },
-    })
-    tools.push({
-      name: 'get_rechtspraak_ruling',
-      description: 'Haal de VOLLEDIGE tekst van een uitspraak op via het ECLI-nummer. VERPLICHT: gebruik deze tool ALTIJD voordat je een ECLI citeert die je via search_rechtspraak hebt gevonden. Noem NOOIT een ECLI zonder de uitspraak eerst te hebben gelezen (in de passages of via deze tool). Alle ECLIs worden automatisch geverifieerd — onjuiste ECLIs worden zichtbaar gemarkeerd.',
-      input_schema: {
-        type: 'object',
-        properties: {
-          ecli: { type: 'string', description: 'ECLI-nummer zoals gevonden via search_rechtspraak, bijv. "ECLI:NL:HR:2023:1234"' },
+      })
+      tools.push({
+        name: 'get_rechtspraak_ruling',
+        description: 'Haal de VOLLEDIGE tekst van een uitspraak op via het ECLI-nummer. VERPLICHT na search_rechtspraak: lees altijd de uitspraak voordat je een ECLI citeert.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            ecli: { type: 'string', description: 'ECLI-nummer zoals gevonden via search_rechtspraak, bijv. "ECLI:NL:HR:2023:1234"' },
+          },
+          required: ['ecli'],
         },
-        required: ['ecli'],
-      },
-    })
+      })
+    }
 
     // Parse rechtspraak.nl XML to clean text (saves 60-80% tokens vs raw XML)
     const parseRechtspraakSearch = (xml: string): string => {
@@ -1471,8 +1510,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             messages: msgs,
             thinking: {
               type: 'enabled',
-              // Higher thinking budget = more reasoning = fewer hallucinations
-              budget_tokens: isOpus ? 40000 : 24000,
+              budget_tokens: isOpus ? 32000 : 16000,
             },
             ...(tools.length > 0 ? { tools } : {}),
           }
@@ -1647,7 +1685,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
               temperature: 1,
               system: systemPrompt,
               messages: loopMsgs,
-              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 50000 : 32000 },
+              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 40000 : 24000 },
               tools,
             })
 
@@ -1705,23 +1743,21 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             const problems: string[] = []
             const eclisToStrip: string[] = [] // ECLIs to remove from response text
 
+            // Separate ECLIs into categories for parallel processing
+            const unknownEclis: Array<{ ecli: string; claimText: string }> = []
             for (const ecli of mentionedEclis) {
-              // Category 1: ECLI found via tool (get_rechtspraak_ruling) — Claude read the full ruling
               if (toolVerifiedEclis.has(ecli)) continue
 
-              // Extract what Claude claims about this ECLI (the sentence containing it)
               const ecliEscaped = ecli.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
               const claimMatch = fullText.match(new RegExp(`[^.]*${ecliEscaped}[^.]*\\.`, 's'))
               const claimText = claimMatch ? claimMatch[0].toLowerCase() : ''
 
-              // Category 2: ECLI in source passages — verify context matches
+              // Category 2: ECLI in source passages — verify context matches (fast, no HTTP)
               if (sourceEclis.has(ecli)) {
                 if (claimText && sourcesContext) {
-                  // Extract the passage text around this ECLI in sourcesContext
                   const srcMatch = sourcesContext.match(new RegExp(`[^\\n]*${ecliEscaped}[^\\n]*`, 'gs'))
                   const passageContext = srcMatch ? srcMatch.join(' ').toLowerCase() : ''
                   if (passageContext) {
-                    // Check if Claude's claim roughly matches the passage (key legal terms)
                     const claimWords = claimText.split(/\s+/).filter(w => w.length > 4)
                     const matchingWords = claimWords.filter(w => passageContext.includes(w))
                     const matchRatio = claimWords.length > 0 ? matchingWords.length / claimWords.length : 1
@@ -1734,53 +1770,65 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
                 continue
               }
 
-              // Category 3: ECLI NOT in any source — fetch from rechtspraak.nl and verify
-              try {
-                const checkRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(ecli)}`, {
-                  headers: { Accept: 'application/xml' },
-                  signal: AbortSignal.timeout(8000),
-                })
-                if (!checkRes.ok) {
-                  problems.push(`${ecli} (niet gevonden op rechtspraak.nl — waarschijnlijk verzonnen)`)
-                  eclisToStrip.push(ecli) // STRIP: doesn't exist
-                } else {
-                  // ECLI exists — do content + domain verification
-                  const xml = await checkRes.text()
-                  if (xml.includes('<error>') || xml.length < 200) {
-                    problems.push(`${ecli} (niet beschikbaar op rechtspraak.nl)`)
-                    eclisToStrip.push(ecli) // STRIP: can't verify
-                  } else {
-                    const title = (xml.match(/<dcterms:title[^>]*>([\s\S]*?)<\/dcterms:title>/i)?.[1] || '').replace(/<[^>]+>/g, '').toLowerCase()
-                    const abstract = (xml.match(/<dcterms:abstract[^>]*>([\s\S]*?)<\/dcterms:abstract>/i)?.[1] || '').replace(/<[^>]+>/g, '').toLowerCase()
-                    const subjects = (xml.match(/<dcterms:subject[^>]*>([\s\S]*?)<\/dcterms:subject>/gi) || []).map(s => s.replace(/<[^>]+>/g, '').trim().toLowerCase()).join(' ')
-                    // Also read first 1000 chars of body text for richer comparison
-                    const bodyMatch = xml.match(/<(?:uitspraak|conclusie)[^>]*>([\s\S]*?)<\/(?:uitspraak|conclusie)>/i)
-                    const bodyText = bodyMatch ? bodyMatch[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1000).toLowerCase() : ''
-                    const rulingContext = `${title} ${abstract} ${subjects} ${bodyText}`
+              // Category 3: Unknown ECLI — collect for verification
+              unknownEclis.push({ ecli, claimText })
+            }
 
-                    // Check 1: Domain mismatch (strafrecht vs arbeidsrecht)
-                    const isArbeidsrecht = claimText.includes('arbeid') || claimText.includes('werkgever') || claimText.includes('werknemer') || claimText.includes('ontslag') || claimText.includes('ontbinding') || claimText.includes('fraude') || claimText.includes('declaratie')
-                    const rulingIsStrafrecht = subjects.includes('strafrecht') && !subjects.includes('arbeidsrecht') && !subjects.includes('civiel')
-                    if (isArbeidsrecht && rulingIsStrafrecht) {
-                      problems.push(`${ecli} (VERKEERD RECHTSGEBIED: uitspraak is strafrecht, maar wordt gepresenteerd als arbeidsrecht)`)
-                      eclisToStrip.push(ecli) // STRIP: wrong domain
-                      console.warn(`[chat] ECLI domain mismatch: ${ecli} — claim is arbeidsrecht, ruling is strafrecht`)
-                    } else if (claimText) {
-                      // Check 2: Content match — does Claude's claim match the ruling?
-                      const claimWords = claimText.split(/\s+/).filter(w => w.length > 4)
-                      const matchingWords = claimWords.filter(w => rulingContext.includes(w))
-                      const matchRatio = claimWords.length > 0 ? matchingWords.length / claimWords.length : 1
-                      if (matchRatio < 0.3) {
-                        problems.push(`${ecli} (bestaat op rechtspraak.nl, maar beschreven inhoud komt niet overeen met de uitspraak)`)
-                        eclisToStrip.push(ecli) // STRIP: content doesn't match
-                        console.warn(`[chat] ECLI content mismatch: ${ecli} — claim vs ruling match: ${matchRatio.toFixed(2)}`)
+            // Handle unknown ECLIs based on rechtspraak.nl availability
+            if (unknownEclis.length > 0) {
+              let verifyResults: Array<{ ecli: string; problem: string; strip: boolean }>
+
+              if (!useRechtspraak) {
+                // Rechtspraak.nl OFF: immediately strip all unknown ECLIs (no HTTP needed)
+                console.warn(`[chat] Rechtspraak.nl OFF — stripping ${unknownEclis.length} ECLIs not found in passages`)
+                verifyResults = unknownEclis.map(({ ecli }) => ({
+                  ecli,
+                  problem: `${ecli} (niet gevonden in kennisbronnen — verwijderd)`,
+                  strip: true,
+                }))
+              } else {
+                // Rechtspraak.nl ON: verify in PARALLEL with global timeout
+                verifyResults = await Promise.race([
+                  Promise.all(unknownEclis.map(async ({ ecli, claimText }) => {
+                    try {
+                      const checkRes = await fetch(`https://data.rechtspraak.nl/uitspraken/content?id=${encodeURIComponent(ecli)}`, {
+                        headers: { Accept: 'application/xml' },
+                        signal: AbortSignal.timeout(5000),
+                      })
+                      if (!checkRes.ok) {
+                        return { ecli, problem: `${ecli} (niet gevonden op rechtspraak.nl — waarschijnlijk verzonnen)`, strip: true }
                       }
+                      const xml = await checkRes.text()
+                      if (xml.includes('<error>') || xml.length < 200) {
+                        return { ecli, problem: `${ecli} (niet beschikbaar op rechtspraak.nl)`, strip: true }
+                      }
+                      const subjects = (xml.match(/<dcterms:subject[^>]*>([\s\S]*?)<\/dcterms:subject>/gi) || []).map(s => s.replace(/<[^>]+>/g, '').trim().toLowerCase()).join(' ')
+                      const isArbeidsrecht = claimText.includes('arbeid') || claimText.includes('werkgever') || claimText.includes('werknemer') || claimText.includes('ontslag') || claimText.includes('ontbinding') || claimText.includes('fraude') || claimText.includes('declaratie')
+                      const rulingIsStrafrecht = subjects.includes('strafrecht') && !subjects.includes('arbeidsrecht') && !subjects.includes('civiel')
+                      if (isArbeidsrecht && rulingIsStrafrecht) {
+                        console.warn(`[chat] ECLI domain mismatch: ${ecli}`)
+                        return { ecli, problem: `${ecli} (VERKEERD RECHTSGEBIED: uitspraak is strafrecht, wordt gepresenteerd als arbeidsrecht)`, strip: true }
+                      }
+                      return { ecli, problem: `${ecli} (niet uit kennisbronnen — geverifieerd op rechtspraak.nl)`, strip: false }
+                    } catch {
+                      return { ecli, problem: `${ecli} (kon niet worden geverifieerd — mogelijk onjuist)`, strip: true }
                     }
-                  }
-                }
-              } catch {
-                problems.push(`${ecli} (kon niet worden geverifieerd — mogelijk onjuist)`)
-                eclisToStrip.push(ecli) // STRIP: can't verify at all
+                  })),
+                  new Promise<Array<{ ecli: string; problem: string; strip: boolean }>>((resolve) =>
+                    setTimeout(() => {
+                      console.warn(`[chat] ECLI verification timed out — stripping all ${unknownEclis.length} unknown ECLIs`)
+                      resolve(unknownEclis.map(({ ecli }) => ({
+                        ecli,
+                        problem: `${ecli} (verificatie timeout — niet uit kennisbronnen)`,
+                        strip: true,
+                      })))
+                    }, 10000)
+                  ),
+                ])
+              }
+              for (const result of verifyResults) {
+                problems.push(result.problem)
+                if (result.strip) eclisToStrip.push(result.ecli)
               }
             }
 
@@ -1807,6 +1855,34 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
                 ? `\n\n**${problems.length} van ${mentionedEclis.length} ECLI-nummers in dit advies konden niet worden geverifieerd of bevatten onjuistheden. De onbetrouwbare ECLIs zijn doorgestreept in de tekst.**`
                 : ''
               const warningText = `\n\n---\n**${severity} — ECLI-verificatie (automatisch):**\n${problems.map(p => `- ${p}`).join('\n')}${severityMsg}\n\nControleer jurisprudentie altijd op [rechtspraak.nl](https://www.rechtspraak.nl).`
+              fullText += warningText
+              await send(JSON.stringify({ type: 'delta', text: warningText }))
+            }
+          }
+
+          // Passage-ECLI cross-reference: when Claude cites [Passage X] with an ECLI,
+          // verify that the passage actually contains that ECLI
+          if (sourcesContext && fullText.length > 100) {
+            // Find patterns like "[Passage 5]" near an ECLI
+            const passageEcliRef = /\[Passage\s+(\d+)\][^.]*?(ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+)/gi
+            let pMatch
+            const passageMismatches: string[] = []
+            while ((pMatch = passageEcliRef.exec(fullText)) !== null) {
+              const passageNum = parseInt(pMatch[1])
+              const claimedEcli = pMatch[2]
+              // Find the passage in sourcesContext
+              const passagePattern = new RegExp(`\\[Passage ${passageNum}[^\\]]*\\]([\\s\\S]*?)(?=\\[Passage \\d|--- [A-Z]|$)`, 'i')
+              const passageMatch = sourcesContext.match(passagePattern)
+              if (passageMatch) {
+                const passageContent = passageMatch[1]
+                if (!passageContent.includes(claimedEcli)) {
+                  passageMismatches.push(`${claimedEcli} (toegeschreven aan Passage ${passageNum}, maar niet gevonden in die passage)`)
+                  console.warn(`[chat] Passage-ECLI mismatch: ${claimedEcli} not in Passage ${passageNum}`)
+                }
+              }
+            }
+            if (passageMismatches.length > 0) {
+              const warningText = `\n\n---\n**Let op — Passage-verificatie:** De volgende ECLI-nummers werden toegeschreven aan passages die ze niet bevatten:\n${passageMismatches.map(p => `- ${p}`).join('\n')}`
               fullText += warningText
               await send(JSON.stringify({ type: 'delta', text: warningText }))
             }
@@ -3929,7 +4005,7 @@ async function retrieveRelevantChunks(
   console.log(`[chat] Per-source retrieval: ${allQueries.length} queries x ${sourceIds.length} sources`)
 
   // Results per source for semantic search (top-N per source per query)
-  const SEMANTIC_PER_SOURCE = 20 // Top 20 per source for deep coverage across all sources
+  const SEMANTIC_PER_SOURCE = 15 // Top 15 per source for balanced coverage
 
   // Run ALL semantic searches + keyword searches in parallel
   const [semanticResultSets, keywordResults] = await Promise.all([
@@ -4188,8 +4264,8 @@ async function enrichWithAdjacentChunks(
   const adjacentNeeded: Array<{ sourceId: string; chunkIndex: number }> = []
 
   for (const chunk of chunks) {
-    // Only fetch adjacents for top-scored chunks (top 15) to limit DB queries
-    if (chunks.indexOf(chunk) >= 15) break
+    // Only fetch adjacents for top-scored chunks (top 10) to limit DB queries
+    if (chunks.indexOf(chunk) >= 10) break
     const prevKey = `${chunk.sourceId}-${chunk.chunkIndex - 1}`
     const nextKey = `${chunk.sourceId}-${chunk.chunkIndex + 1}`
     if (!existingKeys.has(prevKey) && chunk.chunkIndex > 0) {
@@ -4230,7 +4306,7 @@ async function enrichWithAdjacentChunks(
     // Merge adjacent content into existing chunks (prepend N-1, append N+1)
     // Use 800 chars for context — enough for a full legal paragraph
     return chunks.map((chunk, idx) => {
-      if (idx >= 18) return chunk // Enrich top 18 chunks for deeper context
+      if (idx >= 12) return chunk // Enrich top 12 chunks
       const prevContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex - 1}`)
       const nextContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex + 1}`)
       let enrichedContent = chunk.content
