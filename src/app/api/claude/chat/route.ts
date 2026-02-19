@@ -1191,7 +1191,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
     // This is seamless for the user — the document is still fully analyzed, just as text
     if (totalTokens > MAX_CONTEXT && documentBlocks.length > 0 && pdfTextFallback) {
       console.log(`[chat] Context over limit (~${totalTokens} tokens). Converting PDF blocks to text.`)
-      pdfTextFallback += `\n\n[DEBUG: PDF blocks verwijderd door context limiet. Tokens: ~${totalTokens}, limiet: ${MAX_CONTEXT}]`
+      // PDF blocks removed due to context limit — text fallback is used instead
       // Remove document blocks from messages (keep images)
       for (const msg of msgs) {
         if (Array.isArray(msg.content)) {
@@ -1421,7 +1421,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             if (!isDocError) throw apiErr // Re-throw non-document errors
 
             console.log(`[chat] API error with native blocks (retrying without): ${apiErrMsg.slice(0, 200)}. Blocks: ${documentBlocks.length}`)
-            pdfTextFallback += `\n\n[DEBUG: PDF blocks verwijderd door API error. Fout: ${apiErrMsg.slice(0, 120)}]`
+            // PDF blocks removed due to API error — retrying with text fallback
             await send(JSON.stringify({ type: 'status', text: 'Documenten opnieuw verwerken...' }))
 
             // Strip document blocks from messages
@@ -1661,9 +1661,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             userError = 'De API-limieten zijn bereikt. Neem contact op met de beheerder.'
           }
 
-          // Include technical details so we can debug — visible in error event
-          const debugInfo = `[DEBUG: ${errMsg.slice(0, 150)}${docLoadErrors.length > 0 ? ` | docErrors: ${docLoadErrors.join('; ').slice(0, 100)}` : ''}]`
-          await send(JSON.stringify({ type: 'error', error: `${userError}\n\n${debugInfo}` }))
+          await send(JSON.stringify({ type: 'error', error: userError }))
         } finally {
           if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null }
           clearInterval(heartbeat)
