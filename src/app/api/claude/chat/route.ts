@@ -815,9 +815,14 @@ export async function POST(req: NextRequest) {
         const searchTerms = extractSearchTerms(messageForClaude)
 
         // Multi-query expansion: generate alternative search formulations
+        // When documents are attached, include a summary of document content so
+        // queries target specific topics IN the document, not just the user's question
         const apiKey = process.env.ANTHROPIC_API_KEY
+        const docSummaryForSearch = documentContext.length > 100
+          ? documentContext.slice(0, 4000)
+          : ''
         const expandedQueries = apiKey
-          ? await expandSearchQueries(messageForClaude, apiKey).catch(() => [])
+          ? await expandSearchQueries(messageForClaude, apiKey, docSummaryForSearch).catch(() => [])
           : []
         if (expandedQueries.length > 0) {
           console.log(`[chat] Query expansion: ${expandedQueries.map(q => q.slice(0, 60)).join(' | ')}`)
@@ -830,19 +835,21 @@ export async function POST(req: NextRequest) {
 
         if (chunkCount > 0 && (searchTerms.length > 0 || process.env.OPENAI_API_KEY)) {
           // Retrieve relevant chunks using multi-query hybrid search
-          // Add timeout to prevent slow DB queries from blocking the response
+          // More chunks when documents are attached (more diverse topics to cover)
+          const maxChunks = docSummaryForSearch ? 60 : 40
+          const retrievalTimeout = docSummaryForSearch ? 20000 : 15000
           const relevantChunks = await Promise.race([
             retrieveRelevantChunks(
               primarySourceIds,
               searchTerms,
-              40, // max chunks to include (~200K chars)
+              maxChunks,
               messageForClaude, // for semantic embedding
               expandedQueries // additional query variants for broader recall
             ),
             new Promise<never[]>((resolve) => setTimeout(() => {
-              console.warn('[chat] Chunk retrieval timed out after 15s')
+              console.warn(`[chat] Chunk retrieval timed out after ${retrievalTimeout / 1000}s`)
               resolve([])
-            }, 15000)),
+            }, retrievalTimeout)),
           ])
 
           if (relevantChunks.length > 0) {
@@ -913,7 +920,12 @@ export async function POST(req: NextRequest) {
                   sourcesContext += `\n- ${name} → Raadpleeg voor aanvullende informatie`
                 }
               }
-              sourcesContext += `\n\nMaak in ## Gebruikte bronnen een APART <details>-blok per bron met een LETTERLIJK citaat.`
+              sourcesContext += `\n\nKRITIEKE INSTRUCTIE BRONGEBRUIK:
+- Verwerk ALLE relevante passages in je antwoord — niet slechts 1-2 bronnen. De passages zijn SPECIAAL GESELECTEERD voor deze vraag.
+- Gebruik RAR-annotaties en VAAN-updates voor SPECIFIEKE jurisprudentie — niet alleen bekende arresten (zoals New Hairstyle). Zoek in de passages naar relevante lagere rechtspraak, specifieke toepassingen, en recente ontwikkelingen.
+- Bij juridische analyses: onderbouw ELK argument met minstens 1 specifieke passage. Gebruik liever een concrete ECLI uit de passages dan een algemeen principe.
+- Bij documentanalyse: zoek in de passages naar relevante jurisprudentie voor ELK specifiek onderwerp in het document.
+- Maak in ## Gebruikte bronnen een APART <details>-blok per bron met een LETTERLIJK citaat.`
             }
           }
         }
@@ -1621,6 +1633,46 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             }
           }
 
+          // Document citation verification: when reviewing documents, check if
+          // quoted text actually exists in the source document. This catches
+          // hallucinated citations that reference non-existent document content.
+          if (documentContext.length > 200 && fullText.length > 100) {
+            // Find text between quotes that looks like document citations
+            // Pattern: "quoted text" → correction  OR  **"quoted text"** → correction
+            const citationPattern = /[""„]([^""„]{8,120})[""„]/g
+            const citations_in_response: string[] = []
+            let match
+            while ((match = citationPattern.exec(fullText)) !== null) {
+              citations_in_response.push(match[1])
+            }
+
+            if (citations_in_response.length > 0) {
+              // Check each citation against the document text (case-insensitive, fuzzy)
+              const docTextLower = documentContext.toLowerCase()
+              const notFound: string[] = []
+              for (const citation of citations_in_response) {
+                const citLower = citation.toLowerCase().trim()
+                // Check exact match or partial match (at least 60% of words)
+                if (!docTextLower.includes(citLower)) {
+                  // Try partial: check if most words from the citation appear in the document
+                  const words = citLower.split(/\s+/).filter(w => w.length > 3)
+                  const foundWords = words.filter(w => docTextLower.includes(w))
+                  const matchRatio = words.length > 0 ? foundWords.length / words.length : 0
+                  if (matchRatio < 0.6) {
+                    notFound.push(citation)
+                  }
+                }
+              }
+
+              if (notFound.length > 0) {
+                console.warn(`[chat] Document citation check: ${notFound.length}/${citations_in_response.length} citations not found in document:`, notFound.slice(0, 3))
+                const warningText = `\n\n---\n**Let op:** ${notFound.length} citaat/citaten in bovenstaand antwoord konden niet worden teruggevonden in het bijgevoegde document. Controleer of de geciteerde tekst correct is overgenomen.`
+                fullText += warningText
+                await send(JSON.stringify({ type: 'delta', text: warningText }))
+              }
+            }
+          }
+
           // Save assistant message to database
           await prisma.aIMessage.create({
             data: {
@@ -1785,13 +1837,24 @@ function isEmploymentLawQuestion(message: string): boolean {
  */
 async function expandSearchQueries(
   userMessage: string,
-  apiKey: string
+  apiKey: string,
+  documentSummary?: string
 ): Promise<string[]> {
   try {
-    const client = new Anthropic({ apiKey, timeout: 5000 })
+    const client = new Anthropic({ apiKey, timeout: 8000 })
+
+    // When documents are attached, generate MORE queries targeting specific topics
+    const hasDocument = documentSummary && documentSummary.length > 100
+    const maxQueries = hasDocument ? 10 : 5
+    const maxTokens = hasDocument ? 800 : 400
+
+    const documentInstruction = hasDocument
+      ? `\n\nBELANGRIJK: Er is een document bijgevoegd. Hieronder een samenvatting. Genereer queries voor ELKE afzonderlijke juridische kwestie in het document — niet alleen het overkoepelende thema. Elke specifieke claim, argument of juridische grond verdient een eigen zoekquery.\n\nDocumentinhoud:\n${documentSummary}`
+      : ''
+
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
+      max_tokens: maxTokens,
       system: `Je bent een expert zoekquery-generator voor een Nederlandse arbeidsrecht-kennisbank. Je KERNKWALITEIT is het vertalen van natuurlijke taal naar de juiste juridische terminologie en wetsartikelen.
 
 KRITIEK: Gebruikers stellen vragen in ALLEDAAGSE TAAL ("70 jarige ontslaan", "zieke werknemer eruit", "contract niet verlengen"). Jij MOET dit vertalen naar de JURIDISCHE TERMEN die in de kennisbank staan ("AOW-leeftijd pensioenontslag art. 7:669 lid 4", "opzegverbod ziekte loondoorbetaling art. 7:629", "ketenregeling aanzegverplichting art. 7:668a").
@@ -1802,22 +1865,23 @@ Bronnen:
 - VAAN AR Updates (recente rechtspraakoverzichten)
 - RAR Rechtspraak Arbeidsrecht (jurisprudentie-annotaties 2000-2026)
 
-Genereer 5 zoekformuleringen:
+Genereer ${maxQueries} zoekformuleringen:
 1. Het EXACTE relevante BW-artikel met nummer + juridische term (bijv. "art. 7:669 lid 4 BW AOW-leeftijd pensioenontslag" of "art. 7:669 lid 3 sub g BW disfunctioneren") — treft T&C
 2. Het juridische thema met ALLE relevante vakjargon (bijv. "pensioengerechtigde leeftijd opzegging zonder ontslaggrond" of "disfunctioneren verbetertraject ontslag") — treft Thematica
 3. Juridische synoniemen en GERELATEERDE wetsartikelen (bijv. "pensioenopzegging AOW-gerechtigde art. 7:670a opzegverboden" of "ongeschiktheid functie-eisen herplaatsing") — treft RAR/VAAN
 4. Specifieke juridische GEVOLGEN en procedures (bijv. "transitievergoeding AOW-ontslag art. 7:673 lid 7" of "ontbindingsverzoek kantonrechter") — treft jurisprudentie
 5. Een AANVULLEND juridisch aspect dat de gebruiker niet noemde maar CRUCIAAL is (bijv. "opzegtermijn na AOW-leeftijd art. 7:672" of "billijke vergoeding ernstig verwijtbaar")
+${hasDocument ? `6-${maxQueries}. EXTRA queries voor specifieke onderwerpen uit het document die niet door queries 1-5 gedekt worden. Denk aan: elke afzonderlijke vordering, elke juridische grond, elke schadeclaim, elk verweer.` : ''}
 
 DENK STAP VOOR STAP: Welke wettelijke bepaling is hier PRIMAIR van toepassing? Welk artikel uit Boek 7 BW? Welke juridische term wordt in de literatuur gebruikt?
 
-Geef ALLEEN de 5 queries, een per regel, zonder nummering of uitleg.`,
-      messages: [{ role: 'user', content: userMessage }],
+Geef ALLEEN de ${maxQueries} queries, een per regel, zonder nummering of uitleg.`,
+      messages: [{ role: 'user', content: userMessage + documentInstruction }],
     })
 
     const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
     const queries = text.split('\n').map(q => q.trim()).filter(q => q.length > 5 && q.length < 200)
-    return queries.slice(0, 5) // Max 5 variants
+    return queries.slice(0, maxQueries)
   } catch (err) {
     console.warn('[chat] Query expansion failed (non-critical):', err instanceof Error ? err.message : err)
     return [] // Graceful degradation: continue with original query only
