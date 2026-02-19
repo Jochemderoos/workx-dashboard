@@ -1762,8 +1762,8 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
                     const matchingWords = claimWords.filter(w => passageContext.includes(w))
                     const matchRatio = claimWords.length > 0 ? matchingWords.length / claimWords.length : 1
                     if (matchRatio < 0.35) {
-                      problems.push(`${ecli} (bron: kennispassage, maar inhoud komt niet overeen met passage)`)
-                      console.warn(`[chat] ECLI context mismatch: ${ecli} — claim match ratio: ${matchRatio.toFixed(2)}`)
+                      eclisToStrip.push(ecli) // STRIP: context doesn't match passage
+                      console.warn(`[chat] ECLI context mismatch: ${ecli} — claim match ratio: ${matchRatio.toFixed(2)}, stripping`)
                     }
                   }
                 }
@@ -1832,59 +1832,58 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
               }
             }
 
-            // ACTIEF VERWIJDEREN: vervang onbetrouwbare ECLIs in de tekst
+            // VERWIJDER onbetrouwbare ECLIs volledig uit de tekst (geen doorstreping, geen waarschuwing)
             if (eclisToStrip.length > 0) {
-              console.warn(`[chat] STRIPPING ${eclisToStrip.length} unverified ECLIs from response`)
+              console.warn(`[chat] REMOVING ${eclisToStrip.length} unverified ECLIs from response: ${eclisToStrip.join(', ')}`)
               let cleanedText = fullText
               for (const badEcli of eclisToStrip) {
                 const escaped = badEcli.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                // Replace the ECLI with a strikethrough marker
-                cleanedText = cleanedText.replace(new RegExp(escaped, 'g'), `~~${badEcli}~~ [niet geverifieerd]`)
+                // Remove ECLI and surrounding parentheses/brackets if present
+                // Pattern: "(ECLI:...)" or "[ECLI:...]" or just "ECLI:..."
+                cleanedText = cleanedText
+                  .replace(new RegExp(`\\s*\\(${escaped}\\)`, 'g'), '')  // (ECLI:...)
+                  .replace(new RegExp(`\\s*\\[${escaped}\\]`, 'g'), '')  // [ECLI:...]
+                  .replace(new RegExp(escaped, 'g'), '')                  // bare ECLI:...
               }
-              // Send the replacement delta so the UI updates
+              // Clean up any leftover empty parentheses or double spaces
+              cleanedText = cleanedText.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '').replace(/  +/g, ' ')
               if (cleanedText !== fullText) {
-                // We need to send a full replacement since we're modifying already-sent text
                 await send(JSON.stringify({ type: 'replace_full', text: cleanedText }))
                 fullText = cleanedText
               }
             }
-
-            if (problems.length > 0) {
-              const severity = problems.length >= 3 ? 'WAARSCHUWING' : 'Let op'
-              const severityMsg = problems.length >= 3
-                ? `\n\n**${problems.length} van ${mentionedEclis.length} ECLI-nummers in dit advies konden niet worden geverifieerd of bevatten onjuistheden. De onbetrouwbare ECLIs zijn doorgestreept in de tekst.**`
-                : ''
-              const warningText = `\n\n---\n**${severity} — ECLI-verificatie (automatisch):**\n${problems.map(p => `- ${p}`).join('\n')}${severityMsg}\n\nControleer jurisprudentie altijd op [rechtspraak.nl](https://www.rechtspraak.nl).`
-              fullText += warningText
-              await send(JSON.stringify({ type: 'delta', text: warningText }))
-            }
           }
 
           // Passage-ECLI cross-reference: when Claude cites [Passage X] with an ECLI,
-          // verify that the passage actually contains that ECLI
+          // verify that the passage actually contains that ECLI — silently remove mismatches
           if (sourcesContext && fullText.length > 100) {
-            // Find patterns like "[Passage 5]" near an ECLI
             const passageEcliRef = /\[Passage\s+(\d+)\][^.]*?(ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+)/gi
             let pMatch
-            const passageMismatches: string[] = []
+            const mismatchEclis: string[] = []
             while ((pMatch = passageEcliRef.exec(fullText)) !== null) {
               const passageNum = parseInt(pMatch[1])
               const claimedEcli = pMatch[2]
-              // Find the passage in sourcesContext
               const passagePattern = new RegExp(`\\[Passage ${passageNum}[^\\]]*\\]([\\s\\S]*?)(?=\\[Passage \\d|--- [A-Z]|$)`, 'i')
               const passageMatch = sourcesContext.match(passagePattern)
-              if (passageMatch) {
-                const passageContent = passageMatch[1]
-                if (!passageContent.includes(claimedEcli)) {
-                  passageMismatches.push(`${claimedEcli} (toegeschreven aan Passage ${passageNum}, maar niet gevonden in die passage)`)
-                  console.warn(`[chat] Passage-ECLI mismatch: ${claimedEcli} not in Passage ${passageNum}`)
-                }
+              if (passageMatch && !passageMatch[1].includes(claimedEcli)) {
+                mismatchEclis.push(claimedEcli)
+                console.warn(`[chat] Passage-ECLI mismatch: ${claimedEcli} not in Passage ${passageNum} — removing`)
               }
             }
-            if (passageMismatches.length > 0) {
-              const warningText = `\n\n---\n**Let op — Passage-verificatie:** De volgende ECLI-nummers werden toegeschreven aan passages die ze niet bevatten:\n${passageMismatches.map(p => `- ${p}`).join('\n')}`
-              fullText += warningText
-              await send(JSON.stringify({ type: 'delta', text: warningText }))
+            if (mismatchEclis.length > 0) {
+              let cleanedText = fullText
+              for (const badEcli of mismatchEclis) {
+                const escaped = badEcli.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                cleanedText = cleanedText
+                  .replace(new RegExp(`\\s*\\(${escaped}\\)`, 'g'), '')
+                  .replace(new RegExp(`\\s*\\[${escaped}\\]`, 'g'), '')
+                  .replace(new RegExp(escaped, 'g'), '')
+              }
+              cleanedText = cleanedText.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '').replace(/  +/g, ' ')
+              if (cleanedText !== fullText) {
+                await send(JSON.stringify({ type: 'replace_full', text: cleanedText }))
+                fullText = cleanedText
+              }
             }
           }
 
@@ -1921,9 +1920,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
 
               if (notFound.length > 0) {
                 console.warn(`[chat] Document citation check: ${notFound.length}/${citations_in_response.length} citations not found in document:`, notFound.slice(0, 3))
-                const warningText = `\n\n---\n**Let op:** ${notFound.length} citaat/citaten in bovenstaand antwoord konden niet worden teruggevonden in het bijgevoegde document. Controleer of de geciteerde tekst correct is overgenomen.`
-                fullText += warningText
-                await send(JSON.stringify({ type: 'delta', text: warningText }))
+                // Log only — no visible warning in output (clean document for client)
               }
             }
           }
@@ -1965,9 +1962,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
 
               if (fabricatedQuotes.length > 0) {
                 console.warn(`[chat] Source passage verification: ${fabricatedQuotes.length}/${sourceQuotes.length} source quotes not found in passages:`, fabricatedQuotes.slice(0, 3))
-                const warningText = `\n\n---\n⚠️ **Verificatiemelding:** ${fabricatedQuotes.length} citaat/citaten die aan kennisbronnen worden toegeschreven, konden niet worden teruggevonden in de meegeleverde passages. Deze citaten zijn mogelijk geparafraseerd of uit het geheugen geciteerd. Controleer de exactheid.`
-                fullText += warningText
-                await send(JSON.stringify({ type: 'delta', text: warningText }))
+                // Log only — no visible warning in output (clean document for client)
               }
             }
           }
