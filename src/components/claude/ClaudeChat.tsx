@@ -1052,7 +1052,7 @@ ${markdownHtml}
         if (pollId) {
           setStatusText('Claude verwerkt je vraag...')
           setLoadingProgress(30) // Show some progress
-          for (let attempt = 0; attempt < 60; attempt++) { // 60 * 2s = 120s max
+          for (let attempt = 0; attempt < 150; attempt++) { // 150 * 2s = 300s (5 min) — matches server maxDuration
             await new Promise(r => setTimeout(r, 2000))
             const elapsed = (attempt + 1) * 2
             // Gradually increase progress bar to show activity
