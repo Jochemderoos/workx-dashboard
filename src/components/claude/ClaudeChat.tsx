@@ -670,26 +670,52 @@ ${markdownHtml}
       const exportContent = stripDocxEdits(content)
 
       if (format === 'pdf') {
-        // PDF: open styled HTML in print window — produces high-quality PDF via browser print
+        // PDF: render HTML in hidden container, capture with html2canvas, convert to PDF with jspdf
+        toast.loading('PDF genereren...', { id: 'pdf-export' })
         const html = generateExportHtml(exportContent, false)
-        const printWindow = window.open('', '_blank')
-        if (!printWindow) {
-          toast.error('Pop-up geblokkeerd. Sta pop-ups toe voor deze site.')
-          return
+
+        // Create hidden container
+        const container = document.createElement('div')
+        container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-1;'
+        container.innerHTML = html
+        document.body.appendChild(container)
+
+        try {
+          // Dynamic import to avoid SSR issues
+          const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+            import('html2canvas'),
+            import('jspdf'),
+          ])
+
+          const canvas = await html2canvas(container, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: 794,
+            windowWidth: 794,
+          })
+
+          const imgData = canvas.toDataURL('image/png')
+          const pdf = new jsPDF('p', 'mm', 'a4')
+          const pageWidth = pdf.internal.pageSize.getWidth()
+          const pageHeight = pdf.internal.pageSize.getHeight()
+          const margin = 10
+          const contentWidth = pageWidth - margin * 2
+          const contentHeight = (canvas.height * contentWidth) / canvas.width
+          const totalPages = Math.ceil(contentHeight / (pageHeight - margin * 2))
+
+          for (let page = 0; page < totalPages; page++) {
+            if (page > 0) pdf.addPage()
+            const yOffset = -(page * (pageHeight - margin * 2)) + margin
+            pdf.addImage(imgData, 'PNG', margin, yOffset, contentWidth, contentHeight)
+          }
+
+          pdf.save(`workx-ai-${new Date().toISOString().slice(0, 10)}.pdf`)
+          toast.success('PDF gedownload', { id: 'pdf-export' })
+        } finally {
+          document.body.removeChild(container)
         }
-        printWindow.document.write(html)
-        printWindow.document.close()
-        // Wait for content to render, then trigger print
-        printWindow.onload = () => {
-          setTimeout(() => {
-            printWindow.print()
-          }, 300)
-        }
-        // Fallback if onload doesn't fire
-        setTimeout(() => {
-          try { printWindow.print() } catch { /* ignore */ }
-        }, 1000)
-        toast.success('Print-venster geopend — kies "Opslaan als PDF"')
       } else {
         // Word: download as HTML with .docx extension (Word auto-detects HTML content)
         const html = generateExportHtml(exportContent, true)
