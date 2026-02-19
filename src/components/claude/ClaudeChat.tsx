@@ -214,7 +214,7 @@ export default function ClaudeChat({
     setConvId(null)
     setInput('')
     setAttachedDocs([])
-    setActiveOptions(new Set())
+    setActiveOptions(new Set(['kort']))
     setOptionsExpanded(true) // Re-expand options for new chat
     onNewChat?.()
   }
@@ -406,7 +406,7 @@ export default function ClaudeChat({
   // Sync convId from parent (including reset to null)
   useEffect(() => {
     setConvId(initialConvId || null)
-    setActiveOptions(new Set())
+    setActiveOptions(new Set(['kort']))
     setAttachedDocs([])
   }, [initialConvId])
 
