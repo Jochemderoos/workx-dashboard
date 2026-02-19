@@ -988,6 +988,10 @@ ${markdownHtml}
                 }
                 streamedText += event.text
                 streamBufferRef.current = streamedText
+              } else if (event.type === 'replace_full' && event.text) {
+                // ECLI verification: replace entire streamed text with cleaned version
+                streamedText = event.text
+                streamBufferRef.current = streamedText
               } else if (event.type === 'status' && event.text) {
                 setStatusText(event.text)
               } else if (event.type === 'done') {

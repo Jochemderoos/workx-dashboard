@@ -270,20 +270,19 @@ Als een template is bijgevoegd:
 ELKE ECLI die je noemt wordt AUTOMATISCH geverifieerd tegen rechtspraak.nl. Onjuiste ECLIs worden zichtbaar gemarkeerd voor de gebruiker. Dit is een advocatenkantoor — verkeerde ECLIs zijn een beroepsfout.
 
 TOEGESTANE BRONNEN VOOR ECLI-NUMMERS (geen uitzonderingen):
-1. Letterlijk gekopieerd uit de meegeleverde kennisbronpassages hieronder — citeer dan EXACT wat de passage over deze uitspraak zegt
-2. Gevonden via search_rechtspraak in DIT gesprek EN daarna opgehaald met get_rechtspraak_ruling
-3. GEEN ANDERE BRONNEN. Niet uit je training, niet uit je geheugen, niet "gereconstrueerd"
+1. PRIMAIR: Letterlijk gekopieerd uit de meegeleverde kennisbronpassages hieronder. De passages bevatten TIENTALLEN geverifieerde ECLIs — gebruik DEZE. Citeer EXACT wat de passage over de uitspraak zegt.
+2. SECUNDAIR (alleen als passages onvoldoende): Via search_rechtspraak in DIT gesprek, gevolgd door get_rechtspraak_ruling om de uitspraak te lezen
+3. VERBODEN: Alles uit je training, je geheugen, of "gereconstrueerd". ELKE ECLI die niet uit bron 1 of 2 komt wordt automatisch doorgestreept in de output.
 
 PROCEDURE VOOR JURISPRUDENTIE:
-- Als je een juridisch argument wilt onderbouwen met een uitspraak:
-  1. EERST: zoek in de meegeleverde passages — staat er een relevante ECLI?
-  2. ZO JA: citeer die ECLI met EXACT de context uit de passage
-  3. ZO NEE: gebruik search_rechtspraak om relevante uitspraken te vinden
-  4. NA ZOEKEN: gebruik get_rechtspraak_ruling om de uitspraak op te halen en te lezen VOORDAT je erover schrijft
-  5. NOOIT: een ECLI noemen zonder dat je de uitspraak hebt gelezen (in passage of via tool)
-- Als je geen specifieke ECLI kunt vinden: verwijs naar het juridische principe ZONDER ECLI. "Vaste rechtspraak leert dat..." of "Op grond van [wetsartikel]..." is 100x beter dan een verkeerde ECLI
-- NOOIT een bekende zaaknaam (bijv. "Stoof/Mammoet", "New Hairstyle", "Briljant Schoenen") koppelen aan een ECLI tenzij die koppeling LETTERLIJK in een passage staat of via get_rechtspraak_ruling is bevestigd
-- Bij twijfel: LAAT DE ECLI WEG. Een goed juridisch argument zonder ECLI is oneindig veel beter dan een argument met een verkeerde ECLI
+- Bij elk juridisch argument:
+  1. DOORZOEK de meegeleverde passages — er staan tientallen relevante ECLIs in. Gebruik DEZE.
+  2. Citeer de ECLI met EXACT de context uit de passage: "Volgens [bron] ([Passage X]): '[exact citaat]' (ECLI:NL:...)"
+  3. ALLEEN als de passages geen relevante ECLI bevatten: gebruik search_rechtspraak + get_rechtspraak_ruling
+  4. NOOIT een ECLI noemen die je niet letterlijk in een passage of tool-resultaat hebt gelezen
+- Een juridisch argument ZONDER ECLI is altijd beter dan met een verkeerde ECLI. Schrijf: "Vaste rechtspraak leert dat..." of "Op grond van [wetsartikel]..."
+- NOOIT een bekende zaaknaam (bijv. "Stoof/Mammoet", "New Hairstyle") koppelen aan een ECLI tenzij die koppeling LETTERLIJK in een passage staat
+- Alle ECLIs worden automatisch gecontroleerd — foute ECLIs worden doorgestreept in het advies
 
 ## Citaten en Bronverwijzingen — ABSOLUTE REGEL
 - Tekst tussen aanhalingstekens ("...") MOET LETTERLIJK en EXACT overeenkomen met de bron
@@ -944,6 +943,10 @@ export async function POST(req: NextRequest) {
                   sourcesContext += `\n- ${name} → Raadpleeg voor aanvullende informatie`
                 }
               }
+              // Extract all ECLIs from passages and create explicit whitelist
+              const passageEcliPattern = /ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+/g
+              const passageEclis = Array.from(new Set(sourcesContext.match(passageEcliPattern) || []))
+
               sourcesContext += `\n\nKRITIEKE INSTRUCTIE BRONGEBRUIK:
 - Verwerk ALLE relevante passages in je antwoord — niet slechts 1-2 bronnen. Je hebt ${usedPrimaryNames.length} bronnen met tientallen passages — gebruik ze ALLEMAAL waar relevant.
 - Gebruik RAR-annotaties en VAAN-updates voor SPECIFIEKE jurisprudentie — niet alleen bekende arresten (zoals New Hairstyle). Zoek in de passages naar relevante lagere rechtspraak, specifieke toepassingen, en recente ontwikkelingen.
@@ -953,6 +956,17 @@ export async function POST(req: NextRequest) {
 - VERBODEN: citaten parafraseren en presenteren als letterlijk. Als je parafraseert, gebruik dan GEEN aanhalingstekens.
 - VERBODEN: ECLI-nummers noemen die NIET in de passages staan en NIET via rechtspraak.nl zijn geverifieerd.
 - Tel aan het einde na: als je minder dan ${Math.min(usedPrimaryNames.length, 3)} van de ${usedPrimaryNames.length} bronnen hebt gebruikt, ga terug en zoek relevante passages die je hebt gemist.`
+
+              // ECLI WHITELIST: explicitly list verified ECLIs from passages
+              if (passageEclis.length > 0) {
+                sourcesContext += `\n\n--- GEVERIFIEERDE ECLI-NUMMERS (WHITELIST) ---
+De volgende ${passageEclis.length} ECLI-nummers staan in de meegeleverde passages en zijn GEVERIFIEERD. Dit zijn de ENIGE ECLIs die je mag citeren zonder search_rechtspraak/get_rechtspraak_ruling te gebruiken:
+${passageEclis.join('\n')}
+
+GEBRUIK DEZE ECLI-NUMMERS. Ze komen uit gezaghebbende bronnen en zijn redactioneel geverifieerd.
+Elk ECLI-nummer dat je noemt dat NIET in deze lijst staat en NIET via tools is gevonden, wordt automatisch gemarkeerd als onbetrouwbaar.
+Gebruik LIEVER een ECLI uit deze lijst dan een ECLI uit je eigen geheugen.`
+              }
             }
           }
         }
@@ -1667,6 +1681,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             const sourceEclis = new Set(sourcesContext ? (sourcesContext.match(ecliPattern) || []) : [])
 
             const problems: string[] = []
+            const eclisToStrip: string[] = [] // ECLIs to remove from response text
 
             for (const ecli of mentionedEclis) {
               // Category 1: ECLI found via tool (get_rechtspraak_ruling) — Claude read the full ruling
@@ -1705,11 +1720,13 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
                 })
                 if (!checkRes.ok) {
                   problems.push(`${ecli} (niet gevonden op rechtspraak.nl — waarschijnlijk verzonnen)`)
+                  eclisToStrip.push(ecli) // STRIP: doesn't exist
                 } else {
                   // ECLI exists — do content + domain verification
                   const xml = await checkRes.text()
                   if (xml.includes('<error>') || xml.length < 200) {
                     problems.push(`${ecli} (niet beschikbaar op rechtspraak.nl)`)
+                    eclisToStrip.push(ecli) // STRIP: can't verify
                   } else {
                     const title = (xml.match(/<dcterms:title[^>]*>([\s\S]*?)<\/dcterms:title>/i)?.[1] || '').replace(/<[^>]+>/g, '').toLowerCase()
                     const abstract = (xml.match(/<dcterms:abstract[^>]*>([\s\S]*?)<\/dcterms:abstract>/i)?.[1] || '').replace(/<[^>]+>/g, '').toLowerCase()
@@ -1724,14 +1741,16 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
                     const rulingIsStrafrecht = subjects.includes('strafrecht') && !subjects.includes('arbeidsrecht') && !subjects.includes('civiel')
                     if (isArbeidsrecht && rulingIsStrafrecht) {
                       problems.push(`${ecli} (VERKEERD RECHTSGEBIED: uitspraak is strafrecht, maar wordt gepresenteerd als arbeidsrecht)`)
+                      eclisToStrip.push(ecli) // STRIP: wrong domain
                       console.warn(`[chat] ECLI domain mismatch: ${ecli} — claim is arbeidsrecht, ruling is strafrecht`)
                     } else if (claimText) {
                       // Check 2: Content match — does Claude's claim match the ruling?
                       const claimWords = claimText.split(/\s+/).filter(w => w.length > 4)
                       const matchingWords = claimWords.filter(w => rulingContext.includes(w))
                       const matchRatio = claimWords.length > 0 ? matchingWords.length / claimWords.length : 1
-                      if (matchRatio < 0.25) {
+                      if (matchRatio < 0.3) {
                         problems.push(`${ecli} (bestaat op rechtspraak.nl, maar beschreven inhoud komt niet overeen met de uitspraak)`)
+                        eclisToStrip.push(ecli) // STRIP: content doesn't match
                         console.warn(`[chat] ECLI content mismatch: ${ecli} — claim vs ruling match: ${matchRatio.toFixed(2)}`)
                       }
                     }
@@ -1739,15 +1758,33 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
                 }
               } catch {
                 problems.push(`${ecli} (kon niet worden geverifieerd — mogelijk onjuist)`)
+                eclisToStrip.push(ecli) // STRIP: can't verify at all
+              }
+            }
+
+            // ACTIEF VERWIJDEREN: vervang onbetrouwbare ECLIs in de tekst
+            if (eclisToStrip.length > 0) {
+              console.warn(`[chat] STRIPPING ${eclisToStrip.length} unverified ECLIs from response`)
+              let cleanedText = fullText
+              for (const badEcli of eclisToStrip) {
+                const escaped = badEcli.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                // Replace the ECLI with a strikethrough marker
+                cleanedText = cleanedText.replace(new RegExp(escaped, 'g'), `~~${badEcli}~~ [niet geverifieerd]`)
+              }
+              // Send the replacement delta so the UI updates
+              if (cleanedText !== fullText) {
+                // We need to send a full replacement since we're modifying already-sent text
+                await send(JSON.stringify({ type: 'replace_full', text: cleanedText }))
+                fullText = cleanedText
               }
             }
 
             if (problems.length > 0) {
               const severity = problems.length >= 3 ? 'WAARSCHUWING' : 'Let op'
               const severityMsg = problems.length >= 3
-                ? `\n\n**${problems.length} van ${mentionedEclis.length} ECLI-nummers in dit advies konden niet worden geverifieerd of bevatten onjuistheden. Vertrouw NIET blindelings op de genoemde jurisprudentie — controleer elk ECLI-nummer handmatig.**`
+                ? `\n\n**${problems.length} van ${mentionedEclis.length} ECLI-nummers in dit advies konden niet worden geverifieerd of bevatten onjuistheden. De onbetrouwbare ECLIs zijn doorgestreept in de tekst.**`
                 : ''
-              const warningText = `\n\n---\n**${severity} — ECLI-verificatie (automatisch):**\n${problems.map(p => `- ${p}`).join('\n')}${severityMsg}\n\nControleer deze ECLI-nummers op [rechtspraak.nl](https://www.rechtspraak.nl).`
+              const warningText = `\n\n---\n**${severity} — ECLI-verificatie (automatisch):**\n${problems.map(p => `- ${p}`).join('\n')}${severityMsg}\n\nControleer jurisprudentie altijd op [rechtspraak.nl](https://www.rechtspraak.nl).`
               fullText += warningText
               await send(JSON.stringify({ type: 'delta', text: warningText }))
             }
