@@ -604,39 +604,56 @@ export default function ClaudeChat({
       .replace(/<div class="table-wrapper">/g, '<div>') // Simplify table wrapper
   }
 
-  /** Shared document CSS for both PDF and Word export */
+  /** Shared document CSS for both PDF and Word export — black professional styling */
   const getDocumentStyles = () => `
     @page { size: A4; margin: 2.5cm 2.5cm 2cm 2.5cm; }
     body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #222; margin: 0; padding: 0; }
-    h1 { font-size: 16pt; font-weight: bold; color: #1a3a5c; margin: 20pt 0 10pt 0; border-bottom: 2pt solid #1a3a5c; padding-bottom: 6pt; }
-    h2 { font-size: 13pt; font-weight: bold; color: #1a3a5c; margin: 16pt 0 8pt 0; }
-    h3 { font-size: 11pt; font-weight: bold; color: #333; margin: 12pt 0 6pt 0; }
-    h4, h5, h6 { font-size: 11pt; font-weight: bold; color: #444; margin: 10pt 0 4pt 0; }
+    h1 { font-size: 16pt; font-weight: bold; color: #000; margin: 22pt 0 10pt 0; border-bottom: 2.5pt solid #000; padding-bottom: 6pt; text-transform: uppercase; letter-spacing: 0.5pt; }
+    h2 { font-size: 13pt; font-weight: bold; color: #000; margin: 18pt 0 8pt 0; border-bottom: 1pt solid #ccc; padding-bottom: 4pt; }
+    h3 { font-size: 11pt; font-weight: bold; color: #222; margin: 14pt 0 6pt 0; border-left: 3pt solid #000; padding-left: 10pt; }
+    h4, h5, h6 { font-size: 11pt; font-weight: bold; font-style: italic; color: #333; margin: 10pt 0 4pt 0; }
     p { margin: 0 0 8pt 0; text-align: justify; }
     strong { font-weight: bold; }
     em { font-style: italic; }
     ul, ol { margin: 6pt 0 10pt 0; padding-left: 28pt; }
     li { margin: 0 0 4pt 0; line-height: 1.5; }
-    hr { border: none; border-top: 1pt solid #ddd; margin: 16pt 0; }
+    hr { border: none; border-top: 1pt solid #ccc; margin: 16pt 0; }
     table { border-collapse: collapse; width: 100%; margin: 10pt 0; font-size: 10pt; }
     td, th { border: 1pt solid #bbb; padding: 6pt 10pt; text-align: left; vertical-align: top; }
-    th { background-color: #f0f4f8; font-weight: bold; color: #1a3a5c; }
-    blockquote { margin: 12pt 0; padding: 12pt 18pt; border: 1pt solid #d0d5dd; border-left: 3pt solid #1a3a5c; background-color: #f8f9fb; font-style: normal; color: #333; }
+    th { background-color: #f0f0f0; font-weight: bold; color: #000; }
+    blockquote { margin: 12pt 0; padding: 12pt 18pt; border: 1pt solid #d0d0d0; border-left: 3pt solid #000; background-color: #fafafa; font-style: normal; color: #333; }
     code { font-family: 'Consolas', 'Courier New', monospace; font-size: 9.5pt; background-color: #f4f4f4; padding: 1pt 4pt; border-radius: 2pt; }
     pre { background-color: #f4f4f4; padding: 10pt 14pt; border-radius: 4pt; overflow-x: auto; margin: 8pt 0; font-size: 9pt; line-height: 1.4; }
     pre code { background: none; padding: 0; }
-    a { color: #1a3a5c; text-decoration: underline; }
+    a { color: #000; text-decoration: underline; }
     del { text-decoration: line-through; color: #888; }
     details { margin: 8pt 0; padding: 8pt 12pt; border: 1pt solid #e0e0e0; border-radius: 4pt; background: #fafafa; }
-    summary { font-weight: bold; cursor: pointer; color: #1a3a5c; }
-    .header { margin-bottom: 20pt; padding-bottom: 10pt; border-bottom: 2.5pt solid #1a3a5c; }
-    .header-title { font-size: 9pt; color: #1a3a5c; font-weight: bold; letter-spacing: 0.5pt; text-transform: uppercase; margin: 0; }
+    summary { font-weight: bold; cursor: pointer; color: #000; }
+    .header { margin-bottom: 20pt; padding-bottom: 10pt; border-bottom: 2.5pt solid #000; }
+    .header-logo { height: 50px; margin-bottom: 6pt; }
     .header-date { font-size: 9pt; color: #888; margin: 3pt 0 0 0; }
-    .footer { font-size: 8pt; color: #999; margin-top: 28pt; border-top: 1pt solid #ddd; padding-top: 10pt; }
+    .footer { font-size: 8pt; color: #999; margin-top: 28pt; border-top: 1pt solid #ccc; padding-top: 10pt; }
   `
 
+  /** Fetch logo as base64 data URL for embedding in exports */
+  const fetchLogoBase64 = async (): Promise<string> => {
+    try {
+      const res = await fetch('/workx-logo.png')
+      if (!res.ok) return ''
+      const blob = await res.blob()
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = () => resolve('')
+        reader.readAsDataURL(blob)
+      })
+    } catch {
+      return ''
+    }
+  }
+
   /** Generate full HTML document for export */
-  const generateExportHtml = (content: string, isWord = false): string => {
+  const generateExportHtml = (content: string, isWord = false, logoBase64 = ''): string => {
     const date = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
     const markdownHtml = cleanHtmlForExport(renderMarkdown(content))
     const wordXml = isWord ? `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DefaultFonts><w:DefaultFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/></w:DefaultFonts></w:WordDocument></xml><![endif]-->` : ''
@@ -658,7 +675,7 @@ ${wordXml}
 </head>
 <body>
 <div class="header">
-  <p class="header-title">Workx Advocaten</p>
+  ${logoBase64 ? `<img src="${logoBase64}" alt="Workx Advocaten" class="header-logo" />` : ''}
   <p class="header-date">${date}</p>
 </div>
 ${markdownHtml}
@@ -673,10 +690,13 @@ ${markdownHtml}
     try {
       const exportContent = stripDocxEdits(content)
 
+      // Fetch logo for embedding
+      const logoBase64 = await fetchLogoBase64()
+
       if (format === 'pdf') {
         // PDF: render HTML in hidden container, capture with html2canvas, convert to PDF with jspdf
         toast.loading('PDF genereren...', { id: 'pdf-export' })
-        const html = generateExportHtml(exportContent, false)
+        const html = generateExportHtml(exportContent, false, logoBase64)
 
         // Create hidden container
         const container = document.createElement('div')

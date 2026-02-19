@@ -1,14 +1,24 @@
 /**
  * Generate a real .docx file from markdown content using the `docx` library.
  * Produces native Office Open XML that opens correctly in all Word versions.
+ * Features: Workx logo top-left, black professional styling, differentiated headers.
  */
 import {
-  Document, Packer, Paragraph, TextRun, HeadingLevel,
+  Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun,
   AlignmentType, BorderStyle, Table, TableRow, TableCell,
   WidthType, UnderlineType,
 } from 'docx'
 
-const BRAND_COLOR = '1a3a5c'
+/** Fetch logo as ArrayBuffer for embedding in docx */
+async function fetchLogo(): Promise<ArrayBuffer | null> {
+  try {
+    const res = await fetch('/workx-logo.png')
+    if (!res.ok) return null
+    return await res.arrayBuffer()
+  } catch {
+    return null
+  }
+}
 
 /** Simple markdown-to-docx paragraph converter */
 export async function generateDocx(markdownContent: string): Promise<Blob> {
@@ -16,15 +26,28 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
   const children: (Paragraph | Table)[] = []
   const date = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
 
-  // Header
-  children.push(new Paragraph({
-    children: [new TextRun({ text: 'WORKX ADVOCATEN', bold: true, size: 18, color: BRAND_COLOR, font: 'Calibri' })],
-    spacing: { after: 40 },
-  }))
+  // Fetch logo
+  const logoData = await fetchLogo()
+
+  // Header with logo top-left + date right-aligned on same line
+  if (logoData) {
+    children.push(new Paragraph({
+      children: [
+        new ImageRun({
+          data: logoData,
+          transformation: { width: 120, height: 84 },
+          type: 'png',
+        }),
+      ],
+      spacing: { after: 80 },
+    }))
+  }
+
+  // Date below logo
   children.push(new Paragraph({
     children: [new TextRun({ text: date, size: 18, color: '888888', font: 'Calibri' })],
     spacing: { after: 200 },
-    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BRAND_COLOR } },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' } },
   }))
   children.push(new Paragraph({ spacing: { after: 120 } }))
 
@@ -41,7 +64,7 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
       children.push(new Paragraph({
         children: parseInlineFormatting(blockquoteLines.join(' ')),
         indent: { left: 720 },
-        border: { left: { style: BorderStyle.SINGLE, size: 6, color: BRAND_COLOR } },
+        border: { left: { style: BorderStyle.SINGLE, size: 6, color: '000000' } },
         spacing: { before: 120, after: 120 },
       }))
       blockquoteLines = []
@@ -60,7 +83,7 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
                 spacing: { before: 40, after: 40 },
               })],
               width: { size: Math.floor(100 / cells.length), type: WidthType.PERCENTAGE },
-              shading: rowIdx === 0 ? { fill: 'f0f4f8' } : undefined,
+              shading: rowIdx === 0 ? { fill: 'f0f0f0' } : undefined,
             })
           ),
         })
@@ -90,7 +113,6 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
     // Code blocks
     if (line.trimStart().startsWith('```')) {
       if (inCodeBlock) {
-        // End code block
         children.push(new Paragraph({
           children: [new TextRun({
             text: codeLines.join('\n'),
@@ -117,7 +139,6 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
 
     // Table rows
     if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
-      // Skip separator rows (|---|---|)
       if (/^\|[\s\-:|]+\|$/.test(line.trim())) continue
       flushBlockquote()
       inTable = true
@@ -144,44 +165,77 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
       continue
     }
 
-    // Headings
+    // === HEADINGS — Professional differentiated styles ===
+
+    // H1: Large, bold, uppercase, thick bottom border
     const h1Match = line.match(/^# (.+)/)
     if (h1Match) {
       children.push(new Paragraph({
-        children: [new TextRun({ text: h1Match[1], bold: true, size: 32, color: BRAND_COLOR, font: 'Calibri' })],
+        children: [new TextRun({
+          text: h1Match[1].toUpperCase(),
+          bold: true,
+          size: 32,
+          color: '000000',
+          font: 'Calibri',
+        })],
         heading: HeadingLevel.HEADING_1,
-        spacing: { before: 200, after: 100 },
-        border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: BRAND_COLOR } },
+        spacing: { before: 280, after: 120 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' } },
       }))
       continue
     }
 
+    // H2: Bold, medium size, thin bottom border
     const h2Match = line.match(/^## (.+)/)
     if (h2Match) {
       children.push(new Paragraph({
-        children: [new TextRun({ text: h2Match[1], bold: true, size: 26, color: BRAND_COLOR, font: 'Calibri' })],
+        children: [new TextRun({
+          text: h2Match[1],
+          bold: true,
+          size: 26,
+          color: '000000',
+          font: 'Calibri',
+        })],
         heading: HeadingLevel.HEADING_2,
-        spacing: { before: 160, after: 80 },
+        spacing: { before: 220, after: 80 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: 'cccccc' } },
       }))
       continue
     }
 
+    // H3: Bold, normal size, left accent bar
     const h3Match = line.match(/^### (.+)/)
     if (h3Match) {
       children.push(new Paragraph({
-        children: [new TextRun({ text: h3Match[1], bold: true, size: 22, color: '333333', font: 'Calibri' })],
+        children: [new TextRun({
+          text: h3Match[1],
+          bold: true,
+          size: 23,
+          color: '222222',
+          font: 'Calibri',
+        })],
         heading: HeadingLevel.HEADING_3,
-        spacing: { before: 120, after: 60 },
+        spacing: { before: 160, after: 60 },
+        border: { left: { style: BorderStyle.SINGLE, size: 8, color: '000000' } },
+        indent: { left: 180 },
       }))
       continue
     }
 
+    // H4+: Bold italic, normal size
     const h4Match = line.match(/^####+ (.+)/)
     if (h4Match) {
       children.push(new Paragraph({
-        children: [new TextRun({ text: h4Match[1], bold: true, size: 22, color: '444444', font: 'Calibri' })],
+        children: [new TextRun({
+          text: h4Match[1],
+          bold: true,
+          italics: true,
+          size: 22,
+          color: '333333',
+          font: 'Calibri',
+        })],
         heading: HeadingLevel.HEADING_4,
-        spacing: { before: 100, after: 40 },
+        spacing: { before: 120, after: 40 },
       }))
       continue
     }
@@ -189,7 +243,7 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
     // Horizontal rule
     if (/^---+$/.test(line.trim())) {
       children.push(new Paragraph({
-        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'dddddd' } },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' } },
         spacing: { before: 160, after: 160 },
       }))
       continue
@@ -223,7 +277,7 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
     const summaryMatch = line.match(/<summary>(.+?)<\/summary>/)
     if (summaryMatch) {
       children.push(new Paragraph({
-        children: [new TextRun({ text: summaryMatch[1], bold: true, size: 22, color: BRAND_COLOR, font: 'Calibri' })],
+        children: [new TextRun({ text: summaryMatch[1], bold: true, size: 22, color: '000000', font: 'Calibri' })],
         spacing: { before: 120, after: 40 },
       }))
       continue
@@ -242,7 +296,7 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
   flushTable()
 
   // Footer
-  children.push(new Paragraph({ spacing: { before: 280 }, border: { top: { style: BorderStyle.SINGLE, size: 1, color: 'dddddd' } } }))
+  children.push(new Paragraph({ spacing: { before: 280 }, border: { top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' } } }))
   children.push(new Paragraph({
     children: [new TextRun({
       text: 'Dit document is gegenereerd met behulp van AI en vormt geen juridisch advies. Raadpleeg uw advocaat voor een op uw situatie toegespitst advies.',
@@ -267,7 +321,7 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
     sections: [{
       properties: {
         page: {
-          margin: { top: 1440, right: 1440, bottom: 1152, left: 1440 }, // 1 inch = 1440 twips
+          margin: { top: 1440, right: 1440, bottom: 1152, left: 1440 },
         },
       },
       children,
@@ -280,37 +334,29 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
 /** Parse inline markdown formatting (bold, italic, code, links) into TextRun array */
 function parseInlineFormatting(text: string): TextRun[] {
   const runs: TextRun[] = []
-  // Strip HTML tags that might leak through
   text = text.replace(/<\/?(?:strong|em|code|a|span|div|p|br)\s*[^>]*>/gi, '')
 
-  // Pattern: **bold**, *italic*, `code`, [link](url), ***bold italic***
   const pattern = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g
   let lastIndex = 0
   let match
 
   while ((match = pattern.exec(text)) !== null) {
-    // Text before match
     if (match.index > lastIndex) {
       runs.push(new TextRun({ text: text.slice(lastIndex, match.index), size: 22, font: 'Calibri' }))
     }
 
     if (match[2]) {
-      // ***bold italic***
       runs.push(new TextRun({ text: match[2], bold: true, italics: true, size: 22, font: 'Calibri' }))
     } else if (match[3]) {
-      // **bold**
       runs.push(new TextRun({ text: match[3], bold: true, size: 22, font: 'Calibri' }))
     } else if (match[4]) {
-      // *italic*
       runs.push(new TextRun({ text: match[4], italics: true, size: 22, font: 'Calibri' }))
     } else if (match[5]) {
-      // `code`
       runs.push(new TextRun({ text: match[5], font: 'Consolas', size: 19 }))
     } else if (match[6] && match[7]) {
-      // [link](url)
       runs.push(new TextRun({
         text: match[6],
-        color: BRAND_COLOR,
+        color: '000000',
         underline: { type: UnderlineType.SINGLE },
         size: 22,
         font: 'Calibri',
@@ -320,7 +366,6 @@ function parseInlineFormatting(text: string): TextRun[] {
     lastIndex = match.index + match[0].length
   }
 
-  // Remaining text
   if (lastIndex < text.length) {
     runs.push(new TextRun({ text: text.slice(lastIndex), size: 22, font: 'Calibri' }))
   }
