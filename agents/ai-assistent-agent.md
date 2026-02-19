@@ -161,6 +161,33 @@ Update dit bestand met een log entry onderaan.
 
 <!-- Voeg nieuwe entries bovenaan toe -->
 
+### Sessie 7 — 2026-02-19 (Retrieval kwaliteit & brongebruik optimalisatie)
+
+**Analyse uitgevoerd:**
+- Volledige analyse van retrieval pipeline (embeddings.ts, route.ts retrieval, query expansion, adjacent chunks)
+- Systeem-prompt instructies voor brongebruik beoordeeld op effectiviteit
+- Per-source balancering (MIN_PER_SOURCE=6, MAX_PER_SOURCE=15) geanalyseerd
+- Adjacent chunk enrichment scope vs MIN_PER_SOURCE garantie vergeleken
+- Keyword search recall per bron geanalyseerd
+
+**Problemen gevonden:**
+1. **Keyword search miste heading-matches**: keyword zoekquery bevatte alleen `content: contains` condities, terwijl relevante chunks vaak het zoekterm in hun heading hebben (bijv. "art. 7:669 lid 3 sub d" als heading). T&C chunks (94% met headings na sessie 5 fix) profiteerden hier niet van
+2. **Adjacent chunk enrichment te beperkt**: adjacents werden alleen opgehaald voor top 10 chunks en gemerged in top 12. Met MIN_PER_SOURCE=6 per bron krijgen ondervertegenwoordigde bronnen (VAAN, Thematica) chunks buiten de top 12 die GEEN context-enrichment kregen. Dit verminderde de passage-kwaliteit voor precies de bronnen die het meest context nodig hebben
+3. **Bronintegratie-instructie te vaag**: de WERKWIJZE stap 5 zei "Combineer bronnen systematisch: T&C → Thematica → RAR/VAAN" zonder te specificeren WAT per bron moet worden gezocht. Claude sloeg regelmatig Thematica en VAAN over
+
+**Verbeteringen doorgevoerd:**
+1. **Keyword search + heading matching**: naast `content: contains` worden nu ook `heading: contains` condities toegevoegd voor de top 15 zoektermen. Dit verbetert recall voor T&C chunks (wetsartikel in heading) en alle bronnen met structured headings. Geen extra DB query — condities worden samengevoegd in dezelfde OR-clause
+2. **Adjacent chunk enrichment uitgebreid naar top 20**: ADJACENT_FETCH_LIMIT verhoogd van 10→20 voor fetch, en merge-limiet van 12→20. Hierdoor krijgen MIN_PER_SOURCE gegarandeerde chunks van VAAN en Thematica ook omliggende context. Kosten: maximaal 40 extra OR-condities in 1 DB query (verwaarloosbaar)
+3. **Bronintegratie-instructie concreet gemaakt**: WERKWIJZE stap 5 nu met expliciete sub-stappen per bron (a-d), elk met een specifieke vraag die de bron beantwoordt. T&C="welk artikel, wat zegt commentaar", Thematica="hoofdlijnen, uitzonderingen", RAR="concrete uitspraken", VAAN="recente ontwikkelingen". Forceert Claude om elke bron actief te controleren
+
+**Impact:**
+- Geen performance-regressie: heading matching is OR-conditie in bestaande query, adjacent chunk fetch doet 1 query met meer OR-condities, prompt groeit met ~150 tekens
+- Betere recall: heading-match haalt relevante T&C chunks op die voorheen alleen via semantic search gevonden werden
+- Betere passage-kwaliteit: underrepresented bronnen krijgen nu dezelfde context-enrichment als top-scoring chunks
+- Betere bronbenutting: concrete per-bron instructie forceert Claude om VAAN en Thematica actief te raadplegen
+
+**Compilatie:** Alleen bekende e2e/ fouten
+
 ### Sessie 6 — 2026-02-17 (Grondige QA-test alle features)
 
 **Volledig getest:**
