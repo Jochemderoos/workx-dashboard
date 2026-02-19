@@ -194,7 +194,7 @@ ECLI-nummers uit deze passages zijn GEVERIFIEERD door de redactie en mag je cite
 ### Hoe je bronnen gebruikt
 1. Begin ALTIJD met de meegeleverde passages — dit is je fundament
 2. Combineer: T&C (wettelijk kader) + Thematica (analyse) + RAR/VAAN (jurisprudentie)
-3. Zoek OPTIONEEL aanvullend op rechtspraak.nl als de passages niet genoeg dekken
+3. search_rechtspraak is ZELDEN nodig — de passages bevatten al tientallen geverifieerde ECLIs. Alleen gebruiken als de passages een specifiek onderwerp niet dekken
 4. Beschrijf NOOIT je zoekproces. Niet beginnen met "Ik heb gezocht..." of "Er zijn geen resultaten..."
 5. Bij conflicterende bronnen: vermeld BEIDE standpunten, geef aan welke recenter is
 
@@ -914,7 +914,7 @@ export async function POST(req: NextRequest) {
               for (const chunk of sourceChunks) {
                 const headingLabel = chunk.heading ? ` [${chunk.heading}]` : ''
                 // Detect ECLI numbers in the passage and mark them as verified
-                const ecliMatches = chunk.content.match(/ECLI:NL:[A-Z]{2,6}:\d{4}:\d{1,6}/g)
+                const ecliMatches = chunk.content.match(/ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+/g)
                 const ecliLabel = ecliMatches && ecliMatches.length > 0
                   ? ` [Bevat geverifieerde ECLI: ${Array.from(new Set(ecliMatches)).slice(0, 3).join(', ')}]`
                   : ''
@@ -950,22 +950,44 @@ export async function POST(req: NextRequest) {
               sourcesContext += `\n\nKRITIEKE INSTRUCTIE BRONGEBRUIK:
 - Verwerk ALLE relevante passages in je antwoord — niet slechts 1-2 bronnen. Je hebt ${usedPrimaryNames.length} bronnen met tientallen passages — gebruik ze ALLEMAAL waar relevant.
 - Gebruik RAR-annotaties en VAAN-updates voor SPECIFIEKE jurisprudentie — niet alleen bekende arresten (zoals New Hairstyle). Zoek in de passages naar relevante lagere rechtspraak, specifieke toepassingen, en recente ontwikkelingen.
-- Bij juridische analyses: onderbouw ELK argument met minstens 1 specifieke passage (verwijs naar [Passage X]). Gebruik liever een concrete ECLI uit de passages dan een algemeen principe.
+- Bij juridische analyses: onderbouw ELK argument met minstens 1 specifieke passage (verwijs naar [Passage X]). Gebruik ALLEEN ECLIs die letterlijk in de passages staan — nooit uit je geheugen. Geen ECLI is beter dan een verkeerde ECLI.
 - Bij documentanalyse: zoek in de passages naar relevante jurisprudentie voor ELK specifiek onderwerp in het document.
 - In ## Gebruikte bronnen: maak een APART <details>-blok per bron met een LETTERLIJK citaat (kopieer EXACT uit de passage).
 - VERBODEN: citaten parafraseren en presenteren als letterlijk. Als je parafraseert, gebruik dan GEEN aanhalingstekens.
 - VERBODEN: ECLI-nummers noemen die NIET in de passages staan en NIET via rechtspraak.nl zijn geverifieerd.
 - Tel aan het einde na: als je minder dan ${Math.min(usedPrimaryNames.length, 3)} van de ${usedPrimaryNames.length} bronnen hebt gebruikt, ga terug en zoek relevante passages die je hebt gemist.`
 
-              // ECLI WHITELIST: explicitly list verified ECLIs from passages
+              // ECLI WHITELIST with context: list verified ECLIs + what the passage says
               if (passageEclis.length > 0) {
-                sourcesContext += `\n\n--- GEVERIFIEERDE ECLI-NUMMERS (WHITELIST) ---
-De volgende ${passageEclis.length} ECLI-nummers staan in de meegeleverde passages en zijn GEVERIFIEERD. Dit zijn de ENIGE ECLIs die je mag citeren zonder search_rechtspraak/get_rechtspraak_ruling te gebruiken:
-${passageEclis.join('\n')}
+                // Build ECLI reference table with surrounding context from passages
+                const ecliContextMap = new Map<string, string>()
+                const ecliContextPattern = /ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+/g
+                let ecliCtxMatch
+                while ((ecliCtxMatch = ecliContextPattern.exec(sourcesContext)) !== null) {
+                  const ecli = ecliCtxMatch[0]
+                  if (ecliContextMap.has(ecli)) continue
+                  // Get surrounding context (~150 chars before and after)
+                  const start = Math.max(0, ecliCtxMatch.index - 100)
+                  const end = Math.min(sourcesContext.length, ecliCtxMatch.index + ecli.length + 150)
+                  const context = sourcesContext.slice(start, end).replace(/\n/g, ' ').trim()
+                  ecliContextMap.set(ecli, context)
+                }
 
-GEBRUIK DEZE ECLI-NUMMERS. Ze komen uit gezaghebbende bronnen en zijn redactioneel geverifieerd.
-Elk ECLI-nummer dat je noemt dat NIET in deze lijst staat en NIET via tools is gevonden, wordt automatisch gemarkeerd als onbetrouwbaar.
-Gebruik LIEVER een ECLI uit deze lijst dan een ECLI uit je eigen geheugen.`
+                let ecliTable = ''
+                ecliContextMap.forEach((context, ecli) => {
+                  ecliTable += `\n- ${ecli}: "${context.slice(0, 200)}"`
+                })
+
+                sourcesContext += `\n\n--- GEVERIFIEERDE ECLI-REFERENTIETABEL ---
+De volgende ${passageEclis.length} ECLI-nummers staan in de meegeleverde passages en zijn GEVERIFIEERD.
+Dit zijn de ENIGE ECLIs die je mag gebruiken zonder search_rechtspraak/get_rechtspraak_ruling.
+${ecliTable}
+
+REGELS:
+1. Gebruik ALLEEN ECLIs uit deze tabel of uit tool-resultaten in dit gesprek.
+2. Citeer bij elke ECLI EXACT wat de passage erover zegt — niet je eigen interpretatie.
+3. Elk ECLI-nummer dat NIET in deze tabel staat en NIET via tools is gevonden wordt automatisch DOORGESTREEPT in je antwoord.
+4. Een argument ZONDER ECLI is altijd beter dan een argument met een verkeerde ECLI.`
               }
             }
           }
@@ -1094,7 +1116,7 @@ WERKWIJZE (verplicht voor elk antwoord):
 3. CITEER LETTERLIJK met de CITEERWIJZE per bron, gevolgd door een exact citaat tussen aanhalingstekens dat WOORD VOOR WOORD in de passage staat
 4. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD — deze mag je citeren met passagenummer
 5. Combineer bronnen systematisch: T&C voor wettelijk kader → Thematica voor analyse → RAR/VAAN voor jurisprudentie
-6. Vul aan met rechtspraak.nl-tool. Val op eigen kennis ALLEEN terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet met "Op basis van eigen juridische kennis (niet uit meegeleverde bronnen):"
+6. Gebruik search_rechtspraak ALLEEN als de passages onvoldoende jurisprudentie bevatten — de passages zijn je PRIMAIRE bron, niet rechtspraak.nl. Val op eigen kennis ALLEEN terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet met "Op basis van eigen juridische kennis (niet uit meegeleverde bronnen):"
 7. KRITIEK: Controleer ALTIJD of de juiste wettelijke bepaling in de passages staat. Als je een vraag over ontslag van een AOW-gerechtigde krijgt maar art. 7:669 lid 4 BW niet in de passages staat, gebruik dan je kennis uit de "Kritieke Wettelijke Regels" sectie hierboven en vermeld dit
 8. Bij elk argument: verwijs naar het PASSAGENUMMER [Passage X] zodat de citaten verifieerbaar zijn${sourcesContext}`
     }
@@ -1368,7 +1390,7 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
     // Rechtspraak tools always available — direct API access to Dutch case law
     tools.push({
       name: 'search_rechtspraak',
-      description: 'BELANGRIJK: Gebruik deze tool NIET als dit het eerste bericht in het gesprek is en het een open casusvraag of strategievraag betreft. Stel dan EERST vragen aan de gebruiker. Gebruik deze tool pas nadat de gebruiker je vragen heeft beantwoord, of bij feitelijke vragen (termijnen, bedragen). --- Doorzoekt de officiele Nederlandse rechtspraak-database (rechtspraak.nl). Retourneert ECLI-nummers, samenvattingen en metadata. Doe meerdere zoekopdrachten met VERSCHILLENDE zoektermen. Beschrijf NOOIT je zoekproces in het antwoord.',
+      description: 'LAATSTE REDMIDDEL: Gebruik deze tool ALLEEN als de meegeleverde kennisbronpassages ONVOLDOENDE jurisprudentie bevatten voor het onderwerp. De passages bevatten al tientallen geverifieerde ECLIs — gebruik die EERST. Gebruik deze tool NIET bij het eerste bericht als het een open casusvraag betreft (stel dan EERST vragen). Beschrijf NOOIT je zoekproces.',
       input_schema: {
         type: 'object',
         properties: {
