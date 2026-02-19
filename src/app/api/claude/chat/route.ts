@@ -266,6 +266,19 @@ Als een template is bijgevoegd:
 - Markeer ontbrekende gegevens als [INVULLEN: omschrijving]
 - Behoud de exacte structuur en opmaak
 
+## ECLI-nummers en Jurisprudentie — ABSOLUTE REGEL
+- VERZIN NOOIT een ECLI-nummer. Elk ECLI-nummer dat je noemt MOET afkomstig zijn uit:
+  1. De meegeleverde kennisbronpassages (hieronder), OF
+  2. Een resultaat van de rechtspraak.nl zoektool
+- Als je geen specifieke ECLI kunt vinden: verwijs naar het juridische principe ZONDER ECLI. Schrijf bijv. "Vaste rechtspraak leert dat..." in plaats van een verzonnen ECLI te citeren
+- NOOIT een ECLI-nummer "reconstrueren" of "herinneren" uit je training. Je training bevat GEEN betrouwbare ECLI-database
+- Bij twijfel: gebruik de rechtspraak.nl zoektool om het te verifiëren
+
+## Citaten en Bronverwijzingen — ABSOLUTE REGEL
+- Tekst tussen aanhalingstekens ("...") MOET LETTERLIJK en EXACT overeenkomen met de bron
+- Als je parafraseert: gebruik GEEN aanhalingstekens, maar schrijf "Samengevat stelt [bron] dat..."
+- VERZIN NOOIT een passage, citaat, of formulering en presenteer het als citaat uit een bron
+
 ## Berekeningen
 Bij berekeningen (transitievergoeding, opzegtermijnen, verjaringstermijnen):
 - Toon de rekenmethode stap voor stap
@@ -836,7 +849,7 @@ export async function POST(req: NextRequest) {
         if (chunkCount > 0 && (searchTerms.length > 0 || process.env.OPENAI_API_KEY)) {
           // Retrieve relevant chunks using multi-query hybrid search
           // More chunks when documents are attached (more diverse topics to cover)
-          const maxChunks = docSummaryForSearch ? 60 : 40
+          const maxChunks = docSummaryForSearch ? 75 : 50
           const retrievalTimeout = docSummaryForSearch ? 20000 : 15000
           const relevantChunks = await Promise.race([
             retrieveRelevantChunks(
@@ -921,11 +934,14 @@ export async function POST(req: NextRequest) {
                 }
               }
               sourcesContext += `\n\nKRITIEKE INSTRUCTIE BRONGEBRUIK:
-- Verwerk ALLE relevante passages in je antwoord — niet slechts 1-2 bronnen. De passages zijn SPECIAAL GESELECTEERD voor deze vraag.
+- Verwerk ALLE relevante passages in je antwoord — niet slechts 1-2 bronnen. Je hebt ${usedPrimaryNames.length} bronnen met tientallen passages — gebruik ze ALLEMAAL waar relevant.
 - Gebruik RAR-annotaties en VAAN-updates voor SPECIFIEKE jurisprudentie — niet alleen bekende arresten (zoals New Hairstyle). Zoek in de passages naar relevante lagere rechtspraak, specifieke toepassingen, en recente ontwikkelingen.
-- Bij juridische analyses: onderbouw ELK argument met minstens 1 specifieke passage. Gebruik liever een concrete ECLI uit de passages dan een algemeen principe.
+- Bij juridische analyses: onderbouw ELK argument met minstens 1 specifieke passage (verwijs naar [Passage X]). Gebruik liever een concrete ECLI uit de passages dan een algemeen principe.
 - Bij documentanalyse: zoek in de passages naar relevante jurisprudentie voor ELK specifiek onderwerp in het document.
-- Maak in ## Gebruikte bronnen een APART <details>-blok per bron met een LETTERLIJK citaat.`
+- In ## Gebruikte bronnen: maak een APART <details>-blok per bron met een LETTERLIJK citaat (kopieer EXACT uit de passage).
+- VERBODEN: citaten parafraseren en presenteren als letterlijk. Als je parafraseert, gebruik dan GEEN aanhalingstekens.
+- VERBODEN: ECLI-nummers noemen die NIET in de passages staan en NIET via rechtspraak.nl zijn geverifieerd.
+- Tel aan het einde na: als je minder dan ${Math.min(usedPrimaryNames.length, 3)} van de ${usedPrimaryNames.length} bronnen hebt gebruikt, ga terug en zoek relevante passages die je hebt gemist.`
             }
           }
         }
@@ -1039,15 +1055,23 @@ Vraag NIET naar de echte namen of gegevens.`
     }
     if (sourcesContext) {
       systemPrompt += `\n\n## Kennisbronnen — Meegeleverde Passages
-Hieronder staan passages uit de interne kennisbronnen, automatisch geselecteerd op basis van de vraag. Dit zijn DIRECTE citaten uit gezaghebbende naslagwerken — je EERSTE referentiepunt.
+Hieronder staan passages uit de interne kennisbronnen, automatisch geselecteerd op basis van de vraag. Dit zijn DIRECTE citaten uit gezaghebbende naslagwerken — je EERSTE en BELANGRIJKSTE referentiepunt.
 
-WERKWIJZE:
-1. Doorzoek de passages hieronder GRONDIG — gebruik de exacte formuleringen en analyses
-2. CITEER LETTERLIJK met de CITEERWIJZE per bron, gevolgd door een citaat tussen aanhalingstekens
-3. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD en mag je citeren
-4. Combineer: T&C voor wettelijk kader → Thematica voor analyse → RAR/VAAN voor jurisprudentie
-5. Vul aan met rechtspraak.nl. Val op eigen kennis alleen terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet
-6. KRITIEK: Controleer ALTIJD of de juiste wettelijke bepaling in de passages staat. Als je een vraag over ontslag van een AOW-gerechtigde krijgt maar art. 7:669 lid 4 BW niet in de passages staat, gebruik dan je kennis uit de "Kritieke Wettelijke Regels" sectie hierboven en vermeld dit${sourcesContext}`
+⚠️ ANTI-HALLUCINATIE REGELS (ABSOLUUT):
+- CITEER NOOIT een passage, paragraaf, of tekst die NIET letterlijk in onderstaande passages staat
+- VERZIN NOOIT ECLI-nummers — gebruik ALLEEN ECLIs die hieronder staan of via rechtspraak.nl zijn gevonden
+- Als je twijfelt of iets in de passages staat: CITEER HET DAN NIET. Zeg liever "uit eigen juridische kennis" dan een valse bron citeren
+- ELKE bewering die je toeschrijft aan een bron MOET verifieerbaar zijn in de passages hieronder
+
+WERKWIJZE (verplicht voor elk antwoord):
+1. Doorzoek ALLE passages hieronder GRONDIG — lees ze volledig, niet alleen de eerste alinea
+2. Gebruik ELKE relevante passage — niet slechts 2-3 bronnen. De passages zijn SPECIAAL GESELECTEERD voor deze vraag
+3. CITEER LETTERLIJK met de CITEERWIJZE per bron, gevolgd door een exact citaat tussen aanhalingstekens dat WOORD VOOR WOORD in de passage staat
+4. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD — deze mag je citeren met passagenummer
+5. Combineer bronnen systematisch: T&C voor wettelijk kader → Thematica voor analyse → RAR/VAAN voor jurisprudentie
+6. Vul aan met rechtspraak.nl-tool. Val op eigen kennis ALLEEN terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet met "Op basis van eigen juridische kennis (niet uit meegeleverde bronnen):"
+7. KRITIEK: Controleer ALTIJD of de juiste wettelijke bepaling in de passages staat. Als je een vraag over ontslag van een AOW-gerechtigde krijgt maar art. 7:669 lid 4 BW niet in de passages staat, gebruik dan je kennis uit de "Kritieke Wettelijke Regels" sectie hierboven en vermeld dit
+8. Bij elk argument: verwijs naar het PASSAGENUMMER [Passage X] zodat de citaten verifieerbaar zijn${sourcesContext}`
     }
     if (templatesContext) {
       systemPrompt += `\n\n## Beschikbare templates van Workx Advocaten
@@ -1394,11 +1418,13 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           const streamParams: any = {
             model: modelId,
             max_tokens: isOpus ? 64000 : 32000,
+            temperature: 1, // Required: must be 1 when extended thinking is enabled
             system: systemPrompt,
             messages: msgs,
             thinking: {
               type: 'enabled',
-              budget_tokens: isOpus ? 32000 : 16000,
+              // Higher thinking budget = more reasoning = fewer hallucinations
+              budget_tokens: isOpus ? 40000 : 24000,
             },
             ...(tools.length > 0 ? { tools } : {}),
           }
@@ -1570,9 +1596,10 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             const continueStream = client.messages.stream({
               model: modelId,
               max_tokens: isOpus ? 64000 : 32000,
+              temperature: 1,
               system: systemPrompt,
               messages: loopMsgs,
-              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 50000 : 24000 },
+              thinking: { type: 'enabled' as const, budget_tokens: isOpus ? 50000 : 32000 },
               tools,
             })
 
@@ -1681,6 +1708,50 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
               if (notFound.length > 0) {
                 console.warn(`[chat] Document citation check: ${notFound.length}/${citations_in_response.length} citations not found in document:`, notFound.slice(0, 3))
                 const warningText = `\n\n---\n**Let op:** ${notFound.length} citaat/citaten in bovenstaand antwoord konden niet worden teruggevonden in het bijgevoegde document. Controleer of de geciteerde tekst correct is overgenomen.`
+                fullText += warningText
+                await send(JSON.stringify({ type: 'delta', text: warningText }))
+              }
+            }
+          }
+
+          // Knowledge source passage verification: check if quoted passages
+          // attributed to knowledge sources actually exist in the provided sourcesContext.
+          // This catches hallucinated source citations (fabricated quotes from T&C, VAAN, RAR, etc.)
+          if (sourcesContext && sourcesContext.length > 200 && fullText.length > 100) {
+            // Pattern: find text between quotes that follows a source reference
+            // Common patterns: "T&C Arbeidsrecht: "...", RAR: "...", VAAN AR Updates: "..."
+            const sourceQuotePattern = /(?:T&C|Tekst\s*&\s*Commentaar|Thematica|VAAN|RAR|InView|kennisbron)[^"]*[""„]([^""„]{10,200})[""„]/gi
+            const sourceQuotes: string[] = []
+            let sqMatch
+            while ((sqMatch = sourceQuotePattern.exec(fullText)) !== null) {
+              sourceQuotes.push(sqMatch[1])
+            }
+
+            // Also catch standalone quoted passages that look like legal citations
+            const standaloneQuotePattern = /[""„]([^""„]{15,250})[""„]\s*\((?:T&C|Thematica|VAAN|RAR|passage|bron)/gi
+            while ((sqMatch = standaloneQuotePattern.exec(fullText)) !== null) {
+              sourceQuotes.push(sqMatch[1])
+            }
+
+            if (sourceQuotes.length > 0) {
+              const srcTextLower = sourcesContext.toLowerCase()
+              const fabricatedQuotes: string[] = []
+              for (const quote of sourceQuotes) {
+                const quoteLower = quote.toLowerCase().trim()
+                // Exact substring match
+                if (srcTextLower.includes(quoteLower)) continue
+                // Fuzzy: check if 70% of significant words (>3 chars) appear in sources
+                const words = quoteLower.split(/\s+/).filter(w => w.length > 3)
+                const found = words.filter(w => srcTextLower.includes(w))
+                const ratio = words.length > 0 ? found.length / words.length : 0
+                if (ratio < 0.7) {
+                  fabricatedQuotes.push(quote)
+                }
+              }
+
+              if (fabricatedQuotes.length > 0) {
+                console.warn(`[chat] Source passage verification: ${fabricatedQuotes.length}/${sourceQuotes.length} source quotes not found in passages:`, fabricatedQuotes.slice(0, 3))
+                const warningText = `\n\n---\n⚠️ **Verificatiemelding:** ${fabricatedQuotes.length} citaat/citaten die aan kennisbronnen worden toegeschreven, konden niet worden teruggevonden in de meegeleverde passages. Deze citaten zijn mogelijk geparafraseerd of uit het geheugen geciteerd. Controleer de exactheid.`
                 fullText += warningText
                 await send(JSON.stringify({ type: 'delta', text: warningText }))
               }
@@ -3720,7 +3791,7 @@ async function retrieveRelevantChunks(
   console.log(`[chat] Per-source retrieval: ${allQueries.length} queries x ${sourceIds.length} sources`)
 
   // Results per source for semantic search (top-N per source per query)
-  const SEMANTIC_PER_SOURCE = 15 // Top 15 per source guarantees diverse results
+  const SEMANTIC_PER_SOURCE = 20 // Top 20 per source for deep coverage across all sources
 
   // Run ALL semantic searches + keyword searches in parallel
   const [semanticResultSets, keywordResults] = await Promise.all([
@@ -3901,8 +3972,8 @@ async function retrieveRelevantChunks(
     // Balanced selection: ensure each source gets fair representation
     // Instead of just top-N globally (which lets one large source dominate),
     // guarantee each source gets at least MIN_PER_SOURCE if it has relevant chunks
-    const MIN_PER_SOURCE = 4  // Increased: every source deserves representation
-    const MAX_PER_SOURCE = 12
+    const MIN_PER_SOURCE = 6  // Guarantee deep coverage per source
+    const MAX_PER_SOURCE = 15
     const selected: typeof combined = []
     const perSource = new Map<string, number>()
 
@@ -3923,14 +3994,14 @@ async function retrieveRelevantChunks(
       const needed = MIN_PER_SOURCE - currentCount
       const candidates = combined.filter(c => c.sourceId === sid && !selected.includes(c))
       for (let i = 0; i < Math.min(needed, candidates.length); i++) {
-        if (selected.length >= maxChunks + 8) break // Allow slight overflow for balance
+        if (selected.length >= maxChunks + 12) break // Allow overflow for balanced source representation
         selected.push(candidates[i])
         perSource.set(sid, (perSource.get(sid) || 0) + 1)
       }
     }
 
     selected.sort((a, b) => b.score - a.score)
-    const finalSelected = selected.slice(0, maxChunks + 8) // Allow up to 48 for balanced sources
+    const finalSelected = selected.slice(0, maxChunks + 12) // Allow extra for balanced source coverage
 
     // Log source distribution for debugging
     const dist = new Map<string, number>()
@@ -3979,8 +4050,8 @@ async function enrichWithAdjacentChunks(
   const adjacentNeeded: Array<{ sourceId: string; chunkIndex: number }> = []
 
   for (const chunk of chunks) {
-    // Only fetch adjacents for top-scored chunks (top 10) to limit DB queries
-    if (chunks.indexOf(chunk) >= 10) break
+    // Only fetch adjacents for top-scored chunks (top 15) to limit DB queries
+    if (chunks.indexOf(chunk) >= 15) break
     const prevKey = `${chunk.sourceId}-${chunk.chunkIndex - 1}`
     const nextKey = `${chunk.sourceId}-${chunk.chunkIndex + 1}`
     if (!existingKeys.has(prevKey) && chunk.chunkIndex > 0) {
@@ -4021,7 +4092,7 @@ async function enrichWithAdjacentChunks(
     // Merge adjacent content into existing chunks (prepend N-1, append N+1)
     // Use 800 chars for context — enough for a full legal paragraph
     return chunks.map((chunk, idx) => {
-      if (idx >= 12) return chunk // Enrich top 12 chunks
+      if (idx >= 18) return chunk // Enrich top 18 chunks for deeper context
       const prevContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex - 1}`)
       const nextContent = adjacentMap.get(`${chunk.sourceId}-${chunk.chunkIndex + 1}`)
       let enrichedContent = chunk.content
