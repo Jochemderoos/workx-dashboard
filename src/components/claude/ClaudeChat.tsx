@@ -407,9 +407,9 @@ export default function ClaudeChat({
   }, [initialMsgCount])
 
   // Sync convId from parent (including reset to null)
+  // NOTE: do NOT reset activeOptions here — these are user preferences that persist across conversations
   useEffect(() => {
     setConvId(initialConvId || null)
-    setActiveOptions(new Set(['kort']))
     setAttachedDocs([])
   }, [initialConvId])
 
