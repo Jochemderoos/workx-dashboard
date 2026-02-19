@@ -1079,9 +1079,9 @@ export default function AIAssistentPage() {
                 },
                 {
                   icon: '🧠',
-                  title: 'Model kiezen',
-                  desc: 'Kies tussen Sonnet (snel, goed voor de meeste vragen) en Opus (diepgaand, voor complexe analyses). Gebruik de model-selector rechtsonder in het chatvenster.',
-                  tips: ['Sonnet: ideaal voor snelle vragen en standaard-analyses', 'Opus: voor complexe juridische analyses met meerdere perspectieven', 'Opus denkt langer na maar geeft grondigere antwoorden'],
+                  title: 'Model kiezen (Sonnet vs Opus)',
+                  desc: 'Standaard werkt de AI met Sonnet — snel, slim en betaalbaar. Opus is het diepste model maar kost aanzienlijk meer. Gebruik Opus alleen als Sonnet onvoldoende diepgang oplevert.',
+                  tips: ['Sonnet is de standaard — gebruik dit voor 95% van je vragen', 'Opus alleen inzetten als Sonnet qua diepgang onvoldoende heeft opgeleverd', 'Opus kost circa 10x meer per vraag dan Sonnet — gebruik het met mate'],
                 },
                 {
                   icon: '📁',
@@ -1103,9 +1103,23 @@ export default function AIAssistentPage() {
                 },
                 {
                   icon: '📚',
-                  title: 'Bronnen aan/uit',
-                  desc: 'De AI detecteert automatisch of je vraag arbeidsrecht betreft. Voor niet-juridische vragen worden kennisbronnen overgeslagen (sneller antwoord). Je kunt dit ook handmatig in-/uitschakelen.',
-                  tips: ['De "Bronnen" toggle staat naast de model-selector', 'Zet bronnen uit voor niet-juridische vragen zoals e-mails schrijven of vertalingen', 'Zet bronnen aan als de auto-detectie een juridische vraag mist'],
+                  title: 'Juridische bronnen (aan/uit)',
+                  desc: 'Wanneer bronnen AAN staan, doorzoekt de AI automatisch 5 gezaghebbende bronnen (T&C Arbeidsrecht, Thematica, VAAN AR Updates, RAR en rechtspraak.nl) voor maximale diepgang. De bronnen staan standaard AAN — zet ze alleen uit voor niet-juridische vragen.',
+                  tips: [
+                    'IMPACT: Met bronnen AAN krijg je onderbouwd advies met wetsartikelen, jurisprudentie en letterlijke citaten uit de literatuur',
+                    'Zonder bronnen antwoordt de AI puur uit eigen kennis — sneller maar zonder bronvermelding',
+                    'Zet bronnen UIT voor niet-juridische taken: e-mails schrijven, vertalingen, samenvattingen zonder juridisch kader',
+                  ],
+                },
+                {
+                  icon: '📏',
+                  title: 'Beknopt vs Uitgebreid advies',
+                  desc: 'Standaard geeft de AI een beknopt antwoord (paar alinea\'s). Klik op "Uitgebreid" voor een volledig onderbouwd advies met alle relevante bronnen. Na een beknopt antwoord verschijnt een knop "Maak uitgebreid advies" waarmee je alsnog de uitgebreide versie kunt opvragen.',
+                  tips: [
+                    'BEKNOPT (standaard): kern van het antwoord in een paar alinea\'s — ideaal voor snelle vragen',
+                    'UITGEBREID: volledige juridische analyse met alle relevante wetsartikelen, jurisprudentie en literatuurverwijzingen',
+                    'Tip: begin met Beknopt en klik daarna op "Maak uitgebreid advies" als je meer diepgang wilt — zo bespaar je tijd bij eenvoudige vragen',
+                  ],
                 },
               ].map((feature, i) => (
                 <div key={i} className="group rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-white/10 hover:bg-white/[0.05] transition-all duration-300 overflow-hidden">

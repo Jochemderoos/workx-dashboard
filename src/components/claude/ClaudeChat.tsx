@@ -71,7 +71,7 @@ export default function ClaudeChat({
   const [statusText, setStatusText] = useState('')
   const [convId, setConvId] = useState<string | null>(initialConvId || null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [activeOptions, setActiveOptions] = useState<Set<string>>(new Set())
+  const [activeOptions, setActiveOptions] = useState<Set<string>>(new Set(['kort']))
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -103,6 +103,7 @@ export default function ClaudeChat({
   const [streamingContent, setStreamingContent] = useState('') // Throttled streaming text for markdown rendering
   const [loadingProgress, setLoadingProgress] = useState(0) // Progress bar during loading (0-100)
   const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(new Set()) // Per-message thinking expansion
+  const [kortMessageIds, setKortMessageIds] = useState<Set<string>>(new Set()) // Messages generated with "kort" option — show "Maak uitgebreid" button
 
   const RESPONSE_OPTIONS = [
     { id: 'kort', label: 'Kort antwoord', instruction: 'Geef een kort en bondig antwoord, maximaal een paar alinea\'s.' },
@@ -820,6 +821,7 @@ ${markdownHtml}
     }
 
     const assistantMsgId = `assistant-${Date.now()}`
+    const wasKort = activeOptions.has('kort') && !activeOptions.has('uitgebreid')
 
     setLastFailedMessage(null)
 
@@ -1094,6 +1096,10 @@ ${markdownHtml}
       onNewMessage?.()
       // Keep attachedDocs — they stay available for the entire conversation
       setStatusText('')
+      // Track beknopt messages for "Maak uitgebreid" button
+      if (wasKort) {
+        setKortMessageIds(prev => new Set(prev).add(assistantMsgId))
+      }
 
     } catch (error) {
       clearTimeout(timeoutId)
@@ -1154,6 +1160,31 @@ ${markdownHtml}
   const stopGeneration = () => {
     abortControllerRef.current?.abort()
     setStatusText('Gestopt')
+  }
+
+  // Expand a beknopt answer to uitgebreid: finds the original user question and re-sends with uitgebreid instructions
+  const expandToUitgebreid = (assistantMsgId: string) => {
+    if (isLoading) return
+    // Find the user message that preceded this assistant message
+    const msgIndex = messages.findIndex(m => m.id === assistantMsgId)
+    if (msgIndex <= 0) return
+    // Walk backwards to find the user message
+    let userMsg: Message | null = null
+    for (let i = msgIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        userMsg = messages[i]
+        break
+      }
+    }
+    if (!userMsg) return
+    // Remove from kort tracking
+    setKortMessageIds(prev => {
+      const next = new Set(prev)
+      next.delete(assistantMsgId)
+      return next
+    })
+    // Send with uitgebreid instruction baked into the message directly
+    sendMessage(`Geef een uitgebreid en grondig antwoord met bronvermeldingen (wetsartikelen, jurisprudentie, literatuur) waar mogelijk.\n\nGeef een uitgebreide versie van je vorige antwoord op mijn vraag: ${userMsg.content}`)
   }
 
   const retryLastMessage = () => {
@@ -1441,6 +1472,18 @@ ${markdownHtml}
                       </div>
                     )}
 
+                    {/* "Maak uitgebreid" button — shown after beknopt answers */}
+                    {msg.content && !isStreaming && kortMessageIds.has(msg.id) && (
+                      <button
+                        onClick={() => expandToUitgebreid(msg.id)}
+                        disabled={isLoading}
+                        className="flex items-center gap-2 mt-2.5 ml-0.5 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/15 hover:border-emerald-500/40 transition-all text-xs font-medium disabled:opacity-30"
+                      >
+                        <Icons.chevronRight size={14} className="rotate-90" />
+                        <span>Maak uitgebreid advies</span>
+                        <span className="text-emerald-400/50 text-[10px]">met volledige bronvermeldingen</span>
+                      </button>
+                    )}
                     {/* Annotations display */}
                     {annotations[msg.id]?.length > 0 && (
                       <div className="mt-2 ml-1 space-y-1">
@@ -1656,10 +1699,10 @@ ${markdownHtml}
               </div>
             </button>
 
-            {/* Model selector + Response option chips */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {/* Model toggle — prominent with glow */}
-              <div className="flex items-center rounded-xl overflow-hidden mr-1.5 border border-white/10">
+            {/* Three prominent toggle groups */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 1. Model toggle */}
+              <div className="flex items-center rounded-xl overflow-hidden border border-white/10">
                 <button
                   onClick={() => setSelectedModel('sonnet')}
                   disabled={isLoading}
@@ -1668,9 +1711,9 @@ ${markdownHtml}
                       ? 'bg-workx-lime/20 text-workx-lime shadow-[inset_0_0_12px_rgba(249,255,133,0.1)]'
                       : 'bg-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
                   } disabled:opacity-30`}
-                  title="Sonnet — snel en slim, ideaal voor dagelijkse vragen"
+                  title="Sonnet — snel en slim, standaard model (goedkoop)"
                 >
-                  Sonnet <span className="text-[9px] opacity-50 ml-0.5">snel</span>
+                  Sonnet <span className="text-[9px] opacity-50 ml-0.5">standaard</span>
                 </button>
                 <button
                   onClick={() => setSelectedModel('opus')}
@@ -1680,28 +1723,70 @@ ${markdownHtml}
                       ? 'bg-purple-500/20 text-purple-300 shadow-[inset_0_0_12px_rgba(168,85,247,0.15)]'
                       : 'bg-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
                   } disabled:opacity-30`}
-                  title="Opus — diepste analyse, beste voor complexe juridische vragen"
+                  title="Opus — diepste analyse, alleen bij onvoldoende diepgang van Sonnet (duur)"
                 >
                   Opus <span className="text-[9px] opacity-50 ml-0.5">diep</span>
                 </button>
               </div>
 
-              {/* Knowledge sources toggle */}
-              <button
-                onClick={() => setUseKnowledgeSources(!useKnowledgeSources)}
-                disabled={isLoading}
-                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all border ${
-                  useKnowledgeSources
-                    ? 'bg-blue-500/15 border-blue-500/30 text-blue-400 font-medium'
-                    : 'bg-white/[0.03] border-white/10 text-white/35 hover:text-white/60 hover:bg-white/[0.06]'
-                } disabled:opacity-30`}
-                title={useKnowledgeSources ? 'Kennisbronnen AAN — zoekt in T&C, Thematica, VAAN, RAR' : 'Kennisbronnen UIT — sneller antwoord, geen bronvermelding'}
-              >
-                {useKnowledgeSources ? '\u{1F4DA}' : '\u{1F4AD}'} Bronnen {useKnowledgeSources ? 'aan' : 'uit'}
-              </button>
+              {/* 2. Juridische bronnen toggle — prominent, same style as model */}
+              <div className="flex items-center rounded-xl overflow-hidden border border-white/10">
+                <button
+                  onClick={() => { if (!useKnowledgeSources) setUseKnowledgeSources(true) }}
+                  disabled={isLoading}
+                  className={`px-3.5 py-2 text-[12px] font-medium transition-all ${
+                    useKnowledgeSources
+                      ? 'bg-blue-500/20 text-blue-300 shadow-[inset_0_0_12px_rgba(59,130,246,0.15)]'
+                      : 'bg-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
+                  } disabled:opacity-30`}
+                  title="Doorzoek T&C, Thematica, VAAN, RAR en rechtspraak.nl"
+                >
+                  Bronnen aan
+                </button>
+                <button
+                  onClick={() => { if (useKnowledgeSources) setUseKnowledgeSources(false) }}
+                  disabled={isLoading}
+                  className={`px-3.5 py-2 text-[12px] font-medium transition-all border-l border-white/10 ${
+                    !useKnowledgeSources
+                      ? 'bg-white/10 text-white/60'
+                      : 'bg-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
+                  } disabled:opacity-30`}
+                  title="Geen juridische bronnen — voor niet-juridische vragen"
+                >
+                  Bronnen uit
+                </button>
+              </div>
 
-              <span className="text-white/10 text-[10px]">|</span>
-              {RESPONSE_OPTIONS.map((opt) => (
+              {/* 3. Beknopt / Uitgebreid toggle — prominent */}
+              <div className="flex items-center rounded-xl overflow-hidden border border-white/10">
+                <button
+                  onClick={() => toggleOption('kort')}
+                  disabled={isLoading}
+                  className={`px-3.5 py-2 text-[12px] font-medium transition-all ${
+                    activeOptions.has('kort')
+                      ? 'bg-amber-500/20 text-amber-300 shadow-[inset_0_0_12px_rgba(245,158,11,0.12)]'
+                      : 'bg-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
+                  } disabled:opacity-30`}
+                  title="Kort en bondig antwoord, maximaal een paar alinea's"
+                >
+                  Beknopt
+                </button>
+                <button
+                  onClick={() => toggleOption('uitgebreid')}
+                  disabled={isLoading}
+                  className={`px-3.5 py-2 text-[12px] font-medium transition-all border-l border-white/10 ${
+                    activeOptions.has('uitgebreid')
+                      ? 'bg-emerald-500/20 text-emerald-300 shadow-[inset_0_0_12px_rgba(16,185,129,0.12)]'
+                      : 'bg-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
+                  } disabled:opacity-30`}
+                  title="Uitgebreid antwoord met volledige bronvermeldingen en juridische analyse"
+                >
+                  Uitgebreid
+                </button>
+              </div>
+
+              {/* Extra options as small chips */}
+              {RESPONSE_OPTIONS.filter(o => o.id !== 'kort' && o.id !== 'uitgebreid').map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => toggleOption(opt.id)}
@@ -1796,27 +1881,37 @@ ${markdownHtml}
                   Opus
                 </span>
               )}
-              {activeOptions.size > 0 && (
-                <>
-                  {Array.from(activeOptions).map(optId => {
-                    const opt = RESPONSE_OPTIONS.find(o => o.id === optId)
-                    return opt ? (
-                      <span
-                        key={optId}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-workx-lime/10 border border-workx-lime/20 text-[10px] text-workx-lime"
-                      >
-                        {opt.label}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toggleOption(optId) }}
-                          className="hover:text-white transition-colors ml-0.5"
-                        >
-                          <Icons.x size={8} />
-                        </button>
-                      </span>
-                    ) : null
-                  })}
-                </>
-              )}
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] ${
+                useKnowledgeSources
+                  ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400'
+                  : 'bg-white/5 border border-white/10 text-white/30'
+              }`}>
+                Bronnen {useKnowledgeSources ? 'aan' : 'uit'}
+              </span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] ${
+                activeOptions.has('uitgebreid')
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+              }`}>
+                {activeOptions.has('uitgebreid') ? 'Uitgebreid' : 'Beknopt'}
+              </span>
+              {Array.from(activeOptions).filter(id => id !== 'kort' && id !== 'uitgebreid').map(optId => {
+                const opt = RESPONSE_OPTIONS.find(o => o.id === optId)
+                return opt ? (
+                  <span
+                    key={optId}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-workx-lime/10 border border-workx-lime/20 text-[10px] text-workx-lime"
+                  >
+                    {opt.label}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleOption(optId) }}
+                      className="hover:text-white transition-colors ml-0.5"
+                    >
+                      <Icons.x size={8} />
+                    </button>
+                  </span>
+                ) : null
+              })}
             </div>
           )}
 
