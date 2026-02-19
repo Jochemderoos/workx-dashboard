@@ -8,7 +8,7 @@ Dit is het Workx Advocaten dashboard: een Next.js 14 applicatie met React, Tailw
 - **AI**: Anthropic Claude API (Sonnet 4.5 / Opus 4.6) met extended thinking en streaming
 - **Auth**: NextAuth.js met Prisma adapter
 - **Deploy**: Vercel (auto-deploy op push naar master)
-- **Externe APIs**: rechtspraak.nl (jurisprudentie), web search
+- **Externe APIs**: rechtspraak.nl (jurisprudentie, standaard UIT), web search
 
 ## Projectstructuur
 - `src/app/dashboard/` — Dashboard pagina's (werkdruk, AI, chat, etc.)
@@ -26,8 +26,11 @@ Dit is het Workx Advocaten dashboard: een Next.js 14 applicatie met React, Tailw
 
 ## Agents
 
-Er zijn twee doorlopende verbeteragents beschikbaar. Start ze met:
+Er zijn drie doorlopende verbeteragents beschikbaar. Start ze met:
 ```
 claude "volg de instructies in agents/ai-assistent-agent.md"
 claude "volg de instructies in agents/dashboard-agent.md"
+claude "volg de instructies in agents/anti-hallucinatie-agent.md"
 ```
+
+De anti-hallucinatie agent is de BELANGRIJKSTE — verkeerde ECLIs of verzonnen citaten zijn een beroepsfout.
