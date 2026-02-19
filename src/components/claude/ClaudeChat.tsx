@@ -690,13 +690,13 @@ ${markdownHtml}
         }, 1000)
         toast.success('Print-venster geopend — kies "Opslaan als PDF"')
       } else {
-        // Word: download as HTML with .doc extension
+        // Word: download as HTML with .docx extension (Word auto-detects HTML content)
         const html = generateExportHtml(exportContent, true)
-        const blob = new Blob([html], { type: 'application/msword' })
+        const blob = new Blob([html], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `workx-ai-${new Date().toISOString().slice(0, 10)}.doc`
+        a.download = `workx-ai-${new Date().toISOString().slice(0, 10)}.docx`
         a.click()
         URL.revokeObjectURL(url)
         toast.success('Word-document gedownload')

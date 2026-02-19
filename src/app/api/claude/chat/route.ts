@@ -651,13 +651,15 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Pre-load base64 for ALL ATTACHED PDFs and images (not project docs).
-          // This ensures native document blocks work for ALL attached PDFs —
-          // including PDFs with some OCR text that would otherwise skip the native path.
+          // Pre-load base64 for:
+          // 1. ALL attached PDFs and images (always — user explicitly added these)
+          // 2. Project SCANNED PDFs (no usable text → must use native block or nothing)
           const docsNeedingBase64 = allDocs.filter(({ doc, isAttached }) => {
-            if (!isAttached) return false // Never pre-load project docs
-            if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) return true
-            if (doc.fileType === 'pdf' && (doc.fileSize || 0) <= 5 * 1024 * 1024) return true
+            if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) return isAttached
+            if (doc.fileType === 'pdf' && (doc.fileSize || 0) <= 5 * 1024 * 1024) {
+              if (isAttached) return true // Always load attached PDFs
+              if (!hasUsableContent(doc)) return true // Load project scanned PDFs (no text)
+            }
             return false
           })
           const base64Map = new Map<string, string | null>()
@@ -681,10 +683,10 @@ export async function POST(req: NextRequest) {
             if (doc.fileType === 'pdf') {
               const hasText = hasUsableContent(doc)
 
-              // ATTACHED PDFs with pre-loaded base64: ALWAYS send as native block.
-              // This ensures Claude can "see" the actual pages — even if the PDF has
-              // some OCR text, the native block gives vision access to the full document.
-              if (isAttached && base64Map.has(doc.id)) {
+              // PDFs with pre-loaded base64: send as native block.
+              // For attached PDFs: ALWAYS (user explicitly added them).
+              // For project scanned PDFs: also send as native block (only way to read them).
+              if (base64Map.has(doc.id)) {
                 const fileUrl = base64Map.get(doc.id)
                 const base64Data = fileUrl ? extractBase64FromDataUrl(fileUrl) : null
                 const sizeMB = (doc.fileSize || 0) / (1024 * 1024)
@@ -723,10 +725,10 @@ export async function POST(req: NextRequest) {
                 // Attached PDF without pre-loaded base64: try loading (sequential fallback)
                 await processPdfDoc(doc, prefix)
               } else {
-                // Project scanned PDF (NOT attached): skip base64 loading entirely.
+                // Project scanned PDF too large for native block and no text available
                 const sizeMB = (doc.fileSize || 0) / (1024 * 1024)
-                documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n[Gescand PDF-document (${sizeMB.toFixed(1)}MB) — niet automatisch geladen. Upload het document opnieuw om het te laten splitsen, of voeg het expliciet toe aan je vraag.]\n--- Einde ---`
-                console.log(`[chat] PDF ${doc.name}: project scanned — skipped (${sizeMB.toFixed(1)}MB, not attached)`)
+                documentContext += `\n\n--- ${doc.name} (id: ${doc.id}) ---\n[Gescand PDF-document (${sizeMB.toFixed(1)}MB) — te groot voor directe analyse. Upload een kleinere versie of splits het document.]\n--- Einde ---`
+                console.log(`[chat] PDF ${doc.name}: scanned, no base64 available (${sizeMB.toFixed(1)}MB)`)
               }
             } else if (['png', 'jpg', 'jpeg', 'webp'].includes(doc.fileType || '')) {
               if (!isAttached) continue // Skip project images (not attached)

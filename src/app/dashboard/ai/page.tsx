@@ -450,8 +450,8 @@ export default function AIAssistentPage() {
       {activeTab === 'chat' && (
         <div className="flex gap-0" style={{ height: isCompactMode ? 'calc(100vh - 110px)' : 'calc(100vh - 140px)' }}>
           {/* Conversation history sidebar — auto-collapses when AI is generating */}
-          <div className={`bg-white/[0.02] border-r border-white/[0.06] overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
-            showHistory ? 'w-64 opacity-100' : 'w-0 opacity-0 border-0 p-0'
+          <div className={`bg-white/[0.02] overflow-hidden flex flex-col transition-all duration-300 flex-shrink-0 ${
+            showHistory ? 'w-64 opacity-100' : 'w-0 opacity-0 p-0'
           }`}>
             {showHistory && (
               <>
