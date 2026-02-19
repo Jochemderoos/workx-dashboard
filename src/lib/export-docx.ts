@@ -1,24 +1,13 @@
 /**
  * Generate a real .docx file from markdown content using the `docx` library.
  * Produces native Office Open XML that opens correctly in all Word versions.
- * Features: Workx logo top-left, black professional styling, differentiated headers.
+ * Features: black professional styling, differentiated headers.
  */
 import {
-  Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun,
+  Document, Packer, Paragraph, TextRun, HeadingLevel,
   AlignmentType, BorderStyle, Table, TableRow, TableCell,
   WidthType, UnderlineType,
 } from 'docx'
-
-/** Fetch logo as ArrayBuffer for embedding in docx */
-async function fetchLogo(): Promise<ArrayBuffer | null> {
-  try {
-    const res = await fetch('/workx-logo.png')
-    if (!res.ok) return null
-    return await res.arrayBuffer()
-  } catch {
-    return null
-  }
-}
 
 /** Simple markdown-to-docx paragraph converter */
 export async function generateDocx(markdownContent: string): Promise<Blob> {
@@ -26,24 +15,7 @@ export async function generateDocx(markdownContent: string): Promise<Blob> {
   const children: (Paragraph | Table)[] = []
   const date = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
 
-  // Fetch logo
-  const logoData = await fetchLogo()
-
-  // Header with logo top-left + date right-aligned on same line
-  if (logoData) {
-    children.push(new Paragraph({
-      children: [
-        new ImageRun({
-          data: logoData,
-          transformation: { width: 120, height: 84 },
-          type: 'png',
-        }),
-      ],
-      spacing: { after: 80 },
-    }))
-  }
-
-  // Date below logo
+  // Date header
   children.push(new Paragraph({
     children: [new TextRun({ text: date, size: 18, color: '888888', font: 'Calibri' })],
     spacing: { after: 200 },

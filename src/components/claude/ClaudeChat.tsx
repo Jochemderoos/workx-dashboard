@@ -630,30 +630,12 @@ export default function ClaudeChat({
     details { margin: 8pt 0; padding: 8pt 12pt; border: 1pt solid #e0e0e0; border-radius: 4pt; background: #fafafa; }
     summary { font-weight: bold; cursor: pointer; color: #000; }
     .header { margin-bottom: 20pt; padding-bottom: 10pt; border-bottom: 2.5pt solid #000; }
-    .header-logo { height: 50px; margin-bottom: 6pt; }
     .header-date { font-size: 9pt; color: #888; margin: 3pt 0 0 0; }
     .footer { font-size: 8pt; color: #999; margin-top: 28pt; border-top: 1pt solid #ccc; padding-top: 10pt; }
   `
 
-  /** Fetch logo as base64 data URL for embedding in exports */
-  const fetchLogoBase64 = async (): Promise<string> => {
-    try {
-      const res = await fetch('/workx-logo.png')
-      if (!res.ok) return ''
-      const blob = await res.blob()
-      return new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.onerror = () => resolve('')
-        reader.readAsDataURL(blob)
-      })
-    } catch {
-      return ''
-    }
-  }
-
   /** Generate full HTML document for export */
-  const generateExportHtml = (content: string, isWord = false, logoBase64 = ''): string => {
+  const generateExportHtml = (content: string, isWord = false): string => {
     const date = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
     const markdownHtml = cleanHtmlForExport(renderMarkdown(content))
     const wordXml = isWord ? `<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DefaultFonts><w:DefaultFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/></w:DefaultFonts></w:WordDocument></xml><![endif]-->` : ''
@@ -675,7 +657,6 @@ ${wordXml}
 </head>
 <body>
 <div class="header">
-  ${logoBase64 ? `<img src="${logoBase64}" alt="Workx Advocaten" class="header-logo" />` : ''}
   <p class="header-date">${date}</p>
 </div>
 ${markdownHtml}
@@ -690,13 +671,10 @@ ${markdownHtml}
     try {
       const exportContent = stripDocxEdits(content)
 
-      // Fetch logo for embedding
-      const logoBase64 = await fetchLogoBase64()
-
       if (format === 'pdf') {
         // PDF: render HTML in hidden container, capture with html2canvas, convert to PDF with jspdf
         toast.loading('PDF genereren...', { id: 'pdf-export' })
-        const html = generateExportHtml(exportContent, false, logoBase64)
+        const html = generateExportHtml(exportContent, false)
 
         // Create hidden container
         const container = document.createElement('div')
