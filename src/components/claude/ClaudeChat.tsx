@@ -1041,7 +1041,7 @@ ${markdownHtml}
       // Stream ended. If no response yet, switch to DB polling.
       // CRITICAL: reset thinking state so the loading indicator becomes visible again.
       // Without this, isThinking=true hides the loading bar during the entire polling phase.
-      if (!finished && !streamedText) {
+      if (!finished && !streamedText && !controller.signal.aborted) {
         setIsThinking(false)
         isThinkingRef.current = false
         setThinkingText('')
@@ -1087,7 +1087,9 @@ ${markdownHtml}
           setStatusText(getStatusMessage(0))
           setLoadingProgress(30) // Show some progress
           for (let attempt = 0; attempt < 150; attempt++) { // 150 * 2s = 300s (5 min) — matches server maxDuration
+            if (controller.signal.aborted) { finished = true; break }
             await new Promise(r => setTimeout(r, 2000))
+            if (controller.signal.aborted) { finished = true; break }
             const elapsed = (attempt + 1) * 2
             // Gradually increase progress bar to show activity
             setLoadingProgress(Math.min(30 + Math.floor(elapsed * 0.4), 90))
@@ -1144,6 +1146,19 @@ ${markdownHtml}
 
       if (finished) {
         clearTimeout(timeoutId)
+      } else if (controller.signal.aborted) {
+        // User clicked stop — keep partial response if any, otherwise remove placeholder
+        clearTimeout(timeoutId)
+        setStreamingMsgId(null)
+        if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
+        setStreamingContent('')
+        if (streamedText) {
+          setMessages(prev => prev.map(m =>
+            m.id === assistantMsgId ? { ...m, content: streamedText + '\n\n*[Generatie gestopt]*' } : m
+          ))
+        } else {
+          setMessages(prev => prev.filter(m => m.id !== assistantMsgId))
+        }
       } else if (streamedText) {
         clearTimeout(timeoutId)
         setStreamingMsgId(null)
@@ -1224,6 +1239,12 @@ ${markdownHtml}
   const stopGeneration = () => {
     abortControllerRef.current?.abort()
     setStatusText('Gestopt')
+    setIsLoading(false)
+    setIsThinking(false)
+    isThinkingRef.current = false
+    setStreamingMsgId(null)
+    if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
+    setStreamingContent('')
   }
 
   // Expand a beknopt answer to uitgebreid: finds the original user question and re-sends with uitgebreid instructions
