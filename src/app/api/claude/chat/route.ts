@@ -1008,20 +1008,30 @@ export async function POST(req: NextRequest) {
               chunksBySource.set(chunk.sourceId, existing)
             }
 
-            // Citation format per source for consistent referencing
-            const citationFormats: Record<string, string> = {
-              'Tekst en Commentaar': 'Volgens T&C Arbeidsrecht bij art. [X] BW:',
-              'Thematica': 'Thematica Arbeidsrecht vermeldt:',
-              'Themata': 'Thematica Arbeidsrecht vermeldt:',
-              'VAAN': 'Volgens VAAN AR Updates:',
-              'InView — RAR': 'RAR (Rechtspraak Arbeidsrecht):',
-              'InView — Tijdschrift': 'Tijdschrift ArbeidsRecht:',
+            // Detailed citation format per source type — instructs Claude HOW to cite
+            const citationInstructions: Record<string, string> = {
+              'Tekst en Commentaar': `CITEERWIJZE T&C: Verwijs ALTIJD naar het specifieke wetsartikel uit de heading.
+Voorbeeld: "T&C Arbeidsrecht bij art. 7:669 lid 3 sub g BW (commentaar): 'letterlijk citaat uit passage'"
+Bij bronvermelding: vermeld het artikel + "T&C Arbeidsrecht 2024"`,
+              'Thematica': `CITEERWIJZE Thematica: Verwijs ALTIJD naar het hoofdstuk/paragraafnummer uit de heading.
+Voorbeeld: "Thematica Arbeidsrecht, §2.1 Ontslaggronden: 'letterlijk citaat uit passage'"
+Bij bronvermelding: vermeld de paragraaf + "Thematica Arbeidsrecht"`,
+              'Themata': `CITEERWIJZE Thematica: Verwijs naar het hoofdstuk/paragraafnummer uit de heading.
+Voorbeeld: "Thematica Arbeidsrecht, §2.1 Ontslaggronden: 'letterlijk citaat uit passage'"`,
+              'VAAN': `CITEERWIJZE VAAN: Verwijs ALTIJD naar het updatenummer en de rechterlijke instantie uit de heading.
+Voorbeeld: "VAAN AR Updates 2025-0834 (Hoge Raad): 'letterlijk citaat uit passage'" of "VAAN AR Updates 2025/12 (Rb. Amsterdam, ECLI:NL:RBAMS:2025:456): 'citaat'"
+Bij bronvermelding: vermeld het updatenummer + instantie + ECLI + datum indien beschikbaar`,
+              'InView — RAR': `CITEERWIJZE RAR: Verwijs ALTIJD naar het annotatienummer EN het ECLI-nummer uit de heading/content.
+Voorbeeld: "RAR 2024/156 (ECLI:NL:GHARL:2024:789, Hof Arnhem-Leeuwarden 15 maart 2024): 'letterlijk citaat'"
+Bij bronvermelding: vermeld RAR-nummer + ECLI + instantie + datum. De ECLI is de VINDPLAATS waarmee de uitspraak terug te vinden is op rechtspraak.nl`,
+              'InView — Tijdschrift': `CITEERWIJZE Tijdschrift ArbeidsRecht: Verwijs naar het artikelnummer/editie uit de heading.
+Voorbeeld: "ArbeidsRecht 2024/5.2 (auteursnaam): 'letterlijk citaat'"`,
             }
-            const getCitationFormat = (name: string): string => {
-              for (const [key, format] of Object.entries(citationFormats)) {
-                if (name.toLowerCase().includes(key.toLowerCase())) return format
+            const getCitationInstruction = (name: string): string => {
+              for (const [key, instruction] of Object.entries(citationInstructions)) {
+                if (name.toLowerCase().includes(key.toLowerCase())) return instruction
               }
-              return `Volgens ${name}:`
+              return `CITEERWIJZE: Verwijs naar de specifieke sectie/heading uit de passage. Voorbeeld: "${name}, [heading]: 'letterlijk citaat'"`
             }
 
             const usedPrimaryNames: string[] = []
@@ -1032,9 +1042,9 @@ export async function POST(req: NextRequest) {
               // Sort by chunk index for reading order
               sourceChunks.sort((a, b) => a.chunkIndex - b.chunkIndex)
 
-              const citeFmt = getCitationFormat(source.name)
+              const citeInstruction = getCitationInstruction(source.name)
               sourcesContext += `\n\n--- ${source.name} [PRIMAIRE BRON — ${sourceChunks.length} relevante passages] (${source.category}) ---`
-              sourcesContext += `\nCITEERWIJZE: "${citeFmt}" gevolgd door een letterlijk citaat uit onderstaande passages.`
+              sourcesContext += `\n${citeInstruction}`
               for (const chunk of sourceChunks) {
                 const headingLabel = chunk.heading ? ` [${chunk.heading}]` : ''
                 // Detect ECLI numbers in the passage and mark them as verified
@@ -1081,7 +1091,8 @@ export async function POST(req: NextRequest) {
 - Gebruik RAR-annotaties en VAAN-updates voor SPECIFIEKE jurisprudentie — niet alleen bekende arresten (zoals New Hairstyle). Zoek in de passages naar relevante lagere rechtspraak, specifieke toepassingen, en recente ontwikkelingen.
 - Bij juridische analyses: onderbouw ELK argument met minstens 1 specifieke passage (verwijs naar [Passage X]). Gebruik ALLEEN ECLIs die letterlijk in de passages staan — nooit uit je geheugen. Geen ECLI is beter dan een verkeerde ECLI.
 - Bij DOCUMENTANALYSE (verweerschrift, dagvaarding, etc.): doorloop ALLE passages hieronder en koppel ze aan de specifieke gronden/argumenten in het document. Voor ELKE juridische grond: zoek het relevante wetsartikel (T&C), de systematische analyse (Thematica), de relevante jurisprudentie (RAR), en recente ontwikkelingen (VAAN). Als een passage relevant is voor meerdere gronden, gebruik hem bij elke grond.
-- In ## Gebruikte bronnen: maak een APART <details>-blok per bron met een LETTERLIJK citaat (kopieer EXACT uit de passage).
+- VINDPLAATS IS VERPLICHT: noem ALTIJD de specifieke vindplaats (artikelnummer, paragraaf, annotatienummer, ECLI) bij elke verwijzing naar een bron. "Volgens Thematica..." ZONDER paragraafnummer is ONVOLDOENDE.
+- Bij jurisprudentie: vermeld ALTIJD het volledige ECLI-nummer + rechterlijke instantie + datum. Het ECLI is de vindplaats waarmee de advocaat de uitspraak kan terugvinden.
 - VERBODEN: citaten parafraseren en presenteren als letterlijk. Als je parafraseert, gebruik dan GEEN aanhalingstekens.
 - VERBODEN: ECLI-nummers noemen die NIET in de passages staan en NIET via rechtspraak.nl zijn geverifieerd.
 - KWALITEITSCONTROLE: tel aan het einde na hoeveel van de ${usedPrimaryNames.length} bronnen je hebt gebruikt. Als je minder dan ${Math.min(usedPrimaryNames.length, 3)} bronnen hebt gebruikt, ga TERUG en doorzoek ALLE passages opnieuw — er zijn er honderden en je mist relevante informatie.`
@@ -1271,8 +1282,15 @@ ANTI-HALLUCINATIE REGELS (ABSOLUUT):
 WERKWIJZE (verplicht voor elk antwoord):
 1. Doorzoek ALLE passages hieronder GRONDIG — lees ze volledig, niet alleen de eerste alinea
 2. Gebruik ELKE relevante passage — niet slechts 2-3 bronnen. De passages zijn SPECIAAL GESELECTEERD voor deze vraag
-3. CITEER LETTERLIJK met de CITEERWIJZE per bron, gevolgd door een exact citaat tussen aanhalingstekens dat WOORD VOOR WOORD in de passage staat
-4. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD — deze mag je citeren met passagenummer
+3. CITEER CONCREET met VINDPLAATS — volg de CITEERWIJZE per bron hierboven. Elke verwijzing MOET bevatten:
+   - De BRONNAAM (T&C, Thematica, RAR, VAAN)
+   - De VINDPLAATS: artikelnummer (T&C), paragraafnummer (Thematica), annotatienummer + ECLI (RAR), updatenummer (VAAN) — haal deze uit de [heading] van de passage
+   - Een LETTERLIJK CITAAT tussen aanhalingstekens dat WOORD VOOR WOORD in de passage staat
+   Voorbeeld goed: "T&C Arbeidsrecht bij art. 7:669 lid 3 sub e BW: 'De werkgever moet aannemelijk maken dat sprake is van verwijtbaar handelen'"
+   Voorbeeld goed: "RAR 2024/156 (ECLI:NL:GHARL:2024:789, Hof Arnhem-Leeuwarden): 'De kantonrechter heeft terecht geoordeeld dat...'"
+   Voorbeeld FOUT: "Volgens Thematica Arbeidsrecht..." (geen paragraaf, geen citaat)
+   Voorbeeld FOUT: "RAR vermeldt dat..." (geen annotatienummer, geen ECLI)
+4. ECLI-nummers die in deze passages staan zijn GEVERIFIEERD — citeer ze ALTIJD met het volledige ECLI-nummer, de rechterlijke instantie en de datum als die in de passage staan. De ECLI is de vindplaats waarmee de lezer de uitspraak kan terugvinden
 5. INTEGREER bronnen systematisch in deze VASTE VOLGORDE:
    a. T&C Arbeidsrecht → begin met het wettelijk kader: welk artikel is van toepassing, wat zegt het commentaar?
    b. Thematica Arbeidsrecht → verdiep met de systematische analyse: wat zijn de hoofdlijnen, uitzonderingen, aandachtspunten?
@@ -1281,7 +1299,12 @@ WERKWIJZE (verplicht voor elk antwoord):
    Als een bron GEEN relevante passages bevat, sla die bron dan over — maar controleer ALTIJD alle 4 de bronnen
 6. ${useRechtspraak ? 'Gebruik search_rechtspraak ALLEEN als de passages onvoldoende jurisprudentie bevatten — de passages zijn je PRIMAIRE bron, niet rechtspraak.nl.' : 'De passages zijn je ENIGE bron voor ECLIs en jurisprudentie. Rechtspraak.nl is NIET beschikbaar.'} Val op eigen kennis ALLEEN terug als de bronnen het onderwerp niet dekken — vermeld dit dan expliciet met "Op basis van eigen juridische kennis (niet uit meegeleverde bronnen):"
 7. KRITIEK: Controleer ALTIJD of de juiste wettelijke bepaling in de passages staat. Als je een vraag over ontslag van een AOW-gerechtigde krijgt maar art. 7:669 lid 4 BW niet in de passages staat, gebruik dan je kennis uit de "Kritieke Wettelijke Regels" sectie hierboven en vermeld dit
-8. Bij elk argument: verwijs naar het PASSAGENUMMER [Passage X] zodat de citaten verifieerbaar zijn${sourcesContext}`
+8. BRONNENVERANTWOORDING: sluit af met een sectie "## Gebruikte bronnen" met per bron een APART <details>-blok. Elke bron MOET bevatten:
+   - De VOLLEDIGE vindplaats (artikelnummer, paragraaf, annotatienummer, ECLI)
+   - Bij jurisprudentie: ECLI-nummer, rechterlijke instantie, datum, korte omschrijving van de rechtsregel
+   - Een LETTERLIJK citaat uit de passage (kopieer EXACT)
+   Voorbeeld jurisprudentie: "**RAR 2024/156** (ECLI:NL:GHARL:2024:789, Hof Arnhem-Leeuwarden 15 maart 2024) — Ontslag wegens verwijtbaar handelen. De ECLI is te raadplegen via rechtspraak.nl."
+   Voorbeeld wetcommentaar: "**T&C Arbeidsrecht** bij art. 7:669 lid 3 sub e BW — Verwijtbaar handelen werknemer"${sourcesContext}`
     }
     if (templatesContext) {
       systemPrompt += `\n\n## Beschikbare templates van Workx Advocaten
@@ -1344,11 +1367,11 @@ Bij open casusvragen, strategievragen of vragen waarbij feiten ontbreken: STEL E
 ### Concept-emails en -brieven
 Wanneer je een concept-email, concept-brief of ander concept-document schrijft, zet dan de VOLLEDIGE concepttekst in een blockquote (elke regel begint met >). Dit zorgt voor de juiste opmaak. Gebruik een moderne zakelijke schrijfstijl: geen "Geachte heer/mevrouw" of "Hoogachtend" tenzij echt vereist.
 
-### Brongebruik
+### Brongebruik en citeerwijze
 1. PRIMAIRE BRON: de meegeleverde passages uit T&C, Thematica, RAR en VAAN. Dit is je fundament.
 2. ${useRechtspraak ? 'search_rechtspraak is OPTIONEEL — alleen als aanvulling. NIET verplicht.' : 'Rechtspraak.nl is NIET beschikbaar. De passages zijn je ENIGE bron voor ECLIs.'}
 3. ECLI-NUMMERS — STRENGE REGEL: alleen uit meegeleverde passages${useRechtspraak ? ' of via search_rechtspraak/get_rechtspraak_ruling in DIT gesprek' : ''}. NOOIT uit eigen geheugen. Wat je BEWEERT over een ECLI moet EXACT overeenkomen met wat de bron zegt. Alle ECLIs worden automatisch gecontroleerd.
-4. Als je een ECLI uit de passages citeert: vermeld het passagenummer [Passage X] zodat het verifieerbaar is.
+4. VINDPLAATS VERPLICHT: vermeld bij ELKE bronverwijzing de specifieke vindplaats zodat de advocaat het kan terugvinden. Concreet: artikelnummer (T&C), paragraafnummer (Thematica), annotatienummer + ECLI + instantie + datum (RAR/VAAN). "Volgens Thematica..." zonder paragraaf is ONVOLDOENDE.
 5. NOOIT je zoekproces beschrijven. Begin DIRECT met de inhoud.
 6. Sluit af met %%CONFIDENCE:hoog/gemiddeld/laag%% op de allerlaatste regel.
 
