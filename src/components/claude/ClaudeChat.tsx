@@ -840,7 +840,7 @@ ${markdownHtml}
     setThinkingText('')
     thinkingTextRef.current = ''
     setThinkingExpanded(false)
-    setStatusText('Verbinden met Claude...')
+    setStatusText(attachedDocs.length > 0 ? 'Document wordt voorbereid...' : 'Verbinden met Claude...')
 
     // Signal to StaleVersionGuard: do NOT refresh while chat is active
     try { sessionStorage.setItem('workx-last-version-refresh', Date.now().toString()) } catch { /* ignore */ }
@@ -1050,14 +1050,44 @@ ${markdownHtml}
         if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
         setStreamingContent('')
         if (pollId) {
-          setStatusText('Claude verwerkt je vraag...')
+          // Context-aware status messages for long operations
+          const hasAttachments = attachedDocs.length > 0 || documentIds.length > 0
+          const isUitgebreid = activeOptions.has('uitgebreid')
+          const hasBronnen = useKnowledgeSources
+
+          const getStatusMessage = (elapsed: number): string => {
+            if (elapsed <= 10) {
+              return hasAttachments
+                ? 'Document wordt geladen en geanalyseerd...'
+                : 'Claude verwerkt je vraag...'
+            }
+            if (elapsed <= 30) {
+              if (hasAttachments && hasBronnen) return 'Document analyseren en juridische bronnen doorzoeken...'
+              if (hasAttachments) return 'Document wordt grondig geanalyseerd...'
+              if (hasBronnen) return 'Juridische bronnen worden doorzocht (T&C, VAAN, RAR)...'
+              return 'Claude formuleert een antwoord...'
+            }
+            if (elapsed <= 60) {
+              if (hasAttachments && isUitgebreid) return 'Uitgebreide analyse van het document met alle bronnen — dit duurt 2-3 minuten...'
+              if (hasAttachments) return 'Document wordt vergeleken met juridische bronnen — nog even geduld...'
+              if (isUitgebreid) return 'Uitgebreid advies met volledige bronvermeldingen wordt opgesteld...'
+              return 'Claude doorzoekt rechtspraak.nl en formuleert het antwoord...'
+            }
+            if (elapsed <= 120) {
+              if (isUitgebreid || hasAttachments) return 'Grondig advies wordt opgesteld met alle relevante bronnen — nog even geduld...'
+              return 'Claude is bijna klaar met het antwoord...'
+            }
+            return 'Dit is een complexe analyse — Claude is nog bezig, even geduld...'
+          }
+
+          setStatusText(getStatusMessage(0))
           setLoadingProgress(30) // Show some progress
           for (let attempt = 0; attempt < 150; attempt++) { // 150 * 2s = 300s (5 min) — matches server maxDuration
             await new Promise(r => setTimeout(r, 2000))
             const elapsed = (attempt + 1) * 2
             // Gradually increase progress bar to show activity
-            setLoadingProgress(Math.min(30 + elapsed, 90))
-            setStatusText(`Claude verwerkt je vraag... (${elapsed}s)`)
+            setLoadingProgress(Math.min(30 + Math.floor(elapsed * 0.4), 90))
+            setStatusText(getStatusMessage(elapsed))
             try {
               const resp = await fetch(`/api/claude/conversations/${pollId}`)
               if (!resp.ok) {
