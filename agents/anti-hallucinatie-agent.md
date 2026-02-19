@@ -220,6 +220,40 @@ node scripts/verify-eclis-deep.js
 
 <!-- Voeg nieuwe entries bovenaan toe -->
 
+### Sessie 1 — 2026-02-19 (3 verbeteringen zonder rechtspraak.nl)
+
+**Focus:** Situatie ZONDER rechtspraak.nl (standaard modus). Alle ECLIs moeten uit kennisbronnen komen.
+
+**Verbetering 1: ECLI-formaatvalidatie (Layer 0)**
+- Nieuwe functie `validateEcliFormat()` controleert rechtsinstantie-code en jaartal
+- 40+ geldige court codes (HR, GHAMS, RBAMS, etc. incl. historische codes)
+- Jaartal > huidig jaar = altijd fout (bijv. ECLI:NL:HR:2030:xxx)
+- Onbekende court codes = altijd fout (bijv. ECLI:NL:FAKE:2023:xxx)
+- Wordt uitgevoerd VOOR de whitelist-check — snelste filter
+
+**Verbetering 2: Zaaknaam-ECLI koppelingscontrole (Layer 3)**
+- Nieuwe functie `extractCaseNameEcliPairs()` bouwt een lookup-tabel uit passages
+- Extraheert patronen zoals "Stoof/Mammoet ... ECLI:NL:..." uit de bronpassages
+- Als Claude een bekende zaaknaam aan een verkeerde ECLI koppelt: ECLI wordt gestript
+- Logging toont welke ECLI in passages staat als correcte koppeling
+- Voorkomt het probleem uit sessie 0: "New Hairstyle gelabeld als Stoof/Mammoet"
+
+**Verbetering 3: Gewogen context-match met juridische termen**
+- Vervangt de grove 0.35 woordoverlap-threshold door gewogen scoring
+- 60+ juridische termen (ontslag, verwijtbaar, billijk, transitievergoeding, etc.) wegen 3x zwaarder
+- Nieuwe threshold: 0.30 (gewogen) — effectief strenger voor juridische mismatches
+- Functie `weightedContextMatch()` geeft een ratio 0-1 terug
+- Voorbeeld: als Claude beweert dat een ECLI over "verstoorde arbeidsverhouding" gaat maar de passage zegt "disfunctioneren", worden de juridische termen zwaarder gewogen in de mismatch
+
+**Prompt-verbetering (bonus):**
+- DENKSTAP checklist bij `!useRechtspraak`: stap 2 vervangt search_rechtspraak door zaaknaam-ECLI koppelingscontrole
+- Claude moet nu in extended thinking verifiëren of zaaknaam+ECLI combinatie in passage staat
+
+**Impact:**
+- Geen performance-regressie (alle checks zijn in-memory, geen HTTP calls)
+- Geen false positives verwacht: format-validatie is conservatief, zaaknaam-check alleen bij bekende paren
+- Strengere context-match door juridische term-weging vangt subtielere mismatches
+
 ### Sessie 0 — 2026-02-19 (Agent aangemaakt)
 
 **Huidige staat anti-hallucinatie (baseline):**

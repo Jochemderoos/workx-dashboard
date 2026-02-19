@@ -29,6 +29,123 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 3.5)
 }
 
+// --- ANTI-HALLUCINATIE HELPERS ---
+
+// Valid Dutch court codes for ECLI format validation
+const VALID_COURT_CODES = new Set([
+  // Hoge Raad & Parket
+  'HR', 'PHR',
+  // Gerechtshoven
+  'GHAMS', 'GHARL', 'GHDHA', 'GHSHE', 'GHLHE',
+  // Rechtbanken
+  'RBAMS', 'RBDHA', 'RBGEL', 'RBLIM', 'RBMNE', 'RBNHO', 'RBNNE', 'RBOBR', 'RBOVE', 'RBROT', 'RBZWB',
+  // Overig (CRvB, CBb, RvS)
+  'CRVB', 'CBB', 'RVS',
+  // Oudere/alternatieve codes die nog in passages kunnen voorkomen
+  'GHLEE', 'GHARN', 'GHSGR', 'RBARN', 'RBSGR', 'RBZUT', 'RBLEE', 'RBHAA', 'RBALK', 'RBUTR',
+  'RBDOR', 'RBZLY', 'RBALM', 'RBBRE', 'RBGRO', 'RBMAA', 'RBROE', 'RBSHE', 'RBHRL',
+  'KTGAMS', 'KTGROT', 'KTGSGR', // Kantongerecht (historisch)
+])
+
+/**
+ * Validate ECLI format: court code must be known, year must be <= current year.
+ * Returns null if valid, or a reason string if invalid.
+ */
+function validateEcliFormat(ecli: string): string | null {
+  const parts = ecli.split(':')
+  // ECLI:NL:COURT:YEAR:ID — should have exactly 5 parts
+  if (parts.length !== 5) return 'ongeldig formaat (niet 5 delen)'
+  const courtCode = parts[2]
+  const yearStr = parts[3]
+  const year = parseInt(yearStr, 10)
+  const currentYear = new Date().getFullYear()
+
+  if (!VALID_COURT_CODES.has(courtCode)) {
+    return `onbekende rechtsinstantie-code: ${courtCode}`
+  }
+  if (isNaN(year) || year < 1900 || year > currentYear) {
+    return `ongeldig jaar: ${yearStr} (huidig jaar: ${currentYear})`
+  }
+  return null
+}
+
+/**
+ * Extract known case-name → ECLI mappings from passage text.
+ * Looks for patterns like "Arrest X/Y (ECLI:...)" or "X/Y-arrest, ECLI:..."
+ * Returns a Map<caseName (lowercase), Set<ECLI>>
+ */
+function extractCaseNameEcliPairs(text: string): Map<string, Set<string>> {
+  const pairs = new Map<string, Set<string>>()
+  // Common Dutch case-name patterns: "Naam/Naam" near an ECLI
+  // Pattern: capture "Word/Word" or "Word/Word-arrest" within 200 chars of an ECLI
+  const caseNamePattern = /([A-Z][a-zéëïöüà]+(?:\s*\/\s*[A-Z][a-zéëïöüà]+)+)[\s\S]{0,200}?(ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+)/g
+  const reversePattern = /(ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+)[\s\S]{0,200}?([A-Z][a-zéëïöüà]+(?:\s*\/\s*[A-Z][a-zéëïöüà]+)+)/g
+
+  let m
+  while ((m = caseNamePattern.exec(text)) !== null) {
+    const caseName = m[1].replace(/\s+/g, '').toLowerCase()
+    const ecli = m[2]
+    if (!pairs.has(caseName)) pairs.set(caseName, new Set())
+    pairs.get(caseName)!.add(ecli)
+  }
+  while ((m = reversePattern.exec(text)) !== null) {
+    const ecli = m[1]
+    const caseName = m[2].replace(/\s+/g, '').toLowerCase()
+    if (!pairs.has(caseName)) pairs.set(caseName, new Set())
+    pairs.get(caseName)!.add(ecli)
+  }
+  return pairs
+}
+
+// Legal terms that should be weighted more heavily in context-match scoring
+const LEGAL_TERMS = new Set([
+  // Ontslaggronden
+  'ontslag', 'ontbinding', 'opzegging', 'beëindiging', 'ontslagvergunning',
+  // BW-specifiek
+  'verwijtbaar', 'ernstig', 'billijk', 'billijkheidsvergoeding', 'transitievergoeding',
+  'disfunctioneren', 'nalatig', 'verstoord', 'verstoorde', 'arbeidsverhouding',
+  'wedertewerkstelling', 'herplaatsing', 'herplaatsingsverplichting',
+  'opzegverbod', 'opzegtermijn', 'proeftijd', 'concurrentiebeding',
+  // Gronden art. 7:669
+  'a-grond', 'b-grond', 'c-grond', 'd-grond', 'e-grond', 'f-grond', 'g-grond', 'h-grond', 'i-grond',
+  // Procesrecht
+  'verzoekschrift', 'tegenverzoek', 'reconventie', 'hoger beroep', 'cassatie',
+  'kantonrechter', 'gerechtshof', 'hoge raad',
+  // Kerntermen
+  'werkgever', 'werknemer', 'arbeidsovereenkomst', 'cao', 'dienstverband',
+  'loon', 'loondoorbetaling', 'ziekte', 'arbeidsongeschikt', 'arbeidsongeschiktheid',
+  're-integratie', 'reïntegratie', 'bedrijfsarts', 'uwv',
+  'vaststellingsovereenkomst', 'bedenktermijn', 'finale kwijting',
+  'reorganisatie', 'afspiegelingsbeginsel', 'sociaal plan',
+  // Rechtsregels
+  'redelijkheid', 'billijkheid', 'goed werkgeverschap', 'goed werknemerschap',
+  'belangenafweging', 'proportionaliteit', 'subsidiariteit',
+])
+
+/**
+ * Improved context-match scoring with legal term weighting.
+ * Legal terms count 3x as heavy as normal words.
+ * Returns a weighted match ratio (0-1).
+ */
+function weightedContextMatch(claimText: string, passageContext: string): number {
+  const claimWords = claimText.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+  if (claimWords.length === 0) return 1
+
+  let totalWeight = 0
+  let matchedWeight = 0
+
+  for (const word of claimWords) {
+    const isLegal = LEGAL_TERMS.has(word)
+    const weight = isLegal ? 3 : 1
+    totalWeight += weight
+    if (passageContext.includes(word)) {
+      matchedWeight += weight
+    }
+  }
+
+  return totalWeight > 0 ? matchedWeight / totalWeight : 1
+}
+
 // Large PDFs as native document blocks can overflow the 200K context window
 // (~1500 tokens/page). For files over this threshold, use extracted text instead.
 // 7MB base64 ≈ 5MB file ≈ 80-100 pages — fits comfortably with system prompt.
@@ -1112,7 +1229,7 @@ Een argument ZONDER ECLI is altijd beter dan een argument met een verkeerde ECLI
         )
         .replace(
           '2. Heb ik deze ECLI gevonden via search_rechtspraak EN opgehaald via get_rechtspraak_ruling in DIT gesprek? → Zo ja: OK\n',
-          ''
+          '2. Noem ik een zaaknaam (bijv. Stoof/Mammoet, New Hairstyle) samen met deze ECLI? → Controleer of die EXACTE combinatie in een passage staat. Zo niet: GEBRUIK DE ECLI NIET.\n'
         )
         // Remove rechtspraak.nl tool references from knowledge sources section
         .replace(
@@ -1722,10 +1839,12 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
           }
 
           // ECLI VERIFICATION — INHOUDELIJKE CONTROLE
-          // Not just existence checks, but content verification:
+          // Multi-layer verification:
+          // 0. Format validation: court code, year must be valid
           // 1. Check if ECLI exists in source passages or tool results
-          // 2. For ECLIs from source passages: verify Claude's claims match the passage
-          // 3. For unknown ECLIs: fetch from rechtspraak.nl and compare content
+          // 2. For ECLIs from source passages: verify context matches (weighted legal terms)
+          // 3. Case name-ECLI coupling: verify known pairs from passages
+          // 4. For unknown ECLIs: fetch from rechtspraak.nl or strip immediately
           const ecliPattern = /ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+/g
           const mentionedEclis = Array.from(new Set(fullText.match(ecliPattern) || []))
           if (mentionedEclis.length > 0) {
@@ -1740,30 +1859,44 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
             // Collect ECLIs from source passages (editorial content — ECLI exists but need context check)
             const sourceEclis = new Set(sourcesContext ? (sourcesContext.match(ecliPattern) || []) : [])
 
+            // Build case name-ECLI lookup from passages for coupling verification
+            const passageCaseNamePairs = sourcesContext ? extractCaseNameEcliPairs(sourcesContext) : new Map<string, Set<string>>()
+
             const problems: string[] = []
             const eclisToStrip: string[] = [] // ECLIs to remove from response text
 
+            // Layer 0: ECLI format validation — catch obviously fabricated ECLIs
+            for (const ecli of mentionedEclis) {
+              const formatError = validateEcliFormat(ecli)
+              if (formatError) {
+                eclisToStrip.push(ecli)
+                problems.push(`${ecli} (ongeldig ECLI-formaat: ${formatError})`)
+                console.warn(`[chat] ECLI format invalid: ${ecli} — ${formatError}`)
+              }
+            }
+            // Remove format-invalid ECLIs from further processing
+            const formatValidEclis = mentionedEclis.filter(e => !eclisToStrip.includes(e))
+
             // Separate ECLIs into categories for parallel processing
             const unknownEclis: Array<{ ecli: string; claimText: string }> = []
-            for (const ecli of mentionedEclis) {
+            for (const ecli of formatValidEclis) {
               if (toolVerifiedEclis.has(ecli)) continue
 
               const ecliEscaped = ecli.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
               const claimMatch = fullText.match(new RegExp(`[^.]*${ecliEscaped}[^.]*\\.`, 's'))
               const claimText = claimMatch ? claimMatch[0].toLowerCase() : ''
 
-              // Category 2: ECLI in source passages — verify context matches (fast, no HTTP)
+              // Category 2: ECLI in source passages — verify context matches (weighted legal terms)
               if (sourceEclis.has(ecli)) {
                 if (claimText && sourcesContext) {
                   const srcMatch = sourcesContext.match(new RegExp(`[^\\n]*${ecliEscaped}[^\\n]*`, 'gs'))
                   const passageContext = srcMatch ? srcMatch.join(' ').toLowerCase() : ''
                   if (passageContext) {
-                    const claimWords = claimText.split(/\s+/).filter(w => w.length > 4)
-                    const matchingWords = claimWords.filter(w => passageContext.includes(w))
-                    const matchRatio = claimWords.length > 0 ? matchingWords.length / claimWords.length : 1
-                    if (matchRatio < 0.35) {
+                    // Use weighted context matching: legal terms count 3x
+                    const matchRatio = weightedContextMatch(claimText, passageContext)
+                    if (matchRatio < 0.30) {
                       eclisToStrip.push(ecli) // STRIP: context doesn't match passage
-                      console.warn(`[chat] ECLI context mismatch: ${ecli} — claim match ratio: ${matchRatio.toFixed(2)}, stripping`)
+                      console.warn(`[chat] ECLI context mismatch: ${ecli} — weighted match ratio: ${matchRatio.toFixed(2)}, stripping`)
                     }
                   }
                 }
@@ -1772,6 +1905,36 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
 
               // Category 3: Unknown ECLI — collect for verification
               unknownEclis.push({ ecli, claimText })
+            }
+
+            // Layer 3: Case name-ECLI coupling verification
+            // Check if Claude pairs a known case name with the wrong ECLI
+            if (passageCaseNamePairs.size > 0) {
+              // Extract case name + ECLI pairs from Claude's response
+              const responseCasePattern = /([A-Z][a-zéëïöüà]+(?:\s*\/\s*[A-Z][a-zéëïöüà]+)+)[\s\S]{0,150}?(ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+)/g
+              const reverseResponsePattern = /(ECLI:NL:[A-Z]{2,6}:\d{4}:[A-Za-z0-9]+)[\s\S]{0,150}?([A-Z][a-zéëïöüà]+(?:\s*\/\s*[A-Z][a-zéëïöüà]+)+)/g
+              const responsePairs: Array<{ caseName: string; ecli: string }> = []
+
+              let rm
+              while ((rm = responseCasePattern.exec(fullText)) !== null) {
+                responsePairs.push({ caseName: rm[1].replace(/\s+/g, '').toLowerCase(), ecli: rm[2] })
+              }
+              while ((rm = reverseResponsePattern.exec(fullText)) !== null) {
+                responsePairs.push({ caseName: rm[2].replace(/\s+/g, '').toLowerCase(), ecli: rm[1] })
+              }
+
+              for (const { caseName, ecli } of responsePairs) {
+                const knownEclis = passageCaseNamePairs.get(caseName)
+                if (knownEclis && knownEclis.size > 0 && !knownEclis.has(ecli)) {
+                  // Claude paired a known case name with an ECLI that doesn't match passages
+                  if (!eclisToStrip.includes(ecli)) {
+                    eclisToStrip.push(ecli)
+                    const correctEclis = Array.from(knownEclis).join(', ')
+                    problems.push(`${ecli} (verkeerde ECLI bij zaaknaam "${caseName}" — in passages: ${correctEclis})`)
+                    console.warn(`[chat] Case name-ECLI mismatch: "${caseName}" paired with ${ecli}, but passages have: ${correctEclis}`)
+                  }
+                }
+              }
             }
 
             // Handle unknown ECLIs based on rechtspraak.nl availability
