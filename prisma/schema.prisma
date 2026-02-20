@@ -120,6 +120,10 @@ model User {
   aiFavorites           AIFavorite[]
   aiAnnotations         AIAnnotation[]
 
+  // Bonnetjes & Declaraties
+  createdActivities     ExpenseActivity[] @relation("CreatedActivities")
+  uploadedReceipts      Receipt[]         @relation("UploadedReceipts")
+
   @@index([isActive])
   @@index([role])
 }
@@ -1442,4 +1446,44 @@ model DevelopmentPlan {
   @@index([userId])
   @@index([employeeName])
   @@index([year])
+}
+
+// ==================== BONNETJES & DECLARATIES ====================
+
+// Activiteit waaraan bonnetjes gekoppeld worden (bijv. "Hamburg trip", "Kantooruitje")
+model ExpenseActivity {
+  id          String   @id @default(cuid())
+  name        String   // "Hamburg trip Juliette", "Kantooruitje december"
+  description String?
+  date        DateTime // Datum activiteit
+  createdById String
+  status      String   @default("OPEN") // OPEN, CLOSED, DECLARED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy   User      @relation("CreatedActivities", fields: [createdById], references: [id])
+  receipts    Receipt[]
+
+  @@index([createdById])
+  @@index([status])
+  @@index([date])
+}
+
+// Individueel bonnetje (foto) gekoppeld aan een activiteit
+model Receipt {
+  id           String   @id @default(cuid())
+  activityId   String
+  uploadedById String
+  description  String?  // "Diner restaurant", "Taxi"
+  amount       Float?   // Bedrag (optioneel, kan later ingevuld)
+  imageUrl     String   // Vercel Blob URL van foto
+  imageName    String   // Originele bestandsnaam
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  activity     ExpenseActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  uploadedBy   User            @relation("UploadedReceipts", fields: [uploadedById], references: [id])
+
+  @@index([activityId])
+  @@index([uploadedById])
 }
