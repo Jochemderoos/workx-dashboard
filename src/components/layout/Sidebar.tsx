@@ -39,6 +39,7 @@ const mainMenuItems = [
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover' },
   { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', iconAnim: 'icon-graduation-hover' },
   { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', iconAnim: 'icon-briefcase-hover' },
+  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', iconAnim: 'icon-target-hover' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover' },
 ]
 
@@ -131,6 +132,7 @@ function SidebarComponent({ user }: SidebarProps) {
           <div className="space-y-1">
             <NavLink href="/dashboard/partners/werk" icon={Icons.briefcase} label="Werk" iconAnim="icon-briefcase-hover" />
             <NavLink href="/dashboard/partners/notulen" icon={Icons.fileText} label="Notulen" iconAnim="icon-file-hover" />
+            <NavLink href="/dashboard/ontwikkelplannen" icon={Icons.target} label="Ontwikkelplannen" iconAnim="icon-target-hover" />
           </div>
         </div>
 

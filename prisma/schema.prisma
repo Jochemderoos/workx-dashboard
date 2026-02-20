@@ -104,6 +104,9 @@ model User {
   // Audit log
   auditLogs        AuditLog[]       @relation("AuditLogs")
 
+  // Ontwikkelplannen
+  developmentPlans  DevelopmentPlan[]
+
   // Dashboard preferences
   whatsNewDismissed     String?   // Version string of last dismissed "What's New" widget
 
@@ -1414,4 +1417,29 @@ model FileUploadChunk {
 
   @@unique([uploadId, chunkIndex])
   @@index([uploadId])
+}
+
+// ==================== ONTWIKKELPLANNEN ====================
+
+// Ontwikkelplan per medewerker per periode
+model DevelopmentPlan {
+  id            String   @id @default(cuid())
+  userId        String?  // FK naar User (null als geen match gevonden bij import)
+  employeeName  String   // Naam medewerker (voor import zonder user match)
+  period        String   // Periode tekst (bijv. "september 2025 – verlof")
+  year          Int      // Jaar voor tabjes
+  sections      String   @db.Text // JSON array: [{number, title, goals, evaluation}]
+  status        String   @default("actief") // "actief" | "afgerond"
+  generalNotes  String?  @db.Text // Algemene opmerkingen bij evaluatie
+  evaluationDate DateTime? // Datum evaluatie
+  documentUrl   String?  // Vercel Blob URL van origineel DOCX
+  documentName  String?  // Originele bestandsnaam
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([employeeName])
+  @@index([year])
 }
