@@ -124,44 +124,46 @@ export async function POST(req: NextRequest) {
       clientLogo,
     } = body
 
-    if (!selectedTeamMembers || !Array.isArray(selectedTeamMembers)) {
-      return NextResponse.json(
-        { error: 'selectedTeamMembers is verplicht and must be an array' },
-        { status: 400 }
+    // Team members are optional — pitch can be generated without CVs
+    const teamMembersInput = Array.isArray(selectedTeamMembers) ? selectedTeamMembers : []
+
+    let validMembers: string[] = []
+    if (teamMembersInput.length > 0) {
+      // Try to get CV documents from database
+      const dbCvDocs = await prisma.pitchDocument.findMany({
+        where: {
+          type: 'cv',
+          isActive: true,
+          language,
+        },
+      })
+
+      // Build team member to page mapping (from database or fallback to hardcoded)
+      let teamCvPages: Record<string, number> = {}
+      if (dbCvDocs.length > 0) {
+        for (const doc of dbCvDocs) {
+          const name = doc.teamMemberName || doc.label
+          const pages = doc.basePages ? doc.basePages.split(',').map(p => parseInt(p.trim())) : []
+          if (pages.length > 0) {
+            teamCvPages[name] = pages[0]
+          }
+        }
+      } else {
+        teamCvPages = { ...TEAM_CV_PAGES }
+      }
+
+      // Validate team members
+      validMembers = teamMembersInput.filter(
+        (name: string) => teamCvPages[name]
       )
     }
 
-    // Try to get CV documents from database
-    const dbCvDocs = await prisma.pitchDocument.findMany({
-      where: {
-        type: 'cv',
-        isActive: true,
-        language,
-      },
-    })
-
-    // Build team member to page mapping (from database or fallback to hardcoded)
-    let teamCvPages: Record<string, number> = {}
-    if (dbCvDocs.length > 0) {
-      for (const doc of dbCvDocs) {
-        const name = doc.teamMemberName || doc.label
-        const pages = doc.basePages ? doc.basePages.split(',').map(p => parseInt(p.trim())) : []
-        if (pages.length > 0) {
-          teamCvPages[name] = pages[0]
-        }
-      }
-    } else {
-      teamCvPages = { ...TEAM_CV_PAGES }
-    }
-
-    // Validate team members
-    const validMembers = selectedTeamMembers.filter(
-      (name: string) => teamCvPages[name]
-    )
-
-    if (validMembers.length === 0) {
+    // Must have at least some content (intro, CVs, or bijlagen)
+    const hasIntro = selectedIntroSections && selectedIntroSections.length > 0
+    const hasBijlagen = selectedBijlagenSections && selectedBijlagenSections.length > 0
+    if (validMembers.length === 0 && !hasIntro && !hasBijlagen) {
       return NextResponse.json(
-        { error: 'No valid team members selected' },
+        { error: 'Selecteer minimaal 1 onderdeel (intro, CV of bijlage)' },
         { status: 400 }
       )
     }
@@ -238,13 +240,18 @@ export async function POST(req: NextRequest) {
     // Get stats for logging
     const stats = getDocumentStats(validMembers, validIntroSections, validBijlagenSections)
 
-    // Create filename with team names
-    const teamNames = validMembers
-      .map((name: string) => name.split(' ')[0]) // First names only
-      .slice(0, 3) // Max 3 names in filename
-      .join('-')
-    const suffix = validMembers.length > 3 ? `-+${validMembers.length - 3}` : ''
-    const filename = `Workx-Pitch-${teamNames}${suffix}-${new Date().toISOString().split('T')[0]}.pdf`
+    // Create filename with team names (or just date if no CVs)
+    let filename: string
+    if (validMembers.length > 0) {
+      const teamNames = validMembers
+        .map((name: string) => name.split(' ')[0]) // First names only
+        .slice(0, 3) // Max 3 names in filename
+        .join('-')
+      const suffix = validMembers.length > 3 ? `-+${validMembers.length - 3}` : ''
+      filename = `Workx-Pitch-${teamNames}${suffix}-${new Date().toISOString().split('T')[0]}.pdf`
+    } else {
+      filename = `Workx-Pitch-${new Date().toISOString().split('T')[0]}.pdf`
+    }
 
     // Return PDF as download
     return new NextResponse(Buffer.from(pdfBytes), {
