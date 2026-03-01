@@ -469,7 +469,12 @@ function TopBarComponent({ user }: TopBarProps) {
                 .filter((item) => !item.roles || item.roles.includes(user.role))
                 .map((item) => {
                   const Icon = item.icon
-                  const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+                  const allMobileHrefs = mobileMenuItems.map(i => i.href)
+                  const isActive = pathname === item.href || (
+                    item.href !== '/dashboard' &&
+                    pathname.startsWith(item.href + '/') &&
+                    !allMobileHrefs.some(h => h !== item.href && h.startsWith(item.href + '/') && pathname.startsWith(h))
+                  )
                   const badge = 'badge' in item ? item.badge : null
                   return (
                     <Link
