@@ -228,6 +228,60 @@ export default function PartnersWerkPage() {
     setEditingWorkload(null)
   }
 
+  // Weekly totals for the last 4 weeks (visible on Monday)
+  const weeklyTotals = useMemo(() => {
+    const now = new Date()
+    const dow = now.getDay() // 0=Sun, 1=Mon...
+    const hr = now.getHours()
+    const isMonday = dow === 1 && hr < 20
+
+    // Only calculate on Monday before 20:00
+    if (!isMonday || historyOffset !== 0) return null
+
+    // Today is Monday — that's the start of the current week
+    const thisMonday = new Date(now)
+    thisMonday.setHours(0, 0, 0, 0)
+
+    const weeks: { label: string; startDate: Date; endDate: Date; totalHours: number; personHours: Record<string, number> }[] = []
+
+    // Go back 4 weeks (week 1 = afgelopen week, week 2-4 = ervoor)
+    for (let w = 1; w <= 4; w++) {
+      const weekStart = new Date(thisMonday)
+      weekStart.setDate(weekStart.getDate() - (w * 7))
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 6) // Sunday
+
+      // Format label: "24 feb - 2 mrt"
+      const startDay = weekStart.getDate()
+      const endDay = weekEnd.getDate()
+      const months = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+      const startMonth = months[weekStart.getMonth()]
+      const endMonth = months[weekEnd.getMonth()]
+      const label = startMonth === endMonth
+        ? `${startDay} - ${endDay} ${endMonth}`
+        : `${startDay} ${startMonth} - ${endDay} ${endMonth}`
+
+      // Sum hours for this week
+      let totalHours = 0
+      const personHours: Record<string, number> = {}
+
+      for (const entry of workloadEntries) {
+        if (!entry.hours) continue
+        const entryDate = entry.date // YYYY-MM-DD
+        const startStr = formatDateForAPI(weekStart)
+        const endStr = formatDateForAPI(weekEnd)
+        if (entryDate >= startStr && entryDate <= endStr) {
+          totalHours += entry.hours
+          personHours[entry.personName] = (personHours[entry.personName] || 0) + entry.hours
+        }
+      }
+
+      weeks.push({ label, startDate: weekStart, endDate: weekEnd, totalHours, personHours })
+    }
+
+    return weeks
+  }, [workloadEntries, historyOffset])
+
   // Count workload levels for today
   const todayStats = useMemo(() => {
     const today = formatDateForAPI(new Date())
@@ -597,6 +651,99 @@ export default function PartnersWerkPage() {
               </Popover.Portal>
             </Popover.Root>
           </div>
+
+          {/* Weekly Summary Card - only visible on Monday before 20:00 */}
+          {weeklyTotals && weeklyTotals[0].totalHours > 0 && (
+            <div className="card overflow-hidden border-workx-lime/20">
+              <div className="p-4 sm:p-5 border-b border-white/5 bg-gradient-to-r from-workx-lime/5 to-transparent">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                    <Icons.trendingUp className="text-workx-lime" size={16} />
+                  </div>
+                  <h2 className="font-medium text-white text-sm sm:text-base">Weektotalen</h2>
+                </div>
+              </div>
+              <div className="p-4 sm:p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
+                  {weeklyTotals.map((week, idx) => {
+                    const isCurrentWeek = idx === 0
+                    const prevWeekHours = weeklyTotals[idx + 1]?.totalHours || 0
+                    const change = prevWeekHours > 0
+                      ? ((week.totalHours - prevWeekHours) / prevWeekHours) * 100
+                      : null
+                    const personCount = Object.keys(week.personHours).length
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`relative rounded-xl p-4 transition-all ${
+                          isCurrentWeek
+                            ? 'bg-workx-lime/10 border-2 border-workx-lime/30 ring-1 ring-workx-lime/10'
+                            : 'bg-white/[0.03] border border-white/5'
+                        }`}
+                      >
+                        {isCurrentWeek && (
+                          <span className="absolute -top-2.5 left-3 px-2 py-0.5 text-[10px] font-bold rounded-full bg-workx-lime text-workx-dark">
+                            Afgelopen week
+                          </span>
+                        )}
+                        <p className={`text-xs mb-2 ${isCurrentWeek ? 'text-workx-lime/70' : 'text-gray-500'}`}>
+                          {week.label}
+                        </p>
+                        <p className={`text-2xl font-bold ${isCurrentWeek ? 'text-workx-lime' : 'text-white/80'}`}>
+                          {week.totalHours.toFixed(1).replace('.', ',')}
+                          <span className={`text-xs font-normal ml-1 ${isCurrentWeek ? 'text-workx-lime/50' : 'text-white/30'}`}>uur</span>
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className={`text-[11px] ${isCurrentWeek ? 'text-workx-lime/50' : 'text-white/30'}`}>
+                            {personCount} personen
+                          </span>
+                          {change !== null && (
+                            <span className={`text-[11px] font-medium flex items-center gap-0.5 ${
+                              change > 0 ? 'text-red-400' : change < 0 ? 'text-green-400' : 'text-gray-500'
+                            }`}>
+                              {change > 0 ? (
+                                <Icons.trendingUp size={11} />
+                              ) : change < 0 ? (
+                                <Icons.trendingDown size={11} />
+                              ) : null}
+                              {change > 0 ? '+' : ''}{change.toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Top workers this week */}
+                {weeklyTotals[0].totalHours > 0 && (
+                  <div className="mt-4 pt-4 border-t border-white/5">
+                    <p className="text-xs text-gray-500 mb-3">Verdeling afgelopen week</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(weeklyTotals[0].personHours)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([name, hours]) => {
+                          const photo = getPhotoUrl(name)
+                          const firstName = name.split(' ')[0]
+                          return (
+                            <div key={name} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 border border-white/5">
+                              {photo ? (
+                                <img src={photo} alt={name} className="w-5 h-5 rounded-md object-cover" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center text-[10px] text-white/50 font-bold">{firstName.charAt(0)}</div>
+                              )}
+                              <span className="text-xs text-white/70">{firstName}</span>
+                              <span className="text-xs font-medium text-workx-lime">{hours.toFixed(1).replace('.', ',')}</span>
+                            </div>
+                          )
+                        })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Workload Overview - employees only */}
           <div className="card overflow-hidden">
