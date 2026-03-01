@@ -156,9 +156,11 @@ export default function WeekSection({
         body: JSON.stringify({ distributions: dists }),
       })
       if (!res.ok) throw new Error()
+      toast.success('Werkverdeling opgeslagen')
       onDataChange()
     } catch {
       toast.error('Kon werkverdeling niet bijwerken')
+      throw new Error('save failed')
     }
   }
 
@@ -192,10 +194,13 @@ export default function WeekSection({
           {/* Topics */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <div className="grid grid-cols-[1fr_2fr_auto] gap-3 w-full text-xs font-medium text-gray-400 uppercase tracking-wider px-3">
+              <div className="hidden sm:grid sm:grid-cols-[1fr_2fr_auto] gap-3 w-full text-xs font-medium text-gray-400 uppercase tracking-wider px-3">
                 <span>Agenda</span>
                 <span>Opmerkingen</span>
                 <span className="w-10" />
+              </div>
+              <div className="sm:hidden px-3 text-xs font-medium text-gray-400 uppercase tracking-wider">
+                Agendapunten
               </div>
             </div>
             <div>

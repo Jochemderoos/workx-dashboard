@@ -101,31 +101,75 @@ export default function TopicRow({
 
   return (
     <div className="py-3 px-3 rounded-lg group hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
-      {/* Topic row: Title | Remarks | Delete */}
-      <div className="grid grid-cols-[1fr_2fr_auto] gap-3">
-        {/* Agenda titel */}
-        <div className="min-w-0">
-          {isEditingTitle ? (
-            <input
-              ref={titleRef}
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={handleTitleSave}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(); if (e.key === 'Escape') { setEditTitle(title); setIsEditingTitle(false) } }}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-            />
-          ) : (
-            <p
-              onClick={() => !isStandard && setIsEditingTitle(true)}
-              className={`text-sm font-medium truncate ${isStandard ? 'text-workx-lime/80' : 'text-white cursor-pointer hover:text-workx-lime'} transition-colors`}
+      {/* Topic row: responsive layout — stacked on mobile, grid on desktop */}
+      <div className="flex flex-col sm:grid sm:grid-cols-[1fr_2fr_auto] sm:gap-3">
+        {/* Top row on mobile: title + actions */}
+        <div className="flex items-start gap-2 sm:contents">
+          {/* Agenda titel */}
+          <div className="min-w-0 flex-1">
+            {isEditingTitle ? (
+              <input
+                ref={titleRef}
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(); if (e.key === 'Escape') { setEditTitle(title); setIsEditingTitle(false) } }}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+              />
+            ) : (
+              <p
+                onClick={() => !isStandard && setIsEditingTitle(true)}
+                className={`text-sm font-medium ${isStandard ? 'text-workx-lime/80' : 'text-white cursor-pointer hover:text-workx-lime'} transition-colors`}
+              >
+                {title}
+              </p>
+            )}
+          </div>
+
+          {/* Opmerkingen — hidden on mobile here, shown below */}
+          <div className="min-w-0 hidden sm:block">
+            {isEditingRemarks ? (
+              <textarea
+                ref={remarksRef}
+                value={editRemarks}
+                onChange={(e) => setEditRemarks(e.target.value)}
+                onBlur={handleRemarksSave}
+                onKeyDown={(e) => { if (e.key === 'Escape') { setEditRemarks(remarks || ''); setIsEditingRemarks(false) } }}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-workx-lime/30 resize-none"
+                rows={2}
+              />
+            ) : (
+              <p
+                onClick={() => setIsEditingRemarks(true)}
+                className="text-sm text-gray-400 cursor-pointer hover:text-white transition-colors whitespace-pre-wrap"
+              >
+                {remarks || <span className="text-white/20 italic">Klik om opmerking toe te voegen...</span>}
+              </p>
+            )}
+          </div>
+
+          {/* Actions: add action + delete topic */}
+          <div className="flex items-start gap-1 flex-shrink-0">
+            <button
+              onClick={() => setIsAddingAction(!isAddingAction)}
+              className="p-1 text-gray-500 hover:text-orange-400 transition-colors"
+              title="Actiepunt toevoegen"
             >
-              {title}
-            </p>
-          )}
+              <Icons.target size={14} />
+            </button>
+            {!isStandard && (
+              <button
+                onClick={() => onDelete(id)}
+                className="p-1 text-gray-500 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+              >
+                <Icons.trash size={14} />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Opmerkingen */}
-        <div className="min-w-0">
+        {/* Opmerkingen — mobile only, shown as separate row below title */}
+        <div className="sm:hidden mt-1.5">
           {isEditingRemarks ? (
             <textarea
               ref={remarksRef}
@@ -137,31 +181,16 @@ export default function TopicRow({
               rows={2}
             />
           ) : (
-            <p
+            <div
               onClick={() => setIsEditingRemarks(true)}
-              className="text-sm text-gray-400 cursor-pointer hover:text-white transition-colors whitespace-pre-wrap"
+              className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 cursor-pointer hover:border-white/10 transition-colors"
             >
-              {remarks || <span className="text-white/20 italic">Klik om opmerking toe te voegen...</span>}
-            </p>
-          )}
-        </div>
-
-        {/* Actions: add action + delete topic */}
-        <div className="flex items-start gap-1">
-          <button
-            onClick={() => setIsAddingAction(!isAddingAction)}
-            className="p-1 text-gray-500 hover:text-orange-400 transition-colors"
-            title="Actiepunt toevoegen"
-          >
-            <Icons.target size={14} />
-          </button>
-          {!isStandard && (
-            <button
-              onClick={() => onDelete(id)}
-              className="p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-            >
-              <Icons.trash size={14} />
-            </button>
+              {remarks ? (
+                <p className="text-sm text-gray-300 whitespace-pre-wrap">{remarks}</p>
+              ) : (
+                <p className="text-sm text-white/30 italic">Tik om opmerking toe te voegen...</p>
+              )}
+            </div>
           )}
         </div>
       </div>
