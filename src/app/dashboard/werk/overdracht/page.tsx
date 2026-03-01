@@ -379,80 +379,110 @@ function CaseRow({
     onUpdate({ ...caseData, waarnemers: newNames.join(', ') })
   }
 
+  const waarnemerBadges = (
+    <div className="flex flex-wrap items-center gap-1">
+      {waarnemerNames.map(name => {
+        const photo = getPhotoUrl(name)
+        return (
+          <div key={name} className="flex items-center gap-1 pl-1 pr-1.5 py-0.5 rounded-lg bg-workx-lime/10 border border-workx-lime/20">
+            {photo ? (
+              <img src={photo} alt={name} className="w-4 h-4 rounded object-cover" />
+            ) : (
+              <div className="w-4 h-4 rounded bg-workx-lime/20 flex items-center justify-center text-workx-lime text-[8px] font-bold">
+                {name.charAt(0)}
+              </div>
+            )}
+            <span className="text-[11px] text-workx-lime font-medium">{name.split(' ')[0]}</span>
+            <button
+              onClick={() => handleToggleWaarnemer(name)}
+              className="p-0.5 rounded hover:bg-white/10 text-workx-lime/60 hover:text-workx-lime transition-colors"
+            >
+              <Icons.x size={8} />
+            </button>
+          </div>
+        )
+      })}
+      <button
+        ref={btnRef}
+        onClick={() => setOpenDropdown(!openDropdown)}
+        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all text-[11px]"
+      >
+        <Icons.plus size={10} />
+      </button>
+      {openDropdown && (
+        <WaarnemerDropdown
+          anchorRef={btnRef}
+          selectedNames={waarnemerNames}
+          onToggle={handleToggleWaarnemer}
+          onClose={() => setOpenDropdown(false)}
+        />
+      )}
+    </div>
+  )
+
   return (
-    <div className="grid grid-cols-[1fr_0.8fr_1.5fr_1fr_auto] gap-3 px-4 py-3 items-start hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-b-0">
-      {/* Dossiernaam */}
-      <input
-        value={caseData.dossiernaam}
-        onChange={e => onUpdate({ ...caseData, dossiernaam: e.target.value })}
-        className="bg-transparent text-sm text-white border-b border-transparent hover:border-white/10 focus:border-workx-lime/50 focus:outline-none py-0.5 w-full"
-        placeholder="Dossiernaam"
-      />
-
-      {/* Contactpersoon */}
-      <input
-        value={caseData.contactpersoon || ''}
-        onChange={e => onUpdate({ ...caseData, contactpersoon: e.target.value || null })}
-        className="bg-transparent text-sm text-gray-400 border-b border-transparent hover:border-white/10 focus:border-workx-lime/50 focus:outline-none py-0.5 w-full"
-        placeholder="Contactpersoon"
-      />
-
-      {/* Beschrijving */}
-      <ExpandableText
-        text={caseData.beschrijving}
-        onChange={val => onUpdate({ ...caseData, beschrijving: val || null })}
-        placeholder="Status / beschrijving"
-        maxLines={2}
-      />
-
-      {/* Waarnemer(s) */}
-      <div className="flex flex-wrap items-center gap-1">
-        {waarnemerNames.map(name => {
-          const photo = getPhotoUrl(name)
-          return (
-            <div key={name} className="flex items-center gap-1 pl-1 pr-1.5 py-0.5 rounded-lg bg-workx-lime/10 border border-workx-lime/20">
-              {photo ? (
-                <img src={photo} alt={name} className="w-4 h-4 rounded object-cover" />
-              ) : (
-                <div className="w-4 h-4 rounded bg-workx-lime/20 flex items-center justify-center text-workx-lime text-[8px] font-bold">
-                  {name.charAt(0)}
-                </div>
-              )}
-              <span className="text-[11px] text-workx-lime font-medium">{name.split(' ')[0]}</span>
-              <button
-                onClick={() => handleToggleWaarnemer(name)}
-                className="p-0.5 rounded hover:bg-white/10 text-workx-lime/60 hover:text-workx-lime transition-colors"
-              >
-                <Icons.x size={8} />
-              </button>
-            </div>
-          )
-        })}
+    <>
+      {/* Desktop: grid row */}
+      <div className="hidden sm:grid grid-cols-[1fr_0.8fr_1.5fr_1fr_auto] gap-3 px-4 py-3 items-start hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-b-0">
+        <input
+          value={caseData.dossiernaam}
+          onChange={e => onUpdate({ ...caseData, dossiernaam: e.target.value })}
+          className="bg-transparent text-sm text-white border-b border-transparent hover:border-white/10 focus:border-workx-lime/50 focus:outline-none py-0.5 w-full"
+          placeholder="Dossiernaam"
+        />
+        <input
+          value={caseData.contactpersoon || ''}
+          onChange={e => onUpdate({ ...caseData, contactpersoon: e.target.value || null })}
+          className="bg-transparent text-sm text-gray-400 border-b border-transparent hover:border-white/10 focus:border-workx-lime/50 focus:outline-none py-0.5 w-full"
+          placeholder="Contactpersoon"
+        />
+        <ExpandableText
+          text={caseData.beschrijving}
+          onChange={val => onUpdate({ ...caseData, beschrijving: val || null })}
+          placeholder="Status / beschrijving"
+          maxLines={2}
+        />
+        {waarnemerBadges}
         <button
-          ref={btnRef}
-          onClick={() => setOpenDropdown(!openDropdown)}
-          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all text-[11px]"
+          onClick={onDelete}
+          className="p-1 rounded-lg hover:bg-red-500/10 text-gray-600 hover:text-red-400 transition-colors mt-0.5"
         >
-          <Icons.plus size={10} />
+          <Icons.trash size={14} />
         </button>
-        {openDropdown && (
-          <WaarnemerDropdown
-            anchorRef={btnRef}
-            selectedNames={waarnemerNames}
-            onToggle={handleToggleWaarnemer}
-            onClose={() => setOpenDropdown(false)}
-          />
-        )}
       </div>
 
-      {/* Delete */}
-      <button
-        onClick={onDelete}
-        className="p-1 rounded-lg hover:bg-red-500/10 text-gray-600 hover:text-red-400 transition-colors mt-0.5"
-      >
-        <Icons.trash size={14} />
-      </button>
-    </div>
+      {/* Mobile: card layout */}
+      <div className="sm:hidden px-3 py-3 border-b border-white/5 last:border-b-0 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <input
+              value={caseData.dossiernaam}
+              onChange={e => onUpdate({ ...caseData, dossiernaam: e.target.value })}
+              className="bg-transparent text-sm font-medium text-white border-b border-transparent focus:border-workx-lime/50 focus:outline-none py-0.5 w-full"
+              placeholder="Dossiernaam"
+            />
+            <input
+              value={caseData.contactpersoon || ''}
+              onChange={e => onUpdate({ ...caseData, contactpersoon: e.target.value || null })}
+              className="bg-transparent text-xs text-gray-500 border-b border-transparent focus:border-workx-lime/50 focus:outline-none py-0.5 w-full"
+              placeholder="Contactpersoon"
+            />
+          </div>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
+          >
+            <Icons.trash size={14} />
+          </button>
+        </div>
+        {caseData.beschrijving ? (
+          <p className="text-xs text-gray-400 whitespace-pre-wrap leading-relaxed">{caseData.beschrijving}</p>
+        ) : (
+          <p className="text-xs text-white/20 italic">Geen beschrijving</p>
+        )}
+        {waarnemerBadges}
+      </div>
+    </>
   )
 }
 
@@ -796,8 +826,8 @@ export default function OverdrachtPage() {
                 </div>
               )}
 
-              {/* Cases table header */}
-              <div className="grid grid-cols-[1fr_0.8fr_1.5fr_1fr_auto] gap-3 px-4 py-2 text-[10px] font-medium text-gray-500 uppercase tracking-wider border-b border-white/5 bg-white/[0.01]">
+              {/* Cases table header (desktop only) */}
+              <div className="hidden sm:grid grid-cols-[1fr_0.8fr_1.5fr_1fr_auto] gap-3 px-4 py-2 text-[10px] font-medium text-gray-500 uppercase tracking-wider border-b border-white/5 bg-white/[0.01]">
                 <span>Dossiernaam</span>
                 <span>Contactpersoon</span>
                 <span>Beschrijving / status</span>
