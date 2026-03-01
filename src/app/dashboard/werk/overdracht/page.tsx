@@ -746,9 +746,9 @@ export default function OverdrachtPage() {
                   {obs.beschrijving && (
                     <ExpandableText
                       text={obs.beschrijving}
-                      maxLines={2}
+                      maxLines={3}
                       readOnly
-                      className="mt-0.5 [&_p]:!text-xs [&_p]:!text-gray-400"
+                      className="mt-1 [&_p]:!text-xs [&_p]:!text-gray-400"
                     />
                   )}
                 </div>
