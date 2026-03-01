@@ -355,7 +355,8 @@ export default function PartnersWerkPage() {
 
   const fetchWorkload = async () => {
     try {
-      const res = await fetch('/api/workload')
+      const year = new Date().getFullYear()
+      const res = await fetch(`/api/workload?year=${year}&year2=${year - 1}`)
       if (res.ok) {
         const data = await res.json()
         setWorkloadEntries(data.map((e: { personName: string; date: string; level: string; hours?: number | null }) => ({

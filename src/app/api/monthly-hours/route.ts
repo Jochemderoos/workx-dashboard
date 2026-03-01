@@ -12,22 +12,20 @@ const NAME_CORRECTIONS: Record<string, string> = {
   'Lodewijk van': 'Lodewijk van Thiel',
 }
 
-// One-time migration flag (runs once per server instance)
-let migrationRun = false
+const MIGRATION_KEY = 'monthly_hours_name_migration_done'
 
 async function migrateIncompleteNames() {
-  if (migrationRun) return
-  migrationRun = true
+  // Check DB flag so this only ever runs once (not per cold start)
+  const setting = await prisma.appSetting.findUnique({ where: { key: MIGRATION_KEY } })
+  if (setting) return
 
   try {
     for (const [incorrectName, correctName] of Object.entries(NAME_CORRECTIONS)) {
-      // Find all records with the incorrect name
       const incorrectRecords = await prisma.monthlyHours.findMany({
         where: { employeeName: incorrectName }
       })
 
       for (const record of incorrectRecords) {
-        // Check if correct name already has an entry for this month/year
         const existingCorrect = await prisma.monthlyHours.findUnique({
           where: {
             employeeName_year_month: {
@@ -39,7 +37,6 @@ async function migrateIncompleteNames() {
         })
 
         if (existingCorrect) {
-          // Merge hours into existing record and delete old
           await prisma.monthlyHours.update({
             where: { id: existingCorrect.id },
             data: {
@@ -49,7 +46,6 @@ async function migrateIncompleteNames() {
           })
           await prisma.monthlyHours.delete({ where: { id: record.id } })
         } else {
-          // Just update the name
           await prisma.monthlyHours.update({
             where: { id: record.id },
             data: { employeeName: correctName }
@@ -57,9 +53,12 @@ async function migrateIncompleteNames() {
         }
       }
     }
+    // Mark as done permanently
+    await prisma.appSetting.create({
+      data: { key: MIGRATION_KEY, value: 'true', label: 'Monthly hours naamcorrectie migratie voltooid' }
+    })
   } catch (error) {
     console.error('Error during name migration:', error)
-    migrationRun = false // Allow retry on error
   }
 }
 

@@ -534,16 +534,19 @@ export async function GET() {
 
       // Expand comma-separated employee names into individual entries
       // IMPORTANT: use individual user IDs, not the shared distribution row employeeId
+      // Batch load all active users once instead of N+1 queries per name
+      const allActiveUsers = await prisma.user.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, avatarUrl: true },
+      })
+
       const employeeEntries: any[] = []
       for (const d of partnerDistributions) {
         if (!d.employeeName) continue
         const names = d.employeeName.split(', ').map((n: string) => n.trim())
         for (const name of names) {
-          // Try to find user ID for this employee name
-          const employeeUser = await prisma.user.findFirst({
-            where: { name: { contains: name }, isActive: true },
-            select: { id: true, name: true, avatarUrl: true },
-          })
+          // Find user from pre-loaded list
+          const employeeUser = allActiveUsers.find(u => u.name?.includes(name))
           // Always prefer the individual user's ID, never the shared distribution row ID
           const empId = employeeUser?.id || `name-${name}`
           employeeEntries.push({

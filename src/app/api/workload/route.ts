@@ -12,29 +12,31 @@ const NAME_CORRECTIONS: Record<string, string> = {
   'Lodewijk van': 'Lodewijk van Thiel',
 }
 
-// One-time migration flag
-let workloadMigrationRun = false
+const MIGRATION_KEY = 'workload_name_migration_done'
 
 async function migrateWorkloadNames() {
-  if (workloadMigrationRun) return
-  workloadMigrationRun = true
+  // Check DB flag so this only ever runs once (not per cold start)
+  const setting = await prisma.appSetting.findUnique({ where: { key: MIGRATION_KEY } })
+  if (setting) return
 
   try {
     for (const [incorrectName, correctName] of Object.entries(NAME_CORRECTIONS)) {
-      // Update all records with incorrect name
       await prisma.workload.updateMany({
         where: { personName: incorrectName },
         data: { personName: correctName }
       })
     }
+    // Mark as done permanently
+    await prisma.appSetting.create({
+      data: { key: MIGRATION_KEY, value: 'true', label: 'Workload naamcorrectie migratie voltooid' }
+    })
   } catch (error) {
     console.error('Error during workload name migration:', error)
-    workloadMigrationRun = false
   }
 }
 
-// GET - Haal alle werkdruk entries op
-export async function GET() {
+// GET - Haal werkdruk entries op (gefilterd op jaar)
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
@@ -44,7 +46,14 @@ export async function GET() {
     // Run migration on first access
     await migrateWorkloadNames()
 
+    const { searchParams } = new URL(req.url)
+    const year = searchParams.get('year') || String(new Date().getFullYear())
+    const year2 = searchParams.get('year2')
+
     const entries = await prisma.workload.findMany({
+      where: year2
+        ? { OR: [{ date: { startsWith: year } }, { date: { startsWith: year2 } }] }
+        : { date: { startsWith: year } },
       orderBy: [
         { date: 'desc' },
         { personName: 'asc' }
