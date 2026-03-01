@@ -705,20 +705,30 @@ export default function PartnersWerkPage() {
                   <div className="flex gap-2 sm:gap-3">
                     <div className="rounded-lg bg-white/[0.04] border border-white/5 px-3 py-2 text-center">
                       <p className="text-[9px] uppercase tracking-wider text-gray-500 mb-0.5">vs gem.</p>
-                      <p className={`text-sm font-bold ${
-                        vsAvgPct > 5 ? 'text-red-400' : vsAvgPct < -5 ? 'text-green-400' : 'text-white'
-                      }`}>
-                        {vsAvgPct > 0 ? '+' : ''}{vsAvgPct.toFixed(0)}%
-                      </p>
+                      <div className="flex items-center justify-center gap-1">
+                        {vsAvgPct > 2 ? (
+                          <Icons.trendingUp size={13} className="text-white/60" />
+                        ) : vsAvgPct < -2 ? (
+                          <Icons.trendingDown size={13} className="text-white/60" />
+                        ) : null}
+                        <p className="text-sm font-bold text-white">
+                          {vsAvgPct > 0 ? '+' : ''}{vsAvgPct.toFixed(0)}%
+                        </p>
+                      </div>
                       <p className="text-[9px] text-gray-600">{avg.toFixed(0)} uur</p>
                     </div>
                     <div className="rounded-lg bg-white/[0.04] border border-white/5 px-3 py-2 text-center">
                       <p className="text-[9px] uppercase tracking-wider text-gray-500 mb-0.5">vs vorig</p>
-                      <p className={`text-sm font-bold ${
-                        vsPrevPct > 5 ? 'text-red-400' : vsPrevPct < -5 ? 'text-green-400' : 'text-white'
-                      }`}>
-                        {vsPrevPct > 0 ? '+' : ''}{vsPrevPct.toFixed(0)}%
-                      </p>
+                      <div className="flex items-center justify-center gap-1">
+                        {vsPrevPct > 2 ? (
+                          <Icons.trendingUp size={13} className="text-white/60" />
+                        ) : vsPrevPct < -2 ? (
+                          <Icons.trendingDown size={13} className="text-white/60" />
+                        ) : null}
+                        <p className="text-sm font-bold text-white">
+                          {vsPrevPct > 0 ? '+' : ''}{vsPrevPct.toFixed(0)}%
+                        </p>
+                      </div>
                       <p className="text-[9px] text-gray-600">{prevWeek.totalHours.toFixed(0)} uur</p>
                     </div>
                   </div>
@@ -968,9 +978,7 @@ export default function PartnersWerkPage() {
                           </td>
                           <td className="px-4 py-2.5 text-right">
                             {avg > 0 && week.totalHours > 0 ? (
-                              <span className={`text-[11px] font-medium ${
-                                pctOfAvg > 5 ? 'text-red-400' : pctOfAvg < -5 ? 'text-green-400' : 'text-gray-500'
-                              }`}>
+                              <span className={`text-[11px] font-medium ${isCurrentWeek ? 'text-white' : 'text-gray-400'}`}>
                                 {pctOfAvg > 0 ? '+' : ''}{pctOfAvg.toFixed(0)}%
                               </span>
                             ) : (
