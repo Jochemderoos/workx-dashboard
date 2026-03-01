@@ -233,17 +233,20 @@ export default function PartnersWerkPage() {
   const weeklyReport = useMemo(() => {
     if (historyOffset !== 0) return null
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
     const months = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+
+    // Bepaal de nieuwste dag met data
+    const entriesWithHours = workloadEntries.filter(e => e.hours)
+    if (entriesWithHours.length === 0) return null
+    const latestDate = entriesWithHours.reduce((max, e) => e.date > max ? e.date : max, entriesWithHours[0].date)
+    const anchor = new Date(latestDate + 'T00:00:00')
 
     const weeks: { label: string; totalHours: number; personCount: number }[] = []
 
-    // 7 periodes van 7 dagen, tellend vanaf vandaag terug
+    // 7 periodes van 7 dagen, tellend vanaf de nieuwste ingevoerde dag
     for (let w = 0; w < 7; w++) {
-      const periodEnd = new Date(today)
-      periodEnd.setDate(periodEnd.getDate() - (w * 7)) // vandaag, 7 dagen geleden, etc.
+      const periodEnd = new Date(anchor)
+      periodEnd.setDate(periodEnd.getDate() - (w * 7))
       const periodStart = new Date(periodEnd)
       periodStart.setDate(periodStart.getDate() - 6) // 7 dagen eerder
 
