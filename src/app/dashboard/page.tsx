@@ -307,9 +307,13 @@ interface ParentalLeaveData {
 }
 
 const allQuickLinks = [
-  { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10', iconAnim: 'icon-calendar-hover', hideFor: [] as string[] },
-  { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10', iconAnim: 'icon-euro-hover', hideFor: ['PARTNER', 'OFFICE_MANAGER'] },
-  { href: '/dashboard/werk', Icon: Icons.briefcase, label: 'Werk', desc: 'Taken beheren', color: 'from-red-500/20 to-red-600/10', iconAnim: 'icon-briefcase-hover', hideFor: ['MEDEWERKER', 'ADVOCAAT'] },
+  // Partners & Admin: Uren en Notulen bovenaan
+  { href: '/dashboard/partners/werk', Icon: Icons.clock, label: 'Uren', desc: 'Urenoverzicht', color: 'from-red-500/20 to-red-600/10', iconAnim: 'icon-clock-hover', hideFor: ['EMPLOYEE'] },
+  { href: '/dashboard/partners/notulen', Icon: Icons.fileText, label: 'Notulen', desc: 'Maandagoverleg', color: 'from-blue-500/20 to-blue-600/10', iconAnim: 'icon-file-hover', hideFor: ['EMPLOYEE'] },
+  // Medewerkers: Agenda en Bonus
+  { href: '/dashboard/agenda', Icon: Icons.calendar, label: 'Agenda', desc: 'Events & verjaardagen', color: 'from-blue-500/20 to-blue-600/10', iconAnim: 'icon-calendar-hover', hideFor: ['PARTNER', 'ADMIN'] },
+  { href: '/dashboard/bonus', Icon: Icons.euro, label: 'Bonus', desc: 'Berekeningen', color: 'from-green-500/20 to-green-600/10', iconAnim: 'icon-euro-hover', hideFor: ['PARTNER', 'ADMIN'] },
+  // Iedereen
   { href: '/dashboard/lustrum', Icon: Icons.star, label: 'Lustrum', desc: '15 jaar Workx!', color: 'from-orange-500/20 to-amber-600/10', iconAnim: 'icon-star-hover', hideFor: [] as string[] },
 ]
 

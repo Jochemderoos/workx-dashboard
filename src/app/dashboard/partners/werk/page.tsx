@@ -123,35 +123,40 @@ export default function PartnersWerkPage() {
     return days.reverse() // Oldest first
   }, [historyOffset])
 
-  // Include weekend days in the display if anyone has logged hours on them
+  // Include weekend days ONLY on Monday before 20:00 (current week view)
+  // Weekend = the Sat/Sun right after the last Friday in the workdays range
   const daysToDisplay = useMemo(() => {
     if (workdaysToShow.length === 0) return workdaysToShow
 
-    // Extend range by 2 days on each side to catch adjacent weekends
-    // (e.g. Mon-Fri range misses Sat/Sun on both edges)
-    const rangeStart = new Date(workdaysToShow[0])
-    rangeStart.setDate(rangeStart.getDate() - 2)
-    const rangeEnd = new Date(workdaysToShow[workdaysToShow.length - 1])
-    rangeEnd.setDate(rangeEnd.getDate() + 2)
+    const now = new Date()
+    const dow = now.getDay()
+    const hr = now.getHours()
+    // Weekend columns only visible on Monday before 20:00, and only for the current view (no history)
+    const showWeekend = dow === 1 && hr < 20 && historyOffset === 0
 
-    // Build all calendar days in the extended range
-    const allDays: Date[] = []
-    const cursor = new Date(rangeStart)
-    while (cursor <= rangeEnd) {
-      allDays.push(new Date(cursor))
-      cursor.setDate(cursor.getDate() + 1)
+    if (!showWeekend) return workdaysToShow
+
+    // Find the last Friday in the range and add Sat/Sun after it (if data exists)
+    const lastWorkday = workdaysToShow[workdaysToShow.length - 1]
+    const result = [...workdaysToShow]
+
+    const saturday = new Date(lastWorkday)
+    saturday.setDate(saturday.getDate() + 1)
+    const sunday = new Date(lastWorkday)
+    sunday.setDate(sunday.getDate() + 2)
+
+    const satStr = formatDateForAPI(saturday)
+    const sunStr = formatDateForAPI(sunday)
+
+    if (saturday.getDay() === 6 && workloadEntries.some(e => e.date === satStr)) {
+      result.push(saturday)
+    }
+    if (sunday.getDay() === 0 && workloadEntries.some(e => e.date === sunStr)) {
+      result.push(sunday)
     }
 
-    // Keep the original workdays always; keep weekend days only if there's data
-    const workdayStrings = new Set(workdaysToShow.map(d => formatDateForAPI(d)))
-    return allDays.filter(day => {
-      const dateStr = formatDateForAPI(day)
-      if (workdayStrings.has(dateStr)) return true
-      const dow = day.getDay()
-      if (dow !== 0 && dow !== 6) return false // Extra weekdays outside range: skip
-      return workloadEntries.some(e => e.date === dateStr)
-    })
-  }, [workdaysToShow, workloadEntries])
+    return result
+  }, [workdaysToShow, workloadEntries, historyOffset])
 
   const last3Workdays = daysToDisplay
 
