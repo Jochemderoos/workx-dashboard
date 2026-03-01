@@ -27,6 +27,7 @@ interface ExpenseDeclaration {
   status: string
   totalAmount: number
   note?: string
+  invoiceNumber?: string
   items: ExpenseItem[]
   createdAt: string
   holdingName?: string
@@ -40,6 +41,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
 
   // Check if user is partner or admin
@@ -66,6 +68,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   const [note, setNote] = useState('')
   const [items, setItems] = useState<ExpenseItem[]>([])
   const [holdingName, setHoldingName] = useState('')
+  const [invoiceNumber, setInvoiceNumber] = useState('')
 
   // Calculate total
   const totalAmount = items.reduce((sum, item) => sum + (item.amount || 0), 0)
@@ -115,6 +118,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     setBankAccount(declaration.bankAccount)
     setNote(declaration.note || '')
     setHoldingName(declaration.holdingName || '')
+    setInvoiceNumber(declaration.invoiceNumber || '')
     setItems(
       declaration.items.map(i => ({
         ...i,
@@ -137,6 +141,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     setBankAccount('')
     setNote('')
     setHoldingName('')
+    setInvoiceNumber('')
     setItems([])
     setView('form')
   }
@@ -320,6 +325,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
           })),
           note: note.trim(),
           holdingName: activeTab === 'holding' ? holdingName.trim() : null,
+          invoiceNumber: invoiceNumber.trim() || null,
           submit: false,
         }),
       })
@@ -347,7 +353,294 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     }
   }
 
-  // Generate professional PDF
+  // Build PDF document (reused by download and email)
+  const buildPDF = async (): Promise<{ doc: jsPDF; fileName: string } | null> => {
+    const logoDataUrl = await loadWorkxLogo()
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const isHolding = activeTab === 'holding'
+
+    let y = 20
+
+    // === HEADER ===
+    if (!isHolding) {
+      drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
+      y = 30
+    } else {
+      doc.setFontSize(22)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      doc.text(holdingName, 15, y + 5)
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(100, 100, 100)
+      doc.text('Declaratieformulier', 15, y + 14)
+      y = 45
+    }
+
+    // Date and invoice number on the right
+    doc.setFontSize(9)
+    doc.setTextColor(100, 100, 100)
+    const dateText = `Datum: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`
+    doc.text(dateText, pageWidth - 15, 25, { align: 'right' })
+
+    if (invoiceNumber.trim()) {
+      doc.text(`Factuurnr: ${invoiceNumber.trim()}`, pageWidth - 15, 31, { align: 'right' })
+    }
+
+    // === TITLE ===
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.3)
+    doc.line(15, y, pageWidth - 15, y)
+    y += 15
+
+    if (!isHolding) {
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      doc.text('DECLARATIEFORMULIER', 15, y)
+      y += 15
+    }
+
+    // === PERSONAL INFO BOX ===
+    const infoBoxHeight = invoiceNumber.trim() ? 38 : 28
+    doc.setFillColor(248, 249, 250)
+    doc.roundedRect(15, y, pageWidth - 30, infoBoxHeight, 3, 3, 'F')
+
+    doc.setFontSize(9)
+    doc.setTextColor(100, 100, 100)
+    doc.text('Naam medewerker:', 20, y + 10)
+    doc.text('IBAN:', 20, y + 20)
+
+    doc.setFontSize(10)
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'bold')
+    doc.text(employeeName, 60, y + 10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(formatIBAN(bankAccount), 60, y + 20)
+
+    if (invoiceNumber.trim()) {
+      doc.setFontSize(9)
+      doc.setTextColor(100, 100, 100)
+      doc.text('Factuurnummer:', 20, y + 30)
+      doc.setFontSize(10)
+      doc.setTextColor(30, 30, 30)
+      doc.setFont('helvetica', 'bold')
+      doc.text(invoiceNumber.trim(), 60, y + 30)
+      doc.setFont('helvetica', 'normal')
+    }
+
+    y += infoBoxHeight + 12
+
+    // === EXPENSE TABLE ===
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 30, 30)
+    doc.text('Kostenposten', 15, y)
+    y += 8
+
+    // Table header - different columns for Workx vs Holding
+    const hasChargeColumn = !isHolding
+    const colX = hasChargeColumn
+      ? [15, 40, 105, 140, 175] // With charge column
+      : [15, 43, 128, 163]      // Without charge column
+
+    doc.setFillColor(249, 255, 133)
+    doc.rect(15, y, pageWidth - 30, 8, 'F')
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 30, 30)
+    doc.text('Datum', colX[0] + 2, y + 5.5)
+    doc.text('Omschrijving', colX[1] + 2, y + 5.5)
+    if (hasChargeColumn) {
+      doc.text('Doorbelasten', colX[2] + 2, y + 5.5)
+      doc.text('Bedrag', colX[3] + 2, y + 5.5)
+    } else {
+      doc.text('Bedrag', colX[2] + 2, y + 5.5)
+      doc.text('Bijlage', colX[3] + 2, y + 5.5)
+    }
+
+    y += 8
+
+    // Table rows
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+
+    const validItems = items.filter(i => i.description && i.date && i.amount > 0)
+    validItems.forEach((item, index) => {
+      const rowY = y + (index * 10)
+
+      if (index % 2 === 1) {
+        doc.setFillColor(250, 250, 250)
+        doc.rect(15, rowY, pageWidth - 30, 10, 'F')
+      }
+
+      doc.setDrawColor(230, 230, 230)
+      doc.line(15, rowY + 10, pageWidth - 15, rowY + 10)
+
+      doc.setTextColor(50, 50, 50)
+      doc.text(formatDate(item.date), colX[0] + 2, rowY + 6.5)
+
+      let desc = item.description
+      if (item.expenseType === 'reiskosten_auto' && item.kilometers) {
+        desc = `${item.description} (${item.kilometers} km)`
+      }
+      const maxDescLen = hasChargeColumn ? 35 : 45
+      desc = desc.length > maxDescLen ? desc.substring(0, maxDescLen) + '...' : desc
+      doc.text(desc, colX[1] + 2, rowY + 6.5)
+
+      if (hasChargeColumn) {
+        if (item.chargeToClient) {
+          const chargeText = item.chargeToClient.length > 18
+            ? item.chargeToClient.substring(0, 15) + '...'
+            : item.chargeToClient
+          doc.text(chargeText, colX[2] + 2, rowY + 6.5)
+        }
+        doc.text(formatCurrency(item.amount), colX[3] + 2, rowY + 6.5)
+      } else {
+        doc.text(formatCurrency(item.amount), colX[2] + 2, rowY + 6.5)
+        if (item.attachmentName) {
+          doc.setTextColor(100, 100, 100)
+          const attachName = item.attachmentName.length > 15
+            ? item.attachmentName.substring(0, 12) + '...'
+            : item.attachmentName
+          doc.text(attachName, colX[3] + 2, rowY + 6.5)
+        }
+      }
+    })
+
+    y += validItems.length * 10 + 5
+
+    // Total row
+    doc.setFillColor(249, 255, 133)
+    doc.rect(15, y, pageWidth - 30, 12, 'F')
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 30, 30)
+    doc.text('TOTAAL TE DECLAREREN:', 20, y + 8)
+    doc.setFontSize(14)
+    doc.text(formatCurrency(totalAmount), pageWidth - 20, y + 8, { align: 'right' })
+
+    y += 20
+
+    // === NOTES ===
+    if (note.trim()) {
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      doc.text('Opmerkingen:', 15, y)
+      y += 6
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(80, 80, 80)
+      const noteLines = doc.splitTextToSize(note, pageWidth - 30)
+      doc.text(noteLines, 15, y)
+      y += noteLines.length * 4 + 10
+    }
+
+    // === SIGNATURE AREA ===
+    y = Math.max(y, pageHeight - 70)
+
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.3)
+    doc.line(15, y, pageWidth - 15, y)
+    y += 15
+
+    doc.setFontSize(9)
+    doc.setTextColor(100, 100, 100)
+    doc.text('Handtekening:', 15, y)
+    doc.text('Datum:', pageWidth / 2 + 10, y)
+
+    y += 20
+    doc.setDrawColor(150, 150, 150)
+    doc.line(15, y, pageWidth / 2 - 10, y)
+    doc.line(pageWidth / 2 + 10, y, pageWidth - 15, y)
+
+    // === FOOTER ===
+    if (!isHolding) {
+      doc.setFillColor(80, 80, 80)
+      doc.rect(0, pageHeight - 12, pageWidth, 12, 'F')
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'normal')
+      doc.text(
+        'Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl',
+        pageWidth / 2,
+        pageHeight - 5,
+        { align: 'center' }
+      )
+    }
+
+    // === ADD ATTACHMENTS AS SEPARATE PAGES ===
+    const attachmentsWithData = validItems.filter(item => item.attachmentUrl && item.attachmentUrl.startsWith('data:'))
+
+    for (const item of attachmentsWithData) {
+      if (!item.attachmentUrl) continue
+
+      doc.addPage()
+      let attachY = 20
+
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      doc.text('BIJLAGE', 15, attachY)
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(80, 80, 80)
+      doc.text(`${item.description} - ${formatDate(item.date)} - ${formatCurrency(item.amount)}`, 15, attachY + 8)
+
+      doc.setDrawColor(220, 220, 220)
+      doc.line(15, attachY + 12, pageWidth - 15, attachY + 12)
+      attachY += 25
+
+      if (item.attachmentUrl.startsWith('data:image/')) {
+        try {
+          const maxWidth = pageWidth - 30
+          const maxHeight = pageHeight - attachY - 20
+
+          doc.addImage(
+            item.attachmentUrl,
+            item.attachmentUrl.includes('png') ? 'PNG' : 'JPEG',
+            15,
+            attachY,
+            maxWidth,
+            maxHeight,
+            undefined,
+            'MEDIUM'
+          )
+        } catch (e) {
+          doc.setFontSize(10)
+          doc.setTextColor(150, 50, 50)
+          doc.text(`Kon bijlage niet laden: ${item.attachmentName}`, 15, attachY)
+        }
+      } else if (item.attachmentUrl.startsWith('data:application/pdf')) {
+        doc.setFillColor(248, 249, 250)
+        doc.roundedRect(15, attachY, pageWidth - 30, 30, 3, 3, 'F')
+
+        doc.setFontSize(10)
+        doc.setTextColor(80, 80, 80)
+        doc.text(`PDF Bijlage: ${item.attachmentName}`, 20, attachY + 12)
+        doc.setFontSize(8)
+        doc.text('(PDF bijlages kunnen niet direct in dit document worden weergegeven)', 20, attachY + 22)
+      }
+    }
+
+    const fileName = isHolding
+      ? `Declaratie_${holdingName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+      : `Declaratie_${employeeName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+
+    return { doc, fileName }
+  }
+
+  // Generate and download PDF
   const generatePDF = async () => {
     const saved = await saveDeclaration()
     if (!saved) return
@@ -355,292 +648,58 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     setIsGeneratingPdf(true)
 
     try {
-      // Pre-load the logo image
-      const logoDataUrl = await loadWorkxLogo()
+      const result = await buildPDF()
+      if (!result) return
 
-      const doc = new jsPDF()
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const pageHeight = doc.internal.pageSize.getHeight()
-      const isHolding = activeTab === 'holding'
-
-      let y = 20
-
-      // === HEADER ===
-      if (!isHolding) {
-        // Workx logo for employee declarations (flush top-left)
-        drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
-        y = 30
-      } else {
-        // Holding header (no Workx logo)
-        doc.setFontSize(22)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(30, 30, 30)
-        doc.text(holdingName, 15, y + 5)
-
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(100, 100, 100)
-        doc.text('Declaratieformulier', 15, y + 14)
-        y = 45
-      }
-
-      // Date on the right
-      doc.setFontSize(9)
-      doc.setTextColor(100, 100, 100)
-      doc.text(`Datum: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`, pageWidth - 15, 25, { align: 'right' })
-
-      // === TITLE ===
-      doc.setDrawColor(220, 220, 220)
-      doc.setLineWidth(0.3)
-      doc.line(15, y, pageWidth - 15, y)
-      y += 15
-
-      if (!isHolding) {
-        doc.setFontSize(18)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(30, 30, 30)
-        doc.text('DECLARATIEFORMULIER', 15, y)
-        y += 15
-      }
-
-      // === PERSONAL INFO BOX ===
-      doc.setFillColor(248, 249, 250)
-      doc.roundedRect(15, y, pageWidth - 30, 28, 3, 3, 'F')
-
-      doc.setFontSize(9)
-      doc.setTextColor(100, 100, 100)
-      doc.text('Naam medewerker:', 20, y + 10)
-      doc.text('IBAN:', 20, y + 20)
-
-      doc.setFontSize(10)
-      doc.setTextColor(30, 30, 30)
-      doc.setFont('helvetica', 'bold')
-      doc.text(employeeName, 60, y + 10)
-      doc.setFont('helvetica', 'normal')
-      doc.text(formatIBAN(bankAccount), 60, y + 20)
-
-      y += 40
-
-      // === EXPENSE TABLE ===
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(30, 30, 30)
-      doc.text('Kostenposten', 15, y)
-      y += 8
-
-      // Table header - different columns for Workx vs Holding
-      const hasChargeColumn = !isHolding
-      const colX = hasChargeColumn
-        ? [15, 40, 105, 140, 175] // With charge column
-        : [15, 43, 128, 163]      // Without charge column
-
-      doc.setFillColor(249, 255, 133)
-      doc.rect(15, y, pageWidth - 30, 8, 'F')
-
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(30, 30, 30)
-      doc.text('Datum', colX[0] + 2, y + 5.5)
-      doc.text('Omschrijving', colX[1] + 2, y + 5.5)
-      if (hasChargeColumn) {
-        doc.text('Doorbelasten', colX[2] + 2, y + 5.5)
-        doc.text('Bedrag', colX[3] + 2, y + 5.5)
-      } else {
-        doc.text('Bedrag', colX[2] + 2, y + 5.5)
-        doc.text('Bijlage', colX[3] + 2, y + 5.5)
-      }
-
-      y += 8
-
-      // Table rows
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-
-      const validItems = items.filter(i => i.description && i.date && i.amount > 0)
-      validItems.forEach((item, index) => {
-        const rowY = y + (index * 10)
-
-        // Alternating row background
-        if (index % 2 === 1) {
-          doc.setFillColor(250, 250, 250)
-          doc.rect(15, rowY, pageWidth - 30, 10, 'F')
-        }
-
-        // Row border
-        doc.setDrawColor(230, 230, 230)
-        doc.line(15, rowY + 10, pageWidth - 15, rowY + 10)
-
-        doc.setTextColor(50, 50, 50)
-        doc.text(formatDate(item.date), colX[0] + 2, rowY + 6.5)
-
-        // Description with km info if applicable
-        let desc = item.description
-        if (item.expenseType === 'reiskosten_auto' && item.kilometers) {
-          desc = `${item.description} (${item.kilometers} km)`
-        }
-        const maxDescLen = hasChargeColumn ? 35 : 45
-        desc = desc.length > maxDescLen ? desc.substring(0, maxDescLen) + '...' : desc
-        doc.text(desc, colX[1] + 2, rowY + 6.5)
-
-        if (hasChargeColumn) {
-          // Charge to client column
-          if (item.chargeToClient) {
-            const chargeText = item.chargeToClient.length > 18
-              ? item.chargeToClient.substring(0, 15) + '...'
-              : item.chargeToClient
-            doc.text(chargeText, colX[2] + 2, rowY + 6.5)
-          }
-          doc.text(formatCurrency(item.amount), colX[3] + 2, rowY + 6.5)
-        } else {
-          doc.text(formatCurrency(item.amount), colX[2] + 2, rowY + 6.5)
-          if (item.attachmentName) {
-            doc.setTextColor(100, 100, 100)
-            const attachName = item.attachmentName.length > 15
-              ? item.attachmentName.substring(0, 12) + '...'
-              : item.attachmentName
-            doc.text(attachName, colX[3] + 2, rowY + 6.5)
-          }
-        }
-      })
-
-      y += validItems.length * 10 + 5
-
-      // Total row
-      doc.setFillColor(249, 255, 133)
-      doc.rect(15, y, pageWidth - 30, 12, 'F')
-
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(30, 30, 30)
-      doc.text('TOTAAL TE DECLAREREN:', 20, y + 8)
-      doc.setFontSize(14)
-      doc.text(formatCurrency(totalAmount), pageWidth - 20, y + 8, { align: 'right' })
-
-      y += 20
-
-      // === NOTES ===
-      if (note.trim()) {
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(30, 30, 30)
-        doc.text('Opmerkingen:', 15, y)
-        y += 6
-
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(9)
-        doc.setTextColor(80, 80, 80)
-        const noteLines = doc.splitTextToSize(note, pageWidth - 30)
-        doc.text(noteLines, 15, y)
-        y += noteLines.length * 4 + 10
-      }
-
-      // === SIGNATURE AREA ===
-      y = Math.max(y, pageHeight - 70)
-
-      doc.setDrawColor(200, 200, 200)
-      doc.setLineWidth(0.3)
-      doc.line(15, y, pageWidth - 15, y)
-      y += 15
-
-      doc.setFontSize(9)
-      doc.setTextColor(100, 100, 100)
-      doc.text('Handtekening:', 15, y)
-      doc.text('Datum:', pageWidth / 2 + 10, y)
-
-      y += 20
-      doc.setDrawColor(150, 150, 150)
-      doc.line(15, y, pageWidth / 2 - 10, y)
-      doc.line(pageWidth / 2 + 10, y, pageWidth - 15, y)
-
-      // === FOOTER ===
-      if (!isHolding) {
-        // Footer bar only for Workx declarations
-        doc.setFillColor(80, 80, 80)
-        doc.rect(0, pageHeight - 12, pageWidth, 12, 'F')
-
-        doc.setTextColor(255, 255, 255)
-        doc.setFontSize(7)
-        doc.setFont('helvetica', 'normal')
-        doc.text(
-          'Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl',
-          pageWidth / 2,
-          pageHeight - 5,
-          { align: 'center' }
-        )
-      }
-
-      // === ADD ATTACHMENTS AS SEPARATE PAGES ===
-      const attachmentsWithData = validItems.filter(item => item.attachmentUrl && item.attachmentUrl.startsWith('data:'))
-
-      for (const item of attachmentsWithData) {
-        if (!item.attachmentUrl) continue
-
-        doc.addPage()
-        let attachY = 20
-
-        // Attachment header
-        doc.setFontSize(12)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(30, 30, 30)
-        doc.text('BIJLAGE', 15, attachY)
-
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(80, 80, 80)
-        doc.text(`${item.description} - ${formatDate(item.date)} - ${formatCurrency(item.amount)}`, 15, attachY + 8)
-
-        doc.setDrawColor(220, 220, 220)
-        doc.line(15, attachY + 12, pageWidth - 15, attachY + 12)
-        attachY += 25
-
-        // Check if it's an image
-        if (item.attachmentUrl.startsWith('data:image/')) {
-          try {
-            // Calculate image dimensions to fit page
-            const maxWidth = pageWidth - 30
-            const maxHeight = pageHeight - attachY - 20
-
-            doc.addImage(
-              item.attachmentUrl,
-              item.attachmentUrl.includes('png') ? 'PNG' : 'JPEG',
-              15,
-              attachY,
-              maxWidth,
-              maxHeight,
-              undefined,
-              'MEDIUM'
-            )
-          } catch (e) {
-            doc.setFontSize(10)
-            doc.setTextColor(150, 50, 50)
-            doc.text(`Kon bijlage niet laden: ${item.attachmentName}`, 15, attachY)
-          }
-        } else if (item.attachmentUrl.startsWith('data:application/pdf')) {
-          // For PDFs, show a reference
-          doc.setFillColor(248, 249, 250)
-          doc.roundedRect(15, attachY, pageWidth - 30, 30, 3, 3, 'F')
-
-          doc.setFontSize(10)
-          doc.setTextColor(80, 80, 80)
-          doc.text(`PDF Bijlage: ${item.attachmentName}`, 20, attachY + 12)
-          doc.setFontSize(8)
-          doc.text('(PDF bijlages kunnen niet direct in dit document worden weergegeven)', 20, attachY + 22)
-        }
-      }
-
-      // Download the PDF
-      const fileName = isHolding
-        ? `Declaratie_${holdingName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
-        : `Declaratie_${employeeName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
-
-      doc.save(fileName)
+      result.doc.save(result.fileName)
       toast.success('PDF gedownload')
-
     } catch (error) {
       console.error('Error generating PDF:', error)
       toast.error('Kon PDF niet genereren')
     } finally {
       setIsGeneratingPdf(false)
+    }
+  }
+
+  // Send PDF via email to officemanagement
+  const sendEmail = async () => {
+    const saved = await saveDeclaration()
+    if (!saved) return
+
+    setIsSendingEmail(true)
+
+    try {
+      const result = await buildPDF()
+      if (!result) return
+
+      // Get base64 PDF data from data URI
+      const dataUri = result.doc.output('datauristring')
+      const pdfBase64 = dataUri.split(',')[1]
+
+      const res = await fetch('/api/expenses/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pdfBase64,
+          fileName: result.fileName,
+          employeeName,
+          invoiceNumber: invoiceNumber.trim() || undefined,
+          totalAmount: formatCurrency(totalAmount),
+          holdingName: activeTab === 'holding' ? holdingName.trim() : undefined,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Versturen mislukt')
+      }
+
+      toast.success('Declaratie verstuurd naar officemanagement')
+    } catch (error) {
+      console.error('Error sending email:', error)
+      toast.error(error instanceof Error ? error.message : 'Kon e-mail niet versturen')
+    } finally {
+      setIsSendingEmail(false)
     }
   }
 
@@ -799,6 +858,11 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                               {decl.holdingName}
                             </span>
                           )}
+                          {decl.invoiceNumber && (
+                            <span className="px-2 py-0.5 text-xs bg-workx-lime/10 rounded-full text-workx-lime">
+                              #{decl.invoiceNumber}
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-400">
                           {new Date(decl.createdAt).toLocaleDateString('nl-NL')} • {decl.items.length} post{decl.items.length !== 1 ? 'en' : ''}
@@ -837,7 +901,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
               )}
 
               {/* Personal Info */}
-              <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4">
+              <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Naam medewerker</label>
                   <input
@@ -856,6 +920,16 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                     onChange={(e) => setBankAccount(e.target.value)}
                     className="input-field w-full font-mono text-sm"
                     placeholder="NL00 BANK 0000 0000 00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Factuurnummer (optioneel)</label>
+                  <input
+                    type="text"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                    className="input-field w-full"
+                    placeholder="Bijv. 512"
                   />
                 </div>
               </div>
@@ -1210,7 +1284,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                   <button
                     onClick={generatePDF}
                     disabled={isLoading || isGeneratingPdf || items.length === 0}
-                    className="btn-primary flex items-center justify-center gap-2 disabled:opacity-50 flex-1"
+                    className="btn-secondary flex items-center justify-center gap-2 disabled:opacity-50 flex-1"
                   >
                     {isGeneratingPdf ? (
                       <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
@@ -1220,6 +1294,18 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                     PDF
                   </button>
                 </div>
+                <button
+                  onClick={sendEmail}
+                  disabled={isLoading || isSendingEmail || isGeneratingPdf || items.length === 0}
+                  className="btn-primary flex items-center justify-center gap-2 disabled:opacity-50 w-full"
+                >
+                  {isSendingEmail ? (
+                    <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                  ) : (
+                    <Icons.send size={16} />
+                  )}
+                  Verstuur naar officemanagement
+                </button>
                 <div className="flex gap-2">
                   <button
                     onClick={startNewForm}
@@ -1263,7 +1349,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                   <button
                     onClick={generatePDF}
                     disabled={isLoading || isGeneratingPdf || items.length === 0}
-                    className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                    className="btn-secondary flex items-center gap-2 disabled:opacity-50"
                   >
                     {isGeneratingPdf ? (
                       <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
@@ -1271,6 +1357,18 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                       <Icons.fileText size={16} />
                     )}
                     Download PDF
+                  </button>
+                  <button
+                    onClick={sendEmail}
+                    disabled={isLoading || isSendingEmail || isGeneratingPdf || items.length === 0}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSendingEmail ? (
+                      <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                    ) : (
+                      <Icons.send size={16} />
+                    )}
+                    Verstuur
                   </button>
                 </div>
               </div>

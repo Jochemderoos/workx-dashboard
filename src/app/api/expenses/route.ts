@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { employeeName, bankAccount, items, note, submit, holdingName } = body
+    const { employeeName, bankAccount, items, note, submit, holdingName, invoiceNumber } = body
 
     if (!employeeName || !bankAccount) {
       return NextResponse.json(
@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
         employeeName,
         bankAccount,
         holdingName: holdingName || null,
+        invoiceNumber: invoiceNumber || null,
         totalAmount,
         note,
         status: submit ? 'SUBMITTED' : 'DRAFT',

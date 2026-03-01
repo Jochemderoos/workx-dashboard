@@ -864,6 +864,7 @@ model ExpenseDeclaration {
   employeeName  String
   bankAccount   String   // IBAN
   holdingName   String?  // Naam Holding BV (voor partners)
+  invoiceNumber String?  // Factuurnummer (voor Trifact/Exact)
 
   // Status
   status        String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, PAID
