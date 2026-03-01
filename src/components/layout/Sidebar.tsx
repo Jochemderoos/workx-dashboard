@@ -66,11 +66,19 @@ const manageMenuItems = [
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover' },
 ]
 
+// All menu hrefs for accurate active-state detection
+const allMenuHrefs = [...mainMenuItems, ...partnersMenuItems, ...toolsMenuItems, ...manageMenuItems].map(i => i.href)
+
 function SidebarComponent({ user }: SidebarProps) {
   const pathname = usePathname()
 
   const NavLink = ({ href, icon: Icon, label, iconAnim, badge, isAI }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string; isAI?: boolean }) => {
-    const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'))
+    // Exact match, or prefix match only when no more-specific menu item matches
+    const isActive = pathname === href || (
+      href !== '/dashboard' &&
+      pathname.startsWith(href + '/') &&
+      !allMenuHrefs.some(h => h !== href && h.startsWith(href + '/') && pathname.startsWith(h))
+    )
     const isLustrum = href === '/dashboard/lustrum'
 
     if (isAI) {
