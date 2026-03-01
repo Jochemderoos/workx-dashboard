@@ -70,7 +70,7 @@ function SidebarComponent({ user }: SidebarProps) {
   const pathname = usePathname()
 
   const NavLink = ({ href, icon: Icon, label, iconAnim, badge, isAI }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string; isAI?: boolean }) => {
-    const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+    const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'))
     const isLustrum = href === '/dashboard/lustrum'
 
     if (isAI) {
