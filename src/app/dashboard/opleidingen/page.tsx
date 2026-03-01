@@ -902,7 +902,7 @@ export default function OpleidingenPage() {
           ${cert.certificateUrl ? `
           <div class="original-cert">
             <p style="color: #888; margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Origineel certificaat</p>
-            <img src="${cert.certificateUrl}" alt="Origineel certificaat" />
+            ${cert.certificateUrl.startsWith('data:application/pdf') ? `<iframe src="${cert.certificateUrl}" style="width:100%;height:600px;border:none;border-radius:8px;" />` : `<img src="${cert.certificateUrl}" alt="Origineel certificaat" />`}
           </div>
           ` : ''}
 
@@ -990,7 +990,7 @@ export default function OpleidingenPage() {
           ${cert.certificateUrl ? `
           <div class="original">
             <p style="color: #888; margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Origineel certificaat</p>
-            <img src="${cert.certificateUrl}" alt="Origineel certificaat" />
+            ${cert.certificateUrl.startsWith('data:application/pdf') ? `<iframe src="${cert.certificateUrl}" style="width:100%;height:600px;border:none;border-radius:8px;" />` : `<img src="${cert.certificateUrl}" alt="Origineel certificaat" />`}
           </div>
           ` : ''}
           <div class="cert-footer">
@@ -1466,9 +1466,9 @@ export default function OpleidingenPage() {
                 ) : (
                   <div>
                     <Icons.upload className="mx-auto text-gray-500 mb-3" size={32} />
-                    <p className="text-gray-400">Klik om certificaat te uploaden</p>
+                    <p className="text-gray-400">Klik om certificaat te uploaden (optioneel)</p>
                     <p className="text-sm text-gray-500 mt-1">
-                      Het certificaat wordt automatisch geanalyseerd
+                      Upload een afbeelding of PDF — wordt bewaard en automatisch geanalyseerd
                     </p>
                   </div>
                 )}
@@ -1599,15 +1599,20 @@ export default function OpleidingenPage() {
                           <Icons.check size={12} className="text-workx-dark" />
                         )}
                       </div>
-                      <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
+                      <div className="relative w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
                         <Icons.award className="text-green-400" size={20} />
+                        {cert.certificateUrl && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center" title="Bijlage">
+                            <Icons.file size={8} className="text-white" />
+                          </div>
+                        )}
                       </div>
                       <div>
                         <h3 className="font-medium text-white">{cert.trainingName}</h3>
                         {cert.provider && (
                           <p className="text-sm text-gray-400">{cert.provider}</p>
                         )}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
                           <span className="flex items-center gap-1">
                             <Icons.calendar size={12} />
                             {new Date(cert.completedDate).toLocaleDateString('nl-NL', {
@@ -1619,6 +1624,27 @@ export default function OpleidingenPage() {
                           <span className="px-2 py-0.5 bg-green-500/10 text-green-400 rounded">
                             {cert.points} {cert.points === 1 ? 'punt' : 'punten'}
                           </span>
+                          {cert.certificateUrl && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                // Open base64 in new tab
+                                const w = window.open('')
+                                if (w) {
+                                  if (cert.certificateUrl!.startsWith('data:application/pdf')) {
+                                    w.document.write(`<iframe src="${cert.certificateUrl}" style="width:100%;height:100%;border:none;position:absolute;top:0;left:0;" /></iframe>`)
+                                  } else {
+                                    w.document.write(`<html><head><title>${cert.trainingName}</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#111;}</style></head><body><img src="${cert.certificateUrl}" style="max-width:100%;max-height:100vh;" /></body></html>`)
+                                  }
+                                  w.document.title = cert.trainingName
+                                }
+                              }}
+                              className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition-colors"
+                            >
+                              <Icons.eye size={11} />
+                              Bekijk origineel
+                            </button>
+                          )}
                         </div>
                         {cert.note && (
                           <p className="text-xs text-gray-500 mt-2">{cert.note}</p>
@@ -1626,6 +1652,23 @@ export default function OpleidingenPage() {
                       </div>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      {cert.certificateUrl && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Download original file
+                            const link = document.createElement('a')
+                            link.href = cert.certificateUrl!
+                            const isPdf = cert.certificateUrl!.startsWith('data:application/pdf')
+                            link.download = `${cert.trainingName.replace(/[^a-zA-Z0-9 ]/g, '')}.${isPdf ? 'pdf' : 'png'}`
+                            link.click()
+                          }}
+                          className="p-2 text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                          title="Download origineel"
+                        >
+                          <Icons.download size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -1634,7 +1677,7 @@ export default function OpleidingenPage() {
                         className="p-2 text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 rounded-lg transition-colors"
                         title="Exporteer naar PDF"
                       >
-                        <Icons.download size={16} />
+                        <Icons.printer size={16} />
                       </button>
                       <button
                         onClick={(e) => {
