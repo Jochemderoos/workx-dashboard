@@ -131,8 +131,8 @@ export default function PartnersWerkPage() {
     const now = new Date()
     const dow = now.getDay()
     const hr = now.getHours()
-    // Weekend columns only visible on Monday before 20:00, and only for the current view (no history)
-    const showWeekend = dow === 1 && hr < 20 && historyOffset === 0
+    // Weekend columns visible from Sunday 18:00 until Monday 20:00, only for current view (no history)
+    const showWeekend = ((dow === 0 && hr >= 18) || (dow === 1 && hr < 20)) && historyOffset === 0
 
     if (!showWeekend) return workdaysToShow
 
