@@ -3,10 +3,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { withRateLimit } from '@/lib/rate-limiter'
 
 // Only ADMIN and PARTNER can reset passwords
 export async function POST(req: NextRequest) {
   try {
+    const limited = withRateLimit(req, { maxRequests: 5, windowMs: 60000, keyPrefix: 'reset-pw' })
+    if (limited) return limited
+
     const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })

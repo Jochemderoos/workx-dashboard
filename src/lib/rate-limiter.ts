@@ -1,3 +1,5 @@
+import { NextResponse } from 'next/server'
+
 /**
  * Simple in-memory rate limiter for API endpoints
  * Note: This is per-instance, so in a serverless environment
@@ -102,6 +104,29 @@ export function getClientIp(req: Request): string {
 
   // Fallback - in production this should be more robust
   return 'unknown'
+}
+
+/**
+ * Middleware-style rate limit check for API routes.
+ * Returns a NextResponse (429) if rate limited, or null if allowed.
+ */
+export function withRateLimit(
+  req: Request,
+  options?: Partial<RateLimitOptions>
+): NextResponse | null {
+  const ip = getClientIp(req)
+  const result = checkRateLimit(ip, {
+    maxRequests: options?.maxRequests ?? 60,
+    windowMs: options?.windowMs ?? 60 * 1000,
+    keyPrefix: options?.keyPrefix ?? 'api',
+  })
+  if (!result.success) {
+    return NextResponse.json(
+      { error: 'Te veel verzoeken, probeer het later opnieuw' },
+      { status: 429, headers: { 'Retry-After': String(result.retryAfter) } }
+    )
+  }
+  return null
 }
 
 // Pre-configured rate limiters for common use cases

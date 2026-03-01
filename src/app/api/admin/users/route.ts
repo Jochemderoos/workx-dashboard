@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { logAuditAction, getIpFromRequest, getUserAgentFromRequest } from '@/lib/audit-log'
+import { withRateLimit } from '@/lib/rate-limiter'
 
 // GET all users (for admin panel)
 export async function GET(req: NextRequest) {
@@ -52,6 +53,9 @@ export async function GET(req: NextRequest) {
 // POST create new user
 export async function POST(req: NextRequest) {
   try {
+    const limited = withRateLimit(req, { maxRequests: 10, windowMs: 60000, keyPrefix: 'admin-users' })
+    if (limited) return limited
+
     const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })

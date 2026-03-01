@@ -112,25 +112,33 @@ export async function GET(req: NextRequest) {
   const sourceId = req.nextUrl.searchParams.get('sourceId')
 
   // Get stats per source
-  const rows = await prisma.$queryRawUnsafe(`
-    SELECT
-      s.id,
-      s.name,
-      COUNT(sc.id)::int as "totalChunks",
-      COUNT(sc.embedding)::int as "withEmbedding"
-    FROM "AISource" s
-    LEFT JOIN "SourceChunk" sc ON sc."sourceId" = s.id
-    WHERE s."isActive" = true
-    ${sourceId ? `AND s.id = '${sourceId}'` : ''}
-    GROUP BY s.id, s.name
-    HAVING COUNT(sc.id) > 0
-    ORDER BY s.name
-  `) as Array<{
-    id: string
-    name: string
-    totalChunks: number
-    withEmbedding: number
-  }>
+  const rows = sourceId
+    ? await prisma.$queryRawUnsafe(`
+        SELECT
+          s.id,
+          s.name,
+          COUNT(sc.id)::int as "totalChunks",
+          COUNT(sc.embedding)::int as "withEmbedding"
+        FROM "AISource" s
+        LEFT JOIN "SourceChunk" sc ON sc."sourceId" = s.id
+        WHERE s."isActive" = true AND s.id = $1
+        GROUP BY s.id, s.name
+        HAVING COUNT(sc.id) > 0
+        ORDER BY s.name
+      `, sourceId) as Array<{ id: string; name: string; totalChunks: number; withEmbedding: number }>
+    : await prisma.$queryRawUnsafe(`
+        SELECT
+          s.id,
+          s.name,
+          COUNT(sc.id)::int as "totalChunks",
+          COUNT(sc.embedding)::int as "withEmbedding"
+        FROM "AISource" s
+        LEFT JOIN "SourceChunk" sc ON sc."sourceId" = s.id
+        WHERE s."isActive" = true
+        GROUP BY s.id, s.name
+        HAVING COUNT(sc.id) > 0
+        ORDER BY s.name
+      `) as Array<{ id: string; name: string; totalChunks: number; withEmbedding: number }>
 
   return NextResponse.json({
     sources: rows.map(r => ({

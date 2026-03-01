@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { withRateLimit } from '@/lib/rate-limiter'
 
 // GET - Alle actieve handovers ophalen (met cases)
 export async function GET(req: NextRequest) {
@@ -40,6 +41,9 @@ export async function GET(req: NextRequest) {
 // POST - Nieuw overdrachtsdocument aanmaken
 export async function POST(req: NextRequest) {
   try {
+    const limited = withRateLimit(req, { maxRequests: 20, windowMs: 60000, keyPrefix: 'handovers' })
+    if (limited) return limited
+
     const session = await getServerSession(authOptions)
     if (!session?.user) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })

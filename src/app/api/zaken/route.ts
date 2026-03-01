@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateAssignmentQueue, offerToNextInQueue } from '@/lib/zaken-utils'
+import { withRateLimit } from '@/lib/rate-limiter'
 
 // GET - Fetch zaken (filtered by role)
 export async function GET(req: NextRequest) {
@@ -50,6 +51,9 @@ export async function GET(req: NextRequest) {
 // POST - Create new zaak (only Partners)
 export async function POST(req: NextRequest) {
   try {
+    const limited = withRateLimit(req, { maxRequests: 10, windowMs: 60000, keyPrefix: 'zaken' })
+    if (limited) return limited
+
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })

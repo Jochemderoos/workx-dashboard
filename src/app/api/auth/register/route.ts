@@ -1,15 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { rateLimiters, getClientIp } from '@/lib/rate-limiter'
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting — 3 registraties per minuut per IP
+    const ip = getClientIp(req)
+    const rateLimit = rateLimiters.auth(ip)
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Te veel verzoeken, probeer het later opnieuw' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter) } }
+      )
+    }
+
     const { name, email, password } = await req.json()
 
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: 'Alle velden zijn verplicht' },
         { status: 400 }
+      )
+    }
+
+    // Alleen @workxadvocaten.nl emailadressen toegestaan
+    if (!email.endsWith('@workxadvocaten.nl')) {
+      return NextResponse.json(
+        { error: 'Alleen @workxadvocaten.nl emailadressen zijn toegestaan' },
+        { status: 403 }
       )
     }
 
