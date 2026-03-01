@@ -712,11 +712,11 @@ export default function TeamPage() {
                 {/* Row 2: Salary - only for current user or manager */}
                 {showFullInfo && (
                   <div className="pt-4 border-t border-gray-700">
-                    <span className="text-gray-400 text-sm block mb-1">Bruto Salaris</span>
+                    <span className="text-gray-400 text-sm block mb-1">{isHourlyWage ? 'Uurvergoeding' : 'Bruto Salaris'}</span>
                     <span className="text-white font-bold text-xl">
                       {employee.compensation?.salary ? formatCurrency(employee.compensation.salary) : (salaryScale ? formatCurrency(salaryScale.salary) : '-')}
                     </span>
-                    <span className="text-gray-500 text-sm ml-1">/mnd</span>
+                    <span className="text-gray-500 text-sm ml-1">{isHourlyWage ? '/uur' : '/mnd'}</span>
                   </div>
                 )}
               </div>
