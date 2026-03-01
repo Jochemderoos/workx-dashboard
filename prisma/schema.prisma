@@ -124,6 +124,9 @@ model User {
   createdActivities     ExpenseActivity[] @relation("CreatedActivities")
   uploadedReceipts      Receipt[]         @relation("UploadedReceipts")
 
+  // Overdracht (Waarneming)
+  handovers             Handover[]        @relation("UserHandovers")
+
   @@index([isActive])
   @@index([role])
 }
@@ -1487,4 +1490,39 @@ model Receipt {
 
   @@index([activityId])
   @@index([uploadedById])
+}
+
+// ==================== OVERDRACHT (WAARNEMING) ====================
+
+// Overdrachtsdocument per persoon/periode
+model Handover {
+  id          String   @id @default(cuid())
+  userId      String
+  periodStart DateTime
+  periodEnd   DateTime
+  note        String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation("UserHandovers", fields: [userId], references: [id])
+  cases       HandoverCase[]
+
+  @@index([userId])
+  @@index([periodEnd])
+}
+
+// Individuele zaak binnen een overdrachtsdocument
+model HandoverCase {
+  id              String   @id @default(cuid())
+  handoverId      String
+  dossiernaam     String
+  contactpersoon  String?
+  beschrijving    String?  @db.Text
+  waarnemers      String   // Komma-gescheiden namen
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  handover        Handover @relation(fields: [handoverId], references: [id], onDelete: Cascade)
+
+  @@index([handoverId])
 }
