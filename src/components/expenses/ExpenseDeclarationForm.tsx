@@ -41,7 +41,6 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
-  const [isSendingEmail, setIsSendingEmail] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
 
   // Check if user is partner or admin
@@ -661,47 +660,6 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     }
   }
 
-  // Send PDF via email to officemanagement
-  const sendEmail = async () => {
-    const saved = await saveDeclaration()
-    if (!saved) return
-
-    setIsSendingEmail(true)
-
-    try {
-      const result = await buildPDF()
-      if (!result) return
-
-      // Get base64 PDF data from data URI
-      const dataUri = result.doc.output('datauristring')
-      const pdfBase64 = dataUri.split(',')[1]
-
-      const res = await fetch('/api/expenses/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pdfBase64,
-          fileName: result.fileName,
-          employeeName,
-          invoiceNumber: invoiceNumber.trim() || undefined,
-          totalAmount: formatCurrency(totalAmount),
-          holdingName: activeTab === 'holding' ? holdingName.trim() : undefined,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Versturen mislukt')
-      }
-
-      toast.success('Declaratie verstuurd naar officemanagement')
-    } catch (error) {
-      console.error('Error sending email:', error)
-      toast.error(error instanceof Error ? error.message : 'Kon e-mail niet versturen')
-    } finally {
-      setIsSendingEmail(false)
-    }
-  }
 
   return (
     <div
@@ -1294,18 +1252,6 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                     PDF
                   </button>
                 </div>
-                <button
-                  onClick={sendEmail}
-                  disabled={isLoading || isSendingEmail || isGeneratingPdf || items.length === 0}
-                  className="btn-primary flex items-center justify-center gap-2 disabled:opacity-50 w-full"
-                >
-                  {isSendingEmail ? (
-                    <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
-                  ) : (
-                    <Icons.send size={16} />
-                  )}
-                  Verstuur naar officemanagement
-                </button>
                 <div className="flex gap-2">
                   <button
                     onClick={startNewForm}
@@ -1357,18 +1303,6 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                       <Icons.fileText size={16} />
                     )}
                     Download PDF
-                  </button>
-                  <button
-                    onClick={sendEmail}
-                    disabled={isLoading || isSendingEmail || isGeneratingPdf || items.length === 0}
-                    className="btn-primary flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {isSendingEmail ? (
-                      <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
-                    ) : (
-                      <Icons.send size={16} />
-                    )}
-                    Verstuur
                   </button>
                 </div>
               </div>
