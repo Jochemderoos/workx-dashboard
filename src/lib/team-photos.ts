@@ -21,6 +21,9 @@ export const TEAM_PHOTOS: Record<string, string> = {
   'Barbara Rip': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/10/Barbara.jpg',
   'Heleen Pesser': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/10/Heleen.jpg',
 
+  // Externe advocaten
+  'Lodewijk van Thiel': 'https://lodewijkvanthiel.nl/wp-content/uploads/2019/03/Lodewijk-Foto_v2.jpg',
+
   // Kantoor
   'Hanna Blaauboer': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Hanna.jpg',
   'Lotte van Sint Truiden': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/01/Lotte.jpg',
@@ -67,6 +70,7 @@ export const ADVOCATEN = [
   'Heleen Pesser',
   'Barbara Rip',
   'Julia Groen',
+  'Lodewijk van Thiel',
 ]
 
 // Alle teamleden
@@ -77,7 +81,7 @@ export const ALL_TEAM_MEMBERS = [
   'Maaike de Jong',
   'Bas den Ridder',
   'Juliette Niersman',
-  // Advocaten
+  // Advocaten (incl. externe)
   ...ADVOCATEN,
   // Kantoor
   'Hanna Blaauboer',
