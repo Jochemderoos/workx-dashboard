@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Icons } from '@/components/ui/Icons'
+import DatePicker from '@/components/ui/DatePicker'
+import ExpandableText from '@/components/ui/ExpandableText'
 import { getPhotoUrl, PARTNERS, ADVOCATEN } from '@/lib/team-photos'
 
 // Team members voor waarnemer dropdown (exclusief Hanna en Lotte)
@@ -251,15 +253,17 @@ function NewDocumentModal({
 }) {
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string>('')
-  const [periodStart, setPeriodStart] = useState('')
-  const [periodEnd, setPeriodEnd] = useState('')
+  const [periodStartDate, setPeriodStartDate] = useState<Date | null>(null)
+  const [periodEndDate, setPeriodEndDate] = useState<Date | null>(null)
   const [note, setNote] = useState('')
   const [showPersonDropdown, setShowPersonDropdown] = useState(false)
   const personBtnRef = useRef<HTMLButtonElement>(null)
 
+  const formatToISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onCancel}>
-      <div className="bg-workx-dark border border-white/10 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 pt-[12vh] overflow-y-auto" onClick={onCancel}>
+      <div className="bg-workx-dark border border-white/10 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl mb-8" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-semibold text-white mb-4">Nieuw overdrachtsdocument</h3>
 
         <div className="space-y-4">
@@ -298,20 +302,20 @@ function NewDocumentModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm text-gray-400 mb-1.5">Van</label>
-              <input
-                type="date"
-                value={periodStart}
-                onChange={e => setPeriodStart(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-workx-lime/50 [color-scheme:dark]"
+              <DatePicker
+                selected={periodStartDate}
+                onChange={setPeriodStartDate}
+                placeholder="Startdatum..."
+                maxDate={periodEndDate || undefined}
               />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1.5">Tot</label>
-              <input
-                type="date"
-                value={periodEnd}
-                onChange={e => setPeriodEnd(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-workx-lime/50 [color-scheme:dark]"
+              <DatePicker
+                selected={periodEndDate}
+                onChange={setPeriodEndDate}
+                placeholder="Einddatum..."
+                minDate={periodStartDate || undefined}
               />
             </div>
           </div>
@@ -335,11 +339,11 @@ function NewDocumentModal({
           </button>
           <button
             onClick={() => {
-              if (selectedUserId && periodStart && periodEnd) {
-                onSave({ userId: selectedUserId, periodStart, periodEnd, note })
+              if (selectedUserId && periodStartDate && periodEndDate) {
+                onSave({ userId: selectedUserId, periodStart: formatToISO(periodStartDate), periodEnd: formatToISO(periodEndDate), note })
               }
             }}
-            disabled={!selectedUserId || !periodStart || !periodEnd}
+            disabled={!selectedUserId || !periodStartDate || !periodEndDate}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Icons.plus size={14} />
@@ -394,17 +398,11 @@ function CaseRow({
       />
 
       {/* Beschrijving */}
-      <textarea
-        value={caseData.beschrijving || ''}
-        onChange={e => onUpdate({ ...caseData, beschrijving: e.target.value || null })}
-        rows={1}
-        className="bg-transparent text-sm text-gray-400 border-b border-transparent hover:border-white/10 focus:border-workx-lime/50 focus:outline-none py-0.5 w-full resize-none"
+      <ExpandableText
+        text={caseData.beschrijving}
+        onChange={val => onUpdate({ ...caseData, beschrijving: val || null })}
         placeholder="Status / beschrijving"
-        onInput={(e) => {
-          const t = e.target as HTMLTextAreaElement
-          t.style.height = 'auto'
-          t.style.height = t.scrollHeight + 'px'
-        }}
+        maxLines={2}
       />
 
       {/* Waarnemer(s) */}
@@ -716,7 +714,12 @@ export default function OverdrachtPage() {
                     <span className="text-xs text-gray-500">Contact: {obs.contactpersoon}</span>
                   )}
                   {obs.beschrijving && (
-                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{obs.beschrijving}</p>
+                    <ExpandableText
+                      text={obs.beschrijving}
+                      maxLines={2}
+                      readOnly
+                      className="mt-0.5 [&_p]:!text-xs [&_p]:!text-gray-400"
+                    />
                   )}
                 </div>
               </div>
