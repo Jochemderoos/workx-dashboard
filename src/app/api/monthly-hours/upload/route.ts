@@ -16,6 +16,7 @@ const NAME_CORRECTIONS: Record<string, string> = {
   'Lotte van Sint': 'Lotte van Sint Truiden',
   'Wies van': 'Wies van Pesch',
   'Erika van': 'Erika van Zadelhof',
+  'Lodewijk van': 'Lodewijk van Thiel',
 }
 
 function normalizeName(name: string): string {
