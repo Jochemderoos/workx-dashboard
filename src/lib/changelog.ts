@@ -1,4 +1,4 @@
-export const CHANGELOG_VERSION = '2026-02-09'
+export const CHANGELOG_VERSION = '2026-03-01'
 
 export interface ChangelogFeature {
   icon: string
@@ -19,34 +19,34 @@ export interface ChangelogEntry {
 }
 
 export const CURRENT_CHANGELOG: ChangelogEntry = {
-  version: '2026-02-09',
-  date: 'Feb 2026',
+  version: '2026-03-01',
+  date: 'Maart 2026',
   features: [
     {
-      icon: 'sparkles',
-      title: 'AI Assistent',
-      description: 'Stel juridische vragen, analyseer documenten en zoek jurisprudentie met Claude AI.',
-      href: '/dashboard/ai',
-      color: 'from-violet-500/20 to-blue-500/20',
-      iconColor: 'text-violet-400',
-      iconBg: 'bg-violet-500/10',
-      isNew: true,
-    },
-    {
       icon: 'file',
-      title: 'Pitch Maker',
-      description: 'Genereer professionele team pitches en profielen als PDF.',
-      href: '/dashboard/pitch',
-      color: 'from-blue-500/20 to-cyan-500/20',
-      iconColor: 'text-blue-400',
-      iconBg: 'bg-blue-500/10',
+      title: 'Overdracht',
+      description: 'Overdrachtsdocumenten bij afwezigheid: waarnemers toewijzen per zaak.',
+      href: '/dashboard/werk/overdracht',
+      color: 'from-purple-500/20 to-blue-500/20',
+      iconColor: 'text-purple-400',
+      iconBg: 'bg-purple-500/10',
       isNew: true,
     },
     {
-      icon: 'printer',
-      title: 'Workxflow',
-      description: 'Print dagvaardingen en producties klaar voor de rechtbank.',
-      href: '/dashboard/workxflow',
+      icon: 'star',
+      title: 'Certificaten',
+      description: 'PO-punten en opleidingscertificaten bijhouden per medewerker.',
+      href: '/dashboard/opleidingen',
+      color: 'from-amber-500/20 to-orange-500/20',
+      iconColor: 'text-amber-400',
+      iconBg: 'bg-amber-500/10',
+      isNew: true,
+    },
+    {
+      icon: 'briefcase',
+      title: 'Ontwikkelplannen',
+      description: 'Persoonlijke ontwikkelplannen met doelen en evaluaties.',
+      href: '/dashboard/ontwikkelplannen',
       color: 'from-emerald-500/20 to-green-500/20',
       iconColor: 'text-emerald-400',
       iconBg: 'bg-emerald-500/10',
@@ -54,9 +54,8 @@ export const CURRENT_CHANGELOG: ChangelogEntry = {
     },
   ],
   improvements: [
-    'AI Assistent nu ook beschikbaar op mobiel',
-    'Anonimiseer-optie voor persoonsgegevens in AI chat',
-    'Appjeplekje slaat weekenden automatisch over',
-    'Nieuwsbrief-herinneringen op het dashboard',
+    'Bonnetjes & declaraties: foto\'s uploaden per activiteit',
+    'Weekoverzicht team met staafdiagram en kleurcodering',
+    'Sidebar highlight werkt correct bij geneste pagina\'s',
   ],
 }
