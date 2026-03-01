@@ -240,10 +240,10 @@ export default function PartnersWerkPage() {
 
     const weeks: { label: string; totalHours: number; personCount: number }[] = []
 
-    // 7 periodes van 7 dagen, tellend vanaf gisteren terug
+    // 7 periodes van 7 dagen, tellend vanaf vandaag terug
     for (let w = 0; w < 7; w++) {
       const periodEnd = new Date(today)
-      periodEnd.setDate(periodEnd.getDate() - 1 - (w * 7)) // gisteren, 8 dagen geleden, etc.
+      periodEnd.setDate(periodEnd.getDate() - (w * 7)) // vandaag, 7 dagen geleden, etc.
       const periodStart = new Date(periodEnd)
       periodStart.setDate(periodStart.getDate() - 6) // 7 dagen eerder
 
