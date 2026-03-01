@@ -21,45 +21,62 @@ function HoverPreview({
   text: string
   anchorRef: React.RefObject<HTMLElement | null>
 }) {
-  const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0 })
+  const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0, position: 'fixed', zIndex: 9999 })
   const cardRef = useRef<HTMLDivElement>(null)
 
+  // Two-pass positioning: render offscreen first, then measure and position
   useEffect(() => {
-    if (!anchorRef.current) return
-    const rect = anchorRef.current.getBoundingClientRect()
-    const cardWidth = Math.min(440, window.innerWidth - 32)
+    const frame = requestAnimationFrame(() => {
+      if (!anchorRef.current || !cardRef.current) return
+      const rect = anchorRef.current.getBoundingClientRect()
+      const cardRect = cardRef.current.getBoundingClientRect()
+      const cardWidth = Math.min(440, window.innerWidth - 32)
+      const cardHeight = cardRect.height
+      const viewH = window.innerHeight
+      const margin = 12
 
-    // Position above by default, below if not enough space
-    let top = rect.top - 8
-    let transformOrigin = 'bottom left'
-    let translateY = '-100%'
+      // Decide vertical placement: prefer above, fall back to below, constrain to viewport
+      const spaceAbove = rect.top - margin
+      const spaceBelow = viewH - rect.bottom - margin
+      let top: number
 
-    // If card would go off the top, position below
-    if (rect.top < 240) {
-      top = rect.bottom + 8
-      transformOrigin = 'top left'
-      translateY = '0'
-    }
+      if (spaceAbove >= cardHeight) {
+        // Fits above
+        top = rect.top - cardHeight - 8
+      } else if (spaceBelow >= cardHeight) {
+        // Fits below
+        top = rect.bottom + 8
+      } else {
+        // Doesn't fit either way — pin to whichever side has more room, card will scroll
+        top = spaceAbove > spaceBelow ? margin : rect.bottom + 8
+      }
 
-    // Horizontal: align left with anchor, but keep in viewport
-    let left = rect.left
-    if (left + cardWidth > window.innerWidth - 16) {
-      left = window.innerWidth - cardWidth - 16
-    }
-    if (left < 16) left = 16
+      // Clamp to viewport
+      if (top + cardHeight > viewH - margin) {
+        top = viewH - cardHeight - margin
+      }
+      if (top < margin) top = margin
 
-    setStyle({
-      position: 'fixed',
-      top,
-      left,
-      width: cardWidth,
-      transform: `translateY(${translateY})`,
-      transformOrigin,
-      opacity: 1,
-      zIndex: 9999,
+      // Horizontal
+      let left = rect.left
+      if (left + cardWidth > window.innerWidth - 16) {
+        left = window.innerWidth - cardWidth - 16
+      }
+      if (left < 16) left = 16
+
+      setStyle({
+        position: 'fixed',
+        top,
+        left,
+        width: cardWidth,
+        opacity: 1,
+        zIndex: 9999,
+      })
     })
+    return () => cancelAnimationFrame(frame)
   }, [anchorRef])
 
+  // Max height = 60vh so the card is always scrollable within the viewport
   return createPortal(
     <div
       ref={cardRef}
