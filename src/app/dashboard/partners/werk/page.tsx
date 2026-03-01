@@ -228,77 +228,66 @@ export default function PartnersWerkPage() {
     setEditingWorkload(null)
   }
 
-  // Weekly totals for the last 7 weeks (visible Sunday 20:00 - Monday 20:00)
-  // Week 0 = afgelopen week, weeks 1-6 = vergelijkingsweken
+  // Rolling 7-day team totals — altijd zichtbaar, doorlopend venster
+  // "Afgelopen week" = gisteren t/m 7 dagen terug, daarna steeds 7-daagse blokken
   const weeklyReport = useMemo(() => {
-    const now = new Date()
-    const dow = now.getDay() // 0=Sun, 1=Mon...
-    const hr = now.getHours()
-    // TODO: Tijdscheck terugzetten na testen
-    // const isVisible = (dow === 0 && hr >= 20) || (dow === 1 && hr < 20)
-    const isVisible = true
+    if (historyOffset !== 0) return null
 
-    if (!isVisible || historyOffset !== 0) return null
-
-    // Find the most recent Monday
-    const thisMonday = new Date(now)
-    thisMonday.setHours(0, 0, 0, 0)
-    if (dow === 0) thisMonday.setDate(thisMonday.getDate() + 1)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
 
     const months = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
 
-    const weeks: { label: string; shortLabel: string; totalHours: number; personCount: number }[] = []
+    const weeks: { label: string; totalHours: number; personCount: number }[] = []
 
-    // Go back 7 weeks (week 1 = afgelopen week, week 2-7 = ervoor)
-    for (let w = 1; w <= 7; w++) {
-      const weekStart = new Date(thisMonday)
-      weekStart.setDate(weekStart.getDate() - (w * 7))
-      const weekEnd = new Date(weekStart)
-      weekEnd.setDate(weekEnd.getDate() + 6)
+    // 7 periodes van 7 dagen, tellend vanaf gisteren terug
+    for (let w = 0; w < 7; w++) {
+      const periodEnd = new Date(today)
+      periodEnd.setDate(periodEnd.getDate() - 1 - (w * 7)) // gisteren, 8 dagen geleden, etc.
+      const periodStart = new Date(periodEnd)
+      periodStart.setDate(periodStart.getDate() - 6) // 7 dagen eerder
 
-      const startDay = weekStart.getDate()
-      const endDay = weekEnd.getDate()
-      const startMonth = months[weekStart.getMonth()]
-      const endMonth = months[weekEnd.getMonth()]
+      const startDay = periodStart.getDate()
+      const endDay = periodEnd.getDate()
+      const startMonth = months[periodStart.getMonth()]
+      const endMonth = months[periodEnd.getMonth()]
       const label = startMonth === endMonth
         ? `${startDay} - ${endDay} ${endMonth}`
         : `${startDay} ${startMonth} - ${endDay} ${endMonth}`
-      const shortLabel = `${startDay} ${startMonth}`
 
       let totalHours = 0
       const personsSet = new Set<string>()
 
+      const startStr = formatDateForAPI(periodStart)
+      const endStr = formatDateForAPI(periodEnd)
+
       for (const entry of workloadEntries) {
         if (!entry.hours) continue
-        const startStr = formatDateForAPI(weekStart)
-        const endStr = formatDateForAPI(weekEnd)
         if (entry.date >= startStr && entry.date <= endStr) {
           totalHours += entry.hours
           personsSet.add(entry.personName)
         }
       }
 
-      weeks.push({ label, shortLabel, totalHours, personCount: personsSet.size })
+      weeks.push({ label, totalHours, personCount: personsSet.size })
     }
 
-    // Bereken statistieken
+    // Statistieken
     const currentWeek = weeks[0]
     const compareWeeks = weeks.slice(1).filter(w => w.totalHours > 0)
     const avg = compareWeeks.length > 0
       ? compareWeeks.reduce((sum, w) => sum + w.totalHours, 0) / compareWeeks.length
       : 0
     const prevWeek = weeks[1]
-    const maxWeek = [...weeks].sort((a, b) => b.totalHours - a.totalHours)[0]
-    const minWeek = [...weeks].filter(w => w.totalHours > 0).sort((a, b) => a.totalHours - b.totalHours)[0]
+    const allWithHours = weeks.filter(w => w.totalHours > 0)
+    const maxWeek = allWithHours.length > 0 ? [...allWithHours].sort((a, b) => b.totalHours - a.totalHours)[0] : null
+    const minWeek = allWithHours.length > 0 ? [...allWithHours].sort((a, b) => a.totalHours - b.totalHours)[0] : null
 
-    // Percentage t.o.v. gemiddelde
     const vsAvgPct = avg > 0 ? ((currentWeek.totalHours - avg) / avg) * 100 : 0
-    // Percentage t.o.v. vorige week
     const vsPrevPct = prevWeek.totalHours > 0
       ? ((currentWeek.totalHours - prevWeek.totalHours) / prevWeek.totalHours) * 100
       : 0
 
-    // Kleur op basis van verhouding tot gemiddelde
     const ratio = avg > 0 ? currentWeek.totalHours / avg : 1
     let color: 'green' | 'lime' | 'orange' | 'red'
     let colorLabel: string
@@ -307,18 +296,7 @@ export default function PartnersWerkPage() {
     else if (ratio <= 1.30) { color = 'orange'; colorLabel = 'Drukke week' }
     else { color = 'red'; colorLabel = 'Heel drukke week' }
 
-    return {
-      weeks,
-      currentWeek,
-      avg,
-      prevWeek,
-      maxWeek,
-      minWeek,
-      vsAvgPct,
-      vsPrevPct,
-      color,
-      colorLabel,
-    }
+    return { weeks, currentWeek, avg, prevWeek, maxWeek, minWeek, vsAvgPct, vsPrevPct, color, colorLabel }
   }, [workloadEntries, historyOffset])
 
   // Count workload levels for today
@@ -691,221 +669,59 @@ export default function PartnersWerkPage() {
             </Popover.Root>
           </div>
 
-          {/* Weekly Summary Card - visible Sunday 20:00 to Monday 20:00 */}
+          {/* Weekly Summary Card — compact overview */}
           {weeklyReport && weeklyReport.currentWeek.totalHours > 0 && (() => {
-            const { weeks, currentWeek, avg, prevWeek, maxWeek, minWeek, vsAvgPct, vsPrevPct, color, colorLabel } = weeklyReport
-            const maxHours = Math.max(...weeks.map(w => w.totalHours))
+            const { currentWeek, avg, prevWeek, vsAvgPct, vsPrevPct, color, colorLabel } = weeklyReport
 
             const colorStyles = {
-              green: { border: 'border-green-400/30', headerBg: 'from-green-500/15 via-green-400/5', text: 'text-green-400', textDim: 'text-green-400/60', barBg: 'bg-green-400', badge: 'bg-green-400 text-green-950', glow: 'shadow-green-400/10' },
-              lime: { border: 'border-workx-lime/30', headerBg: 'from-workx-lime/15 via-workx-lime/5', text: 'text-workx-lime', textDim: 'text-workx-lime/60', barBg: 'bg-workx-lime', badge: 'bg-workx-lime text-workx-dark', glow: 'shadow-workx-lime/10' },
-              orange: { border: 'border-orange-400/30', headerBg: 'from-orange-500/15 via-orange-400/5', text: 'text-orange-400', textDim: 'text-orange-400/60', barBg: 'bg-orange-400', badge: 'bg-orange-400 text-orange-950', glow: 'shadow-orange-400/10' },
-              red: { border: 'border-red-400/30', headerBg: 'from-red-500/15 via-red-400/5', text: 'text-red-400', textDim: 'text-red-400/60', barBg: 'bg-red-400', badge: 'bg-red-400 text-red-950', glow: 'shadow-red-400/10' },
+              green: { border: 'border-green-400/30', headerBg: 'from-green-500/15 via-green-400/5', text: 'text-green-400', barBg: 'bg-green-400', badge: 'bg-green-400 text-green-950', glow: 'shadow-green-400/10' },
+              lime: { border: 'border-workx-lime/30', headerBg: 'from-workx-lime/15 via-workx-lime/5', text: 'text-workx-lime', barBg: 'bg-workx-lime', badge: 'bg-workx-lime text-workx-dark', glow: 'shadow-workx-lime/10' },
+              orange: { border: 'border-orange-400/30', headerBg: 'from-orange-500/15 via-orange-400/5', text: 'text-orange-400', barBg: 'bg-orange-400', badge: 'bg-orange-400 text-orange-950', glow: 'shadow-orange-400/10' },
+              red: { border: 'border-red-400/30', headerBg: 'from-red-500/15 via-red-400/5', text: 'text-red-400', barBg: 'bg-red-400', badge: 'bg-red-400 text-red-950', glow: 'shadow-red-400/10' },
             }
             const cs = colorStyles[color]
 
             return (
             <div className={`card overflow-hidden ${cs.border} shadow-lg ${cs.glow}`}>
-              {/* Header */}
-              <div className={`p-4 sm:p-5 border-b border-white/5 bg-gradient-to-r ${cs.headerBg} to-transparent`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl ${cs.barBg}/15 flex items-center justify-center`}>
-                      <Icons.activity className={cs.text} size={18} />
-                    </div>
+              <div className={`p-4 sm:p-5 bg-gradient-to-r ${cs.headerBg} to-transparent`}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                  {/* Left: big number + label */}
+                  <div className="flex items-center gap-4 sm:gap-5 flex-1">
                     <div>
-                      <h2 className="font-semibold text-white text-sm sm:text-base">Weekoverzicht team</h2>
-                      <p className="text-xs text-gray-500">{currentWeek.label}</p>
+                      <p className={`text-4xl sm:text-5xl font-bold tracking-tight ${cs.text} leading-none`}>
+                        {currentWeek.totalHours.toFixed(0)}
+                      </p>
+                      <p className="text-[11px] text-gray-500 mt-1">teamuren</p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${cs.badge} w-fit`}>
+                        {colorLabel}
+                      </span>
+                      <p className="text-xs text-gray-500">{currentWeek.label} &middot; {currentWeek.personCount} personen</p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1.5 text-xs font-bold rounded-full ${cs.badge}`}>
-                    {colorLabel}
-                  </span>
-                </div>
-              </div>
 
-              <div className="p-4 sm:p-5 space-y-5">
-                {/* === ROW 1: Big number + comparison stats === */}
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                  {/* Big number */}
-                  <div className="sm:w-2/5">
-                    <p className={`text-5xl sm:text-6xl font-bold tracking-tight ${cs.text}`}>
-                      {currentWeek.totalHours.toFixed(0)}
-                    </p>
-                    <p className="text-sm text-gray-400 mt-0.5">totaal teamuren afgelopen week</p>
-                    <p className="text-xs text-gray-600 mt-1">{currentWeek.personCount} medewerkers actief</p>
-                  </div>
-
-                  {/* Comparison stats grid */}
-                  <div className="flex-1 grid grid-cols-2 gap-3">
-                    {/* vs Gemiddelde */}
-                    <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">vs. gemiddelde</p>
-                      <p className={`text-lg font-bold ${
+                  {/* Right: comparison chips */}
+                  <div className="flex gap-2 sm:gap-3">
+                    <div className="rounded-lg bg-white/[0.04] border border-white/5 px-3 py-2 text-center">
+                      <p className="text-[9px] uppercase tracking-wider text-gray-500 mb-0.5">vs gem.</p>
+                      <p className={`text-sm font-bold ${
                         vsAvgPct > 5 ? 'text-red-400' : vsAvgPct < -5 ? 'text-green-400' : 'text-white'
                       }`}>
                         {vsAvgPct > 0 ? '+' : ''}{vsAvgPct.toFixed(0)}%
                       </p>
-                      <p className="text-[11px] text-gray-600">gem. {avg.toFixed(0)} uur</p>
+                      <p className="text-[9px] text-gray-600">{avg.toFixed(0)} uur</p>
                     </div>
-
-                    {/* vs Vorige week */}
-                    <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">vs. vorige week</p>
-                      <p className={`text-lg font-bold ${
+                    <div className="rounded-lg bg-white/[0.04] border border-white/5 px-3 py-2 text-center">
+                      <p className="text-[9px] uppercase tracking-wider text-gray-500 mb-0.5">vs vorig</p>
+                      <p className={`text-sm font-bold ${
                         vsPrevPct > 5 ? 'text-red-400' : vsPrevPct < -5 ? 'text-green-400' : 'text-white'
                       }`}>
                         {vsPrevPct > 0 ? '+' : ''}{vsPrevPct.toFixed(0)}%
                       </p>
-                      <p className="text-[11px] text-gray-600">{prevWeek.totalHours.toFixed(0)} uur</p>
-                    </div>
-
-                    {/* Drukste week */}
-                    {maxWeek && (
-                      <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
-                        <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">drukste week</p>
-                        <p className="text-lg font-bold text-white">{maxWeek.totalHours.toFixed(0)} <span className="text-xs font-normal text-gray-500">uur</span></p>
-                        <p className="text-[11px] text-gray-600">{maxWeek.label}</p>
-                      </div>
-                    )}
-
-                    {/* Rustigste week */}
-                    {minWeek && (
-                      <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3">
-                        <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">rustigste week</p>
-                        <p className="text-lg font-bold text-white">{minWeek.totalHours.toFixed(0)} <span className="text-xs font-normal text-gray-500">uur</span></p>
-                        <p className="text-[11px] text-gray-600">{minWeek.label}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* === ROW 2: Bar chart === */}
-                <div className="rounded-xl bg-white/[0.02] border border-white/5 p-4">
-                  <p className="text-xs text-gray-500 mb-4">Teamuren per week — afgelopen 7 weken</p>
-                  <div className="relative">
-                    {/* Average line */}
-                    {avg > 0 && maxHours > 0 && (
-                      <div
-                        className="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
-                        style={{ bottom: `${(avg / maxHours) * 100}%` }}
-                      >
-                        <div className="flex-1 border-t border-dashed border-white/20" />
-                        <span className="text-[9px] text-gray-500 ml-2 bg-workx-dark px-1 whitespace-nowrap">gem. {avg.toFixed(0)}</span>
-                      </div>
-                    )}
-
-                    {/* Bars */}
-                    <div className="flex items-end gap-1.5 sm:gap-2 h-36 sm:h-44">
-                      {[...weeks].reverse().map((week, idx) => {
-                        const isCurrentWeek = idx === weeks.length - 1
-                        const barHeight = maxHours > 0 ? (week.totalHours / maxHours) * 100 : 0
-                        const isAboveAvg = avg > 0 && week.totalHours > avg * 1.1
-                        const isBelowAvg = avg > 0 && week.totalHours < avg * 0.9
-
-                        return (
-                          <div key={idx} className="flex-1 flex flex-col items-center gap-1" style={{ minWidth: 0 }}>
-                            {/* Hours label */}
-                            <span className={`text-[11px] sm:text-xs font-semibold tabular-nums ${
-                              isCurrentWeek ? cs.text : 'text-gray-500'
-                            }`}>
-                              {week.totalHours.toFixed(0)}
-                            </span>
-                            {/* Bar container */}
-                            <div className="w-full relative flex-1">
-                              <div
-                                className={`absolute bottom-0 left-[15%] right-[15%] rounded-t-md transition-all duration-500 ${
-                                  isCurrentWeek
-                                    ? cs.barBg
-                                    : isAboveAvg
-                                      ? 'bg-red-400/20'
-                                      : isBelowAvg
-                                        ? 'bg-green-400/20'
-                                        : 'bg-white/10'
-                                }`}
-                                style={{ height: `${Math.max(barHeight, 3)}%` }}
-                              />
-                            </div>
-                            {/* Week label */}
-                            <div className={`text-center leading-none ${isCurrentWeek ? 'font-semibold' : ''}`}>
-                              <span className={`text-[9px] sm:text-[10px] ${isCurrentWeek ? cs.text : 'text-gray-600'}`}>
-                                {week.shortLabel}
-                              </span>
-                              {isCurrentWeek && (
-                                <div className={`w-1 h-1 rounded-full ${cs.barBg} mx-auto mt-1`} />
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
+                      <p className="text-[9px] text-gray-600">{prevWeek.totalHours.toFixed(0)} uur</p>
                     </div>
                   </div>
-                </div>
-
-                {/* === ROW 3: Week-over-week table === */}
-                <div className="rounded-xl bg-white/[0.02] border border-white/5 overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/5">
-                        <th className="text-left px-3 py-2.5 font-medium">Week</th>
-                        <th className="text-right px-3 py-2.5 font-medium">Uren</th>
-                        <th className="text-right px-3 py-2.5 font-medium hidden sm:table-cell">Personen</th>
-                        <th className="text-right px-3 py-2.5 font-medium">vs. gem.</th>
-                        <th className="text-right px-3 py-2.5 font-medium w-24 sm:w-32">Verhouding</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {weeks.map((week, idx) => {
-                        const isCurrentWeek = idx === 0
-                        const pctOfAvg = avg > 0 ? ((week.totalHours - avg) / avg) * 100 : 0
-                        const barWidthPct = maxHours > 0 ? (week.totalHours / maxHours) * 100 : 0
-
-                        return (
-                          <tr
-                            key={idx}
-                            className={`border-b border-white/[0.03] ${
-                              isCurrentWeek ? `${cs.barBg}/[0.06]` : 'hover:bg-white/[0.02]'
-                            }`}
-                          >
-                            <td className="px-3 py-2.5">
-                              <span className={`text-xs ${isCurrentWeek ? cs.text + ' font-semibold' : 'text-gray-400'}`}>
-                                {isCurrentWeek ? '→ ' : ''}{week.label}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2.5 text-right">
-                              <span className={`text-sm font-bold tabular-nums ${isCurrentWeek ? cs.text : 'text-white/80'}`}>
-                                {week.totalHours.toFixed(0)}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2.5 text-right hidden sm:table-cell">
-                              <span className="text-xs text-gray-500">{week.personCount}</span>
-                            </td>
-                            <td className="px-3 py-2.5 text-right">
-                              {avg > 0 && week.totalHours > 0 ? (
-                                <span className={`text-[11px] font-medium ${
-                                  pctOfAvg > 5 ? 'text-red-400' : pctOfAvg < -5 ? 'text-green-400' : 'text-gray-500'
-                                }`}>
-                                  {pctOfAvg > 0 ? '+' : ''}{pctOfAvg.toFixed(0)}%
-                                </span>
-                              ) : (
-                                <span className="text-[11px] text-gray-600">—</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-500 ${
-                                    isCurrentWeek ? cs.barBg : 'bg-white/15'
-                                  }`}
-                                  style={{ width: `${Math.max(barWidthPct, 2)}%` }}
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
                 </div>
               </div>
             </div>
@@ -1084,6 +900,102 @@ export default function PartnersWerkPage() {
             </div>
             </div>
           </div>
+
+          {/* Week-over-week comparison table */}
+          {weeklyReport && weeklyReport.currentWeek.totalHours > 0 && (() => {
+            const { weeks, avg, color } = weeklyReport
+            const maxHours = Math.max(...weeks.map(w => w.totalHours))
+
+            const barColors = {
+              green: 'bg-green-400', lime: 'bg-workx-lime', orange: 'bg-orange-400', red: 'bg-red-400',
+            }
+            const textColors = {
+              green: 'text-green-400', lime: 'text-workx-lime', orange: 'text-orange-400', red: 'text-red-400',
+            }
+            const bgColors = {
+              green: 'bg-green-400', lime: 'bg-workx-lime', orange: 'bg-orange-400', red: 'bg-red-400',
+            }
+
+            return (
+            <div className="card overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Icons.trendingUp className="text-gray-400" size={16} />
+                  </div>
+                  <div>
+                    <h2 className="font-medium text-white text-sm sm:text-base">Weekvergelijking</h2>
+                    <p className="text-xs text-gray-500">Teamuren per 7-daagse periode</p>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/5">
+                      <th className="text-left px-4 py-2.5 font-medium">Periode</th>
+                      <th className="text-right px-4 py-2.5 font-medium">Uren</th>
+                      <th className="text-right px-4 py-2.5 font-medium hidden sm:table-cell">Personen</th>
+                      <th className="text-right px-4 py-2.5 font-medium">vs. gem.</th>
+                      <th className="text-right px-4 py-2.5 font-medium w-28 sm:w-40">Verhouding</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weeks.map((week, idx) => {
+                      const isCurrentWeek = idx === 0
+                      const pctOfAvg = avg > 0 ? ((week.totalHours - avg) / avg) * 100 : 0
+                      const barWidthPct = maxHours > 0 ? (week.totalHours / maxHours) * 100 : 0
+
+                      return (
+                        <tr
+                          key={idx}
+                          className={`border-b border-white/[0.03] ${
+                            isCurrentWeek ? `${bgColors[color]}/[0.06]` : 'hover:bg-white/[0.02]'
+                          }`}
+                        >
+                          <td className="px-4 py-2.5">
+                            <span className={`text-xs ${isCurrentWeek ? textColors[color] + ' font-semibold' : 'text-gray-400'}`}>
+                              {isCurrentWeek ? '→ ' : ''}{week.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            <span className={`text-sm font-bold tabular-nums ${isCurrentWeek ? textColors[color] : 'text-white/80'}`}>
+                              {week.totalHours.toFixed(0)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right hidden sm:table-cell">
+                            <span className="text-xs text-gray-500">{week.personCount}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            {avg > 0 && week.totalHours > 0 ? (
+                              <span className={`text-[11px] font-medium ${
+                                pctOfAvg > 5 ? 'text-red-400' : pctOfAvg < -5 ? 'text-green-400' : 'text-gray-500'
+                              }`}>
+                                {pctOfAvg > 0 ? '+' : ''}{pctOfAvg.toFixed(0)}%
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-gray-600">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className="h-2.5 rounded-full bg-white/5 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  isCurrentWeek ? barColors[color] : 'bg-white/15'
+                                }`}
+                                style={{ width: `${Math.max(barWidthPct, 2)}%` }}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            )
+          })()}
 
           {/* Info card */}
           <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
