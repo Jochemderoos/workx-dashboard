@@ -21,7 +21,7 @@ import { CURRENT_CHANGELOG, CHANGELOG_VERSION } from '@/lib/changelog'
 // Logo Component - uses actual Workx logo
 function WorkxLogoSmall() {
   return (
-    <Image src="/workx-logo.png" alt="Workx Advocaten" width={56} height={56} className="h-14 w-auto" draggable={false} priority />
+    <Image src="/workx-logo.png" alt="Workx Advocaten" width={180} height={56} className="h-14 w-auto" draggable={false} priority />
   )
 }
 

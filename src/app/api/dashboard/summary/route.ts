@@ -316,18 +316,23 @@ export async function GET() {
       }).catch(() => []),
 
       // 16. Work Distribution for current week - for employee widget
-      prisma.meetingWeek.findFirst({
-        where: {
-          meetingDate: {
-            gte: new Date(todayWork.getTime() - 3 * 24 * 60 * 60 * 1000), // within 3 days before
-            lte: new Date(todayWork.getTime() + 3 * 24 * 60 * 60 * 1000), // within 3 days after
-          },
-        },
-        include: {
-          distributions: true,
-        },
-        orderBy: { meetingDate: 'desc' },
-      }).catch(() => null),
+      // Use Monday-Sunday week boundaries so last week's data never bleeds through
+      (() => {
+        const d = new Date(now)
+        const day = d.getDay() // 0=Sun, 1=Mon, ...
+        const diffToMonday = day === 0 ? -6 : 1 - day // Sunday → previous Monday
+        const monday = new Date(d)
+        monday.setDate(d.getDate() + diffToMonday)
+        monday.setHours(0, 0, 0, 0)
+        const sunday = new Date(monday)
+        sunday.setDate(monday.getDate() + 6)
+        sunday.setHours(23, 59, 59, 999)
+        return prisma.meetingWeek.findFirst({
+          where: { meetingDate: { gte: monday, lte: sunday } },
+          include: { distributions: true },
+          orderBy: { meetingDate: 'desc' },
+        }).catch(() => null)
+      })(),
 
       // 17. Pending Vacation Requests - for admin widget
       prisma.vacationRequest.findMany({
