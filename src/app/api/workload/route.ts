@@ -49,11 +49,18 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const year = searchParams.get('year') || String(new Date().getFullYear())
     const year2 = searchParams.get('year2')
+    const personName = searchParams.get('personName')
+
+    const dateFilter = year2
+      ? { OR: [{ date: { startsWith: year } }, { date: { startsWith: year2 } }] }
+      : { date: { startsWith: year } }
+
+    const where = personName
+      ? { AND: [{ personName }, dateFilter] }
+      : dateFilter
 
     const entries = await prisma.workload.findMany({
-      where: year2
-        ? { OR: [{ date: { startsWith: year } }, { date: { startsWith: year2 } }] }
-        : { date: { startsWith: year } },
+      where,
       orderBy: [
         { date: 'desc' },
         { personName: 'asc' }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -16,6 +16,18 @@ const LODEWIJK = {
   internRate: 155,
   externRate: 310,
   userId: 'lodewijk-van-thiel', // Used as advocateUserId
+  capacityMin: 24, // minimale uren/week
+  capacityMax: 32, // maximale uren/week
+}
+
+interface WorkloadEntry {
+  id: string
+  personName: string
+  date: string
+  level: string
+  hours: number | null
+  createdAt: string
+  updatedAt: string
 }
 
 interface ExternalCase {
@@ -154,13 +166,13 @@ function ContactDropdown({ anchorRef, selectedName, onSelect, onClose }: Contact
 // ─── Workload Bar ───────────────────────────────────────────────────────
 
 function WorkloadBar({ hours }: { hours: number }) {
-  const maxHours = 50
+  const maxHours = 42
   const pct = Math.min((hours / maxHours) * 100, 100)
   let color = 'from-green-500 to-green-400'
   let label = 'Licht'
-  if (hours > 40) { color = 'from-red-500 to-red-400'; label = 'Zwaar' }
-  else if (hours > 30) { color = 'from-orange-500 to-orange-400'; label = 'Hoog' }
-  else if (hours > 20) { color = 'from-yellow-500 to-yellow-400'; label = 'Gemiddeld' }
+  if (hours > 32) { color = 'from-red-500 to-red-400'; label = 'Zwaar' }
+  else if (hours > 28) { color = 'from-orange-500 to-orange-400'; label = 'Hoog' }
+  else if (hours > 24) { color = 'from-yellow-500 to-yellow-400'; label = 'Normaal' }
 
   return (
     <div className="space-y-1.5">
@@ -176,9 +188,129 @@ function WorkloadBar({ hours }: { hours: number }) {
       </div>
       <div className="flex justify-between text-[10px] text-white/20">
         <span>0u</span>
-        <span>20u</span>
-        <span>40u</span>
-        <span>50u</span>
+        <span>24u</span>
+        <span>32u</span>
+        <span>42u</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Weekly Hours Overview ──────────────────────────────────────────────
+
+function getWeekBounds(weeksAgo: number): { start: Date; end: Date } {
+  const now = new Date()
+  const dayOfWeek = now.getDay()
+  // Monday = start of week (ISO)
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7) - (weeksAgo * 7))
+  monday.setHours(0, 0, 0, 0)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59, 999)
+  return { start: monday, end: sunday }
+}
+
+function formatWeekLabel(start: Date, end: Date): string {
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+  return `${start.toLocaleDateString('nl-NL', opts)} - ${end.toLocaleDateString('nl-NL', opts)}`
+}
+
+function getBarColor(hours: number): string {
+  if (hours > 32) return 'from-red-500 to-red-400'
+  if (hours > 28) return 'from-orange-500 to-orange-400'
+  if (hours > 24) return 'from-yellow-500 to-yellow-400'
+  return 'from-green-500 to-green-400'
+}
+
+interface WeekData {
+  start: Date
+  end: Date
+  label: string
+  hours: number
+  pct: number
+  isCurrent: boolean
+}
+
+function WeeklyHoursOverview({ entries }: { entries: WorkloadEntry[] }) {
+  const weeks: WeekData[] = useMemo(() => {
+    const result: WeekData[] = []
+    for (let i = 0; i < 4; i++) {
+      const { start, end } = getWeekBounds(i)
+      const startStr = start.toISOString().slice(0, 10)
+      const endStr = end.toISOString().slice(0, 10)
+      const weekEntries = entries.filter(e => e.date >= startStr && e.date <= endStr)
+      const hours = weekEntries.reduce((sum, e) => sum + (e.hours || 0), 0)
+      result.push({
+        start,
+        end,
+        label: formatWeekLabel(start, end),
+        hours: Math.round(hours * 10) / 10,
+        pct: Math.min((hours / LODEWIJK.capacityMax) * 100, 100),
+        isCurrent: i === 0,
+      })
+    }
+    return result
+  }, [entries])
+
+  const trend = useMemo(() => {
+    if (weeks.length < 2 || weeks[1].hours === 0) return null
+    const diff = ((weeks[0].hours - weeks[1].hours) / weeks[1].hours) * 100
+    return Math.round(diff * 10) / 10
+  }, [weeks])
+
+  const average = useMemo(() => {
+    const total = weeks.reduce((sum, w) => sum + w.hours, 0)
+    return Math.round((total / weeks.length) * 10) / 10
+  }, [weeks])
+
+  // Don't render if no data at all
+  const hasData = entries.some(e => e.hours && e.hours > 0)
+  if (!hasData) return null
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/10">
+      <div className="absolute -top-16 -right-16 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl" />
+      <div className="relative p-6 sm:p-8 space-y-5">
+        <h3 className="text-base font-semibold text-white flex items-center gap-2">
+          <Icons.clock size={18} className="text-workx-lime/70" />
+          Weekoverzicht declarabele uren
+        </h3>
+
+        <div className="space-y-3">
+          {weeks.map((week, i) => (
+            <div key={i} className={`rounded-xl p-3 transition-colors ${week.isCurrent ? 'bg-white/[0.04] ring-1 ring-workx-lime/20' : ''}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-white/50">
+                  {week.label}
+                  {week.isCurrent && <span className="ml-2 text-workx-lime/70 text-[10px] font-medium">(deze week)</span>}
+                </span>
+                <span className="text-xs font-medium text-white/70">{week.hours}u</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2.5 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${getBarColor(week.hours)} transition-all duration-500`}
+                    style={{ width: `${week.pct}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-white/30 w-8 text-right">{Math.round(week.pct)}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer: trend + gemiddelde + capaciteit */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 border-t border-white/5 text-xs text-white/40">
+          {trend !== null && (
+            <span className={`flex items-center gap-1 ${trend >= 0 ? 'text-green-400/70' : 'text-red-400/70'}`}>
+              {trend >= 0 ? <Icons.trendingUp size={14} /> : <Icons.trendingDown size={14} />}
+              {trend >= 0 ? '+' : ''}{trend}% t.o.v. vorige week
+            </span>
+          )}
+          <span>Gemiddeld: <span className="text-white/60 font-medium">{average} uur/week</span></span>
+          <span>Capaciteit: <span className="text-white/60 font-medium">{LODEWIJK.capacityMin}-{LODEWIJK.capacityMax} uur/week</span></span>
+        </div>
       </div>
     </div>
   )
@@ -389,6 +521,7 @@ export default function WerkLodewijkPage() {
   const [cases, setCases] = useState<ExternalCase[]>([])
   const [completedCases, setCompletedCases] = useState<ExternalCase[]>([])
   const [editedCases, setEditedCases] = useState<ExternalCase[] | null>(null)
+  const [workloadEntries, setWorkloadEntries] = useState<WorkloadEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -427,17 +560,43 @@ export default function WerkLodewijkPage() {
     }
   }, [])
 
+  // Fetch workload entries for Lodewijk
+  const fetchWorkload = useCallback(async () => {
+    try {
+      const year = new Date().getFullYear()
+      const res = await fetch(`/api/workload?year=${year}&personName=${encodeURIComponent(LODEWIJK.name)}`)
+      if (res.ok) {
+        const data = await res.json()
+        setWorkloadEntries(data)
+      }
+    } catch {
+      // Silently fail — weekoverzicht just won't show
+    }
+  }, [])
+
   useEffect(() => {
     if (status === 'authenticated') {
       fetchCases()
+      fetchWorkload()
     }
-  }, [status, fetchCases])
+  }, [status, fetchCases, fetchWorkload])
 
   // Computed
   const displayCases = editedCases ?? cases
   const hasChanges = editedCases !== null
   const totalHours = displayCases.reduce((sum, c) => sum + (c.verwachteUrenPerWeek || 0), 0)
   const activeCaseCount = displayCases.length
+
+  // Current week actual hours from workload data
+  const currentWeekActual = useMemo(() => {
+    if (workloadEntries.length === 0) return null
+    const { start, end } = getWeekBounds(0)
+    const startStr = start.toISOString().slice(0, 10)
+    const endStr = end.toISOString().slice(0, 10)
+    const weekEntries = workloadEntries.filter(e => e.date >= startStr && e.date <= endStr && e.hours)
+    if (weekEntries.length === 0) return null
+    return Math.round(weekEntries.reduce((sum, e) => sum + (e.hours || 0), 0) * 10) / 10
+  }, [workloadEntries])
 
   // Actions
   const updateCase = (updated: ExternalCase) => {
@@ -612,18 +771,28 @@ export default function WerkLodewijkPage() {
                   </div>
                   <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
                     <p className="text-[10px] text-white/30 uppercase tracking-wider">Uren/week</p>
-                    <p className="text-lg font-bold text-white">{totalHours}</p>
+                    {currentWeekActual !== null ? (
+                      <p className="text-lg font-bold text-white">
+                        {currentWeekActual}
+                        <span className="text-xs text-white/30 font-normal ml-1">(geschat: {totalHours})</span>
+                      </p>
+                    ) : (
+                      <p className="text-lg font-bold text-white">{totalHours}</p>
+                    )}
                   </div>
                 </div>
 
                 {/* Workload bar */}
                 <div className="mt-4 max-w-md">
-                  <WorkloadBar hours={totalHours} />
+                  <WorkloadBar hours={currentWeekActual ?? totalHours} />
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* ── Weekly Hours Overview ─────────────────────────────────── */}
+        <WeeklyHoursOverview entries={workloadEntries} />
 
         {/* ── Error banner ───────────────────────────────────────────── */}
         {error && (
