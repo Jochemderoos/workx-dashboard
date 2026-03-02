@@ -4,16 +4,17 @@ import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
 /**
- * Detects stale JavaScript after Vercel deployments and auto-refreshes.
+ * Detects stale JavaScript after Vercel deployments.
  *
  * Three strategies:
- * 1. Chunk load error detection: catches errors when old JS references missing chunks
- * 2. Tab-visibility refresh: checks build ID when tab becomes visible after 5+ minutes
- * 3. Periodic build-ID check: polls /api/version every 5 minutes to detect deploys
+ * 1. Chunk load error detection: force-refresh when old JS references missing chunks
+ * 2. Tab-visibility check: shows banner when tab becomes visible after 5+ minutes
+ * 3. Periodic build-ID check: polls /api/version every 5 minutes, shows banner
  *
- * IMPORTANT: Never auto-refreshes on the AI chat page (/dashboard/ai) to prevent
- * losing uploads, conversations, and in-progress work. Shows a non-intrusive
- * notification banner instead.
+ * Strategy 2 & 3 show a non-intrusive "Nieuwe versie" banner so the user can
+ * refresh when ready — no disruptive auto-refreshes while someone has a page open
+ * (e.g. notulen tijdens een overleg). Only chunk errors (strategy 1) force-refresh
+ * because those make the page unusable.
  */
 export default function StaleVersionGuard() {
   const pathname = usePathname()
@@ -91,7 +92,7 @@ export default function StaleVersionGuard() {
       }
     }
 
-    // --- Strategy 2: Tab-visibility auto-refresh ---
+    // --- Strategy 2: Tab-visibility check ---
     let hiddenAt: number | null = null
     const clientBuildId = process.env.NEXT_PUBLIC_BUILD_ID
 
@@ -115,20 +116,22 @@ export default function StaleVersionGuard() {
       } else if (hiddenAt) {
         const hiddenDuration = Date.now() - hiddenAt
         hiddenAt = null
-        // Only check after 5+ minutes hidden (was 30s — too aggressive)
+        // Only check after 5+ minutes hidden
         if (hiddenDuration > 5 * 60 * 1000) {
           const stale = await checkBuildVersion()
-          if (stale) safeRefresh('workx-version-refresh', 120000)
+          if (stale) showUpdateBanner()
         }
       }
     }
 
-    // --- Strategy 3: Periodic build-ID version check (every 5 minutes, was 2) ---
+    // --- Strategy 3: Periodic build-ID version check (every 5 minutes) ---
+    // Always shows a banner instead of force-refreshing to prevent
+    // disrupting users who have the page open (e.g. during meetings)
     const periodicCheck = setInterval(async () => {
       if (document.hidden) return
       const stale = await checkBuildVersion()
-      if (stale) safeRefresh('workx-version-refresh', 120000)
-    }, 300000) // 5 minutes (was 2 minutes)
+      if (stale) showUpdateBanner()
+    }, 300000) // 5 minutes
 
     window.addEventListener('error', handleError)
     window.addEventListener('unhandledrejection', handleRejection)
