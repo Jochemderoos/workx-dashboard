@@ -1526,3 +1526,22 @@ model HandoverCase {
 
   @@index([handoverId])
 }
+
+// ==================== EXTERNE ADVOCAAT ZAKEN ====================
+
+// Zaken belegd bij externe advocaat (Lodewijk van Thiel)
+model ExternalAdvocateCase {
+  id                   String    @id @default(cuid())
+  advocateUserId       String
+  dossiernaam          String
+  contactpersoonNaam   String?
+  beschrijving         String?   @db.Text
+  verwachteUrenPerWeek Float     @default(0)
+  isCompleted          Boolean   @default(false)
+  completedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([advocateUserId])
+  @@index([isCompleted])
+}

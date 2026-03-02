@@ -49,6 +49,7 @@ const mainMenuItems = [
 const partnersMenuItems = [
   { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Notulen', iconAnim: 'icon-file-hover' },
+  { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', iconAnim: 'icon-briefcase-hover' },
 ]
 
 const toolsMenuItems = [
@@ -140,9 +141,7 @@ function SidebarComponent({ user }: SidebarProps) {
         <div style={(user.role === 'PARTNER' || user.role === 'ADMIN') ? {} : { display: 'none' }}>
           <p className="px-4 mb-2 text-[10px] font-medium text-workx-lime/40 uppercase tracking-widest">Partners</p>
           <div className="space-y-1">
-            <NavLink href="/dashboard/partners/werk" icon={Icons.briefcase} label="Werk" iconAnim="icon-briefcase-hover" />
-            <NavLink href="/dashboard/partners/notulen" icon={Icons.fileText} label="Notulen" iconAnim="icon-file-hover" />
-            <NavLink href="/dashboard/ontwikkelplannen" icon={Icons.target} label="Ontwikkelplannen" iconAnim="icon-target-hover" />
+            {partnersMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
 
