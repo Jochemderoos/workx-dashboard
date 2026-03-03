@@ -406,10 +406,24 @@ export async function GET() {
         })
       })().catch(() => []),
 
-      // 21. Pending Expense Declarations - SUBMITTED declarations for admin widget
+      // 21. Pending Expense Declarations - SUBMITTED declarations for admin widget (include full data for PDF download)
       prisma.expenseDeclaration.findMany({
         where: { status: 'SUBMITTED' },
-        include: { items: { select: { id: true } } },
+        include: {
+          items: {
+            select: {
+              id: true,
+              description: true,
+              date: true,
+              amount: true,
+              expenseType: true,
+              kilometers: true,
+              chargeToClient: true,
+              attachmentName: true,
+            },
+            orderBy: { date: 'asc' },
+          },
+        },
         orderBy: { submittedAt: 'asc' },
       }).catch(() => []),
     ])

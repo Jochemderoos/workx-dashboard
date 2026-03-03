@@ -137,7 +137,30 @@ export async function GET() {
       }
     }
 
-    // 5. Werkverdelingsgesprekken - for current week
+    // 5. Ingediende declaraties (for admins only - Hanna & Lotte)
+    if (currentUser?.role === 'ADMIN') {
+      const submittedDeclarations = await prisma.expenseDeclaration.findMany({
+        where: { status: 'SUBMITTED' },
+        orderBy: { submittedAt: 'desc' },
+        take: 5,
+      })
+
+      submittedDeclarations.forEach((decl) => {
+        const key = `declaratie-${decl.id}`
+        const amount = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(decl.totalAmount || 0)
+        notifications.push({
+          id: key,
+          type: 'declaratie',
+          title: 'Declaratie ingediend',
+          message: `${decl.employeeName} — ${amount}`,
+          createdAt: decl.submittedAt || decl.createdAt,
+          read: dismissedKeys.has(key),
+          href: '/dashboard/declaraties',
+        })
+      })
+    }
+
+    // 7. Werkverdelingsgesprekken - for current week
     {
       // Skip weekends: advance to next Monday if date falls on Saturday or Sunday
       const todayWork = new Date(now)
@@ -221,7 +244,7 @@ export async function GET() {
       }
     }
 
-    // 6. Lustrum verrassing — tijdelijke notificatie voor iedereen
+    // 8. Lustrum verrassing — tijdelijke notificatie voor iedereen
     {
       const key = 'lustrum-2026'
       if (!dismissedKeys.has(key)) {

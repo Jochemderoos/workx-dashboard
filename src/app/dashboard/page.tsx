@@ -16,6 +16,7 @@ import MagneticButton from '@/components/ui/MagneticButton'
 import Sparkline from '@/components/ui/Sparkline'
 import TextReveal from '@/components/ui/TextReveal'
 import { CURRENT_CHANGELOG, CHANGELOG_VERSION } from '@/lib/changelog'
+import { buildExpensePDF } from '@/lib/expense-pdf'
 // import { BeamConnector } from '@/components/ui/AnimatedBeam'
 
 // Logo Component - uses actual Workx logo
@@ -896,6 +897,7 @@ export default function DashboardHome() {
   const [rejectionReason, setRejectionReason] = useState('')
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null)
   const [processingDeclarationId, setProcessingDeclarationId] = useState<string | null>(null)
+  const [downloadingDeclarationId, setDownloadingDeclarationId] = useState<string | null>(null)
 
   // Calculate next birthday
   const nextBirthday = useMemo(() => {
@@ -1975,33 +1977,75 @@ export default function DashboardHome() {
                         </div>
                         <p className="text-green-400 font-bold text-lg shrink-0">{totalAmount}</p>
                       </div>
-                      <button
-                        onClick={async () => {
-                          setProcessingDeclarationId(decl.id)
-                          try {
-                            const res = await fetch(`/api/expenses/${decl.id}`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ action: 'paid' }),
-                            })
-                            if (!res.ok) throw new Error()
-                            toast.success(`Declaratie van ${decl.employeeName} als betaald gemarkeerd`)
-                            mutateSummary()
-                          } catch {
-                            toast.error('Kon declaratie niet als betaald markeren')
-                          } finally {
-                            setProcessingDeclarationId(null)
-                          }
-                        }}
-                        disabled={processingDeclarationId === decl.id}
-                        className="w-full px-3 py-2 rounded-lg bg-green-500/20 text-green-300 text-xs font-bold hover:bg-green-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
-                      >
-                        {processingDeclarationId === decl.id ? (
-                          <span className="w-3.5 h-3.5 border-2 border-green-300/30 border-t-green-300 rounded-full animate-spin" />
-                        ) : (
-                          <><Icons.check size={14} /> Betaald</>
-                        )}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            setDownloadingDeclarationId(decl.id)
+                            try {
+                              const result = await buildExpensePDF({
+                                employeeName: decl.employeeName,
+                                bankAccount: decl.bankAccount,
+                                holdingName: decl.holdingName,
+                                invoiceNumber: decl.invoiceNumber,
+                                note: decl.note,
+                                items: (decl.items || []).map((item: any) => ({
+                                  description: item.description,
+                                  date: item.date,
+                                  amount: item.amount,
+                                  expenseType: item.expenseType,
+                                  kilometers: item.kilometers,
+                                  chargeToClient: item.chargeToClient,
+                                  attachmentUrl: item.attachmentUrl,
+                                  attachmentName: item.attachmentName,
+                                })),
+                              })
+                              if (result) {
+                                result.doc.save(result.fileName)
+                                toast.success('PDF gedownload')
+                              }
+                            } catch {
+                              toast.error('Kon PDF niet genereren')
+                            } finally {
+                              setDownloadingDeclarationId(null)
+                            }
+                          }}
+                          disabled={downloadingDeclarationId === decl.id}
+                          className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {downloadingDeclarationId === decl.id ? (
+                            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <><Icons.download size={14} /> PDF</>
+                          )}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setProcessingDeclarationId(decl.id)
+                            try {
+                              const res = await fetch(`/api/expenses/${decl.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'paid' }),
+                              })
+                              if (!res.ok) throw new Error()
+                              toast.success(`Declaratie van ${decl.employeeName} als betaald gemarkeerd`)
+                              mutateSummary()
+                            } catch {
+                              toast.error('Kon declaratie niet als betaald markeren')
+                            } finally {
+                              setProcessingDeclarationId(null)
+                            }
+                          }}
+                          disabled={processingDeclarationId === decl.id}
+                          className="flex-1 px-3 py-2 rounded-lg bg-green-500/20 text-green-300 text-xs font-bold hover:bg-green-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          {processingDeclarationId === decl.id ? (
+                            <span className="w-3.5 h-3.5 border-2 border-green-300/30 border-t-green-300 rounded-full animate-spin" />
+                          ) : (
+                            <><Icons.check size={14} /> Betaald</>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
