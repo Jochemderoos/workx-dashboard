@@ -1484,7 +1484,7 @@ ${markdownHtml}
                 {!translatePanelOpen ? (
                   <button
                     onClick={() => setTranslatePanelOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-white/40 bg-white/[0.03] border border-white/[0.06] hover:text-white/70 hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-300"
+                    className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-workx-lime/70 bg-workx-lime/[0.06] border border-workx-lime/20 hover:text-workx-lime hover:bg-workx-lime/[0.12] hover:border-workx-lime/35 shadow-[0_0_20px_rgba(163,230,53,0.06)] hover:shadow-[0_0_25px_rgba(163,230,53,0.12)] transition-all duration-300"
                   >
                     <Icons.globe size={16} />
                     Document vertalen
