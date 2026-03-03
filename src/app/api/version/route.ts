@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
 
 /**
  * Lightweight version endpoint for stale-code detection.
@@ -11,6 +10,6 @@ export const dynamic = 'force-dynamic'
 export function GET() {
   return NextResponse.json(
     { buildId: process.env.NEXT_PUBLIC_BUILD_ID || '' },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' } }
   )
 }

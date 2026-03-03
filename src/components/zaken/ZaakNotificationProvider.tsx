@@ -114,8 +114,8 @@ export default function ZaakNotificationProvider({ children, userRole }: ZaakNot
     // Check immediately on mount
     checkForOffers()
 
-    // Poll every 30 seconds
-    const interval = setInterval(checkForOffers, 30000)
+    // Poll every 2 minutes (was 30s — te veel serverless invocaties)
+    const interval = setInterval(checkForOffers, 120000)
 
     return () => clearInterval(interval)
   }, [checkForOffers, shouldPoll])

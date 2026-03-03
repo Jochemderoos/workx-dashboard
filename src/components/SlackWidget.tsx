@@ -75,10 +75,9 @@ export function SlackWidget({ currentUserName }: SlackWidgetProps) {
   useEffect(() => {
     if (selectedChannel) {
       fetchMessages(selectedChannel.id)
-      // Poll for new messages every 10 seconds
-      const interval = setInterval(() => fetchMessages(selectedChannel.id), 10000)
+      // Polling disabled — Slack chat is niet in gebruik.
+      // Was: setInterval(() => fetchMessages(selectedChannel.id), 10000)
       return () => {
-        clearInterval(interval)
         abortControllerRef.current?.abort()
       }
     }

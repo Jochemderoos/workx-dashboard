@@ -21,9 +21,8 @@ export function SlackPreview() {
 
   useEffect(() => {
     fetchLatestMessages()
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchLatestMessages, 30000)
-    return () => clearInterval(interval)
+    // Polling disabled — Slack chat is niet in gebruik.
+    // Was: setInterval(fetchLatestMessages, 30000)
   }, [])
 
   const fetchLatestMessages = async () => {

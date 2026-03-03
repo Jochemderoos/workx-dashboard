@@ -16,7 +16,7 @@ const fetcher = async (url: string) => {
  * Default SWR options for different data types
  */
 const defaultOptions: SWRConfiguration = {
-  revalidateOnFocus: true,
+  revalidateOnFocus: false,
   revalidateOnReconnect: true,
   dedupingInterval: 2000,
 }
