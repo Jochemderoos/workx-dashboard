@@ -1118,6 +1118,8 @@ export default function DashboardHome() {
       if (res.ok) {
         toast.success(`Gesprek met ${employeeName || partnerName} als afgerond gemarkeerd`)
         // Optimistic update: immediately mark as completed in local state
+        // NOTE: don't revalidate from server — the summary API has a 120s browser cache
+        // which would return stale data and reset isCompleted back to false
         mutateSummary((current: any) => {
           if (!current) return current
           return {
@@ -1130,8 +1132,6 @@ export default function DashboardHome() {
             ),
           }
         }, false)
-        // Also revalidate from server
-        setTimeout(() => mutateSummary(), 500)
       } else {
         toast.error('Kon gesprek niet afvinken')
       }
