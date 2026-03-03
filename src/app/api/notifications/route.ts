@@ -221,8 +221,12 @@ export async function GET() {
           // Employee: notification per open conversation
           for (const d of currentWeek.distributions) {
             if (!d.employeeName) continue
-            const names = d.employeeName.split(', ').map((n: string) => n.trim())
-            if (!names.includes(currentUser?.name || '') && d.employeeId !== userId) continue
+            const names = d.employeeName.split(',').map((n: string) => n.trim())
+            const userFirst = currentUser?.name?.split(' ')[0]?.toLowerCase() || ''
+            const nameMatches = names.some((name: string) =>
+              name === (currentUser?.name || '') || name.split(' ')[0].toLowerCase() === userFirst
+            )
+            if (!nameMatches && d.employeeId !== userId) continue
 
             const isComplete = completions.some(
               (c: any) => c.partnerName === d.partnerName && c.employeeId === userId

@@ -540,7 +540,11 @@ export async function GET() {
     const matchesEmployee = (d: any) => {
       if (d.employeeId === userId) return true
       if (!d.employeeName || !currentUser?.name) return false
-      return d.employeeName.split(', ').map((n: string) => n.trim()).includes(currentUser.name)
+      const names = d.employeeName.split(',').map((n: string) => n.trim())
+      const userFirst = currentUser.name.split(' ')[0].toLowerCase()
+      return names.some((name: string) =>
+        name === currentUser!.name || name.split(' ')[0].toLowerCase() === userFirst
+      )
     }
 
     // Build werkverdelingGesprekken array (for employees) - each entry is one partner conversation

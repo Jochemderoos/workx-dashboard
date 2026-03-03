@@ -138,13 +138,23 @@ export default function WerkverdelingsgesprekkenPage() {
 
   // Find partner assignment from distributions for a given employee in a given week
   const getPartnerForEmployee = useCallback((week: Week, employeeName: string): string => {
-    // Check distributions: employeeName matches
+    // First check if there's already a saved conversation with a partner
+    const conv = week.conversations.find(c => {
+      const convFirst = c.employeeName.split(' ')[0].toLowerCase()
+      const empFirst = employeeName.split(' ')[0].toLowerCase()
+      return convFirst === empFirst || c.employeeName.toLowerCase() === employeeName.toLowerCase()
+    })
+    if (conv?.partnerName && conv.partnerName !== '-') return conv.partnerName
+
+    // Check distributions: employeeName is comma-separated (e.g. "Kay Maes, Erika van Zadelhof")
+    const empFirst = employeeName.split(' ')[0].toLowerCase()
     const dist = week.distributions.find(d => {
       if (!d.employeeName) return false
-      // Match on first name
-      const distFirst = d.employeeName.split(' ')[0].toLowerCase()
-      const empFirst = employeeName.split(' ')[0].toLowerCase()
-      return distFirst === empFirst || d.employeeName.toLowerCase() === employeeName.toLowerCase()
+      const names = d.employeeName.split(',').map(n => n.trim())
+      return names.some(name => {
+        const nameFirst = name.split(' ')[0].toLowerCase()
+        return nameFirst === empFirst || name.toLowerCase() === employeeName.toLowerCase()
+      })
     })
     return dist?.partnerName || ''
   }, [])
