@@ -314,13 +314,14 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
           employeeName: employeeName.trim(),
           bankAccount: bankAccount.replace(/\s/g, '').toUpperCase(),
           items: validItems.map(item => ({
-            ...item,
-            // Include expense type and kilometers in description for storage
-            description: item.expenseType === 'reiskosten_auto' && item.kilometers
-              ? `Reiskosten: ${item.description} (${item.kilometers} km × €${kilometerRate.toFixed(2)})`
-              : item.description,
-            // Include charge to client info if provided
-            chargeToClient: activeTab === 'medewerker' ? item.chargeToClient : undefined
+            description: item.description,
+            date: item.date,
+            amount: item.amount,
+            attachmentUrl: item.attachmentUrl,
+            attachmentName: item.attachmentName,
+            expenseType: item.expenseType,
+            kilometers: item.expenseType === 'reiskosten_auto' ? item.kilometers : undefined,
+            chargeToClient: activeTab === 'medewerker' ? item.chargeToClient : undefined,
           })),
           note: note.trim(),
           holdingName: activeTab === 'holding' ? holdingName.trim() : null,

@@ -904,6 +904,11 @@ model ExpenseItem {
   date          DateTime // Datum factuur
   amount        Float    // Bedrag
 
+  // Reiskosten-specifieke velden
+  expenseType    String?  // 'reiskosten_auto' | 'overig'
+  kilometers     Float?   // Aantal km (voor reiskosten)
+  chargeToClient String?  // Doorbelasten aan zaak
+
   // Bijlage (factuur upload)
   attachmentUrl String?  // URL naar geüploade factuur
   attachmentName String? // Originele bestandsnaam
