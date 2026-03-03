@@ -76,6 +76,8 @@ export default function ClaudeChat({
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [translateDropdownId, setTranslateDropdownId] = useState<string | null>(null)
+  const [translatingDocId, setTranslatingDocId] = useState<string | null>(null)
   const [uploadStatusText, setUploadStatusText] = useState('')
   const [thinkingText, setThinkingText] = useState('')
   const [isThinking, setIsThinking] = useState(false)
@@ -392,6 +394,42 @@ export default function ClaudeChat({
 
   const removeAttachedDoc = (docId: string) => {
     setAttachedDocs(prev => prev.filter(d => d.id !== docId))
+  }
+
+  const translateDocument = async (docId: string, targetLanguage: string) => {
+    setTranslateDropdownId(null)
+    setTranslatingDocId(docId)
+    try {
+      const res = await fetch(`/api/claude/documents/${docId}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ targetLanguage }),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Vertaling mislukt' }))
+        throw new Error(errData.error || `Server fout (${res.status})`)
+      }
+
+      const blob = await res.blob()
+      const disposition = res.headers.get('Content-Disposition') || ''
+      const filenameMatch = disposition.match(/filename="?(.+?)"?$/)
+      const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : 'vertaald.docx'
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Vertaald document gedownload')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Vertaling mislukt'
+      toast.error(message)
+    } finally {
+      setTranslatingDocId(null)
+    }
   }
 
   // Track isLoading in ref so effects can check without re-triggering
@@ -1922,23 +1960,66 @@ ${markdownHtml}
           {attachedDocs.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {attachedDocs.map((doc) => (
-                <span
-                  key={doc.id}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400"
-                >
-                  {anonymize && <Icons.shield size={9} className="text-workx-lime" />}
-                  <Icons.paperclip size={10} />
-                  <span className="truncate max-w-[200px]">{doc.name}</span>
-                  {doc.splitIds && doc.splitIds.length > 1 && (
-                    <span className="text-blue-400/50 text-[9px]">({doc.splitIds.length} delen)</span>
-                  )}
-                  <button
-                    onClick={() => removeAttachedDoc(doc.id)}
-                    className="hover:text-white transition-colors"
+                <div key={doc.id} className="relative">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] ${
+                      translatingDocId === doc.id
+                        ? 'bg-workx-lime/10 border-workx-lime/20 text-workx-lime'
+                        : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                    }`}
                   >
-                    <Icons.x size={10} />
-                  </button>
-                </span>
+                    {anonymize && <Icons.shield size={9} className="text-workx-lime" />}
+                    <Icons.paperclip size={10} />
+                    <span className="truncate max-w-[200px]">{doc.name}</span>
+                    {doc.splitIds && doc.splitIds.length > 1 && (
+                      <span className="text-blue-400/50 text-[9px]">({doc.splitIds.length} delen)</span>
+                    )}
+                    {translatingDocId === doc.id ? (
+                      <span className="flex items-center gap-1 text-workx-lime">
+                        <div className="animate-spin"><Icons.refresh size={10} /></div>
+                        <span className="text-[10px]">Vertalen...</span>
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setTranslateDropdownId(translateDropdownId === doc.id ? null : doc.id)}
+                          className="hover:text-workx-lime transition-colors"
+                          title="Vertaal document"
+                        >
+                          <Icons.globe size={10} />
+                        </button>
+                        <button
+                          onClick={() => removeAttachedDoc(doc.id)}
+                          className="hover:text-white transition-colors"
+                        >
+                          <Icons.x size={10} />
+                        </button>
+                      </>
+                    )}
+                  </span>
+                  {/* Translate language dropdown */}
+                  {translateDropdownId === doc.id && !translatingDocId && (
+                    <div className="absolute top-full left-0 mt-1 z-50 rounded-xl bg-[#1e1e1e] border border-white/10 shadow-xl overflow-hidden min-w-[140px]">
+                      <p className="px-3 pt-2 pb-1 text-[9px] font-bold text-white/25 uppercase tracking-widest">Vertaal naar</p>
+                      {[
+                        { code: 'en', label: 'Engels', flag: '\uD83C\uDDEC\uD83C\uDDE7' },
+                        { code: 'nl', label: 'Nederlands', flag: '\uD83C\uDDF3\uD83C\uDDF1' },
+                        { code: 'de', label: 'Duits', flag: '\uD83C\uDDE9\uD83C\uDDEA' },
+                        { code: 'fr', label: 'Frans', flag: '\uD83C\uDDEB\uD83C\uDDF7' },
+                        { code: 'es', label: 'Spaans', flag: '\uD83C\uDDEA\uD83C\uDDF8' },
+                      ].map((lang) => (
+                        <button
+                          key={lang.code}
+                          onClick={() => translateDocument(doc.id, lang.code)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                        >
+                          <span>{lang.flag}</span>
+                          <span>{lang.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
