@@ -1308,6 +1308,7 @@ model MeetingWeek {
   topics        MeetingTopic[]
   actions       MeetingAction[]
   distributions WorkDistribution[]
+  conversations WorkConversation[]
 
   @@index([monthId])
   @@index([meetingDate])
@@ -1566,4 +1567,24 @@ model ExternalAdvocateCase {
 
   @@index([advocateUserId])
   @@index([isCompleted])
+}
+
+// ==================== WERKVERDELINGSGESPREKKEN ====================
+
+// Werkverdelingsgesprek notities per medewerker per week
+model WorkConversation {
+  id           String   @id @default(cuid())
+  weekId       String
+  employeeId   String
+  employeeName String
+  partnerName  String
+  capacity     String?  // 'veel_ruimte' | 'ruimte' | 'vol' | 'heel_vol'
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  week         MeetingWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@unique([weekId, employeeId])
+  @@index([weekId])
 }
