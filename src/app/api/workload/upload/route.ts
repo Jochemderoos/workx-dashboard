@@ -377,54 +377,56 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Sla werkdruk op voor elke gevonden entry
+    // Sla werkdruk op — alle upserts in één transactie
     const results: { name: string; date: string; hours: number; level: string }[] = []
-
-    for (const entry of uniqueEntries) {
+    const workloadOps = uniqueEntries.map(entry => {
       const level = getWorkloadLevel(entry.hours)
-
-      await prisma.workload.upsert({
+      results.push({ name: entry.personName, date: entry.date, hours: entry.hours, level })
+      return prisma.workload.upsert({
         where: {
           personName_date: { personName: entry.personName, date: entry.date }
         },
         update: { level, hours: entry.hours },
         create: { personName: entry.personName, date: entry.date, level, hours: entry.hours }
       })
+    })
 
-      results.push({ name: entry.personName, date: entry.date, hours: entry.hours, level })
-    }
-
-    // Sla WorkloadDetail records op (uit XLS parsing)
-    let detailCount = 0
-    if (detailEntries.length > 0) {
-      for (const detail of detailEntries) {
-        await prisma.workloadDetail.upsert({
-          where: {
-            personName_date_projectName_activityType: {
-              personName: detail.personName,
-              date: detail.date,
-              projectName: detail.projectName,
-              activityType: detail.activityType,
-            }
-          },
-          update: {
-            description: detail.description,
-            billableHours: detail.billableHours,
-            workedHours: detail.workedHours,
-          },
-          create: {
+    // Sla WorkloadDetail records op — in batches van 50 binnen transacties
+    const detailOps = detailEntries.map(detail =>
+      prisma.workloadDetail.upsert({
+        where: {
+          personName_date_projectName_activityType: {
             personName: detail.personName,
             date: detail.date,
             projectName: detail.projectName,
             activityType: detail.activityType,
-            description: detail.description,
-            billableHours: detail.billableHours,
-            workedHours: detail.workedHours,
           }
-        })
-        detailCount++
-      }
+        },
+        update: {
+          description: detail.description,
+          billableHours: detail.billableHours,
+          workedHours: detail.workedHours,
+        },
+        create: {
+          personName: detail.personName,
+          date: detail.date,
+          projectName: detail.projectName,
+          activityType: detail.activityType,
+          description: detail.description,
+          billableHours: detail.billableHours,
+          workedHours: detail.workedHours,
+        }
+      })
+    )
+
+    // Verwerk alles in batches van 50 binnen transacties
+    const BATCH_SIZE = 50
+    const allOps = [...workloadOps, ...detailOps]
+    for (let i = 0; i < allOps.length; i += BATCH_SIZE) {
+      const batch = allOps.slice(i, i + BATCH_SIZE)
+      await prisma.$transaction(batch)
     }
+    const detailCount = detailEntries.length
 
     // Get unique dates from results
     const uniqueDates = Array.from(new Set(results.map(r => r.date)))
