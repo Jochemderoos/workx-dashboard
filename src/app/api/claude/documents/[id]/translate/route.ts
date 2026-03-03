@@ -203,34 +203,40 @@ export async function POST(
         return NextResponse.json({ error: 'Geen tekst gevonden in het document' }, { status: 400 })
       }
 
-      // Single Claude call for all paragraphs (faster for typical documents)
-      const textsJson = JSON.stringify(allParagraphs.map((p) => p.text))
-      const prompt = `Je bent een professionele vertaler. Vertaal elk item in de onderstaande JSON-array naar het ${taalNaam}.
+      // Delimiter-based format avoids JSON escaping issues with quotes in text
+      const DELIM = '¶¶¶'
 
-REGELS:
-- Retourneer ALLEEN een JSON-array met exact evenveel items als de input.
-- Behoud de volgorde exact.
-- Vertaal elk item volledig en professioneel.
-- Gebruik professioneel juridisch taalgebruik waar van toepassing.
-- Geef GEEN uitleg, GEEN markdown, ALLEEN de JSON-array.
+      const translateChunk = async (texts: string[]): Promise<string[]> => {
+        const numbered = texts.map((t, i) => `[${i}] ${t}`).join('\n')
+        const prompt = `Vertaal elke genummerde regel hieronder naar het ${taalNaam}.
+Geef elke vertaling op een aparte regel, gescheiden door exact "${DELIM}" op een eigen regel.
+Geef GEEN nummers, GEEN uitleg, ALLEEN de vertalingen gescheiden door ${DELIM}.
+Gebruik professioneel juridisch taalgebruik waar van toepassing.
 
-INPUT:
-${textsJson}`
+${numbered}`
 
-      console.log('[translate] Calling Claude Haiku...', prompt.length, 'chars prompt')
-      const result = await callClaude(prompt)
-      console.log('[translate] Claude response:', result.length, 'chars')
-
-      const cleaned = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-      const arrayStart = cleaned.indexOf('[')
-      const arrayEnd = cleaned.lastIndexOf(']')
-      if (arrayStart === -1 || arrayEnd === -1) {
-        throw new Error('Kon vertaling niet verwerken – geen JSON array in response')
+        const result = await callClaude(prompt, 8192)
+        const parts = result.split(DELIM).map((s) => s.trim()).filter((s) => s.length > 0)
+        if (parts.length !== texts.length) {
+          console.error(`[translate] Chunk mismatch: got ${parts.length}, expected ${texts.length}`)
+          // Pad or truncate to match
+          while (parts.length < texts.length) parts.push(texts[parts.length])
+          if (parts.length > texts.length) parts.length = texts.length
+        }
+        return parts
       }
-      const translatedTexts: string[] = JSON.parse(cleaned.substring(arrayStart, arrayEnd + 1))
-      if (!Array.isArray(translatedTexts) || translatedTexts.length !== allParagraphs.length) {
-        throw new Error(`Vertaling gaf ${translatedTexts.length} items, verwacht ${allParagraphs.length}`)
+
+      // Process in parallel chunks of 30
+      const chunkSize = 30
+      const chunks: string[][] = []
+      for (let i = 0; i < allParagraphs.length; i += chunkSize) {
+        chunks.push(allParagraphs.slice(i, i + chunkSize).map((p) => p.text))
       }
+
+      console.log('[translate] Translating', allParagraphs.length, 'paragraphs in', chunks.length, 'chunks')
+      const chunkResults = await Promise.all(chunks.map((c) => translateChunk(c)))
+      const translatedTexts = chunkResults.flat()
+      console.log('[translate] Done, got', translatedTexts.length, 'translations')
 
       // Replace texts in XML files
       for (const file of xmlFiles) {
