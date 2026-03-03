@@ -286,10 +286,50 @@ export default function WerkverdelingsgesprekkenPage() {
           </div>
         )}
 
+        {/* Capacity overview */}
+        {activeWeek && (() => {
+          const counts = { veel_ruimte: 0, ruimte: 0, vol: 0, heel_vol: 0, none: 0 }
+          GESPREK_MEDEWERKERS.forEach(name => {
+            const key = `${activeWeek.id}-${getEmployeeId(name)}`
+            const cap = savedData[key]?.capacity
+            if (cap && cap in counts) counts[cap as keyof typeof counts]++
+            else counts.none++
+          })
+          const filled = GESPREK_MEDEWERKERS.length - counts.none
+          return (
+            <div className="card p-4 border border-white/10 flex flex-wrap items-center gap-x-5 gap-y-2">
+              <div className="flex items-center gap-2 mr-auto">
+                <Icons.chart className="text-gray-500" size={16} />
+                <span className="text-sm text-gray-400">
+                  <span className="text-white font-medium">{filled}</span>/{GESPREK_MEDEWERKERS.length} ingevuld
+                </span>
+              </div>
+              {CAPACITY_OPTIONS.map(opt => {
+                const count = counts[opt.value as keyof typeof counts]
+                const style = getCapacityStyle(opt.value)
+                return (
+                  <div key={opt.value} className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${style.dot}`} />
+                    <span className={`text-xs ${style.text}`}>{opt.label}</span>
+                    <span className="text-xs text-gray-500 font-medium">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
+
         {/* Employee cards grid */}
         {activeWeek && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {GESPREK_MEDEWERKERS.map((name) => {
+            {[...GESPREK_MEDEWERKERS].sort((a, b) => {
+              const aKey = `${activeWeek.id}-${getEmployeeId(a)}`
+              const bKey = `${activeWeek.id}-${getEmployeeId(b)}`
+              const aFilled = !!(savedData[aKey]?.capacity || savedData[aKey]?.notes)
+              const bFilled = !!(savedData[bKey]?.capacity || savedData[bKey]?.notes)
+              if (aFilled === bFilled) return 0
+              return aFilled ? -1 : 1
+            }).map((name) => {
               const employeeId = getEmployeeId(name)
               const key = `${activeWeek.id}-${employeeId}`
               const data = localData[key] || {
