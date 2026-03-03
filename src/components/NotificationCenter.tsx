@@ -128,9 +128,10 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-workx-lime hover:underline"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime text-xs font-medium hover:bg-workx-lime/20 transition-colors"
               >
-                Alles als gelezen markeren
+                <Icons.check size={12} />
+                Als gelezen markeren
               </button>
             )}
           </div>
