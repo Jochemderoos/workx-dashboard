@@ -78,6 +78,8 @@ export default function ClaudeChat({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [translateDropdownId, setTranslateDropdownId] = useState<string | null>(null)
   const [translatingDocId, setTranslatingDocId] = useState<string | null>(null)
+  const [translateProgress, setTranslateProgress] = useState(0)
+  const translateTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [translatePanelOpen, setTranslatePanelOpen] = useState(false)
   const [translateFile, setTranslateFile] = useState<{ id: string; name: string } | null>(null)
   const [translateUploading, setTranslateUploading] = useState(false)
@@ -403,6 +405,16 @@ export default function ClaudeChat({
   const translateDocument = async (docId: string, targetLanguage: string) => {
     setTranslateDropdownId(null)
     setTranslatingDocId(docId)
+    setTranslateProgress(0)
+    // Animated progress: ramps up quickly then slows down (never reaches 100 until done)
+    if (translateTimerRef.current) clearInterval(translateTimerRef.current)
+    const startTime = Date.now()
+    translateTimerRef.current = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000
+      // Asymptotic curve: reaches ~90% at 40s, never 100%
+      const progress = Math.min(95, 100 * (1 - Math.exp(-elapsed / 20)))
+      setTranslateProgress(Math.round(progress))
+    }, 300)
     try {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 90_000)
@@ -454,6 +466,7 @@ export default function ClaudeChat({
         URL.revokeObjectURL(url)
       }
 
+      setTranslateProgress(100)
       toast.success('Vertaald document gedownload')
       return true
     } catch (err) {
@@ -465,7 +478,9 @@ export default function ClaudeChat({
       }
       return false
     } finally {
+      if (translateTimerRef.current) { clearInterval(translateTimerRef.current); translateTimerRef.current = null }
       setTranslatingDocId(null)
+      setTimeout(() => setTranslateProgress(0), 500)
     }
   }
 
@@ -1537,9 +1552,17 @@ ${markdownHtml}
                     </div>
 
                     {translatingDocId ? (
-                      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-workx-lime/10 border border-workx-lime/15">
-                        <div className="animate-spin"><Icons.refresh size={14} className="text-workx-lime" /></div>
-                        <span className="text-workx-lime text-sm">Document wordt vertaald...</span>
+                      <div className="space-y-2 px-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-workx-lime font-medium">Vertalen...</span>
+                          <span className="text-white/40 tabular-nums">{translateProgress}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-workx-lime/70 to-workx-lime transition-all duration-300 ease-out"
+                            style={{ width: `${translateProgress}%` }}
+                          />
+                        </div>
                       </div>
                     ) : !translateFile ? (
                       <button
@@ -2146,8 +2169,7 @@ ${markdownHtml}
                     )}
                     {translatingDocId === doc.id ? (
                       <span className="flex items-center gap-1 text-workx-lime">
-                        <div className="animate-spin"><Icons.refresh size={10} /></div>
-                        <span className="text-[10px]">Vertalen...</span>
+                        <span className="text-[10px] tabular-nums">{translateProgress}%</span>
                       </span>
                     ) : (
                       <>
