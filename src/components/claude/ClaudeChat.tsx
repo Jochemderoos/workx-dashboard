@@ -78,6 +78,10 @@ export default function ClaudeChat({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [translateDropdownId, setTranslateDropdownId] = useState<string | null>(null)
   const [translatingDocId, setTranslatingDocId] = useState<string | null>(null)
+  const [translatePanelOpen, setTranslatePanelOpen] = useState(false)
+  const [translateFile, setTranslateFile] = useState<{ id: string; name: string } | null>(null)
+  const [translateUploading, setTranslateUploading] = useState(false)
+  const translateInputRef = useRef<HTMLInputElement>(null)
   const [uploadStatusText, setUploadStatusText] = useState('')
   const [thinkingText, setThinkingText] = useState('')
   const [isThinking, setIsThinking] = useState(false)
@@ -430,6 +434,50 @@ export default function ClaudeChat({
     } finally {
       setTranslatingDocId(null)
     }
+  }
+
+  const handleTranslateUpload = async (file: File) => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || ''
+    if (!['pdf', 'docx', 'txt'].includes(ext)) {
+      toast.error('Alleen PDF, DOCX en TXT bestanden')
+      return
+    }
+    if (file.size > 32 * 1024 * 1024) {
+      toast.error('Bestand is te groot (max 32MB)')
+      return
+    }
+
+    setTranslateUploading(true)
+    try {
+      // Upload via existing document upload flow
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/claude/documents', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Upload mislukt' }))
+        throw new Error(data.error || 'Upload mislukt')
+      }
+
+      const doc = await res.json()
+      setTranslateFile({ id: doc.id, name: doc.name })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload mislukt')
+    } finally {
+      setTranslateUploading(false)
+    }
+  }
+
+  const handleTranslateAndDownload = async (targetLanguage: string) => {
+    if (!translateFile || translatingDocId) return
+    const fileId = translateFile.id
+    setTranslateFile(null)
+    await translateDocument(fileId, targetLanguage)
+    setTranslatePanelOpen(false)
   }
 
   // Track isLoading in ref so effects can check without re-triggering
@@ -1418,6 +1466,93 @@ ${markdownHtml}
                     {i < 4 && <span className="mx-1 text-white/10">&middot;</span>}
                   </span>
                 ))}
+              </div>
+
+              {/* Translate document card */}
+              <div className="pt-6 w-full max-w-sm mx-auto">
+                <input
+                  ref={translateInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) handleTranslateUpload(f)
+                    if (translateInputRef.current) translateInputRef.current.value = ''
+                  }}
+                  className="hidden"
+                />
+                {!translatePanelOpen ? (
+                  <button
+                    onClick={() => setTranslatePanelOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-white/40 bg-white/[0.03] border border-white/[0.06] hover:text-white/70 hover:bg-white/[0.06] hover:border-white/[0.12] transition-all duration-300"
+                  >
+                    <Icons.globe size={16} />
+                    Document vertalen
+                  </button>
+                ) : (
+                  <div className="rounded-xl bg-white/[0.04] border border-white/[0.08] p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-white/70 flex items-center gap-2">
+                        <Icons.globe size={15} className="text-workx-lime" />
+                        Document vertalen
+                      </h4>
+                      <button onClick={() => { setTranslatePanelOpen(false); setTranslateFile(null) }} className="text-white/30 hover:text-white/60 transition-colors">
+                        <Icons.x size={14} />
+                      </button>
+                    </div>
+
+                    {translatingDocId ? (
+                      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-workx-lime/10 border border-workx-lime/15">
+                        <div className="animate-spin"><Icons.refresh size={14} className="text-workx-lime" /></div>
+                        <span className="text-workx-lime text-sm">Document wordt vertaald...</span>
+                      </div>
+                    ) : !translateFile ? (
+                      <button
+                        onClick={() => translateInputRef.current?.click()}
+                        disabled={translateUploading}
+                        className="w-full flex flex-col items-center gap-2 px-4 py-5 rounded-xl border-2 border-dashed border-white/[0.08] hover:border-workx-lime/30 hover:bg-workx-lime/[0.03] text-white/40 hover:text-white/60 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {translateUploading ? (
+                          <>
+                            <div className="animate-spin"><Icons.refresh size={20} className="text-workx-lime" /></div>
+                            <span className="text-xs">Uploaden...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Icons.upload size={20} />
+                            <span className="text-xs">Upload PDF, DOCX of TXT</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[12px] text-blue-400">
+                          <Icons.paperclip size={12} />
+                          <span className="truncate flex-1">{translateFile.name}</span>
+                          <button onClick={() => setTranslateFile(null)} className="hover:text-white transition-colors"><Icons.x size={10} /></button>
+                        </div>
+                        <p className="text-[11px] text-white/30 px-1">Vertaal naar:</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {[
+                            { code: 'en', label: 'Engels', flag: '\uD83C\uDDEC\uD83C\uDDE7' },
+                            { code: 'nl', label: 'Nederlands', flag: '\uD83C\uDDF3\uD83C\uDDF1' },
+                            { code: 'de', label: 'Duits', flag: '\uD83C\uDDE9\uD83C\uDDEA' },
+                            { code: 'fr', label: 'Frans', flag: '\uD83C\uDDEB\uD83C\uDDF7' },
+                          ].map((lang) => (
+                            <button
+                              key={lang.code}
+                              onClick={() => handleTranslateAndDownload(lang.code)}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[12px] text-white/60 hover:text-white hover:bg-workx-lime/10 hover:border-workx-lime/20 transition-all"
+                            >
+                              <span>{lang.flag}</span>
+                              <span>{lang.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
