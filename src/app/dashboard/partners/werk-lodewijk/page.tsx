@@ -30,6 +30,26 @@ interface WorkloadEntry {
   updatedAt: string
 }
 
+interface WorkloadDetailEntry {
+  id: string
+  personName: string
+  date: string
+  projectName: string
+  activityType: string
+  description: string | null
+  billableHours: number
+  workedHours: number
+}
+
+interface ProjectSummary {
+  projectName: string
+  totalBillableHours: number
+  totalWorkedHours: number
+  daysActive: number
+  lastDate: string
+  details: WorkloadDetailEntry[]
+}
+
 interface ExternalCase {
   id: string
   advocateUserId: string
@@ -512,6 +532,102 @@ function CaseCard({ caseData, onUpdate, onComplete, onDelete }: CaseRowProps) {
   )
 }
 
+// ─── Cases From Upload ──────────────────────────────────────────────────
+
+function CasesFromUpload({ summaries }: { summaries: ProjectSummary[] }) {
+  const [expandedProject, setExpandedProject] = useState<string | null>(null)
+
+  if (summaries.length === 0) return null
+
+  const maxHours = Math.max(...summaries.map(s => s.totalBillableHours))
+  const totalHours = summaries.reduce((sum, s) => sum + s.totalBillableHours, 0)
+
+  // Shorten project name for display: "Stek Advocaten B.V. / Castellum - Project Eurohill" → "Castellum - Project Eurohill"
+  const shortName = (name: string) => {
+    const parts = name.split(' / ')
+    return parts.length > 1 ? parts.slice(1).join(' / ') : name
+  }
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/10">
+      <div className="absolute -top-16 -right-16 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl" />
+      <div className="relative p-6 sm:p-8 space-y-5">
+        <h3 className="text-base font-semibold text-white flex items-center gap-2">
+          <Icons.briefcase size={18} className="text-workx-lime/70" />
+          Uren per zaak (laatste 4 weken)
+        </h3>
+
+        <div className="space-y-3">
+          {summaries.map((summary) => {
+            const pct = maxHours > 0 ? (summary.totalBillableHours / maxHours) * 100 : 0
+            const isExpanded = expandedProject === summary.projectName
+
+            return (
+              <div key={summary.projectName}>
+                <button
+                  onClick={() => setExpandedProject(isExpanded ? null : summary.projectName)}
+                  className="w-full text-left rounded-xl p-3 hover:bg-white/[0.04] transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm text-white/80 font-medium truncate mr-3">
+                      {shortName(summary.projectName)}
+                    </span>
+                    <span className="text-sm font-bold text-white/70 flex-shrink-0">
+                      {summary.totalBillableHours}u
+                    </span>
+                  </div>
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-1.5">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-workx-lime/80 to-workx-lime transition-all duration-500"
+                      style={{ width: `${Math.max(pct, 3)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-white/30">
+                    <span>Laatst: {formatDate(summary.lastDate)}</span>
+                    <span>&middot;</span>
+                    <span>{summary.daysActive} {summary.daysActive === 1 ? 'dag' : 'dagen'}</span>
+                    <Icons.chevronDown
+                      size={12}
+                      className={`ml-auto transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    />
+                  </div>
+                </button>
+
+                {/* Expanded detail rows */}
+                {isExpanded && (
+                  <div className="ml-3 mt-1 mb-2 pl-3 border-l border-white/5 space-y-1">
+                    {summary.details.map((d, idx) => (
+                      <div key={idx} className="flex items-start gap-3 py-1.5 text-xs">
+                        <span className="text-white/30 w-14 flex-shrink-0">{formatDate(d.date)}</span>
+                        <span className="text-white/50 w-10 text-right flex-shrink-0">{d.billableHours}u</span>
+                        {d.description && (
+                          <span className="text-white/25 truncate">{d.description}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Footer totaal */}
+        <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs text-white/40">
+          <span>
+            Totaal: <span className="text-white/60 font-medium">{Math.round(totalHours * 10) / 10}u</span> over {summaries.length} {summaries.length === 1 ? 'zaak' : 'zaken'}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ──────────────────────────────────────────────────────────
 
 export default function WerkLodewijkPage() {
@@ -522,6 +638,7 @@ export default function WerkLodewijkPage() {
   const [completedCases, setCompletedCases] = useState<ExternalCase[]>([])
   const [editedCases, setEditedCases] = useState<ExternalCase[] | null>(null)
   const [workloadEntries, setWorkloadEntries] = useState<WorkloadEntry[]>([])
+  const [workloadDetails, setWorkloadDetails] = useState<WorkloadDetailEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -574,12 +691,33 @@ export default function WerkLodewijkPage() {
     }
   }, [])
 
+  // Fetch workload detail entries (uren per zaak) — laatste 4 weken
+  const fetchWorkloadDetails = useCallback(async () => {
+    try {
+      const endDate = new Date()
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - 28) // 4 weken terug
+      const startStr = startDate.toISOString().slice(0, 10)
+      const endStr = endDate.toISOString().slice(0, 10)
+      const res = await fetch(
+        `/api/workload-details?personName=${encodeURIComponent(LODEWIJK.name)}&startDate=${startStr}&endDate=${endStr}`
+      )
+      if (res.ok) {
+        const data = await res.json()
+        setWorkloadDetails(data)
+      }
+    } catch {
+      // Silently fail
+    }
+  }, [])
+
   useEffect(() => {
     if (status === 'authenticated') {
       fetchCases()
       fetchWorkload()
+      fetchWorkloadDetails()
     }
-  }, [status, fetchCases, fetchWorkload])
+  }, [status, fetchCases, fetchWorkload, fetchWorkloadDetails])
 
   // Computed
   const displayCases = editedCases ?? cases
@@ -597,6 +735,43 @@ export default function WerkLodewijkPage() {
     if (weekEntries.length === 0) return null
     return Math.round(weekEntries.reduce((sum, e) => sum + (e.hours || 0), 0) * 10) / 10
   }, [workloadEntries])
+
+  // Aggregatie: uren per zaak (project) uit workloadDetails
+  const projectSummaries: ProjectSummary[] = useMemo(() => {
+    if (workloadDetails.length === 0) return []
+
+    const map = new Map<string, { totalBillable: number; totalWorked: number; dates: Set<string>; lastDate: string; details: WorkloadDetailEntry[] }>()
+
+    for (const d of workloadDetails) {
+      const existing = map.get(d.projectName)
+      if (existing) {
+        existing.totalBillable += d.billableHours
+        existing.totalWorked += d.workedHours
+        existing.dates.add(d.date)
+        if (d.date > existing.lastDate) existing.lastDate = d.date
+        existing.details.push(d)
+      } else {
+        map.set(d.projectName, {
+          totalBillable: d.billableHours,
+          totalWorked: d.workedHours,
+          dates: new Set([d.date]),
+          lastDate: d.date,
+          details: [d],
+        })
+      }
+    }
+
+    return Array.from(map.entries())
+      .map(([projectName, data]) => ({
+        projectName,
+        totalBillableHours: Math.round(data.totalBillable * 10) / 10,
+        totalWorkedHours: Math.round(data.totalWorked * 10) / 10,
+        daysActive: data.dates.size,
+        lastDate: data.lastDate,
+        details: data.details.sort((a, b) => b.date.localeCompare(a.date)),
+      }))
+      .sort((a, b) => b.totalBillableHours - a.totalBillableHours)
+  }, [workloadDetails])
 
   // Actions
   const updateCase = (updated: ExternalCase) => {
@@ -793,6 +968,9 @@ export default function WerkLodewijkPage() {
 
         {/* ── Weekly Hours Overview ─────────────────────────────────── */}
         <WeeklyHoursOverview entries={workloadEntries} />
+
+        {/* ── Uren per zaak (uit upload) ─────────────────────────────── */}
+        <CasesFromUpload summaries={projectSummaries} />
 
         {/* ── Error banner ───────────────────────────────────────────── */}
         {error && (

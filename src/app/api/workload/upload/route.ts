@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import * as XLSX from 'xlsx'
 
 // Medewerkers + partners voor werkdruk
 const MEDEWERKERS = [
@@ -24,6 +25,24 @@ const MEDEWERKERS = [
   'Bas den Ridder',
   'Juliette Niersman',
 ]
+
+// Naam correcties voor incomplete namen uit XLS
+const NAME_CORRECTIONS: Record<string, string> = {
+  'Emma van der': 'Emma van der Vos',
+  'Lotte van Sint': 'Lotte van Sint Truiden',
+  'Wies van': 'Wies van Pesch',
+  'Erika van': 'Erika van Zadelhof',
+  'Lodewijk van': 'Lodewijk van Thiel',
+}
+
+function applyNameCorrection(name: string): string {
+  for (const [incorrect, correct] of Object.entries(NAME_CORRECTIONS)) {
+    if (name === incorrect || name.startsWith(incorrect + ' ')) {
+      return correct
+    }
+  }
+  return name
+}
 
 // Dutch day and month names for parsing
 const DUTCH_DAYS = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag']
@@ -55,6 +74,130 @@ interface WorkloadEntry {
   date: string
   hours: number
 }
+
+interface WorkloadDetailEntry {
+  personName: string
+  date: string
+  projectName: string
+  activityType: string
+  description: string | null
+  billableHours: number
+  workedHours: number
+}
+
+// ─── XLS Parser ─────────────────────────────────────────────────────────
+
+function parseXLSFile(buffer: ArrayBuffer): { aggregated: WorkloadEntry[]; details: WorkloadDetailEntry[] } {
+  const workbook = XLSX.read(buffer, { type: 'array' })
+
+  // Zoek het GegevensOverzicht sheet
+  const sheetName = workbook.SheetNames.find(n => n.toLowerCase().includes('gegevensoverzicht'))
+  if (!sheetName) {
+    throw new Error('Sheet "GegevensOverzicht" niet gevonden in het bestand')
+  }
+
+  const sheet = workbook.Sheets[sheetName]
+  const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+
+  const details: WorkloadDetailEntry[] = []
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (!row || row.length < 6) continue
+
+    // Col B (idx 1): personName
+    const rawName = String(row[1] || '').trim()
+    if (!rawName || rawName.toLowerCase().includes('totaal')) continue
+
+    const personName = applyNameCorrection(rawName)
+
+    // Col D (idx 3): datum — kan een Excel serial number of DD-MM-YYYY string zijn
+    const rawDate = row[3]
+    let isoDate: string | null = null
+
+    if (typeof rawDate === 'number') {
+      // Excel serial number → Date
+      const d = XLSX.SSF.parse_date_code(rawDate)
+      if (d) {
+        isoDate = `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`
+      }
+    } else if (typeof rawDate === 'string' && rawDate.trim()) {
+      // Try DD-MM-YYYY format
+      const match = rawDate.trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+      if (match) {
+        isoDate = `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`
+      }
+    }
+
+    if (!isoDate) continue
+
+    // Col E (idx 4): factureerbare uren (kan komma-decimaal string zijn)
+    const rawBillable = row[4]
+    const billableHours = parseDutchNumber(rawBillable)
+
+    // Col F (idx 5): bestede uren
+    const rawWorked = row[5]
+    const workedHours = parseDutchNumber(rawWorked)
+
+    // Skip rijen zonder uren
+    if (billableHours === 0 && workedHours === 0) continue
+
+    // Col I (idx 8): projectName
+    const projectName = String(row[8] || '').trim()
+    if (!projectName) continue
+
+    // Col J (idx 9): activityType
+    const activityType = String(row[9] || '').trim()
+
+    // Col K (idx 10): description
+    const rawDesc = String(row[10] || '').trim()
+    const description = rawDesc || null
+
+    details.push({
+      personName,
+      date: isoDate,
+      projectName,
+      activityType,
+      description,
+      billableHours,
+      workedHours,
+    })
+  }
+
+  // Aggregeer tot totaal uren per persoon+dag (voor Workload tabel)
+  const aggMap = new Map<string, WorkloadEntry>()
+  for (const detail of details) {
+    const key = `${detail.personName}|${detail.date}`
+    const existing = aggMap.get(key)
+    if (existing) {
+      existing.hours += detail.workedHours
+    } else {
+      aggMap.set(key, {
+        personName: detail.personName,
+        date: detail.date,
+        hours: detail.workedHours,
+      })
+    }
+  }
+
+  return {
+    aggregated: Array.from(aggMap.values()),
+    details,
+  }
+}
+
+function parseDutchNumber(val: unknown): number {
+  if (typeof val === 'number') return val
+  if (typeof val === 'string') {
+    // Replace comma with dot for Dutch decimal format
+    const cleaned = val.trim().replace(',', '.')
+    const num = parseFloat(cleaned)
+    return isNaN(num) ? 0 : num
+  }
+  return 0
+}
+
+// ─── RTF Parsers (bestaand) ─────────────────────────────────────────────
 
 // Parse RTF content met Dutch dates (e.g. "woensdag, 28 januari 2026")
 function parseRTFWithDutchDates(content: string): WorkloadEntry[] {
@@ -159,6 +302,8 @@ function parseRTFTable(content: string, dateStr: string): WorkloadEntry[] {
   return results
 }
 
+// ─── POST Handler ───────────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -187,15 +332,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Geen bestand geüpload' }, { status: 400 })
     }
 
-    // Lees bestand als text
-    const content = await file.text()
+    // Detecteer bestandstype op extensie
+    const fileName = file.name.toLowerCase()
+    const isXLS = fileName.endsWith('.xls') || fileName.endsWith('.xlsx')
 
-    // Try parsing with Dutch dates first (preferred method)
-    let workloadEntries = parseRTFWithDutchDates(content)
+    let workloadEntries: WorkloadEntry[] = []
+    let detailEntries: WorkloadDetailEntry[] = []
 
-    // If no results and we have a date parameter, try legacy parsing
-    if (workloadEntries.length === 0 && dateStr) {
-      workloadEntries = parseRTFTable(content, dateStr)
+    if (isXLS) {
+      // XLS/XLSX parser
+      const buffer = await file.arrayBuffer()
+      const parsed = parseXLSFile(buffer)
+      workloadEntries = parsed.aggregated
+      detailEntries = parsed.details
+    } else {
+      // Bestaande RTF parser
+      const content = await file.text()
+
+      // Try parsing with Dutch dates first (preferred method)
+      workloadEntries = parseRTFWithDutchDates(content)
+
+      // If no results and we have a date parameter, try legacy parsing
+      if (workloadEntries.length === 0 && dateStr) {
+        workloadEntries = parseRTFTable(content, dateStr)
+      }
     }
 
     // Remove duplicates (same person + date), keep last occurrence
@@ -234,6 +394,38 @@ export async function POST(req: NextRequest) {
       results.push({ name: entry.personName, date: entry.date, hours: entry.hours, level })
     }
 
+    // Sla WorkloadDetail records op (uit XLS parsing)
+    let detailCount = 0
+    if (detailEntries.length > 0) {
+      for (const detail of detailEntries) {
+        await prisma.workloadDetail.upsert({
+          where: {
+            personName_date_projectName_activityType: {
+              personName: detail.personName,
+              date: detail.date,
+              projectName: detail.projectName,
+              activityType: detail.activityType,
+            }
+          },
+          update: {
+            description: detail.description,
+            billableHours: detail.billableHours,
+            workedHours: detail.workedHours,
+          },
+          create: {
+            personName: detail.personName,
+            date: detail.date,
+            projectName: detail.projectName,
+            activityType: detail.activityType,
+            description: detail.description,
+            billableHours: detail.billableHours,
+            workedHours: detail.workedHours,
+          }
+        })
+        detailCount++
+      }
+    }
+
     // Get unique dates from results
     const uniqueDates = Array.from(new Set(results.map(r => r.date)))
 
@@ -241,13 +433,15 @@ export async function POST(req: NextRequest) {
       success: true,
       dates: uniqueDates,
       processed: results.length,
+      detailRecords: detailCount,
       results
     })
 
   } catch (error) {
     console.error('Error processing workload upload:', error)
+    const message = error instanceof Error ? error.message : 'Fout bij verwerken van bestand'
     return NextResponse.json(
-      { error: 'Fout bij verwerken van bestand' },
+      { error: message },
       { status: 500 }
     )
   }

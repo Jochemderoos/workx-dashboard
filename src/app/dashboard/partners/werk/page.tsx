@@ -633,7 +633,7 @@ export default function PartnersWerkPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm text-white/60 mb-2">Urenoverzicht bestand (.docx / .rtf)</label>
+                      <label className="block text-sm text-white/60 mb-2">Urenoverzicht bestand (.xls / .xlsx / .docx / .rtf)</label>
                       <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                         isUploading
                           ? 'border-workx-lime/50 bg-workx-lime/5'
@@ -656,7 +656,7 @@ export default function PartnersWerkPage() {
                         <input
                           type="file"
                           className="hidden"
-                          accept=".docx,.rtf,.doc"
+                          accept=".docx,.rtf,.doc,.xls,.xlsx"
                           onChange={handleFileUpload}
                           disabled={isUploading}
                         />

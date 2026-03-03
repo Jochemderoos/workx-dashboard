@@ -1529,6 +1529,23 @@ model HandoverCase {
 
 // ==================== EXTERNE ADVOCAAT ZAKEN ====================
 
+// Detailregels uit urenoverzicht upload (per persoon/dag/zaak)
+model WorkloadDetail {
+  id            String   @id @default(cuid())
+  personName    String
+  date          String   // YYYY-MM-DD
+  projectName   String   // "Stek Advocaten B.V. / Castellum - Project Eurohill"
+  activityType  String   @default("")
+  description   String?  @db.Text
+  billableHours Float    @default(0)
+  workedHours   Float    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([personName, date, projectName, activityType])
+  @@index([personName, date])
+}
+
 // Zaken belegd bij externe advocaat (Lodewijk van Thiel)
 model ExternalAdvocateCase {
   id                   String    @id @default(cuid())
