@@ -180,10 +180,13 @@ function parseXLSFile(buffer: ArrayBuffer): { aggregated: WorkloadEntry[]; detai
     }
   }
 
-  return {
-    aggregated: Array.from(aggMap.values()),
-    details,
-  }
+  // Rond geaggregeerde uren af (floating point fix)
+  const aggregated = Array.from(aggMap.values()).map(e => ({
+    ...e,
+    hours: Math.round(e.hours * 100) / 100,
+  }))
+
+  return { aggregated, details }
 }
 
 function parseDutchNumber(val: unknown): number {
