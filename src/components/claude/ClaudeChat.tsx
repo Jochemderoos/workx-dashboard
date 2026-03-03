@@ -404,12 +404,17 @@ export default function ClaudeChat({
     setTranslateDropdownId(null)
     setTranslatingDocId(docId)
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 90_000) // 90s timeout
+
       const res = await fetch(`/api/claude/documents/${docId}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ targetLanguage }),
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: 'Vertaling mislukt' }))
@@ -428,9 +433,15 @@ export default function ClaudeChat({
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Vertaald document gedownload')
+      return true
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Vertaling mislukt'
-      toast.error(message)
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        toast.error('Vertaling duurde te lang. Probeer een kleiner document.')
+      } else {
+        const message = err instanceof Error ? err.message : 'Vertaling mislukt'
+        toast.error(message)
+      }
+      return false
     } finally {
       setTranslatingDocId(null)
     }
@@ -475,9 +486,11 @@ export default function ClaudeChat({
   const handleTranslateAndDownload = async (targetLanguage: string) => {
     if (!translateFile || translatingDocId) return
     const fileId = translateFile.id
-    setTranslateFile(null)
-    await translateDocument(fileId, targetLanguage)
-    setTranslatePanelOpen(false)
+    const success = await translateDocument(fileId, targetLanguage)
+    if (success) {
+      setTranslateFile(null)
+      setTranslatePanelOpen(false)
+    }
   }
 
   // Track isLoading in ref so effects can check without re-triggering

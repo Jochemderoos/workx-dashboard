@@ -79,10 +79,10 @@ function replaceParagraphTexts(xml: string, translations: Map<number, string>): 
 
 // ── Claude API ────────────────────────────────────────────────────
 
-async function callClaude(prompt: string, maxTokens = 16384): Promise<string> {
+async function callClaude(prompt: string, maxTokens = 8192): Promise<string> {
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured')
 
-  const maxRetries = 3
+  const maxRetries = 2
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -92,7 +92,7 @@ async function callClaude(prompt: string, maxTokens = 16384): Promise<string> {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: maxTokens,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -203,14 +203,18 @@ export async function POST(
         return NextResponse.json({ error: 'Geen tekst gevonden in het document' }, { status: 400 })
       }
 
-      // Translate in chunks
-      const chunkSize = 100
-      const translatedTexts: string[] = []
-
+      // Translate in parallel chunks
+      const chunkSize = 150
+      const chunks: { start: number; texts: string[] }[] = []
       for (let i = 0; i < allParagraphs.length; i += chunkSize) {
-        const chunk = allParagraphs.slice(i, i + chunkSize)
-        const textsJson = JSON.stringify(chunk.map((p) => p.text))
+        chunks.push({
+          start: i,
+          texts: allParagraphs.slice(i, i + chunkSize).map((p) => p.text),
+        })
+      }
 
+      const translateChunk = async (texts: string[]): Promise<string[]> => {
+        const textsJson = JSON.stringify(texts)
         const prompt = `Je bent een professionele vertaler. Vertaal elk item in de onderstaande JSON-array naar het ${taalNaam}.
 
 REGELS:
@@ -231,15 +235,24 @@ ${textsJson}`
           throw new Error('Kon vertaling niet verwerken')
         }
         const parsed = JSON.parse(cleaned.substring(arrayStart, arrayEnd + 1))
-        if (!Array.isArray(parsed) || parsed.length !== chunk.length) {
-          throw new Error(`Vertaling gaf ${parsed.length} items, verwacht ${chunk.length}`)
+        if (!Array.isArray(parsed) || parsed.length !== texts.length) {
+          throw new Error(`Vertaling gaf ${parsed.length} items, verwacht ${texts.length}`)
         }
-        translatedTexts.push(...parsed)
-
-        if (i + chunkSize < allParagraphs.length) {
-          await new Promise((r) => setTimeout(r, 500))
-        }
+        return parsed
       }
+
+      // Run all chunks in parallel (max 3 concurrent)
+      const results = new Array<string[]>(chunks.length)
+      const concurrency = 3
+      for (let batch = 0; batch < chunks.length; batch += concurrency) {
+        const batchChunks = chunks.slice(batch, batch + concurrency)
+        const batchResults = await Promise.all(
+          batchChunks.map((c) => translateChunk(c.texts))
+        )
+        batchResults.forEach((r, i) => { results[batch + i] = r })
+      }
+
+      const translatedTexts = results.flat()
 
       // Replace texts in XML files
       for (const file of xmlFiles) {
