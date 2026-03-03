@@ -1933,8 +1933,8 @@ export default function DashboardHome() {
         </div>
       )}
 
-      {/* OPENSTAANDE DECLARATIES WIDGET - for admin (Hanna + Lotte) */}
-      {isAdmin && (
+      {/* OPENSTAANDE DECLARATIES WIDGET - only for ADMIN (Hanna + Lotte) */}
+      {currentUser?.role === 'ADMIN' && (
         <div className={`relative overflow-hidden rounded-2xl border-2 ${pendingDeclarations.length > 0 ? 'border-green-400 shadow-lg shadow-green-500/20' : 'border-green-500/30'} bg-gradient-to-br ${pendingDeclarations.length > 0 ? 'from-green-500/20 via-green-500/10 to-emerald-500/10' : 'from-green-500/10 via-green-500/5 to-transparent'} p-5`}>
           {/* Pulse animation border effect - only when pending */}
           {pendingDeclarations.length > 0 && (
