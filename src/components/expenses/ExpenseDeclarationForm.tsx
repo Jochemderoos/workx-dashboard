@@ -40,7 +40,9 @@ interface ExpenseDeclarationFormProps {
 export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFormProps) {
   const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
 
   // Check if user is partner or admin
@@ -350,6 +352,88 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
       return false
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Submit declaration (sets status to SUBMITTED)
+  const submitDeclaration = async () => {
+    if (activeTab === 'holding' && !holdingName.trim()) {
+      toast.error('Vul de naam van de Holding BV in')
+      return
+    }
+    if (!employeeName.trim()) {
+      toast.error('Vul je naam in')
+      return
+    }
+    if (!bankAccount.trim() || !isValidIBAN(bankAccount)) {
+      toast.error('Vul een geldig IBAN nummer in')
+      return
+    }
+    const validItems = items.filter(i => i.date && i.amount > 0)
+    if (validItems.length === 0) {
+      toast.error('Voeg minimaal één kostenpost toe')
+      return
+    }
+    const missingDescription = validItems.find(i => i.expenseType === 'reiskosten_auto' && !i.description?.trim())
+    if (missingDescription) {
+      toast.error('Vul een reis omschrijving in voor alle reiskosten')
+      return
+    }
+    const missingOverigDescription = validItems.find(i => i.expenseType === 'overig' && !i.description?.trim())
+    if (missingOverigDescription) {
+      toast.error('Vul een omschrijving in voor alle kostenposten')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const method = currentDeclaration ? 'PUT' : 'POST'
+      const url = currentDeclaration
+        ? `/api/expenses/${currentDeclaration.id}`
+        : '/api/expenses'
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeName: employeeName.trim(),
+          bankAccount: bankAccount.replace(/\s/g, '').toUpperCase(),
+          items: validItems.map(item => ({
+            description: item.description,
+            date: item.date,
+            amount: item.amount,
+            attachmentUrl: item.attachmentUrl,
+            attachmentName: item.attachmentName,
+            expenseType: item.expenseType,
+            kilometers: item.expenseType === 'reiskosten_auto' ? item.kilometers : undefined,
+            chargeToClient: activeTab === 'medewerker' ? item.chargeToClient : undefined,
+          })),
+          note: note.trim(),
+          holdingName: activeTab === 'holding' ? holdingName.trim() : null,
+          invoiceNumber: invoiceNumber.trim() || null,
+          submit: true,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Indienen mislukt')
+      }
+
+      // Refresh declarations list
+      const listRes = await fetch('/api/expenses')
+      if (listRes.ok) {
+        setSavedDeclarations(await listRes.json())
+      }
+
+      toast.success('Declaratie ingediend!')
+      setShowSubmitConfirm(false)
+      startNewForm()
+      setView('history')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Kon niet indienen')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -751,6 +835,38 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
             </div>
           )}
 
+          {/* Submit Confirmation Dialog */}
+          {showSubmitConfirm && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setShowSubmitConfirm(false)}>
+              <div className="bg-workx-dark border border-white/10 rounded-2xl p-4 sm:p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                  <Icons.alertTriangle size={20} className="text-orange-400" />
+                  Declaratie indienen
+                </h3>
+                <p className="text-sm text-gray-400 mb-6">
+                  Weet je zeker dat je wilt indienen? Na indienen kun je niet meer bewerken.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setShowSubmitConfirm(false)} className="btn-secondary">
+                    Annuleren
+                  </button>
+                  <button
+                    onClick={submitDeclaration}
+                    disabled={isSubmitting}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                    ) : (
+                      <Icons.send size={16} />
+                    )}
+                    Indienen
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tabs for Partners */}
           {isPartner && view === 'form' && (
             <div className="px-4 sm:px-6 pt-4">
@@ -806,12 +922,30 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                   {savedDeclarations.map((decl) => (
                     <div
                       key={decl.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer gap-2"
-                      onClick={() => loadDeclaration(decl)}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors gap-2 ${
+                        decl.status === 'DRAFT' ? 'cursor-pointer' : ''
+                      }`}
+                      onClick={() => decl.status === 'DRAFT' && loadDeclaration(decl)}
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-white font-medium truncate">{decl.employeeName}</p>
+                          {/* Status badge */}
+                          {decl.status === 'DRAFT' && (
+                            <span className="px-2 py-0.5 text-xs bg-gray-500/20 rounded-full text-gray-400 font-medium">
+                              Concept
+                            </span>
+                          )}
+                          {decl.status === 'SUBMITTED' && (
+                            <span className="px-2 py-0.5 text-xs bg-orange-500/20 rounded-full text-orange-400 font-medium">
+                              Ingediend
+                            </span>
+                          )}
+                          {decl.status === 'PAID' && (
+                            <span className="px-2 py-0.5 text-xs bg-green-500/20 rounded-full text-green-400 font-medium">
+                              Betaald
+                            </span>
+                          )}
                           {decl.holdingName && (
                             <span className="px-2 py-0.5 text-xs bg-white/10 rounded-full text-gray-400 truncate max-w-[150px]">
                               {decl.holdingName}
@@ -1227,6 +1361,18 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
             <div className="sticky bottom-0 p-4 sm:p-6 border-t border-white/10 bg-workx-dark rounded-b-2xl">
               {/* Mobile: stacked buttons */}
               <div className="flex flex-col gap-3 sm:hidden">
+                <button
+                  onClick={() => setShowSubmitConfirm(true)}
+                  disabled={isLoading || isSubmitting || items.length === 0}
+                  className="btn-primary flex items-center justify-center gap-2 disabled:opacity-50 w-full font-semibold"
+                >
+                  {isSubmitting ? (
+                    <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                  ) : (
+                    <Icons.send size={16} />
+                  )}
+                  Indienen
+                </button>
                 <div className="flex gap-2">
                   <button
                     onClick={saveDeclaration}
@@ -1304,6 +1450,18 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                       <Icons.fileText size={16} />
                     )}
                     Download PDF
+                  </button>
+                  <button
+                    onClick={() => setShowSubmitConfirm(true)}
+                    disabled={isLoading || isSubmitting || items.length === 0}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50 font-semibold"
+                  >
+                    {isSubmitting ? (
+                      <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                    ) : (
+                      <Icons.send size={16} />
+                    )}
+                    Indienen
                   </button>
                 </div>
               </div>

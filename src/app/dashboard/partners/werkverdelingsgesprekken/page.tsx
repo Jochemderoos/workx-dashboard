@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import TextReveal from '@/components/ui/TextReveal'
+import ExpandableText from '@/components/ui/ExpandableText'
 import { ADVOCATEN, getPhotoUrl } from '@/lib/team-photos'
 
-// Medewerkers die werkverdelingsgesprekken krijgen (advocaten excl. Lodewijk)
-const GESPREK_MEDEWERKERS = ADVOCATEN.filter(name => name !== 'Lodewijk van Thiel')
+// Medewerkers die werkverdelingsgesprekken krijgen
+const GESPREK_MEDEWERKERS = ADVOCATEN
 
 interface Distribution {
   id?: string
@@ -73,7 +74,12 @@ export default function WerkverdelingsgesprekkenPage() {
 
   // Local state for edits (keyed by `weekId-employeeId`)
   const [localData, setLocalData] = useState<Record<string, { capacity: CapacityValue; notes: string; partnerName: string }>>({})
-  const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({})
+  // Saved state snapshot — used to detect dirty cards
+  const [savedData, setSavedData] = useState<Record<string, { capacity: CapacityValue; notes: string; partnerName: string }>>({})
+  // Track which cards are currently saving
+  const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set())
+  // Track which cards are in notes edit mode
+  const [editingNotes, setEditingNotes] = useState<Set<string>>(new Set())
 
   // Check access
   useEffect(() => {
@@ -120,6 +126,7 @@ export default function WerkverdelingsgesprekkenPage() {
           }
         }
         setLocalData(initial)
+        setSavedData(initial)
       } catch {
         toast.error('Kon gesprekken niet laden')
       } finally {
@@ -152,9 +159,10 @@ export default function WerkverdelingsgesprekkenPage() {
     return emp?.id || name // fallback to name if no match
   }, [employees])
 
-  // Auto-save with debounce
-  const saveConversation = useCallback(async (weekId: string, employeeName: string, data: { capacity: CapacityValue; notes: string; partnerName: string }) => {
+  // Save conversation (explicit, no debounce)
+  const saveConversation = useCallback(async (weekId: string, employeeName: string, key: string, data: { capacity: CapacityValue; notes: string; partnerName: string }) => {
     const employeeId = getEmployeeId(employeeName)
+    setSavingKeys(prev => new Set(prev).add(key))
     try {
       const res = await fetch('/api/work-conversations', {
         method: 'PUT',
@@ -169,10 +177,34 @@ export default function WerkverdelingsgesprekkenPage() {
         }),
       })
       if (!res.ok) throw new Error()
+      // Update saved snapshot
+      setSavedData(prev => ({ ...prev, [key]: { ...data } }))
+      // Exit edit mode for notes
+      setEditingNotes(prev => {
+        const next = new Set(prev)
+        next.delete(key)
+        return next
+      })
+      toast.success(`Opgeslagen`)
     } catch {
       toast.error(`Kon gesprek voor ${employeeName.split(' ')[0]} niet opslaan`)
+    } finally {
+      setSavingKeys(prev => {
+        const next = new Set(prev)
+        next.delete(key)
+        return next
+      })
     }
   }, [getEmployeeId])
+
+  // Check if a card has unsaved changes
+  const isDirty = useCallback((key: string) => {
+    const local = localData[key]
+    const saved = savedData[key]
+    if (!local && !saved) return false
+    if (!local || !saved) return true
+    return local.capacity !== saved.capacity || local.notes !== saved.notes
+  }, [localData, savedData])
 
   const handleChange = useCallback((weekId: string, employeeName: string, field: 'capacity' | 'notes', value: string) => {
     const employeeId = getEmployeeId(employeeName)
@@ -186,18 +218,9 @@ export default function WerkverdelingsgesprekkenPage() {
         partnerName: activeWeek ? getPartnerForEmployee(activeWeek, employeeName) : '',
       }
       const updated = { ...current, [field]: value }
-
-      // Debounced save
-      if (debounceTimers.current[key]) {
-        clearTimeout(debounceTimers.current[key])
-      }
-      debounceTimers.current[key] = setTimeout(() => {
-        saveConversation(weekId, employeeName, updated)
-      }, 1000)
-
       return { ...prev, [key]: updated }
     })
-  }, [weeks, getEmployeeId, getPartnerForEmployee, saveConversation])
+  }, [weeks, getEmployeeId, getPartnerForEmployee])
 
   // Active week data
   const activeWeek = weeks.find(w => w.id === activeWeekId)
@@ -276,6 +299,10 @@ export default function WerkverdelingsgesprekkenPage() {
               }
               const photoUrl = getPhotoUrl(name)
               const style = getCapacityStyle(data.capacity)
+              const dirty = isDirty(key)
+              const isSaving = savingKeys.has(key)
+              const isEditingNote = editingNotes.has(key)
+              const hasSavedNotes = !!(savedData[key]?.notes)
 
               return (
                 <div key={name} className={`card p-4 border ${style.border} transition-all`}>
@@ -329,17 +356,45 @@ export default function WerkverdelingsgesprekkenPage() {
                     </div>
                   </div>
 
-                  {/* Notes textarea */}
+                  {/* Notes: ExpandableText read mode or textarea edit mode */}
                   <div>
                     <label className="text-xs text-gray-500 mb-1.5 block">Notities</label>
-                    <textarea
-                      value={data.notes}
-                      onChange={(e) => handleChange(activeWeek.id, name, 'notes', e.target.value)}
-                      placeholder="Gespreksnotities..."
-                      rows={3}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 resize-none focus:outline-none focus:border-workx-lime/30 focus:ring-1 focus:ring-workx-lime/20 transition-all"
-                    />
+                    {isEditingNote || !hasSavedNotes ? (
+                      <textarea
+                        value={data.notes}
+                        onChange={(e) => handleChange(activeWeek.id, name, 'notes', e.target.value)}
+                        placeholder="Gespreksnotities..."
+                        rows={3}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 resize-none focus:outline-none focus:border-workx-lime/30 focus:ring-1 focus:ring-workx-lime/20 transition-all"
+                      />
+                    ) : (
+                      <div
+                        onClick={() => setEditingNotes(prev => new Set(prev).add(key))}
+                        className="cursor-pointer"
+                      >
+                        <ExpandableText
+                          text={data.notes}
+                          maxLines={3}
+                          readOnly
+                        />
+                      </div>
+                    )}
                   </div>
+
+                  {/* Save button — only when dirty or in edit mode */}
+                  {(dirty || isEditingNote) && (
+                    <button
+                      onClick={() => saveConversation(activeWeek.id, name, key, data)}
+                      disabled={isSaving || !dirty}
+                      className="mt-3 w-full px-3 py-2 rounded-lg bg-workx-lime/20 text-workx-lime text-xs font-bold hover:bg-workx-lime/30 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      {isSaving ? (
+                        <span className="w-3.5 h-3.5 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
+                      ) : (
+                        <><Icons.save size={14} /> Opslaan</>
+                      )}
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -364,7 +419,7 @@ export default function WerkverdelingsgesprekkenPage() {
             </div>
             <div className="text-sm text-gray-400">
               <p className="text-white font-medium mb-1">Werkverdelingsgesprekken</p>
-              <p>Houd hier per medewerker de werkverdelingsgesprekken bij. De partner wordt automatisch ingevuld vanuit de notulen-werkverdeling. Selecteer de capaciteit en voeg gespreksnotities toe. Wijzigingen worden automatisch opgeslagen.</p>
+              <p>Houd hier per medewerker de werkverdelingsgesprekken bij. De partner wordt automatisch ingevuld vanuit de notulen-werkverdeling. Selecteer de capaciteit en voeg gespreksnotities toe. Klik op &quot;Opslaan&quot; om wijzigingen op te slaan.</p>
             </div>
           </div>
         </div>

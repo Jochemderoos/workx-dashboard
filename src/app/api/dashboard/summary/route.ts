@@ -80,6 +80,7 @@ export async function GET() {
       myVacationRequests,
       allApprovedVacations,
       calendarAbsenceEvents,
+      pendingDeclarations,
     ] = await Promise.all([
       // 1. Calendar Events - upcoming events (fetch more to allow social event prioritization)
       prisma.calendarEvent.findMany({
@@ -404,6 +405,13 @@ export async function GET() {
           orderBy: { startTime: 'asc' },
         })
       })().catch(() => []),
+
+      // 21. Pending Expense Declarations - SUBMITTED declarations for admin widget
+      prisma.expenseDeclaration.findMany({
+        where: { status: 'SUBMITTED' },
+        include: { items: { select: { id: true } } },
+        orderBy: { submittedAt: 'asc' },
+      }).catch(() => []),
     ])
 
     // Calculate vacation balance totals for easier frontend use
@@ -626,6 +634,8 @@ export async function GET() {
         color: '#f97316',
         isCalendarEvent: true,
       })),
+      // Pending expense declarations (admin only)
+      pendingDeclarations: currentUser?.role === 'ADMIN' ? pendingDeclarations : [],
       // Meta information
       fetchedAt: now.toISOString(),
     }, {
