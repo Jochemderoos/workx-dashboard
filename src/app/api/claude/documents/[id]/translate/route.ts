@@ -82,36 +82,28 @@ function replaceParagraphTexts(xml: string, translations: Map<number, string>): 
 async function callClaude(prompt: string, maxTokens = 8192): Promise<string> {
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured')
 
-  const maxRetries = 2
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  })
 
-    if (response.ok) {
-      const data = await response.json()
-      return data.content[0].text
-    }
-
-    if ((response.status === 429 || response.status === 500 || response.status === 529) && attempt < maxRetries) {
-      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)))
-      continue
-    }
-
+  if (!response.ok) {
     const errText = await response.text()
-    throw new Error(`Claude API error: ${response.status} – ${errText}`)
+    console.error(`[translate] Claude API ${response.status}:`, errText.substring(0, 300))
+    throw new Error(`Claude API error: ${response.status}`)
   }
-  throw new Error('Max retries exceeded')
+
+  const data = await response.json()
+  return data.content[0].text
 }
 
 // ── POST handler ──────────────────────────────────────────────────
@@ -120,6 +112,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  console.log('[translate] Start – doc:', params.id)
+
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
@@ -132,6 +126,7 @@ export async function POST(
     }
 
     const taalNaam = LANGUAGE_NAMES[targetLanguage]
+    console.log('[translate] Taal:', taalNaam)
 
     // Load document
     const document = await prisma.aIDocument.findFirst({
@@ -145,23 +140,24 @@ export async function POST(
     })
 
     if (!document) {
+      console.log('[translate] Document niet gevonden')
       return NextResponse.json({ error: 'Document niet gevonden' }, { status: 404 })
     }
 
-    if (!document.fileUrl) {
-      return NextResponse.json({ error: 'Geen bestandsdata beschikbaar' }, { status: 400 })
-    }
+    console.log('[translate] Document gevonden:', document.name, 'type:', document.fileType, 'fileUrl:', document.fileUrl ? 'ja' : 'nee', 'content:', document.content?.length || 0, 'chars')
 
-    const base64Match = document.fileUrl.match(/^data:[^;]+;base64,(.+)$/)
-    if (!base64Match) {
-      return NextResponse.json({ error: 'Ongeldig bestandsformaat' }, { status: 400 })
-    }
-
-    const buffer = Buffer.from(base64Match[1], 'base64')
     const outputName = document.name.replace(/\.[^.]+$/i, '') + `-${taalNaam}.docx`
 
     // ── DOCX: style-preserving translation ──
-    if (document.fileType === 'docx') {
+    if (document.fileType === 'docx' && document.fileUrl) {
+      const base64Match = document.fileUrl.match(/^data:[^;]+;base64,(.+)$/)
+      if (!base64Match) {
+        return NextResponse.json({ error: 'Ongeldig bestandsformaat' }, { status: 400 })
+      }
+
+      const buffer = Buffer.from(base64Match[1], 'base64')
+      console.log('[translate] DOCX buffer:', buffer.length, 'bytes')
+
       const zip = new AdmZip(buffer)
 
       // Find all XML files with translatable text
@@ -178,6 +174,8 @@ export async function POST(
           xmlFiles.push(name)
         }
       }
+
+      console.log('[translate] XML files:', xmlFiles)
 
       // Collect non-empty paragraph texts across all XML files
       const allParagraphs: { file: string; globalIndex: number; localIndex: number; text: string }[] = []
@@ -199,23 +197,15 @@ export async function POST(
         }
       }
 
+      console.log('[translate] Paragraphs to translate:', allParagraphs.length)
+
       if (allParagraphs.length === 0) {
         return NextResponse.json({ error: 'Geen tekst gevonden in het document' }, { status: 400 })
       }
 
-      // Translate in parallel chunks
-      const chunkSize = 150
-      const chunks: { start: number; texts: string[] }[] = []
-      for (let i = 0; i < allParagraphs.length; i += chunkSize) {
-        chunks.push({
-          start: i,
-          texts: allParagraphs.slice(i, i + chunkSize).map((p) => p.text),
-        })
-      }
-
-      const translateChunk = async (texts: string[]): Promise<string[]> => {
-        const textsJson = JSON.stringify(texts)
-        const prompt = `Je bent een professionele vertaler. Vertaal elk item in de onderstaande JSON-array naar het ${taalNaam}.
+      // Single Claude call for all paragraphs (faster for typical documents)
+      const textsJson = JSON.stringify(allParagraphs.map((p) => p.text))
+      const prompt = `Je bent een professionele vertaler. Vertaal elk item in de onderstaande JSON-array naar het ${taalNaam}.
 
 REGELS:
 - Retourneer ALLEEN een JSON-array met exact evenveel items als de input.
@@ -227,32 +217,20 @@ REGELS:
 INPUT:
 ${textsJson}`
 
-        const result = await callClaude(prompt)
-        const cleaned = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-        const arrayStart = cleaned.indexOf('[')
-        const arrayEnd = cleaned.lastIndexOf(']')
-        if (arrayStart === -1 || arrayEnd === -1) {
-          throw new Error('Kon vertaling niet verwerken')
-        }
-        const parsed = JSON.parse(cleaned.substring(arrayStart, arrayEnd + 1))
-        if (!Array.isArray(parsed) || parsed.length !== texts.length) {
-          throw new Error(`Vertaling gaf ${parsed.length} items, verwacht ${texts.length}`)
-        }
-        return parsed
-      }
+      console.log('[translate] Calling Claude Haiku...', prompt.length, 'chars prompt')
+      const result = await callClaude(prompt)
+      console.log('[translate] Claude response:', result.length, 'chars')
 
-      // Run all chunks in parallel (max 3 concurrent)
-      const results = new Array<string[]>(chunks.length)
-      const concurrency = 3
-      for (let batch = 0; batch < chunks.length; batch += concurrency) {
-        const batchChunks = chunks.slice(batch, batch + concurrency)
-        const batchResults = await Promise.all(
-          batchChunks.map((c) => translateChunk(c.texts))
-        )
-        batchResults.forEach((r, i) => { results[batch + i] = r })
+      const cleaned = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+      const arrayStart = cleaned.indexOf('[')
+      const arrayEnd = cleaned.lastIndexOf(']')
+      if (arrayStart === -1 || arrayEnd === -1) {
+        throw new Error('Kon vertaling niet verwerken – geen JSON array in response')
       }
-
-      const translatedTexts = results.flat()
+      const translatedTexts: string[] = JSON.parse(cleaned.substring(arrayStart, arrayEnd + 1))
+      if (!Array.isArray(translatedTexts) || translatedTexts.length !== allParagraphs.length) {
+        throw new Error(`Vertaling gaf ${translatedTexts.length} items, verwacht ${allParagraphs.length}`)
+      }
 
       // Replace texts in XML files
       for (const file of xmlFiles) {
@@ -272,21 +250,19 @@ ${textsJson}`
       }
 
       const modifiedBuffer = zip.toBuffer()
+      const docxBase64 = modifiedBuffer.toString('base64')
+      console.log('[translate] DOCX done, base64 size:', docxBase64.length)
 
-      return new Response(modifiedBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'Content-Disposition': `attachment; filename="${encodeURIComponent(outputName)}"`,
-        },
-      })
+      return NextResponse.json({ docxBase64, fileName: outputName })
     }
 
-    // ── PDF/TXT: extract text, translate, return as text ──
+    // ── PDF/TXT: extract text, translate, return as DOCX ──
     const textContent = document.content || ''
     if (!textContent.trim()) {
       return NextResponse.json({ error: 'Geen tekst gevonden in het document' }, { status: 400 })
     }
+
+    console.log('[translate] PDF/TXT mode, content:', textContent.length, 'chars')
 
     const translatePrompt = `Vertaal het volledige onderstaande document naar het ${taalNaam}.
 Behoud de originele structuur, alinea's, koppen en opmaak exact.
@@ -298,22 +274,12 @@ Gebruik professioneel juridisch taalgebruik waar van toepassing.
 ${textContent}`
 
     const translation = await callClaude(translatePrompt)
+    console.log('[translate] Translation done:', translation.length, 'chars')
 
-    // Generate DOCX from translated text using the docx library
-    const { generateDocx } = await import('@/lib/export-docx')
-    const blob = await generateDocx(translation)
-    const arrayBuffer = await blob.arrayBuffer()
-
-    return new Response(Buffer.from(arrayBuffer), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(outputName)}"`,
-      },
-    })
+    return NextResponse.json({ translation, fileName: outputName })
   } catch (error) {
-    console.error('[documents/translate] Error:', error)
-    const message = error instanceof Error ? error.message : 'Onbekende fout'
+    console.error('[translate] Error:', error)
+    const message = error instanceof Error ? error.message : 'Onbekende fout bij vertaling'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

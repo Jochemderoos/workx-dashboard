@@ -405,7 +405,7 @@ export default function ClaudeChat({
     setTranslatingDocId(docId)
     try {
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 90_000) // 90s timeout
+      const timeout = setTimeout(() => controller.abort(), 90_000)
 
       const res = await fetch(`/api/claude/documents/${docId}/translate`, {
         method: 'POST',
@@ -416,22 +416,44 @@ export default function ClaudeChat({
       })
       clearTimeout(timeout)
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ error: 'Vertaling mislukt' }))
-        throw new Error(errData.error || `Server fout (${res.status})`)
+      const data = await res.json()
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `Server fout (${res.status})`)
       }
 
-      const blob = await res.blob()
-      const disposition = res.headers.get('Content-Disposition') || ''
-      const filenameMatch = disposition.match(/filename="?(.+?)"?$/)
-      const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : 'vertaald.docx'
+      if (data.docxBase64) {
+        // DOCX: style-preserved binary
+        const byteChars = atob(data.docxBase64)
+        const byteArray = new Uint8Array(byteChars.length)
+        for (let i = 0; i < byteChars.length; i++) {
+          byteArray[i] = byteChars.charCodeAt(i)
+        }
+        const blob = new Blob([byteArray], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = data.fileName || 'vertaald.docx'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else if (data.translation) {
+        // PDF/TXT: generate DOCX from translated text
+        const { generateDocx } = await import('@/lib/export-docx')
+        const blob = await generateDocx(data.translation)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = data.fileName || 'vertaald.docx'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
 
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      URL.revokeObjectURL(url)
       toast.success('Vertaald document gedownload')
       return true
     } catch (err) {
