@@ -840,25 +840,31 @@ function ProfielTab({ applicant }: { applicant: Applicant }) {
 function DocumentenTab({ applicant, onRefresh }: { applicant: Applicant; onRefresh: () => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
-  const [docType, setDocType] = useState<'cv' | 'brief' | 'overig'>('cv')
   const [extracting, setExtracting] = useState(false)
   const [extractedText, setExtractedText] = useState<string | null>(null)
+
+  // Auto-detect document type from filename
+  function detectDocType(filename: string): 'cv' | 'brief' | 'overig' {
+    const lower = filename.toLowerCase()
+    if (lower.includes('cv') || lower.includes('curriculum') || lower.includes('resume')) return 'cv'
+    if (lower.includes('brief') || lower.includes('motivatie') || lower.includes('letter')) return 'brief'
+    return 'overig'
+  }
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    const detectedType = detectDocType(file.name)
     setUploading(true)
     try {
-      // Upload to Vercel Blob
       const result = await uploadToBlob(`sollicitaties/${applicant.id}/${file.name}`, file)
 
-      // Save document metadata
       const res = await fetch(`/api/sollicitaties/${applicant.id}/documents`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          type: docType,
+          type: detectedType,
           naam: file.name,
           fileUrl: result.url,
           fileSize: file.size,
@@ -868,12 +874,10 @@ function DocumentenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
       if (res.ok) {
         toast.success('Document geüpload')
 
-        // If it's a CV or brief, also extract text for later AI extraction
-        if (docType === 'cv' || docType === 'brief') {
+        // If it's a CV or brief, extract text for AI extraction
+        if (detectedType === 'cv' || detectedType === 'brief') {
           const text = await extractTextFromFile(file)
-          if (text) {
-            setExtractedText(text)
-          }
+          if (text) setExtractedText(text)
         }
 
         onRefresh()
@@ -928,28 +932,19 @@ function DocumentenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
 
   return (
     <div className="space-y-4">
-      {/* Upload area */}
+      {/* Upload + extract actions */}
       <div className="flex items-center gap-3">
-        <select
-          value={docType}
-          onChange={e => setDocType(e.target.value as 'cv' | 'brief' | 'overig')}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-        >
-          <option value="cv">CV</option>
-          <option value="brief">Motivatiebrief</option>
-          <option value="overig">Overig</option>
-        </select>
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-white/70 hover:text-white text-sm transition-all disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 text-white/70 hover:text-white text-sm transition-all disabled:opacity-50"
         >
           {uploading ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
-            <Icons.upload size={14} />
+            <Icons.plus size={14} />
           )}
-          {uploading ? 'Uploaden...' : 'Bestand kiezen'}
+          {uploading ? 'Uploaden...' : 'Document toevoegen'}
         </button>
         <input
           ref={fileInputRef}
@@ -962,7 +957,7 @@ function DocumentenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
           <button
             onClick={handleExtract}
             disabled={extracting}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 text-sm font-medium transition-all disabled:opacity-50 border border-workx-lime/20"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 text-sm font-medium transition-all disabled:opacity-50 border border-workx-lime/20"
           >
             {extracting ? (
               <div className="w-4 h-4 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
