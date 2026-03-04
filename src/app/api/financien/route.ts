@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const EMPTY_12 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
 // GET 2026 financial data - toegankelijk voor alle ingelogde gebruikers
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -17,14 +19,16 @@ export async function GET(req: NextRequest) {
     if (!data) {
       // Return default empty data
       return NextResponse.json({
-        werkgeverslasten: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        omzet: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        uren: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        werkgeverslasten: EMPTY_12,
+        kostenExtern: EMPTY_12,
+        omzet: EMPTY_12,
+        uren: EMPTY_12
       })
     }
 
     return NextResponse.json({
       werkgeverslasten: JSON.parse(data.werkgeverslasten),
+      kostenExtern: JSON.parse(data.kostenExtern),
       omzet: JSON.parse(data.omzet),
       uren: JSON.parse(data.uren)
     })
@@ -53,12 +57,14 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { werkgeverslasten, omzet, uren } = body
+    const { werkgeverslasten, kostenExtern, omzet, uren } = body
 
     // Validate arrays
     if (!Array.isArray(werkgeverslasten) || !Array.isArray(omzet) || !Array.isArray(uren)) {
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 })
     }
+
+    const kostenExtData = Array.isArray(kostenExtern) ? kostenExtern : EMPTY_12
 
     // Upsert - create if not exists, update if exists
     const existing = await prisma.financialData2026.findFirst()
@@ -69,6 +75,7 @@ export async function PUT(req: NextRequest) {
         where: { id: existing.id },
         data: {
           werkgeverslasten: JSON.stringify(werkgeverslasten),
+          kostenExtern: JSON.stringify(kostenExtData),
           omzet: JSON.stringify(omzet),
           uren: JSON.stringify(uren)
         }
@@ -77,6 +84,7 @@ export async function PUT(req: NextRequest) {
       data = await prisma.financialData2026.create({
         data: {
           werkgeverslasten: JSON.stringify(werkgeverslasten),
+          kostenExtern: JSON.stringify(kostenExtData),
           omzet: JSON.stringify(omzet),
           uren: JSON.stringify(uren)
         }
@@ -85,6 +93,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({
       werkgeverslasten: JSON.parse(data.werkgeverslasten),
+      kostenExtern: JSON.parse(data.kostenExtern),
       omzet: JSON.parse(data.omzet),
       uren: JSON.parse(data.uren)
     })

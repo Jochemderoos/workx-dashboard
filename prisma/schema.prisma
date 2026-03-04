@@ -458,6 +458,7 @@ model CalendarEvent {
 model FinancialData2026 {
   id                 String   @id @default(cuid())
   werkgeverslasten   String   // JSON array van 12 getallen
+  kostenExtern       String   @default("[0,0,0,0,0,0,0,0,0,0,0,0]") // JSON array van 12 getallen (kosten extern, bv. Lodewijk)
   omzet              String   // JSON array van 12 getallen
   uren               String   // JSON array van 12 getallen
   createdAt          DateTime @default(now())

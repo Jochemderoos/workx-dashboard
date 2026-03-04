@@ -14,14 +14,16 @@ const years = [currentYear - 2, currentYear - 1, currentYear] as const
 type YearType = typeof years[number]
 
 // Historical financial data - will be extended as years pass
-const historicalData: Record<number, { werkgeverslasten: number[], omzet: number[], uren: number[] }> = {
+const historicalData: Record<number, { werkgeverslasten: number[], kostenExtern: number[], omzet: number[], uren: number[] }> = {
   2024: {
     werkgeverslasten: [83498, 93037, 90637, 97496, 141919, 93079, 110122.21, 81458.26, 87341.8, 95277, 93797, 82992.28],
+    kostenExtern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     omzet: [20771.73, 208021.62, 233890, 268590, 282943.32, 258967.33, 267419.35, 218107.23, 226676.53, 294707.11, 287153.81, 535280.4],
     uren: [904, 843, 1017, 1021, 964, 1003.4, 1061, 747, 804, 972, 916, 883]
   },
   2025: {
     werkgeverslasten: [88521, 72934, 68268, 107452, 90244, 154652, 81963.87, 79466.89, 82125, 80670, 103485, 95562],
+    kostenExtern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     omzet: [-14020, 267211, 258439, 270619, 267833.5, 287433.03, 300822.95, 258031.08, 242402.91, 309577.51, 342265.3, 602865],
     uren: [1000.75, 955, 962, 975, 914, 998, 1020, 716, 1076, 1173, 1013, 1068]
   }
@@ -31,6 +33,7 @@ const historicalData: Record<number, { werkgeverslasten: number[], omzet: number
 const getYearData = (year: number) => {
   return historicalData[year] || {
     werkgeverslasten: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    kostenExtern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     omzet: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     uren: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   }
@@ -117,6 +120,7 @@ export default function FinancienPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overzicht')
   const [currentYearData, setCurrentYearData] = useState({
     werkgeverslasten: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    kostenExtern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     omzet: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     uren: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   })
@@ -224,9 +228,12 @@ export default function FinancienPage() {
   }
 
   // Calculate totals and saldo dynamically based on years
+  // kostenExtern wordt opgeteld bij werkgeverslasten in saldo-berekeningen
   const calculations = useMemo(() => {
     const totals: Record<string, Record<number, number>> = {
       werkgeverslasten: {},
+      kostenExtern: {},
+      totaleKosten: {}, // werkgeverslasten + kostenExtern
       omzet: {},
       uren: {}
     }
@@ -237,10 +244,12 @@ export default function FinancienPage() {
     years.forEach(year => {
       const yearData = getDataForYear(year)
       totals.werkgeverslasten[year] = yearData.werkgeverslasten.reduce((a, b) => a + b, 0)
+      totals.kostenExtern[year] = yearData.kostenExtern.reduce((a, b) => a + b, 0)
+      totals.totaleKosten[year] = totals.werkgeverslasten[year] + totals.kostenExtern[year]
       totals.omzet[year] = yearData.omzet.reduce((a, b) => a + b, 0)
       totals.uren[year] = yearData.uren.reduce((a, b) => a + b, 0)
-      saldo[year] = periods.map((_, i) => yearData.omzet[i] - yearData.werkgeverslasten[i])
-      saldoTotals[year] = totals.omzet[year] - totals.werkgeverslasten[year]
+      saldo[year] = periods.map((_, i) => yearData.omzet[i] - yearData.werkgeverslasten[i] - (yearData.kostenExtern[i] || 0))
+      saldoTotals[year] = totals.omzet[year] - totals.totaleKosten[year]
     })
 
     return { totals, saldo, saldoTotals }
@@ -674,6 +683,16 @@ export default function FinancienPage() {
     doc.setTextColor(50, 50, 50)
     y += 8
 
+    // Kosten Extern
+    doc.text('Kosten Extern', col1, y)
+    doc.text(formatCurrency(calculations.totals.kostenExtern[years[0]]), col2, y, { align: 'right' })
+    doc.text(formatCurrency(calculations.totals.kostenExtern[years[1]]), col3, y, { align: 'right' })
+    const keDiff = calculations.totals.kostenExtern[years[1]] - calculations.totals.kostenExtern[years[0]]
+    doc.setTextColor(keDiff < 0 ? 0 : 200, keDiff < 0 ? 150 : 50, 50)
+    doc.text(formatCurrency(keDiff), col4, y, { align: 'right' })
+    doc.setTextColor(50, 50, 50)
+    y += 8
+
     // Omzet
     doc.text('Omzet', col1, y)
     doc.text(formatCurrency(calculations.totals.omzet[years[0]]), col2, y, { align: 'right' })
@@ -763,7 +782,10 @@ export default function FinancienPage() {
 
     // Row 1: Omzet and Werkgeverslasten
     drawBarChart('Omzet', [getDataForYear(years[0]).omzet, getDataForYear(years[1]).omzet], y, chartWidth, chartHeight, leftX)
-    const afterRow1 = drawBarChart('Werkgeverslasten', [getDataForYear(years[0]).werkgeverslasten, getDataForYear(years[1]).werkgeverslasten], y, chartWidth, chartHeight, rightX)
+    const afterRow1 = drawBarChart('Totale Kosten', [
+      getDataForYear(years[0]).werkgeverslasten.map((v, i) => v + (getDataForYear(years[0]).kostenExtern[i] || 0)),
+      getDataForYear(years[1]).werkgeverslasten.map((v, i) => v + (getDataForYear(years[1]).kostenExtern[i] || 0))
+    ], y, chartWidth, chartHeight, rightX)
     y = afterRow1 + 5
 
     // Row 2: Saldo and Uren
@@ -910,9 +932,9 @@ export default function FinancienPage() {
                 positive: true
               },
               {
-                label: `Werkgeverslasten ${years[1]}`,
-                value: formatCurrency(calculations.totals.werkgeverslasten[years[1]]),
-                diff: calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]],
+                label: `Totale Kosten ${years[1]}`,
+                value: formatCurrency(calculations.totals.totaleKosten[years[1]]),
+                diff: calculations.totals.totaleKosten[years[1]] - calculations.totals.totaleKosten[years[0]],
                 positive: false
               },
               {
@@ -991,6 +1013,25 @@ export default function FinancienPage() {
                     </tr>
                   ))}
 
+                  {/* Kosten Extern - all 3 years */}
+                  {years.map((year, yearIdx) => {
+                    const hasData = getDataForYear(year).kostenExtern.some(v => v > 0)
+                    return (
+                      <tr key={`ke-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
+                        {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white/70 font-medium align-top text-sm">Kosten Extern</td>}
+                        <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
+                        {getDataForYear(year).kostenExtern.map((v, i) => (
+                          <td key={i} className={`text-right py-3 px-4 text-sm ${!hasData ? 'text-white/20' : yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
+                            {formatCurrency(v)}
+                          </td>
+                        ))}
+                        <td className={`text-right py-3 px-4 font-medium ${!hasData ? 'text-white/20' : yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
+                          {formatCurrency(calculations.totals.kostenExtern[year])}
+                        </td>
+                      </tr>
+                    )
+                  })}
+
                   {/* Omzet - all 3 years */}
                   {years.map((year, yearIdx) => (
                     <tr key={`omzet-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
@@ -1067,9 +1108,13 @@ export default function FinancienPage() {
               </div>
             </div>
             <div className="p-6 space-y-6">
-              {['werkgeverslasten', 'omzet', 'uren'].map((category) => (
+              {['werkgeverslasten', 'kostenExtern', 'omzet', 'uren'].map((category) => (
                 <div key={category}>
-                  <p className="text-white/60 text-sm mb-3 capitalize font-medium">{category}</p>
+                  <p className="text-white/60 text-sm mb-3 font-medium">{
+                    category === 'kostenExtern' ? 'Kosten Extern (bv. Lodewijk)' :
+                    category === 'werkgeverslasten' ? 'Werkgeverslasten' :
+                    category === 'omzet' ? 'Omzet' : 'Uren'
+                  }</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
                     {periods.map((p, i) => (
                       <div key={p} className="space-y-1">
@@ -1111,13 +1156,12 @@ export default function FinancienPage() {
           />
 
           <LineChart
-            data={[
-              getDataForYear(years[0]).werkgeverslasten,
-              getDataForYear(years[1]).werkgeverslasten,
-              getDataForYear(years[2]).werkgeverslasten
-            ]}
+            data={years.map(year => {
+              const d = getDataForYear(year)
+              return d.werkgeverslasten.map((v, i) => v + (d.kostenExtern[i] || 0))
+            })}
             labels={periods}
-            title="Werkgeverslasten Ontwikkeling"
+            title="Totale Kosten (Werkgeverslasten + Extern)"
             colors={['#f97316', '#06b6d4', '#f9ff85']}
             height={200}
           />
@@ -1150,10 +1194,10 @@ export default function FinancienPage() {
           <div className="md:col-span-2 bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
             <h3 className="text-white font-medium mb-4 sm:mb-6">Jaarlijkse Vergelijking</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
-              {['Omzet', 'Werkgeverslasten', 'Saldo', 'Uren'].map((label, idx) => {
+              {['Omzet', 'Totale Kosten', 'Saldo', 'Uren'].map((label, idx) => {
                 const values = [
                   [calculations.totals.omzet[years[0]], calculations.totals.omzet[years[1]], calculations.totals.omzet[years[2]]],
-                  [calculations.totals.werkgeverslasten[years[0]], calculations.totals.werkgeverslasten[years[1]], calculations.totals.werkgeverslasten[years[2]]],
+                  [calculations.totals.totaleKosten[years[0]], calculations.totals.totaleKosten[years[1]], calculations.totals.totaleKosten[years[2]]],
                   [calculations.saldoTotals[years[0]], calculations.saldoTotals[years[1]], calculations.saldoTotals[years[2]]],
                   [calculations.totals.uren[years[0]], calculations.totals.uren[years[1]], calculations.totals.uren[years[2]]]
                 ][idx]

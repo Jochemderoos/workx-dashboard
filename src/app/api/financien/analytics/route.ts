@@ -254,8 +254,9 @@ export async function GET() {
     const current2026Data = financialData2026 ? {
       omzet: JSON.parse(financialData2026.omzet) as number[],
       werkgeverslasten: JSON.parse(financialData2026.werkgeverslasten) as number[],
+      kostenExtern: JSON.parse(financialData2026.kostenExtern || '[0,0,0,0,0,0,0,0,0,0,0,0]') as number[],
       uren: JSON.parse(financialData2026.uren) as number[],
-    } : { omzet: Array(12).fill(0), werkgeverslasten: Array(12).fill(0), uren: Array(12).fill(0) }
+    } : { omzet: Array(12).fill(0), werkgeverslasten: Array(12).fill(0), kostenExtern: Array(12).fill(0), uren: Array(12).fill(0) }
 
     const actualMonths: { month: number; omzet: number }[] = []
     for (let m = 0; m < 12; m++) {
@@ -277,9 +278,10 @@ export async function GET() {
     const previousYearOmzetTotal = HISTORICAL_2025.omzet.reduce((s, v) => s + v, 0)
 
     // ======= #9 Year-over-Year groei =======
+    const kostenExternTotal = current2026Data.kostenExtern.reduce((s: number, v: number) => s + v, 0)
     const current2026Totals = {
       omzet: current2026Data.omzet.reduce((s: number, v: number) => s + v, 0),
-      werkgeverslasten: current2026Data.werkgeverslasten.reduce((s: number, v: number) => s + v, 0),
+      werkgeverslasten: current2026Data.werkgeverslasten.reduce((s: number, v: number) => s + v, 0) + kostenExternTotal,
       uren: current2026Data.uren.reduce((s: number, v: number) => s + v, 0),
     }
     const current2026Saldo = current2026Totals.omzet - current2026Totals.werkgeverslasten
