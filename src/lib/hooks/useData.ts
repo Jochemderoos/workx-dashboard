@@ -83,6 +83,13 @@ export function useWorkItems(limit = 20) {
 }
 
 /**
+ * Hook for lopende zaken (top 20 projects by hours)
+ */
+export function useLopendeZaken() {
+  return useSWR('/api/work/lopende-zaken', fetcher, defaultOptions)
+}
+
+/**
  * Hook for notifications
  */
 export function useNotifications() {
@@ -212,6 +219,7 @@ export default {
   useCalendarEvents,
   useVacationSummary,
   useWorkItems,
+  useLopendeZaken,
   useNotifications,
   useActivity,
   useOfficeAttendance,
