@@ -51,7 +51,6 @@ const partnersMenuItems = [
   { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Notulen', iconAnim: 'icon-file-hover' },
   { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Gesprekken', iconAnim: 'icon-chat-hover' },
   { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', iconAnim: 'icon-briefcase-hover' },
-  { href: '/dashboard/werk/lopende-zaken', icon: Icons.briefcase, label: 'Lopende zaken', iconAnim: 'icon-briefcase-hover' },
 ]
 
 const toolsMenuItems = [
