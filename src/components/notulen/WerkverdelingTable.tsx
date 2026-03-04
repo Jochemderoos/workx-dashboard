@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Icons } from '@/components/ui/Icons'
-import { getPhotoUrl, PARTNERS } from '@/lib/team-photos'
+import { getPhotoUrl, PARTNERS, ADVOCATEN } from '@/lib/team-photos'
 
 interface Distribution {
   id?: string
@@ -218,8 +218,53 @@ export default function WerkverdelingTable({ distributions, employees, onUpdate 
     setOpenDropdown(null)
   }
 
+  // Collect all assigned names for the overview box
+  const allAssignedNames = new Set(
+    localDistributions.flatMap(d => parseNames(d.employeeName))
+  )
+
   return (
     <div className="space-y-3">
+      {/* Team overview box */}
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+        <p className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-2">Overzicht team</p>
+        <div className="flex flex-wrap gap-1.5">
+          {ADVOCATEN.map(name => {
+            const photo = getPhotoUrl(name)
+            const isAssigned = allAssignedNames.has(name)
+            return (
+              <div
+                key={name}
+                className={`flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-lg transition-all ${
+                  isAssigned
+                    ? 'bg-white/[0.03] opacity-40'
+                    : 'bg-white/5'
+                }`}
+                title={isAssigned ? `${name} — al verdeeld` : name}
+              >
+                {photo ? (
+                  <img
+                    src={photo}
+                    alt={name}
+                    className={`w-5 h-5 rounded-md object-cover ${isAssigned ? 'grayscale' : ''}`}
+                  />
+                ) : (
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                    isAssigned ? 'bg-white/5 text-white/20' : 'bg-workx-lime/10 text-workx-lime'
+                  }`}>
+                    {name.charAt(0)}
+                  </div>
+                )}
+                <span className={`text-xs ${isAssigned ? 'text-white/25 line-through' : 'text-white/60'}`}>
+                  {name.split(' ')[0]}
+                </span>
+                {isAssigned && <Icons.check size={10} className="text-white/20" />}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       <div className="rounded-xl border border-white/10 overflow-hidden">
         <div className="grid grid-cols-[1fr_1fr] gap-0 text-xs font-medium text-gray-400 uppercase tracking-wider px-4 py-2 bg-white/[0.02] border-b border-white/5">
           <span>Partner</span>
@@ -278,15 +323,27 @@ export default function WerkverdelingTable({ distributions, employees, onUpdate 
                     <Icons.plus size={12} />
                     <span>{selectedNames.length === 0 ? 'Selecteer medewerker...' : 'Toevoegen'}</span>
                   </button>
-                  {openDropdown === dist.partnerName && buttonRefs.current[dist.partnerName] && (
-                    <EmployeeDropdown
-                      anchorRef={{ current: buttonRefs.current[dist.partnerName] }}
-                      employees={filteredEmployees}
-                      selectedNames={selectedNames}
-                      onToggle={(emp) => handleToggleEmployee(dist.partnerName, emp)}
-                      onClose={() => setOpenDropdown(null)}
-                    />
-                  )}
+                  {openDropdown === dist.partnerName && buttonRefs.current[dist.partnerName] && (() => {
+                    // Collect all assigned employee names across ALL partners
+                    const allAssigned = new Set(
+                      localDistributions.flatMap(d => parseNames(d.employeeName))
+                    )
+                    // Remove current partner's own selections so they stay visible (for unchecking)
+                    selectedNames.forEach(n => allAssigned.delete(n))
+                    // Filter out employees already assigned to other partners
+                    const availableEmployees = filteredEmployees.filter(
+                      e => !allAssigned.has(e.name)
+                    )
+                    return (
+                      <EmployeeDropdown
+                        anchorRef={{ current: buttonRefs.current[dist.partnerName] }}
+                        employees={availableEmployees}
+                        selectedNames={selectedNames}
+                        onToggle={(emp) => handleToggleEmployee(dist.partnerName, emp)}
+                        onClose={() => setOpenDropdown(null)}
+                      />
+                    )
+                  })()}
                 </div>
               </div>
             )

@@ -1570,6 +1570,66 @@ model ExternalAdvocateCase {
   @@index([isCompleted])
 }
 
+// ==================== SOLLICITATIES ====================
+
+model Applicant {
+  id                String    @id @default(cuid())
+  naam              String
+  email             String?
+  telefoon          String?
+  geboortedatum     String?
+  adres             String?
+  photoUrl          String?
+  huidigeWerkgever  String?
+  huidigeFunctie    String?
+  opleiding         String?   @db.Text
+  ervaring          String?   @db.Text
+  vaardigheden      String?   @db.Text
+  talen             String?
+  cvSummary         String?   @db.Text   // AI-generated samenvatting
+  status            String    @default("nieuw") // nieuw, in_gesprek, aangenomen, afgewezen
+  notities          String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  documents         ApplicantDocument[]
+  interviews        ApplicantInterview[]
+
+  @@index([status])
+}
+
+model ApplicantDocument {
+  id           String   @id @default(cuid())
+  applicantId  String
+  type         String   // cv, brief, overig
+  naam         String
+  fileUrl      String
+  fileSize     Int?
+  createdAt    DateTime @default(now())
+
+  applicant    Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@index([applicantId])
+}
+
+model ApplicantInterview {
+  id               String    @id @default(cuid())
+  applicantId      String
+  datum             DateTime
+  interviewerIds   String?   // Kommagescheiden user IDs
+  interviewerNames String?   // Kommagescheiden namen
+  feedback         String?   @db.Text
+  aandachtspunten  String?   @db.Text
+  status           String    @default("gepland") // gepland, afgerond, geannuleerd
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  applicant        Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@index([applicantId])
+  @@index([datum])
+}
+
 // ==================== WERKVERDELINGSGESPREKKEN ====================
 
 // Werkverdelingsgesprek notities per medewerker per week
