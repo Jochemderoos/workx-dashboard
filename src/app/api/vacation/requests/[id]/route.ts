@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { calculateWorkdays } from '@/lib/vacation-utils'
 import { sendPushNotification } from '@/lib/push-notifications'
 import { sendDirectMessage } from '@/lib/slack'
 
@@ -191,7 +192,7 @@ export async function PATCH(
     if (startDate || endDate) {
       const newStart = startDate ? parseLocalDate(startDate) : request.startDate
       const newEnd = endDate ? parseLocalDate(endDate) : request.endDate
-      const newDays = Math.ceil((newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      const newDays = calculateWorkdays(newStart, newEnd)
 
       // If approved, adjust vacation balance
       if (request.status === 'APPROVED') {

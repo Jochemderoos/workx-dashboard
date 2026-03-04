@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { calculateWorkdays } from '@/lib/vacation-utils'
 import { sendPushNotification } from '@/lib/push-notifications'
 import { sendDirectMessage } from '@/lib/slack'
 
@@ -139,10 +140,10 @@ export async function POST(req: NextRequest) {
       targetUserId = requestedUserId
     }
 
-    // Calculate days if not provided - use parseLocalDate to avoid timezone issues
+    // Calculate days if not provided - use werkdagen (excludes weekends + holidays)
     const start = parseLocalDate(startDate)
     const end = parseLocalDate(endDate)
-    const calculatedDays = days || Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const calculatedDays = days || calculateWorkdays(start, end)
 
     // Check available days (skip for admin when creating for others)
     if (!isAdmin || targetUserId === session.user.id) {
