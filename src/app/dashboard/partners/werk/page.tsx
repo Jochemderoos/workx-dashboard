@@ -71,6 +71,7 @@ export default function PartnersWerkPage() {
 
   // Monthly hours state
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHoursEntry[]>([])
+  const [prevYearHours, setPrevYearHours] = useState<MonthlyHoursEntry[]>([])
   const [showHoursUploadModal, setShowHoursUploadModal] = useState(false)
   const [isUploadingHours, setIsUploadingHours] = useState(false)
 
@@ -82,7 +83,7 @@ export default function PartnersWerkPage() {
 
   const [selectedYear, setSelectedYear] = useState<number>(() => {
     const currentYear = new Date().getFullYear()
-    return currentYear - 1 // Default to previous year (volledig data)
+    return currentYear // Default to current year
   })
 
   // Workload state
@@ -419,10 +420,19 @@ export default function PartnersWerkPage() {
 
   const fetchMonthlyHours = async () => {
     try {
-      const res = await fetch(`/api/monthly-hours?year=${selectedYear}`)
+      const [res, prevRes] = await Promise.all([
+        fetch(`/api/monthly-hours?year=${selectedYear}`),
+        fetch(`/api/monthly-hours?year=${selectedYear - 1}`)
+      ])
       if (res.ok) {
         const data = await res.json()
         setMonthlyHours(data)
+      }
+      if (prevRes.ok) {
+        const prevData = await prevRes.json()
+        setPrevYearHours(prevData)
+      } else {
+        setPrevYearHours([])
       }
     } catch (error) {
       console.error('Kon urenoverzicht niet laden')
@@ -505,6 +515,21 @@ export default function PartnersWerkPage() {
 
     return { employees, data, totals, monthlyTotals, grandTotal }
   }, [monthlyHours])
+
+  // Prepare previous year monthly totals for comparison
+  const prevYearMonthlyTotals = useMemo(() => {
+    const totals: Record<number, { billable: number; worked: number }> = {}
+    for (let m = 1; m <= 12; m++) {
+      totals[m] = { billable: 0, worked: 0 }
+    }
+    for (const entry of prevYearHours) {
+      if (entry.month >= 1 && entry.month <= 12) {
+        totals[entry.month].billable += entry.billableHours
+        totals[entry.month].worked += entry.workedHours
+      }
+    }
+    return totals
+  }, [prevYearHours])
 
   if (isLoading) {
     return (
@@ -1258,6 +1283,131 @@ export default function PartnersWerkPage() {
                     </div>
                   )
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Year Comparison Chart */}
+          {prevYearHours.length > 0 && (
+            <div className="card p-5">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.chart className="text-workx-lime" size={16} />
+                </div>
+                <h2 className="font-medium text-white">Vergelijking {selectedYear} vs {selectedYear - 1}</h2>
+                <div className="ml-auto flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-sm bg-white/20" />
+                    <span className="text-white/40">{selectedYear - 1}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-sm bg-workx-lime" />
+                    <span className="text-white/40">{selectedYear}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {(() => {
+                  const maxHours = Math.max(
+                    ...MONTH_NAMES.map((_, idx) => {
+                      const m = idx + 1
+                      return Math.max(
+                        monthlyHoursData.monthlyTotals[m]?.billable || 0,
+                        prevYearMonthlyTotals[m]?.billable || 0
+                      )
+                    })
+                  ) || 1
+
+                  const currentYearTotal = Object.values(monthlyHoursData.monthlyTotals).reduce((sum, v) => sum + v.billable, 0)
+                  const prevYearTotal = Object.values(prevYearMonthlyTotals).reduce((sum, v) => sum + v.billable, 0)
+
+                  return (
+                    <>
+                      {MONTH_NAMES.map((month, idx) => {
+                        const m = idx + 1
+                        const currentHours = monthlyHoursData.monthlyTotals[m]?.billable || 0
+                        const prevHours = prevYearMonthlyTotals[m]?.billable || 0
+
+                        if (currentHours === 0 && prevHours === 0) return null
+
+                        const diff = prevHours > 0
+                          ? ((currentHours - prevHours) / prevHours * 100)
+                          : currentHours > 0 ? 100 : 0
+
+                        return (
+                          <div key={month} className="group">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-white/50 w-8 flex-shrink-0">{month}</span>
+                              <div className="flex-1 space-y-1">
+                                {/* Previous year bar */}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-4 bg-white/[0.02] rounded overflow-hidden">
+                                    <div
+                                      className="h-full bg-white/15 rounded transition-all duration-500"
+                                      style={{ width: `${(prevHours / maxHours) * 100}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[11px] text-white/30 w-14 text-right tabular-nums">{Math.round(prevHours)}</span>
+                                </div>
+                                {/* Current year bar */}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-4 bg-white/[0.02] rounded overflow-hidden">
+                                    <div
+                                      className="h-full bg-workx-lime/60 rounded transition-all duration-500"
+                                      style={{ width: `${(currentHours / maxHours) * 100}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[11px] text-white/50 w-14 text-right tabular-nums font-medium">{Math.round(currentHours)}</span>
+                                </div>
+                              </div>
+                              <span className={`text-xs w-14 text-right font-medium tabular-nums ${
+                                diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-white/30'
+                              }`}>
+                                {diff > 0 ? '+' : ''}{Math.round(diff)}%
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {/* Totaal rij */}
+                      <div className="pt-3 mt-3 border-t border-white/10">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-workx-lime font-semibold w-8 flex-shrink-0">Tot.</span>
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-5 bg-white/[0.02] rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-white/15 rounded transition-all duration-500"
+                                  style={{ width: `${prevYearTotal >= currentYearTotal ? 100 : (prevYearTotal / currentYearTotal) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] text-white/30 w-14 text-right tabular-nums">{Math.round(prevYearTotal).toLocaleString('nl-NL')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-5 bg-white/[0.02] rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-workx-lime/60 rounded transition-all duration-500"
+                                  style={{ width: `${currentYearTotal >= prevYearTotal ? 100 : (currentYearTotal / prevYearTotal) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] text-workx-lime w-14 text-right tabular-nums font-semibold">{Math.round(currentYearTotal).toLocaleString('nl-NL')}</span>
+                            </div>
+                          </div>
+                          <span className={`text-xs w-14 text-right font-bold tabular-nums ${
+                            prevYearTotal > 0
+                              ? ((currentYearTotal - prevYearTotal) / prevYearTotal * 100) > 0 ? 'text-green-400' : 'text-red-400'
+                              : 'text-white/30'
+                          }`}>
+                            {prevYearTotal > 0
+                              ? `${((currentYearTotal - prevYearTotal) / prevYearTotal * 100) > 0 ? '+' : ''}${Math.round((currentYearTotal - prevYearTotal) / prevYearTotal * 100)}%`
+                              : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
           )}
