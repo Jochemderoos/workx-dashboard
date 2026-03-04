@@ -3183,14 +3183,31 @@ textarea::-webkit-scrollbar-thumb:hover {
 .workx-datepicker-popper .react-datepicker__time-container {
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.2);
+  border-radius: 0 16px 16px 0;
+  overflow: hidden;
 }
 
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time {
   background: transparent;
+  border-radius: 0 0 16px 0;
 }
 
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time-box {
   width: 100px;
+  border-radius: 0 0 16px 0;
+}
+
+.workx-datepicker-popper .react-datepicker__time-container .react-datepicker__header--time {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  border-radius: 0;
+}
+
+.workx-datepicker-popper .react-datepicker__time-container .react-datepicker__header--time .react-datepicker-time__header {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time-list-item {
@@ -3198,16 +3215,18 @@ textarea::-webkit-scrollbar-thumb:hover {
   height: auto !important;
   padding: 8px 12px !important;
   transition: all 0.15s ease;
+  border-radius: 6px;
+  margin: 1px 4px;
 }
 
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time-list-item:hover {
-  background: rgba(249, 255, 133, 0.2) !important;
+  background: rgba(249, 255, 133, 0.15) !important;
   color: white;
 }
 
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time-list-item--selected {
-  background: var(--workx-lime) !important;
-  color: var(--workx-dark) !important;
+  background: rgba(249, 255, 133, 0.2) !important;
+  color: rgb(249, 255, 133) !important;
   font-weight: 600;
 }
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import DatePicker from '@/components/ui/DatePicker'
 import { getPhotoUrl, ALL_TEAM_MEMBERS } from '@/lib/team-photos'
 import { uploadToBlob } from '@/lib/blob-upload'
 
@@ -1015,29 +1016,71 @@ function DocumentenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
 
 // ─── Gesprekken Tab ───────────────────────────────────────────────────────
 
+// Shared interviewer picker used by both new and edit forms
+function InterviewerPicker({ selected, onToggle }: { selected: string[]; onToggle: (name: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {ALL_TEAM_MEMBERS.map(name => {
+        const photo = getPhotoUrl(name)
+        const isSelected = selected.includes(name)
+        return (
+          <button
+            key={name}
+            onClick={() => onToggle(name)}
+            className={`flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-xs transition-all ${
+              isSelected
+                ? 'bg-workx-lime/10 border border-workx-lime/30 text-workx-lime'
+                : 'bg-white/5 border border-white/10 text-white/50 hover:text-white hover:border-white/20'
+            }`}
+          >
+            {photo ? (
+              <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold">
+                {name.charAt(0)}
+              </div>
+            )}
+            {name.split(' ')[0]}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function GesprekkenTab({ applicant, onRefresh }: { applicant: Applicant; onRefresh: () => void }) {
   const [showPlanForm, setShowPlanForm] = useState(false)
-  const [datum, setDatum] = useState('')
-  const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([])
+  const [planDatum, setPlanDatum] = useState<Date | null>(null)
+  const [planInterviewers, setPlanInterviewers] = useState<string[]>([])
   const [planning, setPlanning] = useState(false)
 
-  // Feedback/aandachtspunten editing
+  // Edit state — covers date, interviewers, feedback, aandachtspunten
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDatum, setEditDatum] = useState<Date | null>(null)
+  const [editInterviewers, setEditInterviewers] = useState<string[]>([])
   const [editFeedback, setEditFeedback] = useState('')
   const [editAandachtspunten, setEditAandachtspunten] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const toggleInterviewer = (name: string) => {
-    setSelectedInterviewers(prev =>
-      prev.includes(name)
-        ? prev.filter(n => n !== name)
-        : [...prev, name]
-    )
+  const togglePlanInterviewer = (name: string) => {
+    setPlanInterviewers(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
+  }
+
+  const toggleEditInterviewer = (name: string) => {
+    setEditInterviewers(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
+  }
+
+  const startEditing = (interview: ApplicantInterview) => {
+    setEditingId(interview.id)
+    setEditDatum(new Date(interview.datum))
+    setEditInterviewers(interview.interviewerNames?.split(', ').filter(Boolean) || [])
+    setEditFeedback(interview.feedback || '')
+    setEditAandachtspunten(interview.aandachtspunten || '')
   }
 
   const handlePlan = async () => {
-    if (!datum) { toast.error('Kies een datum'); return }
-    if (selectedInterviewers.length === 0) { toast.error('Selecteer minimaal één interviewer'); return }
+    if (!planDatum) { toast.error('Kies een datum'); return }
+    if (planInterviewers.length === 0) { toast.error('Selecteer minimaal één interviewer'); return }
 
     setPlanning(true)
     try {
@@ -1045,15 +1088,15 @@ function GesprekkenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          datum,
-          interviewerNames: selectedInterviewers.join(', '),
+          datum: planDatum.toISOString(),
+          interviewerNames: planInterviewers.join(', '),
         }),
       })
       if (res.ok) {
         toast.success('Gesprek gepland')
         setShowPlanForm(false)
-        setDatum('')
-        setSelectedInterviewers([])
+        setPlanDatum(null)
+        setPlanInterviewers([])
         onRefresh()
       }
     } catch {
@@ -1063,23 +1106,25 @@ function GesprekkenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
     }
   }
 
-  const handleSaveFeedback = async (interviewId: string) => {
+  const handleSaveEdit = async (interviewId: string) => {
     setSaving(true)
     try {
       await fetch(`/api/sollicitaties/${applicant.id}/interviews/${interviewId}`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          datum: editDatum?.toISOString(),
+          interviewerNames: editInterviewers.join(', '),
           feedback: editFeedback,
           aandachtspunten: editAandachtspunten,
-          status: 'afgerond',
+          ...(editFeedback.trim() && { status: 'afgerond' }),
         }),
       })
-      toast.success('Feedback opgeslagen')
+      toast.success('Gesprek bijgewerkt')
       setEditingId(null)
       onRefresh()
     } catch {
-      toast.error('Kon feedback niet opslaan')
+      toast.error('Kon gesprek niet bijwerken')
     } finally {
       setSaving(false)
     }
@@ -1114,7 +1159,7 @@ function GesprekkenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
       {/* Plan button */}
       <button
         onClick={() => setShowPlanForm(!showPlanForm)}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 text-sm font-medium transition-all border border-workx-lime/20"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 text-sm font-medium transition-all border border-workx-lime/20"
       >
         <Icons.plus size={14} />
         Gesprek plannen
@@ -1131,56 +1176,32 @@ function GesprekkenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
           >
             <div className="bg-white/[0.02] rounded-xl border border-white/10 p-4 space-y-4">
               <div>
-                <label className="block text-xs text-white/40 mb-1">Datum en tijd</label>
-                <input
-                  type="datetime-local"
-                  value={datum}
-                  onChange={e => setDatum(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                <label className="block text-xs text-white/40 mb-2">Datum en tijd</label>
+                <DatePicker
+                  selected={planDatum}
+                  onChange={setPlanDatum}
+                  showTimeSelect
+                  placeholder="Selecteer datum en tijd..."
+                  minDate={new Date()}
                 />
               </div>
 
               <div>
                 <label className="block text-xs text-white/40 mb-2">Interviewers</label>
-                <div className="flex flex-wrap gap-2">
-                  {ALL_TEAM_MEMBERS.map(name => {
-                    const photo = getPhotoUrl(name)
-                    const isSelected = selectedInterviewers.includes(name)
-                    return (
-                      <button
-                        key={name}
-                        onClick={() => toggleInterviewer(name)}
-                        className={`flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-xs transition-all ${
-                          isSelected
-                            ? 'bg-workx-lime/10 border border-workx-lime/30 text-workx-lime'
-                            : 'bg-white/5 border border-white/10 text-white/50 hover:text-white hover:border-white/20'
-                        }`}
-                      >
-                        {photo ? (
-                          <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold">
-                            {name.charAt(0)}
-                          </div>
-                        )}
-                        {name.split(' ')[0]}
-                      </button>
-                    )
-                  })}
-                </div>
+                <InterviewerPicker selected={planInterviewers} onToggle={togglePlanInterviewer} />
               </div>
 
               <div className="flex items-center gap-2 justify-end">
                 <button
                   onClick={() => setShowPlanForm(false)}
-                  className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 text-sm transition-all"
+                  className="px-3 py-1.5 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 text-sm transition-all"
                 >
                   Annuleren
                 </button>
                 <button
                   onClick={handlePlan}
                   disabled={planning}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-50"
                 >
                   {planning ? (
                     <div className="w-3.5 h-3.5 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
@@ -1210,131 +1231,144 @@ function GesprekkenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
 
             return (
               <div key={interview.id} className="bg-white/[0.02] rounded-xl border border-white/5 p-4 space-y-3">
-                {/* Interview header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      interview.status === 'gepland' ? 'bg-blue-400' :
-                      interview.status === 'afgerond' ? 'bg-green-400' :
-                      'bg-red-400'
-                    }`} />
-                    <span className="text-sm text-white font-medium">
-                      {interviewDate.toLocaleDateString('nl-NL', {
-                        weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
-                      })}
-                      {' om '}
-                      {interviewDate.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                      interview.status === 'gepland' ? 'bg-blue-500/20 text-blue-400' :
-                      interview.status === 'afgerond' ? 'bg-green-500/20 text-green-400' :
-                      'bg-red-500/20 text-red-400'
-                    }`}>
-                      {interview.status === 'gepland' ? 'Gepland' :
-                       interview.status === 'afgerond' ? 'Afgerond' : 'Geannuleerd'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {interview.status === 'gepland' && (
-                      <>
+                {!isEditing ? (
+                  <>
+                    {/* Interview header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          interview.status === 'gepland' ? 'bg-blue-400' :
+                          interview.status === 'afgerond' ? 'bg-green-400' :
+                          'bg-red-400'
+                        }`} />
+                        <span className="text-sm text-white font-medium">
+                          {interviewDate.toLocaleDateString('nl-NL', {
+                            weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+                          })}
+                          {' om '}
+                          {interviewDate.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                          interview.status === 'gepland' ? 'bg-blue-500/20 text-blue-400' :
+                          interview.status === 'afgerond' ? 'bg-green-500/20 text-green-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {interview.status === 'gepland' ? 'Gepland' :
+                           interview.status === 'afgerond' ? 'Afgerond' : 'Geannuleerd'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {interview.status !== 'geannuleerd' && (
+                          <button
+                            onClick={() => startEditing(interview)}
+                            className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-all"
+                            title="Bewerken"
+                          >
+                            <Icons.edit size={14} />
+                          </button>
+                        )}
+                        {interview.status === 'gepland' && (
+                          <button
+                            onClick={() => handleCancelInterview(interview.id)}
+                            className="p-1.5 rounded-lg text-yellow-400/30 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all"
+                            title="Annuleren"
+                          >
+                            <Icons.x size={14} />
+                          </button>
+                        )}
                         <button
-                          onClick={() => {
-                            setEditingId(interview.id)
-                            setEditFeedback(interview.feedback || '')
-                            setEditAandachtspunten(interview.aandachtspunten || '')
-                          }}
-                          className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-all"
-                          title="Feedback toevoegen"
+                          onClick={() => handleDeleteInterview(interview.id)}
+                          className="p-1.5 rounded-lg text-red-400/30 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                          title="Verwijderen"
                         >
-                          <Icons.edit size={14} />
+                          <Icons.trash size={14} />
                         </button>
-                        <button
-                          onClick={() => handleCancelInterview(interview.id)}
-                          className="p-1.5 rounded-lg text-yellow-400/30 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all"
-                          title="Annuleren"
-                        >
-                          <Icons.x size={14} />
-                        </button>
-                      </>
-                    )}
-                    {interview.status === 'afgerond' && !isEditing && (
-                      <button
-                        onClick={() => {
-                          setEditingId(interview.id)
-                          setEditFeedback(interview.feedback || '')
-                          setEditAandachtspunten(interview.aandachtspunten || '')
-                        }}
-                        className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-all"
-                        title="Feedback bewerken"
-                      >
-                        <Icons.edit size={14} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteInterview(interview.id)}
-                      className="p-1.5 rounded-lg text-red-400/30 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                      title="Verwijderen"
-                    >
-                      <Icons.trash size={14} />
-                    </button>
-                  </div>
-                </div>
+                      </div>
+                    </div>
 
-                {/* Interviewers with photos */}
-                {interviewers.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-white/30">Interviewers:</span>
-                    <div className="flex items-center gap-1.5">
-                      {interviewers.map(name => {
-                        const photo = getPhotoUrl(name)
-                        return (
-                          <div key={name} className="flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full bg-white/5" title={name}>
-                            {photo ? (
-                              <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover ring-1 ring-workx-lime/20" />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-workx-lime/10 flex items-center justify-center text-workx-lime text-[10px] font-bold">
-                                {name.charAt(0)}
+                    {/* Interviewers with photos */}
+                    {interviewers.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-white/30">Interviewers:</span>
+                        <div className="flex items-center gap-1.5">
+                          {interviewers.map(name => {
+                            const photo = getPhotoUrl(name)
+                            return (
+                              <div key={name} className="flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full bg-white/5" title={name}>
+                                {photo ? (
+                                  <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover ring-1 ring-workx-lime/20" />
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full bg-workx-lime/10 flex items-center justify-center text-workx-lime text-[10px] font-bold">
+                                    {name.charAt(0)}
+                                  </div>
+                                )}
+                                <span className="text-xs text-white/60">{name.split(' ')[0]}</span>
                               </div>
-                            )}
-                            <span className="text-xs text-white/60">{name.split(' ')[0]}</span>
-                          </div>
-                        )
-                      })}
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Feedback display */}
+                    {interview.feedback && (
+                      <div className="mt-2">
+                        <h5 className="text-xs text-white/40 uppercase tracking-wider mb-1">Feedback</h5>
+                        <p className="text-sm text-white/70 whitespace-pre-line">{interview.feedback}</p>
+                      </div>
+                    )}
+
+                    {/* Aandachtspunten display */}
+                    {interview.aandachtspunten && (
+                      <div className="mt-2 bg-amber-500/10 border-l-4 border-amber-500/60 rounded-r-lg px-4 py-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icons.alertTriangle size={14} className="text-amber-400" />
+                          <h5 className="text-xs text-amber-400 uppercase tracking-wider font-medium">Aandachtspunten</h5>
+                        </div>
+                        <p className="text-sm text-amber-200/80 whitespace-pre-line">{interview.aandachtspunten}</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* ── Inline edit form ── */
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm text-white font-medium">Gesprek bewerken</h4>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                        interview.status === 'gepland' ? 'bg-blue-500/20 text-blue-400' :
+                        interview.status === 'afgerond' ? 'bg-green-500/20 text-green-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {interview.status === 'gepland' ? 'Gepland' :
+                         interview.status === 'afgerond' ? 'Afgerond' : 'Geannuleerd'}
+                      </span>
                     </div>
-                  </div>
-                )}
 
-                {/* Feedback display (when not editing) */}
-                {!isEditing && interview.feedback && (
-                  <div className="mt-2">
-                    <h5 className="text-xs text-white/40 uppercase tracking-wider mb-1">Feedback</h5>
-                    <p className="text-sm text-white/70 whitespace-pre-line">{interview.feedback}</p>
-                  </div>
-                )}
-
-                {/* Aandachtspunten display (when not editing) */}
-                {!isEditing && interview.aandachtspunten && (
-                  <div className="mt-2 bg-amber-500/10 border-l-4 border-amber-500/60 rounded-r-lg px-4 py-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icons.alertTriangle size={14} className="text-amber-400" />
-                      <h5 className="text-xs text-amber-400 uppercase tracking-wider font-medium">Aandachtspunten</h5>
+                    <div>
+                      <label className="block text-xs text-white/40 mb-2">Datum en tijd</label>
+                      <DatePicker
+                        selected={editDatum}
+                        onChange={setEditDatum}
+                        showTimeSelect
+                        placeholder="Selecteer datum en tijd..."
+                      />
                     </div>
-                    <p className="text-sm text-amber-200/80 whitespace-pre-line">{interview.aandachtspunten}</p>
-                  </div>
-                )}
 
-                {/* Editing feedback/aandachtspunten */}
-                {isEditing && (
-                  <div className="space-y-3 pt-2 border-t border-white/5">
+                    <div>
+                      <label className="block text-xs text-white/40 mb-2">Interviewers</label>
+                      <InterviewerPicker selected={editInterviewers} onToggle={toggleEditInterviewer} />
+                    </div>
+
                     <div>
                       <label className="block text-xs text-white/40 mb-1">Feedback</label>
                       <textarea
                         value={editFeedback}
                         onChange={e => setEditFeedback(e.target.value)}
-                        className="w-full h-24 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30 resize-none"
+                        className="w-full h-24 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30 resize-none"
                         placeholder="Hoe verliep het gesprek?"
                       />
                     </div>
+
                     <div>
                       <label className="flex items-center gap-1.5 text-xs text-amber-400 mb-1">
                         <Icons.alertTriangle size={12} />
@@ -1343,21 +1377,22 @@ function GesprekkenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
                       <textarea
                         value={editAandachtspunten}
                         onChange={e => setEditAandachtspunten(e.target.value)}
-                        className="w-full h-20 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/40 resize-none"
+                        className="w-full h-20 bg-amber-500/5 border border-amber-500/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/40 resize-none"
                         placeholder="Belangrijke aandachtspunten of zorgen..."
                       />
                     </div>
+
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => setEditingId(null)}
-                        className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 text-sm transition-all"
+                        className="px-3 py-1.5 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 text-sm transition-all"
                       >
                         Annuleren
                       </button>
                       <button
-                        onClick={() => handleSaveFeedback(interview.id)}
+                        onClick={() => handleSaveEdit(interview.id)}
                         disabled={saving}
-                        className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-50"
                       >
                         {saving ? (
                           <div className="w-3.5 h-3.5 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
