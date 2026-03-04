@@ -125,12 +125,23 @@ export default function StaleVersionGuard() {
     }
 
     // --- Strategy 3: Periodic build-ID version check (every 5 minutes) ---
-    // Always shows a banner instead of force-refreshing to prevent
-    // disrupting users who have the page open (e.g. during meetings)
+    // Shows a banner immediately. After 1 hour stale, auto-refreshes
+    // (unless on a protected page like AI chat).
+    let staleDetectedAt: number | null = null
+
     const periodicCheck = setInterval(async () => {
       if (document.hidden) return
       const stale = await checkBuildVersion()
-      if (stale) showUpdateBanner()
+      if (stale) {
+        showUpdateBanner()
+        if (!staleDetectedAt) staleDetectedAt = Date.now()
+        // Auto-refresh after 1 hour stale (unless protected page)
+        if (!isProtectedPage && Date.now() - staleDetectedAt > 60 * 60 * 1000) {
+          window.location.reload()
+        }
+      } else {
+        staleDetectedAt = null
+      }
     }, 300000) // 5 minutes
 
     window.addEventListener('error', handleError)
