@@ -118,11 +118,12 @@ export default function SollicitatiesPage() {
 
   // New applicant form
   const [newNaam, setNewNaam] = useState('')
-  const [newEmail, setNewEmail] = useState('')
-  const [newTelefoon, setNewTelefoon] = useState('')
-  const [newFunctie, setNewFunctie] = useState('')
-  const [newWerkgever, setNewWerkgever] = useState('')
+  const [newCvFile, setNewCvFile] = useState<File | null>(null)
+  const [newBriefFile, setNewBriefFile] = useState<File | null>(null)
   const [creating, setCreating] = useState(false)
+  const [createProgress, setCreateProgress] = useState('')
+  const cvInputRef = useRef<HTMLInputElement>(null)
+  const briefInputRef = useRef<HTMLInputElement>(null)
 
   // Access check
   useEffect(() => {
@@ -158,37 +159,118 @@ export default function SollicitatiesPage() {
 
   const selectedApplicant = applicants.find(a => a.id === selectedId) || null
 
-  // Create new applicant
+  const resetForm = () => {
+    setNewNaam('')
+    setNewCvFile(null)
+    setNewBriefFile(null)
+    setCreateProgress('')
+    if (cvInputRef.current) cvInputRef.current.value = ''
+    if (briefInputRef.current) briefInputRef.current.value = ''
+  }
+
+  // Create new applicant with CV upload + auto-extraction
   const handleCreate = async () => {
-    if (!newNaam.trim()) { toast.error('Naam is verplicht'); return }
+    if (!newNaam.trim() && !newCvFile) {
+      toast.error('Vul een naam in of upload een CV')
+      return
+    }
+
     setCreating(true)
     try {
+      // Step 1: Create applicant (with name or placeholder)
+      setCreateProgress('Sollicitant aanmaken...')
       const res = await fetch('/api/sollicitaties', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          naam: newNaam,
-          email: newEmail || undefined,
-          telefoon: newTelefoon || undefined,
-          huidigeFunctie: newFunctie || undefined,
-          huidigeWerkgever: newWerkgever || undefined,
+          naam: newNaam.trim() || 'Nieuwe sollicitant',
         }),
       })
-      if (res.ok) {
-        const applicant = await res.json()
-        toast.success('Sollicitant aangemaakt')
-        setShowNewForm(false)
-        setNewNaam(''); setNewEmail(''); setNewTelefoon(''); setNewFunctie(''); setNewWerkgever('')
-        await fetchApplicants()
-        setSelectedId(applicant.id)
-      } else {
+      if (!res.ok) {
         const err = await res.json()
         toast.error(err.error || 'Kon sollicitant niet aanmaken')
+        return
       }
+      const applicant = await res.json()
+
+      // Step 2: Upload CV if provided
+      let cvText = ''
+      if (newCvFile) {
+        setCreateProgress('CV uploaden...')
+        try {
+          const cvResult = await uploadToBlob(
+            `sollicitaties/${applicant.id}/${newCvFile.name}`,
+            newCvFile
+          )
+          await fetch(`/api/sollicitaties/${applicant.id}/documents`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              type: 'cv',
+              naam: newCvFile.name,
+              fileUrl: cvResult.url,
+              fileSize: newCvFile.size,
+            }),
+          })
+          // Extract text for AI
+          setCreateProgress('CV tekst extraheren...')
+          cvText = await extractTextFromFile(newCvFile)
+        } catch {
+          console.error('CV upload failed')
+        }
+      }
+
+      // Step 3: Upload brief if provided
+      let briefText = ''
+      if (newBriefFile) {
+        setCreateProgress('Motivatiebrief uploaden...')
+        try {
+          const briefResult = await uploadToBlob(
+            `sollicitaties/${applicant.id}/${newBriefFile.name}`,
+            newBriefFile
+          )
+          await fetch(`/api/sollicitaties/${applicant.id}/documents`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              type: 'brief',
+              naam: newBriefFile.name,
+              fileUrl: briefResult.url,
+              fileSize: newBriefFile.size,
+            }),
+          })
+          // Extract text
+          briefText = await extractTextFromFile(newBriefFile)
+        } catch {
+          console.error('Brief upload failed')
+        }
+      }
+
+      // Step 4: Auto-extract profile data from CV/brief text via AI
+      const combinedText = [cvText, briefText].filter(Boolean).join('\n\n---\n\n')
+      if (combinedText.trim()) {
+        setCreateProgress('Kerngegevens extraheren met AI...')
+        try {
+          await fetch(`/api/sollicitaties/${applicant.id}/extract`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ text: combinedText }),
+          })
+        } catch {
+          console.error('AI extraction failed')
+        }
+      }
+
+      toast.success(combinedText ? 'Sollicitant aangemaakt en gegevens geëxtraheerd' : 'Sollicitant aangemaakt')
+      setShowNewForm(false)
+      resetForm()
+      await fetchApplicants()
+      setSelectedId(applicant.id)
     } catch {
       toast.error('Fout bij aanmaken')
     } finally {
       setCreating(false)
+      setCreateProgress('')
     }
   }
 
@@ -226,58 +308,140 @@ export default function SollicitatiesPage() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-workx-dark/40 rounded-2xl border border-white/5 p-6 space-y-4">
-              <h3 className="text-white font-semibold">Nieuwe sollicitant</h3>
+            <div className="bg-workx-dark/40 rounded-2xl border border-white/5 p-6 space-y-5">
+              <div>
+                <h3 className="text-white font-semibold">Nieuwe sollicitant</h3>
+                <p className="text-white/30 text-xs mt-1">Upload een CV en/of brief — kerngegevens worden automatisch geëxtraheerd</p>
+              </div>
+
+              {/* File uploads - prominent */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-white/40 mb-1">Naam *</label>
+                  <label className="block text-xs text-white/40 mb-1.5">CV (PDF, DOCX)</label>
+                  <button
+                    onClick={() => cvInputRef.current?.click()}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed transition-all text-left ${
+                      newCvFile
+                        ? 'border-workx-lime/30 bg-workx-lime/5'
+                        : 'border-white/10 hover:border-white/20 bg-white/[0.02]'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      newCvFile ? 'bg-workx-lime/10' : 'bg-white/5'
+                    }`}>
+                      {newCvFile ? (
+                        <Icons.check size={18} className="text-workx-lime" />
+                      ) : (
+                        <Icons.upload size={18} className="text-white/30" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {newCvFile ? (
+                        <>
+                          <p className="text-sm text-workx-lime font-medium truncate">{newCvFile.name}</p>
+                          <p className="text-xs text-white/30">{(newCvFile.size / 1024).toFixed(0)} KB</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-white/60">CV uploaden</p>
+                          <p className="text-xs text-white/20">Klik om bestand te kiezen</p>
+                        </>
+                      )}
+                    </div>
+                    {newCvFile && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setNewCvFile(null); if (cvInputRef.current) cvInputRef.current.value = '' }}
+                        className="p-1 rounded hover:bg-white/10 text-white/30 hover:text-white transition-colors"
+                      >
+                        <Icons.x size={14} />
+                      </button>
+                    )}
+                  </button>
                   <input
-                    value={newNaam}
-                    onChange={e => setNewNaam(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-                    placeholder="Volledige naam"
+                    ref={cvInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.doc,.txt"
+                    onChange={e => { if (e.target.files?.[0]) setNewCvFile(e.target.files[0]) }}
+                    className="hidden"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs text-white/40 mb-1">Email</label>
+                  <label className="block text-xs text-white/40 mb-1.5">Motivatiebrief (optioneel)</label>
+                  <button
+                    onClick={() => briefInputRef.current?.click()}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed transition-all text-left ${
+                      newBriefFile
+                        ? 'border-workx-lime/30 bg-workx-lime/5'
+                        : 'border-white/10 hover:border-white/20 bg-white/[0.02]'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      newBriefFile ? 'bg-workx-lime/10' : 'bg-white/5'
+                    }`}>
+                      {newBriefFile ? (
+                        <Icons.check size={18} className="text-workx-lime" />
+                      ) : (
+                        <Icons.upload size={18} className="text-white/30" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {newBriefFile ? (
+                        <>
+                          <p className="text-sm text-workx-lime font-medium truncate">{newBriefFile.name}</p>
+                          <p className="text-xs text-white/30">{(newBriefFile.size / 1024).toFixed(0)} KB</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-white/60">Brief uploaden</p>
+                          <p className="text-xs text-white/20">Klik om bestand te kiezen</p>
+                        </>
+                      )}
+                    </div>
+                    {newBriefFile && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setNewBriefFile(null); if (briefInputRef.current) briefInputRef.current.value = '' }}
+                        className="p-1 rounded hover:bg-white/10 text-white/30 hover:text-white transition-colors"
+                      >
+                        <Icons.x size={14} />
+                      </button>
+                    )}
+                  </button>
                   <input
-                    value={newEmail}
-                    onChange={e => setNewEmail(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-                    placeholder="email@voorbeeld.nl"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-white/40 mb-1">Telefoon</label>
-                  <input
-                    value={newTelefoon}
-                    onChange={e => setNewTelefoon(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-                    placeholder="06-12345678"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-white/40 mb-1">Huidige functie</label>
-                  <input
-                    value={newFunctie}
-                    onChange={e => setNewFunctie(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-                    placeholder="Functie"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-white/40 mb-1">Huidige werkgever</label>
-                  <input
-                    value={newWerkgever}
-                    onChange={e => setNewWerkgever(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-                    placeholder="Werkgever"
+                    ref={briefInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.doc,.txt"
+                    onChange={e => { if (e.target.files?.[0]) setNewBriefFile(e.target.files[0]) }}
+                    className="hidden"
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2 justify-end">
+
+              {/* Name fallback */}
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Naam {!newCvFile && '*'}</label>
+                <input
+                  value={newNaam}
+                  onChange={e => setNewNaam(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+                  placeholder={newCvFile ? 'Wordt automatisch ingevuld uit CV' : 'Volledige naam'}
+                />
+                {newCvFile && (
+                  <p className="text-[10px] text-workx-lime/50 mt-1">Naam wordt automatisch uit het CV gehaald</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 justify-between">
+                {creating && createProgress && (
+                  <div className="flex items-center gap-2 text-xs text-workx-lime/70">
+                    <div className="w-3.5 h-3.5 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
+                    {createProgress}
+                  </div>
+                )}
+                <div className="flex-1" />
                 <button
-                  onClick={() => setShowNewForm(false)}
+                  onClick={() => { setShowNewForm(false); resetForm() }}
                   className="px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white text-sm transition-all"
                 >
                   Annuleren
@@ -285,14 +449,14 @@ export default function SollicitatiesPage() {
                 <button
                   onClick={handleCreate}
                   disabled={creating}
-                  className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-50 border border-workx-lime/20"
                 >
                   {creating ? (
                     <div className="w-3.5 h-3.5 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
                   ) : (
-                    <Icons.check size={14} />
+                    <Icons.sparkles size={14} />
                   )}
-                  Aanmaken
+                  {newCvFile ? 'Aanmaken & extraheren' : 'Aanmaken'}
                 </button>
               </div>
             </div>
