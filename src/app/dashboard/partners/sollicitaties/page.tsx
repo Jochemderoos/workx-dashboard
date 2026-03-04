@@ -300,6 +300,149 @@ export default function SollicitatiesPage() {
         </button>
       </div>
 
+      {/* Overview dashboard */}
+      {applicants.length > 0 && (() => {
+        const actief = applicants.filter(a => a.status === 'nieuw' || a.status === 'in_gesprek')
+        const allInterviews = applicants.flatMap(a =>
+          a.interviews.map(i => ({ ...i, applicantNaam: a.naam, applicantId: a.id }))
+        )
+        const now = new Date()
+        const gepland = allInterviews
+          .filter(i => i.status === 'gepland' && new Date(i.datum) >= now)
+          .sort((a, b) => new Date(a.datum).getTime() - new Date(b.datum).getTime())
+        const afgerond = allInterviews
+          .filter(i => i.status === 'afgerond')
+          .sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime())
+          .slice(0, 5)
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Actieve sollicitanten */}
+            <div className="bg-workx-dark/40 rounded-2xl border border-white/5 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Icons.users size={12} className="text-blue-400" />
+                </div>
+                <span className="text-xs text-white/40 uppercase tracking-wider font-medium">Actief</span>
+                <span className="text-xs text-white/20 ml-auto">{actief.length}</span>
+              </div>
+              {actief.length === 0 ? (
+                <p className="text-xs text-white/20">Geen actieve sollicitanten</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {actief.map(a => (
+                    <button
+                      key={a.id}
+                      onClick={() => setSelectedId(a.id)}
+                      className="w-full flex items-center gap-2 text-left hover:bg-white/5 rounded-lg px-2 py-1.5 transition-all"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-workx-lime/10 flex items-center justify-center text-workx-lime text-[10px] font-bold flex-shrink-0">
+                        {a.naam.charAt(0)}
+                      </div>
+                      <span className="text-xs text-white/70 truncate flex-1">{a.naam}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${STATUS_CONFIG[a.status]?.bg || ''}`}>
+                        {STATUS_CONFIG[a.status]?.label || a.status}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Geplande gesprekken */}
+            <div className="bg-workx-dark/40 rounded-2xl border border-white/5 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.calendar size={12} className="text-workx-lime" />
+                </div>
+                <span className="text-xs text-white/40 uppercase tracking-wider font-medium">Gepland</span>
+                <span className="text-xs text-white/20 ml-auto">{gepland.length}</span>
+              </div>
+              {gepland.length === 0 ? (
+                <p className="text-xs text-white/20">Geen geplande gesprekken</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {gepland.slice(0, 5).map(i => {
+                    const d = new Date(i.datum)
+                    const interviewers = i.interviewerNames?.split(', ').filter(Boolean) || []
+                    return (
+                      <button
+                        key={i.id}
+                        onClick={() => setSelectedId(i.applicantId)}
+                        className="w-full flex items-center gap-2 text-left hover:bg-white/5 rounded-lg px-2 py-1.5 transition-all"
+                      >
+                        <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white/70 truncate">{i.applicantNaam}</p>
+                          <p className="text-[10px] text-white/30">
+                            {d.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            {' '}
+                            {d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="flex -space-x-1.5">
+                          {interviewers.slice(0, 3).map(name => {
+                            const photo = getPhotoUrl(name)
+                            return photo ? (
+                              <img key={name} src={photo} alt={name} className="w-5 h-5 rounded-full object-cover ring-1 ring-workx-dark" title={name} />
+                            ) : (
+                              <div key={name} className="w-5 h-5 rounded-full bg-white/10 ring-1 ring-workx-dark flex items-center justify-center text-[8px] text-white/50" title={name}>
+                                {name.charAt(0)}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Afgeronde gesprekken */}
+            <div className="bg-workx-dark/40 rounded-2xl border border-white/5 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg bg-green-500/10 flex items-center justify-center">
+                  <Icons.check size={12} className="text-green-400" />
+                </div>
+                <span className="text-xs text-white/40 uppercase tracking-wider font-medium">Afgerond</span>
+                <span className="text-xs text-white/20 ml-auto">{allInterviews.filter(i => i.status === 'afgerond').length}</span>
+              </div>
+              {afgerond.length === 0 ? (
+                <p className="text-xs text-white/20">Nog geen gesprekken afgerond</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {afgerond.map(i => {
+                    const d = new Date(i.datum)
+                    const hasAandachtspunten = !!i.aandachtspunten
+                    return (
+                      <button
+                        key={i.id}
+                        onClick={() => setSelectedId(i.applicantId)}
+                        className="w-full flex items-center gap-2 text-left hover:bg-white/5 rounded-lg px-2 py-1.5 transition-all"
+                      >
+                        <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white/70 truncate">{i.applicantNaam}</p>
+                          <p className="text-[10px] text-white/30">
+                            {d.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          </p>
+                        </div>
+                        {hasAandachtspunten && (
+                          <span title="Heeft aandachtspunten">
+                            <Icons.alertTriangle size={12} className="text-amber-400/60 flex-shrink-0" />
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* New applicant form */}
       <AnimatePresence>
         {showNewForm && (
