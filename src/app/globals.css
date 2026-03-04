@@ -3006,6 +3006,15 @@ textarea::-webkit-scrollbar-thumb:hover {
 /* Popper container */
 .workx-datepicker-popper {
   z-index: 9999 !important;
+  inset: unset !important;
+}
+
+.workx-datepicker-popper[data-placement^="bottom"] {
+  padding-top: 4px;
+}
+
+.workx-datepicker-popper[data-placement^="top"] {
+  padding-bottom: 4px;
 }
 
 .workx-datepicker-popper .react-datepicker {
@@ -3019,6 +3028,7 @@ textarea::-webkit-scrollbar-thumb:hover {
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
   backdrop-filter: blur(20px);
+  display: flex !important;
 }
 
 /* Header */
@@ -3183,18 +3193,24 @@ textarea::-webkit-scrollbar-thumb:hover {
 .workx-datepicker-popper .react-datepicker__time-container {
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 0 16px 16px 0;
+  width: 100px !important;
   overflow: hidden;
 }
 
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time {
   background: transparent;
-  border-radius: 0 0 16px 0;
+  overflow-y: auto;
 }
 
-.workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time-box {
-  width: 100px;
-  border-radius: 0 0 16px 0;
+.workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box {
+  width: 100px !important;
+}
+
+.workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box ul.react-datepicker__time-list {
+  height: 240px !important;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
 }
 
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__header--time {
@@ -3213,10 +3229,11 @@ textarea::-webkit-scrollbar-thumb:hover {
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time-list-item {
   color: rgba(255, 255, 255, 0.7);
   height: auto !important;
-  padding: 8px 12px !important;
+  padding: 6px 10px !important;
   transition: all 0.15s ease;
   border-radius: 6px;
   margin: 1px 4px;
+  font-size: 13px;
 }
 
 .workx-datepicker-popper .react-datepicker__time-container .react-datepicker__time-list-item:hover {

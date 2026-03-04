@@ -62,6 +62,7 @@ export default function DatePicker({
         minDate={minDate}
         maxDate={maxDate}
         showTimeSelect={showTimeSelect}
+        timeCaption="Tijd"
         timeFormat="HH:mm"
         timeIntervals={15}
         isClearable={isClearable}
