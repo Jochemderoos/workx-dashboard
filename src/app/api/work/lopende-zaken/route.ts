@@ -10,6 +10,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
+    // Alleen toegankelijk voor Partners en Admin (Hanna)
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+      select: { role: true },
+    })
+    if (!user || (user.role !== 'PARTNER' && user.role !== 'ADMIN')) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    }
+
     const endDate = new Date()
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - 30)
