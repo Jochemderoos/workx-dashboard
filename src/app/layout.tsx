@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { Toaster } from 'react-hot-toast'
@@ -64,6 +65,7 @@ export default function RootLayout({
           />
           {/* Portal for date picker popups */}
           <div id="datepicker-portal" />
+          <Analytics />
         </Providers>
       </body>
     </html>
