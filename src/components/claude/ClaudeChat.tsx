@@ -2119,17 +2119,18 @@ ${markdownHtml}
               ))}
 
               {/* Quick translate buttons — uses Claude-only fast path */}
-              <div className="flex items-center gap-1 ml-1 pl-2 border-l border-white/[0.06]">
+              <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-white/[0.06]">
+                <span className="text-[10px] text-white/20 mr-0.5">Vertaal</span>
                 <button
                   onClick={() => {
                     if (!input.trim()) return
                     sendMessage(`Vertaal de volgende tekst naar het Engels. Geef ALLEEN de vertaling, geen toelichting.\n\n${input.trim()}`, { claudeOnly: true })
                   }}
                   disabled={!input.trim() || isLoading}
-                  className="px-2.5 py-1 rounded-lg text-[11px] border bg-purple-500/10 border-purple-500/20 text-purple-300/70 hover:text-purple-200 hover:bg-purple-500/20 disabled:opacity-20 transition-all"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium border bg-purple-500/10 border-purple-500/20 text-purple-300/70 hover:text-purple-200 hover:bg-purple-500/20 disabled:opacity-20 transition-all"
                   title="Vertaal je tekst naar Engels via Claude (snel, zonder bronnen)"
                 >
-                  → EN
+                  Engels
                 </button>
                 <button
                   onClick={() => {
@@ -2137,10 +2138,10 @@ ${markdownHtml}
                     sendMessage(`Vertaal de volgende tekst naar het Nederlands. Geef ALLEEN de vertaling, geen toelichting.\n\n${input.trim()}`, { claudeOnly: true })
                   }}
                   disabled={!input.trim() || isLoading}
-                  className="px-2.5 py-1 rounded-lg text-[11px] border bg-purple-500/10 border-purple-500/20 text-purple-300/70 hover:text-purple-200 hover:bg-purple-500/20 disabled:opacity-20 transition-all"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium border bg-purple-500/10 border-purple-500/20 text-purple-300/70 hover:text-purple-200 hover:bg-purple-500/20 disabled:opacity-20 transition-all"
                   title="Vertaal je tekst naar Nederlands via Claude (snel, zonder bronnen)"
                 >
-                  → NL
+                  Nederlands
                 </button>
               </div>
             </div>
