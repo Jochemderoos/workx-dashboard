@@ -949,7 +949,7 @@ ${markdownHtml}
     } catch { /* ignore */ }
   }
 
-  const sendMessage = async (overrideMessage?: string) => {
+  const sendMessage = async (overrideMessage?: string, options?: { claudeOnly?: boolean }) => {
     const text = overrideMessage || input.trim()
     if (!text || isLoading) return
 
@@ -1009,8 +1009,8 @@ ${markdownHtml}
           documentIds: [...documentIds, ...attachedDocs.flatMap(d => d.splitIds || [d.id])],
           anonymize,
           model: selectedModel,
-          useKnowledgeSources,
-          useRechtspraak,
+          useKnowledgeSources: options?.claudeOnly ? false : useKnowledgeSources,
+          useRechtspraak: options?.claudeOnly ? false : useRechtspraak,
         }),
         signal: controller.signal,
       })
@@ -2101,22 +2101,6 @@ ${markdownHtml}
                 </button>
               </div>
 
-              {/* 4. Rechtspraak.nl toggle — off by default */}
-              <button
-                onClick={() => setUseRechtspraak(!useRechtspraak)}
-                disabled={isLoading || !useKnowledgeSources}
-                className={`px-3 py-2 rounded-xl text-[12px] font-medium transition-all border ${
-                  useRechtspraak
-                    ? 'bg-orange-500/20 border-orange-500/30 text-orange-300 shadow-[inset_0_0_12px_rgba(249,115,22,0.12)]'
-                    : 'bg-white/[0.03] border-white/10 text-white/30 hover:text-white/50 hover:bg-white/[0.05]'
-                } disabled:opacity-20`}
-                title={useRechtspraak
-                  ? 'Rechtspraak.nl actief — zoekt extra uitspraken buiten kennisbronnen (langzamer)'
-                  : 'Klik om ook op rechtspraak.nl te zoeken (duurt langer, meestal niet nodig)'}
-              >
-                {useRechtspraak ? 'Rechtspraak.nl aan' : 'Rechtspraak.nl uit'}
-              </button>
-
               {/* Extra options as small chips */}
               {RESPONSE_OPTIONS.filter(o => o.id !== 'kort' && o.id !== 'uitgebreid').map((opt) => (
                 <button
@@ -2272,11 +2256,6 @@ ${markdownHtml}
               }`}>
                 {activeOptions.has('uitgebreid') ? 'Uitgebreid' : 'Beknopt'}
               </span>
-              {useRechtspraak && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/10 border border-orange-500/20 text-[10px] text-orange-400">
-                  Rechtspraak.nl
-                </span>
-              )}
               {Array.from(activeOptions).filter(id => id !== 'kort' && id !== 'uitgebreid').map(optId => {
                 const opt = RESPONSE_OPTIONS.find(o => o.id === optId)
                 return opt ? (
@@ -2339,6 +2318,21 @@ ${markdownHtml}
                 className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-2xl text-white text-[15px] placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/30 focus:bg-white/[0.06] transition-all duration-300 disabled:opacity-50"
                 style={{ maxHeight: '200px' }}
               />
+            </div>
+            {/* Claude-only send button */}
+            <div className="relative group/claude">
+              <button
+                onClick={() => sendMessage(undefined, { claudeOnly: true })}
+                disabled={!input.trim() || isLoading}
+                className="flex-shrink-0 w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-500/25 text-purple-300 flex items-center justify-center hover:bg-purple-500/25 hover:border-purple-500/40 disabled:opacity-20 transition-all"
+              >
+                <Icons.sparkles size={17} />
+              </button>
+              {/* Hover tooltip */}
+              <div className="absolute bottom-full right-0 mb-2 hidden group-hover/claude:block pointer-events-none w-52 p-2.5 rounded-xl bg-[#1a1a1a] border border-purple-500/20 shadow-xl">
+                <p className="text-xs font-medium text-purple-300">Claude-only</p>
+                <p className="text-[10px] text-white/40 mt-0.5">Zonder juridische bronnen. Voor vertalingen en algemene vragen.</p>
+              </div>
             </div>
             {isLoading ? (
               <button
