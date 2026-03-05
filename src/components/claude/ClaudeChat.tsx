@@ -949,7 +949,7 @@ ${markdownHtml}
     } catch { /* ignore */ }
   }
 
-  const sendMessage = async (overrideMessage?: string, options?: { claudeOnly?: boolean }) => {
+  const sendMessage = async (overrideMessage?: string, options?: { claudeOnly?: boolean; displayText?: string }) => {
     const text = overrideMessage || input.trim()
     if (!text || isLoading) return
 
@@ -964,7 +964,7 @@ ${markdownHtml}
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: text,
+      content: options?.displayText || text,
       attachments: currentAttachments,
     }
     setMessages(prev => [...prev, userMessage])
@@ -2143,7 +2143,8 @@ ${markdownHtml}
                 <button
                   onClick={() => {
                     if (!input.trim()) return
-                    sendMessage(`Vertaal de volgende tekst naar het Engels. Geef ALLEEN de vertaling, geen toelichting.\n\n${input.trim()}`, { claudeOnly: true })
+                    const userText = input.trim()
+                    sendMessage(`Vertaal de volgende tekst naar het Engels. Geef ALLEEN de vertaling, geen toelichting.\n\n${userText}`, { claudeOnly: true, displayText: userText })
                   }}
                   disabled={!input.trim() || isLoading}
                   className="px-2.5 py-1 rounded-lg text-[11px] font-medium border bg-purple-500/15 border-purple-500/30 text-purple-300 hover:text-purple-100 hover:bg-purple-500/25 hover:shadow-[0_0_8px_rgba(168,85,247,0.15)] disabled:opacity-20 transition-all"
@@ -2154,7 +2155,8 @@ ${markdownHtml}
                 <button
                   onClick={() => {
                     if (!input.trim()) return
-                    sendMessage(`Vertaal de volgende tekst naar het Nederlands. Geef ALLEEN de vertaling, geen toelichting.\n\n${input.trim()}`, { claudeOnly: true })
+                    const userText = input.trim()
+                    sendMessage(`Vertaal de volgende tekst naar het Nederlands. Geef ALLEEN de vertaling, geen toelichting.\n\n${userText}`, { claudeOnly: true, displayText: userText })
                   }}
                   disabled={!input.trim() || isLoading}
                   className="px-2.5 py-1 rounded-lg text-[11px] font-medium border bg-purple-500/15 border-purple-500/30 text-purple-300 hover:text-purple-100 hover:bg-purple-500/25 hover:shadow-[0_0_8px_rgba(168,85,247,0.15)] disabled:opacity-20 transition-all"
