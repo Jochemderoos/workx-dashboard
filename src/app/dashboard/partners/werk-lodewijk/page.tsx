@@ -456,7 +456,6 @@ export default function WerkLodewijkPage() {
                     </div>
                   )}
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-green-500 border-2 border-workx-dark" />
               </div>
 
               {/* Info */}
