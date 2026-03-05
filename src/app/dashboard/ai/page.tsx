@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Icons } from '@/components/ui/Icons'
 import toast from 'react-hot-toast'
 import ClaudeChat from '@/components/claude/ClaudeChat'
@@ -65,6 +65,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function AIAssistentPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { setCollapsed: setSidebarCollapsed } = useSidebar()
   const [projects, setProjects] = useState<Project[]>([])
   const [recentConversations, setRecentConversations] = useState<Conversation[]>([])
@@ -143,28 +144,23 @@ export default function AIAssistentPage() {
       setIsLoading(false)
     })
 
-    // Check URL for conv parameter, or auto-resume last conversation
-    const urlParams = new URLSearchParams(window.location.search)
-    const convParam = urlParams.get('conv')
-    if (convParam) {
-      setSelectedConvId(convParam)
-      setChatInstance(prev => prev + 1)
-    }
-    // Auto-resume is handled after conversations load (see effect below)
   }, [])
 
-  // Only restore conversation from URL parameter (e.g. direct link / browser back)
-  // Never auto-select the most recent conversation — always start fresh
+  // Sync selected conversation from URL search params (reactive)
+  // When ?conv=xxx → load that conversation; when ?conv is removed (sidebar click) → fresh chat
+  const convParam = searchParams.get('conv')
   useEffect(() => {
-    if (!isLoading && !selectedConvId) {
-      const urlParams = new URLSearchParams(window.location.search)
-      const convFromUrl = urlParams.get('conv')
-      if (convFromUrl) {
-        setSelectedConvId(convFromUrl)
+    if (convParam) {
+      if (convParam !== selectedConvId) {
+        setSelectedConvId(convParam)
         setChatInstance(prev => prev + 1)
       }
+    } else if (selectedConvId) {
+      // URL no longer has ?conv → reset to fresh chat
+      setSelectedConvId(null)
+      setChatInstance(prev => prev + 1)
     }
-  }, [isLoading])
+  }, [convParam])
 
   // Debounced search
   useEffect(() => {
