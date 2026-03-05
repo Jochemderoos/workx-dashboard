@@ -361,12 +361,10 @@ function WaarnemerBadges({
   waarnemers,
   onRemove,
   onOpenDropdown,
-  buttonRef,
 }: {
   waarnemers: string[]
   onRemove: (name: string) => void
-  onOpenDropdown: () => void
-  buttonRef: (el: HTMLButtonElement | null) => void
+  onOpenDropdown: (btnEl: HTMLButtonElement) => void
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -392,8 +390,7 @@ function WaarnemerBadges({
         )
       })}
       <button
-        ref={buttonRef}
-        onClick={onOpenDropdown}
+        onClick={(e) => onOpenDropdown(e.currentTarget)}
         className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all text-[11px]"
       >
         <Icons.plus size={10} />
@@ -406,18 +403,14 @@ function WaarnemerBadges({
 
 function CaseRow({
   caseData,
-  caseKey,
   onUpdate,
   onDelete,
   onOpenDropdown,
-  waarnemerBtnRef,
 }: {
   caseData: HandoverCase
-  caseKey: string
   onUpdate: (updated: HandoverCase) => void
   onDelete: () => void
-  onOpenDropdown: () => void
-  waarnemerBtnRef: (el: HTMLButtonElement | null) => void
+  onOpenDropdown: (btnEl: HTMLButtonElement) => void
 }) {
   const waarnemerNames = caseData.waarnemers ? caseData.waarnemers.split(', ').filter(Boolean) : []
 
@@ -452,7 +445,6 @@ function CaseRow({
           waarnemers={waarnemerNames}
           onRemove={handleRemoveWaarnemer}
           onOpenDropdown={onOpenDropdown}
-          buttonRef={waarnemerBtnRef}
         />
         <button
           onClick={onDelete}
@@ -495,7 +487,6 @@ function CaseRow({
           waarnemers={waarnemerNames}
           onRemove={handleRemoveWaarnemer}
           onOpenDropdown={onOpenDropdown}
-          buttonRef={waarnemerBtnRef}
         />
       </div>
     </>
@@ -529,7 +520,6 @@ export default function OverdrachtPage() {
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [openWaarnemerDropdown, setOpenWaarnemerDropdown] = useState<string | null>(null) // caseKey
-  const waarnemerBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const activeWaarnemerBtnRef = useRef<HTMLButtonElement | null>(null)
 
   // Fetch user + handovers + team
@@ -998,25 +988,23 @@ export default function OverdrachtPage() {
                     <CaseRow
                       key={c.id || `new-${i}`}
                       caseData={c}
-                      caseKey={caseKey}
                       onUpdate={(updated) => updateLocalCase(activeHandover.id, i, updated)}
                       onDelete={() => deleteLocalCase(activeHandover.id, i)}
-                      onOpenDropdown={() => {
+                      onOpenDropdown={(btnEl) => {
                         if (openWaarnemerDropdown === caseKey) {
                           setOpenWaarnemerDropdown(null)
                         } else {
-                          activeWaarnemerBtnRef.current = waarnemerBtnRefs.current[caseKey] || null
+                          activeWaarnemerBtnRef.current = btnEl
                           setOpenWaarnemerDropdown(caseKey)
                         }
                       }}
-                      waarnemerBtnRef={(el) => { waarnemerBtnRefs.current[caseKey] = el }}
                     />
                   )
                 })}
               </div>
 
               {/* Waarnemer dropdown — rendered at parent level like WerkverdelingTable */}
-              {openWaarnemerDropdown && activeWaarnemerBtnRef.current && (() => {
+              {openWaarnemerDropdown !== null && activeWaarnemerBtnRef.current && (() => {
                 const handoverId = activeHandover.id
                 const cases = getCases(handoverId)
                 const caseIndex = cases.findIndex((c, i) => {
