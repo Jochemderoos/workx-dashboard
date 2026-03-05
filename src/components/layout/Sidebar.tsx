@@ -36,12 +36,12 @@ const mainMenuItems = [
   { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', iconAnim: 'icon-party-hover', badge: '15 jaar!' },
   { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', iconAnim: 'icon-mappin-hover' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', iconAnim: 'icon-calendar-hover' },
-  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover' },
+  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover', hideForExternal: true },
   { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', iconAnim: 'icon-graduation-hover' },
   { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', iconAnim: 'icon-file-hover' },
-  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', iconAnim: 'icon-target-hover' },
-  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover' },
+  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', iconAnim: 'icon-target-hover', hideForExternal: true },
+  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover', hideForExternal: true },
 ]
 
 // Partners sectie - alleen zichtbaar voor PARTNER en ADMIN
@@ -56,16 +56,16 @@ const partnersMenuItems = [
 
 const toolsMenuItems = [
   { href: '/dashboard/ai', icon: Icons.sparkles, label: 'AI Assistent', iconAnim: 'icon-zap-hover', isAI: true },
-  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover' },
+  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover', hideForExternal: true },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover' },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', iconAnim: 'icon-layers-hover' },
-  { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', iconAnim: 'icon-file-hover' },
-  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', iconAnim: 'icon-file-hover' },
+  { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', iconAnim: 'icon-file-hover', hideForExternal: true },
+  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', iconAnim: 'icon-file-hover', hideForExternal: true },
 ]
 
 const manageMenuItems = [
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover' },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover' },
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover', hideForExternal: true },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover' },
 ]
 
@@ -74,6 +74,8 @@ const allMenuHrefs = [...mainMenuItems, ...partnersMenuItems, ...toolsMenuItems,
 
 function SidebarComponent({ user }: SidebarProps) {
   const pathname = usePathname()
+
+  const isExternal = user.role === 'EXTERNAL'
 
   const NavLink = ({ href, icon: Icon, label, iconAnim, badge, isAI }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string; isAI?: boolean }) => {
     // Exact match, or prefix match only when no more-specific menu item matches
@@ -135,7 +137,9 @@ function SidebarComponent({ user }: SidebarProps) {
         <div>
           <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Menu</p>
           <div className="space-y-1">
-            {mainMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
+            {mainMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
+            {/* Werk Lodewijk voor EXTERNAL */}
+            {isExternal && <NavLink href="/dashboard/partners/werk-lodewijk" icon={Icons.briefcase} label="Werk Lodewijk" iconAnim="icon-briefcase-hover" />}
           </div>
         </div>
 
@@ -151,7 +155,7 @@ function SidebarComponent({ user }: SidebarProps) {
         <div>
           <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Tools</p>
           <div className="space-y-1">
-            {toolsMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
+            {toolsMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
 
@@ -159,7 +163,7 @@ function SidebarComponent({ user }: SidebarProps) {
         <div>
           <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Beheer</p>
           <div className="space-y-1">
-            {manageMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
+            {manageMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
       </nav>

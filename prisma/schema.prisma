@@ -20,7 +20,7 @@ datasource db {
   directUrl = env("DIRECT_URL")  // Directe connectie voor migraties (zonder pooler)
 }
 
-// Rollen: EMPLOYEE (medewerker), PARTNER (Marnix, Jochem, Juliette, Bas), ADMIN (Hanna - kantoormanager)
+// Rollen: EMPLOYEE (medewerker), PARTNER (Marnix, Jochem, Juliette, Bas), ADMIN (Hanna - kantoormanager), EXTERNAL (Lodewijk - extern advocaat, beperkte toegang)
 // PARTNER en ADMIN kunnen vakantiesaldo beheren
 
 model User {
@@ -28,7 +28,7 @@ model User {
   email          String    @unique
   name           String
   password       String
-  role           String    @default("EMPLOYEE") // EMPLOYEE, PARTNER, ADMIN
+  role           String    @default("EMPLOYEE") // EMPLOYEE, PARTNER, ADMIN, EXTERNAL
   avatarUrl      String?
   department     String?
   phoneNumber    String?

@@ -316,7 +316,7 @@ export default function WerkLodewijkPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login')
-    } else if (status === 'authenticated' && user?.role !== 'PARTNER' && user?.role !== 'ADMIN') {
+    } else if (status === 'authenticated' && user?.role !== 'PARTNER' && user?.role !== 'ADMIN' && user?.role !== 'EXTERNAL') {
       router.push('/dashboard')
     }
   }, [status, user?.role, router])
