@@ -731,22 +731,25 @@ export default function OverdrachtPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <Icons.search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Zoek in alle overdrachten..."
-              className="pl-9 pr-8 py-2 w-56 sm:w-64 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-              >
-                <Icons.x size={14} />
-              </button>
-            )}
+          <div className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/30 to-blue-500/30 rounded-xl blur-sm opacity-60 group-hover:opacity-100 transition-opacity" />
+            <div className="relative flex items-center">
+              <Icons.search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Zoek in alle overdrachten..."
+                className="pl-10 pr-9 py-2.5 w-60 sm:w-72 rounded-xl bg-workx-dark/90 border border-purple-500/30 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-500/20 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                >
+                  <Icons.x size={14} />
+                </button>
+              )}
+            </div>
           </div>
           <button
             onClick={() => setShowNewModal(true)}
