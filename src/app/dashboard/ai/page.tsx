@@ -153,19 +153,18 @@ export default function AIAssistentPage() {
     // Auto-resume is handled after conversations load (see effect below)
   }, [])
 
-  // Auto-resume: select most recent conversation if none selected
+  // Only restore conversation from URL parameter (e.g. direct link / browser back)
+  // Never auto-select the most recent conversation — always start fresh
   useEffect(() => {
-    if (!isLoading && !selectedConvId && recentConversations.length > 0) {
+    if (!isLoading && !selectedConvId) {
       const urlParams = new URLSearchParams(window.location.search)
-      if (!urlParams.get('conv')) {
-        // Auto-select most recent conversation
-        const mostRecent = recentConversations[0]
-        setSelectedConvId(mostRecent.id)
+      const convFromUrl = urlParams.get('conv')
+      if (convFromUrl) {
+        setSelectedConvId(convFromUrl)
         setChatInstance(prev => prev + 1)
-        window.history.replaceState(null, '', `/dashboard/ai?conv=${mostRecent.id}`)
       }
     }
-  }, [isLoading, recentConversations])
+  }, [isLoading])
 
   // Debounced search
   useEffect(() => {

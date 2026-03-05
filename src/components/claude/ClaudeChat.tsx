@@ -1011,6 +1011,7 @@ ${markdownHtml}
           model: selectedModel,
           useKnowledgeSources: options?.claudeOnly ? false : useKnowledgeSources,
           useRechtspraak: options?.claudeOnly ? false : useRechtspraak,
+          claudeOnly: options?.claudeOnly || false,
         }),
         signal: controller.signal,
       })

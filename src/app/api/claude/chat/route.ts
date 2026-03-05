@@ -534,7 +534,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Te veel verzoeken. Wacht even voordat je een nieuwe vraag stelt (max 30 per uur).' }, { status: 429 })
   }
 
-  const { conversationId, projectId, message, documentIds, anonymize, model: requestedModel, useKnowledgeSources, useRechtspraak } = await req.json()
+  const { conversationId, projectId, message, documentIds, anonymize, model: requestedModel, useKnowledgeSources, useRechtspraak, claudeOnly } = await req.json()
 
   if (!message?.trim()) {
     return NextResponse.json({ error: 'Bericht mag niet leeg zijn' }, { status: 400 })
@@ -678,6 +678,70 @@ export async function POST(req: NextRequest) {
           // Notify client immediately that connection is alive
           await send(JSON.stringify({ type: 'start', conversationId: convId }))
           lastStep = 'start'
+
+          // === CLAUDE-ONLY FAST PATH ===
+          // Skip ALL heavy processing: no documents, no knowledge sources, no ECLI checks, no tools.
+          // Minimal system prompt, no extended thinking → response in 1-3 seconds.
+          if (claudeOnly) {
+            const claudeOnlyPrompt = `Je bent een behulpzame AI-assistent voor medewerkers van een advocatenkantoor (arbeidsrecht). In deze modus werk je ZONDER juridische bronnen — geef geen juridische adviezen met bronvermeldingen.
+
+Gebruik deze modus voor: vertalingen, samenvattingen, e-mails opstellen, algemene vragen, en andere niet-juridische taken.
+
+Antwoord altijd in het Nederlands tenzij de gebruiker een andere taal vraagt (bijv. bij vertalingen). Wees direct en beknopt.`
+
+            // Build simple messages from history (no documents)
+            const simpleMsgs: Array<{ role: 'user' | 'assistant'; content: string }> = []
+            for (const msg of history) {
+              const prev = simpleMsgs[simpleMsgs.length - 1]
+              if (prev && prev.role === msg.role) {
+                prev.content = msg.role === 'user'
+                  ? prev.content + '\n\n' + msg.content
+                  : msg.content
+                continue
+              }
+              simpleMsgs.push({ role: msg.role as 'user' | 'assistant', content: msg.content })
+            }
+
+            const client = new Anthropic({ apiKey, timeout: 60000 })
+            console.log(`[chat] Claude-only fast path: ${simpleMsgs.length} messages`)
+            await send(JSON.stringify({ type: 'status', text: 'Claude starten...' }))
+
+            const stream = client.messages.stream({
+              model: 'claude-sonnet-4-5-20250929',
+              max_tokens: 8000,
+              system: claudeOnlyPrompt,
+              messages: simpleMsgs,
+            })
+
+            let coFullText = ''
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            stream.on('streamEvent' as any, (event: any) => {
+              if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+                coFullText += event.delta.text
+                send(JSON.stringify({ type: 'delta', text: event.delta.text })).catch(() => {})
+              }
+            })
+
+            await stream.finalMessage()
+            coFullText = coFullText.trim()
+
+            // Save to database
+            await prisma.aIMessage.create({
+              data: { conversationId: convId, role: 'assistant', content: coFullText },
+            })
+            if (history.length <= 1) {
+              await prisma.aIConversation.update({
+                where: { id: convId },
+                data: { title: message.slice(0, 80) + (message.length > 80 ? '...' : '') },
+              })
+            }
+
+            await send(JSON.stringify({ type: 'done', hasWebSearch: false, citations: [], sources: [], model: 'claude-sonnet-4-5-20250929' }))
+            if (watchdogTimer) clearTimeout(watchdogTimer)
+            clearInterval(heartbeat)
+            await writer.close()
+            return
+          }
 
           // === DOCUMENT LOADING (inside stream to prevent gateway timeout) ===
           await send(JSON.stringify({ type: 'status', text: 'Documenten laden...' }))
