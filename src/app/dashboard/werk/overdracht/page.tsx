@@ -355,33 +355,22 @@ function NewDocumentModal({
   )
 }
 
-// ─── Case row component ───
+// ─── Waarnemer badges (read-only display + remove) ───
 
-function CaseRow({
-  caseData,
-  onUpdate,
-  onDelete,
+function WaarnemerBadges({
+  waarnemers,
+  onRemove,
+  onOpenDropdown,
+  buttonRef,
 }: {
-  caseData: HandoverCase
-  onUpdate: (updated: HandoverCase) => void
-  onDelete: () => void
+  waarnemers: string[]
+  onRemove: (name: string) => void
+  onOpenDropdown: () => void
+  buttonRef: (el: HTMLButtonElement | null) => void
 }) {
-  const [openDropdown, setOpenDropdown] = useState(false)
-  const btnRef = useRef<HTMLButtonElement>(null)
-
-  const waarnemerNames = caseData.waarnemers ? caseData.waarnemers.split(', ').filter(Boolean) : []
-
-  const handleToggleWaarnemer = (name: string) => {
-    const current = waarnemerNames
-    const newNames = current.includes(name)
-      ? current.filter(n => n !== name)
-      : [...current, name]
-    onUpdate({ ...caseData, waarnemers: newNames.join(', ') })
-  }
-
-  const waarnemerBadges = (
+  return (
     <div className="flex flex-wrap items-center gap-1">
-      {waarnemerNames.map(name => {
+      {waarnemers.map(name => {
         const photo = getPhotoUrl(name)
         return (
           <div key={name} className="flex items-center gap-1 pl-1 pr-1.5 py-0.5 rounded-lg bg-workx-lime/10 border border-workx-lime/20">
@@ -394,7 +383,7 @@ function CaseRow({
             )}
             <span className="text-[11px] text-workx-lime font-medium">{name.split(' ')[0]}</span>
             <button
-              onClick={() => handleToggleWaarnemer(name)}
+              onClick={() => onRemove(name)}
               className="p-0.5 rounded hover:bg-white/10 text-workx-lime/60 hover:text-workx-lime transition-colors"
             >
               <Icons.x size={8} />
@@ -403,22 +392,39 @@ function CaseRow({
         )
       })}
       <button
-        ref={btnRef}
-        onClick={() => setOpenDropdown(!openDropdown)}
+        ref={buttonRef}
+        onClick={onOpenDropdown}
         className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-gray-400 hover:text-white transition-all text-[11px]"
       >
         <Icons.plus size={10} />
       </button>
-      {openDropdown && (
-        <WaarnemerDropdown
-          anchorRef={btnRef}
-          selectedNames={waarnemerNames}
-          onToggle={handleToggleWaarnemer}
-          onClose={() => setOpenDropdown(false)}
-        />
-      )}
     </div>
   )
+}
+
+// ─── Case row component ───
+
+function CaseRow({
+  caseData,
+  caseKey,
+  onUpdate,
+  onDelete,
+  onOpenDropdown,
+  waarnemerBtnRef,
+}: {
+  caseData: HandoverCase
+  caseKey: string
+  onUpdate: (updated: HandoverCase) => void
+  onDelete: () => void
+  onOpenDropdown: () => void
+  waarnemerBtnRef: (el: HTMLButtonElement | null) => void
+}) {
+  const waarnemerNames = caseData.waarnemers ? caseData.waarnemers.split(', ').filter(Boolean) : []
+
+  const handleRemoveWaarnemer = (name: string) => {
+    const newNames = waarnemerNames.filter(n => n !== name)
+    onUpdate({ ...caseData, waarnemers: newNames.join(', ') })
+  }
 
   return (
     <>
@@ -442,7 +448,12 @@ function CaseRow({
           placeholder="Status / beschrijving"
           maxLines={2}
         />
-        {waarnemerBadges}
+        <WaarnemerBadges
+          waarnemers={waarnemerNames}
+          onRemove={handleRemoveWaarnemer}
+          onOpenDropdown={onOpenDropdown}
+          buttonRef={waarnemerBtnRef}
+        />
         <button
           onClick={onDelete}
           className="p-1 rounded-lg hover:bg-red-500/10 text-gray-600 hover:text-red-400 transition-colors mt-0.5"
@@ -480,7 +491,12 @@ function CaseRow({
         ) : (
           <p className="text-xs text-white/20 italic">Geen beschrijving</p>
         )}
-        {waarnemerBadges}
+        <WaarnemerBadges
+          waarnemers={waarnemerNames}
+          onRemove={handleRemoveWaarnemer}
+          onOpenDropdown={onOpenDropdown}
+          buttonRef={waarnemerBtnRef}
+        />
       </div>
     </>
   )
@@ -512,6 +528,8 @@ export default function OverdrachtPage() {
   const [editedCases, setEditedCases] = useState<Record<string, HandoverCase[]>>({})
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState('')
+  const [openWaarnemerDropdown, setOpenWaarnemerDropdown] = useState<string | null>(null) // caseKey
+  const waarnemerBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   // Fetch user + handovers + team
   useEffect(() => {
@@ -574,6 +592,16 @@ export default function OverdrachtPage() {
     const cases = [...getCases(handoverId), { dossiernaam: '', contactpersoon: null, beschrijving: null, waarnemers: '' }]
     setEditedCases(prev => ({ ...prev, [handoverId]: cases }))
     setHasChanges(prev => ({ ...prev, [handoverId]: true }))
+  }
+
+  const handleToggleWaarnemer = (handoverId: string, caseIndex: number, name: string) => {
+    const cases = getCases(handoverId)
+    const c = cases[caseIndex]
+    const current = c.waarnemers ? c.waarnemers.split(', ').filter(Boolean) : []
+    const newNames = current.includes(name)
+      ? current.filter(n => n !== name)
+      : [...current, name]
+    updateLocalCase(handoverId, caseIndex, { ...c, waarnemers: newNames.join(', ') })
   }
 
   const cancelChanges = (handoverId: string) => {
@@ -730,34 +758,34 @@ export default function OverdrachtPage() {
             <p className="text-sm text-gray-500">Waarneming bij afwezigheid</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/30 to-blue-500/30 rounded-xl blur-sm opacity-60 group-hover:opacity-100 transition-opacity" />
-            <div className="relative flex items-center">
-              <Icons.search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400" />
-              <input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Zoek in alle overdrachten..."
-                className="pl-10 pr-9 py-2.5 w-60 sm:w-72 rounded-xl bg-workx-dark/90 border border-purple-500/30 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-400/60 focus:ring-1 focus:ring-purple-500/20 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                >
-                  <Icons.x size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all"
-          >
-            <Icons.plus size={16} />
-            Nieuw document
-          </button>
+        <button
+          onClick={() => setShowNewModal(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all"
+        >
+          <Icons.plus size={16} />
+          Nieuw document
+        </button>
+      </div>
+
+      {/* Search bar — prominent with lime glow */}
+      <div className="relative group/search">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-workx-lime/40 via-yellow-400/30 to-workx-lime/40 rounded-2xl blur-md opacity-70 group-hover/search:opacity-100 transition-opacity pointer-events-none" />
+        <div className="relative flex items-center bg-workx-dark/95 rounded-2xl border border-workx-lime/30 px-4 py-3 gap-3">
+          <Icons.search size={18} className="text-workx-lime flex-shrink-0" />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Zoek in alle overdrachten (dossiernaam, contactpersoon, beschrijving, waarnemer)..."
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="p-1 rounded-lg bg-white/10 text-white/60 hover:text-white hover:bg-white/20 transition-colors flex-shrink-0"
+            >
+              <Icons.x size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -963,15 +991,44 @@ export default function OverdrachtPage() {
 
               {/* Cases */}
               <div>
-                {getCases(activeHandover.id).map((c, i) => (
-                  <CaseRow
-                    key={c.id || `new-${i}`}
-                    caseData={c}
-                    onUpdate={(updated) => updateLocalCase(activeHandover.id, i, updated)}
-                    onDelete={() => deleteLocalCase(activeHandover.id, i)}
-                  />
-                ))}
+                {getCases(activeHandover.id).map((c, i) => {
+                  const caseKey = `${activeHandover.id}-${c.id || `new-${i}`}`
+                  return (
+                    <CaseRow
+                      key={c.id || `new-${i}`}
+                      caseData={c}
+                      caseKey={caseKey}
+                      onUpdate={(updated) => updateLocalCase(activeHandover.id, i, updated)}
+                      onDelete={() => deleteLocalCase(activeHandover.id, i)}
+                      onOpenDropdown={() => setOpenWaarnemerDropdown(openWaarnemerDropdown === caseKey ? null : caseKey)}
+                      waarnemerBtnRef={(el) => { waarnemerBtnRefs.current[caseKey] = el }}
+                    />
+                  )
+                })}
               </div>
+
+              {/* Waarnemer dropdown — rendered at parent level like WerkverdelingTable */}
+              {openWaarnemerDropdown && waarnemerBtnRefs.current[openWaarnemerDropdown] && (() => {
+                // Parse handoverId and caseIndex from the key
+                const parts = openWaarnemerDropdown.split('-')
+                const handoverId = activeHandover.id
+                const cases = getCases(handoverId)
+                const caseIndex = cases.findIndex((c, i) => {
+                  const key = `${handoverId}-${c.id || `new-${i}`}`
+                  return key === openWaarnemerDropdown
+                })
+                if (caseIndex === -1) return null
+                const c = cases[caseIndex]
+                const selectedNames = c.waarnemers ? c.waarnemers.split(', ').filter(Boolean) : []
+                return (
+                  <WaarnemerDropdown
+                    anchorRef={{ current: waarnemerBtnRefs.current[openWaarnemerDropdown] }}
+                    selectedNames={selectedNames}
+                    onToggle={(name) => handleToggleWaarnemer(handoverId, caseIndex, name)}
+                    onClose={() => setOpenWaarnemerDropdown(null)}
+                  />
+                )
+              })()}
 
               {/* Add row + Save/Cancel */}
               <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between">
