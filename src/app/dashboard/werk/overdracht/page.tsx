@@ -511,6 +511,7 @@ export default function OverdrachtPage() {
   const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([])
   const [editedCases, setEditedCases] = useState<Record<string, HandoverCase[]>>({})
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({})
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Fetch user + handovers + team
   useEffect(() => {
@@ -676,6 +677,29 @@ export default function OverdrachtPage() {
       )
     : []
 
+  // Search results — zoek over ALLE overdrachten
+  const searchResults = searchQuery.trim().length >= 2
+    ? handovers.flatMap(h =>
+        h.cases
+          .filter(c => {
+            const q = searchQuery.toLowerCase()
+            return (
+              c.dossiernaam.toLowerCase().includes(q) ||
+              (c.contactpersoon && c.contactpersoon.toLowerCase().includes(q)) ||
+              (c.beschrijving && c.beschrijving.toLowerCase().includes(q)) ||
+              c.waarnemers.toLowerCase().includes(q)
+            )
+          })
+          .map(c => ({
+            ...c,
+            fromUser: h.user.name,
+            handoverId: h.id,
+            periodStart: h.periodStart,
+            periodEnd: h.periodEnd,
+          }))
+      )
+    : null
+
   if (isLoading) {
     return (
       <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
@@ -706,13 +730,32 @@ export default function OverdrachtPage() {
             <p className="text-sm text-gray-500">Waarneming bij afwezigheid</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowNewModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all"
-        >
-          <Icons.plus size={16} />
-          Nieuw document
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Icons.search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Zoek in alle overdrachten..."
+              className="pl-9 pr-8 py-2 w-56 sm:w-64 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              >
+                <Icons.x size={14} />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all"
+          >
+            <Icons.plus size={16} />
+            Nieuw document
+          </button>
+        </div>
       </div>
 
       {/* Mijn Waarnemingen */}
@@ -758,8 +801,88 @@ export default function OverdrachtPage() {
         )}
       </div>
 
+      {/* Search results */}
+      {searchResults !== null ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <Icons.search size={14} className="text-purple-400" />
+            <span className="text-sm text-gray-400">
+              {searchResults.length === 0
+                ? `Geen resultaten voor "${searchQuery}"`
+                : `${searchResults.length} resultaat${searchResults.length !== 1 ? 'en' : ''} voor "${searchQuery}"`
+              }
+            </span>
+          </div>
+          {searchResults.map((result, i) => {
+            const waarnemerNames = result.waarnemers ? result.waarnemers.split(', ').filter(Boolean) : []
+            return (
+              <div
+                key={`${result.handoverId}-${result.id || i}`}
+                className="rounded-2xl border border-white/10 bg-white/[0.02] hover:border-purple-500/20 transition-colors cursor-pointer overflow-hidden"
+                onClick={() => { setActiveTab(result.handoverId); setSearchQuery('') }}
+              >
+                {/* Top: van wie + periode */}
+                <div className="px-4 py-2.5 border-b border-white/5 bg-white/[0.01] flex items-center gap-2.5">
+                  {getPhotoUrl(result.fromUser) && (
+                    <img src={getPhotoUrl(result.fromUser)!} alt={result.fromUser} className="w-6 h-6 rounded-lg object-cover" />
+                  )}
+                  <span className="text-xs text-gray-500">
+                    Overdracht van <span className="text-white font-medium">{result.fromUser}</span>
+                  </span>
+                  <span className="text-[10px] text-gray-600 ml-auto">
+                    {formatDateShort(result.periodStart)} - {formatDateShort(result.periodEnd)}
+                  </span>
+                </div>
+                {/* Content */}
+                <div className="px-4 py-3 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white">{result.dossiernaam}</p>
+                      {result.contactpersoon && (
+                        <p className="text-xs text-gray-500 mt-0.5">Contact: {result.contactpersoon}</p>
+                      )}
+                    </div>
+                  </div>
+                  {result.beschrijving && (
+                    <p className="text-xs text-gray-400 whitespace-pre-wrap leading-relaxed line-clamp-3">{result.beschrijving}</p>
+                  )}
+                  {/* Waarnemer(s) — prominent */}
+                  {waarnemerNames.length > 0 ? (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] text-purple-400 uppercase tracking-wider font-medium">Waarnemer{waarnemerNames.length > 1 ? 's' : ''}</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {waarnemerNames.map(name => {
+                          const photo = getPhotoUrl(name)
+                          return (
+                            <div key={name} className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                              {photo ? (
+                                <img src={photo} alt={name} className="w-5 h-5 rounded-md object-cover" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-md bg-purple-500/20 flex items-center justify-center text-purple-300 text-[9px] font-bold">
+                                  {name.charAt(0)}
+                                </div>
+                              )}
+                              <span className="text-xs text-purple-300 font-medium">{name.split(' ')[0]}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] text-gray-600 uppercase tracking-wider font-medium">Waarnemer</span>
+                      <span className="text-xs text-gray-600 italic">Niet toegewezen</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+
       {/* Tabs + Content */}
-      {handovers.length === 0 ? (
+      {searchResults !== null ? null : handovers.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <Icons.fileText size={48} className="mx-auto mb-4 opacity-20" />
           <p className="text-lg">Geen overdrachtsdocumenten</p>
