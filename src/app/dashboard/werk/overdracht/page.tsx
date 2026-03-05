@@ -530,6 +530,7 @@ export default function OverdrachtPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [openWaarnemerDropdown, setOpenWaarnemerDropdown] = useState<string | null>(null) // caseKey
   const waarnemerBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const activeWaarnemerBtnRef = useRef<HTMLButtonElement | null>(null)
 
   // Fetch user + handovers + team
   useEffect(() => {
@@ -1000,7 +1001,14 @@ export default function OverdrachtPage() {
                       caseKey={caseKey}
                       onUpdate={(updated) => updateLocalCase(activeHandover.id, i, updated)}
                       onDelete={() => deleteLocalCase(activeHandover.id, i)}
-                      onOpenDropdown={() => setOpenWaarnemerDropdown(openWaarnemerDropdown === caseKey ? null : caseKey)}
+                      onOpenDropdown={() => {
+                        if (openWaarnemerDropdown === caseKey) {
+                          setOpenWaarnemerDropdown(null)
+                        } else {
+                          activeWaarnemerBtnRef.current = waarnemerBtnRefs.current[caseKey] || null
+                          setOpenWaarnemerDropdown(caseKey)
+                        }
+                      }}
                       waarnemerBtnRef={(el) => { waarnemerBtnRefs.current[caseKey] = el }}
                     />
                   )
@@ -1008,9 +1016,7 @@ export default function OverdrachtPage() {
               </div>
 
               {/* Waarnemer dropdown — rendered at parent level like WerkverdelingTable */}
-              {openWaarnemerDropdown && waarnemerBtnRefs.current[openWaarnemerDropdown] && (() => {
-                // Parse handoverId and caseIndex from the key
-                const parts = openWaarnemerDropdown.split('-')
+              {openWaarnemerDropdown && activeWaarnemerBtnRef.current && (() => {
                 const handoverId = activeHandover.id
                 const cases = getCases(handoverId)
                 const caseIndex = cases.findIndex((c, i) => {
@@ -1022,7 +1028,7 @@ export default function OverdrachtPage() {
                 const selectedNames = c.waarnemers ? c.waarnemers.split(', ').filter(Boolean) : []
                 return (
                   <WaarnemerDropdown
-                    anchorRef={{ current: waarnemerBtnRefs.current[openWaarnemerDropdown] }}
+                    anchorRef={activeWaarnemerBtnRef}
                     selectedNames={selectedNames}
                     onToggle={(name) => handleToggleWaarnemer(handoverId, caseIndex, name)}
                     onClose={() => setOpenWaarnemerDropdown(null)}
