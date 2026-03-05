@@ -72,7 +72,7 @@ export default function ClaudeChat({
   const [statusText, setStatusText] = useState('')
   const [convId, setConvId] = useState<string | null>(initialConvId || null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [activeOptions, setActiveOptions] = useState<Set<string>>(new Set(['kort']))
+  const [activeOptions, setActiveOptions] = useState<Set<string>>(new Set(['kort', 'nl']))
   const [attachedDocs, setAttachedDocs] = useState<AttachedDoc[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -2102,8 +2102,27 @@ ${markdownHtml}
                 </button>
               </div>
 
+              {/* Antwoordtaal */}
+              <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-white/[0.06]">
+                <span className="text-[10px] text-white/25">Antwoord in</span>
+                {RESPONSE_OPTIONS.filter(o => o.id === 'nl' || o.id === 'en').map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => toggleOption(opt.id)}
+                    disabled={isLoading}
+                    className={`option-chip px-2.5 py-1 rounded-lg text-[11px] border ${
+                      activeOptions.has(opt.id)
+                        ? 'bg-workx-lime/15 border-workx-lime/30 text-workx-lime font-medium'
+                        : 'bg-white/[0.03] border-white/[0.08] text-white/35 hover:text-white/60 hover:bg-white/[0.06]'
+                    } disabled:opacity-30`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
               {/* Extra options as small chips */}
-              {RESPONSE_OPTIONS.filter(o => o.id !== 'kort' && o.id !== 'uitgebreid').map((opt) => (
+              {RESPONSE_OPTIONS.filter(o => !['kort', 'uitgebreid', 'nl', 'en'].includes(o.id)).map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => toggleOption(opt.id)}
@@ -2120,17 +2139,17 @@ ${markdownHtml}
 
               {/* Quick translate buttons — uses Claude-only fast path */}
               <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-white/[0.06]">
-                <span className="text-[10px] text-white/20 mr-0.5">Vertaal</span>
+                <span className="text-[10px] text-purple-300/50">Vertaal</span>
                 <button
                   onClick={() => {
                     if (!input.trim()) return
                     sendMessage(`Vertaal de volgende tekst naar het Engels. Geef ALLEEN de vertaling, geen toelichting.\n\n${input.trim()}`, { claudeOnly: true })
                   }}
                   disabled={!input.trim() || isLoading}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium border bg-purple-500/10 border-purple-500/20 text-purple-300/70 hover:text-purple-200 hover:bg-purple-500/20 disabled:opacity-20 transition-all"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium border bg-purple-500/15 border-purple-500/30 text-purple-300 hover:text-purple-100 hover:bg-purple-500/25 hover:shadow-[0_0_8px_rgba(168,85,247,0.15)] disabled:opacity-20 transition-all"
                   title="Vertaal je tekst naar Engels via Claude (snel, zonder bronnen)"
                 >
-                  Engels
+                  ➜ Engels
                 </button>
                 <button
                   onClick={() => {
@@ -2138,10 +2157,10 @@ ${markdownHtml}
                     sendMessage(`Vertaal de volgende tekst naar het Nederlands. Geef ALLEEN de vertaling, geen toelichting.\n\n${input.trim()}`, { claudeOnly: true })
                   }}
                   disabled={!input.trim() || isLoading}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium border bg-purple-500/10 border-purple-500/20 text-purple-300/70 hover:text-purple-200 hover:bg-purple-500/20 disabled:opacity-20 transition-all"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium border bg-purple-500/15 border-purple-500/30 text-purple-300 hover:text-purple-100 hover:bg-purple-500/25 hover:shadow-[0_0_8px_rgba(168,85,247,0.15)] disabled:opacity-20 transition-all"
                   title="Vertaal je tekst naar Nederlands via Claude (snel, zonder bronnen)"
                 >
-                  Nederlands
+                  ➜ Nederlands
                 </button>
               </div>
             </div>
