@@ -123,6 +123,26 @@ export async function POST(req: NextRequest) {
     // Calculate vacation days
     const days = calculateVacationDays(start, end, werkdagenArray)
 
+    // Waarschuwing: check of er al een goedgekeurde aanvraag is voor overlappende datums
+    const overlappingRequest = await prisma.vacationRequest.findFirst({
+      where: {
+        userId,
+        status: 'APPROVED',
+        startDate: { lte: end },
+        endDate: { gte: start },
+      },
+      select: { id: true, startDate: true, endDate: true, days: true },
+    })
+
+    if (overlappingRequest) {
+      const overlapStart = new Date(overlappingRequest.startDate).toLocaleDateString('nl-NL')
+      const overlapEnd = new Date(overlappingRequest.endDate).toLocaleDateString('nl-NL')
+      return NextResponse.json({
+        error: `Er is al een goedgekeurde vakantieaanvraag voor ${overlapStart} t/m ${overlapEnd} (${overlappingRequest.days} dagen). Het saldo is al verwerkt via die aanvraag. Voeg alleen een periode toe als de datums NIET overlappen met een bestaande aanvraag.`,
+        overlap: true,
+      }, { status: 409 })
+    }
+
     // Get or create vacation balance for this user/year
     let balance = await prisma.vacationBalance.findFirst({
       where: { userId, year },
@@ -178,14 +198,8 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Update the vacation balance
-    await prisma.vacationBalance.update({
-      where: { id: balance.id },
-      data: {
-        opgenomenLopendJaar: balance.opgenomenLopendJaar + days,
-        updatedById: session.user.id,
-      },
-    })
+    // NB: Saldo wordt NIET aangepast door periodes — alleen VacationRequests beheren het saldo.
+    // Periodes zijn alleen voor kalender/display.
 
     return NextResponse.json(period, { status: 201 })
   } catch (error) {
@@ -268,16 +282,7 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
-    // Update the vacation balance if days changed
-    if (daysDiff !== 0) {
-      await prisma.vacationBalance.update({
-        where: { id: existingPeriod.balanceId },
-        data: {
-          opgenomenLopendJaar: existingPeriod.balance.opgenomenLopendJaar + daysDiff,
-          updatedById: session.user.id,
-        },
-      })
-    }
+    // NB: Saldo wordt NIET aangepast door periodes — alleen VacationRequests beheren het saldo.
 
     return NextResponse.json(updatedPeriod)
   } catch (error) {
@@ -328,14 +333,7 @@ export async function DELETE(req: NextRequest) {
       where: { id },
     })
 
-    // Update the vacation balance (subtract the days)
-    await prisma.vacationBalance.update({
-      where: { id: period.balanceId },
-      data: {
-        opgenomenLopendJaar: Math.max(0, period.balance.opgenomenLopendJaar - period.days),
-        updatedById: session.user.id,
-      },
-    })
+    // NB: Saldo wordt NIET aangepast door periodes — alleen VacationRequests beheren het saldo.
 
     return NextResponse.json({ success: true })
   } catch (error) {

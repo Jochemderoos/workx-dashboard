@@ -9,7 +9,7 @@ import * as Popover from '@radix-ui/react-popover'
 import VacationPeriodForm, { VacationPeriodFormData } from '@/components/vacation/VacationPeriodForm'
 import VacationPeriodList, { VacationPeriod } from '@/components/vacation/VacationPeriodList'
 import WorkdaysCalculator from '@/components/vacation/WorkdaysCalculator'
-import { werkdagenToString, parseWerkdagen, DEFAULT_WERKDAGEN } from '@/lib/vacation-utils'
+import { werkdagenToString, parseWerkdagen, DEFAULT_WERKDAGEN, calculateWorkdays } from '@/lib/vacation-utils'
 import { SCHOOL_HOLIDAYS, COLORS, getColorForUser, type SchoolHoliday } from '@/lib/config'
 import { formatDateForAPI } from '@/lib/date-utils'
 import SpotlightCard from '@/components/ui/SpotlightCard'
@@ -352,14 +352,7 @@ export default function VakantiesPage() {
     const start = new Date(vacReqStartDate)
     const end = new Date(vacReqEndDate)
     if (end < start) return null
-    let days = 0
-    const current = new Date(start)
-    while (current <= end) {
-      const day = current.getDay()
-      if (day !== 0 && day !== 6) days++
-      current.setDate(current.getDate() + 1)
-    }
-    return days
+    return calculateWorkdays(start, end)
   }, [vacReqStartDate, vacReqEndDate])
 
   // Delete vacation
