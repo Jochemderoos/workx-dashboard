@@ -26,6 +26,7 @@ interface Handover {
   periodStart: string
   periodEnd: string
   note: string | null
+  notifiedAt: string | null
   user: { id: string; name: string; avatarUrl: string | null }
   cases: HandoverCase[]
 }
@@ -521,6 +522,8 @@ export default function OverdrachtPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [openWaarnemerDropdown, setOpenWaarnemerDropdown] = useState<string | null>(null) // caseKey
   const activeWaarnemerBtnRef = useRef<HTMLButtonElement | null>(null)
+  const [notifyingId, setNotifyingId] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   // Fetch user + handovers + team
   useEffect(() => {
@@ -679,6 +682,23 @@ export default function OverdrachtPage() {
       }
     } catch (error) {
       console.error('Verwijderen mislukt:', error)
+    }
+  }
+
+  // Notify team
+  const notifyTeam = async (handoverId: string) => {
+    setNotifyingId(handoverId)
+    try {
+      const res = await fetch(`/api/handovers/${handoverId}/notify`, { method: 'POST' })
+      if (res.ok) {
+        setHandovers(prev => prev.map(h => h.id === handoverId ? { ...h, notifiedAt: new Date().toISOString() } : h))
+        setToastMessage('Notificatie verstuurd')
+        setTimeout(() => setToastMessage(null), 3000)
+      }
+    } catch (error) {
+      console.error('Notificatie versturen mislukt:', error)
+    } finally {
+      setNotifyingId(null)
     }
   }
 
@@ -1062,6 +1082,36 @@ export default function OverdrachtPage() {
                   </div>
                 )}
               </div>
+
+              {/* Notify team button — only for the creator */}
+              {currentUser && activeHandover.userId === currentUser.id && (
+                <div className="px-4 py-3 border-t border-white/5">
+                  {activeHandover.notifiedAt ? (
+                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime/5 border border-workx-lime/10 text-workx-lime/60 text-sm w-fit">
+                      <Icons.check size={16} />
+                      Verstuurd ✓
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => notifyTeam(activeHandover.id)}
+                      disabled={notifyingId === activeHandover.id}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-50 border border-workx-lime/20 hover:border-workx-lime/40"
+                    >
+                      {notifyingId === activeHandover.id ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
+                          Versturen...
+                        </>
+                      ) : (
+                        <>
+                          <Icons.bell size={16} />
+                          Verstuur notificatie aan Team Workx
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </>
@@ -1081,6 +1131,14 @@ export default function OverdrachtPage() {
           onConfirm={confirmDelete}
           onCancel={() => setDeleteId(null)}
         />
+      )}
+
+      {/* Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-workx-lime/10 border border-workx-lime/30 text-workx-lime text-sm font-medium shadow-lg animate-modal-in">
+          <Icons.check size={16} />
+          {toastMessage}
+        </div>
       )}
     </div>
   )

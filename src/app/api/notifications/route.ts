@@ -248,7 +248,38 @@ export async function GET() {
       }
     }
 
-    // 8. Lustrum verrassing — tijdelijke notificatie voor iedereen
+    // 8. Overdracht notificaties — handovers met notifiedAt in afgelopen 7 dagen
+    {
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const notifiedHandovers = await prisma.handover.findMany({
+        where: {
+          notifiedAt: { gte: sevenDaysAgo },
+          userId: { not: userId }, // Niet voor de maker zelf
+        },
+        include: {
+          user: { select: { name: true } },
+        },
+        orderBy: { notifiedAt: 'desc' },
+        take: 5,
+      })
+
+      notifiedHandovers.forEach((handover) => {
+        const key = `overdracht-${handover.id}`
+        const startStr = new Date(handover.periodStart).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })
+        const endStr = new Date(handover.periodEnd).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })
+        notifications.push({
+          id: key,
+          type: 'overdracht',
+          title: 'Overdrachtsdocument',
+          message: `${handover.user.name} heeft een overdrachtsdocument klaargezet (${startStr} - ${endStr})`,
+          createdAt: handover.notifiedAt!,
+          read: dismissedKeys.has(key),
+          href: '/dashboard/werk/overdracht',
+        })
+      })
+    }
+
+    // 9. Lustrum verrassing — tijdelijke notificatie voor iedereen
     {
       const key = 'lustrum-2026'
       if (!dismissedKeys.has(key)) {

@@ -1508,6 +1508,7 @@ model Handover {
   periodStart DateTime
   periodEnd   DateTime
   note        String?  @db.Text
+  notifiedAt  DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

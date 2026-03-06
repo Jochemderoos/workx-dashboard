@@ -9,7 +9,7 @@ import { useNotifications } from '@/lib/hooks/useData'
 
 interface Notification {
   id: string
-  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system' | 'lustrum'
+  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system' | 'lustrum' | 'overdracht'
   title: string
   message: string
   createdAt: Date
@@ -80,6 +80,8 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         return <Icons.calendar size={16} className="text-green-400" />
       case 'werkverdeling':
         return <Icons.users size={16} className="text-yellow-400" />
+      case 'overdracht':
+        return <Icons.fileText size={16} className="text-blue-400" />
       case 'lustrum':
         return <span className="inline-block animate-bounce text-base">🎉</span>
       default:
