@@ -48,15 +48,17 @@ export async function GET() {
 
     pendingZaken.forEach((assignment) => {
       const key = `zaak-${assignment.id}`
-      notifications.push({
-        id: key,
-        type: 'zaak',
-        title: 'Nieuwe zaak beschikbaar',
-        message: `${assignment.zaak?.shortDescription || 'Nieuwe zaak'} - van ${assignment.zaak?.createdBy?.name || 'onbekend'}`,
-        createdAt: assignment.createdAt,
-        read: dismissedKeys.has(key),
-        href: '/dashboard/werk',
-      })
+      if (!dismissedKeys.has(key)) {
+        notifications.push({
+          id: key,
+          type: 'zaak',
+          title: 'Nieuwe zaak beschikbaar',
+          message: `${assignment.zaak?.shortDescription || 'Nieuwe zaak'} - van ${assignment.zaak?.createdBy?.name || 'onbekend'}`,
+          createdAt: assignment.createdAt,
+          read: false,
+          href: '/dashboard/werk',
+        })
+      }
     })
 
     // 2. Recent vacation request approvals/rejections (for the current user)
@@ -73,15 +75,17 @@ export async function GET() {
     recentVacationUpdates.forEach((request) => {
       const isApproved = request.status === 'APPROVED'
       const key = `vacation-${request.id}`
-      notifications.push({
-        id: key,
-        type: 'vacation',
-        title: isApproved ? 'Vakantie goedgekeurd' : 'Vakantie afgewezen',
-        message: `Je verlofaanvraag voor ${new Date(request.startDate).toLocaleDateString('nl-NL', { timeZone: 'Europe/Amsterdam' })} is ${isApproved ? 'goedgekeurd' : 'afgewezen'}`,
-        createdAt: request.updatedAt,
-        read: dismissedKeys.has(key),
-        href: '/dashboard/vakanties',
-      })
+      if (!dismissedKeys.has(key)) {
+        notifications.push({
+          id: key,
+          type: 'vacation',
+          title: isApproved ? 'Vakantie goedgekeurd' : 'Vakantie afgewezen',
+          message: `Je verlofaanvraag voor ${new Date(request.startDate).toLocaleDateString('nl-NL', { timeZone: 'Europe/Amsterdam' })} is ${isApproved ? 'goedgekeurd' : 'afgewezen'}`,
+          createdAt: request.updatedAt,
+          read: false,
+          href: '/dashboard/vakanties',
+        })
+      }
     })
 
     // 3. Upcoming calendar events (reminders) - today
@@ -101,15 +105,17 @@ export async function GET() {
 
     todayEvents.forEach((event) => {
       const key = `event-${event.id}`
-      notifications.push({
-        id: key,
-        type: 'calendar',
-        title: 'Vandaag',
-        message: `${event.title} om ${new Date(event.startTime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' })}`,
-        createdAt: now,
-        read: dismissedKeys.has(key),
-        href: '/dashboard/agenda',
-      })
+      if (!dismissedKeys.has(key)) {
+        notifications.push({
+          id: key,
+          type: 'calendar',
+          title: 'Vandaag',
+          message: `${event.title} om ${new Date(event.startTime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' })}`,
+          createdAt: now,
+          read: false,
+          href: '/dashboard/agenda',
+        })
+      }
     })
 
     // 4. New feedback (for admins/partners only)
@@ -125,15 +131,17 @@ export async function GET() {
 
       if (unprocessedFeedback > 0) {
         const key = 'feedback-unprocessed'
-        notifications.push({
-          id: key,
-          type: 'feedback',
-          title: 'Nieuwe feedback',
-          message: `Er ${unprocessedFeedback === 1 ? 'is' : 'zijn'} ${unprocessedFeedback} nieuwe feedback item${unprocessedFeedback === 1 ? '' : 's'}`,
-          createdAt: now,
-          read: dismissedKeys.has(key),
-          href: '/dashboard/feedback',
-        })
+        if (!dismissedKeys.has(key)) {
+          notifications.push({
+            id: key,
+            type: 'feedback',
+            title: 'Nieuwe feedback',
+            message: `Er ${unprocessedFeedback === 1 ? 'is' : 'zijn'} ${unprocessedFeedback} nieuwe feedback item${unprocessedFeedback === 1 ? '' : 's'}`,
+            createdAt: now,
+            read: false,
+            href: '/dashboard/feedback',
+          })
+        }
       }
     }
 
@@ -147,16 +155,18 @@ export async function GET() {
 
       submittedDeclarations.forEach((decl) => {
         const key = `declaratie-${decl.id}`
-        const amount = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(decl.totalAmount || 0)
-        notifications.push({
-          id: key,
-          type: 'declaratie',
-          title: 'Declaratie ingediend',
-          message: `${decl.employeeName} — ${amount}`,
-          createdAt: decl.submittedAt || decl.createdAt,
-          read: dismissedKeys.has(key),
-          href: '/dashboard/declaraties',
-        })
+        if (!dismissedKeys.has(key)) {
+          const amount = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(decl.totalAmount || 0)
+          notifications.push({
+            id: key,
+            type: 'declaratie',
+            title: 'Declaratie ingediend',
+            message: `${decl.employeeName} — ${amount}`,
+            createdAt: decl.submittedAt || decl.createdAt,
+            read: false,
+            href: '/dashboard/declaraties',
+          })
+        }
       })
     }
 
@@ -269,17 +279,19 @@ export async function GET() {
 
       notifiedHandovers.forEach((handover) => {
         const key = `overdracht-${handover.id}`
-        const startStr = new Date(handover.periodStart).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })
-        const endStr = new Date(handover.periodEnd).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })
-        notifications.push({
-          id: key,
-          type: 'overdracht',
-          title: 'Overdrachtsdocument',
-          message: `${handover.user.name} heeft een overdrachtsdocument klaargezet (${startStr} - ${endStr})`,
-          createdAt: handover.notifiedAt!,
-          read: dismissedKeys.has(key),
-          href: '/dashboard/werk/overdracht',
-        })
+        if (!dismissedKeys.has(key)) {
+          const startStr = new Date(handover.periodStart).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })
+          const endStr = new Date(handover.periodEnd).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })
+          notifications.push({
+            id: key,
+            type: 'overdracht',
+            title: 'Overdrachtsdocument',
+            message: `${handover.user.name} heeft een overdrachtsdocument klaargezet (${startStr} - ${endStr})`,
+            createdAt: handover.notifiedAt!,
+            read: false,
+            href: '/dashboard/werk/overdracht',
+          })
+        }
       })
     }
 

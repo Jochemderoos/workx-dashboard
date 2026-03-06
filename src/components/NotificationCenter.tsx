@@ -29,12 +29,12 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
   const notifications: Notification[] = data?.notifications || []
   const unreadCount: number = data?.unreadCount || 0
 
-  // Mark notification as read
-  const markAsRead = async (notificationId: string) => {
-    // Optimistic update
+  // Dismiss a single notification (permanently hide it)
+  const dismissNotification = async (notificationId: string) => {
+    // Optimistic update — remove from list
     mutate(
       {
-        notifications: notifications.map(n => n.id === notificationId ? { ...n, read: true } : n),
+        notifications: notifications.filter(n => n.id !== notificationId),
         unreadCount: Math.max(0, unreadCount - 1),
       },
       false
@@ -43,26 +43,31 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
       await fetch(`/api/notifications/${notificationId}/read`, { method: 'POST' })
       mutate()
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+      console.error('Error dismissing notification:', error)
       mutate() // Revert on error
     }
   }
 
-  // Mark all as read
-  const markAllAsRead = async () => {
-    // Optimistic update
+  // Dismiss all notifications
+  const dismissAll = async () => {
+    // Optimistic update — clear list
     mutate(
       {
-        notifications: notifications.map(n => ({ ...n, read: true })),
+        notifications: [],
         unreadCount: 0,
       },
       false
     )
     try {
-      await fetch('/api/notifications/read-all', { method: 'POST' })
+      // Dismiss each notification individually
+      await Promise.all(
+        notifications.map(n =>
+          fetch(`/api/notifications/${n.id}/read`, { method: 'POST' })
+        )
+      )
       mutate()
     } catch (error) {
-      console.error('Error marking all as read:', error)
+      console.error('Error dismissing all notifications:', error)
       mutate() // Revert on error
     }
   }
@@ -127,13 +132,13 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-white/10">
             <h3 className="text-lg font-semibold">Notificaties</h3>
-            {unreadCount > 0 && (
+            {notifications.length > 0 && (
               <button
-                onClick={markAllAsRead}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime text-xs font-medium hover:bg-workx-lime/20 transition-colors"
+                onClick={dismissAll}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 text-xs font-medium hover:bg-white/10 hover:text-white transition-colors"
               >
-                <Icons.check size={12} />
-                Als gelezen markeren
+                <Icons.x size={12} />
+                Alles wissen
               </button>
             )}
           </div>
@@ -159,15 +164,12 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-white/5 transition-colors cursor-pointer ${
-                      notification.type === 'lustrum' && !notification.read
+                    className={`group/notif p-4 hover:bg-white/5 transition-colors cursor-pointer ${
+                      notification.type === 'lustrum'
                         ? 'bg-gradient-to-r from-pink-500/10 via-yellow-500/10 to-pink-500/10 border-l-2 border-yellow-400'
-                        : !notification.read ? 'bg-workx-lime/5' : ''
+                        : 'bg-workx-lime/5'
                     }`}
                     onClick={() => {
-                      if (!notification.read) {
-                        markAsRead(notification.id)
-                      }
                       if (notification.href) {
                         window.location.href = notification.href
                       }
@@ -180,16 +182,19 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p
-                            className={`text-sm font-medium truncate ${
-                              !notification.read ? 'text-white' : 'text-gray-300'
-                            }`}
-                          >
+                          <p className="text-sm font-medium truncate text-white">
                             {notification.title}
                           </p>
-                          {!notification.read && (
-                            <span className="w-2 h-2 rounded-full bg-workx-lime flex-shrink-0 mt-1.5" />
-                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              dismissNotification(notification.id)
+                            }}
+                            className="p-1 rounded-lg text-gray-600 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover/notif:opacity-100 flex-shrink-0"
+                            title="Verwijderen"
+                          >
+                            <Icons.x size={14} />
+                          </button>
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">
                           {notification.message}
