@@ -207,15 +207,17 @@ export async function GET() {
           const remaining = totalEmployees - completedCount
           if (remaining > 0) {
             const key = `werkverdeling-${currentWeek.id}-partner-${partnerFirstName}`
-            notifications.push({
-              id: key,
-              type: 'werkverdeling',
-              title: 'Werkverdelingsgesprekken',
-              message: `Je hebt nog ${remaining} werkverdelingsgesprek${remaining === 1 ? '' : 'ken'} in te plannen`,
-              createdAt: currentWeek.meetingDate,
-              read: dismissedKeys.has(key),
-              href: '/dashboard',
-            })
+            if (!dismissedKeys.has(key)) {
+              notifications.push({
+                id: key,
+                type: 'werkverdeling',
+                title: 'Werkverdelingsgesprekken',
+                message: `Je hebt nog ${remaining} werkverdelingsgesprek${remaining === 1 ? '' : 'ken'} in te plannen`,
+                createdAt: currentWeek.meetingDate,
+                read: false,
+                href: '/dashboard',
+              })
+            }
           }
         } else {
           // Employee: notification per open conversation
@@ -233,15 +235,17 @@ export async function GET() {
             )
             if (!isComplete) {
               const key = `werkverdeling-${currentWeek.id}-${d.partnerName}-${userId}`
-              notifications.push({
-                id: key,
-                type: 'werkverdeling',
-                title: 'Werkverdelingsgesprek',
-                message: `Plan je snel een gesprek in met ${d.partnerName}`,
-                createdAt: currentWeek.meetingDate,
-                read: dismissedKeys.has(key),
-                href: '/dashboard',
-              })
+              if (!dismissedKeys.has(key)) {
+                notifications.push({
+                  id: key,
+                  type: 'werkverdeling',
+                  title: 'Werkverdelingsgesprek',
+                  message: `Plan je snel een gesprek in met ${d.partnerName}`,
+                  createdAt: currentWeek.meetingDate,
+                  read: false,
+                  href: '/dashboard',
+                })
+              }
             }
           }
         }
