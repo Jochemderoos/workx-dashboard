@@ -45,15 +45,6 @@ export async function POST(
       )
     }
 
-    // Kopieer toewijzingen van de meest recente week die ingevuld is
-    const previousWeek = await prisma.meetingWeek.findFirst({
-      orderBy: { meetingDate: 'desc' },
-      include: { distributions: true },
-    })
-    const prevDistMap = new Map(
-      (previousWeek?.distributions || []).map(d => [d.partnerName, { employeeName: d.employeeName || '', employeeId: d.employeeId }])
-    )
-
     const week = await prisma.meetingWeek.create({
       data: {
         monthId,
@@ -65,8 +56,8 @@ export async function POST(
         distributions: {
           create: DEFAULT_PARTNERS.map((partnerName) => ({
             partnerName,
-            employeeName: prevDistMap.get(partnerName)?.employeeName || '',
-            employeeId: prevDistMap.get(partnerName)?.employeeId || null,
+            employeeName: '',
+            employeeId: null,
           })),
         },
       },
