@@ -316,23 +316,17 @@ export async function GET() {
         take: 10,
       }).catch(() => []),
 
-      // 16. Work Distribution for current week - for employee widget
-      // Use Monday-Sunday week boundaries so last week's data never bleeds through
-      // Dates are stored in CET (UTC+1/+2), so Monday 00:00 CET = Sunday 22:00-23:00 UTC
-      // Start boundary 3h early to cover both CET and CEST
+      // 16. Work Distribution - meest recente week (binnen 14 dagen)
+      // Gebruik ruim venster zodat zowel huidige als volgende week meegenomen wordt
       (() => {
-        const d = new Date(now)
-        const day = d.getDay() // 0=Sun, 1=Mon, ...
-        const diffToMonday = day === 0 ? -6 : 1 - day // Sunday → previous Monday
-        const monday = new Date(d)
-        monday.setDate(d.getDate() + diffToMonday)
-        monday.setUTCHours(0, 0, 0, 0)
-        monday.setTime(monday.getTime() - 3 * 60 * 60 * 1000) // 3h buffer for CET/CEST
-        const sunday = new Date(monday)
-        sunday.setDate(monday.getDate() + 7)
-        sunday.setUTCHours(23, 59, 59, 999)
+        const twoWeeksAgo = new Date(now)
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 10)
+        twoWeeksAgo.setUTCHours(0, 0, 0, 0)
+        const twoWeeksAhead = new Date(now)
+        twoWeeksAhead.setDate(twoWeeksAhead.getDate() + 8)
+        twoWeeksAhead.setUTCHours(23, 59, 59, 999)
         return prisma.meetingWeek.findFirst({
-          where: { meetingDate: { gte: monday, lte: sunday } },
+          where: { meetingDate: { gte: twoWeeksAgo, lte: twoWeeksAhead } },
           include: { distributions: true },
           orderBy: { meetingDate: 'desc' },
         }).catch(() => null)
