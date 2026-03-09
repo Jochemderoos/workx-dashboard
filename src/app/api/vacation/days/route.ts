@@ -32,12 +32,27 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    // Herbereken opgenomenLopendJaar uit daadwerkelijke APPROVED requests
+    const approvedRequests = await prisma.vacationRequest.aggregate({
+      where: {
+        userId: session.user.id,
+        status: 'APPROVED',
+        startDate: {
+          gte: new Date(currentYear, 0, 1),
+          lt: new Date(currentYear + 1, 0, 1),
+        },
+      },
+      _sum: { days: true },
+    })
+    const actualOpgenomen = approvedRequests._sum.days || 0
+
     // Return in a format compatible with existing code
     return NextResponse.json({
       ...vacationBalance,
+      opgenomenLopendJaar: actualOpgenomen,
       totalDays: vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar,
-      usedDays: vacationBalance.opgenomenLopendJaar,
-      remainingDays: vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar - vacationBalance.opgenomenLopendJaar,
+      usedDays: actualOpgenomen,
+      remainingDays: vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar - actualOpgenomen,
     })
   } catch (error) {
     console.error('Error fetching vacation balance:', error)

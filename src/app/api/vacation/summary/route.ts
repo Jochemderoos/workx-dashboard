@@ -165,21 +165,34 @@ export async function GET() {
       }),
     ])
 
+    // Herbereken opgenomenLopendJaar uit daadwerkelijke APPROVED requests
+    const approvedDaysMap = new Map<string, number>()
+    for (const v of vacations) {
+      const reqYear = new Date(v.startDate).getFullYear()
+      if (reqYear === currentYear) {
+        approvedDaysMap.set(v.userId, (approvedDaysMap.get(v.userId) || 0) + v.days)
+      }
+    }
+
     // Format vacation balances for easier frontend use
-    const formattedBalances = vacationBalances.map((b: any) => ({
-      userId: b.userId,
-      personName: b.user?.name || 'Onbekend',
-      overgedragenVorigJaar: b.overgedragenVorigJaar,
-      opbouwLopendJaar: b.opbouwLopendJaar,
-      bijgekocht: b.bijgekocht,
-      opgenomenLopendJaar: b.opgenomenLopendJaar,
-      note: b.note,
-      isPartner: b.user?.role === 'PARTNER',
-    }))
+    const formattedBalances = vacationBalances.map((b: any) => {
+      const actualOpgenomen = approvedDaysMap.get(b.userId) || 0
+      return {
+        userId: b.userId,
+        personName: b.user?.name || 'Onbekend',
+        overgedragenVorigJaar: b.overgedragenVorigJaar,
+        opbouwLopendJaar: b.opbouwLopendJaar,
+        bijgekocht: b.bijgekocht,
+        opgenomenLopendJaar: actualOpgenomen,
+        note: b.note,
+        isPartner: b.user?.role === 'PARTNER',
+      }
+    })
 
     // Format my vacation balance
     const isPartner = currentUser?.role === 'PARTNER'
     const defaultOpbouw = getDefaultVacationDays(currentUser?.role || 'EMPLOYEE')
+    const myActualOpgenomen = approvedDaysMap.get(userId) || 0
 
     const myVacationBalanceFormatted = myVacationBalance
       ? {
@@ -187,7 +200,7 @@ export async function GET() {
           overgedragenVorigJaar: myVacationBalance.overgedragenVorigJaar,
           opbouwLopendJaar: myVacationBalance.opbouwLopendJaar,
           bijgekocht: myVacationBalance.bijgekocht,
-          opgenomenLopendJaar: myVacationBalance.opgenomenLopendJaar,
+          opgenomenLopendJaar: myActualOpgenomen,
           totaalDagen:
             myVacationBalance.overgedragenVorigJaar +
             myVacationBalance.opbouwLopendJaar +
@@ -196,7 +209,7 @@ export async function GET() {
             myVacationBalance.overgedragenVorigJaar +
             myVacationBalance.opbouwLopendJaar +
             myVacationBalance.bijgekocht -
-            myVacationBalance.opgenomenLopendJaar,
+            myActualOpgenomen,
           isPartner,
         }
       : {
