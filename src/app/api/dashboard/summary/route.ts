@@ -552,10 +552,33 @@ export async function GET() {
       ),
     }))
 
-    // Build partner overview (for partners) - all employees assigned to this partner
+    // Build partner overview - for partners AND admins whose name appears in distributions
     let partnerWerkverdelingOverview: any[] | null = null
-    if (currentUser?.role === 'PARTNER' && currentWeekDistribution) {
-      const partnerFirstName = currentUser.name?.split(' ')[0] || ''
+    const isPartnerOrAdmin = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
+    const userFirstName = currentUser?.name?.split(' ')[0] || ''
+    const hasDistributions = currentWeekDistribution?.distributions?.some(
+      (d: any) => d.partnerName === userFirstName
+    )
+
+    // Debug logging
+    console.log('[werkverdelingWidget]', {
+      role: currentUser?.role,
+      name: currentUser?.name,
+      userFirstName,
+      isPartnerOrAdmin,
+      hasWeekDistribution: !!currentWeekDistribution,
+      weekId: currentWeekDistribution?.id,
+      weekDate: currentWeekDistribution?.meetingDate,
+      distributionCount: currentWeekDistribution?.distributions?.length,
+      distributions: currentWeekDistribution?.distributions?.map((d: any) => ({
+        partner: d.partnerName,
+        employees: d.employeeName,
+      })),
+      hasDistributions,
+    })
+
+    if (isPartnerOrAdmin && hasDistributions && currentWeekDistribution) {
+      const partnerFirstName = userFirstName
       const partnerDistributions = currentWeekDistribution.distributions?.filter(
         (d: any) => d.partnerName === partnerFirstName
       ) || []

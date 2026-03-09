@@ -1655,7 +1655,7 @@ export default function DashboardHome() {
       </ScrollReveal>
 
       {/* WERKVERDELINGSGESPREKKEN WIDGET - for employees (prominent, with completion) */}
-      {werkverdelingGesprekken.filter(g => !g.isCompleted).length > 0 && currentUser?.role !== 'PARTNER' && (
+      {werkverdelingGesprekken.filter(g => !g.isCompleted).length > 0 && currentUser?.role !== 'PARTNER' && currentUser?.role !== 'ADMIN' && (
         <div className="relative overflow-hidden rounded-2xl border-2 border-yellow-400 shadow-lg shadow-yellow-500/20 bg-gradient-to-br from-yellow-500/20 via-yellow-500/10 to-orange-500/5 p-5">
           <div className="absolute inset-0 rounded-2xl border-2 border-yellow-400/30 animate-pulse pointer-events-none" />
           <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
