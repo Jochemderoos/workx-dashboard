@@ -1223,8 +1223,8 @@ export default function PartnersWerkPage() {
                     <text key={idx} x={80 + idx * 60} y="240" fill="rgba(255,255,255,0.4)" fontSize="11" textAnchor="middle">{month}</text>
                   ))}
                   {/* Lines for each employee */}
-                  {monthlyHoursData.employees.slice(0, 10).map((emp, empIdx) => {
-                    const colors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6']
+                  {monthlyHoursData.employees.map((emp, empIdx) => {
+                    const colors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6', '#6366f1', '#d946ef', '#0ea5e9', '#84cc16', '#f43f5e', '#8b5cf6', '#10b981', '#fb923c']
                     const color = colors[empIdx % colors.length]
 
                     // Calculate cumulative hours
@@ -1245,28 +1245,28 @@ export default function PartnersWerkPage() {
                       }
                     }
 
-                    if (points.length < 2) return null
+                    if (points.length === 0) return null
 
                     return (
                       <g key={emp}>
-                        <polyline
-                          points={points.join(' ')}
-                          fill="none"
-                          stroke={color}
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          opacity="0.8"
-                        />
-                        {/* End point with name */}
-                        {points.length > 0 && (
-                          <circle
-                            cx={parseFloat(points[points.length - 1].split(',')[0])}
-                            cy={parseFloat(points[points.length - 1].split(',')[1])}
-                            r="4"
-                            fill={color}
+                        {points.length >= 2 && (
+                          <polyline
+                            points={points.join(' ')}
+                            fill="none"
+                            stroke={color}
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            opacity="0.8"
                           />
                         )}
+                        {/* End point */}
+                        <circle
+                          cx={parseFloat(points[points.length - 1].split(',')[0])}
+                          cy={parseFloat(points[points.length - 1].split(',')[1])}
+                          r="4"
+                          fill={color}
+                        />
                       </g>
                     )
                   })}
@@ -1274,8 +1274,8 @@ export default function PartnersWerkPage() {
               </div>
               {/* Legend */}
               <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-white/5">
-                {monthlyHoursData.employees.slice(0, 10).map((emp, empIdx) => {
-                  const colors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6']
+                {monthlyHoursData.employees.map((emp, empIdx) => {
+                  const colors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6', '#6366f1', '#d946ef', '#0ea5e9', '#84cc16', '#f43f5e', '#8b5cf6', '#10b981', '#fb923c']
                   const color = colors[empIdx % colors.length]
                   return (
                     <div key={emp} className="flex items-center gap-2">
