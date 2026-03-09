@@ -1681,42 +1681,29 @@ function LopendeZakenTab() {
       <div className="space-y-2">
         {cases.map((c, i) => {
           const isExpanded = expandedIndex === i
-          const isTop3 = i < 3
 
           return (
             <div key={c.projectName} className={`rounded-2xl border overflow-hidden transition-all ${
               isExpanded
                 ? 'border-workx-lime/20 bg-workx-lime/[0.04] shadow-lg shadow-workx-lime/5'
-                : isTop3
-                  ? 'border-workx-lime/10 bg-workx-lime/[0.02] hover:border-workx-lime/20 hover:shadow-md hover:shadow-workx-lime/5'
-                  : 'border-white/8 bg-white/[0.02] hover:border-workx-lime/10 hover:bg-workx-lime/[0.02]'
+                : 'border-workx-lime/10 bg-workx-lime/[0.02] hover:border-workx-lime/20 hover:shadow-md hover:shadow-workx-lime/5'
             }`}>
               <button
                 onClick={() => setExpandedIndex(isExpanded ? null : i)}
                 className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left group"
               >
                 {/* Rank badge */}
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  isTop3
-                    ? 'bg-gradient-to-br from-workx-lime/30 to-workx-lime/10 shadow-sm shadow-workx-lime/10'
-                    : 'bg-white/5'
-                }`}>
-                  <span className={`text-xs font-bold ${isTop3 ? 'text-workx-lime' : 'text-white/30'}`}>{i + 1}</span>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-workx-lime/30 to-workx-lime/10 shadow-sm shadow-workx-lime/10">
+                  <span className="text-xs font-bold text-workx-lime">{i + 1}</span>
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-3">
                     {/* Dossier name */}
-                    <span className={`text-[13px] font-semibold tracking-tight truncate ${
-                      isTop3 ? 'text-white' : 'text-white/80'
-                    }`}>{c.projectName}</span>
+                    <span className="text-[13px] font-semibold tracking-tight truncate text-white">{c.projectName}</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {/* Hours badge */}
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums ${
-                        isTop3
-                          ? 'bg-workx-lime/15 text-workx-lime'
-                          : 'bg-white/5 text-white/40'
-                      }`}>{c.totalWorkedHours}u</span>
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums bg-workx-lime/15 text-workx-lime">{c.totalWorkedHours}u</span>
                       {/* Members */}
                       <div className="flex items-center gap-1 text-white/25">
                         <Icons.users size={12} />
