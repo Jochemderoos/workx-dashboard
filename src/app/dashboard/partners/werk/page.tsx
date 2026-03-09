@@ -1678,69 +1678,61 @@ function LopendeZakenTab() {
       </div>
 
       {/* Cases list */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {cases.map((c, i) => {
           const isExpanded = expandedIndex === i
-          const barWidth = (c.totalWorkedHours / maxHours) * 100
           const isTop3 = i < 3
 
           return (
             <div key={c.projectName} className={`rounded-2xl border overflow-hidden transition-all ${
               isExpanded
-                ? 'border-white/15 bg-white/[0.04] shadow-lg shadow-black/20'
-                : 'border-white/8 bg-white/[0.02] hover:border-white/12 hover:bg-white/[0.03]'
+                ? 'border-workx-lime/20 bg-workx-lime/[0.04] shadow-lg shadow-workx-lime/5'
+                : isTop3
+                  ? 'border-workx-lime/10 bg-workx-lime/[0.02] hover:border-workx-lime/20 hover:shadow-md hover:shadow-workx-lime/5'
+                  : 'border-white/8 bg-white/[0.02] hover:border-workx-lime/10 hover:bg-workx-lime/[0.02]'
             }`}>
               <button
                 onClick={() => setExpandedIndex(isExpanded ? null : i)}
                 className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left group"
               >
                 {/* Rank badge */}
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   isTop3
-                    ? 'bg-gradient-to-br from-workx-lime/25 to-workx-lime/10 border border-workx-lime/20'
-                    : 'bg-white/5 border border-white/5'
+                    ? 'bg-gradient-to-br from-workx-lime/30 to-workx-lime/10 shadow-sm shadow-workx-lime/10'
+                    : 'bg-white/5'
                 }`}>
                   <span className={`text-xs font-bold ${isTop3 ? 'text-workx-lime' : 'text-white/30'}`}>{i + 1}</span>
                 </div>
 
-                <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-3">
-                    {/* Dossier name chip */}
-                    <span className="text-[13px] font-semibold text-white tracking-tight truncate">{c.projectName}</span>
-                    <div className="flex items-center gap-2.5 flex-shrink-0">
+                    {/* Dossier name */}
+                    <span className={`text-[13px] font-semibold tracking-tight truncate ${
+                      isTop3 ? 'text-white' : 'text-white/80'
+                    }`}>{c.projectName}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {/* Hours badge */}
-                      <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold tabular-nums ${
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums ${
                         isTop3
-                          ? 'bg-workx-lime/15 text-workx-lime border border-workx-lime/15'
-                          : 'bg-white/5 text-white/50 border border-white/5'
+                          ? 'bg-workx-lime/15 text-workx-lime'
+                          : 'bg-white/5 text-white/40'
                       }`}>{c.totalWorkedHours}u</span>
-                      {/* Members count */}
-                      <div className="flex items-center gap-1">
-                        <Icons.users size={12} className="text-white/20" />
-                        <span className="text-xs text-white/30">{c.members.length}</span>
+                      {/* Members */}
+                      <div className="flex items-center gap-1 text-white/25">
+                        <Icons.users size={12} />
+                        <span className="text-xs">{c.members.length}</span>
                       </div>
                     </div>
-                  </div>
-                  {/* Progress bar */}
-                  <div className="h-1 rounded-full bg-white/5 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isTop3
-                          ? 'bg-gradient-to-r from-workx-lime to-workx-lime/60'
-                          : 'bg-gradient-to-r from-white/20 to-white/10'
-                      }`}
-                      style={{ width: `${barWidth}%` }}
-                    />
                   </div>
                 </div>
 
                 <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
-                  <Icons.chevronDown size={16} className="text-white/20 group-hover:text-white/50 transition-colors" />
+                  <Icons.chevronDown size={16} className="text-white/20 group-hover:text-workx-lime/50 transition-colors" />
                 </div>
               </button>
 
               {isExpanded && (
-                <div className="px-4 pb-4 pt-1 border-t border-white/5">
+                <div className="px-4 pb-4 pt-1 border-t border-workx-lime/10">
                   <div className="ml-[46px] space-y-2">
                     {c.members.map((m, mi) => {
                       const memberBarWidth = (m.workedHours / c.totalWorkedHours) * 100
