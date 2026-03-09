@@ -79,6 +79,31 @@ export async function PATCH(
       )
     )
 
+    // Wis oude completions die niet meer matchen met de nieuwe indeling
+    // Zo worden gesprekken opnieuw zichtbaar in de widget na herindeling
+    const newEmployeeIds = new Set<string>()
+    for (const dist of distributions) {
+      if (dist.employeeId) {
+        for (const id of dist.employeeId.split(', ').filter(Boolean)) {
+          newEmployeeIds.add(`${dist.partnerName}|${id}`)
+        }
+      }
+    }
+
+    const existingCompletions = await prisma.conversationCompletion.findMany({
+      where: { weekId },
+    })
+
+    const toDelete = existingCompletions.filter(
+      c => !newEmployeeIds.has(`${c.partnerName}|${c.employeeId}`)
+    )
+
+    if (toDelete.length > 0) {
+      await prisma.conversationCompletion.deleteMany({
+        where: { id: { in: toDelete.map(c => c.id) } },
+      })
+    }
+
     return NextResponse.json(results)
   } catch (error) {
     console.error('Error updating work distributions:', error)

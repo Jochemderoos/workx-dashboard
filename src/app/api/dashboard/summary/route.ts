@@ -560,23 +560,6 @@ export async function GET() {
       (d: any) => d.partnerName === userFirstName
     )
 
-    // Debug logging
-    console.log('[werkverdelingWidget]', {
-      role: currentUser?.role,
-      name: currentUser?.name,
-      userFirstName,
-      isPartnerOrAdmin,
-      hasWeekDistribution: !!currentWeekDistribution,
-      weekId: currentWeekDistribution?.id,
-      weekDate: currentWeekDistribution?.meetingDate,
-      distributionCount: currentWeekDistribution?.distributions?.length,
-      distributions: currentWeekDistribution?.distributions?.map((d: any) => ({
-        partner: d.partnerName,
-        employees: d.employeeName,
-      })),
-      hasDistributions,
-    })
-
     if (isPartnerOrAdmin && hasDistributions && currentWeekDistribution) {
       const partnerFirstName = userFirstName
       const partnerDistributions = currentWeekDistribution.distributions?.filter(
