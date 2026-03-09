@@ -409,6 +409,7 @@ export default function PartnersWerkPage() {
       toast.success(`${data.processed} entries verwerkt ${datesMsg}`)
       setShowUploadModal(false)
       fetchWorkload() // Herlaad de werkdruk data
+      fetchMonthlyHours() // Herlaad maanduren (auto-aggregatie)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Upload mislukt')
     } finally {

@@ -431,6 +431,54 @@ export async function POST(req: NextRequest) {
     }
     const detailCount = detailEntries.length
 
+    // ─── Auto-aggregatie: herbereken MonthlyHours uit WorkloadDetail ─────
+    if (detailCount > 0) {
+      const allDetails = await prisma.workloadDetail.findMany({
+        select: { personName: true, date: true, billableHours: true, workedHours: true },
+      })
+
+      // Groepeer op personName + jaar + maand
+      const monthMap = new Map<string, { employeeName: string; year: number; month: number; billable: number; worked: number }>()
+      for (const d of allDetails) {
+        // date is "YYYY-MM-DD"
+        const year = parseInt(d.date.substring(0, 4), 10)
+        const month = parseInt(d.date.substring(5, 7), 10)
+        const key = `${d.personName}|${year}|${month}`
+        const existing = monthMap.get(key)
+        if (existing) {
+          existing.billable += d.billableHours
+          existing.worked += d.workedHours
+        } else {
+          monthMap.set(key, { employeeName: d.personName, year, month, billable: d.billableHours, worked: d.workedHours })
+        }
+      }
+
+      // Batch upsert in MonthlyHours
+      const monthlyOps = Array.from(monthMap.values()).map(m =>
+        prisma.monthlyHours.upsert({
+          where: {
+            employeeName_year_month: { employeeName: m.employeeName, year: m.year, month: m.month },
+          },
+          update: {
+            billableHours: Math.round(m.billable * 100) / 100,
+            workedHours: Math.round(m.worked * 100) / 100,
+          },
+          create: {
+            employeeName: m.employeeName,
+            year: m.year,
+            month: m.month,
+            billableHours: Math.round(m.billable * 100) / 100,
+            workedHours: Math.round(m.worked * 100) / 100,
+          },
+        })
+      )
+
+      for (let i = 0; i < monthlyOps.length; i += BATCH_SIZE) {
+        const batch = monthlyOps.slice(i, i + BATCH_SIZE)
+        await prisma.$transaction(batch)
+      }
+    }
+
     // Get unique dates from results
     const uniqueDates = Array.from(new Set(results.map(r => r.date)))
 
