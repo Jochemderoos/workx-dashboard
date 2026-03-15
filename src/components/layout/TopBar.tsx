@@ -56,6 +56,7 @@ const mobileMenuItems = [
   { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
   { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk (Partners)', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Notulen', roles: ['PARTNER', 'ADMIN'] },
+  { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Gesprekken', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['PARTNER', 'ADMIN', 'EXTERNAL'] },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financiën', roles: ['PARTNER', 'ADMIN'] },
