@@ -1108,12 +1108,11 @@ export default function FinancienPage() {
               </div>
             </div>
             <div className="p-6 space-y-6">
-              {['werkgeverslasten', 'kostenExtern', 'omzet', 'uren'].map((category) => (
+              {['werkgeverslasten', 'kostenExtern', 'omzet'].map((category) => (
                 <div key={category}>
                   <p className="text-white/60 text-sm mb-3 font-medium">{
                     category === 'kostenExtern' ? 'Kosten Extern (bv. Lodewijk)' :
-                    category === 'werkgeverslasten' ? 'Werkgeverslasten' :
-                    category === 'omzet' ? 'Omzet' : 'Uren'
+                    category === 'werkgeverslasten' ? 'Werkgeverslasten' : 'Omzet'
                   }</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
                     {periods.map((p, i) => (
@@ -1135,6 +1134,24 @@ export default function FinancienPage() {
                   </div>
                 </div>
               ))}
+
+              {/* Uren - readonly, automatisch berekend */}
+              <div>
+                <p className="text-white/60 text-sm mb-3 font-medium flex items-center gap-2">
+                  Uren
+                  <span className="text-xs text-workx-lime/60 bg-workx-lime/10 px-2 py-0.5 rounded-full">automatisch uit Werkdruk</span>
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
+                  {periods.map((p, i) => (
+                    <div key={p} className="space-y-1">
+                      <label className="text-xs text-gray-400 block">{p}</label>
+                      <div className="w-full px-2 sm:px-3 py-2 bg-white/5 border border-white/5 rounded-lg text-white/50 text-sm">
+                        {currentYearData.uren[i] ? formatNumber(currentYearData.uren[i]) : '-'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

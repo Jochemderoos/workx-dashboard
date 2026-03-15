@@ -13,16 +13,35 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Get the single 2026 data record (or return defaults)
-    const data = await prisma.financialData2026.findFirst()
+    const currentYear = new Date().getFullYear()
+
+    // Haal financiele data en MonthlyHours parallel op
+    const [data, monthlyHours] = await Promise.all([
+      prisma.financialData2026.findFirst(),
+      prisma.monthlyHours.findMany({
+        where: { year: currentYear },
+        select: { month: true, billableHours: true },
+      }),
+    ])
+
+    // Bereken uren per maand automatisch uit MonthlyHours
+    const uren = [...EMPTY_12]
+    for (const h of monthlyHours) {
+      if (h.month >= 1 && h.month <= 12) {
+        uren[h.month - 1] += h.billableHours
+      }
+    }
+    // Afronden op 2 decimalen
+    for (let i = 0; i < 12; i++) {
+      uren[i] = Math.round(uren[i] * 100) / 100
+    }
 
     if (!data) {
-      // Return default empty data
       return NextResponse.json({
         werkgeverslasten: EMPTY_12,
         kostenExtern: EMPTY_12,
         omzet: EMPTY_12,
-        uren: EMPTY_12
+        uren,
       })
     }
 
@@ -30,7 +49,7 @@ export async function GET(req: NextRequest) {
       werkgeverslasten: JSON.parse(data.werkgeverslasten),
       kostenExtern: JSON.parse(data.kostenExtern),
       omzet: JSON.parse(data.omzet),
-      uren: JSON.parse(data.uren)
+      uren,
     })
   } catch (error) {
     console.error('Error fetching 2026 data:', error)
@@ -60,11 +79,12 @@ export async function PUT(req: NextRequest) {
     const { werkgeverslasten, kostenExtern, omzet, uren } = body
 
     // Validate arrays
-    if (!Array.isArray(werkgeverslasten) || !Array.isArray(omzet) || !Array.isArray(uren)) {
+    if (!Array.isArray(werkgeverslasten) || !Array.isArray(omzet)) {
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 })
     }
 
     const kostenExtData = Array.isArray(kostenExtern) ? kostenExtern : EMPTY_12
+    const urenData = Array.isArray(uren) ? uren : EMPTY_12
 
     // Upsert - create if not exists, update if exists
     const existing = await prisma.financialData2026.findFirst()
@@ -77,7 +97,7 @@ export async function PUT(req: NextRequest) {
           werkgeverslasten: JSON.stringify(werkgeverslasten),
           kostenExtern: JSON.stringify(kostenExtData),
           omzet: JSON.stringify(omzet),
-          uren: JSON.stringify(uren)
+          uren: JSON.stringify(urenData),
         }
       })
     } else {
@@ -86,16 +106,32 @@ export async function PUT(req: NextRequest) {
           werkgeverslasten: JSON.stringify(werkgeverslasten),
           kostenExtern: JSON.stringify(kostenExtData),
           omzet: JSON.stringify(omzet),
-          uren: JSON.stringify(uren)
+          uren: JSON.stringify(urenData),
         }
       })
+    }
+
+    // Bereken uren automatisch uit MonthlyHours (net als GET)
+    const currentYear = new Date().getFullYear()
+    const monthlyHours = await prisma.monthlyHours.findMany({
+      where: { year: currentYear },
+      select: { month: true, billableHours: true },
+    })
+    const autoUren = [...EMPTY_12]
+    for (const h of monthlyHours) {
+      if (h.month >= 1 && h.month <= 12) {
+        autoUren[h.month - 1] += h.billableHours
+      }
+    }
+    for (let i = 0; i < 12; i++) {
+      autoUren[i] = Math.round(autoUren[i] * 100) / 100
     }
 
     return NextResponse.json({
       werkgeverslasten: JSON.parse(data.werkgeverslasten),
       kostenExtern: JSON.parse(data.kostenExtern),
       omzet: JSON.parse(data.omzet),
-      uren: JSON.parse(data.uren)
+      uren: autoUren,
     })
   } catch (error) {
     console.error('Error updating 2026 data:', error)
