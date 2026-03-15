@@ -126,18 +126,10 @@ export default function PartnersWerkPage() {
     return days.reverse() // Oldest first
   }, [historyOffset])
 
-  // Include weekend days ONLY on Monday before 20:00 (current week view)
-  // Weekend = the Sat/Sun right after the last Friday in the workdays range
+  // Toon weekendkolommen wanneer er data voor is
+  // Weekend = de za/zo direct na de laatste vrijdag in het bereik
   const daysToDisplay = useMemo(() => {
     if (workdaysToShow.length === 0) return workdaysToShow
-
-    const now = new Date()
-    const dow = now.getDay()
-    const hr = now.getHours()
-    // Weekend columns visible from Sunday 18:00 until Monday 20:00, only for current view (no history)
-    const showWeekend = ((dow === 0 && hr >= 18) || (dow === 1 && hr < 20)) && historyOffset === 0
-
-    if (!showWeekend) return workdaysToShow
 
     // Find the last Friday in the range and add Sat/Sun after it (if data exists)
     const lastWorkday = workdaysToShow[workdaysToShow.length - 1]
