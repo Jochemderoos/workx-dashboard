@@ -38,6 +38,15 @@ const getLocalDateString = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
+// Op weekend → selecteer eerstvolgende maandag
+const getNextWorkday = () => {
+  const date = new Date()
+  const day = date.getDay()
+  if (day === 6) date.setDate(date.getDate() + 2)      // Zaterdag → maandag
+  else if (day === 0) date.setDate(date.getDate() + 1)  // Zondag → maandag
+  return getLocalDateString(date)
+}
+
 interface WeekDayData {
   date: string
   dayName: string
@@ -47,7 +56,7 @@ interface WeekDayData {
 }
 
 export default function AppjeplekjePage() {
-  const [selectedDate, setSelectedDate] = useState(getLocalDateString(new Date()))
+  const [selectedDate, setSelectedDate] = useState(getNextWorkday())
   const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isToggling, setIsToggling] = useState(false)
