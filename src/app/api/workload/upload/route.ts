@@ -164,6 +164,29 @@ function parseXLSFile(buffer: ArrayBuffer): { aggregated: WorkloadEntry[]; detai
     })
   }
 
+  // Aggregeer details met dezelfde unieke sleutel (personName+date+project+activityType)
+  // zodat uren worden opgeteld in plaats van overschreven bij upsert
+  const detailAggMap = new Map<string, WorkloadDetailEntry>()
+  for (const d of details) {
+    const key = `${d.personName}|${d.date}|${d.projectName}|${d.activityType}`
+    const existing = detailAggMap.get(key)
+    if (existing) {
+      existing.billableHours += d.billableHours
+      existing.workedHours += d.workedHours
+      // Bewaar langste description
+      if (d.description && (!existing.description || d.description.length > existing.description.length)) {
+        existing.description = d.description
+      }
+    } else {
+      detailAggMap.set(key, { ...d })
+    }
+  }
+  const aggregatedDetails = Array.from(detailAggMap.values()).map(d => ({
+    ...d,
+    billableHours: Math.round(d.billableHours * 100) / 100,
+    workedHours: Math.round(d.workedHours * 100) / 100,
+  }))
+
   // Aggregeer tot totaal uren per persoon+dag (voor Workload tabel)
   const aggMap = new Map<string, WorkloadEntry>()
   for (const detail of details) {
@@ -186,7 +209,7 @@ function parseXLSFile(buffer: ArrayBuffer): { aggregated: WorkloadEntry[]; detai
     hours: Math.round(e.hours * 100) / 100,
   }))
 
-  return { aggregated, details }
+  return { aggregated, details: aggregatedDetails }
 }
 
 function parseDutchNumber(val: unknown): number {
