@@ -454,34 +454,13 @@ export async function POST(req: NextRequest) {
     }
     const detailCount = detailEntries.length
 
-    // ─── Auto-aggregatie: herbereken MonthlyHours voor geüploade maanden ───
+    // ─── Auto-aggregatie: update MonthlyHours direct uit geüploade Excel ────
+    // Bereken vanuit de geparsde data (detailEntries), NIET vanuit de database.
+    // Alleen medewerkers+maanden in deze upload worden bijgewerkt.
     if (detailCount > 0) {
-      // Bepaal welke jaar+maand combinaties in deze upload zitten
-      const uploadedMonths = new Set<string>()
-      for (const d of detailEntries) {
-        const year = parseInt(d.date.substring(0, 4), 10)
-        const month = parseInt(d.date.substring(5, 7), 10)
-        uploadedMonths.add(`${year}|${month}`)
-      }
-
-      // Haal alleen WorkloadDetail op voor die maanden
-      const monthFilters = Array.from(uploadedMonths).map(key => {
-        const [year, month] = key.split('|').map(Number)
-        const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-        const endMonth = month === 12 ? 1 : month + 1
-        const endYear = month === 12 ? year + 1 : year
-        const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`
-        return { date: { gte: startDate, lt: endDate } }
-      })
-
-      const relevantDetails = await prisma.workloadDetail.findMany({
-        where: { OR: monthFilters },
-        select: { personName: true, date: true, billableHours: true, workedHours: true },
-      })
-
-      // Groepeer op personName + jaar + maand
+      // Groepeer de geüploade data op personName + jaar + maand
       const monthMap = new Map<string, { employeeName: string; year: number; month: number; billable: number; worked: number }>()
-      for (const d of relevantDetails) {
+      for (const d of detailEntries) {
         const year = parseInt(d.date.substring(0, 4), 10)
         const month = parseInt(d.date.substring(5, 7), 10)
         const key = `${d.personName}|${year}|${month}`
@@ -494,7 +473,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Batch upsert in MonthlyHours (alleen voor geüploade maanden)
+      // Batch upsert in MonthlyHours (alleen voor medewerkers in deze upload)
       const monthlyOps = Array.from(monthMap.values()).map(m =>
         prisma.monthlyHours.upsert({
           where: {
