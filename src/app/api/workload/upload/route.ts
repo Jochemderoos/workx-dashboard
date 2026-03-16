@@ -454,44 +454,56 @@ export async function POST(req: NextRequest) {
     }
     const detailCount = detailEntries.length
 
-    // ─── Auto-aggregatie: update MonthlyHours direct uit geüploade Excel ────
-    // Bereken vanuit de geparsde data (detailEntries), NIET vanuit de database.
-    // Alleen medewerkers+maanden in deze upload worden bijgewerkt.
+    // ─── Auto-aggregatie: herbereken MonthlyHours uit WorkloadDetail (database) ──
+    // Na de upsert hierboven bevat WorkloadDetail de nieuwste data.
+    // We lezen ALLE WorkloadDetail voor elke medewerker+maand in de upload,
+    // zodat ook eerdere dagen meetellen bij een deelupload.
     if (detailCount > 0) {
-      // Groepeer de geüploade data op personName + jaar + maand
-      const monthMap = new Map<string, { employeeName: string; year: number; month: number; billable: number; worked: number }>()
+      // Bepaal unieke medewerker+jaar+maand combinaties in deze upload
+      const employeeMonths = new Set<string>()
       for (const d of detailEntries) {
         const year = parseInt(d.date.substring(0, 4), 10)
         const month = parseInt(d.date.substring(5, 7), 10)
-        const key = `${d.personName}|${year}|${month}`
-        const existing = monthMap.get(key)
-        if (existing) {
-          existing.billable += d.billableHours
-          existing.worked += d.workedHours
-        } else {
-          monthMap.set(key, { employeeName: d.personName, year, month, billable: d.billableHours, worked: d.workedHours })
-        }
+        employeeMonths.add(`${d.personName}|${year}|${month}`)
       }
 
-      // Batch upsert in MonthlyHours (alleen voor medewerkers in deze upload)
-      const monthlyOps = Array.from(monthMap.values()).map(m =>
-        prisma.monthlyHours.upsert({
-          where: {
-            employeeName_year_month: { employeeName: m.employeeName, year: m.year, month: m.month },
-          },
-          update: {
-            billableHours: Math.round(m.billable * 100) / 100,
-            workedHours: Math.round(m.worked * 100) / 100,
-          },
-          create: {
-            employeeName: m.employeeName,
-            year: m.year,
-            month: m.month,
-            billableHours: Math.round(m.billable * 100) / 100,
-            workedHours: Math.round(m.worked * 100) / 100,
-          },
+      // Voor elke medewerker+maand: lees ALLE WorkloadDetail uit DB en sommeer
+      const monthlyOps = []
+      for (const key of Array.from(employeeMonths)) {
+        const [employeeName, yearStr, monthStr] = key.split('|')
+        const year = parseInt(yearStr, 10)
+        const month = parseInt(monthStr, 10)
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+        const endMonth = month === 12 ? 1 : month + 1
+        const endYear = month === 12 ? year + 1 : year
+        const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`
+
+        const rows = await prisma.workloadDetail.findMany({
+          where: { personName: employeeName, date: { gte: startDate, lt: endDate } },
+          select: { billableHours: true, workedHours: true },
         })
-      )
+
+        let billable = 0, worked = 0
+        for (const r of rows) {
+          billable += r.billableHours
+          worked += r.workedHours
+        }
+
+        monthlyOps.push(
+          prisma.monthlyHours.upsert({
+            where: { employeeName_year_month: { employeeName, year, month } },
+            update: {
+              billableHours: Math.round(billable * 100) / 100,
+              workedHours: Math.round(worked * 100) / 100,
+            },
+            create: {
+              employeeName, year, month,
+              billableHours: Math.round(billable * 100) / 100,
+              workedHours: Math.round(worked * 100) / 100,
+            },
+          })
+        )
+      }
 
       for (let i = 0; i < monthlyOps.length; i += BATCH_SIZE) {
         const batch = monthlyOps.slice(i, i + BATCH_SIZE)
