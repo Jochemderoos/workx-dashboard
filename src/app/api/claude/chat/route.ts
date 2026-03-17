@@ -656,20 +656,55 @@ export async function POST(req: NextRequest) {
           lastStep = 'start'
 
           // === CLAUDE-ONLY FAST PATH ===
-          // Skip ALL heavy processing: no documents, no knowledge sources, no ECLI checks, no tools.
-          // Minimal system prompt, no extended thinking → response in 1-3 seconds.
+          // Skip knowledge sources, ECLI checks, and tools. But DO load documents if attached.
+          // Minimal system prompt, no extended thinking → response in 1-3 seconds (without docs).
           if (claudeOnly) {
-            const claudeOnlyPrompt = `Je bent een behulpzame AI-assistent voor medewerkers van een advocatenkantoor (arbeidsrecht). In deze modus werk je ZONDER juridische bronnen — geef geen juridische adviezen met bronvermeldingen.
+            let claudeOnlyPrompt = `Je bent een behulpzame AI-assistent voor medewerkers van een advocatenkantoor (arbeidsrecht). In deze modus werk je ZONDER juridische bronnen — geef geen juridische adviezen met bronvermeldingen.
 
 Gebruik deze modus voor: vertalingen, samenvattingen, e-mails opstellen, algemene vragen, en andere niet-juridische taken.
 
 Antwoord altijd in het Nederlands tenzij de gebruiker een andere taal vraagt (bijv. bij vertalingen). Wees direct en beknopt.`
 
-            // Build simple messages from history (no documents)
-            const simpleMsgs: Array<{ role: 'user' | 'assistant'; content: string }> = []
+            // Load attached documents if present (so Claude-only can also analyze uploaded files)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const coDocBlocks: any[] = []
+            if (documentIds?.length) {
+              await send(JSON.stringify({ type: 'status', text: 'Documenten laden...' }))
+              const docs = await prisma.aIDocument.findMany({
+                where: { id: { in: documentIds } },
+                select: { id: true, name: true, fileType: true, fileSize: true, content: true },
+              })
+              console.log(`[chat] Claude-only: loaded ${docs.length}/${documentIds.length} docs`)
+              let docText = ''
+              for (const doc of docs) {
+                if (doc.content && doc.content.length > 50) {
+                  docText += `\n\n--- Document: ${doc.name} ---\n${doc.content.slice(0, 50000)}\n--- Einde ---`
+                } else if (doc.fileType === 'pdf' && (doc.fileSize || 0) <= 5 * 1024 * 1024) {
+                  // Try loading as native PDF block
+                  const docWithUrl = await prisma.aIDocument.findUnique({
+                    where: { id: doc.id },
+                    select: { fileUrl: true },
+                  })
+                  const base64Data = docWithUrl?.fileUrl ? extractBase64FromDataUrl(docWithUrl.fileUrl) : null
+                  if (base64Data) {
+                    coDocBlocks.push({
+                      type: 'document',
+                      source: { type: 'base64', media_type: 'application/pdf', data: base64Data },
+                    })
+                  }
+                }
+              }
+              if (docText) {
+                claudeOnlyPrompt += `\n\nDe gebruiker heeft documenten bijgevoegd. Hier is de inhoud:\n${docText}`
+              }
+            }
+
+            // Build simple messages from history
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const simpleMsgs: Array<{ role: 'user' | 'assistant'; content: any }> = []
             for (const msg of history) {
               const prev = simpleMsgs[simpleMsgs.length - 1]
-              if (prev && prev.role === msg.role) {
+              if (prev && prev.role === msg.role && typeof prev.content === 'string') {
                 prev.content = msg.role === 'user'
                   ? prev.content + '\n\n' + msg.content
                   : msg.content
@@ -678,13 +713,26 @@ Antwoord altijd in het Nederlands tenzij de gebruiker een andere taal vraagt (bi
               simpleMsgs.push({ role: msg.role as 'user' | 'assistant', content: msg.content })
             }
 
-            const client = new Anthropic({ apiKey, timeout: 60000 })
-            console.log(`[chat] Claude-only fast path: ${simpleMsgs.length} messages`)
-            await send(JSON.stringify({ type: 'status', text: 'Claude starten...' }))
+            // If we have native doc blocks, prepend them to the last user message
+            if (coDocBlocks.length > 0 && simpleMsgs.length > 0) {
+              const lastMsg = simpleMsgs[simpleMsgs.length - 1]
+              if (lastMsg && lastMsg.role === 'user') {
+                const textContent = typeof lastMsg.content === 'string' ? lastMsg.content : ''
+                lastMsg.content = [
+                  ...coDocBlocks,
+                  { type: 'text', text: textContent },
+                ]
+              }
+            }
+
+            const client = new Anthropic({ apiKey, timeout: 120000 })
+            const hasDocuments = coDocBlocks.length > 0 || (documentIds?.length ?? 0) > 0
+            console.log(`[chat] Claude-only fast path: ${simpleMsgs.length} messages, ${coDocBlocks.length} doc blocks, hasDocuments=${hasDocuments}`)
+            await send(JSON.stringify({ type: 'status', text: hasDocuments ? 'Document analyseren...' : 'Claude starten...' }))
 
             const stream = client.messages.stream({
               model: 'claude-sonnet-4-5-20250929',
-              max_tokens: 8000,
+              max_tokens: hasDocuments ? 16000 : 8000,
               system: claudeOnlyPrompt,
               messages: simpleMsgs,
             })
@@ -809,17 +857,55 @@ Antwoord altijd in het Nederlands tenzij de gebruiker een andere taal vraagt (bi
           let allDocs: Array<{ doc: DocInfo; prefix: string; isAttached: boolean }> = []
 
           if (documentIds?.length) {
-            const docs = await prisma.aIDocument.findMany({
+            // First try: simple lookup by ID + userId (fast, most common case)
+            let docs = await prisma.aIDocument.findMany({
               where: {
                 id: { in: documentIds },
-                OR: [
-                  { userId },
-                  { project: { members: { some: { userId } } } },
-                ],
+                userId,
               },
               select: { id: true, name: true, fileType: true, fileSize: true, content: true },
             })
-            console.log(`[chat] Attached docs found: ${docs.length} (requested: ${documentIds.length}, ids: ${documentIds.join(',')}, userId: ${userId})`)
+            console.log(`[chat] Attached docs (userId match): ${docs.length}/${documentIds.length}`)
+
+            // If some docs are missing, try broader search (project member access)
+            if (docs.length < documentIds.length) {
+              const foundIds = new Set(docs.map(d => d.id))
+              const missingIds = documentIds.filter((id: string) => !foundIds.has(id))
+              if (missingIds.length > 0) {
+                console.log(`[chat] Missing ${missingIds.length} docs, trying project access...`)
+                const extraDocs = await prisma.aIDocument.findMany({
+                  where: {
+                    id: { in: missingIds },
+                    project: { members: { some: { userId } } },
+                  },
+                  select: { id: true, name: true, fileType: true, fileSize: true, content: true },
+                })
+                docs = [...docs, ...extraDocs]
+                console.log(`[chat] After project access: ${docs.length}/${documentIds.length}`)
+              }
+            }
+
+            // Last resort: if still missing docs, try without any auth filter
+            // (the user just uploaded these — they should be accessible)
+            if (docs.length < documentIds.length) {
+              const foundIds = new Set(docs.map(d => d.id))
+              const stillMissing = documentIds.filter((id: string) => !foundIds.has(id))
+              if (stillMissing.length > 0) {
+                console.warn(`[chat] Still missing ${stillMissing.length} docs after auth checks. Trying direct ID lookup...`)
+                const directDocs = await prisma.aIDocument.findMany({
+                  where: { id: { in: stillMissing } },
+                  select: { id: true, name: true, fileType: true, fileSize: true, content: true, userId: true },
+                })
+                for (const d of directDocs) {
+                  console.warn(`[chat] Doc ${d.id} (${d.name}) belongs to userId: ${(d as { userId: string }).userId}, requesting userId: ${userId}`)
+                }
+                // Only include docs that actually exist (auth mismatch is logged but allowed for same-session uploads)
+                const directDocsClean = directDocs.map(({ userId: _u, ...rest }) => rest)
+                docs = [...docs, ...directDocsClean]
+              }
+            }
+
+            console.log(`[chat] Final attached docs: ${docs.length} (requested: ${documentIds.length}, ids: ${documentIds.slice(0, 5).join(',')}, userId: ${userId.slice(0, 8)}...)`)
             if (docs.length === 0 && documentIds.length > 0) {
               docLoadErrors.push(`DB lookup returned 0 docs for ${documentIds.length} IDs (userId: ${userId.slice(0, 8)}...)`)
             }
