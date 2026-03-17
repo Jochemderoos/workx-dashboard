@@ -1046,7 +1046,7 @@ ${markdownHtml}
       setOptionsExpanded(false) // Collapse options to maximize answer space
       setStreamingMsgId(assistantMsgId) // Mark which message is streaming
 
-      // Start throttled markdown rendering interval (40ms — smooth, fast streaming)
+      // Start throttled text update interval (60ms — smooth typewriter, no markdown re-parse)
       streamBufferRef.current = ''
       setStreamingContent('')
       streamIntervalRef.current = setInterval(() => {
@@ -1054,7 +1054,7 @@ ${markdownHtml}
           setStreamingContent(streamBufferRef.current)
           messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
         }
-      }, 40)
+      }, 60)
 
       // Add empty assistant message placeholder
       setMessages(prev => [...prev, {
@@ -1671,11 +1671,11 @@ ${markdownHtml}
                     )}
                     <div className={`assistant-bubble rounded-2xl rounded-tl-md px-5 py-4 ${isStreaming ? 'assistant-bubble-streaming' : (msg.content ? 'assistant-bubble-complete' : '')}`}>
                       {isStreaming ? (
-                        // Streaming: throttled markdown rendering (80ms interval)
-                        <div
-                          className="claude-response text-sm text-white/90"
-                          dangerouslySetInnerHTML={{ __html: renderMarkdown(streamingContent) + '<span class="streaming-cursor"></span>' }}
-                        />
+                        // Streaming: plain text for smooth typewriter effect (no DOM thrashing from markdown re-parse)
+                        <div className="claude-response text-sm text-white/90 whitespace-pre-wrap break-words">
+                          {streamingContent}
+                          <span className="streaming-cursor" />
+                        </div>
                       ) : (
                         // Completed: full markdown rendering (strip DOCX edit blocks from display)
                         <div
