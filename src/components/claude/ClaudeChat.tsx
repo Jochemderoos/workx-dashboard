@@ -108,9 +108,11 @@ export default function ClaudeChat({
   const thinkingTextRef = useRef('') // Tracks accumulated thinking text for saving after stream ends
   const streamBufferRef = useRef('') // Buffered streaming text
   const abortControllerRef = useRef<AbortController | null>(null) // For stop button
-  const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null) // Throttled streaming markdown render
+  const streamingTextRef = useRef<HTMLSpanElement>(null) // Direct DOM ref for smooth typewriter
+  const displayedLengthRef = useRef(0) // How many chars are currently displayed
+  const animationFrameRef = useRef<number | null>(null) // rAF handle for typewriter animation
+  const lastScrollTimeRef = useRef(0) // Throttle scroll during animation
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
-  const [streamingContent, setStreamingContent] = useState('') // Throttled streaming text for markdown rendering
   const [loadingProgress, setLoadingProgress] = useState(0) // Progress bar during loading (0-100)
   const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(new Set()) // Per-message thinking expansion
   const [kortMessageIds, setKortMessageIds] = useState<Set<string>>(new Set()) // Messages generated with "kort" option — show "Maak uitgebreid" button
@@ -687,7 +689,7 @@ export default function ClaudeChat({
               console.warn('[ClaudeChat] Safety net: server-fout gevonden:', lastDb.content.slice(0, 100))
               const errText = lastDb.content.replace(/^\[Fout:\s*/, '').replace(/\]$/, '')
               setStreamingMsgId(null)
-              setStreamingContent('')
+              if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
               setIsThinking(false)
               setThinkingText('')
               setMessages(prev => prev.map(m =>
@@ -706,8 +708,7 @@ export default function ClaudeChat({
             }
             console.log('[ClaudeChat] Safety net: antwoord gevonden via backup polling')
             setStreamingMsgId(null)
-            if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
-            setStreamingContent('')
+            if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
             setIsThinking(false)
             setThinkingText('')
             setMessages(prev => prev.map(m =>
@@ -1046,15 +1047,32 @@ ${markdownHtml}
       setOptionsExpanded(false) // Collapse options to maximize answer space
       setStreamingMsgId(assistantMsgId) // Mark which message is streaming
 
-      // Start throttled text update interval (60ms — smooth typewriter, no markdown re-parse)
+      // Start smooth typewriter animation via requestAnimationFrame (direct DOM updates, no React re-renders)
       streamBufferRef.current = ''
-      setStreamingContent('')
-      streamIntervalRef.current = setInterval(() => {
-        if (streamBufferRef.current) {
-          setStreamingContent(streamBufferRef.current)
-          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+      displayedLengthRef.current = 0
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
+      const animateStream = () => {
+        const el = streamingTextRef.current
+        if (el) {
+          const target = streamBufferRef.current.length
+          const current = displayedLengthRef.current
+          if (current < target) {
+            // Adaptive speed: faster when there's more buffered text to catch up
+            const gap = target - current
+            const speed = gap > 200 ? 12 : gap > 100 ? 8 : gap > 50 ? 4 : gap > 20 ? 2 : 1
+            displayedLengthRef.current = Math.min(current + speed, target)
+            el.textContent = streamBufferRef.current.slice(0, displayedLengthRef.current)
+            // Throttled auto-scroll (every 80ms)
+            const now = performance.now()
+            if (now - lastScrollTimeRef.current > 80) {
+              messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+              lastScrollTimeRef.current = now
+            }
+          }
         }
-      }, 60)
+        animationFrameRef.current = requestAnimationFrame(animateStream)
+      }
+      animationFrameRef.current = requestAnimationFrame(animateStream)
 
       // Add empty assistant message placeholder
       setMessages(prev => [...prev, {
@@ -1131,6 +1149,8 @@ ${markdownHtml}
                 // ECLI verification: replace entire streamed text with cleaned version
                 streamedText = event.text
                 streamBufferRef.current = streamedText
+                // Reset display to show cleaned text from scratch
+                displayedLengthRef.current = 0
               } else if (event.type === 'status' && event.text) {
                 setStatusText(event.text)
               } else if (event.type === 'done') {
@@ -1146,8 +1166,7 @@ ${markdownHtml}
                   streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*/gi, '')
                 }
                 setStreamingMsgId(null)
-                if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
-                setStreamingContent('')
+                if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
                 const savedThinking = thinkingTextRef.current || undefined
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel, thinkingContent: savedThinking } : m
@@ -1190,8 +1209,7 @@ ${markdownHtml}
         console.log('[ClaudeChat] Stream leverde geen inhoud — start DB polling. pollId:', pollId)
         // Clear streaming cursor — no content was streamed, so hide the empty bubble
         setStreamingMsgId(null)
-        if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
-        setStreamingContent('')
+        if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
         if (pollId) {
           // Context-aware status messages for long operations
           const hasAttachments = attachedDocs.length > 0 || documentIds.length > 0
@@ -1267,9 +1285,8 @@ ${markdownHtml}
                 console.log('[ClaudeChat] Antwoord gevonden via DB polling na', elapsed, 'seconden')
                 setLoadingProgress(100)
                 setStreamingMsgId(null)
-                if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
-                setStreamingContent('')
-                setMessages(prev => prev.map(m =>
+                if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+                        setMessages(prev => prev.map(m =>
                   m.id === assistantMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
                 ))
                 setStatusText('')
@@ -1289,8 +1306,7 @@ ${markdownHtml}
         // User clicked stop — keep partial response if any, otherwise remove placeholder
         clearTimeout(timeoutId)
         setStreamingMsgId(null)
-        if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
-        setStreamingContent('')
+        if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
         if (streamedText) {
           setMessages(prev => prev.map(m =>
             m.id === assistantMsgId ? { ...m, content: streamedText + '\n\n*[Generatie gestopt]*' } : m
@@ -1301,8 +1317,7 @@ ${markdownHtml}
       } else if (streamedText) {
         clearTimeout(timeoutId)
         setStreamingMsgId(null)
-        if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
-        setStreamingContent('')
+        if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
         setMessages(prev => prev.map(m =>
           m.id === assistantMsgId && !m.content ? { ...m, content: streamedText } : m
         ))
@@ -1334,11 +1349,10 @@ ${markdownHtml}
       toast.error(errMsg, { duration: 15000 })
       setStatusText('')
       setStreamingMsgId(null)
-      if (streamIntervalRef.current) {
-        clearInterval(streamIntervalRef.current)
-        streamIntervalRef.current = null
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
       }
-      setStreamingContent('')
       setLastFailedMessage(text) // Enable retry
 
       // If we already have streamed content, keep it and add error note
@@ -1368,9 +1382,9 @@ ${markdownHtml}
       isThinkingRef.current = false
       setThinkingText('')
       abortControllerRef.current = null
-      if (streamIntervalRef.current) {
-        clearInterval(streamIntervalRef.current)
-        streamIntervalRef.current = null
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
       }
     }
   }
@@ -1382,8 +1396,7 @@ ${markdownHtml}
     setIsThinking(false)
     isThinkingRef.current = false
     setStreamingMsgId(null)
-    if (streamIntervalRef.current) { clearInterval(streamIntervalRef.current); streamIntervalRef.current = null }
-    setStreamingContent('')
+    if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
   }
 
   // Expand a beknopt answer to uitgebreid: finds the original user question and re-sends with uitgebreid instructions
@@ -1673,7 +1686,7 @@ ${markdownHtml}
                       {isStreaming ? (
                         // Streaming: plain text for smooth typewriter effect (no DOM thrashing from markdown re-parse)
                         <div className="claude-response text-sm text-white/90 whitespace-pre-wrap break-words">
-                          {streamingContent}
+                          <span ref={streamingTextRef} />
                           <span className="streaming-cursor" />
                         </div>
                       ) : (
