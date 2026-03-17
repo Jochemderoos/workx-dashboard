@@ -346,44 +346,6 @@ export default function DDProjectenPage() {
         </div>
       </div>
 
-      {/* ─── Team Overzicht ─── */}
-      {teamOverview.length > 0 && (
-        <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-          <div className="flex items-center gap-2 mb-5">
-            <Icons.users size={16} className="text-workx-lime" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>Team overzicht</h2>
-          </div>
-          <div className="space-y-3">
-            {teamOverview.map((member, i) => {
-              const max7d = teamOverview[0]?.hours7d || 1
-              const barWidth = max7d > 0 ? (member.hours7d / max7d) * 100 : 0
-              const color = MEMBER_COLORS[i % MEMBER_COLORS.length]
-              const photo = getPhotoUrl(member.personName)
-              return (
-                <div key={member.personName} className="flex items-center gap-3">
-                  {photo ? (
-                    <Image src={photo} alt={member.personName} width={32} height={32} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
-                  ) : (
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-xs font-medium text-white">{member.personName.charAt(0)}</span>
-                    </div>
-                  )}
-                  <span className="text-sm font-medium w-40 truncate flex-shrink-0" style={{ color: 'var(--color-text-primary)' }}>{member.personName}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
-                    <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-700`} style={{ width: `${barWidth}%` }} />
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-sm font-mono tabular-nums w-12 text-right font-semibold" style={{ color: member.hours7d > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>{member.hours7d}u</span>
-                    <span className="text-[10px] font-mono tabular-nums w-12 text-right" style={{ color: 'var(--color-text-tertiary)' }}>{member.totalHours}u tot</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <p className="text-[10px] mt-3" style={{ color: 'var(--color-text-tertiary)' }}>Balk en vetgedrukte uren = afgelopen 7 dagen · &quot;tot&quot; = totaal 4 weken</p>
-        </div>
-      )}
-
       {/* ─── Per-client sections ─── */}
       {DD_CLIENTS.filter(c => clientGroups.has(c)).map(client => {
         const cases = clientGroups.get(client)!
@@ -548,6 +510,44 @@ export default function DDProjectenPage() {
           </div>
         )
       })}
+
+      {/* ─── Team Overzicht ─── */}
+      {teamOverview.length > 0 && (
+        <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+          <div className="flex items-center gap-2 mb-5">
+            <Icons.users size={16} className="text-workx-lime" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>Team overzicht</h2>
+          </div>
+          <div className="space-y-3">
+            {teamOverview.map((member, i) => {
+              const max7d = teamOverview[0]?.hours7d || 1
+              const barWidth = max7d > 0 ? (member.hours7d / max7d) * 100 : 0
+              const color = MEMBER_COLORS[i % MEMBER_COLORS.length]
+              const photo = getPhotoUrl(member.personName)
+              return (
+                <div key={member.personName} className="flex items-center gap-3">
+                  {photo ? (
+                    <Image src={photo} alt={member.personName} width={32} height={32} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-xs font-medium text-white">{member.personName.charAt(0)}</span>
+                    </div>
+                  )}
+                  <span className="text-sm font-medium w-40 truncate flex-shrink-0" style={{ color: 'var(--color-text-primary)' }}>{member.personName}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
+                    <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-700`} style={{ width: `${barWidth}%` }} />
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-sm font-mono tabular-nums w-12 text-right font-semibold" style={{ color: member.hours7d > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>{member.hours7d}u</span>
+                    <span className="text-[10px] font-mono tabular-nums w-12 text-right" style={{ color: 'var(--color-text-tertiary)' }}>{member.totalHours}u tot</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-[10px] mt-3" style={{ color: 'var(--color-text-tertiary)' }}>Balk en vetgedrukte uren = afgelopen 7 dagen · &quot;tot&quot; = totaal 4 weken</p>
+        </div>
+      )}
 
       {/* Empty state when no werkdruk data */}
       {stats.totalCases === 0 && unmatchedManualProjects.length === 0 && (
