@@ -35,6 +35,7 @@ interface TeamMember {
 interface WorkloadEntry {
   personName: string
   projectName: string
+  date: string
   billableHours: number
   workedHours: number
 }
@@ -43,7 +44,8 @@ interface DDCase {
   projectName: string
   fullProjectName: string
   totalHours: number
-  members: { personName: string; hours: number }[]
+  hours7d: number // last 7 days
+  members: { personName: string; hours: number; hours7d: number }[]
   linkedProject?: Project
 }
 
@@ -102,20 +104,39 @@ export default function DDProjectenPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // ─── Process workload data into DD structures ───
+  // ─── Process workload data into DD structures with time-based grouping ───
   const { clientGroups, teamOverview, stats, unmatchedManualProjects } = useMemo(() => {
-    // Group workload entries by projectName, filter for DD clients
-    const projectMap = new Map<string, { client: string; members: Map<string, number> }>()
+    const now = new Date()
+    const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const d14 = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+    // Group workload entries by projectName, filter for DD clients, track time buckets
+    const projectMap = new Map<string, {
+      client: string
+      members: Map<string, { total: number; h7d: number }>
+      totalHours: number
+      hours7d: number
+      hours14d: number
+    }>()
+
     for (const entry of workloadData) {
       const client = DD_CLIENTS.find(c => entry.projectName.toLowerCase().includes(c.toLowerCase()))
       if (!client) continue
       const hours = entry.workedHours || entry.billableHours || 0
       if (hours <= 0) continue
+
       if (!projectMap.has(entry.projectName)) {
-        projectMap.set(entry.projectName, { client, members: new Map() })
+        projectMap.set(entry.projectName, { client, members: new Map(), totalHours: 0, hours7d: 0, hours14d: 0 })
       }
       const proj = projectMap.get(entry.projectName)!
-      proj.members.set(entry.personName, (proj.members.get(entry.personName) || 0) + hours)
+      proj.totalHours += hours
+      if (entry.date >= d7) proj.hours7d += hours
+      if (entry.date >= d14) proj.hours14d += hours
+
+      const mem = proj.members.get(entry.personName) || { total: 0, h7d: 0 }
+      mem.total += hours
+      if (entry.date >= d7) mem.h7d += hours
+      proj.members.set(entry.personName, mem)
     }
 
     // Build cases per client + link manual DDProjects
@@ -125,11 +146,11 @@ export default function DDProjectenPage() {
     for (const [fullName, data] of Array.from(projectMap.entries())) {
       const cleanName = fullName.includes('/') ? fullName.split('/').slice(1).join('/').trim() : fullName
       const members = Array.from(data.members.entries())
-        .map(([name, hours]) => ({ personName: name, hours: Math.round(hours * 10) / 10 }))
+        .map(([name, m]) => ({ personName: name, hours: Math.round(m.total * 10) / 10, hours7d: Math.round(m.h7d * 10) / 10 }))
         .sort((a, b) => b.hours - a.hours)
-      const totalHours = Math.round(members.reduce((s, m) => s + m.hours, 0) * 10) / 10
+      const totalHours = Math.round(data.totalHours * 10) / 10
+      const hours7d = Math.round(data.hours7d * 10) / 10
 
-      // Check if any manual DDProject matches
       let linkedProject: Project | undefined
       for (const p of projects) {
         if (p.status === 'afgerond') continue
@@ -144,33 +165,41 @@ export default function DDProjectenPage() {
       }
 
       if (!groups.has(data.client)) groups.set(data.client, [])
-      groups.get(data.client)!.push({ projectName: cleanName, fullProjectName: fullName, totalHours, members, linkedProject })
+      groups.get(data.client)!.push({ projectName: cleanName, fullProjectName: fullName, totalHours, hours7d, members, linkedProject })
     }
 
+    // Sort cases: most recently active first (by hours7d desc, then totalHours)
     for (const cases of Array.from(groups.values())) {
-      cases.sort((a, b) => b.totalHours - a.totalHours)
+      cases.sort((a, b) => b.hours7d - a.hours7d || b.totalHours - a.totalHours)
     }
 
-    // Team overview: aggregate per person across all DD work
-    const personMap = new Map<string, number>()
-    for (const [, data] of Array.from(projectMap.entries())) {
-      for (const [name, hours] of Array.from(data.members.entries())) {
-        personMap.set(name, (personMap.get(name) || 0) + hours)
-      }
+    // Team overview: aggregate per person with time buckets
+    const personMap = new Map<string, { total: number; h7d: number; h14d: number }>()
+    for (const entry of workloadData) {
+      const client = DD_CLIENTS.find(c => entry.projectName.toLowerCase().includes(c.toLowerCase()))
+      if (!client) continue
+      const hours = entry.workedHours || entry.billableHours || 0
+      if (hours <= 0) continue
+      const mem = personMap.get(entry.personName) || { total: 0, h7d: 0, h14d: 0 }
+      mem.total += hours
+      if (entry.date >= d7) mem.h7d += hours
+      if (entry.date >= d14) mem.h14d += hours
+      personMap.set(entry.personName, mem)
     }
     const team = Array.from(personMap.entries())
-      .map(([name, hours]) => ({ personName: name, totalHours: Math.round(hours * 10) / 10 }))
-      .sort((a, b) => b.totalHours - a.totalHours)
+      .map(([name, m]) => ({ personName: name, totalHours: Math.round(m.total * 10) / 10, hours7d: Math.round(m.h7d * 10) / 10, hours14d: Math.round(m.h14d * 10) / 10 }))
+      .sort((a, b) => b.hours7d - a.hours7d || b.totalHours - a.totalHours)
 
     // Stats
     const totalHours = Math.round(team.reduce((s, m) => s + m.totalHours, 0) * 10) / 10
+    const totalHours7d = Math.round(team.reduce((s, m) => s + m.hours7d, 0) * 10) / 10
     let totalCases = 0
     for (const cases of Array.from(groups.values())) totalCases += cases.length
 
     // Unmatched manual projects (not linked to any werkdruk case)
     const unmatched = projects.filter(p => !matchedProjectIds.has(p.id) && p.status !== 'afgerond')
 
-    return { clientGroups: groups, teamOverview: team, stats: { totalHours, totalCases, teamCount: team.length }, unmatchedManualProjects: unmatched }
+    return { clientGroups: groups, teamOverview: team, stats: { totalHours, totalHours7d, totalCases, teamCount: team.length }, unmatchedManualProjects: unmatched }
   }, [workloadData, projects])
 
   // ─── CRUD handlers ───
@@ -286,11 +315,18 @@ export default function DDProjectenPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-xl border p-4 transition-colors" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center gap-2 mb-2">
             <Icons.clock size={18} className="text-workx-lime" />
-            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Totaal DD uren</span>
+            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Uren (7 dagen)</span>
+          </div>
+          <p className="text-2xl font-semibold text-workx-lime">{Math.round(stats.totalHours7d).toLocaleString('nl-NL')}</p>
+        </div>
+        <div className="rounded-xl border p-4 transition-colors" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Icons.clock size={18} style={{ color: 'var(--color-text-tertiary)' }} />
+            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Uren (4 weken)</span>
           </div>
           <p className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{Math.round(stats.totalHours).toLocaleString('nl-NL')}</p>
         </div>
@@ -319,8 +355,8 @@ export default function DDProjectenPage() {
           </div>
           <div className="space-y-3">
             {teamOverview.map((member, i) => {
-              const maxHours = teamOverview[0]?.totalHours || 1
-              const barWidth = (member.totalHours / maxHours) * 100
+              const max7d = teamOverview[0]?.hours7d || 1
+              const barWidth = max7d > 0 ? (member.hours7d / max7d) * 100 : 0
               const color = MEMBER_COLORS[i % MEMBER_COLORS.length]
               const photo = getPhotoUrl(member.personName)
               return (
@@ -336,19 +372,32 @@ export default function DDProjectenPage() {
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
                     <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-700`} style={{ width: `${barWidth}%` }} />
                   </div>
-                  <span className="text-sm font-mono tabular-nums w-14 text-right flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>{member.totalHours}u</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-sm font-mono tabular-nums w-12 text-right font-semibold" style={{ color: member.hours7d > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>{member.hours7d}u</span>
+                    <span className="text-[10px] font-mono tabular-nums w-12 text-right" style={{ color: 'var(--color-text-tertiary)' }}>{member.totalHours}u tot</span>
+                  </div>
                 </div>
               )
             })}
           </div>
+          <p className="text-[10px] mt-3" style={{ color: 'var(--color-text-tertiary)' }}>Balk en vetgedrukte uren = afgelopen 7 dagen · &quot;tot&quot; = totaal 4 weken</p>
         </div>
       )}
 
       {/* ─── Per-client sections ─── */}
       {DD_CLIENTS.filter(c => clientGroups.has(c)).map(client => {
         const cases = clientGroups.get(client)!
+        const client7dHours = Math.round(cases.reduce((s, c) => s + c.hours7d, 0) * 10) / 10
         const clientTotalHours = Math.round(cases.reduce((s, c) => s + c.totalHours, 0) * 10) / 10
         const cc = CLIENT_COLORS[client] || CLIENT_COLORS['De Breij']
+
+        // Find max 7d hours across ALL clients for relative bar sizing
+        const allCases = DD_CLIENTS.filter(c => clientGroups.has(c)).flatMap(c => clientGroups.get(c)!)
+        const max7dHours = Math.max(...allCases.map(c => c.hours7d), 1)
+
+        // Split cases by recency
+        const recent7d = cases.filter(c => c.hours7d > 0)
+        const older = cases.filter(c => c.hours7d === 0)
 
         return (
           <div key={client} className="space-y-3">
@@ -357,77 +406,145 @@ export default function DDProjectenPage() {
               <div className={`w-2.5 h-2.5 rounded-full ${cc.dot}`} />
               <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>{client}</h2>
               <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                {cases.length} {cases.length === 1 ? 'zaak' : 'zaken'} · {clientTotalHours} uur
+                {cases.length} {cases.length === 1 ? 'zaak' : 'zaken'} · {client7dHours}u (7d) · {clientTotalHours}u totaal
               </span>
             </div>
 
-            {/* Cases */}
-            <div className="space-y-2">
-              {cases.map((c, i) => {
-                const key = `${client}-${i}`
-                const isExpanded = expandedKey === key
-                return (
-                  <div key={c.fullProjectName} className={`rounded-2xl border overflow-hidden transition-all ${
-                    isExpanded ? `${cc.border} ${cc.bg} shadow-lg` : 'hover:shadow-md'
-                  }`} style={!isExpanded ? { borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' } : undefined}>
-                    <button
-                      onClick={() => setExpandedKey(isExpanded ? null : key)}
-                      className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left group"
-                    >
-                      {/* Rank badge */}
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${cc.bg}`}>
-                        <span className={`text-xs font-bold ${cc.text}`}>{i + 1}</span>
-                      </div>
+            {/* Recent cases (7 days) */}
+            {recent7d.length > 0 && (
+              <div className="space-y-2">
+                {recent7d.map((c, i) => {
+                  const key = `${client}-${i}`
+                  const isExpanded = expandedKey === key
+                  const activityBar = (c.hours7d / max7dHours) * 100
+                  return (
+                    <div key={c.fullProjectName} className={`rounded-2xl border overflow-hidden transition-all ${
+                      isExpanded ? `${cc.border} ${cc.bg} shadow-lg` : 'hover:shadow-md'
+                    }`} style={!isExpanded ? { borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' } : undefined}>
+                      <button
+                        onClick={() => setExpandedKey(isExpanded ? null : key)}
+                        className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left group"
+                      >
+                        {/* Rank badge */}
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${cc.bg}`}>
+                          <span className={`text-xs font-bold ${cc.text}`}>{i + 1}</span>
+                        </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-[13px] font-semibold tracking-tight truncate" style={{ color: 'var(--color-text-primary)' }}>{c.projectName}</span>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums ${cc.bg} ${cc.text}`}>{c.totalHours}u</span>
-                            <div className="flex items-center gap-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                              <Icons.users size={12} />
-                              <span className="text-xs">{c.members.length}</span>
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-[13px] font-semibold tracking-tight truncate" style={{ color: 'var(--color-text-primary)' }}>{c.projectName}</span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold tabular-nums ${cc.bg} ${cc.text}`}>{c.hours7d}u 7d</span>
+                              <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--color-text-tertiary)' }}>{c.totalHours}u tot</span>
+                              <div className="flex items-center gap-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                                <Icons.users size={12} />
+                                <span className="text-xs">{c.members.length}</span>
+                              </div>
                             </div>
                           </div>
+                          {/* Activity bar: shows relative intensity vs other DD projects (7d) */}
+                          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
+                            <div className={`h-full rounded-full bg-gradient-to-r from-workx-lime to-workx-lime/60 transition-all duration-700`} style={{ width: `${activityBar}%` }} />
+                          </div>
                         </div>
-                      </div>
 
-                      <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
-                        <Icons.chevronDown size={16} style={{ color: 'var(--color-text-tertiary)' }} />
-                      </div>
-                    </button>
+                        <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
+                          <Icons.chevronDown size={16} style={{ color: 'var(--color-text-tertiary)' }} />
+                        </div>
+                      </button>
 
-                    {isExpanded && (
-                      <div className="px-4 pb-4 pt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
-                        <div className="ml-[46px] space-y-2">
-                          {c.members.map((m, mi) => {
-                            const memberBarWidth = c.totalHours > 0 ? (m.hours / c.totalHours) * 100 : 0
-                            const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
-                            const photo = getPhotoUrl(m.personName)
-                            return (
-                              <div key={m.personName} className="flex items-center gap-3">
-                                {photo ? (
-                                  <Image src={photo} alt={m.personName} width={28} height={28} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
-                                ) : (
-                                  <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                                    <span className="text-[11px] font-medium text-white">{m.personName.charAt(0)}</span>
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                          <div className="ml-[46px] space-y-2">
+                            {c.members.map((m, mi) => {
+                              const memberBarWidth = c.totalHours > 0 ? (m.hours / c.totalHours) * 100 : 0
+                              const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
+                              const photo = getPhotoUrl(m.personName)
+                              return (
+                                <div key={m.personName} className="flex items-center gap-3">
+                                  {photo ? (
+                                    <Image src={photo} alt={m.personName} width={28} height={28} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
+                                  ) : (
+                                    <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                                      <span className="text-[11px] font-medium text-white">{m.personName.charAt(0)}</span>
+                                    </div>
+                                  )}
+                                  <span className="text-sm w-36 truncate flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>{m.personName}</span>
+                                  <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
+                                    <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-500`} style={{ width: `${memberBarWidth}%` }} />
                                   </div>
-                                )}
-                                <span className="text-sm w-36 truncate flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>{m.personName}</span>
-                                <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
-                                  <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-500`} style={{ width: `${memberBarWidth}%` }} />
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    <span className="text-xs font-mono w-10 text-right font-semibold" style={{ color: m.hours7d > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>{m.hours7d}u</span>
+                                    <span className="text-[10px] font-mono w-10 text-right" style={{ color: 'var(--color-text-tertiary)' }}>{m.hours}u</span>
+                                  </div>
                                 </div>
-                                <span className="text-xs font-mono w-10 text-right flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }}>{m.hours}u</span>
-                              </div>
-                            )
-                          })}
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
                     )}
                   </div>
                 )
               })}
             </div>
+            )}
+
+            {/* Older cases (no hours in 7 days, but hours in 4 weeks) */}
+            {older.length > 0 && (
+              <div className="space-y-2">
+                {recent7d.length > 0 && (
+                  <p className="text-[10px] uppercase tracking-wider font-medium mt-2" style={{ color: 'var(--color-text-tertiary)' }}>Eerder (geen uren afgelopen 7 dagen)</p>
+                )}
+                {older.map((c, i) => {
+                  const key = `${client}-older-${i}`
+                  const isExpanded = expandedKey === key
+                  return (
+                    <div key={c.fullProjectName} className="rounded-2xl border overflow-hidden transition-all opacity-60 hover:opacity-80" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                      <button
+                        onClick={() => setExpandedKey(isExpanded ? null : key)}
+                        className="w-full flex items-center gap-3.5 px-4 py-3 text-left"
+                      >
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-bg-tertiary)' }}>
+                          <Icons.briefcase size={12} style={{ color: 'var(--color-text-tertiary)' }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>{c.projectName}</span>
+                            <span className="text-[10px] font-mono tabular-nums flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }}>{c.totalHours}u</span>
+                          </div>
+                        </div>
+                        <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
+                          <Icons.chevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                        </div>
+                      </button>
+                      {isExpanded && (
+                        <div className="px-4 pb-3 pt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                          <div className="ml-[38px] space-y-1.5">
+                            {c.members.map((m, mi) => {
+                              const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
+                              const photo = getPhotoUrl(m.personName)
+                              return (
+                                <div key={m.personName} className="flex items-center gap-2">
+                                  {photo ? (
+                                    <Image src={photo} alt={m.personName} width={22} height={22} className="w-[22px] h-[22px] rounded object-cover flex-shrink-0" />
+                                  ) : (
+                                    <div className={`w-[22px] h-[22px] rounded bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                                      <span className="text-[9px] font-medium text-white">{m.personName.charAt(0)}</span>
+                                    </div>
+                                  )}
+                                  <span className="text-xs flex-1 truncate" style={{ color: 'var(--color-text-tertiary)' }}>{m.personName}</span>
+                                  <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-tertiary)' }}>{m.hours}u</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )
       })}

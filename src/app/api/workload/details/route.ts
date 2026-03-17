@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     select: {
       personName: true,
       projectName: true,
+      date: true,
       billableHours: true,
       workedHours: true,
     },
