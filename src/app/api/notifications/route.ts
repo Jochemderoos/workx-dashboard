@@ -311,6 +311,50 @@ export async function GET() {
       }
     }
 
+    // 10. Light mode aankondiging — eenmalig voor iedereen
+    {
+      const key = 'light-mode-2026'
+      if (!dismissedKeys.has(key)) {
+        notifications.push({
+          id: key,
+          type: 'system',
+          title: '☀️ Light Mode beschikbaar!',
+          message: 'Het dashboard heeft nu een licht thema. Schakel het in via de toggle onderaan de sidebar.',
+          createdAt: new Date('2026-03-17'),
+          read: false,
+          href: '/dashboard',
+        })
+      }
+    }
+
+    // 11. Dagelijkse AI Assistent tip — roteert door features
+    {
+      const aiTips = [
+        { key: 'ai-tip-claude-only', title: '💡 AI Tip: Claude-only', message: 'Gebruik de paarse knop naast het invoerveld voor snelle vragen zonder bronnen — ideaal voor vertalingen, e-mails en samenvattingen.', href: '/dashboard/ai' },
+        { key: 'ai-tip-hulp-nodig', title: '💡 AI Tip: Hulp Nodig?', message: 'Klik op "Hulp Nodig?" in de AI Assistent voor uitleg over alle functies, bronnen en slimme opties.', href: '/dashboard/ai' },
+        { key: 'ai-tip-documenten', title: '💡 AI Tip: Documenten', message: 'Upload arbeidsovereenkomsten, CAOs of brieven via het paperclip-icoon. De AI analyseert ze direct.', href: '/dashboard/ai' },
+        { key: 'ai-tip-projecten', title: '💡 AI Tip: Projecten', message: 'Maak AI-projecten aan om documenten en gesprekken per zaak te organiseren. Delen met collega\'s kan ook.', href: '/dashboard/ai' },
+        { key: 'ai-tip-bronnen', title: '💡 AI Tip: Kennisbronnen', message: 'De AI doorzoekt automatisch Tekst & Commentaar, VAan en andere juridische bronnen bij arbeidsrechtvragen.', href: '/dashboard/ai' },
+        { key: 'ai-tip-opties', title: '💡 AI Tip: Antwoordopties', message: 'Gebruik de opties boven het invoerveld: "Kort" voor bondig advies, "Uitgebreid" voor juridische memo\'s, "Vergelijk" voor voor/tegen analyses.', href: '/dashboard/ai' },
+        { key: 'ai-tip-rechtspraak', title: '💡 AI Tip: Rechtspraak', message: 'Schakel "Rechtspraak.nl" in bij het invoerveld om actuele jurisprudentie mee te zoeken bij je vraag.', href: '/dashboard/ai' },
+      ]
+      // Show one tip per day based on day-of-year, only if not yet dismissed
+      const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / (24 * 60 * 60 * 1000))
+      const tipIndex = dayOfYear % aiTips.length
+      const tip = aiTips[tipIndex]
+      if (!dismissedKeys.has(tip.key)) {
+        notifications.push({
+          id: tip.key,
+          type: 'system',
+          title: tip.title,
+          message: tip.message,
+          createdAt: now,
+          read: false,
+          href: tip.href,
+        })
+      }
+    }
+
     // Sort by createdAt (newest first)
     notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 

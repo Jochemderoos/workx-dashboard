@@ -200,44 +200,20 @@ function estimatePdfBlockTokens(base64Len: number): number {
   return estimatedPages * 2000 // ~2000 tokens/page average (conservative but realistic)
 }
 
-const SYSTEM_PROMPT = `# REGEL 1 — LEES DIT ALLEREERST — STEL VRAGEN VOOR JE ANTWOORD GEEFT
+const SYSTEM_PROMPT = `# REGEL 1 — GEEF DIRECT ANTWOORD
 
-Bij ELKE open casusvraag, strategievraag of vraag waarbij feiten ontbreken:
-GEEF NIET DIRECT EEN ANTWOORD. Stel EERST 3-5 gerichte vragen en WACHT op het antwoord van de gebruiker.
+GEEF ALTIJD DIRECT EEN INHOUDELIJK ANTWOORD op de vraag van de gebruiker. Stel NIET eerst vragen.
 
-WANNEER MOET JE VRAGEN STELLEN (altijd bij):
-- Casusvragen: "Een werknemer heeft...", "Mijn cliënt wil...", "Hoe zit het met..."
-- Strategievragen: "Wat zijn de mogelijkheden?", "Wat raad je aan?"
-- Ontbrekende feiten die juridisch relevant zijn
+Als je voor een volledig advies aanvullende informatie nodig hebt:
+1. Geef EERST je beste antwoord op basis van de beschikbare informatie
+2. Vermeld daarna KORT (1-2 regels) welke informatie het advies zou kunnen verfijnen
+3. Gebruik een korte alinea onderaan, bijv.: "💡 Voor een preciezer advies zou ik nog willen weten: [korte opsomming]"
 
-WELKE VRAGEN STEL JE — METHODOLOGIE:
-Denk na als een ervaren advocaat die een intake doet. Stel jezelf de vraag: "Welke informatie zou, als ik die WEL of NIET heb, tot een FUNDAMENTEEL ANDER advies leiden?" Stel vragen over DIE informatie. Dit zijn altijd 3 categorieën:
+NOOIT een heel bericht met alleen maar vragen sturen. De gebruiker verwacht een direct antwoord.
 
-**Categorie 1: De feiten die het juridisch oordeel bepalen**
-Elke zaak heeft 3-5 kernfeiten die het verschil maken. Voorbeelden per onderwerp:
-- Ontslag: duur dienstverband, dossieropbouw, CAO, eerdere waarschuwingen, functioneringsgesprekken
-- Grensoverschrijdend gedrag: wat is er precies gezegd/gedaan, getuigen/bewijs, hoor en wederhoor, eerdere incidenten
-- Ziekte: duur ziekte, plan van aanpak, standpunt bedrijfsarts, re-integratie-inspanningen
-- VSO: wie nam initiatief, is er al onderhandeld, loopt er een procedure
-- Concurrentiebeding: bepaalde/onbepaalde tijd, schriftelijke motivering, belang werkgever vs. werknemer
-
-**Categorie 2: Intern beleid en procedures (ALTIJD vragen)**
-Bij ELKE casusvraag: vraag of er relevant intern beleid, protocol of reglement is. Dit is VAAK doorslaggevend bij de rechterlijke toetsing. Voorbeelden:
-- Gedragscode, integriteitscode, beleid ongewenste omgangsvormen
-- Sanctiebeleid, verzuimprotocol, re-integratiebeleid
-- Klokkenluidersregeling, vertrouwenspersoon, klachtencommissie
-- Personeelshandboek, arbeidsvoorwaardenreglement
-- Is het beleid aan betrokkene bekend gemaakt? Heeft het bedrijf eerder op basis hiervan gehandhaafd?
-
-**Categorie 3: Context en format**
-- "Wil je een kort praktisch advies, een uitgebreid juridisch memo, of een concept-brief/e-mail?"
-- "Heb je relevante documenten die ik kan bekijken? (arbeidsovereenkomst, waarschuwingen, gespreksverslagen, medische stukken, correspondentie) — je kunt ze uploaden via de paperclip."
-
-WANNEER GEEN VRAGEN (direct antwoord):
-- Feitelijke vragen: "Wat is de opzegtermijn bij 8 dienstjaren?" → direct antwoord
-- Vervolgvragen in een lopend gesprek (context is al duidelijk)
-- Berekeningen: transitievergoeding, termijnen
-- Expliciet verzoek: "Geef direct antwoord"
+UITZONDERINGEN waarbij je WEL eerst mag vragen (maximaal 2-3 vragen):
+- De vraag is zó vaag dat je werkelijk niet kunt bepalen welk rechtsgebied het betreft
+- De gebruiker vraagt expliciet: "Welke vragen moet ik stellen?" of "Wat heb je nodig?"
 
 ANTWOORDLENGTE — MINDER IS MEER:
 - Standaard: 300-600 woorden, ALLEEN het kernadvies
@@ -843,7 +819,10 @@ Antwoord altijd in het Nederlands tenzij de gebruiker een andere taal vraagt (bi
               },
               select: { id: true, name: true, fileType: true, fileSize: true, content: true },
             })
-            console.log(`[chat] Attached docs found: ${docs.length} (requested: ${documentIds.length})`)
+            console.log(`[chat] Attached docs found: ${docs.length} (requested: ${documentIds.length}, ids: ${documentIds.join(',')}, userId: ${userId})`)
+            if (docs.length === 0 && documentIds.length > 0) {
+              docLoadErrors.push(`DB lookup returned 0 docs for ${documentIds.length} IDs (userId: ${userId.slice(0, 8)}...)`)
+            }
             for (const doc of docs) {
               allDocs.push({ doc, prefix: 'Document: ', isAttached: true })
             }
@@ -1502,9 +1481,9 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
     const isFirstMessage = history.length <= 1
     const hasDocumentAttachments = documentBlocks.length > 0 || (documentIds?.length ?? 0) > 0
 
-    // When documents were requested but failed to load: tell Claude explicitly, don't let it hallucinate
+    // When documents were requested but failed to load: warn Claude but still let it try to help
     if (hasDocumentAttachments && documentBlocks.length === 0 && documentContext.length < 100) {
-      const failNote = `[SYSTEEM: De gebruiker heeft ${documentIds?.length || 0} document(en) bijgevoegd, maar deze konden niet geladen worden (technisch probleem). Meld dit aan de gebruiker en vraag om de pagina te verversen (Ctrl+Shift+R) en het opnieuw te proberen. Geef GEEN inhoudelijk antwoord op basis van aannames — je hebt de documenten NIET gezien.]`
+      const failNote = `[SYSTEEM: De gebruiker heeft ${documentIds?.length || 0} document(en) bijgevoegd, maar deze konden niet volledig geladen worden. ${docLoadErrors.length > 0 ? `Fouten: ${docLoadErrors.join('; ').slice(0, 200)}` : 'Mogelijk zijn de bestanden nog niet verwerkt of is er een tijdelijk probleem.'} Meld dit kort aan de gebruiker (vraag om de pagina te verversen met Ctrl+Shift+R en opnieuw te proberen), maar probeer de vraag WEL te beantwoorden op basis van de overige informatie die je hebt. Als de gebruiker specifiek naar de inhoud van een document vraagt dat je niet kunt zien, geef dat dan eerlijk aan.]`
       if (msgs.length > 0) {
         const lastMsg = msgs[msgs.length - 1]
         if (lastMsg && lastMsg.role === 'user') {
@@ -1515,22 +1494,8 @@ Gebruik NOOIT emoji's, iconen of unicode-symbolen in je antwoord. Geen ⚠️, �
       }
     }
 
-    if (isFirstMessage && !hasDocumentAttachments && msgs.length > 0) {
-      const lastMsg = msgs[msgs.length - 1]
-      if (lastMsg && lastMsg.role === 'user') {
-        const questionInstruction = `[SYSTEEM: Dit is het EERSTE bericht in dit gesprek. REAGEER MET 3-5 GERICHTE VRAGEN — geef GEEN inhoudelijk antwoord. Stel vragen om de casus te begrijpen: de relevante feiten, of er intern beleid/gedragscode/protocol is dat van toepassing is, vraag naar het gewenste antwoordformat, en vraag of er relevante documenten zijn. UITZONDERING: alleen bij puur feitelijke vragen over termijnen, bedragen of berekeningen mag je direct antwoorden.]\n\n`
-        if (typeof lastMsg.content === 'string') {
-          lastMsg.content = questionInstruction + lastMsg.content
-        } else if (Array.isArray(lastMsg.content)) {
-          for (const block of lastMsg.content) {
-            if (block.type === 'text') {
-              block.text = questionInstruction + block.text
-              break
-            }
-          }
-        }
-      }
-    }
+    // First message hint: remind Claude to answer directly (no more forced questions)
+    // Only add a gentle nudge, not a blocking instruction
 
     // Context window protection: estimate tokens and trim if needed
     const MAX_CONTEXT = 170000 // Leave buffer from 200K limit

@@ -17,17 +17,16 @@ interface SidebarProps {
   }
 }
 
-// Official Workx logo
+// Official Workx logo — SVG for crisp rendering on all backgrounds
 function WorkxLogoBox() {
   return (
-    <Image
-      src="/workx-logo.png"
+    <img
+      src="/workx-logo.svg"
       alt="Workx Advocaten"
       width={180}
       height={56}
       className="h-14 w-auto"
       draggable={false}
-      priority
     />
   )
 }
@@ -41,6 +40,7 @@ const mainMenuItems = [
   { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', iconAnim: 'icon-graduation-hover' },
   { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', iconAnim: 'icon-file-hover' },
+  { href: '/dashboard/werkstudent', icon: Icons.clipboard, label: 'Werkstudent', iconAnim: 'icon-file-hover' },
   { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', iconAnim: 'icon-target-hover', hideForExternal: true },
   { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover', hideForExternal: true },
 ]
@@ -53,6 +53,7 @@ const partnersMenuItems = [
   { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', iconAnim: 'icon-user-hover' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover' },
+  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', iconAnim: 'icon-briefcase-hover' },
 ]
 
 const toolsMenuItems = [

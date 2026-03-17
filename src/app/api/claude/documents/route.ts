@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 export const maxDuration = 60
 
 const MAX_FILE_SIZE = 32 * 1024 * 1024 // 32MB (Claude ondersteunt PDFs tot 32MB)
-const ALLOWED_TYPES = ['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp']
+const ALLOWED_TYPES = ['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp', 'xlsx', 'xls']
 // PDFs over this size AND scanned get auto-split into pages.
 // Native PDF document blocks work up to ~5MB (7MB base64), so only split larger files.
 const AUTO_SPLIT_THRESHOLD = 5 * 1024 * 1024 // 5MB
@@ -126,6 +126,13 @@ export async function POST(req: NextRequest) {
       textContent = await extractTextFromDocx(buffer)
     } catch {
       textContent = '[DOCX tekst kon niet worden geëxtraheerd]'
+    }
+  } else if (extension === 'xlsx' || extension === 'xls') {
+    // For Excel: extract all sheets as text/CSV
+    try {
+      textContent = extractTextFromExcel(buffer, file.name)
+    } catch {
+      textContent = '[Excel bestand kon niet worden gelezen]'
     }
   } else if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
     // For images: no text extraction needed, Claude will analyze the image directly
@@ -349,4 +356,25 @@ async function autoSplitPdf(
   }
 
   return createdDocs
+}
+
+/** Extract text from Excel (XLSX/XLS) using SheetJS */
+function extractTextFromExcel(buffer: Buffer, fileName: string): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const XLSX = require('xlsx')
+  const workbook = XLSX.read(buffer, { type: 'buffer' })
+  const parts: string[] = [`--- Excel: ${fileName} ---\n`]
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName]
+    // Convert to CSV for maximum readability by Claude
+    const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false })
+    if (csv.trim()) {
+      parts.push(`\n## Tabblad: ${sheetName}\n`)
+      parts.push(csv)
+    }
+  }
+
+  const result = parts.join('\n').trim()
+  return result || '[Geen data gevonden in Excel bestand]'
 }

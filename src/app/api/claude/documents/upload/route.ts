@@ -98,6 +98,24 @@ export async function POST(req: NextRequest) {
       } catch {
         textContent = '[DOCX tekst kon niet worden geëxtraheerd]'
       }
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const XLSX = require('xlsx')
+        const workbook = XLSX.read(buffer, { type: 'buffer' })
+        const parts: string[] = [`--- Excel: ${meta.fileName} ---\n`]
+        for (const sheetName of workbook.SheetNames) {
+          const sheet = workbook.Sheets[sheetName]
+          const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false })
+          if (csv.trim()) {
+            parts.push(`\n## Tabblad: ${sheetName}\n`)
+            parts.push(csv)
+          }
+        }
+        textContent = parts.join('\n').trim() || '[Geen data gevonden in Excel bestand]'
+      } catch {
+        textContent = '[Excel bestand kon niet worden gelezen]'
+      }
     } else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
       textContent = `[Afbeelding: ${meta.fileName}]`
     }

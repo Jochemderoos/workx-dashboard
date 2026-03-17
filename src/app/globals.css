@@ -92,65 +92,68 @@
 
 /* ==================== LIGHT MODE ==================== */
 [data-theme="light"] {
-  --color-bg-primary: #f5f5f3;
+  /* Silicon Valley aesthetic — clean whites, warm grays, subtle color glow */
+  --color-bg-primary: #f7f7f5;
   --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #eeeeec;
-  --color-bg-card: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 248, 0.98) 100%);
-  --color-bg-card-hover: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(252, 252, 250, 1) 100%);
-  --color-bg-input: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 248, 246, 0.98) 100%);
-  --color-bg-input-hover: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 250, 248, 1) 100%);
-  --color-bg-input-focus: linear-gradient(135deg, #ffffff 0%, #fafaf8 100%);
-  --color-bg-glass: rgba(255, 255, 255, 0.7);
-  --color-bg-glass-hover: rgba(255, 255, 255, 0.85);
-  --color-bg-nav-hover: rgba(0, 0, 0, 0.04);
-  --color-bg-sidebar: linear-gradient(to bottom, #ffffff, #fafaf8);
-  --color-bg-topbar: rgba(255, 255, 255, 0.95);
+  --color-bg-tertiary: #f0f0ee;
+  --color-bg-card: linear-gradient(145deg, #ffffff 0%, #fafaf8 100%);
+  --color-bg-card-hover: linear-gradient(145deg, #ffffff 0%, #f8f8f6 100%);
+  --color-bg-input: linear-gradient(145deg, #ffffff 0%, #fafaf8 100%);
+  --color-bg-input-hover: linear-gradient(145deg, #ffffff 0%, #f7f7f5 100%);
+  --color-bg-input-focus: linear-gradient(145deg, #ffffff 0%, #fefefe 100%);
+  --color-bg-glass: rgba(255, 255, 255, 0.75);
+  --color-bg-glass-hover: rgba(255, 255, 255, 0.9);
+  --color-bg-nav-hover: rgba(0, 0, 0, 0.035);
+  --color-bg-sidebar: linear-gradient(180deg, #ffffff 0%, #f9f9f7 50%, #f5f5f3 100%);
+  --color-bg-topbar: rgba(255, 255, 255, 0.92);
   --color-bg-dropdown: #ffffff;
-  --color-bg-modal: rgba(0, 0, 0, 0.3);
+  --color-bg-modal: rgba(0, 0, 0, 0.25);
 
   --color-text-primary: #1a1a1a;
-  --color-text-secondary: #555555;
-  --color-text-tertiary: #888888;
-  --color-text-muted: #aaaaaa;
+  --color-text-secondary: #4a4a4a;
+  --color-text-tertiary: #7a7a7a;
+  --color-text-muted: #a0a0a0;
   --color-text-on-lime: #1e1e1e;
 
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-border-subtle: rgba(0, 0, 0, 0.06);
-  --color-border-hover: rgba(180, 180, 0, 0.4);
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-subtle: rgba(0, 0, 0, 0.05);
+  --color-border-hover: rgba(180, 185, 50, 0.5);
 
-  --color-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.1);
-  --color-shadow-card-glow: 0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 12px 40px -8px rgba(0, 0, 0, 0.12);
-  --color-shadow-input: 0 1px 4px rgba(0, 0, 0, 0.06);
+  /* Soft glowing shadows — silicon valley depth */
+  --color-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 12px 28px -6px rgba(0, 0, 0, 0.08);
+  --color-shadow-card-glow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 0 48px -12px rgba(180, 185, 50, 0.12);
+  --color-shadow-input: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
 
   --color-scrollbar-track: rgba(0, 0, 0, 0.02);
-  --color-scrollbar-thumb: linear-gradient(180deg, #cccccc, #bbbbbb);
+  --color-scrollbar-thumb: linear-gradient(180deg, #d0d0d0, #c0c0c0);
 
-  --color-badge-bg: linear-gradient(135deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.03) 100%);
-  --color-badge-border: rgba(0, 0, 0, 0.1);
+  --color-badge-bg: linear-gradient(145deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.02) 100%);
+  --color-badge-border: rgba(0, 0, 0, 0.08);
 
   --color-autofill-bg: #ffffff;
   --color-autofill-text: #1a1a1a;
 
-  --color-selection-bg: rgba(200, 205, 60, 0.3);
+  --color-selection-bg: rgba(200, 205, 60, 0.25);
   --color-selection-text: #1a1a1a;
 
   --color-focus-ring-inner: rgba(255, 255, 255, 1);
-  --color-focus-ring-outer: rgba(180, 185, 50, 0.5);
+  --color-focus-ring-outer: rgba(180, 185, 50, 0.6);
 
-  --color-liquid-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.7) 100%);
-  --color-liquid-glass-border: rgba(0, 0, 0, 0.08);
-  --color-liquid-glass-sm-bg: rgba(255, 255, 255, 0.7);
-  --color-liquid-glass-sm-border: rgba(0, 0, 0, 0.06);
+  /* Frosted glass — refined light mode */
+  --color-liquid-glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.65) 50%, rgba(255, 255, 255, 0.75) 100%);
+  --color-liquid-glass-border: rgba(0, 0, 0, 0.06);
+  --color-liquid-glass-sm-bg: rgba(255, 255, 255, 0.75);
+  --color-liquid-glass-sm-border: rgba(0, 0, 0, 0.05);
 
-  --color-divider: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1), transparent);
-  --color-progress-track: rgba(0, 0, 0, 0.08);
+  --color-divider: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
+  --color-progress-track: rgba(0, 0, 0, 0.06);
 
-  --color-table-header-text: rgba(0, 0, 0, 0.5);
-  --color-table-border: rgba(0, 0, 0, 0.06);
-  --color-table-row-hover: rgba(0, 0, 0, 0.02);
+  --color-table-header-text: #7a7a7a;
+  --color-table-border: rgba(0, 0, 0, 0.05);
+  --color-table-row-hover: rgba(180, 185, 50, 0.04);
 
-  --color-checkbox-border: rgba(0, 0, 0, 0.2);
-  --color-radio-border: rgba(0, 0, 0, 0.2);
+  --color-checkbox-border: rgba(0, 0, 0, 0.18);
+  --color-radio-border: rgba(0, 0, 0, 0.18);
 
   --color-select-option-bg: #ffffff;
   --color-select-option-text: #1a1a1a;
@@ -161,9 +164,6 @@
   --pand-filter: brightness(0.2);
   --calendar-picker-filter: opacity(0.4);
   --calendar-picker-hover-filter: opacity(1);
-
-  --color-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.1);
-  --color-shadow-card-glow: 0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 12px 40px -8px rgba(0, 0, 0, 0.12);
 
   color-scheme: light;
 }
@@ -5463,4 +5463,63 @@ textarea::-webkit-scrollbar-thumb:hover {
 /* ---- 49. DROP SHADOW FILTERS: softer in light ---- */
 [data-theme="light"] [class*="drop-shadow-\["] {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.06));
+}
+
+/* ---- 50. SILICON VALLEY LIGHT MODE ENHANCEMENTS ---- */
+/* Subtle lime glow on cards and interactive elements */
+[data-theme="light"] .card:hover,
+[data-theme="light"] .stat-card:hover {
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 0 32px -8px rgba(180, 185, 50, 0.1);
+}
+
+/* Nav link active state: warm glow */
+[data-theme="light"] .nav-link.active {
+  box-shadow: 0 0 20px -4px rgba(180, 185, 50, 0.15);
+}
+
+/* Sidebar subtle gradient border accent */
+[data-theme="light"] aside {
+  border-right-color: rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 4px 0 24px -8px rgba(0, 0, 0, 0.04);
+}
+
+/* Input fields: subtle inset shadow + focus glow */
+[data-theme="light"] .input-field:focus-within,
+[data-theme="light"] textarea:focus {
+  box-shadow: 0 0 0 3px rgba(180, 185, 50, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Table rows: warm hover glow */
+[data-theme="light"] .table-premium tbody tr:hover {
+  background: rgba(180, 185, 50, 0.04);
+}
+
+/* Badge lime: refined for light */
+[data-theme="light"] .badge-lime {
+  background: linear-gradient(145deg, rgba(180, 185, 50, 0.12), rgba(180, 185, 50, 0.08));
+  border-color: rgba(180, 185, 50, 0.25);
+  color: #5c6108;
+}
+
+/* Buttons: refined shadows */
+[data-theme="light"] .btn-primary {
+  box-shadow: 0 2px 8px -2px rgba(180, 185, 50, 0.3), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .btn-primary:hover {
+  box-shadow: 0 4px 16px -2px rgba(180, 185, 50, 0.4), 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Send button glow */
+[data-theme="light"] .send-btn:not(:disabled) {
+  box-shadow: 0 2px 12px -2px rgba(180, 185, 50, 0.35), 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .send-btn:not(:disabled):hover {
+  box-shadow: 0 4px 20px -2px rgba(180, 185, 50, 0.45), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Topbar: frosted glass + subtle bottom border glow */
+[data-theme="light"] .topbar {
+  backdrop-filter: blur(20px) saturate(1.2);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }

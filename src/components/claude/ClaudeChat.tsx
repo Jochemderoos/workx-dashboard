@@ -90,8 +90,8 @@ export default function ClaudeChat({
   const [thinkingExpanded, setThinkingExpanded] = useState(true)
   const [anonymize, setAnonymize] = useState(false)
   const [selectedModel, setSelectedModel] = useState<'sonnet' | 'opus'>('sonnet')
-  const [useKnowledgeSources, setUseKnowledgeSources] = useState(true)
-  const [useRechtspraak, setUseRechtspraak] = useState(false) // Default OFF — knowledge sources are primary
+  const [useKnowledgeSources, setUseKnowledgeSources] = useState(false) // Default OFF — Claude-only is default
+  const [useRechtspraak, setUseRechtspraak] = useState(false) // Default OFF
   const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set())
   const [annotatingId, setAnnotatingId] = useState<string | null>(null)
   const [annotationText, setAnnotationText] = useState('')
@@ -224,7 +224,9 @@ export default function ClaudeChat({
     setConvId(null)
     setInput('')
     setAttachedDocs([])
-    setActiveOptions(new Set(['kort']))
+    setActiveOptions(new Set(['kort', 'nl']))
+    setUseKnowledgeSources(false) // Reset to Claude-only default
+    setUseRechtspraak(false)
     setOptionsExpanded(true) // Re-expand options for new chat
     onNewChat?.()
   }
@@ -301,8 +303,8 @@ export default function ClaudeChat({
     // Validate all files first
     for (const file of filesToUpload) {
       const ext = file.name.split('.').pop()?.toLowerCase() || ''
-      if (!['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
-        toast.error(`Bestandstype .${ext} niet ondersteund. Toegestaan: pdf, docx, txt, md, png, jpg`)
+      if (!['pdf', 'docx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp', 'xlsx', 'xls'].includes(ext)) {
+        toast.error(`Bestandstype .${ext} niet ondersteund. Toegestaan: pdf, docx, xlsx, txt, md, png, jpg`)
         return
       }
       const maxSize = ext === 'pdf' ? 32 * 1024 * 1024 : 10 * 1024 * 1024
@@ -1044,7 +1046,7 @@ ${markdownHtml}
       setOptionsExpanded(false) // Collapse options to maximize answer space
       setStreamingMsgId(assistantMsgId) // Mark which message is streaming
 
-      // Start throttled markdown rendering interval (80ms — smooth incremental rendering)
+      // Start throttled markdown rendering interval (40ms — smooth, fast streaming)
       streamBufferRef.current = ''
       setStreamingContent('')
       streamIntervalRef.current = setInterval(() => {
@@ -1052,7 +1054,7 @@ ${markdownHtml}
           setStreamingContent(streamBufferRef.current)
           messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
         }
-      }, 80)
+      }, 40)
 
       // Add empty assistant message placeholder
       setMessages(prev => [...prev, {
@@ -1432,10 +1434,17 @@ ${markdownHtml}
     }
   }
 
+  // Smart send: Claude-only when no sources active, full search when sources are on
+  const hasSourcesActive = useKnowledgeSources || useRechtspraak
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      sendMessage()
+      if (hasSourcesActive) {
+        sendMessage() // Full search with sources
+      } else {
+        sendMessage(undefined, { claudeOnly: true }) // Claude-only (fast)
+      }
     }
   }
 
@@ -1445,7 +1454,7 @@ ${markdownHtml}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
+        accept=".pdf,.docx,.xlsx,.xls,.txt,.md,.png,.jpg,.jpeg,.webp"
         onChange={handleFileAttach}
         multiple
         className="hidden"
@@ -2341,7 +2350,7 @@ ${markdownHtml}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading || isUploading}
-              title="Bestanden bijvoegen (PDF, DOCX, TXT, afbeeldingen)"
+              title="Bestanden bijvoegen (PDF, DOCX, Excel, TXT, afbeeldingen)"
               className="attach-btn flex-shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed transition-all"
               style={{ background: 'var(--color-bg-glass)', borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
             >
@@ -2369,22 +2378,7 @@ ${markdownHtml}
                 style={{ maxHeight: '200px', background: 'var(--color-bg-secondary)', border: '1.5px solid var(--color-border)', color: 'var(--color-text-primary)' }}
               />
             </div>
-            {/* Claude-only send button — prominent purple */}
-            <div className="relative group/claude">
-              <button
-                onClick={() => sendMessage(undefined, { claudeOnly: true })}
-                disabled={!input.trim() || isLoading}
-                className="claude-only-btn flex-shrink-0 h-10 px-3 rounded-xl bg-purple-500/20 border-2 border-purple-500/40 text-purple-400 flex items-center justify-center gap-1.5 hover:bg-purple-500/30 hover:border-purple-500/60 hover:shadow-lg hover:shadow-purple-500/10 disabled:opacity-20 transition-all font-medium"
-              >
-                <Icons.sparkles size={15} />
-                <span className="text-xs hidden sm:inline">Claude</span>
-              </button>
-              {/* Hover tooltip */}
-              <div className="absolute bottom-full right-0 mb-2 hidden group-hover/claude:block pointer-events-none w-52 p-2.5 rounded-xl shadow-xl" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-                <p className="text-xs font-medium text-purple-500">Claude-only</p>
-                <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Zonder juridische bronnen. Voor vertalingen en algemene vragen.</p>
-              </div>
-            </div>
+            {/* Smart send buttons: Claude-only is default, W button activates when sources are on */}
             {isLoading ? (
               <button
                 onClick={stopGeneration}
@@ -2393,14 +2387,66 @@ ${markdownHtml}
               >
                 <div className="w-3.5 h-3.5 rounded-sm bg-white" />
               </button>
+            ) : hasSourcesActive ? (
+              <>
+                {/* W button = primary when sources active */}
+                <div className="relative group/wsend">
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={!input.trim()}
+                    className="send-btn flex-shrink-0 h-10 px-3.5 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center gap-1.5 disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/20 font-bold text-sm"
+                  >
+                    W
+                    <Icons.send size={15} />
+                  </button>
+                  <div className="absolute bottom-full right-0 mb-2 hidden group-hover/wsend:block pointer-events-none w-56 p-2.5 rounded-xl shadow-xl z-50" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+                    <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Workx Zoeken</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Zoekt met je gekozen opties (bronnen, rechtspraak). Uitgebreider maar duurt langer.</p>
+                  </div>
+                </div>
+                {/* Claude-only = secondary when sources active */}
+                <div className="relative group/claude">
+                  <button
+                    onClick={() => sendMessage(undefined, { claudeOnly: true })}
+                    disabled={!input.trim()}
+                    className="flex-shrink-0 h-10 w-10 rounded-xl border flex items-center justify-center disabled:opacity-20 transition-all"
+                    style={{ background: 'var(--color-bg-glass)', borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
+                  >
+                    <Icons.sparkles size={16} />
+                  </button>
+                  <div className="absolute bottom-full right-0 mb-2 hidden group-hover/claude:block pointer-events-none w-52 p-2.5 rounded-xl shadow-xl z-50" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+                    <p className="text-xs font-medium text-purple-500">Claude-only</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Zonder bronnen. Snel antwoord voor vertalingen en algemene vragen.</p>
+                  </div>
+                </div>
+              </>
             ) : (
-              <button
-                onClick={() => sendMessage()}
-                disabled={!input.trim()}
-                className="send-btn flex-shrink-0 h-10 w-10 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/20"
-              >
-                <Icons.send size={18} />
-              </button>
+              <>
+                {/* Claude-only = primary when no sources active (default) */}
+                <button
+                  onClick={() => sendMessage(undefined, { claudeOnly: true })}
+                  disabled={!input.trim()}
+                  className="send-btn flex-shrink-0 h-10 px-3.5 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center gap-1.5 disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/20 font-medium text-sm"
+                >
+                  <Icons.sparkles size={15} />
+                  <Icons.send size={15} />
+                </button>
+                {/* W button = secondary when no sources */}
+                <div className="relative group/wsend">
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={!input.trim()}
+                    className="flex-shrink-0 h-10 w-10 rounded-xl border flex items-center justify-center disabled:opacity-20 transition-all font-bold text-xs"
+                    style={{ background: 'var(--color-bg-glass)', borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
+                  >
+                    W
+                  </button>
+                  <div className="absolute bottom-full right-0 mb-2 hidden group-hover/wsend:block pointer-events-none w-56 p-2.5 rounded-xl shadow-xl z-50" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+                    <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Workx Zoeken</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Zoekt met juridische bronnen (T&C, VAAN, RAR). Zet bronnen aan voor betere resultaten. Duurt langer.</p>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>

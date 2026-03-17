@@ -53,13 +53,8 @@ export async function POST(
         topics: {
           create: STANDARD_TOPICS,
         },
-        distributions: {
-          create: DEFAULT_PARTNERS.map((partnerName) => ({
-            partnerName,
-            employeeName: '',
-            employeeId: null,
-          })),
-        },
+        // NOTE: distributions (werkverdelingsgesprekken) are NOT auto-created.
+        // They should only be added when explicitly saved by the user.
       },
       include: {
         topics: {

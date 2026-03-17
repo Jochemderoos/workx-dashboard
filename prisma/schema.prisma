@@ -127,6 +127,12 @@ model User {
   // Overdracht (Waarneming)
   handovers             Handover[]        @relation("UserHandovers")
 
+  // Werkstudent opdrachten
+  werkstudentTasks      WerkstudentTask[] @relation("WerkstudentAssigner")
+
+  // DD Projecten
+  ddProjectMembers      DDProjectMember[]
+
   @@index([isActive])
   @@index([role])
 }
@@ -1649,4 +1655,60 @@ model WorkConversation {
 
   @@unique([weekId, employeeId])
   @@index([weekId])
+}
+
+// ==================== WERKSTUDENT OPDRACHTEN ====================
+
+model WerkstudentTask {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  deadline    DateTime?
+  priority    String    @default("normaal") // laag, normaal, hoog, urgent
+  status      String    @default("open")    // open, bezig, klaar
+  assignedBy  String    // userId van medewerker die opdracht gaf
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  assigner    User      @relation("WerkstudentAssigner", fields: [assignedBy], references: [id])
+
+  @@index([status])
+  @@index([assignedBy])
+  @@index([deadline])
+}
+
+// ==================== DD PROJECTEN (DUE DILIGENCE) ====================
+
+model DDProject {
+  id          String    @id @default(cuid())
+  name        String
+  client      String    // De Breij, Stek, JB Law, etc.
+  description String?   @db.Text
+  status      String    @default("actief") // actief, afgerond, on_hold
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  members     DDProjectMember[]
+
+  @@index([status])
+  @@index([client])
+}
+
+model DDProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("medewerker") // partner, medewerker
+  hours     Float    @default(0) // totaal uren geschreven
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   DDProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
 }
