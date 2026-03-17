@@ -100,6 +100,7 @@ export default function ClaudeChat({
   const [annotations, setAnnotations] = useState<Record<string, any[]>>({})
   const [optionsExpanded, setOptionsExpanded] = useState(true)
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null)
+  const [revealingMsgId, setRevealingMsgId] = useState<string | null>(null) // Fancy word-by-word reveal after streaming
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const thinkingContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -108,10 +109,8 @@ export default function ClaudeChat({
   const thinkingTextRef = useRef('') // Tracks accumulated thinking text for saving after stream ends
   const streamBufferRef = useRef('') // Buffered streaming text
   const abortControllerRef = useRef<AbortController | null>(null) // For stop button
-  const streamingTextRef = useRef<HTMLSpanElement>(null) // Direct DOM ref for smooth typewriter
-  const displayedLengthRef = useRef(0) // How many chars are currently displayed
-  const animationFrameRef = useRef<number | null>(null) // rAF handle for typewriter animation
-  const lastScrollTimeRef = useRef(0) // Throttle scroll during animation
+  const revealContainerRef = useRef<HTMLDivElement>(null) // DOM ref for reveal animation
+  const animationFrameRef = useRef<number | null>(null) // rAF handle for reveal animation
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
   const [loadingProgress, setLoadingProgress] = useState(0) // Progress bar during loading (0-100)
   const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(new Set()) // Per-message thinking expansion
@@ -604,6 +603,80 @@ export default function ClaudeChat({
     }
   }, [thinkingText, isLoading, scrollToBottom])
 
+  // ─── Fancy word-by-word reveal animation after streaming completes ───
+  useEffect(() => {
+    if (!revealingMsgId) return
+    // Wait one frame for React to render the markdown HTML in the reveal container
+    const startRaf = requestAnimationFrame(() => {
+      const container = revealContainerRef.current
+      if (!container) { setRevealingMsgId(null); return }
+
+      // Walk all text nodes and collect their content
+      const textNodes: { node: Text; fullText: string }[] = []
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+      let walkerNode: Node | null
+      while ((walkerNode = walker.nextNode())) {
+        const text = walkerNode.textContent || ''
+        if (text) {
+          textNodes.push({ node: walkerNode as Text, fullText: text })
+          ;(walkerNode as Text).textContent = '' // Hide initially
+        }
+      }
+
+      // Make container visible (starts with opacity: 0 to prevent flash)
+      container.style.opacity = '1'
+
+      const totalChars = textNodes.reduce((sum, n) => sum + n.fullText.length, 0)
+      if (totalChars === 0) { setRevealingMsgId(null); return }
+
+      // Duration scales with content: short answers fast, long answers max 2.5s
+      const duration = Math.min(2500, Math.max(600, totalChars * 2))
+      const startTime = performance.now()
+      let revealed = 0
+      let nodeIdx = 0
+      let charIdx = 0
+
+      const animate = () => {
+        const elapsed = performance.now() - startTime
+        // Ease-out curve: starts fast, slows at end for polish
+        const progress = Math.min(1, elapsed / duration)
+        const eased = 1 - Math.pow(1 - progress, 2) // quadratic ease-out
+        const targetRevealed = Math.floor(eased * totalChars)
+
+        while (revealed < targetRevealed && nodeIdx < textNodes.length) {
+          charIdx++
+          textNodes[nodeIdx].node.textContent = textNodes[nodeIdx].fullText.slice(0, charIdx)
+          revealed++
+          if (charIdx >= textNodes[nodeIdx].fullText.length) {
+            nodeIdx++
+            charIdx = 0
+          }
+        }
+
+        // Auto-scroll to follow the reveal
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+
+        if (revealed >= totalChars || progress >= 1) {
+          // Ensure all text is fully shown
+          textNodes.forEach(n => { n.node.textContent = n.fullText })
+          setRevealingMsgId(null)
+          return
+        }
+        animationFrameRef.current = requestAnimationFrame(animate)
+      }
+      animationFrameRef.current = requestAnimationFrame(animate)
+    })
+
+    return () => {
+      cancelAnimationFrame(startRaf)
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealingMsgId])
+
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -707,13 +780,14 @@ export default function ClaudeChat({
               content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*/gi, '')
             }
             console.log('[ClaudeChat] Safety net: antwoord gevonden via backup polling')
-            setStreamingMsgId(null)
             if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
             setIsThinking(false)
             setThinkingText('')
             setMessages(prev => prev.map(m =>
               m.id === emptyMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
             ))
+            setRevealingMsgId(emptyMsgId)
+            setStreamingMsgId(null)
             setStatusText('')
             setIsLoading(false)
             // Keep attachedDocs — they stay available for the entire conversation
@@ -1047,32 +1121,8 @@ ${markdownHtml}
       setOptionsExpanded(false) // Collapse options to maximize answer space
       setStreamingMsgId(assistantMsgId) // Mark which message is streaming
 
-      // Start smooth typewriter animation via requestAnimationFrame (direct DOM updates, no React re-renders)
+      // Buffer text during streaming — reveal with fancy animation when done
       streamBufferRef.current = ''
-      displayedLengthRef.current = 0
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
-      const animateStream = () => {
-        const el = streamingTextRef.current
-        if (el) {
-          const target = streamBufferRef.current.length
-          const current = displayedLengthRef.current
-          if (current < target) {
-            // Adaptive speed: faster when there's more buffered text to catch up
-            const gap = target - current
-            const speed = gap > 200 ? 12 : gap > 100 ? 8 : gap > 50 ? 4 : gap > 20 ? 2 : 1
-            displayedLengthRef.current = Math.min(current + speed, target)
-            el.textContent = streamBufferRef.current.slice(0, displayedLengthRef.current)
-            // Throttled auto-scroll (every 80ms)
-            const now = performance.now()
-            if (now - lastScrollTimeRef.current > 80) {
-              messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
-              lastScrollTimeRef.current = now
-            }
-          }
-        }
-        animationFrameRef.current = requestAnimationFrame(animateStream)
-      }
-      animationFrameRef.current = requestAnimationFrame(animateStream)
 
       // Add empty assistant message placeholder
       setMessages(prev => [...prev, {
@@ -1149,8 +1199,6 @@ ${markdownHtml}
                 // ECLI verification: replace entire streamed text with cleaned version
                 streamedText = event.text
                 streamBufferRef.current = streamedText
-                // Reset display to show cleaned text from scratch
-                displayedLengthRef.current = 0
               } else if (event.type === 'status' && event.text) {
                 setStatusText(event.text)
               } else if (event.type === 'done') {
@@ -1165,12 +1213,14 @@ ${markdownHtml}
                   confidence = confMatch[1].toLowerCase() as 'hoog' | 'gemiddeld' | 'laag'
                   streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*/gi, '')
                 }
-                setStreamingMsgId(null)
                 if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
                 const savedThinking = thinkingTextRef.current || undefined
+                // Set content + trigger fancy reveal animation
                 setMessages(prev => prev.map(m =>
                   m.id === assistantMsgId ? { ...m, content: streamedText, hasWebSearch, citations, sources, confidence, model: eventModel, thinkingContent: savedThinking } : m
                 ))
+                setRevealingMsgId(assistantMsgId)
+                setStreamingMsgId(null)
               } else if (event.type === 'error') {
                 throw new Error(event.error || 'Onbekende fout')
               }
@@ -1396,6 +1446,7 @@ ${markdownHtml}
     setIsThinking(false)
     isThinkingRef.current = false
     setStreamingMsgId(null)
+    setRevealingMsgId(null)
     if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
   }
 
@@ -1642,6 +1693,7 @@ ${markdownHtml}
         {/* Message bubbles */}
         {messages.map((msg, msgIndex) => {
           const isStreaming = streamingMsgId === msg.id
+          const isRevealing = revealingMsgId === msg.id
 
           return (
           <div
@@ -1650,14 +1702,14 @@ ${markdownHtml}
           >
             <div className={`relative group ${msg.role === 'user' ? 'max-w-[80%]' : 'w-full'}`}>
               {/* Assistant message */}
-              {msg.role === 'assistant' && (isStreaming || msg.content) && (
+              {msg.role === 'assistant' && (isStreaming || isRevealing || msg.content) && (
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-workx-lime/20 via-workx-lime/10 to-transparent flex items-center justify-center mt-0.5 border border-workx-lime/10">
                     <span className="text-[11px] font-bold text-workx-lime">W</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     {/* Saved thinking content (collapsible, persists after streaming) */}
-                    {!isStreaming && msg.thinkingContent && (
+                    {!isStreaming && !isRevealing && msg.thinkingContent && (
                       <div className="mb-1.5">
                         <button
                           onClick={() => setExpandedThinkingIds(prev => {
@@ -1682,13 +1734,25 @@ ${markdownHtml}
                         </div>
                       </div>
                     )}
-                    <div className={`assistant-bubble rounded-2xl rounded-tl-md px-5 py-4 ${isStreaming ? 'assistant-bubble-streaming' : (msg.content ? 'assistant-bubble-complete' : '')}`}>
+                    <div className={`assistant-bubble rounded-2xl rounded-tl-md px-5 py-4 ${(isStreaming || isRevealing) ? 'assistant-bubble-streaming' : (msg.content ? 'assistant-bubble-complete' : '')}`}>
                       {isStreaming ? (
-                        // Streaming: plain text for smooth typewriter effect (no DOM thrashing from markdown re-parse)
-                        <div className="claude-response text-sm text-white/90 whitespace-pre-wrap break-words">
-                          <span ref={streamingTextRef} />
-                          <span className="streaming-cursor" />
+                        // Buffering: show elegant typing indicator while text accumulates in background
+                        <div className="flex items-center gap-3 py-1">
+                          <div className="flex gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-workx-lime/50 animate-[bounce_1.2s_ease-in-out_infinite]" />
+                            <div className="w-2 h-2 rounded-full bg-workx-lime/50 animate-[bounce_1.2s_ease-in-out_0.15s_infinite]" />
+                            <div className="w-2 h-2 rounded-full bg-workx-lime/50 animate-[bounce_1.2s_ease-in-out_0.3s_infinite]" />
+                          </div>
+                          <span className="text-xs text-white/30">schrijft een antwoord</span>
                         </div>
+                      ) : isRevealing ? (
+                        // Reveal: progressive word-by-word animation on rendered markdown
+                        <div
+                          ref={revealContainerRef}
+                          className="claude-response text-sm text-white/90"
+                          style={{ opacity: 0 }}
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(stripDocxEdits(msg.content)) }}
+                        />
                       ) : (
                         // Completed: full markdown rendering (strip DOCX edit blocks from display)
                         <div
@@ -1699,7 +1763,7 @@ ${markdownHtml}
                     </div>
 
                     {/* DOCX Edit download button */}
-                    {!isStreaming && msg.content && (() => {
+                    {!isStreaming && !isRevealing && msg.content && (() => {
                       const editBlock = parseDocxEdits(msg.content)
                       if (!editBlock) return null
                       return (
@@ -1784,7 +1848,7 @@ ${markdownHtml}
                     )}
 
                     {/* Action buttons: Copy, Export, Favorite, Annotate */}
-                    {msg.content && !isStreaming && (
+                    {msg.content && !isStreaming && !isRevealing && (
                       <div className="flex items-center gap-0.5 mt-2.5 ml-0.5">
                         <button
                           onClick={() => copyToClipboard(msg.content, msg.id)}
@@ -1812,7 +1876,7 @@ ${markdownHtml}
                     )}
 
                     {/* "Maak uitgebreid" button — shown after beknopt answers */}
-                    {msg.content && !isStreaming && kortMessageIds.has(msg.id) && (
+                    {msg.content && !isStreaming && !isRevealing && kortMessageIds.has(msg.id) && (
                       <button
                         onClick={() => expandToUitgebreid(msg.id)}
                         disabled={isLoading}
