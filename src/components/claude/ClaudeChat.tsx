@@ -603,74 +603,72 @@ export default function ClaudeChat({
     }
   }, [thinkingText, isLoading, scrollToBottom])
 
-  // ─── Fancy word-by-word reveal animation after streaming completes ───
+  // ─── Premium stagger fade-in reveal after streaming completes ───
   useEffect(() => {
     if (!revealingMsgId) return
-    // Wait one frame for React to render the markdown HTML in the reveal container
-    const startRaf = requestAnimationFrame(() => {
-      const container = revealContainerRef.current
-      if (!container) { setRevealingMsgId(null); return }
+    // Wait two frames for React to render the markdown HTML in the reveal container
+    let rafId1: number, rafId2: number
+    rafId1 = requestAnimationFrame(() => {
+      rafId2 = requestAnimationFrame(() => {
+        const container = revealContainerRef.current
+        if (!container) { setRevealingMsgId(null); return }
 
-      // Walk all text nodes and collect their content
-      const textNodes: { node: Text; fullText: string }[] = []
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
-      let walkerNode: Node | null
-      while ((walkerNode = walker.nextNode())) {
-        const text = walkerNode.textContent || ''
-        if (text) {
-          textNodes.push({ node: walkerNode as Text, fullText: text })
-          ;(walkerNode as Text).textContent = '' // Hide initially
-        }
-      }
-
-      // Make container visible (starts with opacity: 0 to prevent flash)
-      container.style.opacity = '1'
-
-      const totalChars = textNodes.reduce((sum, n) => sum + n.fullText.length, 0)
-      if (totalChars === 0) { setRevealingMsgId(null); return }
-
-      // Duration scales with content: short answers fast, long answers max 2.5s
-      const duration = Math.min(2500, Math.max(600, totalChars * 2))
-      const startTime = performance.now()
-      let revealed = 0
-      let nodeIdx = 0
-      let charIdx = 0
-
-      const animate = () => {
-        const elapsed = performance.now() - startTime
-        // Ease-out curve: starts fast, slows at end for polish
-        const progress = Math.min(1, elapsed / duration)
-        const eased = 1 - Math.pow(1 - progress, 2) // quadratic ease-out
-        const targetRevealed = Math.floor(eased * totalChars)
-
-        while (revealed < targetRevealed && nodeIdx < textNodes.length) {
-          charIdx++
-          textNodes[nodeIdx].node.textContent = textNodes[nodeIdx].fullText.slice(0, charIdx)
-          revealed++
-          if (charIdx >= textNodes[nodeIdx].fullText.length) {
-            nodeIdx++
-            charIdx = 0
-          }
-        }
-
-        // Auto-scroll to follow the reveal
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
-
-        if (revealed >= totalChars || progress >= 1) {
-          // Ensure all text is fully shown
-          textNodes.forEach(n => { n.node.textContent = n.fullText })
+        // Get all top-level children (p, h1-h6, ul, ol, pre, blockquote, table, hr, div)
+        const children = Array.from(container.children) as HTMLElement[]
+        if (children.length === 0) {
+          container.style.opacity = '1'
           setRevealingMsgId(null)
           return
         }
-        animationFrameRef.current = requestAnimationFrame(animate)
-      }
-      animationFrameRef.current = requestAnimationFrame(animate)
+
+        // Hide all children initially
+        children.forEach(child => {
+          child.style.opacity = '0'
+          child.style.transform = 'translateY(8px)'
+          child.style.transition = 'none'
+        })
+
+        // Make container visible
+        container.style.opacity = '1'
+
+        // Stagger reveal: each block fades in with a delay
+        const staggerDelay = Math.min(120, Math.max(40, 800 / children.length)) // ms between each block
+        let revealed = 0
+
+        const revealNext = () => {
+          if (revealed >= children.length) {
+            setRevealingMsgId(null)
+            return
+          }
+          const child = children[revealed]
+          child.style.transition = 'opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          child.style.opacity = '1'
+          child.style.transform = 'translateY(0)'
+          revealed++
+
+          // Auto-scroll to follow the reveal
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+
+          if (revealed < children.length) {
+            animationFrameRef.current = window.setTimeout(revealNext, staggerDelay) as unknown as number
+          } else {
+            // Final cleanup after last transition ends
+            window.setTimeout(() => {
+              setRevealingMsgId(null)
+            }, 450)
+          }
+        }
+
+        // Start after a tiny pause for visual polish
+        animationFrameRef.current = window.setTimeout(revealNext, 80) as unknown as number
+      })
     })
 
     return () => {
-      cancelAnimationFrame(startRaf)
+      cancelAnimationFrame(rafId1)
+      cancelAnimationFrame(rafId2)
       if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
+        clearTimeout(animationFrameRef.current)
         animationFrameRef.current = null
       }
     }
@@ -762,7 +760,7 @@ export default function ClaudeChat({
               console.warn('[ClaudeChat] Safety net: server-fout gevonden:', lastDb.content.slice(0, 100))
               const errText = lastDb.content.replace(/^\[Fout:\s*/, '').replace(/\]$/, '')
               setStreamingMsgId(null)
-              if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+              if (animationFrameRef.current) { clearTimeout(animationFrameRef.current); animationFrameRef.current = null }
               setIsThinking(false)
               setThinkingText('')
               setMessages(prev => prev.map(m =>
@@ -780,7 +778,7 @@ export default function ClaudeChat({
               content = content.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*/gi, '')
             }
             console.log('[ClaudeChat] Safety net: antwoord gevonden via backup polling')
-            if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+            if (animationFrameRef.current) { clearTimeout(animationFrameRef.current); animationFrameRef.current = null }
             setIsThinking(false)
             setThinkingText('')
             setMessages(prev => prev.map(m =>
@@ -1213,7 +1211,7 @@ ${markdownHtml}
                   confidence = confMatch[1].toLowerCase() as 'hoog' | 'gemiddeld' | 'laag'
                   streamedText = streamedText.replace(/\s*%%CONFIDENCE:(hoog|gemiddeld|laag)%%\s*/gi, '')
                 }
-                if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+                if (animationFrameRef.current) { clearTimeout(animationFrameRef.current); animationFrameRef.current = null }
                 const savedThinking = thinkingTextRef.current || undefined
                 // Set content + trigger fancy reveal animation
                 setMessages(prev => prev.map(m =>
@@ -1259,7 +1257,7 @@ ${markdownHtml}
         console.log('[ClaudeChat] Stream leverde geen inhoud — start DB polling. pollId:', pollId)
         // Clear streaming cursor — no content was streamed, so hide the empty bubble
         setStreamingMsgId(null)
-        if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+        if (animationFrameRef.current) { clearTimeout(animationFrameRef.current); animationFrameRef.current = null }
         if (pollId) {
           // Context-aware status messages for long operations
           const hasAttachments = attachedDocs.length > 0 || documentIds.length > 0
@@ -1335,7 +1333,7 @@ ${markdownHtml}
                 console.log('[ClaudeChat] Antwoord gevonden via DB polling na', elapsed, 'seconden')
                 setLoadingProgress(100)
                 setStreamingMsgId(null)
-                if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+                if (animationFrameRef.current) { clearTimeout(animationFrameRef.current); animationFrameRef.current = null }
                         setMessages(prev => prev.map(m =>
                   m.id === assistantMsgId ? { ...m, content, confidence, hasWebSearch: lastDb.hasWebSearch } : m
                 ))
@@ -1356,7 +1354,7 @@ ${markdownHtml}
         // User clicked stop — keep partial response if any, otherwise remove placeholder
         clearTimeout(timeoutId)
         setStreamingMsgId(null)
-        if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+        if (animationFrameRef.current) { clearTimeout(animationFrameRef.current); animationFrameRef.current = null }
         if (streamedText) {
           setMessages(prev => prev.map(m =>
             m.id === assistantMsgId ? { ...m, content: streamedText + '\n\n*[Generatie gestopt]*' } : m
@@ -1367,7 +1365,7 @@ ${markdownHtml}
       } else if (streamedText) {
         clearTimeout(timeoutId)
         setStreamingMsgId(null)
-        if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+        if (animationFrameRef.current) { clearTimeout(animationFrameRef.current); animationFrameRef.current = null }
         setMessages(prev => prev.map(m =>
           m.id === assistantMsgId && !m.content ? { ...m, content: streamedText } : m
         ))
@@ -1400,7 +1398,7 @@ ${markdownHtml}
       setStatusText('')
       setStreamingMsgId(null)
       if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
+        clearTimeout(animationFrameRef.current)
         animationFrameRef.current = null
       }
       setLastFailedMessage(text) // Enable retry
@@ -1433,7 +1431,7 @@ ${markdownHtml}
       setThinkingText('')
       abortControllerRef.current = null
       if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
+        clearTimeout(animationFrameRef.current)
         animationFrameRef.current = null
       }
     }
@@ -1447,7 +1445,7 @@ ${markdownHtml}
     isThinkingRef.current = false
     setStreamingMsgId(null)
     setRevealingMsgId(null)
-    if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+    if (animationFrameRef.current) { clearTimeout(animationFrameRef.current); animationFrameRef.current = null }
   }
 
   // Expand a beknopt answer to uitgebreid: finds the original user question and re-sends with uitgebreid instructions
