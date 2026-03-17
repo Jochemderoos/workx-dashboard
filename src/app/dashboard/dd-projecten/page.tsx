@@ -40,7 +40,7 @@ interface WorkloadEntry {
   workedHours: number
 }
 
-const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law']
+const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law', 'Strasuwolfs']
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   actief: { label: 'Actief', color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30' },
@@ -52,6 +52,7 @@ const CLIENT_COLORS: Record<string, { from: string; to: string; text: string; ic
   'De Breij': { from: 'from-blue-500/15', to: 'to-cyan-500/10', text: 'text-blue-400', icon: 'bg-blue-500/15' },
   'Stek': { from: 'from-purple-500/15', to: 'to-indigo-500/10', text: 'text-purple-400', icon: 'bg-purple-500/15' },
   'JB Law': { from: 'from-amber-500/15', to: 'to-orange-500/10', text: 'text-amber-400', icon: 'bg-amber-500/15' },
+  'Strasuwolfs': { from: 'from-emerald-500/15', to: 'to-teal-500/10', text: 'text-emerald-400', icon: 'bg-emerald-500/15' },
 }
 
 export default function DDProjectenPage() {
@@ -114,17 +115,19 @@ export default function DDProjectenPage() {
     return projectMap
   }, [workloadData])
 
-  // Merge auto-detected hours into projects
-  const enrichedProjects = useMemo(() => {
-    return projects.map(p => {
+  // Merge auto-detected hours into projects + create virtual projects for unmatched workload entries
+  const { enrichedProjects, autoOnlyProjects } = useMemo(() => {
+    const matchedAutoKeys = new Set<string>()
+
+    const enriched = projects.map(p => {
       const autoHours: Record<string, number> = {}
       const autoMembers: string[] = []
-      // Match by project name or client
       for (const [projName, entries] of Array.from(autoDetectedProjects.entries())) {
         const matchesProject = projName.toLowerCase().includes(p.name.toLowerCase()) ||
           p.name.toLowerCase().includes(projName.split('/')[0].trim().toLowerCase())
         const matchesClient = projName.toLowerCase().includes(p.client.toLowerCase())
         if (matchesProject || matchesClient) {
+          matchedAutoKeys.add(projName)
           for (const e of entries) {
             autoHours[e.personName] = (autoHours[e.personName] || 0) + e.hours
             if (!autoMembers.includes(e.personName)) autoMembers.push(e.personName)
@@ -133,6 +136,52 @@ export default function DDProjectenPage() {
       }
       return { ...p, autoHours, autoMembers }
     })
+
+    // Group unmatched workload entries by client, then sub-project
+    const clientProjects = new Map<string, Map<string, { personName: string; hours: number }[]>>()
+    for (const [projName, entries] of Array.from(autoDetectedProjects.entries())) {
+      if (matchedAutoKeys.has(projName)) continue
+      const client = DD_CLIENTS.find(c => projName.toLowerCase().includes(c.toLowerCase())) || 'Onbekend'
+      // Clean the project name: "Stek Advocaten B.V. / Castellum" → "Castellum"
+      const cleanName = projName.includes('/') ? projName.split('/').slice(1).join('/').trim() : projName
+      if (!clientProjects.has(client)) clientProjects.set(client, new Map())
+      const clientMap = clientProjects.get(client)!
+      if (!clientMap.has(cleanName)) clientMap.set(cleanName, [])
+      for (const e of entries) {
+        const existing = clientMap.get(cleanName)!.find(x => x.personName === e.personName)
+        if (existing) existing.hours += e.hours
+        else clientMap.get(cleanName)!.push({ ...e })
+      }
+    }
+
+    // Create virtual Project objects per client (group sub-projects under one card per client)
+    const autoOnly: Project[] = []
+    for (const [client, subProjects] of Array.from(clientProjects.entries())) {
+      const autoHours: Record<string, number> = {}
+      const autoMembers: string[] = []
+      const subNames: string[] = []
+      for (const [subName, entries] of Array.from(subProjects.entries())) {
+        subNames.push(subName)
+        for (const e of entries) {
+          autoHours[e.personName] = (autoHours[e.personName] || 0) + e.hours
+          if (!autoMembers.includes(e.personName)) autoMembers.push(e.personName)
+        }
+      }
+      autoOnly.push({
+        id: `auto-${client}`,
+        name: subNames.length === 1 ? subNames[0] : `${subNames.length} projecten`,
+        client,
+        description: subNames.length > 1 ? subNames.join(' • ') : null,
+        status: 'actief',
+        completedAt: null,
+        createdAt: new Date().toISOString(),
+        members: [],
+        autoHours,
+        autoMembers,
+      })
+    }
+
+    return { enrichedProjects: enriched, autoOnlyProjects: autoOnly }
   }, [projects, autoDetectedProjects])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -210,17 +259,21 @@ export default function DDProjectenPage() {
   const activeProjects = enrichedProjects.filter(p => p.status !== 'afgerond')
   const completedProjects = enrichedProjects.filter(p => p.status === 'afgerond')
 
+  // Combine manual active projects with auto-detected ones
+  const allActiveProjects = [...activeProjects, ...autoOnlyProjects]
+
   // Split active into "lopend" (has hours from workload) and "toekomstig" (no hours yet)
-  const lopendProjects = activeProjects.filter(p => {
+  const lopendProjects = allActiveProjects.filter(p => {
     const hrs = Object.values(p.autoHours || {}).reduce((s, h) => s + h, 0)
     return hrs > 0
   })
-  const toekomstigProjects = activeProjects.filter(p => {
+  const toekomstigProjects = allActiveProjects.filter(p => {
     const hrs = Object.values(p.autoHours || {}).reduce((s, h) => s + h, 0)
     return hrs === 0
   })
 
-  const totalHours = enrichedProjects.reduce((sum, p) => {
+  const allProjects = [...enrichedProjects, ...autoOnlyProjects]
+  const totalHours = allProjects.reduce((sum, p) => {
     const projectHours = Object.values(p.autoHours || {}).reduce((s, h) => s + h, 0)
     return sum + projectHours
   }, 0)
@@ -397,7 +450,7 @@ export default function DDProjectenPage() {
       )}
 
       {/* Projects */}
-      {activeProjects.length === 0 && completedProjects.length === 0 ? (
+      {allActiveProjects.length === 0 && completedProjects.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-4">
             <Icons.briefcase className="text-blue-400" size={28} />
@@ -506,6 +559,7 @@ function ProjectCard({ project, expandedProject, setExpandedProject, toggleProje
   startEdit: (p: Project) => void
   deleteProject: (id: string) => void
 }) {
+  const isAutoOnly = project.id.startsWith('auto-')
   const clientStyle = CLIENT_COLORS[project.client] || CLIENT_COLORS['De Breij']
   const stat = STATUS_CONFIG[project.status] || STATUS_CONFIG.actief
   const isExpanded = expandedProject === project.id
@@ -529,7 +583,11 @@ function ProjectCard({ project, expandedProject, setExpandedProject, toggleProje
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{project.name}</h3>
-            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${stat.bg} ${stat.color} ${stat.border}`}>{stat.label}</span>
+            {isAutoOnly ? (
+              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-workx-lime/10 text-workx-lime border-workx-lime/30">Werkdruk</span>
+            ) : (
+              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${stat.bg} ${stat.color} ${stat.border}`}>{stat.label}</span>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
             <span className={`font-medium ${clientStyle.text}`}>{project.client}</span>
@@ -537,17 +595,19 @@ function ProjectCard({ project, expandedProject, setExpandedProject, toggleProje
             {totalProjectHours > 0 && <span className="font-medium">{totalProjectHours.toFixed(1)} uur</span>}
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
-          <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors hover:bg-emerald-500/10" title="Markeer als afgerond">
-            <Icons.check size={16} className="text-emerald-400" />
-          </button>
-          <button onClick={() => startEdit(project)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Bewerken">
-            <Icons.edit size={15} />
-          </button>
-          <button onClick={() => deleteProject(project.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" title="Verwijderen">
-            <Icons.trash size={15} />
-          </button>
-        </div>
+        {!isAutoOnly && (
+          <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+            <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors hover:bg-emerald-500/10" title="Markeer als afgerond">
+              <Icons.check size={16} className="text-emerald-400" />
+            </button>
+            <button onClick={() => startEdit(project)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Bewerken">
+              <Icons.edit size={15} />
+            </button>
+            <button onClick={() => deleteProject(project.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" title="Verwijderen">
+              <Icons.trash size={15} />
+            </button>
+          </div>
+        )}
       </div>
       {isExpanded && (
         <div className="px-4 sm:px-5 pb-4 sm:pb-5 border-t" style={{ borderColor: 'var(--color-border)' }}>
