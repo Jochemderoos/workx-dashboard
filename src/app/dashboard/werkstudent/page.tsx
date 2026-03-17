@@ -1,8 +1,16 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
+import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
+
+interface TeamUser {
+  id: string
+  name: string
+  role: string
+}
 
 interface Task {
   id: string
@@ -32,18 +40,23 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 export default function WerkstudentPage() {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [teamUsers, setTeamUsers] = useState<TeamUser[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
-  const [form, setForm] = useState({ title: '', description: '', deadline: '', priority: 'normaal' })
+  const [form, setForm] = useState({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' })
 
   const fetchTasks = useCallback(async () => {
     try {
-      const res = await fetch('/api/werkstudent')
-      if (res.ok) {
-        const data = await res.json()
-        setTasks(data)
+      const [taskRes, teamRes] = await Promise.all([
+        fetch('/api/werkstudent'),
+        fetch('/api/claude/users'),
+      ])
+      if (taskRes.ok) setTasks(await taskRes.json())
+      if (teamRes.ok) {
+        const users = await teamRes.json()
+        setTeamUsers(users.filter((u: TeamUser) => u.role !== 'EXTERNAL'))
       }
     } catch {
       toast.error('Kon opdrachten niet laden')
@@ -59,11 +72,12 @@ export default function WerkstudentPage() {
     if (!form.title.trim()) return
 
     try {
+      const payload = { ...form, deadline: form.deadline || null, assignerId: form.assignerId || undefined }
       if (editingTask) {
         const res = await fetch('/api/werkstudent', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingTask.id, ...form, deadline: form.deadline || null }),
+          body: JSON.stringify({ id: editingTask.id, ...payload }),
         })
         if (!res.ok) throw new Error()
         toast.success('Opdracht bijgewerkt')
@@ -71,12 +85,12 @@ export default function WerkstudentPage() {
         const res = await fetch('/api/werkstudent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, deadline: form.deadline || null }),
+          body: JSON.stringify(payload),
         })
         if (!res.ok) throw new Error()
         toast.success('Opdracht aangemaakt')
       }
-      setForm({ title: '', description: '', deadline: '', priority: 'normaal' })
+      setForm({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' })
       setShowForm(false)
       setEditingTask(null)
       fetchTasks()
@@ -118,6 +132,7 @@ export default function WerkstudentPage() {
       description: task.description || '',
       deadline: task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : '',
       priority: task.priority,
+      assignerId: task.assignedBy,
     })
     setShowForm(true)
   }
@@ -156,7 +171,7 @@ export default function WerkstudentPage() {
           </p>
         </div>
         <button
-          onClick={() => { setShowForm(true); setEditingTask(null); setForm({ title: '', description: '', deadline: '', priority: 'normaal' }) }}
+          onClick={() => { setShowForm(true); setEditingTask(null); setForm({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' }) }}
           className="btn-primary flex items-center gap-2"
         >
           <Icons.plus size={16} />
@@ -209,6 +224,42 @@ export default function WerkstudentPage() {
                   placeholder="Wat moet er precies gebeuren?"
                 />
               </div>
+              {/* Opdrachtgever */}
+              <div>
+                <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Opdrachtgever</label>
+                <div className="flex flex-wrap gap-2">
+                  {teamUsers.map(u => {
+                    const photo = getPhotoUrl(u.name)
+                    const isSelected = form.assignerId === u.id
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, assignerId: u.id }))}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all border ${
+                          isSelected
+                            ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30'
+                            : 'border-transparent'
+                        }`}
+                        style={{
+                          background: isSelected ? undefined : 'var(--color-bg-tertiary)',
+                          color: isSelected ? undefined : 'var(--color-text-tertiary)',
+                        }}
+                      >
+                        {photo ? (
+                          <Image src={photo} alt={u.name} width={20} height={20} className="w-5 h-5 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                            <span className="text-[9px] font-medium text-white">{u.name.charAt(0)}</span>
+                          </div>
+                        )}
+                        {u.name.split(' ')[0]}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-tertiary)' }}>Leeg = jijzelf als opdrachtgever</p>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Deadline</label>
@@ -216,7 +267,7 @@ export default function WerkstudentPage() {
                     type="date"
                     value={form.deadline}
                     onChange={e => setForm({ ...form, deadline: e.target.value })}
-                    className="input-field"
+                    className="input-field !rounded-xl"
                   />
                 </div>
                 <div>
@@ -296,13 +347,24 @@ export default function WerkstudentPage() {
                           {task.description}
                         </p>
                       )}
-                      <div className="flex items-center gap-4 mt-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                        <span className="flex items-center gap-1">
-                          <Icons.user size={12} />
-                          {task.assigner.name}
-                        </span>
+                      <div className="flex items-center gap-4 mt-2.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                        {(() => {
+                          const photo = getPhotoUrl(task.assigner.name)
+                          return (
+                            <span className="flex items-center gap-1.5">
+                              {photo ? (
+                                <Image src={photo} alt={task.assigner.name} width={20} height={20} className="w-5 h-5 rounded-lg object-cover" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                                  <span className="text-[9px] font-medium text-white">{task.assigner.name.charAt(0)}</span>
+                                </div>
+                              )}
+                              <span style={{ color: 'var(--color-text-secondary)' }}>{task.assigner.name.split(' ')[0]}</span>
+                            </span>
+                          )
+                        })()}
                         {task.deadline && (
-                          <span className={`flex items-center gap-1 ${overdue ? 'text-red-400 font-medium' : ''}`}>
+                          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-lg ${overdue ? 'bg-red-500/10 text-red-400 font-medium' : ''}`} style={!overdue ? { background: 'var(--color-bg-tertiary)' } : undefined}>
                             <Icons.calendar size={12} />
                             {formatDate(task.deadline)}
                             {overdue && ' (verlopen)'}
@@ -369,10 +431,19 @@ export default function WerkstudentPage() {
                           {task.title}
                         </h3>
                         <div className="flex items-center gap-4 mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                          <span className="flex items-center gap-1">
-                            <Icons.user size={12} />
-                            {task.assigner.name}
-                          </span>
+                          {(() => {
+                            const photo = getPhotoUrl(task.assigner.name)
+                            return (
+                              <span className="flex items-center gap-1.5">
+                                {photo ? (
+                                  <Image src={photo} alt={task.assigner.name} width={18} height={18} className="w-[18px] h-[18px] rounded object-cover" />
+                                ) : (
+                                  <Icons.user size={12} />
+                                )}
+                                {task.assigner.name.split(' ')[0]}
+                              </span>
+                            )
+                          })()}
                           {task.completedAt && (
                             <span className="flex items-center gap-1">
                               <Icons.check size={12} />
