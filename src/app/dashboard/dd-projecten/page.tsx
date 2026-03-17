@@ -20,6 +20,7 @@ interface Project {
   name: string
   client: string
   description: string | null
+  expectedHours: number | null
   status: string
   completedAt: string | null
   createdAt: string
@@ -40,13 +41,20 @@ interface WorkloadEntry {
   workedHours: number
 }
 
+interface DDEstimate {
+  id: string
+  projectName: string
+  expectedHours: number
+}
+
 interface DDCase {
   projectName: string
   fullProjectName: string
   totalHours: number
-  hours7d: number // last 7 days
-  members: { personName: string; hours: number; hours7d: number }[]
+  hours7d: number
+  memberNames: string[] // Only names, no hours
   linkedProject?: Project
+  expectedHours?: number
 }
 
 const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law', 'Strauswolfs', 'Cleber']
@@ -94,20 +102,24 @@ export default function DDProjectenPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [workloadData, setWorkloadData] = useState<WorkloadEntry[]>([])
+  const [estimates, setEstimates] = useState<DDEstimate[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] as string[] })
+  const [editingEstimate, setEditingEstimate] = useState<string | null>(null) // fullProjectName being edited
+  const [estimateInput, setEstimateInput] = useState('')
+  const [form, setForm] = useState({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] as string[], expectedHours: '' })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRole = (session?.user as any)?.role
 
   const fetchAll = useCallback(async () => {
     try {
-      const [projRes, teamRes, wlRes] = await Promise.all([
+      const [projRes, teamRes, wlRes, estRes] = await Promise.all([
         fetch('/api/dd-projecten'),
         fetch('/api/claude/users'),
         fetch('/api/workload/details?weeks=4'),
+        fetch('/api/dd-projecten/estimates'),
       ])
       if (projRes.ok) setProjects(await projRes.json())
       if (teamRes.ok) {
@@ -115,6 +127,7 @@ export default function DDProjectenPage() {
         setTeamMembers(users.filter((u: TeamMember) => u.role !== 'EXTERNAL'))
       }
       if (wlRes.ok) setWorkloadData(await wlRes.json())
+      if (estRes.ok) setEstimates(await estRes.json())
     } catch {
       toast.error('Kon gegevens niet laden')
     } finally {
@@ -124,19 +137,17 @@ export default function DDProjectenPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // ─── Process workload data into DD structures with time-based grouping ───
-  const { clientGroups, teamOverview, stats, unmatchedManualProjects } = useMemo(() => {
+  // ─── Process workload data into DD structures ───
+  const { clientGroups, stats, unmatchedManualProjects } = useMemo(() => {
     const now = new Date()
     const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    const d14 = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    // Group workload entries by projectName, filter for DD clients, track time buckets
+    // Group workload entries by projectName, filter for DD clients
     const projectMap = new Map<string, {
       client: string
-      members: Map<string, { total: number; h7d: number }>
+      members: Set<string>
       totalHours: number
       hours7d: number
-      hours14d: number
     }>()
 
     for (const entry of workloadData) {
@@ -146,17 +157,18 @@ export default function DDProjectenPage() {
       if (hours <= 0) continue
 
       if (!projectMap.has(entry.projectName)) {
-        projectMap.set(entry.projectName, { client, members: new Map(), totalHours: 0, hours7d: 0, hours14d: 0 })
+        projectMap.set(entry.projectName, { client, members: new Set(), totalHours: 0, hours7d: 0 })
       }
       const proj = projectMap.get(entry.projectName)!
       proj.totalHours += hours
       if (entry.date >= d7) proj.hours7d += hours
-      if (entry.date >= d14) proj.hours14d += hours
+      proj.members.add(entry.personName)
+    }
 
-      const mem = proj.members.get(entry.personName) || { total: 0, h7d: 0 }
-      mem.total += hours
-      if (entry.date >= d7) mem.h7d += hours
-      proj.members.set(entry.personName, mem)
+    // Build estimate lookup
+    const estimateMap = new Map<string, number>()
+    for (const est of estimates) {
+      estimateMap.set(est.projectName, est.expectedHours)
     }
 
     // Build cases per client + link manual DDProjects
@@ -165,9 +177,7 @@ export default function DDProjectenPage() {
 
     for (const [fullName, data] of Array.from(projectMap.entries())) {
       const cleanName = fullName.includes('/') ? fullName.split('/').slice(1).join('/').trim() : fullName
-      const members = Array.from(data.members.entries())
-        .map(([name, m]) => ({ personName: name, hours: Math.round(m.total * 10) / 10, hours7d: Math.round(m.h7d * 10) / 10 }))
-        .sort((a, b) => b.hours - a.hours)
+      const memberNames = Array.from(data.members)
       const totalHours = Math.round(data.totalHours * 10) / 10
       const hours7d = Math.round(data.hours7d * 10) / 10
 
@@ -184,54 +194,51 @@ export default function DDProjectenPage() {
         }
       }
 
+      const expectedHours = linkedProject?.expectedHours ?? estimateMap.get(fullName) ?? undefined
+
       if (!groups.has(data.client)) groups.set(data.client, [])
-      groups.get(data.client)!.push({ projectName: cleanName, fullProjectName: fullName, totalHours, hours7d, members, linkedProject })
+      groups.get(data.client)!.push({ projectName: cleanName, fullProjectName: fullName, totalHours, hours7d, memberNames, linkedProject, expectedHours })
     }
 
-    // Sort cases: most recently active first (by hours7d desc, then totalHours)
+    // Sort cases: most recently active first
     for (const cases of Array.from(groups.values())) {
       cases.sort((a, b) => b.hours7d - a.hours7d || b.totalHours - a.totalHours)
     }
 
-    // Team overview: aggregate per person with time buckets
-    const personMap = new Map<string, { total: number; h7d: number; h14d: number }>()
-    for (const entry of workloadData) {
-      const client = matchDDClient(entry.projectName)
-      if (!client) continue
-      const hours = entry.workedHours || entry.billableHours || 0
-      if (hours <= 0) continue
-      const mem = personMap.get(entry.personName) || { total: 0, h7d: 0, h14d: 0 }
-      mem.total += hours
-      if (entry.date >= d7) mem.h7d += hours
-      if (entry.date >= d14) mem.h14d += hours
-      personMap.set(entry.personName, mem)
-    }
-    const team = Array.from(personMap.entries())
-      .map(([name, m]) => ({ personName: name, totalHours: Math.round(m.total * 10) / 10, hours7d: Math.round(m.h7d * 10) / 10, hours14d: Math.round(m.h14d * 10) / 10 }))
-      .sort((a, b) => b.hours7d - a.hours7d || b.totalHours - a.totalHours)
-
     // Stats
-    const totalHours = Math.round(team.reduce((s, m) => s + m.totalHours, 0) * 10) / 10
-    const totalHours7d = Math.round(team.reduce((s, m) => s + m.hours7d, 0) * 10) / 10
+    let totalHours = 0
+    let totalHours7d = 0
     let totalCases = 0
-    for (const cases of Array.from(groups.values())) totalCases += cases.length
+    const allMembers = new Set<string>()
+    for (const cases of Array.from(groups.values())) {
+      totalCases += cases.length
+      for (const c of cases) {
+        totalHours += c.totalHours
+        totalHours7d += c.hours7d
+        c.memberNames.forEach(n => allMembers.add(n))
+      }
+    }
 
-    // Unmatched manual projects (not linked to any werkdruk case)
     const unmatched = projects.filter(p => !matchedProjectIds.has(p.id) && p.status !== 'afgerond')
 
-    return { clientGroups: groups, teamOverview: team, stats: { totalHours, totalHours7d, totalCases, teamCount: team.length }, unmatchedManualProjects: unmatched }
-  }, [workloadData, projects])
+    return {
+      clientGroups: groups,
+      stats: { totalHours: Math.round(totalHours * 10) / 10, totalHours7d: Math.round(totalHours7d * 10) / 10, totalCases, teamCount: allMembers.size },
+      unmatchedManualProjects: unmatched,
+    }
+  }, [workloadData, projects, estimates])
 
   // ─── CRUD handlers ───
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim() || !form.client.trim()) return
     try {
+      const payload = { ...form, expectedHours: form.expectedHours ? parseFloat(form.expectedHours) : null }
       if (editingProject) {
         const res = await fetch('/api/dd-projecten', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingProject.id, ...form }),
+          body: JSON.stringify({ id: editingProject.id, ...payload }),
         })
         if (!res.ok) throw new Error()
         toast.success('Project bijgewerkt')
@@ -239,7 +246,7 @@ export default function DDProjectenPage() {
         const res = await fetch('/api/dd-projecten', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         })
         if (!res.ok) throw new Error()
         toast.success('Project aangemaakt')
@@ -284,14 +291,34 @@ export default function DDProjectenPage() {
       client: project.client,
       description: project.description || '',
       memberIds: project.members.map(m => m.userId),
+      expectedHours: project.expectedHours?.toString() || '',
     })
     setShowForm(true)
   }
 
   const resetForm = () => {
-    setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] })
+    setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [], expectedHours: '' })
     setShowForm(false)
     setEditingProject(null)
+  }
+
+  const saveEstimate = async (projectName: string, hours: number) => {
+    try {
+      await fetch('/api/dd-projecten/estimates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName, expectedHours: hours }),
+      })
+      setEstimates(prev => {
+        const existing = prev.find(e => e.projectName === projectName)
+        if (existing) return prev.map(e => e.projectName === projectName ? { ...e, expectedHours: hours } : e)
+        return [...prev, { id: '', projectName, expectedHours: hours }]
+      })
+      setEditingEstimate(null)
+      toast.success('Verwachte uren opgeslagen')
+    } catch {
+      toast.error('Kon verwachte uren niet opslaan')
+    }
   }
 
   const completedProjects = projects.filter(p => p.status === 'afgerond')
@@ -369,7 +396,6 @@ export default function DDProjectenPage() {
       {/* ─── Per-client sections ─── */}
       {DD_CLIENTS.filter(c => clientGroups.has(c)).map(client => {
         const cases = clientGroups.get(client)!
-        const client7dHours = Math.round(cases.reduce((s, c) => s + c.hours7d, 0) * 10) / 10
         const clientTotalHours = Math.round(cases.reduce((s, c) => s + c.totalHours, 0) * 10) / 10
         const cc = CLIENT_COLORS[client] || CLIENT_COLORS['De Breij']
 
@@ -381,193 +407,115 @@ export default function DDProjectenPage() {
         const recent7d = cases.filter(c => c.hours7d > 0)
         const older = cases.filter(c => c.hours7d === 0)
 
+        const renderCase = (c: DDCase, i: number, dimmed?: boolean) => {
+          const activityBar = max7dHours > 0 ? (c.hours7d / max7dHours) * 100 : 0
+          const progressPct = c.expectedHours && c.expectedHours > 0 ? Math.min(100, (c.totalHours / c.expectedHours) * 100) : null
+          const isEditingEst = editingEstimate === c.fullProjectName
+
+          return (
+            <div key={c.fullProjectName} className={`rounded-2xl border overflow-hidden transition-all ${dimmed ? 'opacity-60 hover:opacity-80' : 'hover:shadow-md'}`} style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+              <div className="px-4 py-3.5 space-y-2.5">
+                {/* Top row: rank + name + hours */}
+                <div className="flex items-center gap-3">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${cc.bg}`}>
+                    <span className={`text-[11px] font-bold ${cc.text}`}>{i + 1}</span>
+                  </div>
+                  <span className="text-[13px] font-semibold tracking-tight truncate flex-1" style={{ color: 'var(--color-text-primary)' }}>{c.projectName}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {c.hours7d > 0 && (
+                      <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold tabular-nums ${cc.bg} ${cc.text}`}>{c.hours7d}u 7d</span>
+                    )}
+                    <span className="text-xs font-mono tabular-nums font-semibold" style={{ color: 'var(--color-text-primary)' }}>{c.totalHours}u</span>
+                  </div>
+                </div>
+
+                {/* Progress bar (if expected hours set) */}
+                {progressPct !== null && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
+                      <div className={`h-full rounded-full transition-all duration-700 ${progressPct >= 90 ? 'bg-gradient-to-r from-red-500 to-orange-500' : progressPct >= 70 ? 'bg-gradient-to-r from-amber-500 to-yellow-500' : 'bg-gradient-to-r from-workx-lime to-emerald-400'}`} style={{ width: `${progressPct}%` }} />
+                    </div>
+                    <span className="text-[10px] font-mono tabular-nums flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }}>
+                      {Math.round(progressPct)}% van {c.expectedHours}u
+                    </span>
+                  </div>
+                )}
+
+                {/* Activity bar (7d intensity, only if no progress bar and has 7d hours) */}
+                {progressPct === null && c.hours7d > 0 && !dimmed && (
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
+                    <div className="h-full rounded-full bg-gradient-to-r from-workx-lime to-workx-lime/60 transition-all duration-700" style={{ width: `${activityBar}%` }} />
+                  </div>
+                )}
+
+                {/* Team photos + set expected hours */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    {c.memberNames.map((name, mi) => {
+                      const photo = getPhotoUrl(name)
+                      const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
+                      return photo ? (
+                        <Image key={name} src={photo} alt={name} width={24} height={24} className="w-6 h-6 rounded-lg object-cover" title={name} />
+                      ) : (
+                        <div key={name} className={`w-6 h-6 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center`} title={name}>
+                          <span className="text-[9px] font-medium text-white">{name.charAt(0)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {/* Expected hours inline edit */}
+                  {isEditingEst ? (
+                    <form className="flex items-center gap-1.5" onSubmit={e => { e.preventDefault(); const h = parseFloat(estimateInput); if (h > 0) saveEstimate(c.fullProjectName, h) }}>
+                      <input
+                        type="number"
+                        value={estimateInput}
+                        onChange={e => setEstimateInput(e.target.value)}
+                        className="w-16 text-xs px-2 py-1 rounded-lg border text-right"
+                        style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                        placeholder="uren"
+                        autoFocus
+                        min="0"
+                        step="1"
+                      />
+                      <button type="submit" className="text-workx-lime"><Icons.check size={14} /></button>
+                      <button type="button" onClick={() => setEditingEstimate(null)} style={{ color: 'var(--color-text-tertiary)' }}><Icons.x size={14} /></button>
+                    </form>
+                  ) : (
+                    <button
+                      onClick={() => { setEditingEstimate(c.fullProjectName); setEstimateInput(c.expectedHours?.toString() || '') }}
+                      className="text-[10px] px-2 py-0.5 rounded-lg transition-colors hover:opacity-80"
+                      style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}
+                      title="Verwachte uren instellen"
+                    >
+                      {c.expectedHours ? `${c.expectedHours}u verwacht` : 'Uren instellen'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        }
+
         return (
           <div key={client} className="space-y-3">
-            {/* Client header */}
             <div className="flex items-center gap-2.5">
               <div className={`w-2.5 h-2.5 rounded-full ${cc.dot}`} />
               <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>{client}</h2>
               <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                {cases.length} {cases.length === 1 ? 'zaak' : 'zaken'} · {client7dHours}u (7d) · {clientTotalHours}u totaal
+                {cases.length} {cases.length === 1 ? 'zaak' : 'zaken'} · {clientTotalHours}u totaal
               </span>
             </div>
 
-            {/* Recent cases (7 days) */}
-            {recent7d.length > 0 && (
-              <div className="space-y-2">
-                {recent7d.map((c, i) => {
-                  const key = `${client}-${i}`
-                  const isExpanded = expandedKey === key
-                  const activityBar = (c.hours7d / max7dHours) * 100
-                  return (
-                    <div key={c.fullProjectName} className={`rounded-2xl border overflow-hidden transition-all ${
-                      isExpanded ? `${cc.border} ${cc.bg} shadow-lg` : 'hover:shadow-md'
-                    }`} style={!isExpanded ? { borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' } : undefined}>
-                      <button
-                        onClick={() => setExpandedKey(isExpanded ? null : key)}
-                        className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left group"
-                      >
-                        {/* Rank badge */}
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${cc.bg}`}>
-                          <span className={`text-xs font-bold ${cc.text}`}>{i + 1}</span>
-                        </div>
-
-                        <div className="flex-1 min-w-0 space-y-1.5">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-[13px] font-semibold tracking-tight truncate" style={{ color: 'var(--color-text-primary)' }}>{c.projectName}</span>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold tabular-nums ${cc.bg} ${cc.text}`}>{c.hours7d}u 7d</span>
-                              <span className="text-[10px] font-mono tabular-nums" style={{ color: 'var(--color-text-tertiary)' }}>{c.totalHours}u tot</span>
-                              <div className="flex items-center gap-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                                <Icons.users size={12} />
-                                <span className="text-xs">{c.members.length}</span>
-                              </div>
-                            </div>
-                          </div>
-                          {/* Activity bar: shows relative intensity vs other DD projects (7d) */}
-                          <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
-                            <div className={`h-full rounded-full bg-gradient-to-r from-workx-lime to-workx-lime/60 transition-all duration-700`} style={{ width: `${activityBar}%` }} />
-                          </div>
-                        </div>
-
-                        <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
-                          <Icons.chevronDown size={16} style={{ color: 'var(--color-text-tertiary)' }} />
-                        </div>
-                      </button>
-
-                      {isExpanded && (
-                        <div className="px-4 pb-4 pt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
-                          <div className="ml-[46px] space-y-2">
-                            {c.members.map((m, mi) => {
-                              const memberBarWidth = c.totalHours > 0 ? (m.hours / c.totalHours) * 100 : 0
-                              const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
-                              const photo = getPhotoUrl(m.personName)
-                              return (
-                                <div key={m.personName} className="flex items-center gap-3">
-                                  {photo ? (
-                                    <Image src={photo} alt={m.personName} width={28} height={28} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
-                                  ) : (
-                                    <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                                      <span className="text-[11px] font-medium text-white">{m.personName.charAt(0)}</span>
-                                    </div>
-                                  )}
-                                  <span className="text-sm w-36 truncate flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>{m.personName}</span>
-                                  <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
-                                    <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-500`} style={{ width: `${memberBarWidth}%` }} />
-                                  </div>
-                                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                                    <span className="text-xs font-mono w-10 text-right font-semibold" style={{ color: m.hours7d > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>{m.hours7d}u</span>
-                                    <span className="text-[10px] font-mono w-10 text-right" style={{ color: 'var(--color-text-tertiary)' }}>{m.hours}u</span>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                    )}
-                  </div>
-                )
-              })}
+            <div className="space-y-2">
+              {recent7d.map((c, i) => renderCase(c, i))}
+              {older.length > 0 && recent7d.length > 0 && (
+                <p className="text-[10px] uppercase tracking-wider font-medium mt-2" style={{ color: 'var(--color-text-tertiary)' }}>Eerder (geen uren afgelopen 7 dagen)</p>
+              )}
+              {older.map((c, i) => renderCase(c, recent7d.length + i, true))}
             </div>
-            )}
-
-            {/* Older cases (no hours in 7 days, but hours in 4 weeks) */}
-            {older.length > 0 && (
-              <div className="space-y-2">
-                {recent7d.length > 0 && (
-                  <p className="text-[10px] uppercase tracking-wider font-medium mt-2" style={{ color: 'var(--color-text-tertiary)' }}>Eerder (geen uren afgelopen 7 dagen)</p>
-                )}
-                {older.map((c, i) => {
-                  const key = `${client}-older-${i}`
-                  const isExpanded = expandedKey === key
-                  return (
-                    <div key={c.fullProjectName} className="rounded-2xl border overflow-hidden transition-all opacity-60 hover:opacity-80" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-                      <button
-                        onClick={() => setExpandedKey(isExpanded ? null : key)}
-                        className="w-full flex items-center gap-3.5 px-4 py-3 text-left"
-                      >
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-bg-tertiary)' }}>
-                          <Icons.briefcase size={12} style={{ color: 'var(--color-text-tertiary)' }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>{c.projectName}</span>
-                            <span className="text-[10px] font-mono tabular-nums flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }}>{c.totalHours}u</span>
-                          </div>
-                        </div>
-                        <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
-                          <Icons.chevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                        </div>
-                      </button>
-                      {isExpanded && (
-                        <div className="px-4 pb-3 pt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
-                          <div className="ml-[38px] space-y-1.5">
-                            {c.members.map((m, mi) => {
-                              const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
-                              const photo = getPhotoUrl(m.personName)
-                              return (
-                                <div key={m.personName} className="flex items-center gap-2">
-                                  {photo ? (
-                                    <Image src={photo} alt={m.personName} width={22} height={22} className="w-[22px] h-[22px] rounded object-cover flex-shrink-0" />
-                                  ) : (
-                                    <div className={`w-[22px] h-[22px] rounded bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                                      <span className="text-[9px] font-medium text-white">{m.personName.charAt(0)}</span>
-                                    </div>
-                                  )}
-                                  <span className="text-xs flex-1 truncate" style={{ color: 'var(--color-text-tertiary)' }}>{m.personName}</span>
-                                  <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-tertiary)' }}>{m.hours}u</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
         )
       })}
-
-      {/* ─── Team Overzicht ─── */}
-      {teamOverview.length > 0 && (
-        <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-          <div className="flex items-center gap-2 mb-5">
-            <Icons.users size={16} className="text-workx-lime" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>Team overzicht</h2>
-          </div>
-          <div className="space-y-3">
-            {teamOverview.map((member, i) => {
-              const max7d = teamOverview[0]?.hours7d || 1
-              const barWidth = max7d > 0 ? (member.hours7d / max7d) * 100 : 0
-              const color = MEMBER_COLORS[i % MEMBER_COLORS.length]
-              const photo = getPhotoUrl(member.personName)
-              return (
-                <div key={member.personName} className="flex items-center gap-3">
-                  {photo ? (
-                    <Image src={photo} alt={member.personName} width={32} height={32} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
-                  ) : (
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-xs font-medium text-white">{member.personName.charAt(0)}</span>
-                    </div>
-                  )}
-                  <span className="text-sm font-medium w-40 truncate flex-shrink-0" style={{ color: 'var(--color-text-primary)' }}>{member.personName}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
-                    <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-700`} style={{ width: `${barWidth}%` }} />
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-sm font-mono tabular-nums w-12 text-right font-semibold" style={{ color: member.hours7d > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>{member.hours7d}u</span>
-                    <span className="text-[10px] font-mono tabular-nums w-12 text-right" style={{ color: 'var(--color-text-tertiary)' }}>{member.totalHours}u tot</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <p className="text-[10px] mt-3" style={{ color: 'var(--color-text-tertiary)' }}>Balk en vetgedrukte uren = afgelopen 7 dagen · &quot;tot&quot; = totaal 4 weken</p>
-        </div>
-      )}
 
       {/* Empty state when no werkdruk data */}
       {stats.totalCases === 0 && unmatchedManualProjects.length === 0 && (
@@ -590,7 +538,7 @@ export default function DDProjectenPage() {
             </h2>
           </div>
           <button
-            onClick={() => { setShowForm(true); setEditingProject(null); setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] }) }}
+            onClick={() => { setShowForm(true); setEditingProject(null); setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [], expectedHours: '' }) }}
             className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
           >
             <Icons.plus size={14} />
@@ -792,6 +740,18 @@ export default function DDProjectenPage() {
                   className="input-field"
                   rows={2}
                   placeholder="Korte omschrijving van het DD project"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Verwachte uren</label>
+                <input
+                  type="number"
+                  value={form.expectedHours}
+                  onChange={e => setForm({ ...form, expectedHours: e.target.value })}
+                  className="input-field"
+                  placeholder="Bijv. 100"
+                  min="0"
+                  step="1"
                 />
               </div>
               <div>

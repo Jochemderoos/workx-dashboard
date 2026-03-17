@@ -1681,19 +1681,29 @@ model WerkstudentTask {
 // ==================== DD PROJECTEN (DUE DILIGENCE) ====================
 
 model DDProject {
-  id          String    @id @default(cuid())
-  name        String
-  client      String    // De Breij, Stek, JB Law, etc.
-  description String?   @db.Text
-  status      String    @default("actief") // actief, afgerond, on_hold
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  name          String
+  client        String    // De Breij, Stek, JB Law, etc.
+  description   String?   @db.Text
+  expectedHours Float?    // Verwacht totaal uren voor voortgangsbalk
+  status        String    @default("actief") // actief, afgerond, on_hold
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   members     DDProjectMember[]
 
   @@index([status])
   @@index([client])
+}
+
+// Verwachte uren voor werkdruk-gebaseerde DD projecten (key = projectName)
+model DDProjectEstimate {
+  id            String   @id @default(cuid())
+  projectName   String   @unique // Full project name from workload data
+  expectedHours Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model DDProjectMember {

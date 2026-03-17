@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { name, client, description, memberIds } = await req.json()
+  const { name, client, description, memberIds, expectedHours } = await req.json()
   if (!name?.trim() || !client?.trim()) {
     return NextResponse.json({ error: 'Naam en client zijn verplicht' }, { status: 400 })
   }
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       client: client.trim(),
       description: description?.trim() || null,
+      expectedHours: expectedHours || null,
       members: memberIds?.length ? {
         create: memberIds.map((userId: string) => ({
           userId,
@@ -74,7 +75,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { id, name, client, description, status, memberIds } = await req.json()
+  const { id, name, client, description, status, memberIds, expectedHours } = await req.json()
   if (!id) {
     return NextResponse.json({ error: 'ID is verplicht' }, { status: 400 })
   }
@@ -83,6 +84,7 @@ export async function PUT(req: NextRequest) {
   if (name !== undefined) updateData.name = name.trim()
   if (client !== undefined) updateData.client = client.trim()
   if (description !== undefined) updateData.description = description?.trim() || null
+  if (expectedHours !== undefined) updateData.expectedHours = expectedHours || null
   if (status !== undefined) {
     updateData.status = status
     if (status === 'afgerond') updateData.completedAt = new Date()

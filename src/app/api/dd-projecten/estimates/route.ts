@@ -1,0 +1,36 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+// GET - Fetch all estimates
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
+
+  const estimates = await prisma.dDProjectEstimate.findMany()
+  return NextResponse.json(estimates)
+}
+
+// PUT - Upsert an estimate for a workload project
+export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
+
+  const { projectName, expectedHours } = await req.json()
+  if (!projectName) {
+    return NextResponse.json({ error: 'projectName is verplicht' }, { status: 400 })
+  }
+
+  const estimate = await prisma.dDProjectEstimate.upsert({
+    where: { projectName },
+    create: { projectName, expectedHours: expectedHours || 0 },
+    update: { expectedHours: expectedHours || 0 },
+  })
+
+  return NextResponse.json(estimate)
+}
