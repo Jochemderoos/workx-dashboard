@@ -1026,7 +1026,7 @@ export default function AIAssistentPage() {
       {showHelp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowHelp(false)} />
-          <div className="relative w-full max-w-2xl mx-4 max-h-[85vh] rounded-3xl bg-gradient-to-b from-workx-gray to-workx-dark border border-white/10 shadow-2xl overflow-hidden">
+          <div className="relative w-full max-w-2xl mx-4 max-h-[85vh] rounded-3xl border shadow-2xl overflow-hidden" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
             {/* Header with gradient */}
             <div className="relative p-8 pb-6 overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-workx-lime/10 rounded-full blur-[80px]" />
@@ -1071,6 +1071,17 @@ export default function AIAssistentPage() {
                   title: 'Rechtspraak zoeken',
                   desc: 'De AI doorzoekt automatisch rechtspraak.nl en leest relevante uitspraken volledig. Alle ECLI-nummers worden geverifieerd.',
                   tips: ['De AI doet minimaal 2 zoekopdrachten met verschillende termen', 'ECLI-nummers uit de kennisbronnen (RAR/VAAN) zijn redactioneel geverifieerd', 'Niet-geverifieerde ECLIs worden gemarkeerd met een waarschuwing'],
+                },
+                {
+                  icon: '✨',
+                  title: 'Claude-only modus (paarse knop)',
+                  desc: 'De paarse "Claude" knop naast het invulveld stuurt je vraag direct naar Claude ZONDER juridische bronnen. Ideaal voor niet-juridische taken waarbij je geen bronvermelding nodig hebt.',
+                  tips: [
+                    'Gebruik voor: vertalingen, e-mails schrijven, samenvattingen, brainstormen, algemene vragen',
+                    'Sneller dan de standaard modus omdat er geen bronnen doorzocht worden',
+                    'Antwoorden bevatten GEEN juridische bronvermeldingen — gebruik dit niet voor juridisch advies',
+                    'De groene knop (standaard) stuurt je vraag mét alle juridische bronnen',
+                  ],
                 },
                 {
                   icon: '🧠',

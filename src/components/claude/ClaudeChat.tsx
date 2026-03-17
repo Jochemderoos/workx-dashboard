@@ -1499,8 +1499,8 @@ ${markdownHtml}
               <p className="text-[15px] text-white/70 leading-relaxed">
                 Ik ben de <span className="text-white font-medium">Workx AI Assistent</span>. Ik help je verder bij al je juridische vragen.
               </p>
-              <p className="text-[13px] text-white/35 leading-relaxed">
-                Hulp nodig? Klik hieronder en ik vertel je wat ik allemaal kan.
+              <p className="text-[13px] leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
+                Gebruik de <span className="text-purple-400 font-medium">paarse knop</span> voor vertalingen en algemene vragen (zonder bronnen), of de <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>groene knop</span> voor juridisch advies mét bronnen.
               </p>
               {onHelpClick && (
                 <button
