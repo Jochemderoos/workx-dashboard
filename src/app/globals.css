@@ -157,7 +157,7 @@
 
   --color-chat-input-bg: linear-gradient(to top, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 60%, rgba(255, 255, 255, 0.85) 100%);
 
-  --logo-filter: brightness(0.15) contrast(1.3);
+  --logo-filter: none;
   --pand-filter: brightness(0.2);
   --calendar-picker-filter: opacity(0.4);
   --calendar-picker-hover-filter: opacity(1);
@@ -4506,25 +4506,20 @@ textarea::-webkit-scrollbar-thumb:hover {
 [data-theme="light"] .text-white {
   color: var(--color-text-primary);
 }
-/* Preserve white text on colored backgrounds */
+/* Preserve white text ONLY on vivid solid-color backgrounds (not transparent gradients) */
 [data-theme="light"] .bg-workx-lime .text-white,
 [data-theme="light"] .bg-red-500 .text-white,
+[data-theme="light"] .bg-red-500\/80 .text-white,
 [data-theme="light"] .bg-green-500 .text-white,
 [data-theme="light"] .bg-blue-500 .text-white,
-[data-theme="light"] .bg-gradient-to-r .text-white,
-[data-theme="light"] .bg-gradient-to-br .text-white,
-[data-theme="light"] .nav-link.active .text-white,
-[data-theme="light"] [class*="from-orange"] .text-white,
-[data-theme="light"] [class*="from-red"] .text-white,
-[data-theme="light"] [class*="from-green"] .text-white,
-[data-theme="light"] [class*="from-blue"] .text-white,
-[data-theme="light"] [class*="from-purple"] .text-white,
-[data-theme="light"] [class*="from-amber"] .text-white,
-[data-theme="light"] [class*="from-pink"] .text-white,
-[data-theme="light"] [class*="from-cyan"] .text-white,
-[data-theme="light"] [class*="from-emerald"] .text-white,
-[data-theme="light"] .badge .text-white,
-[data-theme="light"] .keep-white {
+[data-theme="light"] .bg-orange-500 .text-white,
+[data-theme="light"] .bg-purple-500 .text-white,
+[data-theme="light"] .keep-white,
+[data-theme="light"] .btn-primary .text-white {
+  color: #ffffff;
+}
+/* White text on vivid gradient badges (full-opacity from/to like the 15-jaar badge) */
+[data-theme="light"] [class*="from-orange-500"][class*="to-amber-500"] {
   color: #ffffff;
 }
 
@@ -4572,9 +4567,22 @@ textarea::-webkit-scrollbar-thumb:hover {
 [data-theme="light"] .bg-white\/\[0\.03\] {
   background-color: rgba(0, 0, 0, 0.02);
 }
+[data-theme="light"] .bg-white\/\[0\.04\] {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+[data-theme="light"] .bg-white\/\[0\.05\] {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] .bg-white\/\[0\.02\] {
+  background-color: rgba(0, 0, 0, 0.015);
+}
 [data-theme="light"] .bg-white\/15,
 [data-theme="light"] .bg-white\/20 {
   background-color: rgba(0, 0, 0, 0.06);
+}
+[data-theme="light"] .bg-white\/25,
+[data-theme="light"] .bg-white\/30 {
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 /* --- Border colors --- */
@@ -4587,13 +4595,32 @@ textarea::-webkit-scrollbar-thumb:hover {
 [data-theme="light"] .border-white\/\[0\.06\] {
   border-color: rgba(0, 0, 0, 0.06);
 }
+[data-theme="light"] .border-white\/\[0\.08\] {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .border-white\/15 {
+  border-color: rgba(0, 0, 0, 0.1);
+}
 [data-theme="light"] .border-white\/20 {
   border-color: rgba(0, 0, 0, 0.12);
 }
+[data-theme="light"] .border-white\/25,
+[data-theme="light"] .border-white\/30 {
+  border-color: rgba(0, 0, 0, 0.15);
+}
 
 /* --- Placeholder colors --- */
-[data-theme="light"] .placeholder-white\/30::placeholder {
+[data-theme="light"] .placeholder-white\/30::placeholder,
+[data-theme="light"] .placeholder-white\/25::placeholder {
   color: var(--color-text-muted);
+}
+
+/* --- Focus border overrides --- */
+[data-theme="light"] .focus\:border-workx-lime\/30:focus {
+  border-color: rgba(92, 97, 8, 0.4);
+}
+[data-theme="light"] .focus\:bg-white\/\[0\.06\]:focus {
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
 /* --- Hover states --- */
@@ -4848,9 +4875,9 @@ textarea::-webkit-scrollbar-thumb:hover {
 /* ==================== LIGHT MODE: COMPREHENSIVE VISUAL OVERHAUL ==================== */
 /* Silicon Valley clean design: white cards, layered shadows, readable accents */
 
-/* ---- 1. LOGO: dark gray, not pure black ---- */
+/* ---- 1. LOGO: no filter needed — lime post-it with black text works on any bg ---- */
 [data-theme="light"] img[alt="Workx Advocaten"] {
-  filter: brightness(0.15) contrast(1.3);
+  filter: none;
 }
 
 /* ---- 2. LIME TEXT: #f9ff85 → accessible dark olive ---- */
@@ -5178,4 +5205,65 @@ textarea::-webkit-scrollbar-thumb:hover {
 }
 [data-theme="light"] .table-premium tbody tr:hover td {
   background-color: rgba(0, 0, 0, 0.015);
+}
+
+/* ---- 29. CLAUDE-ONLY BUTTON: prominent in both modes ---- */
+.claude-only-btn {
+  position: relative;
+}
+.claude-only-btn::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.1));
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: -1;
+}
+.claude-only-btn:hover::before {
+  opacity: 1;
+}
+[data-theme="light"] .claude-only-btn {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.3);
+  color: #7c3aed;
+}
+[data-theme="light"] .claude-only-btn:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+/* ---- 30. CHAT TEXTAREA: visible in light mode ---- */
+[data-theme="light"] textarea[style*="--color-bg-secondary"] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] textarea:focus {
+  border-color: rgba(92, 97, 8, 0.4) !important;
+  box-shadow: 0 0 0 3px rgba(92, 97, 8, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ---- 31. HARDCODED INLINE COLORS: catch-all overrides ---- */
+[data-theme="light"] .bg-\[\#1a1a1a\] {
+  background-color: var(--color-bg-secondary);
+}
+[data-theme="light"] .bg-\[\#252525\] {
+  background-color: var(--color-bg-secondary);
+}
+[data-theme="light"] .border-\[\#333\] {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ---- 32. STOP BUTTON: ensure white content on red ---- */
+[data-theme="light"] .stop-btn {
+  color: #ffffff;
+}
+[data-theme="light"] .stop-btn .bg-white {
+  background-color: #ffffff;
+}
+
+/* ---- 33. SEND BUTTON: keep text dark on lime ---- */
+[data-theme="light"] .send-btn {
+  color: #1e1e1e;
 }

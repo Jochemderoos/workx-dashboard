@@ -1972,7 +1972,7 @@ ${markdownHtml}
       </div>
 
       {/* Input area — compact when options collapsed, expanded when shown */}
-      <div className="flex-shrink-0 border-t border-white/[0.06] chat-input-area">
+      <div className="flex-shrink-0 border-t chat-input-area" style={{ borderColor: 'var(--color-border-subtle)' }}>
         {/* Collapsible options panel */}
         <div
           className={`overflow-hidden transition-all duration-300 ease-in-out ${
@@ -2336,13 +2336,14 @@ ${markdownHtml}
             </button>
           )}
 
-          <div className="flex items-end gap-2.5">
+          <div className="flex items-end gap-2">
             {/* Attach document button */}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading || isUploading}
               title="Bestanden bijvoegen (PDF, DOCX, TXT, afbeeldingen)"
-              className="attach-btn flex-shrink-0 w-11 h-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/40 flex items-center justify-center hover:text-workx-lime hover:border-workx-lime/25 hover:bg-workx-lime/5 disabled:opacity-20 disabled:cursor-not-allowed"
+              className="attach-btn flex-shrink-0 w-10 h-10 rounded-xl border flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+              style={{ background: 'var(--color-bg-glass)', borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
             >
               {isUploading ? (
                 <div className="animate-spin">
@@ -2364,29 +2365,30 @@ ${markdownHtml}
                 spellCheck={false}
                 autoComplete="off"
                 rows={1}
-                className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-2xl text-white text-[15px] placeholder-white/25 resize-none focus:outline-none focus:border-workx-lime/30 focus:bg-white/[0.06] transition-all duration-300 disabled:opacity-50"
-                style={{ maxHeight: '200px' }}
+                className="w-full px-4 py-2.5 rounded-2xl text-[15px] resize-none focus:outline-none transition-all duration-300 disabled:opacity-50"
+                style={{ maxHeight: '200px', background: 'var(--color-bg-secondary)', border: '1.5px solid var(--color-border)', color: 'var(--color-text-primary)' }}
               />
             </div>
-            {/* Claude-only send button */}
+            {/* Claude-only send button — prominent purple */}
             <div className="relative group/claude">
               <button
                 onClick={() => sendMessage(undefined, { claudeOnly: true })}
                 disabled={!input.trim() || isLoading}
-                className="flex-shrink-0 w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-500/25 text-purple-300 flex items-center justify-center hover:bg-purple-500/25 hover:border-purple-500/40 disabled:opacity-20 transition-all"
+                className="claude-only-btn flex-shrink-0 h-10 px-3 rounded-xl bg-purple-500/20 border-2 border-purple-500/40 text-purple-400 flex items-center justify-center gap-1.5 hover:bg-purple-500/30 hover:border-purple-500/60 hover:shadow-lg hover:shadow-purple-500/10 disabled:opacity-20 transition-all font-medium"
               >
-                <Icons.sparkles size={17} />
+                <Icons.sparkles size={15} />
+                <span className="text-xs hidden sm:inline">Claude</span>
               </button>
               {/* Hover tooltip */}
-              <div className="absolute bottom-full right-0 mb-2 hidden group-hover/claude:block pointer-events-none w-52 p-2.5 rounded-xl bg-[#1a1a1a] border border-purple-500/20 shadow-xl">
-                <p className="text-xs font-medium text-purple-300">Claude-only</p>
-                <p className="text-[10px] text-white/40 mt-0.5">Zonder juridische bronnen. Voor vertalingen en algemene vragen.</p>
+              <div className="absolute bottom-full right-0 mb-2 hidden group-hover/claude:block pointer-events-none w-52 p-2.5 rounded-xl shadow-xl" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+                <p className="text-xs font-medium text-purple-500">Claude-only</p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Zonder juridische bronnen. Voor vertalingen en algemene vragen.</p>
               </div>
             </div>
             {isLoading ? (
               <button
                 onClick={stopGeneration}
-                className="stop-btn flex-shrink-0 w-11 h-11 rounded-xl bg-red-500/80 text-white flex items-center justify-center hover:bg-red-500 shadow-lg shadow-red-500/10"
+                className="stop-btn flex-shrink-0 h-10 w-10 rounded-xl bg-red-500 text-white flex items-center justify-center hover:bg-red-600 shadow-lg shadow-red-500/20"
                 title="Stop generatie (Esc)"
               >
                 <div className="w-3.5 h-3.5 rounded-sm bg-white" />
@@ -2395,7 +2397,7 @@ ${markdownHtml}
               <button
                 onClick={() => sendMessage()}
                 disabled={!input.trim()}
-                className="send-btn flex-shrink-0 w-11 h-11 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/10"
+                className="send-btn flex-shrink-0 h-10 w-10 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/20"
               >
                 <Icons.send size={18} />
               </button>
