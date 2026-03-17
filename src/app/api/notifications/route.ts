@@ -330,7 +330,7 @@ export async function GET() {
     // 11. Dagelijkse AI Assistent tip — roteert door features
     {
       const aiTips = [
-        { key: 'ai-tip-claude-only', title: '💡 AI Tip: Claude-only', message: 'Gebruik de paarse knop naast het invoerveld voor snelle vragen zonder bronnen — ideaal voor vertalingen, e-mails en samenvattingen.', href: '/dashboard/ai' },
+        { key: 'ai-tip-claude-only', title: '💡 AI Tip: Claude-only', message: 'Gebruik de paarse knop (Claude-only) voor snelle vragen zonder bronnen, of de gele W-knop (Workx Bronnen) voor juridisch advies mét bronnen.', href: '/dashboard/ai' },
         { key: 'ai-tip-hulp-nodig', title: '💡 AI Tip: Hulp Nodig?', message: 'Klik op "Hulp Nodig?" in de AI Assistent voor uitleg over alle functies, bronnen en slimme opties.', href: '/dashboard/ai' },
         { key: 'ai-tip-documenten', title: '💡 AI Tip: Documenten', message: 'Upload arbeidsovereenkomsten, CAOs of brieven via het paperclip-icoon. De AI analyseert ze direct.', href: '/dashboard/ai' },
         { key: 'ai-tip-projecten', title: '💡 AI Tip: Projecten', message: 'Maak AI-projecten aan om documenten en gesprekken per zaak te organiseren. Delen met collega\'s kan ook.', href: '/dashboard/ai' },

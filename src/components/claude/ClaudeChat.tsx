@@ -1509,7 +1509,7 @@ ${markdownHtml}
                 Ik ben de <span className="text-white font-medium">Workx AI Assistent</span>. Ik help je verder bij al je juridische vragen.
               </p>
               <p className="text-[13px] leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
-                Gebruik de <span className="text-purple-400 font-medium">paarse knop</span> voor vertalingen en algemene vragen (zonder bronnen), of de <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>groene knop</span> voor juridisch advies mét bronnen.
+                Gebruik de <span className="text-purple-400 font-medium">paarse knop</span> (Claude-only) voor vertalingen en algemene vragen, of de <span className="text-workx-lime font-medium">gele W-knop</span> (Workx Bronnen) voor juridisch advies mét bronnen.
               </p>
               {onHelpClick && (
                 <button
@@ -2389,7 +2389,7 @@ ${markdownHtml}
               </button>
             ) : hasSourcesActive ? (
               <>
-                {/* W button = primary when sources active */}
+                {/* Workx Bronnen = primary (geel) when sources active */}
                 <div className="relative group/wsend">
                   <button
                     onClick={() => sendMessage()}
@@ -2400,49 +2400,47 @@ ${markdownHtml}
                     <Icons.send size={15} />
                   </button>
                   <div className="absolute bottom-full right-0 mb-2 hidden group-hover/wsend:block pointer-events-none w-56 p-2.5 rounded-xl shadow-xl z-50" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-                    <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Workx Zoeken</p>
+                    <p className="text-xs font-medium text-workx-lime">Workx Bronnen</p>
                     <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Zoekt met je gekozen opties (bronnen, rechtspraak). Uitgebreider maar duurt langer.</p>
                   </div>
                 </div>
-                {/* Claude-only = secondary when sources active */}
+                {/* Claude-only = secondary (paars) when sources active */}
                 <div className="relative group/claude">
                   <button
                     onClick={() => sendMessage(undefined, { claudeOnly: true })}
                     disabled={!input.trim()}
-                    className="flex-shrink-0 h-10 w-10 rounded-xl border flex items-center justify-center disabled:opacity-20 transition-all"
-                    style={{ background: 'var(--color-bg-glass)', borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
+                    className="flex-shrink-0 h-10 w-10 rounded-xl bg-purple-500/15 border-2 border-purple-500/30 text-purple-400 flex items-center justify-center disabled:opacity-20 hover:bg-purple-500/25 hover:border-purple-500/50 transition-all"
                   >
                     <Icons.sparkles size={16} />
                   </button>
                   <div className="absolute bottom-full right-0 mb-2 hidden group-hover/claude:block pointer-events-none w-52 p-2.5 rounded-xl shadow-xl z-50" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-                    <p className="text-xs font-medium text-purple-500">Claude-only</p>
+                    <p className="text-xs font-medium text-purple-400">Claude-only</p>
                     <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Zonder bronnen. Snel antwoord voor vertalingen en algemene vragen.</p>
                   </div>
                 </div>
               </>
             ) : (
               <>
-                {/* Claude-only = primary when no sources active (default) */}
+                {/* Claude-only = primary (paars) when no sources active (default) */}
                 <button
                   onClick={() => sendMessage(undefined, { claudeOnly: true })}
                   disabled={!input.trim()}
-                  className="send-btn flex-shrink-0 h-10 px-3.5 rounded-xl bg-workx-lime text-workx-dark flex items-center justify-center gap-1.5 disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-workx-lime/20 font-medium text-sm"
+                  className="send-btn flex-shrink-0 h-10 px-3.5 rounded-xl bg-purple-500 text-white flex items-center justify-center gap-1.5 disabled:opacity-20 disabled:cursor-not-allowed shadow-lg shadow-purple-500/30 font-medium text-sm hover:bg-purple-600 transition-colors"
                 >
                   <Icons.sparkles size={15} />
                   <Icons.send size={15} />
                 </button>
-                {/* W button = secondary when no sources */}
+                {/* Workx Bronnen = secondary (geel) when no sources */}
                 <div className="relative group/wsend">
                   <button
                     onClick={() => sendMessage()}
                     disabled={!input.trim()}
-                    className="flex-shrink-0 h-10 w-10 rounded-xl border flex items-center justify-center disabled:opacity-20 transition-all font-bold text-xs"
-                    style={{ background: 'var(--color-bg-glass)', borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
+                    className="flex-shrink-0 h-10 w-10 rounded-xl bg-workx-lime/15 border-2 border-workx-lime/30 text-workx-lime flex items-center justify-center disabled:opacity-20 hover:bg-workx-lime/25 hover:border-workx-lime/50 transition-all font-bold text-xs"
                   >
                     W
                   </button>
                   <div className="absolute bottom-full right-0 mb-2 hidden group-hover/wsend:block pointer-events-none w-56 p-2.5 rounded-xl shadow-xl z-50" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-                    <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>Workx Zoeken</p>
+                    <p className="text-xs font-medium text-workx-lime">Workx Bronnen</p>
                     <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Zoekt met juridische bronnen (T&C, VAAN, RAR). Zet bronnen aan voor betere resultaten. Duurt langer.</p>
                   </div>
                 </div>

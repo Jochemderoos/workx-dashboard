@@ -1075,12 +1075,12 @@ export default function AIAssistentPage() {
                 {
                   icon: '✨',
                   title: 'Claude-only modus (paarse knop)',
-                  desc: 'De paarse "Claude" knop naast het invulveld stuurt je vraag direct naar Claude ZONDER juridische bronnen. Ideaal voor niet-juridische taken waarbij je geen bronvermelding nodig hebt.',
+                  desc: 'De paarse knop stuurt je vraag direct naar Claude ZONDER juridische bronnen. Ideaal voor vertalingen, e-mails en andere niet-juridische taken.',
                   tips: [
                     'Gebruik voor: vertalingen, e-mails schrijven, samenvattingen, brainstormen, algemene vragen',
-                    'Sneller dan de standaard modus omdat er geen bronnen doorzocht worden',
+                    'Sneller dan de Workx Bronnen modus omdat er geen bronnen doorzocht worden',
                     'Antwoorden bevatten GEEN juridische bronvermeldingen — gebruik dit niet voor juridisch advies',
-                    'De groene knop (standaard) stuurt je vraag mét alle juridische bronnen',
+                    'De gele W-knop (Workx Bronnen) stuurt je vraag mét alle juridische bronnen',
                   ],
                 },
                 {
