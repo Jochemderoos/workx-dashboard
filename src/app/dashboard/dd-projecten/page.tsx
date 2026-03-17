@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
+import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
 
 interface Member {
@@ -22,9 +24,6 @@ interface Project {
   completedAt: string | null
   createdAt: string
   members: Member[]
-  // From workload auto-detection
-  autoHours?: Record<string, number> // personName -> hours
-  autoMembers?: string[]
 }
 
 interface TeamMember {
@@ -40,20 +39,33 @@ interface WorkloadEntry {
   workedHours: number
 }
 
+interface DDCase {
+  projectName: string
+  fullProjectName: string
+  totalHours: number
+  members: { personName: string; hours: number }[]
+  linkedProject?: Project
+}
+
 const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law', 'Strasuwolfs']
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  actief: { label: 'Actief', color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30' },
-  on_hold: { label: 'On Hold', color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/30' },
-  afgerond: { label: 'Afgerond', color: 'text-gray-400', bg: 'bg-gray-500/15', border: 'border-gray-500/30' },
+const CLIENT_COLORS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
+  'De Breij': { dot: 'bg-blue-400', text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  'Stek': { dot: 'bg-purple-400', text: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  'JB Law': { dot: 'bg-amber-400', text: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+  'Strasuwolfs': { dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
 }
 
-const CLIENT_COLORS: Record<string, { from: string; to: string; text: string; icon: string }> = {
-  'De Breij': { from: 'from-blue-500/15', to: 'to-cyan-500/10', text: 'text-blue-400', icon: 'bg-blue-500/15' },
-  'Stek': { from: 'from-purple-500/15', to: 'to-indigo-500/10', text: 'text-purple-400', icon: 'bg-purple-500/15' },
-  'JB Law': { from: 'from-amber-500/15', to: 'to-orange-500/10', text: 'text-amber-400', icon: 'bg-amber-500/15' },
-  'Strasuwolfs': { from: 'from-emerald-500/15', to: 'to-teal-500/10', text: 'text-emerald-400', icon: 'bg-emerald-500/15' },
-}
+const MEMBER_COLORS = [
+  'from-blue-500 to-blue-400',
+  'from-purple-500 to-purple-400',
+  'from-orange-500 to-orange-400',
+  'from-emerald-500 to-emerald-400',
+  'from-pink-500 to-pink-400',
+  'from-cyan-500 to-cyan-400',
+  'from-amber-500 to-amber-400',
+  'from-indigo-500 to-indigo-400',
+]
 
 export default function DDProjectenPage() {
   const { data: session } = useSession()
@@ -63,8 +75,7 @@ export default function DDProjectenPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
-  const [showCompleted, setShowCompleted] = useState(false)
-  const [expandedProject, setExpandedProject] = useState<string | null>(null)
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] as string[] })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRole = (session?.user as any)?.role
@@ -91,103 +102,81 @@ export default function DDProjectenPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // Auto-detect DD projects from workload data
-  const autoDetectedProjects = useMemo(() => {
-    const projectMap = new Map<string, { personName: string; hours: number }[]>()
+  // ─── Process workload data into DD structures ───
+  const { clientGroups, teamOverview, stats, unmatchedManualProjects } = useMemo(() => {
+    // Group workload entries by projectName, filter for DD clients
+    const projectMap = new Map<string, { client: string; members: Map<string, number> }>()
     for (const entry of workloadData) {
-      const pn = entry.projectName.toLowerCase()
-      const isDD = DD_CLIENTS.some(c => pn.includes(c.toLowerCase()))
-      if (!isDD) continue
-
+      const client = DD_CLIENTS.find(c => entry.projectName.toLowerCase().includes(c.toLowerCase()))
+      if (!client) continue
+      const hours = entry.workedHours || entry.billableHours || 0
+      if (hours <= 0) continue
       if (!projectMap.has(entry.projectName)) {
-        projectMap.set(entry.projectName, [])
+        projectMap.set(entry.projectName, { client, members: new Map() })
       }
-      const existing = projectMap.get(entry.projectName)!.find(e => e.personName === entry.personName)
-      if (existing) {
-        existing.hours += entry.workedHours || entry.billableHours || 0
-      } else {
-        projectMap.get(entry.projectName)!.push({
-          personName: entry.personName,
-          hours: entry.workedHours || entry.billableHours || 0,
-        })
-      }
+      const proj = projectMap.get(entry.projectName)!
+      proj.members.set(entry.personName, (proj.members.get(entry.personName) || 0) + hours)
     }
-    return projectMap
-  }, [workloadData])
 
-  // Merge auto-detected hours into projects + create virtual projects for unmatched workload entries
-  const { enrichedProjects, autoOnlyProjects } = useMemo(() => {
-    const matchedAutoKeys = new Set<string>()
+    // Build cases per client + link manual DDProjects
+    const groups = new Map<string, DDCase[]>()
+    const matchedProjectIds = new Set<string>()
 
-    const enriched = projects.map(p => {
-      const autoHours: Record<string, number> = {}
-      const autoMembers: string[] = []
-      for (const [projName, entries] of Array.from(autoDetectedProjects.entries())) {
-        const matchesProject = projName.toLowerCase().includes(p.name.toLowerCase()) ||
-          p.name.toLowerCase().includes(projName.split('/')[0].trim().toLowerCase())
-        const matchesClient = projName.toLowerCase().includes(p.client.toLowerCase())
-        if (matchesProject || matchesClient) {
-          matchedAutoKeys.add(projName)
-          for (const e of entries) {
-            autoHours[e.personName] = (autoHours[e.personName] || 0) + e.hours
-            if (!autoMembers.includes(e.personName)) autoMembers.push(e.personName)
-          }
+    for (const [fullName, data] of Array.from(projectMap.entries())) {
+      const cleanName = fullName.includes('/') ? fullName.split('/').slice(1).join('/').trim() : fullName
+      const members = Array.from(data.members.entries())
+        .map(([name, hours]) => ({ personName: name, hours: Math.round(hours * 10) / 10 }))
+        .sort((a, b) => b.hours - a.hours)
+      const totalHours = Math.round(members.reduce((s, m) => s + m.hours, 0) * 10) / 10
+
+      // Check if any manual DDProject matches
+      let linkedProject: Project | undefined
+      for (const p of projects) {
+        if (p.status === 'afgerond') continue
+        const matchesName = fullName.toLowerCase().includes(p.name.toLowerCase()) ||
+          p.name.toLowerCase().includes(cleanName.toLowerCase())
+        const matchesClient = fullName.toLowerCase().includes(p.client.toLowerCase())
+        if (matchesName || matchesClient) {
+          linkedProject = p
+          matchedProjectIds.add(p.id)
+          break
         }
       }
-      return { ...p, autoHours, autoMembers }
-    })
 
-    // Group unmatched workload entries by client, then sub-project
-    const clientProjects = new Map<string, Map<string, { personName: string; hours: number }[]>>()
-    for (const [projName, entries] of Array.from(autoDetectedProjects.entries())) {
-      if (matchedAutoKeys.has(projName)) continue
-      const client = DD_CLIENTS.find(c => projName.toLowerCase().includes(c.toLowerCase())) || 'Onbekend'
-      // Clean the project name: "Stek Advocaten B.V. / Castellum" → "Castellum"
-      const cleanName = projName.includes('/') ? projName.split('/').slice(1).join('/').trim() : projName
-      if (!clientProjects.has(client)) clientProjects.set(client, new Map())
-      const clientMap = clientProjects.get(client)!
-      if (!clientMap.has(cleanName)) clientMap.set(cleanName, [])
-      for (const e of entries) {
-        const existing = clientMap.get(cleanName)!.find(x => x.personName === e.personName)
-        if (existing) existing.hours += e.hours
-        else clientMap.get(cleanName)!.push({ ...e })
-      }
+      if (!groups.has(data.client)) groups.set(data.client, [])
+      groups.get(data.client)!.push({ projectName: cleanName, fullProjectName: fullName, totalHours, members, linkedProject })
     }
 
-    // Create virtual Project objects per client (group sub-projects under one card per client)
-    const autoOnly: Project[] = []
-    for (const [client, subProjects] of Array.from(clientProjects.entries())) {
-      const autoHours: Record<string, number> = {}
-      const autoMembers: string[] = []
-      const subNames: string[] = []
-      for (const [subName, entries] of Array.from(subProjects.entries())) {
-        subNames.push(subName)
-        for (const e of entries) {
-          autoHours[e.personName] = (autoHours[e.personName] || 0) + e.hours
-          if (!autoMembers.includes(e.personName)) autoMembers.push(e.personName)
-        }
-      }
-      autoOnly.push({
-        id: `auto-${client}`,
-        name: subNames.length === 1 ? subNames[0] : `${subNames.length} projecten`,
-        client,
-        description: subNames.length > 1 ? subNames.join(' • ') : null,
-        status: 'actief',
-        completedAt: null,
-        createdAt: new Date().toISOString(),
-        members: [],
-        autoHours,
-        autoMembers,
-      })
+    for (const cases of Array.from(groups.values())) {
+      cases.sort((a, b) => b.totalHours - a.totalHours)
     }
 
-    return { enrichedProjects: enriched, autoOnlyProjects: autoOnly }
-  }, [projects, autoDetectedProjects])
+    // Team overview: aggregate per person across all DD work
+    const personMap = new Map<string, number>()
+    for (const [, data] of Array.from(projectMap.entries())) {
+      for (const [name, hours] of Array.from(data.members.entries())) {
+        personMap.set(name, (personMap.get(name) || 0) + hours)
+      }
+    }
+    const team = Array.from(personMap.entries())
+      .map(([name, hours]) => ({ personName: name, totalHours: Math.round(hours * 10) / 10 }))
+      .sort((a, b) => b.totalHours - a.totalHours)
 
+    // Stats
+    const totalHours = Math.round(team.reduce((s, m) => s + m.totalHours, 0) * 10) / 10
+    let totalCases = 0
+    for (const cases of Array.from(groups.values())) totalCases += cases.length
+
+    // Unmatched manual projects (not linked to any werkdruk case)
+    const unmatched = projects.filter(p => !matchedProjectIds.has(p.id) && p.status !== 'afgerond')
+
+    return { clientGroups: groups, teamOverview: team, stats: { totalHours, totalCases, teamCount: team.length }, unmatchedManualProjects: unmatched }
+  }, [workloadData, projects])
+
+  // ─── CRUD handlers ───
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim() || !form.client.trim()) return
-
     try {
       if (editingProject) {
         const res = await fetch('/api/dd-projecten', {
@@ -256,29 +245,9 @@ export default function DDProjectenPage() {
     setEditingProject(null)
   }
 
-  const activeProjects = enrichedProjects.filter(p => p.status !== 'afgerond')
-  const completedProjects = enrichedProjects.filter(p => p.status === 'afgerond')
+  const completedProjects = projects.filter(p => p.status === 'afgerond')
 
-  // Combine manual active projects with auto-detected ones
-  const allActiveProjects = [...activeProjects, ...autoOnlyProjects]
-
-  // Split active into "lopend" (has hours from workload) and "toekomstig" (no hours yet)
-  const lopendProjects = allActiveProjects.filter(p => {
-    const hrs = Object.values(p.autoHours || {}).reduce((s, h) => s + h, 0)
-    return hrs > 0
-  })
-  const toekomstigProjects = allActiveProjects.filter(p => {
-    const hrs = Object.values(p.autoHours || {}).reduce((s, h) => s + h, 0)
-    return hrs === 0
-  })
-
-  const allProjects = [...enrichedProjects, ...autoOnlyProjects]
-  const totalHours = allProjects.reduce((sum, p) => {
-    const projectHours = Object.values(p.autoHours || {}).reduce((s, h) => s + h, 0)
-    return sum + projectHours
-  }, 0)
-
-  // Role check
+  // ─── Role check ───
   if (!loading && userRole && userRole !== 'PARTNER' && userRole !== 'ADMIN') {
     return (
       <div className="max-w-5xl mx-auto fade-in">
@@ -286,12 +255,8 @@ export default function DDProjectenPage() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center mx-auto mb-4">
             <Icons.lock className="text-red-400" size={28} />
           </div>
-          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-            Geen toegang
-          </h3>
-          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-            DD Projecten is alleen beschikbaar voor partners en kantoormanagement.
-          </p>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>Geen toegang</h3>
+          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>DD Projecten is alleen beschikbaar voor partners en kantoormanagement.</p>
         </div>
       </div>
     )
@@ -306,47 +271,330 @@ export default function DDProjectenPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 fade-in">
+    <div className="max-w-6xl mx-auto space-y-8 fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            DD Projecten
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
-            Due Diligence projecten — automatisch bijgewerkt op basis van werkdruk
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
+            <Icons.briefcase size={20} className="text-workx-lime" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>DD Projecten</h1>
+            <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>Afgelopen 4 weken — automatisch bijgewerkt op basis van werkdruk</p>
+          </div>
         </div>
-        <button
-          onClick={() => { setShowForm(true); setEditingProject(null); setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] }) }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Icons.plus size={16} />
-          Nieuw project
-        </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card p-4">
-          <div className="text-2xl font-bold text-emerald-400">{lopendProjects.length}</div>
-          <div className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>Lopend</div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border p-4 transition-colors" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Icons.clock size={18} className="text-workx-lime" />
+            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Totaal DD uren</span>
+          </div>
+          <p className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{Math.round(stats.totalHours).toLocaleString('nl-NL')}</p>
         </div>
-        <div className="card p-4">
-          <div className="text-2xl font-bold text-blue-400">{toekomstigProjects.length}</div>
-          <div className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>Toekomstig</div>
+        <div className="rounded-xl border p-4 transition-colors" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Icons.briefcase size={18} className="text-blue-400" />
+            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Actieve zaken</span>
+          </div>
+          <p className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{stats.totalCases}</p>
         </div>
-        <div className="card p-4">
-          <div className="text-2xl font-bold text-amber-400">{totalHours.toFixed(1)}</div>
-          <div className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>Uren (4 weken)</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-2xl font-bold text-gray-400">{completedProjects.length}</div>
-          <div className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>Afgerond</div>
+        <div className="rounded-xl border p-4 transition-colors" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Icons.users size={18} className="text-purple-400" />
+            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Teamleden</span>
+          </div>
+          <p className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{stats.teamCount}</p>
         </div>
       </div>
 
-      {/* Add/Edit Form Modal */}
+      {/* ─── Team Overzicht ─── */}
+      {teamOverview.length > 0 && (
+        <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+          <div className="flex items-center gap-2 mb-5">
+            <Icons.users size={16} className="text-workx-lime" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>Team overzicht</h2>
+          </div>
+          <div className="space-y-3">
+            {teamOverview.map((member, i) => {
+              const maxHours = teamOverview[0]?.totalHours || 1
+              const barWidth = (member.totalHours / maxHours) * 100
+              const color = MEMBER_COLORS[i % MEMBER_COLORS.length]
+              const photo = getPhotoUrl(member.personName)
+              return (
+                <div key={member.personName} className="flex items-center gap-3">
+                  {photo ? (
+                    <Image src={photo} alt={member.personName} width={32} height={32} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-xs font-medium text-white">{member.personName.charAt(0)}</span>
+                    </div>
+                  )}
+                  <span className="text-sm font-medium w-40 truncate flex-shrink-0" style={{ color: 'var(--color-text-primary)' }}>{member.personName}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
+                    <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-700`} style={{ width: `${barWidth}%` }} />
+                  </div>
+                  <span className="text-sm font-mono tabular-nums w-14 text-right flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>{member.totalHours}u</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Per-client sections ─── */}
+      {DD_CLIENTS.filter(c => clientGroups.has(c)).map(client => {
+        const cases = clientGroups.get(client)!
+        const clientTotalHours = Math.round(cases.reduce((s, c) => s + c.totalHours, 0) * 10) / 10
+        const cc = CLIENT_COLORS[client] || CLIENT_COLORS['De Breij']
+
+        return (
+          <div key={client} className="space-y-3">
+            {/* Client header */}
+            <div className="flex items-center gap-2.5">
+              <div className={`w-2.5 h-2.5 rounded-full ${cc.dot}`} />
+              <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>{client}</h2>
+              <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                {cases.length} {cases.length === 1 ? 'zaak' : 'zaken'} · {clientTotalHours} uur
+              </span>
+            </div>
+
+            {/* Cases */}
+            <div className="space-y-2">
+              {cases.map((c, i) => {
+                const key = `${client}-${i}`
+                const isExpanded = expandedKey === key
+                return (
+                  <div key={c.fullProjectName} className={`rounded-2xl border overflow-hidden transition-all ${
+                    isExpanded ? `${cc.border} ${cc.bg} shadow-lg` : 'hover:shadow-md'
+                  }`} style={!isExpanded ? { borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' } : undefined}>
+                    <button
+                      onClick={() => setExpandedKey(isExpanded ? null : key)}
+                      className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left group"
+                    >
+                      {/* Rank badge */}
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${cc.bg}`}>
+                        <span className={`text-xs font-bold ${cc.text}`}>{i + 1}</span>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[13px] font-semibold tracking-tight truncate" style={{ color: 'var(--color-text-primary)' }}>{c.projectName}</span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums ${cc.bg} ${cc.text}`}>{c.totalHours}u</span>
+                            <div className="flex items-center gap-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                              <Icons.users size={12} />
+                              <span className="text-xs">{c.members.length}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
+                        <Icons.chevronDown size={16} style={{ color: 'var(--color-text-tertiary)' }} />
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-4 pt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                        <div className="ml-[46px] space-y-2">
+                          {c.members.map((m, mi) => {
+                            const memberBarWidth = c.totalHours > 0 ? (m.hours / c.totalHours) * 100 : 0
+                            const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
+                            const photo = getPhotoUrl(m.personName)
+                            return (
+                              <div key={m.personName} className="flex items-center gap-3">
+                                {photo ? (
+                                  <Image src={photo} alt={m.personName} width={28} height={28} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
+                                ) : (
+                                  <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                                    <span className="text-[11px] font-medium text-white">{m.personName.charAt(0)}</span>
+                                  </div>
+                                )}
+                                <span className="text-sm w-36 truncate flex-shrink-0" style={{ color: 'var(--color-text-secondary)' }}>{m.personName}</span>
+                                <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-tertiary)' }}>
+                                  <div className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-500`} style={{ width: `${memberBarWidth}%` }} />
+                                </div>
+                                <span className="text-xs font-mono w-10 text-right flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }}>{m.hours}u</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Empty state when no werkdruk data */}
+      {stats.totalCases === 0 && unmatchedManualProjects.length === 0 && (
+        <div className="rounded-2xl border p-12 text-center" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-4">
+            <Icons.briefcase className="text-blue-400" size={28} />
+          </div>
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>Nog geen DD zaken</h3>
+          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>Er zijn geen uren gevonden voor DD-clients in de afgelopen 4 weken. Upload werkdruk data of voeg handmatig een project toe.</p>
+        </div>
+      )}
+
+      {/* ─── Handmatig toegevoegd ─── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-workx-lime" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>
+              Handmatig toegevoegd
+            </h2>
+          </div>
+          <button
+            onClick={() => { setShowForm(true); setEditingProject(null); setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] }) }}
+            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
+          >
+            <Icons.plus size={14} />
+            Nieuw project
+          </button>
+        </div>
+
+        {unmatchedManualProjects.length > 0 ? (
+          <div className="space-y-2">
+            {unmatchedManualProjects.map(project => {
+              const cc = CLIENT_COLORS[project.client] || CLIENT_COLORS['De Breij']
+              const key = `manual-${project.id}`
+              const isExpanded = expandedKey === key
+              return (
+                <div key={project.id} className={`rounded-2xl border overflow-hidden transition-all ${
+                  isExpanded ? `${cc.border} ${cc.bg}` : 'hover:shadow-md'
+                }`} style={!isExpanded ? { borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' } : undefined}>
+                  <div className="flex items-center gap-3.5 px-4 py-3.5">
+                    <button
+                      onClick={() => setExpandedKey(isExpanded ? null : key)}
+                      className="flex items-center gap-3.5 flex-1 min-w-0 text-left"
+                    >
+                      <div className={`w-8 h-8 rounded-xl ${cc.bg} flex items-center justify-center flex-shrink-0`}>
+                        <Icons.briefcase size={14} className={cc.text} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{project.name}</span>
+                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${cc.bg} ${cc.text}`}>{project.client}</span>
+                        </div>
+                        {project.description && (
+                          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-text-tertiary)' }}>{project.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                        <Icons.users size={12} />
+                        <span className="text-xs">{project.members.length}</span>
+                      </div>
+                      <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
+                        <Icons.chevronDown size={16} style={{ color: 'var(--color-text-tertiary)' }} />
+                      </div>
+                    </button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors hover:bg-emerald-500/10" title="Markeer als afgerond">
+                        <Icons.check size={15} className="text-emerald-400" />
+                      </button>
+                      <button onClick={() => startEdit(project)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Bewerken">
+                        <Icons.edit size={14} />
+                      </button>
+                      <button onClick={() => deleteProject(project.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" title="Verwijderen">
+                        <Icons.trash size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isExpanded && project.members.length > 0 && (
+                    <div className="px-4 pb-4 pt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                      <div className="ml-[46px] space-y-2">
+                        {project.members.map((m, mi) => {
+                          const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
+                          const photo = getPhotoUrl(m.user.name)
+                          return (
+                            <div key={m.id} className="flex items-center gap-3">
+                              {photo ? (
+                                <Image src={photo} alt={m.user.name} width={28} height={28} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
+                              ) : (
+                                <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                                  <span className="text-[11px] font-medium text-white">{m.user.name.charAt(0)}</span>
+                                </div>
+                              )}
+                              <span className="text-sm flex-1" style={{ color: 'var(--color-text-secondary)' }}>{m.user.name}</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
+                                {m.role === 'partner' ? 'Partner' : 'Medewerker'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed p-6 text-center" style={{ borderColor: 'var(--color-border)' }}>
+            <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+              Nog geen handmatige projecten. Klik op &quot;Nieuw project&quot; om een zaak toe te voegen met teamtoewijzing.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Afgeronde projecten ─── */}
+      {completedProjects.length > 0 && (
+        <div className="space-y-2">
+          <button
+            onClick={() => setExpandedKey(expandedKey === 'completed-section' ? null : 'completed-section')}
+            className="flex items-center gap-2 text-sm font-medium transition-colors"
+            style={{ color: 'var(--color-text-tertiary)' }}
+          >
+            <Icons.chevronRight size={14} className={`transition-transform ${expandedKey === 'completed-section' ? 'rotate-90' : ''}`} />
+            Afgerond ({completedProjects.length})
+          </button>
+          {expandedKey === 'completed-section' && (
+            <div className="space-y-2 opacity-60">
+              {completedProjects.map(project => {
+                const cc = CLIENT_COLORS[project.client] || CLIENT_COLORS['De Breij']
+                return (
+                  <div key={project.id} className="rounded-xl border group" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                    <div className="flex items-center gap-4 p-4">
+                      <div className={`w-8 h-8 rounded-lg ${cc.bg} flex items-center justify-center`}>
+                        <Icons.check size={14} className="text-emerald-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium line-through" style={{ color: 'var(--color-text-tertiary)' }}>{project.name}</h3>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                          <span className={cc.text}>{project.client}</span>
+                          {project.completedAt && (
+                            <span>Afgerond {new Date(project.completedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Heropen">
+                          <Icons.arrowRight size={14} />
+                        </button>
+                        <button onClick={() => deleteProject(project.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors">
+                          <Icons.trash size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── Form Modal ─── */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={resetForm}>
           <div className="card p-6 w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
@@ -368,30 +616,33 @@ export default function DDProjectenPage() {
               </div>
               <div>
                 <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Client *</label>
-                <div className="flex gap-2">
-                  {DD_CLIENTS.map(c => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setForm({ ...form, client: c })}
-                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-all border ${
-                        form.client === c
-                          ? `${CLIENT_COLORS[c]?.icon || 'bg-blue-500/15'} ${CLIENT_COLORS[c]?.text || 'text-blue-400'} border-current/30`
-                          : 'border-transparent'
-                      }`}
-                      style={{
-                        background: form.client === c ? undefined : 'var(--color-bg-tertiary)',
-                        color: form.client === c ? undefined : 'var(--color-text-tertiary)',
-                      }}
-                    >
-                      {c}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap gap-2">
+                  {DD_CLIENTS.map(c => {
+                    const cc = CLIENT_COLORS[c] || CLIENT_COLORS['De Breij']
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setForm({ ...form, client: c })}
+                        className={`px-3 py-2 rounded-xl text-sm font-medium transition-all border ${
+                          form.client === c
+                            ? `${cc.bg} ${cc.text} ${cc.border}`
+                            : 'border-transparent'
+                        }`}
+                        style={{
+                          background: form.client === c ? undefined : 'var(--color-bg-tertiary)',
+                          color: form.client === c ? undefined : 'var(--color-text-tertiary)',
+                        }}
+                      >
+                        {c}
+                      </button>
+                    )
+                  })}
                   <input
                     type="text"
                     value={DD_CLIENTS.includes(form.client) ? '' : form.client}
                     onChange={e => setForm({ ...form, client: e.target.value })}
-                    className="input-field flex-1"
+                    className="input-field flex-1 min-w-[100px]"
                     placeholder="Anders..."
                   />
                 </div>
@@ -409,31 +660,38 @@ export default function DDProjectenPage() {
               <div>
                 <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Teamleden</label>
                 <div className="flex flex-wrap gap-2">
-                  {teamMembers.map(m => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => {
-                        setForm(f => ({
-                          ...f,
-                          memberIds: f.memberIds.includes(m.id)
-                            ? f.memberIds.filter(id => id !== m.id)
-                            : [...f.memberIds, m.id],
-                        }))
-                      }}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                        form.memberIds.includes(m.id)
-                          ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30'
-                          : 'border-transparent'
-                      }`}
-                      style={{
-                        background: form.memberIds.includes(m.id) ? undefined : 'var(--color-bg-tertiary)',
-                        color: form.memberIds.includes(m.id) ? undefined : 'var(--color-text-tertiary)',
-                      }}
-                    >
-                      {m.name.split(' ')[0]}
-                    </button>
-                  ))}
+                  {teamMembers.map(m => {
+                    const photo = getPhotoUrl(m.name)
+                    const isSelected = form.memberIds.includes(m.id)
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setForm(f => ({
+                            ...f,
+                            memberIds: f.memberIds.includes(m.id)
+                              ? f.memberIds.filter(id => id !== m.id)
+                              : [...f.memberIds, m.id],
+                          }))
+                        }}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                          isSelected
+                            ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30'
+                            : 'border-transparent'
+                        }`}
+                        style={{
+                          background: isSelected ? undefined : 'var(--color-bg-tertiary)',
+                          color: isSelected ? undefined : 'var(--color-text-tertiary)',
+                        }}
+                      >
+                        {photo ? (
+                          <Image src={photo} alt={m.name} width={18} height={18} className="w-[18px] h-[18px] rounded object-cover" />
+                        ) : null}
+                        {m.name.split(' ')[0]}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
@@ -445,209 +703,6 @@ export default function DDProjectenPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Projects */}
-      {allActiveProjects.length === 0 && completedProjects.length === 0 ? (
-        <div className="card p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-4">
-            <Icons.briefcase className="text-blue-400" size={28} />
-          </div>
-          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-            Nog geen DD projecten
-          </h3>
-          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-            Maak een nieuw project aan of wacht tot er werkdruk data beschikbaar is.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Lopende projecten */}
-          {lopendProjects.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wider mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-tertiary)' }}>
-                <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                Lopende projecten
-              </h2>
-              <div className="space-y-3">
-                {lopendProjects.map(project => <ProjectCard key={project.id} project={project} expandedProject={expandedProject} setExpandedProject={setExpandedProject} toggleProjectStatus={toggleProjectStatus} startEdit={startEdit} deleteProject={deleteProject} />)}
-              </div>
-            </div>
-          )}
-
-          {/* Toekomstige projecten */}
-          {toekomstigProjects.length > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wider mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-tertiary)' }}>
-                <div className="w-2 h-2 rounded-full bg-blue-400" />
-                Toekomstige projecten
-                <span className="text-[10px] font-normal normal-case tracking-normal" style={{ color: 'var(--color-text-tertiary)' }}>
-                  (verschuift naar lopend zodra er uren worden geschreven)
-                </span>
-              </h2>
-              <div className="space-y-3">
-                {toekomstigProjects.map(project => <ProjectCard key={project.id} project={project} expandedProject={expandedProject} setExpandedProject={setExpandedProject} toggleProjectStatus={toggleProjectStatus} startEdit={startEdit} deleteProject={deleteProject} />)}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Completed Projects */}
-      {completedProjects.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowCompleted(!showCompleted)}
-            className="flex items-center gap-2 text-sm font-medium mb-3 transition-colors"
-            style={{ color: 'var(--color-text-tertiary)' }}
-          >
-            <Icons.chevronRight
-              size={14}
-              className={`transition-transform ${showCompleted ? 'rotate-90' : ''}`}
-            />
-            Afgerond ({completedProjects.length})
-          </button>
-          {showCompleted && (
-            <div className="space-y-2 opacity-60">
-              {completedProjects.map(project => {
-                const clientStyle = CLIENT_COLORS[project.client] || CLIENT_COLORS['De Breij']
-                return (
-                  <div key={project.id} className="card group">
-                    <div className="flex items-center gap-4 p-4">
-                      <div className={`w-8 h-8 rounded-lg ${clientStyle.icon} flex items-center justify-center`}>
-                        <Icons.check size={14} className="text-emerald-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium line-through" style={{ color: 'var(--color-text-tertiary)' }}>
-                          {project.name}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                          <span className={clientStyle.text}>{project.client}</span>
-                          {project.completedAt && (
-                            <span>Afgerond {new Date(project.completedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Heropen">
-                          <Icons.arrowRight size={14} />
-                        </button>
-                        <button onClick={() => deleteProject(project.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors">
-                          <Icons.trash size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Reusable project card component
-function ProjectCard({ project, expandedProject, setExpandedProject, toggleProjectStatus, startEdit, deleteProject }: {
-  project: Project
-  expandedProject: string | null
-  setExpandedProject: (id: string | null) => void
-  toggleProjectStatus: (p: Project) => void
-  startEdit: (p: Project) => void
-  deleteProject: (id: string) => void
-}) {
-  const isAutoOnly = project.id.startsWith('auto-')
-  const clientStyle = CLIENT_COLORS[project.client] || CLIENT_COLORS['De Breij']
-  const stat = STATUS_CONFIG[project.status] || STATUS_CONFIG.actief
-  const isExpanded = expandedProject === project.id
-  const projectAutoHours = Object.entries(project.autoHours || {})
-  const totalProjectHours = projectAutoHours.reduce((s, [, h]) => s + h, 0)
-
-  return (
-    <div className="card overflow-hidden">
-      <div
-        className="flex items-center gap-4 p-4 sm:p-5 cursor-pointer"
-        onClick={() => setExpandedProject(isExpanded ? null : project.id)}
-      >
-        <Icons.chevronRight
-          size={16}
-          className={`transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
-          style={{ color: 'var(--color-text-tertiary)' }}
-        />
-        <div className={`w-10 h-10 rounded-xl ${clientStyle.icon} flex items-center justify-center flex-shrink-0`}>
-          <Icons.briefcase size={18} className={clientStyle.text} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{project.name}</h3>
-            {isAutoOnly ? (
-              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-workx-lime/10 text-workx-lime border-workx-lime/30">Werkdruk</span>
-            ) : (
-              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${stat.bg} ${stat.color} ${stat.border}`}>{stat.label}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            <span className={`font-medium ${clientStyle.text}`}>{project.client}</span>
-            <span>{project.members.length + (project.autoMembers?.filter(am => !project.members.some(m => m.user.name === am)).length || 0)} leden</span>
-            {totalProjectHours > 0 && <span className="font-medium">{totalProjectHours.toFixed(1)} uur</span>}
-          </div>
-        </div>
-        {!isAutoOnly && (
-          <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
-            <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors hover:bg-emerald-500/10" title="Markeer als afgerond">
-              <Icons.check size={16} className="text-emerald-400" />
-            </button>
-            <button onClick={() => startEdit(project)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Bewerken">
-              <Icons.edit size={15} />
-            </button>
-            <button onClick={() => deleteProject(project.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" title="Verwijderen">
-              <Icons.trash size={15} />
-            </button>
-          </div>
-        )}
-      </div>
-      {isExpanded && (
-        <div className="px-4 sm:px-5 pb-4 sm:pb-5 border-t" style={{ borderColor: 'var(--color-border)' }}>
-          {project.description && <p className="text-sm mt-4 mb-4" style={{ color: 'var(--color-text-secondary)' }}>{project.description}</p>}
-          <div className="mt-4">
-            <h4 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-tertiary)' }}>Team & Uren (afgelopen 4 weken)</h4>
-            <div className="space-y-2">
-              {project.members.map(member => {
-                const autoHrs = project.autoHours?.[member.user.name] || 0
-                return (
-                  <div key={member.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'var(--color-bg-tertiary)' }}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}>
-                      {member.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </div>
-                    <span className="flex-1 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{member.user.name}</span>
-                    <span className="text-sm font-mono tabular-nums" style={{ color: autoHrs > 0 ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>
-                      {autoHrs > 0 ? `${autoHrs.toFixed(1)} uur` : '—'}
-                    </span>
-                  </div>
-                )
-              })}
-              {project.autoMembers?.filter(am => !project.members.some(m => m.user.name === am)).map(personName => {
-                const hrs = project.autoHours?.[personName] || 0
-                return (
-                  <div key={personName} className="flex items-center gap-3 p-3 rounded-xl border border-dashed" style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-tertiary)' }}>
-                      {personName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </div>
-                    <span className="flex-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                      {personName}
-                      <span className="text-[10px] ml-2 px-1.5 py-0.5 rounded-full" style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-tertiary)' }}>auto</span>
-                    </span>
-                    <span className="text-sm font-mono tabular-nums" style={{ color: 'var(--color-text-primary)' }}>{hrs.toFixed(1)} uur</span>
-                  </div>
-                )
-              })}
-              {project.members.length === 0 && (!project.autoMembers || project.autoMembers.length === 0) && (
-                <p className="text-sm py-3 text-center" style={{ color: 'var(--color-text-tertiary)' }}>Nog geen teamleden. Klik op bewerken om leden toe te voegen.</p>
-              )}
-            </div>
           </div>
         </div>
       )}
