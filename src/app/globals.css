@@ -118,8 +118,8 @@
   --color-border-subtle: rgba(0, 0, 0, 0.06);
   --color-border-hover: rgba(180, 180, 0, 0.4);
 
-  --color-shadow-card: 0 4px 20px -5px rgba(0, 0, 0, 0.08);
-  --color-shadow-card-glow: 0 8px 30px -10px rgba(0, 0, 0, 0.12);
+  --color-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.1);
+  --color-shadow-card-glow: 0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 12px 40px -8px rgba(0, 0, 0, 0.12);
   --color-shadow-input: 0 1px 4px rgba(0, 0, 0, 0.06);
 
   --color-scrollbar-track: rgba(0, 0, 0, 0.02);
@@ -157,10 +157,13 @@
 
   --color-chat-input-bg: linear-gradient(to top, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 60%, rgba(255, 255, 255, 0.85) 100%);
 
-  --logo-filter: none;
+  --logo-filter: brightness(0) saturate(0);
   --pand-filter: brightness(0.2);
   --calendar-picker-filter: opacity(0.4);
   --calendar-picker-hover-filter: opacity(1);
+
+  --color-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.1);
+  --color-shadow-card-glow: 0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 12px 40px -8px rgba(0, 0, 0, 0.12);
 
   color-scheme: light;
 }
@@ -4844,4 +4847,199 @@ textarea::-webkit-scrollbar-thumb:hover {
 [data-theme="light"] .skeleton-wave {
   background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%);
   background-size: 200% 100%;
+}
+
+/* ==================== LIGHT MODE: CRITICAL FIXES ==================== */
+
+/* --- Logo: make dark for light backgrounds --- */
+[data-theme="light"] img[alt="Workx Advocaten"] {
+  filter: brightness(0) saturate(0);
+}
+
+/* --- Lime/yellow text: darken for readability on light backgrounds --- */
+[data-theme="light"] .text-workx-lime {
+  color: #6b7010 !important;
+}
+[data-theme="light"] .text-workx-lime\/90 { color: rgba(107, 112, 16, 0.9) !important; }
+[data-theme="light"] .text-workx-lime\/80 { color: rgba(107, 112, 16, 0.8) !important; }
+[data-theme="light"] .text-workx-lime\/70 { color: rgba(107, 112, 16, 0.7) !important; }
+[data-theme="light"] .text-workx-lime\/60 { color: rgba(107, 112, 16, 0.6) !important; }
+[data-theme="light"] .text-workx-lime\/50 { color: rgba(107, 112, 16, 0.5) !important; }
+[data-theme="light"] .text-workx-lime\/40 { color: rgba(107, 112, 16, 0.4) !important; }
+
+/* Preserve original lime on dark-background elements */
+[data-theme="light"] .bg-workx-lime .text-workx-dark,
+[data-theme="light"] .btn-primary {
+  color: #1e1e1e;
+}
+
+/* --- Lime hover text --- */
+[data-theme="light"] .hover\:text-workx-lime:hover {
+  color: #6b7010 !important;
+}
+
+/* --- Lime border colors: darken for visibility --- */
+[data-theme="light"] .border-workx-lime\/30 {
+  border-color: rgba(107, 112, 16, 0.3);
+}
+[data-theme="light"] .border-workx-lime\/20 {
+  border-color: rgba(107, 112, 16, 0.2);
+}
+[data-theme="light"] .border-workx-lime\/10 {
+  border-color: rgba(107, 112, 16, 0.12);
+}
+
+/* --- Ring lime --- */
+[data-theme="light"] .ring-workx-lime\/30 {
+  --tw-ring-color: rgba(107, 112, 16, 0.3);
+}
+[data-theme="light"] .ring-workx-lime\/20 {
+  --tw-ring-color: rgba(107, 112, 16, 0.2);
+}
+
+/* --- Lime background opacities: adjust for light mode --- */
+[data-theme="light"] .bg-workx-lime\/5 {
+  background-color: rgba(107, 112, 16, 0.04);
+}
+[data-theme="light"] .bg-workx-lime\/10 {
+  background-color: rgba(107, 112, 16, 0.06);
+}
+[data-theme="light"] .bg-workx-lime\/15 {
+  background-color: rgba(107, 112, 16, 0.08);
+}
+[data-theme="light"] .bg-workx-lime\/20 {
+  background-color: rgba(107, 112, 16, 0.1);
+}
+[data-theme="light"] .bg-workx-lime\/30 {
+  background-color: rgba(107, 112, 16, 0.12);
+}
+/* Keep solid lime buttons vivid */
+[data-theme="light"] .bg-workx-lime {
+  background-color: #e8ed40;
+}
+
+/* --- WhatsNew widget & via-workx-dark gradient fix --- */
+[data-theme="light"] .via-workx-dark {
+  --tw-gradient-via: var(--color-bg-secondary);
+}
+
+/* --- from-workx-lime gradient stops --- */
+[data-theme="light"] .from-workx-lime\/5 {
+  --tw-gradient-from: rgba(107, 112, 16, 0.04);
+}
+[data-theme="light"] .from-workx-lime\/10 {
+  --tw-gradient-from: rgba(107, 112, 16, 0.06);
+}
+[data-theme="light"] .from-workx-lime\/20 {
+  --tw-gradient-from: rgba(107, 112, 16, 0.08);
+}
+[data-theme="light"] .to-violet-500\/5 {
+  --tw-gradient-to: rgba(139, 92, 246, 0.04);
+}
+
+/* --- Card / stat-card stronger shadows in light mode --- */
+[data-theme="light"] .card {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .stat-card {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .stat-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px -4px rgba(0, 0, 0, 0.12);
+  border-color: rgba(107, 112, 16, 0.25);
+}
+
+/* --- Shadow lime glow → subtle dark shadow in light --- */
+[data-theme="light"] .shadow-workx-lime\/5,
+[data-theme="light"] .shadow-workx-lime\/10,
+[data-theme="light"] .shadow-workx-lime\/15,
+[data-theme="light"] .shadow-workx-lime\/20 {
+  --tw-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+/* --- General rounded containers with inline bg-gradient --- */
+[data-theme="light"] [class*="bg-gradient-to-br"][class*="border"][class*="rounded"] {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* --- Badge lime readability --- */
+[data-theme="light"] .badge-lime {
+  background: linear-gradient(135deg, rgba(107, 112, 16, 0.12) 0%, rgba(107, 112, 16, 0.06) 100%);
+  color: #6b7010;
+  border-color: rgba(107, 112, 16, 0.2);
+}
+
+/* --- Workx-lime/3 and other tiny opacities (ambient glows) --- */
+[data-theme="light"] .bg-workx-lime\/3 {
+  background-color: rgba(107, 112, 16, 0.02);
+}
+
+/* --- Ambient glow effects: tone down in light mode --- */
+[data-theme="light"] [class*="blur-"][class*="bg-workx-lime"] {
+  opacity: 0.3;
+}
+[data-theme="light"] [class*="blur-"][class*="bg-purple"] {
+  opacity: 0.15;
+}
+
+/* --- Nav-link active lime text: readable --- */
+[data-theme="light"] .nav-link.active {
+  color: #5a5e0e;
+}
+
+/* --- Pigeons darker in light mode --- */
+[data-theme="light"] img[alt="Pigeons"] {
+  filter: brightness(0.3) saturate(0);
+}
+
+/* --- Workx Pand illustration in login --- */
+[data-theme="light"] img[alt="Workx Pand"] {
+  filter: brightness(0.15) saturate(0);
+  opacity: 0.15;
+}
+
+/* --- bg-black/60 backdrop: lighter in light mode --- */
+[data-theme="light"] .bg-black\/60 {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* --- Ensure inputs have proper light background --- */
+[data-theme="light"] .input-field {
+  background: white;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #1a1a1a;
+}
+[data-theme="light"] .input-field:focus {
+  background: white;
+  border-color: rgba(107, 112, 16, 0.5);
+  box-shadow: 0 0 0 3px rgba(107, 112, 16, 0.1);
+}
+[data-theme="light"] .input-field::placeholder {
+  color: #aaaaaa;
+}
+
+/* --- Lime accent decorative elements --- */
+[data-theme="light"] .divider-lime {
+  background: linear-gradient(90deg, transparent, rgba(107, 112, 16, 0.2), transparent);
+}
+
+/* --- Fix hover:bg-workx-lime/10 etc --- */
+[data-theme="light"] .hover\:bg-workx-lime\/10:hover {
+  background-color: rgba(107, 112, 16, 0.08);
+}
+[data-theme="light"] .hover\:bg-workx-lime\/5:hover {
+  background-color: rgba(107, 112, 16, 0.05);
+}
+
+/* --- Floating particles: hide in light mode --- */
+[data-theme="light"] .animate-pulse[class*="bg-workx-lime"] {
+  display: none;
 }
