@@ -49,13 +49,33 @@ interface DDCase {
   linkedProject?: Project
 }
 
-const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law', 'Strasuwolfs']
+const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law', 'Strauswolfs', 'Cleber']
+
+// Map variations in project names to canonical client names
+const CLIENT_ALIASES: Record<string, string> = {
+  'debreij': 'De Breij',
+  'de breij': 'De Breij',
+  'stek': 'Stek',
+  'jb law': 'JB Law',
+  'strauswolfs': 'Strauswolfs',
+  'strasuwolfs': 'Strauswolfs',
+  'cleber': 'Cleber',
+}
+
+function matchDDClient(projectName: string): string | undefined {
+  const lower = projectName.toLowerCase()
+  for (const [alias, client] of Object.entries(CLIENT_ALIASES)) {
+    if (lower.includes(alias)) return client
+  }
+  return undefined
+}
 
 const CLIENT_COLORS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
   'De Breij': { dot: 'bg-blue-400', text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
   'Stek': { dot: 'bg-purple-400', text: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
   'JB Law': { dot: 'bg-amber-400', text: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
-  'Strasuwolfs': { dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  'Strauswolfs': { dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  'Cleber': { dot: 'bg-cyan-400', text: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
 }
 
 const MEMBER_COLORS = [
@@ -120,7 +140,7 @@ export default function DDProjectenPage() {
     }>()
 
     for (const entry of workloadData) {
-      const client = DD_CLIENTS.find(c => entry.projectName.toLowerCase().includes(c.toLowerCase()))
+      const client = matchDDClient(entry.projectName)
       if (!client) continue
       const hours = entry.workedHours || entry.billableHours || 0
       if (hours <= 0) continue
@@ -176,7 +196,7 @@ export default function DDProjectenPage() {
     // Team overview: aggregate per person with time buckets
     const personMap = new Map<string, { total: number; h7d: number; h14d: number }>()
     for (const entry of workloadData) {
-      const client = DD_CLIENTS.find(c => entry.projectName.toLowerCase().includes(c.toLowerCase()))
+      const client = matchDDClient(entry.projectName)
       if (!client) continue
       const hours = entry.workedHours || entry.billableHours || 0
       if (hours <= 0) continue
