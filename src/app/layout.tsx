@@ -34,14 +34,28 @@ export const metadata: Metadata = {
   },
 }
 
+// Anti-FOUC: inline script that runs before React hydration
+const themeScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('workx-theme');
+    if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.setAttribute('data-theme', 'dark');
+  } catch(e) {}
+})();
+`
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="nl">
-      <body className={`${inter.className} bg-workx-dark text-white antialiased`}>
+    <html lang="nl" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className={`${inter.className} antialiased`}>
         <Providers>
           <PWARegister />
           <StaleVersionGuard />
@@ -51,9 +65,9 @@ export default function RootLayout({
             position="top-right"
             toastOptions={{
               style: {
-                background: '#2a2a2a',
-                color: '#fff',
-                border: '1px solid #404041',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                border: '1px solid var(--color-border)',
               },
               success: {
                 iconTheme: {

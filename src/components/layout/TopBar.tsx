@@ -9,6 +9,7 @@ import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import { NotificationCenter } from '@/components/NotificationCenter'
 import { useTeam, useCalendarEvents, useWorkItems } from '@/lib/hooks/useData'
+import { ThemeToggleCompact } from '@/components/ui/ThemeToggle'
 
 interface TopBarProps {
   user: {
@@ -280,12 +281,12 @@ function TopBarComponent({ user }: TopBarProps) {
   }
 
   return (
-    <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 relative z-[100] bg-workx-dark/95">
+    <header className="h-16 border-b flex items-center justify-between px-4 md:px-8 relative z-[100]" style={{ borderColor: 'var(--color-border-subtle)', background: 'var(--color-bg-topbar)' }}>
       {/* Mobile: Hamburger Menu + Home Button */}
       <div className="md:hidden flex items-center gap-1">
         <button
           onClick={() => setShowMobileMenu(!showMobileMenu)}
-          className="p-2 text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-all"
+          className="p-2 rounded-lg transition-all" style={{ color: 'var(--color-text-secondary)' }}
         >
           {showMobileMenu ? <Icons.x size={24} /> : <Icons.menu size={24} />}
         </button>
@@ -308,15 +309,15 @@ function TopBarComponent({ user }: TopBarProps) {
 
       {/* Left: Greeting (desktop only) */}
       <div className="hidden lg:block">
-        <p className="text-white/40 text-sm">{greeting},</p>
-        <p className="text-white font-medium">{user.name?.split(' ')[0]}</p>
+        <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>{greeting},</p>
+        <p className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{user.name?.split(' ')[0]}</p>
       </div>
 
       {/* Center: Search */}
       <div className="flex-1 max-w-xl mx-8" ref={searchRef}>
         <div className="relative group">
           <div className="absolute inset-0 bg-workx-lime/10 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-          <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-workx-lime transition-colors" size={18} />
+          <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-workx-lime" style={{ color: 'var(--color-text-muted)' }} size={18} />
           <input
             ref={inputRef}
             type="text"
@@ -328,17 +329,18 @@ function TopBarComponent({ user }: TopBarProps) {
             onFocus={() => setShowSearchResults(true)}
             onKeyDown={handleKeyDown}
             placeholder="Zoeken..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/30 focus:bg-white/10 transition-all relative"
+            className="w-full rounded-xl pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:border-workx-lime/30 transition-all relative"
+            style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
           />
-          <kbd className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-white/20 px-1.5 py-0.5 rounded bg-white/10 hidden sm:inline">
+          <kbd className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] px-1.5 py-0.5 rounded hidden sm:inline" style={{ color: 'var(--color-text-muted)', background: 'var(--color-bg-glass)' }}>
             /
           </kbd>
 
           {/* Search Results Dropdown */}
           {showSearchResults && searchQuery.trim() && (
-            <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-workx-gray border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+            <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl shadow-2xl overflow-hidden" style={{ background: 'var(--color-bg-dropdown)', border: '1px solid var(--color-border)' }}>
               {searchResults.length === 0 ? (
-                <div className="p-4 text-center text-gray-400 text-sm">
+                <div className="p-4 text-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
                   <Icons.search size={20} className="mx-auto mb-2 opacity-50" />
                   <p>Geen resultaten voor "{searchQuery}"</p>
                 </div>
@@ -370,11 +372,11 @@ function TopBarComponent({ user }: TopBarProps) {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm truncate ${isSelected ? 'text-workx-lime' : 'text-white'}`}>
+                          <p className={`text-sm truncate ${isSelected ? 'text-workx-lime' : ''}`} style={isSelected ? {} : { color: 'var(--color-text-primary)' }}>
                             {result.label}
                           </p>
                           {result.description && (
-                            <p className="text-xs text-gray-400 truncate">{result.description}</p>
+                            <p className="text-xs truncate" style={{ color: 'var(--color-text-tertiary)' }}>{result.description}</p>
                           )}
                         </div>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full ${getTypeColor(result.type)}`}>
@@ -383,7 +385,7 @@ function TopBarComponent({ user }: TopBarProps) {
                       </button>
                     )
                   })}
-                  <div className="px-4 py-2 border-t border-white/5 flex items-center justify-between text-xs text-gray-500">
+                  <div className="px-4 py-2 border-t flex items-center justify-between text-xs" style={{ borderColor: 'var(--color-border-subtle)', color: 'var(--color-text-muted)' }}>
                     <span>↑↓ navigeren</span>
                     <span>↵ openen</span>
                     <span>esc sluiten</span>
@@ -401,7 +403,7 @@ function TopBarComponent({ user }: TopBarProps) {
         {pathname !== '/dashboard' && (
           <Link
             href="/dashboard"
-            className="hidden md:flex items-center gap-2.5 px-3 py-2 rounded-xl border border-workx-lime/20 hover:border-workx-lime/40 hover:bg-workx-lime/5 transition-all group"
+            className="hidden md:flex items-center gap-2.5 px-3 py-2 rounded-xl border border-workx-lime/20 hover:border-workx-lime/40 hover:bg-workx-lime/5 transition-all group" style={{ borderColor: 'var(--color-border)' }}
             title="Naar Dashboard"
           >
             <Image
@@ -411,7 +413,7 @@ function TopBarComponent({ user }: TopBarProps) {
               height={20}
               className="h-5 w-auto opacity-40 group-hover:opacity-80 group-hover:scale-105 transition-all drop-shadow-[0_0_6px_rgba(249,255,133,0.25)] group-hover:drop-shadow-[0_0_10px_rgba(249,255,133,0.4)]"
             />
-            <span className="text-sm text-white/50 group-hover:text-workx-lime hidden lg:inline transition-colors">Home</span>
+            <span className="text-sm hidden lg:inline transition-colors group-hover:text-workx-lime" style={{ color: 'var(--color-text-tertiary)' }}>Home</span>
           </Link>
         )}
 
@@ -429,21 +431,25 @@ function TopBarComponent({ user }: TopBarProps) {
             })
             document.dispatchEvent(event)
           }}
-          className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-workx-lime/30 hover:bg-white/10 transition-all group"
+          className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl transition-all group"
+          style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)' }}
           title="Command Palette"
         >
-          <Icons.command size={14} className="text-white/40 group-hover:text-workx-lime transition-colors" />
-          <kbd className="text-[10px] text-white/30 group-hover:text-white/50 transition-colors">
+          <Icons.command size={14} className="group-hover:text-workx-lime transition-colors" style={{ color: 'var(--color-text-tertiary)' }} />
+          <kbd className="text-[10px] transition-colors" style={{ color: 'var(--color-text-muted)' }}>
             <span className="mr-0.5">⌘</span>K
           </kbd>
         </button>
 
+        {/* Theme toggle */}
+        <ThemeToggleCompact />
+
         {/* Date pill */}
-        <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-workx-lime/30 hover:bg-white/10 transition-all cursor-default group icon-calendar-hover">
+        <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl transition-all cursor-default group icon-calendar-hover" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)' }}>
           <span className="icon-animated">
             <Icons.calendar size={14} className="text-workx-lime" />
           </span>
-          <span className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
+          <span className="text-sm transition-colors" style={{ color: 'var(--color-text-secondary)' }}>
             {dateString}
           </span>
         </div>
@@ -454,17 +460,17 @@ function TopBarComponent({ user }: TopBarProps) {
         <>
           <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
           <div className="fixed left-0 right-0 top-16 z-[9999] md:hidden fade-in">
-            <div className="bg-workx-dark border-b border-white/10 shadow-2xl">
+            <div className="shadow-2xl" style={{ background: 'var(--color-bg-primary)', borderBottom: '1px solid var(--color-border)' }}>
               {/* User info */}
-              <div className="p-4 border-b border-white/10 flex items-center gap-3">
+              <div className="p-4 flex items-center gap-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center">
                   <span className="text-workx-dark font-semibold">
                     {user.name?.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-white">{user.name}</p>
-                  <p className="text-xs text-white/40">{user.email}</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{user.name}</p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{user.email}</p>
                 </div>
               </div>
 
@@ -489,8 +495,9 @@ function TopBarComponent({ user }: TopBarProps) {
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                         isActive
                           ? 'bg-workx-lime text-workx-dark font-medium'
-                          : 'text-white/70 hover:bg-white/5 hover:text-white'
+                          : ''
                       }`}
+                      style={isActive ? {} : { color: 'var(--color-text-secondary)' }}
                     >
                       <Icon size={20} />
                       <span className="flex-1">{item.label}</span>
@@ -506,7 +513,7 @@ function TopBarComponent({ user }: TopBarProps) {
               </nav>
 
               {/* Logout button */}
-              <div className="p-4 border-t border-white/10">
+              <div className="p-4" style={{ borderTop: '1px solid var(--color-border)' }}>
                 <button
                   onClick={() => signOut({ callbackUrl: '/login' })}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"

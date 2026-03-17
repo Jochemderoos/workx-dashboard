@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 interface SidebarProps {
   user: {
@@ -120,7 +121,7 @@ function SidebarComponent({ user }: SidebarProps) {
   }
 
   return (
-    <aside className="w-72 h-full max-h-screen border-r border-white/5 flex flex-col relative z-20 bg-gradient-to-b from-workx-dark to-workx-dark/95 overflow-y-auto">
+    <aside className="w-72 h-full max-h-screen border-r flex flex-col relative z-20 overflow-y-auto" style={{ borderColor: 'var(--color-border-subtle)', background: 'var(--color-bg-sidebar)' }}>
       {/* Logo - Authentic Workx branding */}
       <div className="p-6 pb-8 flex-shrink-0">
         <Link href="/dashboard" className="block group">
@@ -135,7 +136,7 @@ function SidebarComponent({ user }: SidebarProps) {
       <nav className="flex-1 px-4 space-y-6">
         {/* Main */}
         <div>
-          <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Menu</p>
+          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Menu</p>
           <div className="space-y-1">
             {mainMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
             {/* Werk Lodewijk voor EXTERNAL */}
@@ -145,7 +146,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
         {/* Partners - alleen voor PARTNER en ADMIN */}
         <div style={(user.role === 'PARTNER' || user.role === 'ADMIN') ? {} : { display: 'none' }}>
-          <p className="px-4 mb-2 text-[10px] font-medium text-workx-lime/40 uppercase tracking-widest">Partners</p>
+          <p className="px-4 mb-2 text-[10px] font-medium text-workx-lime/40 uppercase tracking-widest" style={{ color: 'rgba(180, 185, 50, 0.5)' }}>Partners</p>
           <div className="space-y-1">
             {partnersMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
           </div>
@@ -153,7 +154,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
         {/* Tools */}
         <div>
-          <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Tools</p>
+          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Tools</p>
           <div className="space-y-1">
             {toolsMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
           </div>
@@ -161,7 +162,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
         {/* Management */}
         <div>
-          <p className="px-4 mb-2 text-[10px] font-medium text-white/30 uppercase tracking-widest">Beheer</p>
+          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Beheer</p>
           <div className="space-y-1">
             {manageMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
           </div>
@@ -170,6 +171,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
       {/* Bottom section */}
       <div className="p-4 space-y-3 flex-shrink-0">
+        <ThemeToggle />
         <div className="divider-lime" />
 
         <Link
@@ -183,7 +185,7 @@ function SidebarComponent({ user }: SidebarProps) {
         </Link>
 
         {/* Premium user card */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 p-4">
+        <div className="relative overflow-hidden rounded-xl p-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
           <div className="absolute top-0 right-0 w-20 h-20 bg-workx-lime/10 rounded-full blur-2xl" />
           <div className="flex items-center gap-3 relative">
             {getPhotoUrl(user.name) ? (
@@ -202,12 +204,13 @@ function SidebarComponent({ user }: SidebarProps) {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user.name}</p>
-              <p className="text-xs text-white/40 truncate">{user.email}</p>
+              <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{user.name}</p>
+              <p className="text-xs truncate" style={{ color: 'var(--color-text-tertiary)' }}>{user.email}</p>
             </div>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
-              className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors icon-logout-hover"
+              className="p-2 rounded-lg transition-colors icon-logout-hover"
+              style={{ color: 'var(--color-text-tertiary)' }}
               title="Uitloggen"
               aria-label="Uitloggen"
             >
@@ -220,7 +223,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
         {/* Version badge - triple click for easter egg! */}
         <div className="flex items-center justify-center gap-2 pt-2 group cursor-default">
-          <span className="text-[10px] text-white/20 group-hover:text-white/30 transition-colors">Workx Dashboard</span>
+          <span className="text-[10px] transition-colors" style={{ color: 'var(--color-text-muted)' }}>Workx Dashboard</span>
           <span className="badge badge-lime text-[10px] py-0.5 px-2 hover:scale-110 transition-transform cursor-pointer" title="Try triple-clicking me 😉">v2.0</span>
         </div>
 
