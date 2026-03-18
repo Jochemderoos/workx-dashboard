@@ -311,7 +311,23 @@ export async function GET() {
       }
     }
 
-    // 10. Light mode aankondiging — eenmalig voor iedereen
+    // 10. Werkstudent opdrachten herinnering — eenmalig voor iedereen
+    {
+      const key = 'werkstudent-opdrachten-2026'
+      if (!dismissedKeys.has(key)) {
+        notifications.push({
+          id: key,
+          type: 'system',
+          title: '📋 Opdrachten voor werkstudent',
+          message: 'Heb je taken voor de werkstudent? Voer ze in via de Werkstudent pagina zodat alles overzichtelijk blijft.',
+          createdAt: new Date('2026-03-18'),
+          read: false,
+          href: '/dashboard/werkstudent',
+        })
+      }
+    }
+
+    // 11. Light mode aankondiging — eenmalig voor iedereen
     {
       const key = 'light-mode-2026'
       if (!dismissedKeys.has(key)) {
