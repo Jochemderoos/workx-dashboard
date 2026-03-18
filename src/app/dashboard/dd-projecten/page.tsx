@@ -45,6 +45,7 @@ interface DDEstimate {
   id: string
   projectName: string
   expectedHours: number
+  extraMembers: string | null // JSON array of member names
 }
 
 interface DDCase {
@@ -109,6 +110,7 @@ export default function DDProjectenPage() {
   const [expandedKey, setExpandedKey] = useState<string | null>(null)
   const [editingEstimate, setEditingEstimate] = useState<string | null>(null) // fullProjectName being edited
   const [estimateInput, setEstimateInput] = useState('')
+  const [addingMemberTo, setAddingMemberTo] = useState<string | null>(null) // fullProjectName for member picker
   const [form, setForm] = useState({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] as string[], expectedHours: '' })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRole = (session?.user as any)?.role
@@ -165,10 +167,14 @@ export default function DDProjectenPage() {
       proj.members.add(entry.personName)
     }
 
-    // Build estimate lookup
-    const estimateMap = new Map<string, number>()
+    // Build estimate lookup (expectedHours + extraMembers)
+    const estimateMap = new Map<string, { expectedHours: number; extraMembers: string[] }>()
     for (const est of estimates) {
-      estimateMap.set(est.projectName, est.expectedHours)
+      let extra: string[] = []
+      if (est.extraMembers) {
+        try { extra = JSON.parse(est.extraMembers) } catch { /* ignore */ }
+      }
+      estimateMap.set(est.projectName, { expectedHours: est.expectedHours, extraMembers: extra })
     }
 
     // Build cases per client + link manual DDProjects
@@ -177,7 +183,7 @@ export default function DDProjectenPage() {
 
     for (const [fullName, data] of Array.from(projectMap.entries())) {
       const cleanName = fullName.includes('/') ? fullName.split('/').slice(1).join('/').trim() : fullName
-      const memberNames = Array.from(data.members)
+      const workloadMembers = Array.from(data.members)
       const totalHours = Math.round(data.totalHours * 10) / 10
       const hours7d = Math.round(data.hours7d * 10) / 10
 
@@ -194,7 +200,11 @@ export default function DDProjectenPage() {
         }
       }
 
-      const expectedHours = linkedProject?.expectedHours ?? estimateMap.get(fullName) ?? undefined
+      const est = estimateMap.get(fullName)
+      const expectedHours = linkedProject?.expectedHours ?? est?.expectedHours ?? undefined
+      // Merge workload members + manually added extra members (deduplicated)
+      const extraMembers = est?.extraMembers || []
+      const memberNames = [...workloadMembers, ...extraMembers.filter(n => !workloadMembers.includes(n))]
 
       if (!groups.has(data.client)) groups.set(data.client, [])
       groups.get(data.client)!.push({ projectName: cleanName, fullProjectName: fullName, totalHours, hours7d, memberNames, linkedProject, expectedHours })
@@ -312,12 +322,47 @@ export default function DDProjectenPage() {
       setEstimates(prev => {
         const existing = prev.find(e => e.projectName === projectName)
         if (existing) return prev.map(e => e.projectName === projectName ? { ...e, expectedHours: hours } : e)
-        return [...prev, { id: '', projectName, expectedHours: hours }]
+        return [...prev, { id: '', projectName, expectedHours: hours, extraMembers: null }]
       })
       setEditingEstimate(null)
       toast.success('Verwachte uren opgeslagen')
     } catch {
       toast.error('Kon verwachte uren niet opslaan')
+    }
+  }
+
+  const toggleExtraMember = async (projectName: string, memberName: string, currentMembers: string[]) => {
+    const est = estimates.find(e => e.projectName === projectName)
+    let extraMembers: string[] = []
+    if (est?.extraMembers) {
+      try { extraMembers = JSON.parse(est.extraMembers) } catch { /* ignore */ }
+    }
+
+    if (extraMembers.includes(memberName)) {
+      extraMembers = extraMembers.filter(n => n !== memberName)
+    } else {
+      // Only add if not already in workload members
+      if (!currentMembers.includes(memberName)) {
+        extraMembers.push(memberName)
+      }
+    }
+
+    try {
+      const res = await fetch('/api/dd-projecten/estimates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName, extraMembers }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setEstimates(prev => {
+          const exists = prev.find(e => e.projectName === projectName)
+          if (exists) return prev.map(e => e.projectName === projectName ? updated : e)
+          return [...prev, updated]
+        })
+      }
+    } catch {
+      toast.error('Kon teamlid niet bijwerken')
     }
   }
 
@@ -448,9 +493,9 @@ export default function DDProjectenPage() {
                   </div>
                 )}
 
-                {/* Team photos + set expected hours */}
+                {/* Team photos + add member + set expected hours */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 relative">
                     {c.memberNames.map((name, mi) => {
                       const photo = getPhotoUrl(name)
                       const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
@@ -462,6 +507,43 @@ export default function DDProjectenPage() {
                         </div>
                       )
                     })}
+                    {/* Add member button */}
+                    <button
+                      onClick={() => setAddingMemberTo(addingMemberTo === c.fullProjectName ? null : c.fullProjectName)}
+                      className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors border border-dashed"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
+                      title="Teamlid toevoegen"
+                    >
+                      <Icons.plus size={12} />
+                    </button>
+                    {/* Member picker dropdown */}
+                    {addingMemberTo === c.fullProjectName && (
+                      <div className="absolute top-8 left-0 z-20 rounded-xl border shadow-xl p-2 min-w-[200px] max-h-60 overflow-y-auto" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+                        {teamMembers.map(u => {
+                          const alreadyIn = c.memberNames.includes(u.name)
+                          const photo = getPhotoUrl(u.name)
+                          return (
+                            <button
+                              key={u.id}
+                              onClick={() => toggleExtraMember(c.fullProjectName, u.name, c.memberNames)}
+                              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left ${alreadyIn ? 'opacity-50' : 'hover:opacity-80'}`}
+                              style={{ background: alreadyIn ? 'var(--color-bg-tertiary)' : 'transparent', color: 'var(--color-text-primary)' }}
+                              disabled={alreadyIn}
+                            >
+                              {photo ? (
+                                <Image src={photo} alt={u.name} width={20} height={20} className="w-5 h-5 rounded-lg object-cover" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                                  <span className="text-[9px] font-medium text-white">{u.name.charAt(0)}</span>
+                                </div>
+                              )}
+                              <span>{u.name}</span>
+                              {alreadyIn && <Icons.check size={12} className="ml-auto text-workx-lime" />}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                   {/* Expected hours inline edit */}
                   {isEditingEst ? (

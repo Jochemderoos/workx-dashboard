@@ -1701,7 +1701,8 @@ model DDProject {
 model DDProjectEstimate {
   id            String   @id @default(cuid())
   projectName   String   @unique // Full project name from workload data
-  expectedHours Float
+  expectedHours Float    @default(0)
+  extraMembers  String?  @db.Text // JSON array of manually added member names
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

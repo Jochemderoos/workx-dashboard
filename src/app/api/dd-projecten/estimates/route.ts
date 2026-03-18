@@ -21,15 +21,20 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { projectName, expectedHours } = await req.json()
+  const { projectName, expectedHours, extraMembers } = await req.json()
   if (!projectName) {
     return NextResponse.json({ error: 'projectName is verplicht' }, { status: 400 })
   }
 
+  // Build update/create data
+  const data: Record<string, unknown> = {}
+  if (expectedHours !== undefined) data.expectedHours = expectedHours || 0
+  if (extraMembers !== undefined) data.extraMembers = JSON.stringify(extraMembers)
+
   const estimate = await prisma.dDProjectEstimate.upsert({
     where: { projectName },
-    create: { projectName, expectedHours: expectedHours || 0 },
-    update: { expectedHours: expectedHours || 0 },
+    create: { projectName, expectedHours: expectedHours || 0, extraMembers: extraMembers ? JSON.stringify(extraMembers) : null },
+    update: data,
   })
 
   return NextResponse.json(estimate)
