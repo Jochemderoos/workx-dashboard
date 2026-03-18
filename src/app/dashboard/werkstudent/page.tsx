@@ -263,19 +263,29 @@ export default function WerkstudentPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Deadline</label>
-                  <input
-                    type="date"
-                    value={form.deadline}
-                    onChange={e => setForm({ ...form, deadline: e.target.value })}
-                    className="input-field !rounded-xl"
-                  />
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={form.deadline}
+                      onChange={e => setForm({ ...form, deadline: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-2xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-workx-lime/40 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                      style={{
+                        background: 'var(--color-bg-tertiary)',
+                        border: '1px solid var(--color-border)',
+                        color: form.deadline ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
+                      }}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Icons.calendar size={16} className="text-workx-lime" />
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Prioriteit</label>
                   <select
                     value={form.priority}
                     onChange={e => setForm({ ...form, priority: e.target.value })}
-                    className="input-field"
+                    className="input-field !rounded-2xl"
                   >
                     <option value="laag">Laag</option>
                     <option value="normaal">Normaal</option>
