@@ -14,16 +14,18 @@ const years = [currentYear - 2, currentYear - 1, currentYear] as const
 type YearType = typeof years[number]
 
 // Historical financial data - will be extended as years pass
-const historicalData: Record<number, { werkgeverslasten: number[], kostenExtern: number[], omzet: number[], uren: number[] }> = {
+const historicalData: Record<number, { werkgeverslasten: number[], kostenExtern: number[], kostenZzp: number[], omzet: number[], uren: number[] }> = {
   2024: {
     werkgeverslasten: [83498, 93037, 90637, 97496, 141919, 93079, 110122.21, 81458.26, 87341.8, 95277, 93797, 82992.28],
     kostenExtern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    kostenZzp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     omzet: [20771.73, 208021.62, 233890, 268590, 282943.32, 258967.33, 267419.35, 218107.23, 226676.53, 294707.11, 287153.81, 535280.4],
     uren: [904, 843, 1017, 1021, 964, 1003.4, 1061, 747, 804, 972, 916, 883]
   },
   2025: {
     werkgeverslasten: [88521, 72934, 68268, 107452, 90244, 154652, 81963.87, 79466.89, 82125, 80670, 103485, 95562],
     kostenExtern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    kostenZzp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     omzet: [-14020, 267211, 258439, 270619, 267833.5, 287433.03, 300822.95, 258031.08, 242402.91, 309577.51, 342265.3, 602865],
     uren: [1000.75, 955, 962, 975, 914, 998, 1020, 716, 1076, 1173, 1013, 1068]
   }
@@ -34,6 +36,7 @@ const getYearData = (year: number) => {
   return historicalData[year] || {
     werkgeverslasten: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     kostenExtern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    kostenZzp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     omzet: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     uren: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   }
@@ -121,6 +124,7 @@ export default function FinancienPage() {
   const [currentYearData, setCurrentYearData] = useState({
     werkgeverslasten: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     kostenExtern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    kostenZzp: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     omzet: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     uren: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   })
@@ -232,8 +236,10 @@ export default function FinancienPage() {
   const calculations = useMemo(() => {
     const totals: Record<string, Record<number, number>> = {
       werkgeverslasten: {},
+      kostenZzp: {},
+      werkgeverslastenInclZzp: {}, // werkgeverslasten + ZZP
       kostenExtern: {},
-      totaleKosten: {}, // werkgeverslasten + kostenExtern
+      totaleKosten: {}, // werkgeverslasten + ZZP + kostenExtern
       omzet: {},
       uren: {}
     }
@@ -243,12 +249,15 @@ export default function FinancienPage() {
 
     years.forEach(year => {
       const yearData = getDataForYear(year)
+      const zzp = yearData.kostenZzp || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       totals.werkgeverslasten[year] = yearData.werkgeverslasten.reduce((a, b) => a + b, 0)
+      totals.kostenZzp[year] = zzp.reduce((a: number, b: number) => a + b, 0)
+      totals.werkgeverslastenInclZzp[year] = totals.werkgeverslasten[year] + totals.kostenZzp[year]
       totals.kostenExtern[year] = yearData.kostenExtern.reduce((a, b) => a + b, 0)
-      totals.totaleKosten[year] = totals.werkgeverslasten[year] + totals.kostenExtern[year]
+      totals.totaleKosten[year] = totals.werkgeverslastenInclZzp[year] + totals.kostenExtern[year]
       totals.omzet[year] = yearData.omzet.reduce((a, b) => a + b, 0)
       totals.uren[year] = yearData.uren.reduce((a, b) => a + b, 0)
-      saldo[year] = periods.map((_, i) => yearData.omzet[i] - yearData.werkgeverslasten[i] - (yearData.kostenExtern[i] || 0))
+      saldo[year] = periods.map((_, i) => yearData.omzet[i] - yearData.werkgeverslasten[i] - (zzp[i] || 0) - (yearData.kostenExtern[i] || 0))
       saldoTotals[year] = totals.omzet[year] - totals.totaleKosten[year]
     })
 
@@ -683,6 +692,19 @@ export default function FinancienPage() {
     doc.setTextColor(50, 50, 50)
     y += 8
 
+    // ZZP Kosten (if any)
+    if (calculations.totals.kostenZzp[years[0]] > 0 || calculations.totals.kostenZzp[years[1]] > 0) {
+      doc.setTextColor(100, 100, 100)
+      doc.text('  \u21b3 waarvan ZZP', col1, y)
+      doc.text(formatCurrency(calculations.totals.kostenZzp[years[0]]), col2, y, { align: 'right' })
+      doc.text(formatCurrency(calculations.totals.kostenZzp[years[1]]), col3, y, { align: 'right' })
+      const zzpDiff = calculations.totals.kostenZzp[years[1]] - calculations.totals.kostenZzp[years[0]]
+      doc.setTextColor(zzpDiff < 0 ? 0 : 200, zzpDiff < 0 ? 150 : 50, 50)
+      doc.text(formatCurrency(zzpDiff), col4, y, { align: 'right' })
+      doc.setTextColor(50, 50, 50)
+      y += 8
+    }
+
     // Kosten Extern
     doc.text('Kosten Extern', col1, y)
     doc.text(formatCurrency(calculations.totals.kostenExtern[years[0]]), col2, y, { align: 'right' })
@@ -1013,6 +1035,32 @@ export default function FinancienPage() {
                     </tr>
                   ))}
 
+                  {/* ZZP Kosten - only show if current year has ZZP data */}
+                  {(() => {
+                    const hasZzp = years.some(y => {
+                      const zzp = getDataForYear(y).kostenZzp || []
+                      return zzp.some((v: number) => v > 0)
+                    })
+                    if (!hasZzp) return null
+                    return years.map((year, yearIdx) => {
+                      const zzp = getDataForYear(year).kostenZzp || [0,0,0,0,0,0,0,0,0,0,0,0]
+                      return (
+                        <tr key={`zzp-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
+                          {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-cyan-400/80 font-medium align-top text-sm">↳ waarvan ZZP</td>}
+                          <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
+                          {zzp.map((v: number, i: number) => (
+                            <td key={i} className={`text-right py-3 px-4 text-sm ${v > 0 ? 'text-cyan-400/80' : 'text-white/20'}`}>
+                              {formatCurrency(v)}
+                            </td>
+                          ))}
+                          <td className={`text-right py-3 px-4 font-medium ${calculations.totals.kostenZzp[year] > 0 ? 'text-cyan-400' : 'text-white/20'}`}>
+                            {formatCurrency(calculations.totals.kostenZzp[year])}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  })()}
+
                   {/* Kosten Extern - all 3 years */}
                   {years.map((year, yearIdx) => {
                     const hasData = getDataForYear(year).kostenExtern.some(v => v > 0)
@@ -1108,10 +1156,11 @@ export default function FinancienPage() {
               </div>
             </div>
             <div className="p-6 space-y-6">
-              {['werkgeverslasten', 'kostenExtern', 'omzet'].map((category) => (
+              {['werkgeverslasten', 'kostenZzp', 'kostenExtern', 'omzet'].map((category) => (
                 <div key={category}>
-                  <p className="text-white/60 text-sm mb-3 font-medium">{
+                  <p className={`text-sm mb-3 font-medium ${category === 'kostenZzp' ? 'text-cyan-400/80 pl-3' : 'text-white/60'}`}>{
                     category === 'kostenExtern' ? 'Kosten Extern (bv. Lodewijk)' :
+                    category === 'kostenZzp' ? '↳ ZZP Kosten' :
                     category === 'werkgeverslasten' ? 'Werkgeverslasten' : 'Omzet'
                   }</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
@@ -1175,10 +1224,10 @@ export default function FinancienPage() {
           <LineChart
             data={years.map(year => {
               const d = getDataForYear(year)
-              return d.werkgeverslasten.map((v, i) => v + (d.kostenExtern[i] || 0))
+              return d.werkgeverslasten.map((v, i) => v + (d.kostenZzp?.[i] || 0) + (d.kostenExtern[i] || 0))
             })}
             labels={periods}
-            title="Totale Kosten (Werkgeverslasten + Extern)"
+            title="Totale Kosten (Werkgeverslasten + ZZP + Extern)"
             colors={['#f97316', '#06b6d4', '#f9ff85']}
             height={200}
           />

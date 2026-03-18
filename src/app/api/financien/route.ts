@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         werkgeverslasten: EMPTY_12,
         kostenExtern: EMPTY_12,
+        kostenZzp: EMPTY_12,
         omzet: EMPTY_12,
         uren,
       })
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       werkgeverslasten: JSON.parse(data.werkgeverslasten),
       kostenExtern: JSON.parse(data.kostenExtern),
+      kostenZzp: data.kostenZzp ? JSON.parse(data.kostenZzp) : EMPTY_12,
       omzet: JSON.parse(data.omzet),
       uren,
     })
@@ -76,7 +78,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { werkgeverslasten, kostenExtern, omzet, uren } = body
+    const { werkgeverslasten, kostenExtern, kostenZzp, omzet, uren } = body
 
     // Validate arrays
     if (!Array.isArray(werkgeverslasten) || !Array.isArray(omzet)) {
@@ -84,6 +86,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const kostenExtData = Array.isArray(kostenExtern) ? kostenExtern : EMPTY_12
+    const kostenZzpData = Array.isArray(kostenZzp) ? kostenZzp : EMPTY_12
     const urenData = Array.isArray(uren) ? uren : EMPTY_12
 
     // Upsert - create if not exists, update if exists
@@ -96,6 +99,7 @@ export async function PUT(req: NextRequest) {
         data: {
           werkgeverslasten: JSON.stringify(werkgeverslasten),
           kostenExtern: JSON.stringify(kostenExtData),
+          kostenZzp: JSON.stringify(kostenZzpData),
           omzet: JSON.stringify(omzet),
           uren: JSON.stringify(urenData),
         }
@@ -105,6 +109,7 @@ export async function PUT(req: NextRequest) {
         data: {
           werkgeverslasten: JSON.stringify(werkgeverslasten),
           kostenExtern: JSON.stringify(kostenExtData),
+          kostenZzp: JSON.stringify(kostenZzpData),
           omzet: JSON.stringify(omzet),
           uren: JSON.stringify(urenData),
         }
@@ -130,6 +135,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({
       werkgeverslasten: JSON.parse(data.werkgeverslasten),
       kostenExtern: JSON.parse(data.kostenExtern),
+      kostenZzp: data.kostenZzp ? JSON.parse(data.kostenZzp) : EMPTY_12,
       omzet: JSON.parse(data.omzet),
       uren: autoUren,
     })
