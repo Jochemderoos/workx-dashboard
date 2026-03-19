@@ -285,21 +285,66 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
       for (const item of imageAttachments) {
         if (!item.attachmentUrl) continue
         try {
-          // Extract raw bytes directly from data URL — no canvas needed
+          const mimeHeader = item.attachmentUrl.substring(0, 40)
           const base64 = item.attachmentUrl.split(',')[1]
-          if (!base64) continue
+          console.log(`[PDF] Bijlage: ${item.attachmentName}, mime: ${mimeHeader}, base64 length: ${base64?.length || 0}`)
+
+          if (!base64 || base64.length < 100) {
+            console.error('[PDF] Bijlage data is leeg of te kort!')
+            throw new Error('Bijlage data is leeg')
+          }
+
           const binaryStr = atob(base64)
           const imgBytes = new Uint8Array(binaryStr.length)
           for (let j = 0; j < binaryStr.length; j++) {
             imgBytes[j] = binaryStr.charCodeAt(j)
           }
+          console.log(`[PDF] Decoded bytes: ${imgBytes.length}, first bytes: ${imgBytes.slice(0, 4).join(',')}`)
 
-          // Detect format from data URL and embed accordingly
-          const isPng = item.attachmentUrl.startsWith('data:image/png')
-          const embeddedImg = isPng
-            ? await mergedPdf.embedPng(imgBytes)
-            : await mergedPdf.embedJpg(imgBytes)
+          // Detect format: JPEG starts with FF D8, PNG starts with 89 50 4E 47
+          const isPng = imgBytes[0] === 0x89 && imgBytes[1] === 0x50
+          const isJpeg = imgBytes[0] === 0xFF && imgBytes[1] === 0xD8
+          console.log(`[PDF] Format detectie: isPng=${isPng}, isJpeg=${isJpeg}`)
+
+          let embeddedImg
+          if (isPng) {
+            embeddedImg = await mergedPdf.embedPng(imgBytes)
+          } else if (isJpeg) {
+            embeddedImg = await mergedPdf.embedJpg(imgBytes)
+          } else {
+            // Unknown format — convert via canvas as fallback
+            console.log('[PDF] Onbekend formaat, canvas fallback...')
+            const canvasBytes = await new Promise<Uint8Array>((resolve, reject) => {
+              const img = new window.Image()
+              img.onload = () => {
+                const MAX_DIM = 1500
+                let cw = img.naturalWidth, ch = img.naturalHeight
+                if (cw > MAX_DIM || ch > MAX_DIM) {
+                  const s = Math.min(MAX_DIM / cw, MAX_DIM / ch)
+                  cw = Math.round(cw * s); ch = Math.round(ch * s)
+                }
+                const canvas = document.createElement('canvas')
+                canvas.width = cw; canvas.height = ch
+                const ctx = canvas.getContext('2d')!
+                ctx.fillStyle = '#ffffff'
+                ctx.fillRect(0, 0, cw, ch)
+                ctx.drawImage(img, 0, 0, cw, ch)
+                canvas.toBlob(
+                  blob => {
+                    if (!blob) return reject(new Error('toBlob failed'))
+                    blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf))).catch(reject)
+                  },
+                  'image/jpeg', 0.85
+                )
+              }
+              img.onerror = () => reject(new Error('Image load failed'))
+              img.src = item.attachmentUrl!
+            })
+            embeddedImg = await mergedPdf.embedJpg(canvasBytes)
+          }
+
           const imgDims = embeddedImg.scale(1)
+          console.log(`[PDF] Embedded: ${imgDims.width}x${imgDims.height}`)
 
           // Create A4 page and fit image with margins
           const page = mergedPdf.addPage([595.28, 841.89]) // A4 in points
