@@ -48,12 +48,41 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
   const pageHeight = doc.internal.pageSize.getHeight()
   const isHolding = !!data.holdingName
 
-  let y = 20
+  let y = 15
 
   // === HEADER ===
   if (!isHolding) {
-    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
-    y = 30
+    // Dark header bar
+    doc.setFillColor(45, 45, 45)
+    doc.rect(0, 0, pageWidth, 32, 'F')
+
+    // Lime accent line under header
+    doc.setFillColor(249, 255, 133)
+    doc.rect(0, 32, pageWidth, 1.2, 'F')
+
+    // Logo in header — constrained height to prevent stretching
+    const logoW = 30
+    const logoH = logoW * 0.414
+    const logoY = (32 - logoH) / 2
+    drawWorkxLogo(doc, 12, logoY, logoW, logoDataUrl)
+
+    // Title in header
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(255, 255, 255)
+    doc.text('DECLARATIEFORMULIER', 48, 15)
+
+    // Date + invoice in header right-aligned
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(180, 180, 180)
+    const dateText = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+    doc.text(dateText, pageWidth - 15, 14, { align: 'right' })
+    if (data.invoiceNumber?.trim()) {
+      doc.text(`Factuurnr: ${data.invoiceNumber.trim()}`, pageWidth - 15, 20, { align: 'right' })
+    }
+
+    y = 42
   } else {
     doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
@@ -64,31 +93,17 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 100, 100)
     doc.text('Declaratieformulier', 15, y + 14)
+
+    // Date and invoice number on the right
+    doc.setFontSize(9)
+    doc.setTextColor(100, 100, 100)
+    const dateText = `Datum: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`
+    doc.text(dateText, pageWidth - 15, 20, { align: 'right' })
+    if (data.invoiceNumber?.trim()) {
+      doc.text(`Factuurnr: ${data.invoiceNumber.trim()}`, pageWidth - 15, 26, { align: 'right' })
+    }
+
     y = 45
-  }
-
-  // Date and invoice number on the right
-  doc.setFontSize(9)
-  doc.setTextColor(100, 100, 100)
-  const dateText = `Datum: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`
-  doc.text(dateText, pageWidth - 15, 25, { align: 'right' })
-
-  if (data.invoiceNumber?.trim()) {
-    doc.text(`Factuurnr: ${data.invoiceNumber.trim()}`, pageWidth - 15, 31, { align: 'right' })
-  }
-
-  // === TITLE ===
-  doc.setDrawColor(220, 220, 220)
-  doc.setLineWidth(0.3)
-  doc.line(15, y, pageWidth - 15, y)
-  y += 15
-
-  if (!isHolding) {
-    doc.setFontSize(18)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(30, 30, 30)
-    doc.text('DECLARATIEFORMULIER', 15, y)
-    y += 15
   }
 
   // === PERSONAL INFO BOX ===
