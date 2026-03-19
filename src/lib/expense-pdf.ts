@@ -41,7 +41,12 @@ function formatCurrency(amount: number): string {
  * Generate a PDF for an expense declaration.
  * Returns the jsPDF doc and suggested filename, or null on failure.
  */
-export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPDF; fileName: string } | null> {
+export interface PDFAttachmentDownload {
+  blob: Blob
+  fileName: string
+}
+
+export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPDF; fileName: string; pdfAttachments?: PDFAttachmentDownload[] } | null> {
   const logoDataUrl = await loadWorkxLogo()
 
   const doc = new jsPDF()
@@ -401,7 +406,6 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
       return {
         doc: {
           save: (name: string) => {
-            // Download declaration PDF
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
@@ -411,10 +415,9 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
             document.body.removeChild(a)
             URL.revokeObjectURL(url)
           },
-          // Expose PDF attachment downloads for the caller to handle
-          pdfAttachmentDownloads: pdfDownloads,
         } as any,
         fileName,
+        pdfAttachments: pdfDownloads.length > 0 ? pdfDownloads : undefined,
       }
     } catch (mergeErr) {
       console.error('Error in PDF merge flow:', mergeErr)

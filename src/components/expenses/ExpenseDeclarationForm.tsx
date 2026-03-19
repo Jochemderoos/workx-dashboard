@@ -489,16 +489,39 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
       if (!result) return
 
       result.doc.save(result.fileName)
-      // Download PDF attachments by opening in new tab
-      const attachments = (result.doc as any).pdfAttachmentDownloads as { blob: Blob; fileName: string }[] | undefined
-      if (attachments && attachments.length > 0) {
-        for (const dl of attachments) {
-          const dlUrl = URL.createObjectURL(dl.blob)
-          window.open(dlUrl, '_blank')
+      toast.success('PDF gedownload')
+
+      // Show persistent toast for each PDF attachment with a download button
+      if (result.pdfAttachments && result.pdfAttachments.length > 0) {
+        for (const dl of result.pdfAttachments) {
+          const blobUrl = URL.createObjectURL(dl.blob)
+          toast(
+            (t) => {
+              const handleClick = () => {
+                const a = document.createElement('a')
+                a.href = blobUrl
+                a.download = dl.fileName
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                URL.revokeObjectURL(blobUrl)
+                toast.dismiss(t.id)
+              }
+              return (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm">📎 {dl.fileName}</span>
+                  <button
+                    onClick={handleClick}
+                    className="px-3 py-1 bg-workx-lime text-black text-sm font-medium rounded-lg hover:opacity-90"
+                  >
+                    Download
+                  </button>
+                </div>
+              )
+            },
+            { duration: 30000 }
+          )
         }
-        toast.success(`PDF + ${attachments.length} bijlage(n) gedownload`)
-      } else {
-        toast.success('PDF gedownload')
       }
     } catch (error) {
       console.error('Error generating PDF:', error)
@@ -533,16 +556,39 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
       if (!result) return
 
       result.doc.save(result.fileName)
-      // Download PDF attachments by opening in new tab
-      const attachments = (result.doc as any).pdfAttachmentDownloads as { blob: Blob; fileName: string }[] | undefined
-      if (attachments && attachments.length > 0) {
-        for (const dl of attachments) {
-          const dlUrl = URL.createObjectURL(dl.blob)
-          window.open(dlUrl, '_blank')
+      toast.success('PDF gedownload')
+
+      // Show persistent toast for each PDF attachment with a download button
+      if (result.pdfAttachments && result.pdfAttachments.length > 0) {
+        for (const dl of result.pdfAttachments) {
+          const blobUrl = URL.createObjectURL(dl.blob)
+          toast(
+            (t) => {
+              const handleClick = () => {
+                const a = document.createElement('a')
+                a.href = blobUrl
+                a.download = dl.fileName
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                URL.revokeObjectURL(blobUrl)
+                toast.dismiss(t.id)
+              }
+              return (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm">📎 {dl.fileName}</span>
+                  <button
+                    onClick={handleClick}
+                    className="px-3 py-1 bg-workx-lime text-black text-sm font-medium rounded-lg hover:opacity-90"
+                  >
+                    Download
+                  </button>
+                </div>
+              )
+            },
+            { duration: 30000 }
+          )
         }
-        toast.success(`PDF + ${attachments.length} bijlage(n) gedownload`)
-      } else {
-        toast.success('PDF gedownload')
       }
     } catch (error) {
       console.error('Error generating PDF:', error)
