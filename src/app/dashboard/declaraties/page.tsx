@@ -1122,30 +1122,9 @@ export default function DeclaratiesPage() {
           </div>
         )
       ) : activeTab === 'declaratieformulier' ? (
-        /* Tab 2: Declaratieformulier */
+        /* Tab 2: Declaratieformulier — toont direct overzicht eigen declaraties */
         <div>
-          {showDeclaratieForm ? (
-            <div className="relative">
-              <ExpenseDeclarationForm onClose={() => setShowDeclaratieForm(false)} />
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-2xl bg-workx-lime/10 flex items-center justify-center mx-auto mb-4">
-                <Icons.euro size={28} className="text-workx-lime" />
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Onkosten declareren</h3>
-              <p className="text-sm text-white/40 mb-6 max-w-md mx-auto">
-                Maak een formele declaratie aan met IBAN, facturen en genereer een PDF voor de administratie.
-              </p>
-              <button
-                onClick={() => setShowDeclaratieForm(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-workx-lime text-workx-dark font-medium text-sm hover:bg-workx-lime/90 transition-colors"
-              >
-                <Icons.plus size={16} />
-                Nieuwe declaratie
-              </button>
-            </div>
-          )}
+          <ExpenseDeclarationForm onClose={() => setActiveTab('bonnetjes')} inline />
         </div>
       ) : (
         /* Tab 3: Overzicht (managers only) */

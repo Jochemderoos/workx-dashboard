@@ -34,9 +34,10 @@ interface ExpenseDeclaration {
 
 interface ExpenseDeclarationFormProps {
   onClose: () => void
+  inline?: boolean
 }
 
-export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFormProps) {
+export default function ExpenseDeclarationForm({ onClose, inline = false }: ExpenseDeclarationFormProps) {
   const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -649,19 +650,9 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   }
 
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 sm:p-4"
-      style={{ paddingTop: '2vh' }}
-      onClick={onClose}
-    >
-        {/* Modal */}
-        <div
-          ref={modalRef}
-          className="w-full max-w-4xl bg-workx-dark border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl animate-modal-in flex flex-col"
-          style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
+  const content = (
+    <div ref={modalRef} className={`w-full flex flex-col ${!inline ? 'max-w-4xl' : ''}`}>
+        <div className="w-full flex flex-col">
           {/* Header - always visible, never scrolled */}
           <div className="flex-shrink-0 p-4 sm:p-6 border-b border-white/10 bg-workx-dark rounded-t-2xl relative z-10">
             <div className="flex items-start justify-between gap-2">
@@ -708,9 +699,6 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                     <span className="hidden sm:inline">Nieuwe declaratie</span>
                   </button>
                 )}
-                <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-                  <Icons.x size={20} className="text-gray-400" />
-                </button>
               </div>
             </div>
           </div>
@@ -1467,5 +1455,24 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
           )}
         </div>
       </div>
+  )
+
+  if (inline) return content
+
+  // Modal wrapper for non-inline usage (e.g. hr-docs)
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 sm:p-4"
+      style={{ paddingTop: '2vh' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-4xl bg-workx-dark border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl animate-modal-in flex flex-col"
+        style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {content}
+      </div>
+    </div>
   )
 }
