@@ -1,11 +1,6 @@
 import { jsPDF } from 'jspdf'
 import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
-import * as pdfjsLib from 'pdfjs-dist'
-
-// Set worker source for pdfjs
-if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-}
+import { PDFDocument } from 'pdf-lib'
 
 export interface ExpensePDFItem {
   description: string
@@ -314,78 +309,70 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
         doc.text(`Kon bijlage niet laden: ${item.attachmentName}`, 15, attachY)
       }
     } else if (item.attachmentUrl.startsWith('data:application/pdf')) {
-      // Render PDF pages as images using pdfjs
-      try {
-        const base64 = item.attachmentUrl.split(',')[1]
-        const binaryStr = atob(base64)
-        const bytes = new Uint8Array(binaryStr.length)
-        for (let j = 0; j < binaryStr.length; j++) {
-          bytes[j] = binaryStr.charCodeAt(j)
-        }
-
-        const pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise
-        const numPages = pdfDoc.numPages
-
-        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-          if (pageNum > 1) {
-            // Add new page for subsequent PDF pages
-            doc.addPage()
-            attachY = 20
-
-            doc.setFontSize(12)
-            doc.setFont('helvetica', 'bold')
-            doc.setTextColor(30, 30, 30)
-            doc.text(`BIJLAGE (pagina ${pageNum}/${numPages})`, 15, attachY)
-
-            doc.setFontSize(10)
-            doc.setFont('helvetica', 'normal')
-            doc.setTextColor(80, 80, 80)
-            doc.text(`${item.description} - ${formatDate(item.date)} - ${formatCurrency(item.amount)}`, 15, attachY + 8)
-
-            doc.setDrawColor(220, 220, 220)
-            doc.line(15, attachY + 12, pageWidth - 15, attachY + 12)
-            attachY += 25
-          } else {
-            // Update header for first page to show page count
-            if (numPages > 1) {
-              doc.setFontSize(8)
-              doc.setTextColor(120, 120, 120)
-              doc.text(`pagina 1/${numPages}`, pageWidth - 15, 20, { align: 'right' })
-            }
-          }
-
-          const page = await pdfDoc.getPage(pageNum)
-          const scale = 2 // Higher scale for better quality
-          const viewport = page.getViewport({ scale })
-
-          const canvas = document.createElement('canvas')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
-          const ctx = canvas.getContext('2d')!
-
-          await page.render({ canvasContext: ctx, viewport, canvas } as any).promise
-
-          const imgData = canvas.toDataURL('image/jpeg', 0.85)
-          const maxWidth = pageWidth - 30
-          const maxHeight = pageHeight - attachY - 20
-          const ratio = Math.min(maxWidth / viewport.width, maxHeight / viewport.height)
-          const imgW = viewport.width * ratio
-          const imgH = viewport.height * ratio
-
-          doc.addImage(imgData, 'JPEG', 15, attachY, imgW, imgH, undefined, 'MEDIUM')
-        }
-      } catch (pdfError) {
-        console.error('Error rendering PDF attachment:', pdfError)
-        doc.setFontSize(10)
-        doc.setTextColor(150, 50, 50)
-        doc.text(`Kon PDF bijlage niet laden: ${item.attachmentName}`, 15, attachY)
-      }
+      // PDF attachments will be merged using pdf-lib after jsPDF is done
+      // Store a marker — we handle these below
+      doc.setFontSize(9)
+      doc.setTextColor(100, 100, 100)
+      doc.text('(zie bijgevoegde pagina\'s hieronder)', 15, attachY)
     }
   }
 
   const fileName = isHolding
     ? `Declaratie_${(data.holdingName || '').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
     : `Declaratie_${data.employeeName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+
+  // Merge PDF attachments using pdf-lib
+  const pdfAttachments = validItems.filter(
+    i => i.attachmentUrl && i.attachmentUrl.startsWith('data:application/pdf')
+  )
+
+  if (pdfAttachments.length > 0) {
+    try {
+      // Convert jsPDF output to pdf-lib document
+      const jsPdfBytes = doc.output('arraybuffer')
+      const mergedPdf = await PDFDocument.load(jsPdfBytes)
+
+      for (const item of pdfAttachments) {
+        if (!item.attachmentUrl) continue
+        try {
+          const base64 = item.attachmentUrl.split(',')[1]
+          const binaryStr = atob(base64)
+          const bytes = new Uint8Array(binaryStr.length)
+          for (let j = 0; j < binaryStr.length; j++) {
+            bytes[j] = binaryStr.charCodeAt(j)
+          }
+
+          const attachmentPdf = await PDFDocument.load(bytes)
+          const pages = await mergedPdf.copyPages(attachmentPdf, attachmentPdf.getPageIndices())
+          pages.forEach(page => mergedPdf.addPage(page))
+        } catch (attachErr) {
+          console.error('Error merging PDF attachment:', attachErr)
+        }
+      }
+
+      const mergedBytes = await mergedPdf.save()
+      const blob = new Blob([mergedBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
+
+      // Return a compatible object that can be saved
+      return {
+        doc: {
+          save: (name: string) => {
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = name
+            a.click()
+            URL.revokeObjectURL(url)
+          }
+        } as any,
+        fileName,
+      }
+    } catch (mergeErr) {
+      console.error('Error in PDF merge:', mergeErr)
+      // Fall back to jsPDF without merged attachments
+      return { doc, fileName }
+    }
+  }
 
   return { doc, fileName }
 }
