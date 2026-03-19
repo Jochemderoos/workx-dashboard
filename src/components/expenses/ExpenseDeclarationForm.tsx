@@ -57,6 +57,9 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   const [savedDeclarations, setSavedDeclarations] = useState<ExpenseDeclaration[]>([])
   const [currentDeclaration, setCurrentDeclaration] = useState<ExpenseDeclaration | null>(null)
 
+  // Search
+  const [searchQuery, setSearchQuery] = useState('')
+
   // Kilometer rate setting
   const [kilometerRate, setKilometerRate] = useState(0.23)
   const [showRateSettings, setShowRateSettings] = useState(false)
@@ -493,22 +496,40 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     }
   }
 
-  // Mark declaration as paid (admin/partner only)
-  const markAsPaid = async (id: string) => {
+  // Toggle declaration paid/unpaid (admin/partner only)
+  const togglePaidStatus = async (id: string, currentStatus: string) => {
+    const newAction = currentStatus === 'PAID' ? 'unpaid' : 'paid'
     try {
       const res = await fetch(`/api/expenses/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'paid' }),
+        body: JSON.stringify({ action: newAction }),
       })
       if (res.ok) {
-        setSavedDeclarations(prev => prev.map(d => d.id === id ? { ...d, status: 'PAID' } : d))
-        toast.success('Declaratie gemarkeerd als betaald')
+        const newStatus = newAction === 'paid' ? 'PAID' : 'SUBMITTED'
+        setSavedDeclarations(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d))
+        toast.success(newAction === 'paid' ? 'Gemarkeerd als betaald' : 'Teruggezet naar onbetaald')
       } else {
         toast.error('Kon status niet wijzigen')
       }
     } catch {
       toast.error('Kon status niet wijzigen')
+    }
+  }
+
+  // Delete declaration (admin/partner only)
+  const deleteDeclaration = async (id: string) => {
+    if (!confirm('Weet je zeker dat je deze declaratie wilt verwijderen?')) return
+    try {
+      const res = await fetch(`/api/expenses/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setSavedDeclarations(prev => prev.filter(d => d.id !== id))
+        toast.success('Declaratie verwijderd')
+      } else {
+        toast.error('Kon declaratie niet verwijderen')
+      }
+    } catch {
+      toast.error('Kon declaratie niet verwijderen')
     }
   }
 
@@ -672,30 +693,58 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
             /* History View */
             <div className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <h3 className="text-lg font-medium text-white">Opgeslagen declaraties</h3>
+                <h3 className="text-lg font-medium text-white">Declaraties</h3>
                 <button onClick={startNewForm} className="btn-primary flex items-center justify-center gap-2 text-sm w-full sm:w-auto">
                   <Icons.plus size={16} />
                   Nieuw formulier
                 </button>
               </div>
 
+              {/* Search */}
+              {savedDeclarations.length > 0 && (
+                <div className="relative mb-4">
+                  <Icons.search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Zoek op naam, factuurnummer..."
+                    className="input-field w-full pl-10 !rounded-xl"
+                  />
+                </div>
+              )}
+
               {savedDeclarations.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
                   <Icons.fileText size={48} className="mx-auto mb-4 opacity-30" />
-                  <p>Nog geen opgeslagen declaraties</p>
+                  <p>Nog geen declaraties</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {savedDeclarations.map((decl) => (
+                  {savedDeclarations
+                    .filter(decl => {
+                      if (!searchQuery.trim()) return true
+                      const q = searchQuery.toLowerCase()
+                      return (
+                        decl.employeeName.toLowerCase().includes(q) ||
+                        (decl.invoiceNumber || '').toLowerCase().includes(q) ||
+                        (decl.holdingName || '').toLowerCase().includes(q) ||
+                        decl.status.toLowerCase().includes(q)
+                      )
+                    })
+                    .map((decl) => (
                     <div
                       key={decl.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors gap-2 cursor-pointer"
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl transition-colors gap-2 cursor-pointer ${
+                        decl.status === 'PAID'
+                          ? 'bg-white/[0.02] opacity-50 hover:opacity-80'
+                          : 'bg-white/5 hover:bg-white/10'
+                      }`}
                       onClick={() => loadDeclaration(decl)}
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-white font-medium truncate">{decl.employeeName}</p>
-                          {/* Status badge */}
+                          <p className={`font-medium truncate ${decl.status === 'PAID' ? 'text-gray-400' : 'text-white'}`}>{decl.employeeName}</p>
                           {decl.status === 'DRAFT' && (
                             <span className="px-2 py-0.5 text-xs bg-gray-500/20 rounded-full text-gray-400 font-medium">
                               Concept
@@ -703,7 +752,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                           )}
                           {decl.status === 'SUBMITTED' && (
                             <span className="px-2 py-0.5 text-xs bg-orange-500/20 rounded-full text-orange-400 font-medium">
-                              Ingediend
+                              Onbetaald
                             </span>
                           )}
                           {decl.status === 'PAID' && (
@@ -722,21 +771,25 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-gray-500">
                           {new Date(decl.createdAt).toLocaleDateString('nl-NL')} • {decl.items.length} post{decl.items.length !== 1 ? 'en' : ''}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {(isPartner || isAdmin) && decl.status === 'SUBMITTED' && (
+                      <div className="flex items-center gap-2">
+                        {(isPartner || isAdmin) && (decl.status === 'SUBMITTED' || decl.status === 'PAID') && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              markAsPaid(decl.id)
+                              togglePaidStatus(decl.id, decl.status)
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-xs font-medium hover:bg-green-500/20 transition-colors"
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              decl.status === 'PAID'
+                                ? 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20'
+                                : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                            }`}
                           >
                             <Icons.check size={14} />
-                            Betaald
+                            {decl.status === 'PAID' ? 'Onbetaald' : 'Betaald'}
                           </button>
                         )}
                         {decl.status !== 'DRAFT' && (
@@ -751,8 +804,20 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                             PDF
                           </button>
                         )}
-                        <div className="text-left sm:text-right shrink-0">
-                          <p className="text-workx-lime font-bold text-lg">
+                        {(isPartner || isAdmin) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteDeclaration(decl.id)
+                            }}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            title="Verwijderen"
+                          >
+                            <Icons.trash size={14} />
+                          </button>
+                        )}
+                        <div className="text-left sm:text-right shrink-0 ml-1">
+                          <p className={`font-bold text-lg ${decl.status === 'PAID' ? 'text-gray-500' : 'text-workx-lime'}`}>
                             {formatCurrency(decl.totalAmount)}
                           </p>
                         </div>

@@ -118,6 +118,18 @@ export async function PUT(
         })
         return NextResponse.json(updated)
       }
+
+      if (action === 'unpaid') {
+        const updated = await prisma.expenseDeclaration.update({
+          where: { id: params.id },
+          data: {
+            status: 'SUBMITTED',
+            paidAt: null,
+          },
+          include: { items: true },
+        })
+        return NextResponse.json(updated)
+      }
     }
 
     // Regular update (only for DRAFT status)
@@ -188,7 +200,7 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete expense declaration (only DRAFT)
+// DELETE - Delete expense declaration
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -205,6 +217,20 @@ export async function DELETE(
 
     if (!declaration) {
       return NextResponse.json({ error: 'Declaratie niet gevonden' }, { status: 404 })
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    })
+    const isManager = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
+
+    // Managers can delete any declaration, owners can only delete DRAFT
+    if (isManager) {
+      await prisma.expenseDeclaration.delete({
+        where: { id: params.id },
+      })
+      return NextResponse.json({ success: true })
     }
 
     if (declaration.userId !== session.user.id) {
