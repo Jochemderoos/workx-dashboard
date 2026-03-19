@@ -92,11 +92,13 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     fetchKilometerRate()
   }, [])
 
-  // Load saved declarations
+  // Load saved declarations (own only)
   useEffect(() => {
     const fetchDeclarations = async () => {
       try {
-        const res = await fetch('/api/expenses')
+        const userId = session?.user?.id
+        const url = userId ? `/api/expenses?userId=${userId}` : '/api/expenses'
+        const res = await fetch(url)
         if (res.ok) {
           const data = await res.json()
           setSavedDeclarations(data)
@@ -114,8 +116,8 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
         console.error('Error fetching declarations:', error)
       }
     }
-    fetchDeclarations()
-  }, [])
+    if (session?.user?.id) fetchDeclarations()
+  }, [session?.user?.id])
 
   // Load a declaration into the form
   const loadDeclaration = (declaration: ExpenseDeclaration) => {
@@ -186,21 +188,24 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   // Handle file attachment
   const handleFileAttachment = (index: number, file: File | null) => {
     if (!file) {
-      const newItems = [...items]
-      newItems[index] = { ...newItems[index], attachmentUrl: '', attachmentName: '' }
-      setItems(newItems)
+      setItems(prev => prev.map((item, i) =>
+        i === index ? { ...item, attachmentUrl: '', attachmentName: '' } : item
+      ))
+      return
+    }
+
+    // Check file size (max 4MB to stay within API limits)
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Bestand is te groot (max 4MB)')
       return
     }
 
     const reader = new FileReader()
     reader.onload = (e) => {
-      const newItems = [...items]
-      newItems[index] = {
-        ...newItems[index],
-        attachmentUrl: e.target?.result as string,
-        attachmentName: file.name
-      }
-      setItems(newItems)
+      // Use functional update to avoid stale closure
+      setItems(prev => prev.map((item, i) =>
+        i === index ? { ...item, attachmentUrl: e.target?.result as string, attachmentName: file.name } : item
+      ))
     }
     reader.readAsDataURL(file)
   }
@@ -345,7 +350,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
       const saved = await res.json()
       setCurrentDeclaration(saved)
 
-      const listRes = await fetch('/api/expenses')
+      const listRes = await fetch(`/api/expenses${session?.user?.id ? `?userId=${session.user.id}` : ''}`)
       if (listRes.ok) {
         setSavedDeclarations(await listRes.json())
       }
@@ -426,7 +431,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
       }
 
       // Refresh declarations list
-      const listRes = await fetch('/api/expenses')
+      const listRes = await fetch(`/api/expenses${session?.user?.id ? `?userId=${session.user.id}` : ''}`)
       if (listRes.ok) {
         setSavedDeclarations(await listRes.json())
       }
@@ -474,14 +479,19 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   // Download PDF for a saved declaration (from history)
   const downloadDeclarationPDF = async (decl: ExpenseDeclaration) => {
     try {
+      // Fetch full declaration data including attachment URLs (not in list response)
+      const fullRes = await fetch(`/api/expenses/${decl.id}`)
+      if (!fullRes.ok) throw new Error('Kon declaratie niet ophalen')
+      const fullDecl = await fullRes.json()
+
       const result = await buildExpensePDF({
-        employeeName: decl.employeeName,
-        bankAccount: decl.bankAccount,
-        holdingName: decl.holdingName || null,
-        invoiceNumber: decl.invoiceNumber || '',
-        note: decl.note || '',
-        createdAt: decl.createdAt,
-        items: decl.items.map(i => ({
+        employeeName: fullDecl.employeeName,
+        bankAccount: fullDecl.bankAccount,
+        holdingName: fullDecl.holdingName || null,
+        invoiceNumber: fullDecl.invoiceNumber || '',
+        note: fullDecl.note || '',
+        createdAt: fullDecl.createdAt,
+        items: fullDecl.items.map((i: any) => ({
           ...i,
           date: i.date ? new Date(i.date).toISOString().split('T')[0] : '',
           expenseType: i.expenseType || 'overig',
@@ -498,28 +508,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     }
   }
 
-  // Toggle declaration paid/unpaid (admin/partner only)
-  const togglePaidStatus = async (id: string, currentStatus: string) => {
-    const newAction = currentStatus === 'PAID' ? 'unpaid' : 'paid'
-    try {
-      const res = await fetch(`/api/expenses/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: newAction }),
-      })
-      if (res.ok) {
-        const newStatus = newAction === 'paid' ? 'PAID' : 'SUBMITTED'
-        setSavedDeclarations(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d))
-        toast.success(newAction === 'paid' ? 'Gemarkeerd als betaald' : 'Teruggezet naar onbetaald')
-      } else {
-        toast.error('Kon status niet wijzigen')
-      }
-    } catch {
-      toast.error('Kon status niet wijzigen')
-    }
-  }
-
-  // Delete declaration (admin/partner only)
+  // Delete declaration
   const deleteDeclaration = async (id: string) => {
     if (!confirm('Weet je zeker dat je deze declaratie wilt verwijderen?')) return
     try {
@@ -781,22 +770,6 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {(isPartner || isAdmin) && (decl.status === 'SUBMITTED' || decl.status === 'PAID') && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              togglePaidStatus(decl.id, decl.status)
-                            }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                              decl.status === 'PAID'
-                                ? 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20'
-                                : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
-                            }`}
-                          >
-                            <Icons.check size={14} />
-                            {decl.status === 'PAID' ? 'Onbetaald' : 'Betaald'}
-                          </button>
-                        )}
                         {decl.status !== 'DRAFT' && (
                           <button
                             onClick={(e) => {
@@ -809,7 +782,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                             PDF
                           </button>
                         )}
-                        {(isPartner || isAdmin) && (
+                        {decl.status === 'DRAFT' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -965,11 +938,11 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                           </div>
 
                           {/* Description field - always shown, required for reiskosten */}
-                          <input
-                            type="text"
+                          <textarea
                             value={item.description}
                             onChange={(e) => updateItem(index, 'description', e.target.value)}
-                            className="input-field text-sm py-1.5 w-full"
+                            className="input-field text-sm py-1.5 w-full resize-none"
+                            rows={2}
                             placeholder={item.expenseType === 'reiskosten_auto' ? 'Reis omschrijving (bijv. Amsterdam - Rotterdam)...' : 'Omschrijving...'}
                           />
 
@@ -1095,11 +1068,11 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                                 </span>
                               </td>
                               <td className="px-4 py-3">
-                                <input
-                                  type="text"
+                                <textarea
                                   value={item.description}
                                   onChange={(e) => updateItem(index, 'description', e.target.value)}
-                                  className="input-field text-sm py-1.5 w-full"
+                                  className="input-field text-sm py-1.5 w-full resize-none"
+                                  rows={2}
                                   placeholder={item.expenseType === 'reiskosten_auto' ? 'Reis omschrijving (bijv. Amsterdam - Rotterdam)...' : 'Omschrijving...'}
                                 />
                               </td>

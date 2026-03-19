@@ -41,6 +41,18 @@ export async function GET(req: NextRequest) {
       include: {
         items: {
           orderBy: { date: 'asc' },
+          select: {
+            id: true,
+            description: true,
+            date: true,
+            amount: true,
+            attachmentName: true,
+            expenseType: true,
+            kilometers: true,
+            chargeToClient: true,
+            // NOTE: attachmentUrl deliberately excluded - base64 data is too large for list responses.
+            // Fetch individual declaration via GET /api/expenses/[id] to get full attachment data.
+          },
         },
       },
       orderBy: { createdAt: 'desc' },
