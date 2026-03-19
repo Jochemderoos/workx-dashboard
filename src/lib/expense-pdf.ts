@@ -410,19 +410,9 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
             a.click()
             document.body.removeChild(a)
             URL.revokeObjectURL(url)
-
-            // Download PDF attachments as separate files (immediately, same user gesture)
-            for (const dl of pdfDownloads) {
-              const dlUrl = URL.createObjectURL(dl.blob)
-              const dlA = document.createElement('a')
-              dlA.href = dlUrl
-              dlA.download = dl.fileName
-              document.body.appendChild(dlA)
-              dlA.click()
-              document.body.removeChild(dlA)
-              URL.revokeObjectURL(dlUrl)
-            }
-          }
+          },
+          // Expose PDF attachment downloads for the caller to handle
+          pdfAttachmentDownloads: pdfDownloads,
         } as any,
         fileName,
       }

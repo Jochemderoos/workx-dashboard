@@ -489,7 +489,17 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
       if (!result) return
 
       result.doc.save(result.fileName)
-      toast.success('PDF gedownload')
+      // Download PDF attachments by opening in new tab
+      const attachments = (result.doc as any).pdfAttachmentDownloads as { blob: Blob; fileName: string }[] | undefined
+      if (attachments && attachments.length > 0) {
+        for (const dl of attachments) {
+          const dlUrl = URL.createObjectURL(dl.blob)
+          window.open(dlUrl, '_blank')
+        }
+        toast.success(`PDF + ${attachments.length} bijlage(n) gedownload`)
+      } else {
+        toast.success('PDF gedownload')
+      }
     } catch (error) {
       console.error('Error generating PDF:', error)
       toast.error('Kon PDF niet genereren')
@@ -523,7 +533,17 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
       if (!result) return
 
       result.doc.save(result.fileName)
-      toast.success('PDF gedownload')
+      // Download PDF attachments by opening in new tab
+      const attachments = (result.doc as any).pdfAttachmentDownloads as { blob: Blob; fileName: string }[] | undefined
+      if (attachments && attachments.length > 0) {
+        for (const dl of attachments) {
+          const dlUrl = URL.createObjectURL(dl.blob)
+          window.open(dlUrl, '_blank')
+        }
+        toast.success(`PDF + ${attachments.length} bijlage(n) gedownload`)
+      } else {
+        toast.success('PDF gedownload')
+      }
     } catch (error) {
       console.error('Error generating PDF:', error)
       toast.error('Kon PDF niet genereren')
