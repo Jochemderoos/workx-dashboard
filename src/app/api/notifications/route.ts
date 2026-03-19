@@ -327,6 +327,27 @@ export async function GET() {
       }
     }
 
+    // 12. Werkoverleg actiepunten reminder (elke maandag)
+    if (now.getDay() === 1) {
+      const werkoverlegKey = `werkoverleg-acties-${now.toISOString().split('T')[0]}`
+      if (!dismissedKeys.has(werkoverlegKey)) {
+        const openWerkoverlegActions = await prisma.werkoverlegAction.count({
+          where: { isCompleted: false },
+        })
+        if (openWerkoverlegActions > 0) {
+          notifications.push({
+            id: werkoverlegKey,
+            type: 'system',
+            title: '📋 Werkoverleg actiepunten',
+            message: `Er ${openWerkoverlegActions === 1 ? 'is' : 'zijn'} ${openWerkoverlegActions} openstaande actiepunt${openWerkoverlegActions === 1 ? '' : 'en'}. Check de actielijst voor morgen.`,
+            createdAt: now,
+            read: false,
+            href: '/dashboard/werkoverleg',
+          })
+        }
+      }
+    }
+
     // 11. Light mode aankondiging — eenmalig voor iedereen
     {
       const key = 'light-mode-2026'

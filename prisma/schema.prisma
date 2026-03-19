@@ -1679,6 +1679,57 @@ model WerkstudentTask {
   @@index([deadline])
 }
 
+// ==================== WERKOVERLEG (DINSDAGOVERLEG) ====================
+
+// Vergaderdag (altijd op dinsdag)
+model WerkoverlegDay {
+  id            String   @id @default(cuid())
+  meetingDate   DateTime // Altijd een dinsdag
+  dateLabel     String   // "Dinsdag 25 maart 2026"
+  chairperson   String?  // Voorzitter (gekozen week ervoor)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  agendaItems   WerkoverlegAgendaItem[]
+  actionItems   WerkoverlegAction[]
+
+  @@unique([meetingDate])
+  @@index([meetingDate])
+}
+
+// Agendapunt per vergaderdag
+model WerkoverlegAgendaItem {
+  id        String   @id @default(cuid())
+  dayId     String
+  title     String
+  notes     String?  @db.Text
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  day WerkoverlegDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId, sortOrder])
+}
+
+// Actiepunt per vergaderdag
+model WerkoverlegAction {
+  id              String    @id @default(cuid())
+  dayId           String
+  description     String    @db.Text
+  responsibleName String    // "Hele Team" of individuele naam
+  deadline        DateTime?
+  isCompleted     Boolean   @default(false)
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  day WerkoverlegDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId])
+  @@index([isCompleted])
+}
+
 // ==================== DD PROJECTEN (DUE DILIGENCE) ====================
 
 model DDProject {
