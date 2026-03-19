@@ -785,7 +785,7 @@ export default function DeclaratiesPage() {
         <div>
           {showDeclaratieForm || isManagerRole ? (
             <div className="relative">
-              <ExpenseDeclarationForm onClose={() => !isManagerRole && setShowDeclaratieForm(false)} />
+              <ExpenseDeclarationForm onClose={() => setShowDeclaratieForm(false)} />
             </div>
           ) : (
             <div className="text-center py-16">
