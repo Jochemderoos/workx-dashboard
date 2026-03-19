@@ -19,6 +19,7 @@ export interface ExpensePDFData {
   holdingName?: string | null
   invoiceNumber?: string | null
   note?: string | null
+  createdAt?: string | null
   items: ExpensePDFItem[]
 }
 
@@ -47,6 +48,7 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const isHolding = !!data.holdingName
+  const pdfDate = data.createdAt ? new Date(data.createdAt) : new Date()
 
   let y = 15
 
@@ -76,7 +78,7 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(180, 180, 180)
-    const dateText = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+    const dateText = pdfDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
     doc.text(dateText, pageWidth - 15, 14, { align: 'right' })
     if (data.invoiceNumber?.trim()) {
       doc.text(`Factuurnr: ${data.invoiceNumber.trim()}`, pageWidth - 15, 20, { align: 'right' })
@@ -97,7 +99,7 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     // Date and invoice number on the right
     doc.setFontSize(9)
     doc.setTextColor(100, 100, 100)
-    const dateText = `Datum: ${new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`
+    const dateText = `Datum: ${pdfDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`
     doc.text(dateText, pageWidth - 15, 20, { align: 'right' })
     if (data.invoiceNumber?.trim()) {
       doc.text(`Factuurnr: ${data.invoiceNumber.trim()}`, pageWidth - 15, 26, { align: 'right' })
@@ -245,24 +247,6 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     doc.text(noteLines, 15, y)
     y += noteLines.length * 4 + 10
   }
-
-  // === SIGNATURE AREA ===
-  y = Math.max(y, pageHeight - 70)
-
-  doc.setDrawColor(200, 200, 200)
-  doc.setLineWidth(0.3)
-  doc.line(15, y, pageWidth - 15, y)
-  y += 15
-
-  doc.setFontSize(9)
-  doc.setTextColor(100, 100, 100)
-  doc.text('Handtekening:', 15, y)
-  doc.text('Datum:', pageWidth / 2 + 10, y)
-
-  y += 20
-  doc.setDrawColor(150, 150, 150)
-  doc.line(15, y, pageWidth / 2 - 10, y)
-  doc.line(pageWidth / 2 + 10, y, pageWidth - 15, y)
 
   // === FOOTER ===
   if (!isHolding) {

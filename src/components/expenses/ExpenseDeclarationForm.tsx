@@ -456,6 +456,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
         holdingName: activeTab === 'holding' ? holdingName : null,
         invoiceNumber,
         note,
+        createdAt: currentDeclaration?.createdAt || new Date().toISOString(),
         items: items.filter(i => i.description && i.date && i.amount > 0),
       })
       if (!result) return
@@ -479,6 +480,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
         holdingName: decl.holdingName || null,
         invoiceNumber: decl.invoiceNumber || '',
         note: decl.note || '',
+        createdAt: decl.createdAt,
         items: decl.items.map(i => ({
           ...i,
           date: i.date ? new Date(i.date).toISOString().split('T')[0] : '',
@@ -536,18 +538,19 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto overflow-x-hidden"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 sm:p-4"
+      style={{ paddingTop: '2vh' }}
       onClick={onClose}
     >
-      <div className="min-h-full flex items-start justify-center p-2 sm:p-4" style={{ paddingTop: '2vh' }}>
         {/* Modal */}
         <div
           ref={modalRef}
-          className="w-full max-w-4xl bg-workx-dark border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl animate-modal-in overflow-hidden"
+          className="w-full max-w-4xl bg-workx-dark border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl animate-modal-in flex flex-col"
+          style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="sticky top-0 z-10 p-4 sm:p-6 border-b border-white/10 bg-workx-dark rounded-t-2xl">
+          {/* Header - always visible, never scrolled */}
+          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-white/10 bg-workx-dark rounded-t-2xl relative z-10">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-workx-lime/20 flex items-center justify-center shrink-0">
@@ -689,6 +692,8 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
             </div>
           )}
 
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {view === 'history' ? (
             /* History View */
             <div className="p-4 sm:p-6">
@@ -1212,9 +1217,11 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
             </div>
           )}
 
+          </div>{/* End scrollable content area */}
+
           {/* Footer Actions */}
           {view === 'form' && (
-            <div className="sticky bottom-0 p-4 sm:p-6 border-t border-white/10 bg-workx-dark rounded-b-2xl">
+            <div className="flex-shrink-0 p-4 sm:p-6 border-t border-white/10 bg-workx-dark rounded-b-2xl">
               {/* Mobile: stacked buttons */}
               <div className="flex flex-col gap-3 sm:hidden">
                 <button
@@ -1325,6 +1332,5 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
           )}
         </div>
       </div>
-    </div>
   )
 }
