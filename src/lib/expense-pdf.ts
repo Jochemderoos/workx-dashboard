@@ -281,46 +281,24 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
       const jsPdfBytes = doc.output('arraybuffer')
       const mergedPdf = await PDFDocument.load(jsPdfBytes)
 
-      // Add image attachments via pdf-lib
+      // Add image attachments via pdf-lib (direct byte embedding, no canvas)
       for (const item of imageAttachments) {
         if (!item.attachmentUrl) continue
         try {
-          // Convert data URL to bytes via canvas → JPEG
-          const imgBytes = await new Promise<Uint8Array>((resolve, reject) => {
-            const img = new window.Image()
-            img.onload = () => {
-              // Downscale for PDF (150 DPI on A4 ≈ 1240px wide, use 1500 max)
-              let cw = img.naturalWidth
-              let ch = img.naturalHeight
-              const MAX_DIM = 1500
-              if (cw > MAX_DIM || ch > MAX_DIM) {
-                const s = Math.min(MAX_DIM / cw, MAX_DIM / ch)
-                cw = Math.round(cw * s)
-                ch = Math.round(ch * s)
-              }
+          // Extract raw bytes directly from data URL — no canvas needed
+          const base64 = item.attachmentUrl.split(',')[1]
+          if (!base64) continue
+          const binaryStr = atob(base64)
+          const imgBytes = new Uint8Array(binaryStr.length)
+          for (let j = 0; j < binaryStr.length; j++) {
+            imgBytes[j] = binaryStr.charCodeAt(j)
+          }
 
-              const canvas = document.createElement('canvas')
-              canvas.width = cw
-              canvas.height = ch
-              const ctx = canvas.getContext('2d')!
-              ctx.fillStyle = '#ffffff'
-              ctx.fillRect(0, 0, cw, ch)
-              ctx.drawImage(img, 0, 0, cw, ch)
-
-              canvas.toBlob(
-                (blob) => {
-                  if (!blob) return reject(new Error('Canvas toBlob failed'))
-                  blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf))).catch(reject)
-                },
-                'image/jpeg',
-                0.85
-              )
-            }
-            img.onerror = () => reject(new Error('Image load failed'))
-            img.src = item.attachmentUrl!
-          })
-
-          const embeddedImg = await mergedPdf.embedJpg(imgBytes)
+          // Detect format from data URL and embed accordingly
+          const isPng = item.attachmentUrl.startsWith('data:image/png')
+          const embeddedImg = isPng
+            ? await mergedPdf.embedPng(imgBytes)
+            : await mergedPdf.embedJpg(imgBytes)
           const imgDims = embeddedImg.scale(1)
 
           // Create A4 page and fit image with margins
