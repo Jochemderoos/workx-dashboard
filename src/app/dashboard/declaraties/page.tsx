@@ -589,7 +589,9 @@ export default function DeclaratiesPage() {
   const [loading, setLoading] = useState(true)
   const [showNewActivity, setShowNewActivity] = useState(false)
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null)
-  const [showDeclaratieForm, setShowDeclaratieForm] = useState(false)
+  const [showDeclaratieForm, setShowDeclaratieForm] = useState(
+    (session?.user as { role?: string })?.role === 'ADMIN' || (session?.user as { role?: string })?.role === 'PARTNER'
+  )
 
   const userId = session?.user?.id || ''
   const userRole = (session?.user as { role?: string })?.role || 'EMPLOYEE'
