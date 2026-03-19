@@ -294,12 +294,12 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     })
   }
 
-  // === MERGE IMAGE ATTACHMENTS VIA PDF-LIB ===
+  // === MERGE ALL ATTACHMENTS INTO ONE PDF ===
   const imageAttachments = validItems.filter(
     i => i.attachmentUrl && i.attachmentUrl.startsWith('data:image/')
   )
 
-  if (imageAttachments.length > 0) {
+  if (imageAttachments.length > 0 || pdfAttachmentItems.length > 0) {
     try {
       const jsPdfBytes = doc.output('arraybuffer')
       const mergedPdf = await PDFDocument.load(jsPdfBytes)
@@ -399,6 +399,73 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
           const { height } = failPage.getSize()
           failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
           failPage.drawText('Deze afbeelding kon niet worden ingebed in de PDF.', { x: 50, y: height - 110, size: 11, color: rgb(0.5, 0.5, 0.5) })
+        }
+      }
+
+      // Render PDF attachments as images via PDF.js and embed them
+      for (const item of pdfAttachmentItems) {
+        if (!item.attachmentUrl) continue
+        try {
+          const base64 = item.attachmentUrl.split(',')[1]
+          if (!base64) continue
+          const binaryStr = atob(base64)
+          const pdfBytes = new Uint8Array(binaryStr.length)
+          for (let j = 0; j < binaryStr.length; j++) {
+            pdfBytes[j] = binaryStr.charCodeAt(j)
+          }
+
+          const pdfjsLib = await import('pdfjs-dist')
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+          const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise
+
+          for (let p = 1; p <= pdfDoc.numPages; p++) {
+            const pdfPage = await pdfDoc.getPage(p)
+            const viewport = pdfPage.getViewport({ scale: 2 })
+
+            const canvas = document.createElement('canvas')
+            canvas.width = viewport.width
+            canvas.height = viewport.height
+            const ctx = canvas.getContext('2d')!
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+            await pdfPage.render({ canvas, canvasContext: ctx, viewport }).promise
+
+            const jpegBytes = await new Promise<Uint8Array>((resolve, reject) => {
+              canvas.toBlob(
+                blob => {
+                  if (!blob) return reject(new Error('toBlob failed'))
+                  blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf))).catch(reject)
+                },
+                'image/jpeg', 0.90
+              )
+            })
+
+            const embeddedImg = await mergedPdf.embedJpg(jpegBytes)
+            const imgDims = embeddedImg.scale(1)
+            const page = mergedPdf.addPage([595.28, 841.89])
+            const margin = 20
+            const maxW = 595.28 - margin * 2
+            const maxH = 841.89 - margin * 2
+            const scale = Math.min(maxW / imgDims.width, maxH / imgDims.height, 1)
+            const drawW = imgDims.width * scale
+            const drawH = imgDims.height * scale
+            page.drawImage(embeddedImg, {
+              x: (595.28 - drawW) / 2,
+              y: (841.89 - drawH) / 2,
+              width: drawW,
+              height: drawH,
+            })
+          }
+          pdfDoc.destroy()
+          console.log(`[PDF] PDF bijlage gerenderd: ${item.attachmentName}`)
+        } catch (pdfErr) {
+          console.error('Error rendering PDF attachment:', item.attachmentName, pdfErr)
+          // Fallback page — attachment still downloadable via Bijlage button
+          const failPage = mergedPdf.addPage()
+          const { height } = failPage.getSize()
+          failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
+          failPage.drawText('Kon niet worden ingebed. Gebruik de Bijlage-knop.', { x: 50, y: height - 110, size: 11, color: rgb(0.5, 0.5, 0.5) })
         }
       }
 
