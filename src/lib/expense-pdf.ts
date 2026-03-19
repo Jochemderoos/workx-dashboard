@@ -461,11 +461,7 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
           console.log(`[PDF] PDF bijlage gerenderd: ${item.attachmentName}`)
         } catch (pdfErr) {
           console.error('Error rendering PDF attachment:', item.attachmentName, pdfErr)
-          // Fallback page — attachment still downloadable via Bijlage button
-          const failPage = mergedPdf.addPage()
-          const { height } = failPage.getSize()
-          failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
-          failPage.drawText('Kon niet worden ingebed. Gebruik de Bijlage-knop.', { x: 50, y: height - 110, size: 11, color: rgb(0.5, 0.5, 0.5) })
+          // Silently skip — user can download via Bijlage button
         }
       }
 
