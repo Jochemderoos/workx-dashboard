@@ -49,6 +49,7 @@ const nextConfig = {
               "font-src 'self' data:",
               "connect-src 'self' https:",
               "frame-src 'self'",
+              "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",
             ].join('; '),
