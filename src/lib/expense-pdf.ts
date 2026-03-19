@@ -265,10 +265,10 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     )
   }
 
-  // === ADD ATTACHMENTS AS SEPARATE PAGES ===
-  const attachmentsWithData = validItems.filter(item => item.attachmentUrl && item.attachmentUrl.startsWith('data:'))
+  // === ADD IMAGE ATTACHMENTS AS SEPARATE PAGES ===
+  const imageAttachments = validItems.filter(item => item.attachmentUrl && item.attachmentUrl.startsWith('data:image/'))
 
-  for (const item of attachmentsWithData) {
+  for (const item of imageAttachments) {
     if (!item.attachmentUrl) continue
 
     doc.addPage()
@@ -288,32 +288,24 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     doc.line(15, attachY + 12, pageWidth - 15, attachY + 12)
     attachY += 25
 
-    if (item.attachmentUrl.startsWith('data:image/')) {
-      try {
-        const maxWidth = pageWidth - 30
-        const maxHeight = pageHeight - attachY - 20
+    try {
+      const maxWidth = pageWidth - 30
+      const maxHeight = pageHeight - attachY - 20
 
-        doc.addImage(
-          item.attachmentUrl,
-          item.attachmentUrl.includes('png') ? 'PNG' : 'JPEG',
-          15,
-          attachY,
-          maxWidth,
-          maxHeight,
-          undefined,
-          'MEDIUM'
-        )
-      } catch {
-        doc.setFontSize(10)
-        doc.setTextColor(150, 50, 50)
-        doc.text(`Kon bijlage niet laden: ${item.attachmentName}`, 15, attachY)
-      }
-    } else if (item.attachmentUrl.startsWith('data:application/pdf')) {
-      // PDF attachments will be merged using pdf-lib after jsPDF is done
-      // Store a marker — we handle these below
-      doc.setFontSize(9)
-      doc.setTextColor(100, 100, 100)
-      doc.text('(zie bijgevoegde pagina\'s hieronder)', 15, attachY)
+      doc.addImage(
+        item.attachmentUrl,
+        item.attachmentUrl.includes('png') ? 'PNG' : 'JPEG',
+        15,
+        attachY,
+        maxWidth,
+        maxHeight,
+        undefined,
+        'MEDIUM'
+      )
+    } catch {
+      doc.setFontSize(10)
+      doc.setTextColor(150, 50, 50)
+      doc.text(`Kon bijlage niet laden: ${item.attachmentName}`, 15, attachY)
     }
   }
 
