@@ -1,5 +1,11 @@
 import { jsPDF } from 'jspdf'
 import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
+import * as pdfjsLib from 'pdfjs-dist'
+
+// Set worker source for pdfjs
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+}
 
 export interface ExpensePDFItem {
   description: string
@@ -308,14 +314,72 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
         doc.text(`Kon bijlage niet laden: ${item.attachmentName}`, 15, attachY)
       }
     } else if (item.attachmentUrl.startsWith('data:application/pdf')) {
-      doc.setFillColor(248, 249, 250)
-      doc.roundedRect(15, attachY, pageWidth - 30, 30, 3, 3, 'F')
+      // Render PDF pages as images using pdfjs
+      try {
+        const base64 = item.attachmentUrl.split(',')[1]
+        const binaryStr = atob(base64)
+        const bytes = new Uint8Array(binaryStr.length)
+        for (let j = 0; j < binaryStr.length; j++) {
+          bytes[j] = binaryStr.charCodeAt(j)
+        }
 
-      doc.setFontSize(10)
-      doc.setTextColor(80, 80, 80)
-      doc.text(`PDF Bijlage: ${item.attachmentName}`, 20, attachY + 12)
-      doc.setFontSize(8)
-      doc.text('(PDF bijlages kunnen niet direct in dit document worden weergegeven)', 20, attachY + 22)
+        const pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise
+        const numPages = pdfDoc.numPages
+
+        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+          if (pageNum > 1) {
+            // Add new page for subsequent PDF pages
+            doc.addPage()
+            attachY = 20
+
+            doc.setFontSize(12)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(30, 30, 30)
+            doc.text(`BIJLAGE (pagina ${pageNum}/${numPages})`, 15, attachY)
+
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(80, 80, 80)
+            doc.text(`${item.description} - ${formatDate(item.date)} - ${formatCurrency(item.amount)}`, 15, attachY + 8)
+
+            doc.setDrawColor(220, 220, 220)
+            doc.line(15, attachY + 12, pageWidth - 15, attachY + 12)
+            attachY += 25
+          } else {
+            // Update header for first page to show page count
+            if (numPages > 1) {
+              doc.setFontSize(8)
+              doc.setTextColor(120, 120, 120)
+              doc.text(`pagina 1/${numPages}`, pageWidth - 15, 20, { align: 'right' })
+            }
+          }
+
+          const page = await pdfDoc.getPage(pageNum)
+          const scale = 2 // Higher scale for better quality
+          const viewport = page.getViewport({ scale })
+
+          const canvas = document.createElement('canvas')
+          canvas.width = viewport.width
+          canvas.height = viewport.height
+          const ctx = canvas.getContext('2d')!
+
+          await page.render({ canvasContext: ctx, viewport, canvas } as any).promise
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.85)
+          const maxWidth = pageWidth - 30
+          const maxHeight = pageHeight - attachY - 20
+          const ratio = Math.min(maxWidth / viewport.width, maxHeight / viewport.height)
+          const imgW = viewport.width * ratio
+          const imgH = viewport.height * ratio
+
+          doc.addImage(imgData, 'JPEG', 15, attachY, imgW, imgH, undefined, 'MEDIUM')
+        }
+      } catch (pdfError) {
+        console.error('Error rendering PDF attachment:', pdfError)
+        doc.setFontSize(10)
+        doc.setTextColor(150, 50, 50)
+        doc.text(`Kon PDF bijlage niet laden: ${item.attachmentName}`, 15, attachY)
+      }
     }
   }
 
