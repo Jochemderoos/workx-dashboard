@@ -406,19 +406,21 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
             const a = document.createElement('a')
             a.href = url
             a.download = name
+            document.body.appendChild(a)
             a.click()
+            document.body.removeChild(a)
             URL.revokeObjectURL(url)
 
-            // Download PDF attachments as separate files
+            // Download PDF attachments as separate files (immediately, same user gesture)
             for (const dl of pdfDownloads) {
-              setTimeout(() => {
-                const dlUrl = URL.createObjectURL(dl.blob)
-                const dlA = document.createElement('a')
-                dlA.href = dlUrl
-                dlA.download = dl.fileName
-                dlA.click()
-                URL.revokeObjectURL(dlUrl)
-              }, 500)
+              const dlUrl = URL.createObjectURL(dl.blob)
+              const dlA = document.createElement('a')
+              dlA.href = dlUrl
+              dlA.download = dl.fileName
+              document.body.appendChild(dlA)
+              dlA.click()
+              document.body.removeChild(dlA)
+              URL.revokeObjectURL(dlUrl)
             }
           }
         } as any,
