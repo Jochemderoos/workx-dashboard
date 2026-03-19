@@ -291,13 +291,30 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
       const maxWidth = pageWidth - 30
       const maxHeight = pageHeight - attachY - 20
 
+      // Get actual image dimensions to maintain aspect ratio
+      const imgDims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
+        img.onerror = reject
+        img.src = item.attachmentUrl!
+      })
+
+      // Scale to fit within maxWidth x maxHeight while keeping aspect ratio
+      let imgW = imgDims.w
+      let imgH = imgDims.h
+      const scaleW = maxWidth / imgW
+      const scaleH = maxHeight / imgH
+      const scale = Math.min(scaleW, scaleH, 1) // Don't upscale
+      imgW = imgW * scale
+      imgH = imgH * scale
+
       doc.addImage(
         item.attachmentUrl,
         item.attachmentUrl.includes('png') ? 'PNG' : 'JPEG',
         15,
         attachY,
-        maxWidth,
-        maxHeight,
+        imgW,
+        imgH,
         undefined,
         'MEDIUM'
       )
