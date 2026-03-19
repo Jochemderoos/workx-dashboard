@@ -68,6 +68,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   // Form state
   const [employeeName, setEmployeeName] = useState(session?.user?.name || '')
   const [bankAccount, setBankAccount] = useState('')
+  const [savedIban, setSavedIban] = useState('') // IBAN from profile
   const [note, setNote] = useState('')
   const [items, setItems] = useState<ExpenseItem[]>([])
   const [holdingName, setHoldingName] = useState('')
@@ -76,20 +77,31 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   // Calculate total
   const totalAmount = items.reduce((sum, item) => sum + (item.amount || 0), 0)
 
-  // Load kilometer rate setting
+  // Load kilometer rate + saved IBAN from profile
   useEffect(() => {
-    const fetchKilometerRate = async () => {
+    const fetchSettings = async () => {
       try {
-        const res = await fetch('/api/settings?key=kilometerRate')
-        if (res.ok) {
-          const data = await res.json()
+        const [rateRes, profileRes] = await Promise.all([
+          fetch('/api/settings?key=kilometerRate'),
+          fetch('/api/user/profile'),
+        ])
+        if (rateRes.ok) {
+          const data = await rateRes.json()
           setKilometerRate(data.value || 0.23)
         }
+        if (profileRes.ok) {
+          const profile = await profileRes.json()
+          if (profile.iban) {
+            setSavedIban(profile.iban)
+            // Only pre-fill if no bank account entered yet
+            setBankAccount(prev => prev || profile.iban)
+          }
+        }
       } catch (error) {
-        console.error('Error fetching kilometer rate:', error)
+        console.error('Error fetching settings:', error)
       }
     }
-    fetchKilometerRate()
+    fetchSettings()
   }, [])
 
   // Load saved declarations (own only)
@@ -146,7 +158,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   const startNewForm = () => {
     setCurrentDeclaration(null)
     setEmployeeName(session?.user?.name || '')
-    setBankAccount('')
+    setBankAccount(savedIban || '')
     setNote('')
     setHoldingName('')
     setInvoiceNumber('')
@@ -349,6 +361,16 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
 
       const saved = await res.json()
       setCurrentDeclaration(saved)
+
+      // Save IBAN to profile if changed
+      const cleanIban = bankAccount.replace(/\s/g, '').toUpperCase()
+      if (cleanIban && cleanIban !== savedIban) {
+        fetch('/api/user/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ iban: cleanIban }),
+        }).then(() => setSavedIban(cleanIban)).catch(() => {})
+      }
 
       const listRes = await fetch(`/api/expenses${session?.user?.id ? `?userId=${session.user.id}` : ''}`)
       if (listRes.ok) {
@@ -782,7 +804,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                             PDF
                           </button>
                         )}
-                        {decl.status === 'DRAFT' && (
+                        {decl.status !== 'PAID' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()

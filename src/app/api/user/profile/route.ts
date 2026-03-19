@@ -20,6 +20,7 @@ export async function GET() {
         phoneNumber: true,
         department: true,
         birthDate: true,
+        iban: true,
       }
     })
 
@@ -44,7 +45,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const { name, phoneNumber, department, birthDate } = await req.json()
+    const { name, phoneNumber, department, birthDate, iban } = await req.json()
 
     const user = await prisma.user.update({
       where: { id: session.user.id },
@@ -53,6 +54,7 @@ export async function PATCH(req: NextRequest) {
         ...(phoneNumber !== undefined && { phoneNumber }),
         ...(department !== undefined && { department }),
         ...(birthDate !== undefined && { birthDate }),
+        ...(iban !== undefined && { iban }),
       },
       select: {
         id: true,
@@ -61,6 +63,7 @@ export async function PATCH(req: NextRequest) {
         phoneNumber: true,
         department: true,
         birthDate: true,
+        iban: true,
       }
     })
 

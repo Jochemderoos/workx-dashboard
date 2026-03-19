@@ -225,21 +225,15 @@ export async function DELETE(
     })
     const isManager = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
 
-    // Managers can delete any declaration, owners can only delete DRAFT
-    if (isManager) {
-      await prisma.expenseDeclaration.delete({
-        where: { id: params.id },
-      })
-      return NextResponse.json({ success: true })
-    }
-
-    if (declaration.userId !== session.user.id) {
+    // Managers can delete any declaration, owners can delete their own
+    if (!isManager && declaration.userId !== session.user.id) {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
-    if (declaration.status !== 'DRAFT') {
+    // Non-managers can't delete PAID declarations
+    if (!isManager && declaration.status === 'PAID') {
       return NextResponse.json(
-        { error: 'Kan alleen concept-declaraties verwijderen' },
+        { error: 'Kan betaalde declaraties niet verwijderen' },
         { status: 400 }
       )
     }
