@@ -96,6 +96,7 @@ export default function WerkoverlegPage() {
 
   // Chair selection
   const [showChairSelect, setShowChairSelect] = useState(false)
+  const [showChairEdit, setShowChairEdit] = useState(false)
 
   // Add agenda item
   const [newAgendaTitle, setNewAgendaTitle] = useState('')
@@ -454,37 +455,69 @@ export default function WerkoverlegPage() {
         </button>
       </div>
 
-      {/* Chairperson + Next Week Section */}
+      {/* Chairperson Card + Date */}
       {selectedDay && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          {/* Current chairperson */}
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)' }}>
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+          {/* Voorzitter card */}
+          <div className="relative rounded-2xl overflow-hidden p-5 flex items-center gap-4 min-w-[280px]" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/10 rounded-full blur-2xl pointer-events-none" />
             {selectedDay.chairperson && getPhotoUrl(selectedDay.chairperson) ? (
               <Image
                 src={getPhotoUrl(selectedDay.chairperson)!}
                 alt={selectedDay.chairperson}
-                width={24}
-                height={24}
-                className="w-6 h-6 rounded-full object-cover ring-1 ring-workx-lime/30"
+                width={56}
+                height={56}
+                className="w-14 h-14 rounded-xl object-cover ring-2 ring-workx-lime/30 shadow-lg shadow-workx-lime/20 flex-shrink-0"
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center">
-                <Icons.user size={12} className="text-workx-lime" />
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-workx-lime to-workx-lime/80 flex items-center justify-center shadow-lg shadow-workx-lime/20 flex-shrink-0">
+                <Icons.user size={24} className="text-workx-dark" />
               </div>
             )}
-            <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              Voorzitter:
-            </span>
-            <select
-              value={selectedDay.chairperson || ''}
-              onChange={(e) => handleUpdateChairperson(e.target.value)}
-              className="text-sm font-medium bg-transparent border-none focus:outline-none cursor-pointer text-workx-lime"
-            >
-              <option value="" style={{ color: 'var(--color-text-primary)', background: 'var(--color-bg-primary)' }}>Nog niet gekozen</option>
-              {CHAIRPERSON_MEMBERS.map(name => (
-                <option key={name} value={name} style={{ color: 'var(--color-text-primary)', background: 'var(--color-bg-primary)' }}>{name}</option>
-              ))}
-            </select>
+            <div className="flex-1 min-w-0 relative">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-workx-lime mb-0.5">Voorzitter</p>
+              <p className="text-lg font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                {selectedDay.chairperson || 'Nog niet gekozen'}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>{selectedDay.dateLabel}</p>
+            </div>
+            {/* Wijzig knop */}
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setShowChairEdit(!showChairEdit)}
+                className="p-2 rounded-lg transition-all hover:bg-workx-lime/10"
+                style={{ color: 'var(--color-text-muted)' }}
+                title="Voorzitter wijzigen"
+              >
+                <Icons.edit size={16} />
+              </button>
+              {showChairEdit && (
+                <div className="absolute top-full right-0 mt-2 z-50 w-56 rounded-xl shadow-2xl overflow-hidden" style={{ background: 'var(--color-bg-dropdown)', border: '1px solid var(--color-border)' }}>
+                  <div className="py-1 max-h-64 overflow-y-auto">
+                    {CHAIRPERSON_MEMBERS.map(name => (
+                      <button
+                        key={name}
+                        onClick={() => { handleUpdateChairperson(name); setShowChairEdit(false) }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-workx-lime/10 ${
+                          selectedDay.chairperson === name ? 'bg-workx-lime/5' : ''
+                        }`}
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {getPhotoUrl(name) ? (
+                          <Image src={getPhotoUrl(name)!} alt={name} width={28} height={28} className="w-7 h-7 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-lg bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">
+                            {name.charAt(0)}
+                          </div>
+                        )}
+                        <span className="flex-1">{name}</span>
+                        {selectedDay.chairperson === name && <Icons.check size={14} className="text-workx-lime" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Next week chairperson button */}
@@ -492,11 +525,16 @@ export default function WerkoverlegPage() {
             <div className="relative">
               <button
                 onClick={() => setShowChairSelect(!showChairSelect)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all hover:border-workx-lime/30"
-                style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+                className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm transition-all hover:border-workx-lime/30 h-full"
+                style={{ background: 'var(--color-bg-card)', border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)' }}
               >
-                <Icons.plus size={14} />
-                Kies voorzitter volgende week
+                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center flex-shrink-0">
+                  <Icons.plus size={18} className="text-workx-lime" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Volgende week</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Kies voorzitter</p>
+                </div>
               </button>
               {showChairSelect && (
                 <div className="absolute top-full mt-2 left-0 z-50 w-56 rounded-xl shadow-2xl overflow-hidden" style={{ background: 'var(--color-bg-dropdown)', border: '1px solid var(--color-border)' }}>
@@ -509,9 +547,9 @@ export default function WerkoverlegPage() {
                         style={{ color: 'var(--color-text-primary)' }}
                       >
                         {getPhotoUrl(name) ? (
-                          <Image src={getPhotoUrl(name)!} alt={name} width={24} height={24} className="w-6 h-6 rounded-full object-cover" />
+                          <Image src={getPhotoUrl(name)!} alt={name} width={28} height={28} className="w-7 h-7 rounded-lg object-cover" />
                         ) : (
-                          <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-[10px] font-bold text-workx-lime">
+                          <div className="w-7 h-7 rounded-lg bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">
                             {name.charAt(0)}
                           </div>
                         )}
@@ -524,13 +562,6 @@ export default function WerkoverlegPage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* Date label */}
-      {selectedDay && (
-        <p className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
-          {selectedDay.dateLabel}
-        </p>
       )}
 
       {/* Tab Bar */}
