@@ -493,6 +493,25 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     }
   }
 
+  // Mark declaration as paid (admin/partner only)
+  const markAsPaid = async (id: string) => {
+    try {
+      const res = await fetch(`/api/expenses/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'paid' }),
+      })
+      if (res.ok) {
+        setSavedDeclarations(prev => prev.map(d => d.id === id ? { ...d, status: 'PAID' } : d))
+        toast.success('Declaratie gemarkeerd als betaald')
+      } else {
+        toast.error('Kon status niet wijzigen')
+      }
+    } catch {
+      toast.error('Kon status niet wijzigen')
+    }
+  }
+
 
   return (
     <div
@@ -708,6 +727,18 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
+                        {(isPartner || isAdmin) && decl.status === 'SUBMITTED' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              markAsPaid(decl.id)
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 text-xs font-medium hover:bg-green-500/20 transition-colors"
+                          >
+                            <Icons.check size={14} />
+                            Betaald
+                          </button>
+                        )}
                         {decl.status !== 'DRAFT' && (
                           <button
                             onClick={(e) => {
