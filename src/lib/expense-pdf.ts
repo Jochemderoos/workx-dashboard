@@ -393,11 +393,9 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
             pdfBytes[j] = binaryStr.charCodeAt(j)
           }
 
-          // Render PDF pages to canvas via PDF.js (same setup as src/lib/pdf.ts)
+          // Render PDF pages to canvas via PDF.js with local worker (CSP blocks unpkg)
           const pdfjsLib = await import('pdfjs-dist')
-          if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
-          }
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
           const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise
           console.log(`[PDF] PDF.js geladen: ${pdfDoc.numPages} pagina's`)
 
