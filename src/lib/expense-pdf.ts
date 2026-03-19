@@ -395,8 +395,10 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
 
           // Render PDF pages to canvas via PDF.js (dynamic import to avoid SSR issues)
           const pdfjsLib = await import('pdfjs-dist')
-          pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-          const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+          if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+          }
+          const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise
           console.log(`[PDF] PDF.js geladen: ${pdfDoc.numPages} pagina's`)
 
           for (let p = 1; p <= pdfDoc.numPages; p++) {
