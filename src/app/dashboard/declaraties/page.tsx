@@ -783,9 +783,9 @@ export default function DeclaratiesPage() {
       ) : (
         /* Tab 2: Declaratieformulier */
         <div>
-          {showDeclaratieForm ? (
+          {showDeclaratieForm || isManagerRole ? (
             <div className="relative">
-              <ExpenseDeclarationForm onClose={() => setShowDeclaratieForm(false)} />
+              <ExpenseDeclarationForm onClose={() => !isManagerRole && setShowDeclaratieForm(false)} />
             </div>
           ) : (
             <div className="text-center py-16">
