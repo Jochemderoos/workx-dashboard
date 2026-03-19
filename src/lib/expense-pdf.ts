@@ -264,104 +264,104 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     )
   }
 
-  // === ADD IMAGE ATTACHMENTS AS SEPARATE PAGES ===
-  const imageAttachments = validItems.filter(item => item.attachmentUrl && item.attachmentUrl.startsWith('data:image/'))
-
-  for (const item of imageAttachments) {
-    if (!item.attachmentUrl) continue
-
-    doc.addPage()
-    let attachY = 20
-
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(30, 30, 30)
-    doc.text('BIJLAGE', 15, attachY)
-
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(80, 80, 80)
-    doc.text(`${item.description} - ${formatDate(item.date)} - ${formatCurrency(item.amount)}`, 15, attachY + 8)
-
-    doc.setDrawColor(220, 220, 220)
-    doc.line(15, attachY + 12, pageWidth - 15, attachY + 12)
-    attachY += 25
-
-    try {
-      const maxWidth = pageWidth - 30
-      const maxHeight = pageHeight - attachY - 20
-
-      // Load image and convert to canvas-based JPEG for reliable PDF embedding
-      const { dataUrl, w, h } = await new Promise<{ dataUrl: string; w: number; h: number }>((resolve, reject) => {
-        const img = new window.Image()
-        img.onload = () => {
-          let cw = img.naturalWidth
-          let ch = img.naturalHeight
-
-          // Downscale very large images to avoid exceeding browser canvas limits
-          const MAX_CANVAS_DIM = 4096
-          if (cw > MAX_CANVAS_DIM || ch > MAX_CANVAS_DIM) {
-            const downscale = Math.min(MAX_CANVAS_DIM / cw, MAX_CANVAS_DIM / ch)
-            cw = Math.round(cw * downscale)
-            ch = Math.round(ch * downscale)
-          }
-
-          const canvas = document.createElement('canvas')
-          canvas.width = cw
-          canvas.height = ch
-          const ctx = canvas.getContext('2d')!
-
-          // White background — prevents transparent PNGs from becoming black/corrupt in JPEG
-          ctx.fillStyle = '#ffffff'
-          ctx.fillRect(0, 0, cw, ch)
-          ctx.drawImage(img, 0, 0, cw, ch)
-
-          const jpegUrl = canvas.toDataURL('image/jpeg', 0.85)
-          resolve({ dataUrl: jpegUrl, w: cw, h: ch })
-        }
-        img.onerror = () => reject(new Error(`Afbeelding kon niet geladen worden`))
-        img.src = item.attachmentUrl!
-      })
-
-      // Scale to fit within maxWidth x maxHeight while keeping aspect ratio
-      const scaleW = maxWidth / w
-      const scaleH = maxHeight / h
-      const scale = Math.min(scaleW, scaleH, 1)
-      const imgW = w * scale
-      const imgH = h * scale
-
-      doc.addImage(dataUrl, 'JPEG', 15, attachY, imgW, imgH, undefined, 'MEDIUM')
-    } catch {
-      doc.setFontSize(10)
-      doc.setTextColor(150, 50, 50)
-      doc.text(`Kon bijlage niet laden: ${item.attachmentName}`, 15, attachY)
-    }
-  }
-
   const fileName = isHolding
     ? `Declaratie_${(data.holdingName || '').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
     : `Declaratie_${data.employeeName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
 
-  // Merge PDF attachments using pdf-lib
+  // === MERGE ALL ATTACHMENTS VIA PDF-LIB (much more reliable than jsPDF addImage) ===
+  const imageAttachments = validItems.filter(
+    i => i.attachmentUrl && i.attachmentUrl.startsWith('data:image/')
+  )
   const pdfAttachments = validItems.filter(
     i => i.attachmentUrl && i.attachmentUrl.startsWith('data:application/pdf')
   )
 
-  if (pdfAttachments.length > 0) {
+  if (imageAttachments.length > 0 || pdfAttachments.length > 0) {
     try {
-      // Convert jsPDF output to pdf-lib document
       const jsPdfBytes = doc.output('arraybuffer')
       const mergedPdf = await PDFDocument.load(jsPdfBytes)
-      let attachedCount = 0
 
+      // Add image attachments via pdf-lib
+      for (const item of imageAttachments) {
+        if (!item.attachmentUrl) continue
+        try {
+          // Convert data URL to bytes via canvas → JPEG
+          const imgBytes = await new Promise<Uint8Array>((resolve, reject) => {
+            const img = new window.Image()
+            img.onload = () => {
+              // Downscale for PDF (150 DPI on A4 ≈ 1240px wide, use 1500 max)
+              let cw = img.naturalWidth
+              let ch = img.naturalHeight
+              const MAX_DIM = 1500
+              if (cw > MAX_DIM || ch > MAX_DIM) {
+                const s = Math.min(MAX_DIM / cw, MAX_DIM / ch)
+                cw = Math.round(cw * s)
+                ch = Math.round(ch * s)
+              }
+
+              const canvas = document.createElement('canvas')
+              canvas.width = cw
+              canvas.height = ch
+              const ctx = canvas.getContext('2d')!
+              ctx.fillStyle = '#ffffff'
+              ctx.fillRect(0, 0, cw, ch)
+              ctx.drawImage(img, 0, 0, cw, ch)
+
+              canvas.toBlob(
+                (blob) => {
+                  if (!blob) return reject(new Error('Canvas toBlob failed'))
+                  blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf))).catch(reject)
+                },
+                'image/jpeg',
+                0.85
+              )
+            }
+            img.onerror = () => reject(new Error('Image load failed'))
+            img.src = item.attachmentUrl!
+          })
+
+          const embeddedImg = await mergedPdf.embedJpg(imgBytes)
+          const imgDims = embeddedImg.scale(1)
+
+          // Create A4 page and fit image with margins
+          const page = mergedPdf.addPage([595.28, 841.89]) // A4 in points
+          const margin = 42 // ~15mm
+          const titleHeight = 70 // space for title text
+          const maxW = 595.28 - margin * 2
+          const maxH = 841.89 - margin - titleHeight
+
+          const scaleW = maxW / imgDims.width
+          const scaleH = maxH / imgDims.height
+          const scale = Math.min(scaleW, scaleH, 1)
+          const drawW = imgDims.width * scale
+          const drawH = imgDims.height * scale
+
+          // Title
+          page.drawText('BIJLAGE', { x: margin, y: 841.89 - 45, size: 14, color: rgb(0.12, 0.12, 0.12) })
+          page.drawText(
+            `${item.description} - ${formatDate(item.date)} - ${formatCurrency(item.amount)}`,
+            { x: margin, y: 841.89 - 62, size: 10, color: rgb(0.3, 0.3, 0.3) }
+          )
+
+          // Image — centered horizontally
+          const imgX = margin + (maxW - drawW) / 2
+          const imgY = 841.89 - titleHeight - drawH
+          page.drawImage(embeddedImg, { x: imgX, y: imgY, width: drawW, height: drawH })
+        } catch (imgErr) {
+          console.error('Error embedding image:', item.attachmentName, imgErr)
+          const failPage = mergedPdf.addPage()
+          const { height } = failPage.getSize()
+          failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
+          failPage.drawText('Deze afbeelding kon niet worden ingebed in de PDF.', { x: 50, y: height - 110, size: 11, color: rgb(0.5, 0.5, 0.5) })
+        }
+      }
+
+      // Add PDF attachments
       for (const item of pdfAttachments) {
         if (!item.attachmentUrl) continue
         try {
           const base64 = item.attachmentUrl.split(',')[1]
-          if (!base64) {
-            console.error('PDF attachment has no base64 data after comma split')
-            continue
-          }
+          if (!base64) continue
           const binaryStr = atob(base64)
           const bytes = new Uint8Array(binaryStr.length)
           for (let j = 0; j < binaryStr.length; j++) {
@@ -371,22 +371,18 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
           const attachmentPdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
           const pages = await mergedPdf.copyPages(attachmentPdf, attachmentPdf.getPageIndices())
           pages.forEach(page => mergedPdf.addPage(page))
-          attachedCount++
         } catch (attachErr) {
           console.error('Error merging PDF attachment:', item.attachmentName, attachErr)
-          // Add a fallback page noting the attachment couldn't be embedded
           const failPage = mergedPdf.addPage()
-          const { width, height } = failPage.getSize()
+          const { height } = failPage.getSize()
           failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
           failPage.drawText('Deze PDF-bijlage kon niet automatisch worden samengevoegd.', { x: 50, y: height - 110, size: 11, color: rgb(0.5, 0.5, 0.5) })
-          failPage.drawText('Download de bijlage apart vanuit het declaratieformulier.', { x: 50, y: height - 130, size: 11, color: rgb(0.5, 0.5, 0.5) })
         }
       }
 
       const mergedBytes = await mergedPdf.save()
       const blob = new Blob([mergedBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
 
-      // Return a compatible object that can be saved
       return {
         doc: {
           save: (name: string) => {
@@ -402,7 +398,6 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
       }
     } catch (mergeErr) {
       console.error('Error in PDF merge flow:', mergeErr)
-      // Fall back to jsPDF without merged attachments
       return { doc, fileName }
     }
   }
