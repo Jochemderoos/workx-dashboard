@@ -379,78 +379,20 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
         }
       }
 
-      // Add PDF attachments — render pages as images via PDF.js (pdf-lib can't handle all compression methods)
+      // PDF attachments: download as separate files (merging is unreliable due to CSP/compression issues)
+      // Store them so the caller can trigger separate downloads
+      const pdfDownloads: { blob: Blob; fileName: string }[] = []
       for (const item of pdfAttachments) {
         if (!item.attachmentUrl) continue
-        try {
-          console.log(`[PDF] PDF bijlage: ${item.attachmentName}`)
-
-          const base64 = item.attachmentUrl.split(',')[1]
-          if (!base64) continue
-          const binaryStr = atob(base64)
-          const pdfBytes = new Uint8Array(binaryStr.length)
-          for (let j = 0; j < binaryStr.length; j++) {
-            pdfBytes[j] = binaryStr.charCodeAt(j)
-          }
-
-          // Render PDF pages to canvas via PDF.js with local worker (CSP blocks unpkg)
-          const pdfjsLib = await import('pdfjs-dist')
-          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-          const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise
-          console.log(`[PDF] PDF.js geladen: ${pdfDoc.numPages} pagina's`)
-
-          for (let p = 1; p <= pdfDoc.numPages; p++) {
-            const pdfPage = await pdfDoc.getPage(p)
-            const viewport = pdfPage.getViewport({ scale: 2 }) // 2x for good quality
-
-            const canvas = document.createElement('canvas')
-            canvas.width = viewport.width
-            canvas.height = viewport.height
-            const ctx = canvas.getContext('2d')!
-            ctx.fillStyle = '#ffffff'
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-            await pdfPage.render({ canvas, canvasContext: ctx, viewport }).promise
-            console.log(`[PDF] Pagina ${p} gerenderd: ${canvas.width}x${canvas.height}`)
-
-            // Convert canvas to JPEG bytes
-            const jpegBytes = await new Promise<Uint8Array>((resolve, reject) => {
-              canvas.toBlob(
-                blob => {
-                  if (!blob) return reject(new Error('toBlob failed'))
-                  blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf))).catch(reject)
-                },
-                'image/jpeg', 0.90
-              )
-            })
-
-            // Embed in merged PDF
-            const embeddedImg = await mergedPdf.embedJpg(jpegBytes)
-            const imgDims = embeddedImg.scale(1)
-
-            const page = mergedPdf.addPage([595.28, 841.89])
-            const margin = 20
-            const maxW = 595.28 - margin * 2
-            const maxH = 841.89 - margin * 2
-            const scale = Math.min(maxW / imgDims.width, maxH / imgDims.height, 1)
-            const drawW = imgDims.width * scale
-            const drawH = imgDims.height * scale
-            const imgX = (595.28 - drawW) / 2
-            const imgY = (841.89 - drawH) / 2
-
-            page.drawImage(embeddedImg, { x: imgX, y: imgY, width: drawW, height: drawH })
-          }
-
-          pdfDoc.destroy()
-        } catch (attachErr: any) {
-          const errMsg = attachErr?.message || String(attachErr)
-          console.error('Error merging PDF attachment:', item.attachmentName, attachErr)
-          const failPage = mergedPdf.addPage()
-          const { height } = failPage.getSize()
-          failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
-          failPage.drawText(`Fout: ${errMsg.substring(0, 80)}`, { x: 50, y: height - 110, size: 10, color: rgb(0.7, 0.2, 0.2) })
-          failPage.drawText('Deze PDF-bijlage kon niet automatisch worden samengevoegd.', { x: 50, y: height - 140, size: 11, color: rgb(0.5, 0.5, 0.5) })
+        const base64 = item.attachmentUrl.split(',')[1]
+        if (!base64) continue
+        const binaryStr = atob(base64)
+        const bytes = new Uint8Array(binaryStr.length)
+        for (let j = 0; j < binaryStr.length; j++) {
+          bytes[j] = binaryStr.charCodeAt(j)
         }
+        const blob = new Blob([bytes], { type: 'application/pdf' })
+        pdfDownloads.push({ blob, fileName: item.attachmentName || `bijlage-${pdfDownloads.length + 1}.pdf` })
       }
 
       const mergedBytes = await mergedPdf.save()
@@ -459,12 +401,25 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
       return {
         doc: {
           save: (name: string) => {
+            // Download declaration PDF
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
             a.download = name
             a.click()
             URL.revokeObjectURL(url)
+
+            // Download PDF attachments as separate files
+            for (const dl of pdfDownloads) {
+              setTimeout(() => {
+                const dlUrl = URL.createObjectURL(dl.blob)
+                const dlA = document.createElement('a')
+                dlA.href = dlUrl
+                dlA.download = dl.fileName
+                dlA.click()
+                URL.revokeObjectURL(dlUrl)
+              }, 500)
+            }
           }
         } as any,
         fileName,
