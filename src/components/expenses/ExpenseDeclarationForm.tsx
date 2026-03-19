@@ -102,6 +102,9 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
           const latestDraft = data.find((d: ExpenseDeclaration) => d.status === 'DRAFT')
           if (latestDraft) {
             loadDeclaration(latestDraft)
+          } else if (data.length > 0) {
+            // No draft but there are saved declarations — show history
+            setView('history')
           }
         }
       } catch (error) {
