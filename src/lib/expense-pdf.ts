@@ -291,33 +291,46 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
       const maxWidth = pageWidth - 30
       const maxHeight = pageHeight - attachY - 20
 
-      // Get actual image dimensions to maintain aspect ratio
-      const imgDims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
-        img.onerror = reject
+      // Load image and convert to canvas-based JPEG for reliable PDF embedding
+      const { dataUrl, w, h } = await new Promise<{ dataUrl: string; w: number; h: number }>((resolve, reject) => {
+        const img = new window.Image()
+        img.onload = () => {
+          let cw = img.naturalWidth
+          let ch = img.naturalHeight
+
+          // Downscale very large images to avoid exceeding browser canvas limits
+          const MAX_CANVAS_DIM = 4096
+          if (cw > MAX_CANVAS_DIM || ch > MAX_CANVAS_DIM) {
+            const downscale = Math.min(MAX_CANVAS_DIM / cw, MAX_CANVAS_DIM / ch)
+            cw = Math.round(cw * downscale)
+            ch = Math.round(ch * downscale)
+          }
+
+          const canvas = document.createElement('canvas')
+          canvas.width = cw
+          canvas.height = ch
+          const ctx = canvas.getContext('2d')!
+
+          // White background — prevents transparent PNGs from becoming black/corrupt in JPEG
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, cw, ch)
+          ctx.drawImage(img, 0, 0, cw, ch)
+
+          const jpegUrl = canvas.toDataURL('image/jpeg', 0.85)
+          resolve({ dataUrl: jpegUrl, w: cw, h: ch })
+        }
+        img.onerror = () => reject(new Error(`Afbeelding kon niet geladen worden`))
         img.src = item.attachmentUrl!
       })
 
       // Scale to fit within maxWidth x maxHeight while keeping aspect ratio
-      let imgW = imgDims.w
-      let imgH = imgDims.h
-      const scaleW = maxWidth / imgW
-      const scaleH = maxHeight / imgH
-      const scale = Math.min(scaleW, scaleH, 1) // Don't upscale
-      imgW = imgW * scale
-      imgH = imgH * scale
+      const scaleW = maxWidth / w
+      const scaleH = maxHeight / h
+      const scale = Math.min(scaleW, scaleH, 1)
+      const imgW = w * scale
+      const imgH = h * scale
 
-      doc.addImage(
-        item.attachmentUrl,
-        item.attachmentUrl.includes('png') ? 'PNG' : 'JPEG',
-        15,
-        attachY,
-        imgW,
-        imgH,
-        undefined,
-        'MEDIUM'
-      )
+      doc.addImage(dataUrl, 'JPEG', 15, attachY, imgW, imgH, undefined, 'MEDIUM')
     } catch {
       doc.setFontSize(10)
       doc.setTextColor(150, 50, 50)
