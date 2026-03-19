@@ -441,13 +441,14 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
           }
 
           pdfDoc.destroy()
-        } catch (attachErr) {
+        } catch (attachErr: any) {
+          const errMsg = attachErr?.message || String(attachErr)
           console.error('Error merging PDF attachment:', item.attachmentName, attachErr)
           const failPage = mergedPdf.addPage()
           const { height } = failPage.getSize()
           failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
-          failPage.drawText('Deze PDF-bijlage kon niet automatisch worden samengevoegd.', { x: 50, y: height - 110, size: 11, color: rgb(0.5, 0.5, 0.5) })
-          failPage.drawText('Download de bijlage apart vanuit het declaratieformulier.', { x: 50, y: height - 130, size: 11, color: rgb(0.5, 0.5, 0.5) })
+          failPage.drawText(`Fout: ${errMsg.substring(0, 80)}`, { x: 50, y: height - 110, size: 10, color: rgb(0.7, 0.2, 0.2) })
+          failPage.drawText('Deze PDF-bijlage kon niet automatisch worden samengevoegd.', { x: 50, y: height - 140, size: 11, color: rgb(0.5, 0.5, 0.5) })
         }
       }
 
