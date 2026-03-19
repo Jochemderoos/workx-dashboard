@@ -596,6 +596,42 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     }
   }
 
+  // Download attachment for a saved declaration
+  const downloadAttachment = async (decl: ExpenseDeclaration) => {
+    try {
+      const fullRes = await fetch(`/api/expenses/${decl.id}`)
+      if (!fullRes.ok) throw new Error('Kon declaratie niet ophalen')
+      const fullDecl = await fullRes.json()
+
+      for (const item of fullDecl.items) {
+        if (!item.attachmentUrl || !item.attachmentName) continue
+        const base64 = item.attachmentUrl.split(',')[1]
+        if (!base64) continue
+        const mimeMatch = item.attachmentUrl.match(/^data:([^;]+)/)
+        const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream'
+        const binaryStr = atob(base64)
+        const bytes = new Uint8Array(binaryStr.length)
+        for (let j = 0; j < binaryStr.length; j++) {
+          bytes[j] = binaryStr.charCodeAt(j)
+        }
+        const blob = new Blob([bytes], { type: mime })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = item.attachmentName
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        toast.success(`Bijlage "${item.attachmentName}" gedownload`)
+        return // Download first attachment found
+      }
+      toast.error('Geen bijlage gevonden')
+    } catch {
+      toast.error('Kon bijlage niet downloaden')
+    }
+  }
+
   // Delete declaration
   const deleteDeclaration = async (id: string) => {
     if (!confirm('Weet je zeker dat je deze declaratie wilt verwijderen?')) return
@@ -859,16 +895,28 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                       </div>
                       <div className="flex items-center gap-2">
                         {decl.status !== 'DRAFT' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              downloadDeclarationPDF(decl)
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime text-xs font-medium hover:bg-workx-lime/20 transition-colors"
-                          >
-                            <Icons.download size={14} />
-                            PDF
-                          </button>
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                downloadDeclarationPDF(decl)
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime text-xs font-medium hover:bg-workx-lime/20 transition-colors"
+                            >
+                              <Icons.download size={14} />
+                              PDF
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                downloadAttachment(decl)
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 text-xs font-medium hover:bg-white/10 hover:text-white transition-colors"
+                            >
+                              <Icons.paperclip size={14} />
+                              Bijlage
+                            </button>
+                          </>
                         )}
                         {decl.status !== 'PAID' && (
                           <button
