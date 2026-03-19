@@ -783,7 +783,7 @@ export default function DeclaratiesPage() {
       ) : (
         /* Tab 2: Declaratieformulier */
         <div>
-          {showDeclaratieForm || isManagerRole ? (
+          {showDeclaratieForm ? (
             <div className="relative">
               <ExpenseDeclarationForm onClose={() => setShowDeclaratieForm(false)} />
             </div>

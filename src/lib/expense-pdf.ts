@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, rgb } from 'pdf-lib'
 
 export interface ExpensePDFItem {
   description: string
@@ -148,8 +148,8 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
   // Table header - different columns for Workx vs Holding
   const hasChargeColumn = !isHolding
   const colX = hasChargeColumn
-    ? [15, 40, 105, 140, 175]
-    : [15, 43, 128, 163]
+    ? [15, 40, 120, 150, 175]
+    : [15, 43, 135, 170]
 
   doc.setFillColor(249, 255, 133)
   doc.rect(15, y, pageWidth - 30, 8, 'F')
@@ -192,7 +192,7 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     if (item.expenseType === 'reiskosten_auto' && item.kilometers) {
       desc = `${item.description} (${item.kilometers} km)`
     }
-    const maxDescLen = hasChargeColumn ? 35 : 45
+    const maxDescLen = hasChargeColumn ? 45 : 55
     desc = desc.length > maxDescLen ? desc.substring(0, maxDescLen) + '...' : desc
     doc.text(desc, colX[1] + 2, rowY + 6.5)
 
@@ -322,22 +322,34 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
       // Convert jsPDF output to pdf-lib document
       const jsPdfBytes = doc.output('arraybuffer')
       const mergedPdf = await PDFDocument.load(jsPdfBytes)
+      let attachedCount = 0
 
       for (const item of pdfAttachments) {
         if (!item.attachmentUrl) continue
         try {
           const base64 = item.attachmentUrl.split(',')[1]
+          if (!base64) {
+            console.error('PDF attachment has no base64 data after comma split')
+            continue
+          }
           const binaryStr = atob(base64)
           const bytes = new Uint8Array(binaryStr.length)
           for (let j = 0; j < binaryStr.length; j++) {
             bytes[j] = binaryStr.charCodeAt(j)
           }
 
-          const attachmentPdf = await PDFDocument.load(bytes)
+          const attachmentPdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
           const pages = await mergedPdf.copyPages(attachmentPdf, attachmentPdf.getPageIndices())
           pages.forEach(page => mergedPdf.addPage(page))
+          attachedCount++
         } catch (attachErr) {
-          console.error('Error merging PDF attachment:', attachErr)
+          console.error('Error merging PDF attachment:', item.attachmentName, attachErr)
+          // Add a fallback page noting the attachment couldn't be embedded
+          const failPage = mergedPdf.addPage()
+          const { width, height } = failPage.getSize()
+          failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
+          failPage.drawText('Deze PDF-bijlage kon niet automatisch worden samengevoegd.', { x: 50, y: height - 110, size: 11, color: rgb(0.5, 0.5, 0.5) })
+          failPage.drawText('Download de bijlage apart vanuit het declaratieformulier.', { x: 50, y: height - 130, size: 11, color: rgb(0.5, 0.5, 0.5) })
         }
       }
 
@@ -359,7 +371,7 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
         fileName,
       }
     } catch (mergeErr) {
-      console.error('Error in PDF merge:', mergeErr)
+      console.error('Error in PDF merge flow:', mergeErr)
       // Fall back to jsPDF without merged attachments
       return { doc, fileName }
     }
