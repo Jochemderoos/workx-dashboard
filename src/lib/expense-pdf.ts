@@ -379,10 +379,12 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
         }
       }
 
-      // Add PDF attachments
+      // Add PDF attachments — embed as full-page images to avoid copyPages compatibility issues
       for (const item of pdfAttachments) {
         if (!item.attachmentUrl) continue
         try {
+          console.log(`[PDF] PDF bijlage: ${item.attachmentName}, base64 length: ${item.attachmentUrl.split(',')[1]?.length || 0}`)
+
           const base64 = item.attachmentUrl.split(',')[1]
           if (!base64) continue
           const binaryStr = atob(base64)
@@ -391,15 +393,31 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
             bytes[j] = binaryStr.charCodeAt(j)
           }
 
+          // Try embedPages (embeds as XObject, preserving visual appearance better than copyPages)
           const attachmentPdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
-          const pages = await mergedPdf.copyPages(attachmentPdf, attachmentPdf.getPageIndices())
-          pages.forEach(page => mergedPdf.addPage(page))
+          const pageCount = attachmentPdf.getPageCount()
+          console.log(`[PDF] PDF heeft ${pageCount} pagina's`)
+
+          const embeddedPages = await mergedPdf.embedPages(
+            attachmentPdf.getPages(),
+          )
+
+          for (let p = 0; p < embeddedPages.length; p++) {
+            const embedded = embeddedPages[p]
+            const { width: srcW, height: srcH } = embedded.size()
+            console.log(`[PDF] PDF pagina ${p + 1}: ${srcW}x${srcH}`)
+
+            // Create page matching source dimensions
+            const page = mergedPdf.addPage([srcW, srcH])
+            page.drawPage(embedded, { x: 0, y: 0, width: srcW, height: srcH })
+          }
         } catch (attachErr) {
           console.error('Error merging PDF attachment:', item.attachmentName, attachErr)
           const failPage = mergedPdf.addPage()
           const { height } = failPage.getSize()
           failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 16, color: rgb(0.2, 0.2, 0.2) })
           failPage.drawText('Deze PDF-bijlage kon niet automatisch worden samengevoegd.', { x: 50, y: height - 110, size: 11, color: rgb(0.5, 0.5, 0.5) })
+          failPage.drawText('Download de bijlage apart vanuit het declaratieformulier.', { x: 50, y: height - 130, size: 11, color: rgb(0.5, 0.5, 0.5) })
         }
       }
 
