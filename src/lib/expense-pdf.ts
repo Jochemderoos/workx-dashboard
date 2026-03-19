@@ -393,10 +393,8 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
             pdfBytes[j] = binaryStr.charCodeAt(j)
           }
 
-          // Render PDF pages to canvas via PDF.js (dynamic import to avoid SSR issues)
-          const pdfjsLib = await import('pdfjs-dist')
-          // Use local worker to avoid CSP blocking external scripts
-          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+          // Render PDF pages to canvas via PDF.js legacy build (no worker needed, avoids CSP issues)
+          const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
           const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise
           console.log(`[PDF] PDF.js geladen: ${pdfDoc.numPages} pagina's`)
 
