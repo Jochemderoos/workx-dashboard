@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -81,6 +82,97 @@ function formatWeekLabel(dateLabel: string): string {
   return dateLabel
 }
 
+// ── Person Dropdown (portal, no borders, photos) ───────
+
+interface PersonDropdownProps {
+  anchorRef: React.RefObject<HTMLElement | null>
+  members: string[]
+  selected: string | null
+  onSelect: (name: string) => void
+  onClose: () => void
+}
+
+function PersonDropdown({ anchorRef, members, selected, onSelect, onClose }: PersonDropdownProps) {
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [style, setStyle] = useState<React.CSSProperties>({})
+
+  const updatePosition = useCallback(() => {
+    if (!anchorRef.current) return
+    const rect = anchorRef.current.getBoundingClientRect()
+    const dropdownHeight = 320
+    const spaceBelow = window.innerHeight - rect.bottom
+    const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight
+    const width = Math.max(rect.width, 240)
+    const left = Math.min(rect.left, window.innerWidth - width - 8)
+
+    setStyle({
+      position: 'fixed',
+      left: Math.max(8, left),
+      width,
+      top: showAbove ? undefined : rect.bottom + 4,
+      bottom: showAbove ? window.innerHeight - rect.top + 4 : undefined,
+      zIndex: 9999,
+    })
+  }, [anchorRef])
+
+  useEffect(() => {
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [updatePosition])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+        anchorRef.current && !anchorRef.current.contains(e.target as Node)
+      ) {
+        onClose()
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [anchorRef, onClose])
+
+  return createPortal(
+    <div
+      ref={dropdownRef}
+      style={style}
+      className="bg-workx-dark border border-white/10 rounded-xl shadow-2xl py-1 max-h-72 overflow-y-auto"
+      role="listbox"
+    >
+      {members.map(name => {
+        const photo = getPhotoUrl(name)
+        const isSelected = selected === name
+        return (
+          <button
+            key={name}
+            onClick={() => { onSelect(name); onClose() }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+              isSelected ? 'text-workx-lime bg-workx-lime/10' : 'text-white/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            {photo ? (
+              <img src={photo} alt={name} className="w-6 h-6 rounded-lg object-cover" />
+            ) : (
+              <div className="w-6 h-6 rounded-lg bg-workx-lime/10 flex items-center justify-center text-[10px] font-bold text-workx-lime">
+                {name.charAt(0)}
+              </div>
+            )}
+            <span className="flex-1 text-left">{name}</span>
+            {isSelected && <Icons.check size={14} className="text-workx-lime" />}
+          </button>
+        )
+      })}
+    </div>,
+    document.body
+  )
+}
+
 // ── Component ──────────────────────────────────────────
 
 export default function WerkoverlegPage() {
@@ -97,6 +189,12 @@ export default function WerkoverlegPage() {
   // Chair selection
   const [showChairSelect, setShowChairSelect] = useState(false)
   const [showChairEdit, setShowChairEdit] = useState(false)
+  const chairEditRef = useRef<HTMLButtonElement>(null)
+  const chairSelectRef = useRef<HTMLButtonElement>(null)
+
+  // Action responsible dropdown
+  const [showResponsibleFor, setShowResponsibleFor] = useState<string | null>(null)
+  const responsibleRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   // Add agenda item
   const [newAgendaTitle, setNewAgendaTitle] = useState('')
@@ -482,48 +580,31 @@ export default function WerkoverlegPage() {
               <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>{selectedDay.dateLabel}</p>
             </div>
             {/* Wijzig knop */}
-            <div className="relative flex-shrink-0">
-              <button
-                onClick={() => setShowChairEdit(!showChairEdit)}
-                className="p-2 rounded-lg transition-all hover:bg-workx-lime/10"
-                style={{ color: 'var(--color-text-muted)' }}
-                title="Voorzitter wijzigen"
-              >
-                <Icons.edit size={16} />
-              </button>
-              {showChairEdit && (
-                <div className="absolute top-full right-0 mt-2 z-50 w-56 rounded-xl shadow-2xl overflow-hidden" style={{ background: 'var(--color-bg-dropdown)', border: '1px solid var(--color-border)' }}>
-                  <div className="py-1 max-h-64 overflow-y-auto">
-                    {CHAIRPERSON_MEMBERS.map(name => (
-                      <button
-                        key={name}
-                        onClick={() => { handleUpdateChairperson(name); setShowChairEdit(false) }}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-workx-lime/10 ${
-                          selectedDay.chairperson === name ? 'bg-workx-lime/5' : ''
-                        }`}
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {getPhotoUrl(name) ? (
-                          <Image src={getPhotoUrl(name)!} alt={name} width={28} height={28} className="w-7 h-7 rounded-lg object-cover" />
-                        ) : (
-                          <div className="w-7 h-7 rounded-lg bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">
-                            {name.charAt(0)}
-                          </div>
-                        )}
-                        <span className="flex-1">{name}</span>
-                        {selectedDay.chairperson === name && <Icons.check size={14} className="text-workx-lime" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <button
+              ref={chairEditRef}
+              onClick={() => setShowChairEdit(!showChairEdit)}
+              className="p-2 rounded-lg transition-all hover:bg-workx-lime/10 flex-shrink-0"
+              style={{ color: 'var(--color-text-muted)' }}
+              title="Voorzitter wijzigen"
+            >
+              <Icons.edit size={16} />
+            </button>
+            {showChairEdit && (
+              <PersonDropdown
+                anchorRef={chairEditRef}
+                members={CHAIRPERSON_MEMBERS}
+                selected={selectedDay.chairperson}
+                onSelect={(name) => handleUpdateChairperson(name)}
+                onClose={() => setShowChairEdit(false)}
+              />
+            )}
           </div>
 
           {/* Next week chairperson button */}
           {!hasNextWeek() && (
-            <div className="relative">
+            <>
               <button
+                ref={chairSelectRef}
                 onClick={() => setShowChairSelect(!showChairSelect)}
                 className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm transition-all hover:border-workx-lime/30 h-full"
                 style={{ background: 'var(--color-bg-card)', border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)' }}
@@ -537,29 +618,15 @@ export default function WerkoverlegPage() {
                 </div>
               </button>
               {showChairSelect && (
-                <div className="absolute top-full mt-2 left-0 z-50 w-56 rounded-xl shadow-2xl overflow-hidden" style={{ background: 'var(--color-bg-dropdown)', border: '1px solid var(--color-border)' }}>
-                  <div className="py-1 max-h-64 overflow-y-auto">
-                    {CHAIRPERSON_MEMBERS.map(name => (
-                      <button
-                        key={name}
-                        onClick={() => handleSelectChairperson(name)}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-workx-lime/10"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {getPhotoUrl(name) ? (
-                          <Image src={getPhotoUrl(name)!} alt={name} width={28} height={28} className="w-7 h-7 rounded-lg object-cover" />
-                        ) : (
-                          <div className="w-7 h-7 rounded-lg bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">
-                            {name.charAt(0)}
-                          </div>
-                        )}
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <PersonDropdown
+                  anchorRef={chairSelectRef}
+                  members={CHAIRPERSON_MEMBERS}
+                  selected={null}
+                  onSelect={(name) => { handleSelectChairperson(name); setShowChairSelect(false) }}
+                  onClose={() => setShowChairSelect(false)}
+                />
               )}
-            </div>
+            </>
           )}
         </div>
       )}
@@ -744,16 +811,26 @@ export default function WerkoverlegPage() {
                     {/* Meta row: responsible + deadline */}
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       {/* Responsible */}
-                      <select
-                        value={action.responsibleName}
-                        onChange={(e) => handleUpdateAction(action.id, { responsibleName: e.target.value })}
-                        className="text-xs px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime border-none focus:outline-none cursor-pointer"
-                        style={{ background: 'rgba(180, 185, 50, 0.1)' }}
+                      <button
+                        ref={(el) => { responsibleRefs.current[action.id] = el }}
+                        onClick={() => setShowResponsibleFor(showResponsibleFor === action.id ? null : action.id)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime text-xs font-medium cursor-pointer hover:bg-workx-lime/20 transition-colors"
                       >
-                        {TEAM_MEMBERS.map(name => (
-                          <option key={name} value={name} style={{ color: 'var(--color-text-primary)', background: 'var(--color-bg-primary)' }}>{name}</option>
-                        ))}
-                      </select>
+                        {getPhotoUrl(action.responsibleName) ? (
+                          <img src={getPhotoUrl(action.responsibleName)!} alt={action.responsibleName} className="w-4 h-4 rounded-md object-cover" />
+                        ) : null}
+                        {action.responsibleName}
+                        <Icons.chevronDown size={10} />
+                      </button>
+                      {showResponsibleFor === action.id && responsibleRefs.current[action.id] && (
+                        <PersonDropdown
+                          anchorRef={{ current: responsibleRefs.current[action.id] }}
+                          members={TEAM_MEMBERS}
+                          selected={action.responsibleName}
+                          onSelect={(name) => handleUpdateAction(action.id, { responsibleName: name })}
+                          onClose={() => setShowResponsibleFor(null)}
+                        />
+                      )}
 
                       {/* Deadline */}
                       <div className="w-44">
@@ -802,16 +879,26 @@ export default function WerkoverlegPage() {
               style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
             />
             <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={newActionResponsible}
-                onChange={(e) => setNewActionResponsible(e.target.value)}
-                className="text-xs px-3 py-2 rounded-lg focus:outline-none cursor-pointer"
-                style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
+              <button
+                ref={(el) => { responsibleRefs.current['new-action'] = el }}
+                onClick={() => setShowResponsibleFor(showResponsibleFor === 'new-action' ? null : 'new-action')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer hover:bg-workx-lime/20 transition-colors bg-workx-lime/10 text-workx-lime"
               >
-                {TEAM_MEMBERS.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+                {getPhotoUrl(newActionResponsible) ? (
+                  <img src={getPhotoUrl(newActionResponsible)!} alt={newActionResponsible} className="w-4 h-4 rounded-md object-cover" />
+                ) : null}
+                {newActionResponsible}
+                <Icons.chevronDown size={10} />
+              </button>
+              {showResponsibleFor === 'new-action' && responsibleRefs.current['new-action'] && (
+                <PersonDropdown
+                  anchorRef={{ current: responsibleRefs.current['new-action'] }}
+                  members={TEAM_MEMBERS}
+                  selected={newActionResponsible}
+                  onSelect={(name) => setNewActionResponsible(name)}
+                  onClose={() => setShowResponsibleFor(null)}
+                />
+              )}
               <div className="w-48">
                 <DatePicker
                   selected={newActionDeadline}
