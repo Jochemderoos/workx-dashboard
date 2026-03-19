@@ -1,7 +1,6 @@
 import { jsPDF } from 'jspdf'
 import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
 import { PDFDocument, rgb } from 'pdf-lib'
-import * as pdfjsLib from 'pdfjs-dist'
 
 export interface ExpensePDFItem {
   description: string
@@ -394,7 +393,8 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
             pdfBytes[j] = binaryStr.charCodeAt(j)
           }
 
-          // Render PDF pages to canvas via PDF.js, then embed as JPEG images
+          // Render PDF pages to canvas via PDF.js (dynamic import to avoid SSR issues)
+          const pdfjsLib = await import('pdfjs-dist')
           pdfjsLib.GlobalWorkerOptions.workerSrc = ''
           const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
           console.log(`[PDF] PDF.js geladen: ${pdfDoc.numPages} pagina's`)
