@@ -53,7 +53,7 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
   const [activeTab, setActiveTab] = useState<'medewerker' | 'holding'>('medewerker')
 
   // View state
-  const [view, setView] = useState<'form' | 'history'>('form')
+  const [view, setView] = useState<'form' | 'history'>('history')
   const [savedDeclarations, setSavedDeclarations] = useState<ExpenseDeclaration[]>([])
   const [currentDeclaration, setCurrentDeclaration] = useState<ExpenseDeclaration | null>(null)
 
@@ -115,14 +115,14 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
           const data = await res.json()
           setSavedDeclarations(data)
 
-          // Load the latest DRAFT declaration if exists
+          // Always start with overview of own declarations
+          // If there's a draft, pre-load it so "Doorgaan met concept" works
           const latestDraft = data.find((d: ExpenseDeclaration) => d.status === 'DRAFT')
           if (latestDraft) {
             loadDeclaration(latestDraft)
-          } else if (data.length > 0) {
-            // No draft but there are saved declarations — show history
-            setView('history')
+            // Stay in history view — user can click "Doorgaan" to edit
           }
+          setView('history')
         }
       } catch (error) {
         console.error('Error fetching declarations:', error)
@@ -670,9 +670,11 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                   <Icons.euro className="text-workx-lime" size={20} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-lg sm:text-xl font-semibold text-white truncate">Declaratieformulier</h2>
+                  <h2 className="text-lg sm:text-xl font-semibold text-white truncate">
+                    {view === 'history' ? 'Mijn declaraties' : 'Declaratieformulier'}
+                  </h2>
                   <p className="text-sm text-gray-400 truncate">
-                    {view === 'history' ? 'Eerdere declaraties' : items.length > 0 ? `${items.length} kostenpost${items.length !== 1 ? 'en' : ''}` : 'Voeg je kosten toe'}
+                    {view === 'history' ? `${savedDeclarations.length} declaratie${savedDeclarations.length !== 1 ? 's' : ''}` : items.length > 0 ? `${items.length} kostenpost${items.length !== 1 ? 'en' : ''}` : 'Voeg je kosten toe'}
                   </p>
                 </div>
               </div>
@@ -689,13 +691,23 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                     <Icons.settings size={18} />
                   </button>
                 )}
-                <button
-                  onClick={() => setView(view === 'form' ? 'history' : 'form')}
-                  className="btn-secondary flex items-center gap-1 sm:gap-2 text-sm px-2 sm:px-4 py-2"
-                >
-                  <Icons.clock size={16} />
-                  <span className="hidden sm:inline">{view === 'form' ? 'Geschiedenis' : 'Terug'}</span>
-                </button>
+                {view === 'form' ? (
+                  <button
+                    onClick={() => setView('history')}
+                    className="btn-secondary flex items-center gap-1 sm:gap-2 text-sm px-2 sm:px-4 py-2"
+                  >
+                    <Icons.chevronLeft size={16} />
+                    <span className="hidden sm:inline">Terug</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={startNewForm}
+                    className="flex items-center gap-1 sm:gap-2 text-sm px-3 sm:px-4 py-2 rounded-lg bg-workx-lime text-black font-medium hover:opacity-90 transition-colors"
+                  >
+                    <Icons.plus size={16} />
+                    <span className="hidden sm:inline">Nieuwe declaratie</span>
+                  </button>
+                )}
                 <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
                   <Icons.x size={20} className="text-gray-400" />
                 </button>
@@ -810,13 +822,23 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
           {view === 'history' ? (
             /* History View */
             <div className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <h3 className="text-lg font-medium text-white">Declaraties</h3>
-                <button onClick={startNewForm} className="btn-primary flex items-center justify-center gap-2 text-sm w-full sm:w-auto">
-                  <Icons.plus size={16} />
-                  Nieuw formulier
+              {/* Draft banner */}
+              {savedDeclarations.some(d => d.status === 'DRAFT') && (
+                <button
+                  onClick={() => {
+                    const draft = savedDeclarations.find(d => d.status === 'DRAFT')
+                    if (draft) { loadDeclaration(draft); setView('form') }
+                  }}
+                  className="w-full mb-4 p-3 rounded-xl bg-workx-lime/10 border border-workx-lime/20 flex items-center gap-3 hover:bg-workx-lime/15 transition-colors"
+                >
+                  <Icons.edit size={18} className="text-workx-lime shrink-0" />
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-white">Concept declaratie</p>
+                    <p className="text-xs text-gray-400">Klik om verder te gaan met je concept</p>
+                  </div>
+                  <Icons.arrowRight size={16} className="text-workx-lime ml-auto shrink-0" />
                 </button>
-              </div>
+              )}
 
               {/* Search */}
               {savedDeclarations.length > 0 && (
@@ -832,14 +854,18 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                 </div>
               )}
 
-              {savedDeclarations.length === 0 ? (
+              {savedDeclarations.filter(d => d.status !== 'DRAFT').length === 0 && !savedDeclarations.some(d => d.status === 'DRAFT') ? (
                 <div className="text-center py-12 text-gray-400">
                   <Icons.fileText size={48} className="mx-auto mb-4 opacity-30" />
-                  <p>Nog geen declaraties</p>
+                  <p className="mb-4">Nog geen declaraties</p>
+                  <button onClick={startNewForm} className="px-4 py-2 rounded-lg bg-workx-lime text-black font-medium hover:opacity-90 transition-colors">
+                    Eerste declaratie aanmaken
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {savedDeclarations
+                    .filter(decl => decl.status !== 'DRAFT')
                     .filter(decl => {
                       if (!searchQuery.trim()) return true
                       const q = searchQuery.toLowerCase()
