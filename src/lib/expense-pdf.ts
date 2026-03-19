@@ -273,15 +273,33 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     ? `Declaratie_${(data.holdingName || '').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
     : `Declaratie_${data.employeeName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
 
-  // === MERGE ALL ATTACHMENTS VIA PDF-LIB (much more reliable than jsPDF addImage) ===
+  // === Build PDF attachment downloads (always, outside try/catch) ===
+  const pdfAttachmentItems = validItems.filter(
+    i => i.attachmentUrl && i.attachmentUrl.startsWith('data:application/pdf')
+  )
+  const pdfAttachmentDownloads: PDFAttachmentDownload[] = []
+  for (const item of pdfAttachmentItems) {
+    if (!item.attachmentUrl) continue
+    const base64 = item.attachmentUrl.split(',')[1]
+    if (!base64) continue
+    console.log(`[PDF] PDF bijlage gevonden: ${item.attachmentName}, base64 length: ${base64.length}`)
+    const binaryStr = atob(base64)
+    const bytes = new Uint8Array(binaryStr.length)
+    for (let j = 0; j < binaryStr.length; j++) {
+      bytes[j] = binaryStr.charCodeAt(j)
+    }
+    pdfAttachmentDownloads.push({
+      blob: new Blob([bytes], { type: 'application/pdf' }),
+      fileName: item.attachmentName || `bijlage-${pdfAttachmentDownloads.length + 1}.pdf`,
+    })
+  }
+
+  // === MERGE IMAGE ATTACHMENTS VIA PDF-LIB ===
   const imageAttachments = validItems.filter(
     i => i.attachmentUrl && i.attachmentUrl.startsWith('data:image/')
   )
-  const pdfAttachments = validItems.filter(
-    i => i.attachmentUrl && i.attachmentUrl.startsWith('data:application/pdf')
-  )
 
-  if (imageAttachments.length > 0 || pdfAttachments.length > 0) {
+  if (imageAttachments.length > 0) {
     try {
       const jsPdfBytes = doc.output('arraybuffer')
       const mergedPdf = await PDFDocument.load(jsPdfBytes)
@@ -384,22 +402,6 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
         }
       }
 
-      // PDF attachments: download as separate files (merging is unreliable due to CSP/compression issues)
-      // Store them so the caller can trigger separate downloads
-      const pdfDownloads: { blob: Blob; fileName: string }[] = []
-      for (const item of pdfAttachments) {
-        if (!item.attachmentUrl) continue
-        const base64 = item.attachmentUrl.split(',')[1]
-        if (!base64) continue
-        const binaryStr = atob(base64)
-        const bytes = new Uint8Array(binaryStr.length)
-        for (let j = 0; j < binaryStr.length; j++) {
-          bytes[j] = binaryStr.charCodeAt(j)
-        }
-        const blob = new Blob([bytes], { type: 'application/pdf' })
-        pdfDownloads.push({ blob, fileName: item.attachmentName || `bijlage-${pdfDownloads.length + 1}.pdf` })
-      }
-
       const mergedBytes = await mergedPdf.save()
       const blob = new Blob([mergedBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
 
@@ -417,13 +419,14 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
           },
         } as any,
         fileName,
-        pdfAttachments: pdfDownloads.length > 0 ? pdfDownloads : undefined,
+        pdfAttachments: pdfAttachmentDownloads.length > 0 ? pdfAttachmentDownloads : undefined,
       }
     } catch (mergeErr) {
       console.error('Error in PDF merge flow:', mergeErr)
-      return { doc, fileName }
+      // Fall back to jsPDF doc, but STILL include PDF attachments
+      return { doc, fileName, pdfAttachments: pdfAttachmentDownloads.length > 0 ? pdfAttachmentDownloads : undefined }
     }
   }
 
-  return { doc, fileName }
+  return { doc, fileName, pdfAttachments: pdfAttachmentDownloads.length > 0 ? pdfAttachmentDownloads : undefined }
 }
