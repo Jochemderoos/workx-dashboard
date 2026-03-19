@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf'
 import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
 import { PDFDocument, rgb } from 'pdf-lib'
+import * as pdfjsLib from 'pdfjs-dist'
 
 export interface ExpensePDFItem {
   description: string
@@ -379,38 +380,68 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
         }
       }
 
-      // Add PDF attachments — embed as full-page images to avoid copyPages compatibility issues
+      // Add PDF attachments — render pages as images via PDF.js (pdf-lib can't handle all compression methods)
       for (const item of pdfAttachments) {
         if (!item.attachmentUrl) continue
         try {
-          console.log(`[PDF] PDF bijlage: ${item.attachmentName}, base64 length: ${item.attachmentUrl.split(',')[1]?.length || 0}`)
+          console.log(`[PDF] PDF bijlage: ${item.attachmentName}`)
 
           const base64 = item.attachmentUrl.split(',')[1]
           if (!base64) continue
           const binaryStr = atob(base64)
-          const bytes = new Uint8Array(binaryStr.length)
+          const pdfBytes = new Uint8Array(binaryStr.length)
           for (let j = 0; j < binaryStr.length; j++) {
-            bytes[j] = binaryStr.charCodeAt(j)
+            pdfBytes[j] = binaryStr.charCodeAt(j)
           }
 
-          // Try embedPages (embeds as XObject, preserving visual appearance better than copyPages)
-          const attachmentPdf = await PDFDocument.load(bytes, { ignoreEncryption: true })
-          const pageCount = attachmentPdf.getPageCount()
-          console.log(`[PDF] PDF heeft ${pageCount} pagina's`)
+          // Render PDF pages to canvas via PDF.js, then embed as JPEG images
+          pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+          const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes, useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise
+          console.log(`[PDF] PDF.js geladen: ${pdfDoc.numPages} pagina's`)
 
-          const embeddedPages = await mergedPdf.embedPages(
-            attachmentPdf.getPages(),
-          )
+          for (let p = 1; p <= pdfDoc.numPages; p++) {
+            const pdfPage = await pdfDoc.getPage(p)
+            const viewport = pdfPage.getViewport({ scale: 2 }) // 2x for good quality
 
-          for (let p = 0; p < embeddedPages.length; p++) {
-            const embedded = embeddedPages[p]
-            const { width: srcW, height: srcH } = embedded.size()
-            console.log(`[PDF] PDF pagina ${p + 1}: ${srcW}x${srcH}`)
+            const canvas = document.createElement('canvas')
+            canvas.width = viewport.width
+            canvas.height = viewport.height
+            const ctx = canvas.getContext('2d')!
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-            // Create page matching source dimensions
-            const page = mergedPdf.addPage([srcW, srcH])
-            page.drawPage(embedded, { x: 0, y: 0, width: srcW, height: srcH })
+            await pdfPage.render({ canvas, canvasContext: ctx, viewport }).promise
+            console.log(`[PDF] Pagina ${p} gerenderd: ${canvas.width}x${canvas.height}`)
+
+            // Convert canvas to JPEG bytes
+            const jpegBytes = await new Promise<Uint8Array>((resolve, reject) => {
+              canvas.toBlob(
+                blob => {
+                  if (!blob) return reject(new Error('toBlob failed'))
+                  blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf))).catch(reject)
+                },
+                'image/jpeg', 0.90
+              )
+            })
+
+            // Embed in merged PDF
+            const embeddedImg = await mergedPdf.embedJpg(jpegBytes)
+            const imgDims = embeddedImg.scale(1)
+
+            const page = mergedPdf.addPage([595.28, 841.89])
+            const margin = 20
+            const maxW = 595.28 - margin * 2
+            const maxH = 841.89 - margin * 2
+            const scale = Math.min(maxW / imgDims.width, maxH / imgDims.height, 1)
+            const drawW = imgDims.width * scale
+            const drawH = imgDims.height * scale
+            const imgX = (595.28 - drawW) / 2
+            const imgY = (841.89 - drawH) / 2
+
+            page.drawImage(embeddedImg, { x: imgX, y: imgY, width: drawW, height: drawH })
           }
+
+          pdfDoc.destroy()
         } catch (attachErr) {
           console.error('Error merging PDF attachment:', item.attachmentName, attachErr)
           const failPage = mergedPdf.addPage()
