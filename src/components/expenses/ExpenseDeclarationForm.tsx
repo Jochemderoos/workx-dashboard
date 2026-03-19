@@ -464,6 +464,32 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
     }
   }
 
+  // Download PDF for a saved declaration (from history)
+  const downloadDeclarationPDF = async (decl: ExpenseDeclaration) => {
+    try {
+      const result = await buildExpensePDF({
+        employeeName: decl.employeeName,
+        bankAccount: decl.bankAccount,
+        holdingName: decl.holdingName || null,
+        invoiceNumber: decl.invoiceNumber || '',
+        note: decl.note || '',
+        items: decl.items.map(i => ({
+          ...i,
+          date: i.date ? new Date(i.date).toISOString().split('T')[0] : '',
+          expenseType: i.expenseType || 'overig',
+          kilometers: i.kilometers || 0,
+        })),
+      })
+      if (!result) return
+
+      result.doc.save(result.fileName)
+      toast.success('PDF gedownload')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Kon PDF niet genereren')
+    }
+  }
+
 
   return (
     <div
@@ -641,10 +667,8 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                   {savedDeclarations.map((decl) => (
                     <div
                       key={decl.id}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors gap-2 ${
-                        decl.status === 'DRAFT' ? 'cursor-pointer' : ''
-                      }`}
-                      onClick={() => decl.status === 'DRAFT' && loadDeclaration(decl)}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors gap-2 cursor-pointer"
+                      onClick={() => loadDeclaration(decl)}
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -680,10 +704,24 @@ export default function ExpenseDeclarationForm({ onClose }: ExpenseDeclarationFo
                           {new Date(decl.createdAt).toLocaleDateString('nl-NL')} • {decl.items.length} post{decl.items.length !== 1 ? 'en' : ''}
                         </p>
                       </div>
-                      <div className="text-left sm:text-right shrink-0">
-                        <p className="text-workx-lime font-bold text-lg">
-                          {formatCurrency(decl.totalAmount)}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {decl.status !== 'DRAFT' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              downloadDeclarationPDF(decl)
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime text-xs font-medium hover:bg-workx-lime/20 transition-colors"
+                          >
+                            <Icons.download size={14} />
+                            PDF
+                          </button>
+                        )}
+                        <div className="text-left sm:text-right shrink-0">
+                          <p className="text-workx-lime font-bold text-lg">
+                            {formatCurrency(decl.totalAmount)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}

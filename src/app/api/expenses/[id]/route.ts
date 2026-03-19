@@ -131,6 +131,24 @@ export async function PUT(
     // Calculate total
     const totalAmount = items?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0
 
+    // Auto-generate invoice number when submitting (if not manually provided and not already set)
+    let finalInvoiceNumber = invoiceNumber !== undefined ? (invoiceNumber || null) : (declaration as any).invoiceNumber
+    if (body.submit && !finalInvoiceNumber) {
+      const year = new Date().getFullYear()
+      const prefix = `WX-${year}-`
+      const latest = await prisma.expenseDeclaration.findFirst({
+        where: { invoiceNumber: { startsWith: prefix } },
+        orderBy: { invoiceNumber: 'desc' },
+        select: { invoiceNumber: true },
+      })
+      let nextNum = 1
+      if (latest?.invoiceNumber) {
+        const numPart = latest.invoiceNumber.replace(prefix, '')
+        nextNum = (parseInt(numPart, 10) || 0) + 1
+      }
+      finalInvoiceNumber = `${prefix}${String(nextNum).padStart(3, '0')}`
+    }
+
     // Delete existing items and create new ones
     await prisma.expenseItem.deleteMany({
       where: { declarationId: params.id },
@@ -142,7 +160,7 @@ export async function PUT(
         employeeName: employeeName || declaration.employeeName,
         bankAccount: bankAccount || declaration.bankAccount,
         holdingName: holdingName !== undefined ? (holdingName || null) : declaration.holdingName,
-        invoiceNumber: invoiceNumber !== undefined ? (invoiceNumber || null) : (declaration as any).invoiceNumber,
+        invoiceNumber: finalInvoiceNumber,
         totalAmount,
         note,
         status: body.submit ? 'SUBMITTED' : declaration.status,

@@ -53,6 +53,29 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// Generate next invoice number: WX-YYYY-NNN
+async function generateInvoiceNumber(): Promise<string> {
+  const year = new Date().getFullYear()
+  const prefix = `WX-${year}-`
+
+  // Find highest existing invoice number for this year
+  const latest = await prisma.expenseDeclaration.findFirst({
+    where: {
+      invoiceNumber: { startsWith: prefix },
+    },
+    orderBy: { invoiceNumber: 'desc' },
+    select: { invoiceNumber: true },
+  })
+
+  let nextNum = 1
+  if (latest?.invoiceNumber) {
+    const numPart = latest.invoiceNumber.replace(prefix, '')
+    nextNum = (parseInt(numPart, 10) || 0) + 1
+  }
+
+  return `${prefix}${String(nextNum).padStart(3, '0')}`
+}
+
 // POST - Create new expense declaration
 export async function POST(req: NextRequest) {
   try {
@@ -81,6 +104,11 @@ export async function POST(req: NextRequest) {
     // Calculate total
     const totalAmount = items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)
 
+    // Auto-generate invoice number when submitting (if not manually provided)
+    const finalInvoiceNumber = submit && !invoiceNumber
+      ? await generateInvoiceNumber()
+      : (invoiceNumber || null)
+
     // Create declaration with items
     const declaration = await prisma.expenseDeclaration.create({
       data: {
@@ -88,7 +116,7 @@ export async function POST(req: NextRequest) {
         employeeName,
         bankAccount,
         holdingName: holdingName || null,
-        invoiceNumber: invoiceNumber || null,
+        invoiceNumber: finalInvoiceNumber,
         totalAmount,
         note,
         status: submit ? 'SUBMITTED' : 'DRAFT',
