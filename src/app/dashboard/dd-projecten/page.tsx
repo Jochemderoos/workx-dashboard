@@ -495,15 +495,20 @@ export default function DDProjectenPage() {
 
                 {/* Team photos + add member + set expected hours */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 relative">
+                  <div className="flex flex-wrap items-center gap-1.5 relative">
                     {c.memberNames.map((name, mi) => {
                       const photo = getPhotoUrl(name)
                       const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
-                      return photo ? (
-                        <Image key={name} src={photo} alt={name} width={24} height={24} className="w-6 h-6 rounded-lg object-cover" title={name} />
-                      ) : (
-                        <div key={name} className={`w-6 h-6 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center`} title={name}>
-                          <span className="text-[9px] font-medium text-white">{name.charAt(0)}</span>
+                      return (
+                        <div key={name} className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg" style={{ background: 'var(--color-bg-tertiary)' }}>
+                          {photo ? (
+                            <Image src={photo} alt={name} width={22} height={22} className="w-[22px] h-[22px] rounded-md object-cover" />
+                          ) : (
+                            <div className={`w-[22px] h-[22px] rounded-md bg-gradient-to-br ${color} flex items-center justify-center`}>
+                              <span className="text-[9px] font-medium text-white">{name.charAt(0)}</span>
+                            </div>
+                          )}
+                          <span className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>{name.split(' ')[0]}</span>
                         </div>
                       )
                     })}
@@ -639,10 +644,7 @@ export default function DDProjectenPage() {
                   isExpanded ? `${cc.border} ${cc.bg}` : 'hover:shadow-md'
                 }`} style={!isExpanded ? { borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' } : undefined}>
                   <div className="flex items-center gap-3.5 px-4 py-3.5">
-                    <button
-                      onClick={() => setExpandedKey(isExpanded ? null : key)}
-                      className="flex items-center gap-3.5 flex-1 min-w-0 text-left"
-                    >
+                    <div className="flex items-center gap-3.5 flex-1 min-w-0">
                       <div className={`w-8 h-8 rounded-xl ${cc.bg} flex items-center justify-center flex-shrink-0`}>
                         <Icons.briefcase size={14} className={cc.text} />
                       </div>
@@ -655,14 +657,7 @@ export default function DDProjectenPage() {
                           <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-text-tertiary)' }}>{project.description}</p>
                         )}
                       </div>
-                      <div className="flex items-center gap-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                        <Icons.users size={12} />
-                        <span className="text-xs">{project.members.length}</span>
-                      </div>
-                      <div className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
-                        <Icons.chevronDown size={16} style={{ color: 'var(--color-text-tertiary)' }} />
-                      </div>
-                    </button>
+                    </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors hover:bg-emerald-500/10" title="Markeer als afgerond">
                         <Icons.check size={15} className="text-emerald-400" />
@@ -676,25 +671,22 @@ export default function DDProjectenPage() {
                     </div>
                   </div>
 
-                  {isExpanded && project.members.length > 0 && (
-                    <div className="px-4 pb-4 pt-1 border-t" style={{ borderColor: 'var(--color-border)' }}>
-                      <div className="ml-[46px] space-y-2">
+                  {project.members.length > 0 && (
+                    <div className="px-4 pb-3 pt-1">
+                      <div className="ml-[46px] flex flex-wrap gap-2">
                         {project.members.map((m, mi) => {
                           const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
                           const photo = getPhotoUrl(m.user.name)
                           return (
-                            <div key={m.id} className="flex items-center gap-3">
+                            <div key={m.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ background: 'var(--color-bg-tertiary)' }}>
                               {photo ? (
-                                <Image src={photo} alt={m.user.name} width={28} height={28} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
+                                <Image src={photo} alt={m.user.name} width={24} height={24} className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
                               ) : (
-                                <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                                  <span className="text-[11px] font-medium text-white">{m.user.name.charAt(0)}</span>
+                                <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                                  <span className="text-[9px] font-medium text-white">{m.user.name.charAt(0)}</span>
                                 </div>
                               )}
-                              <span className="text-sm flex-1" style={{ color: 'var(--color-text-secondary)' }}>{m.user.name}</span>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
-                                {m.role === 'partner' ? 'Partner' : 'Medewerker'}
-                              </span>
+                              <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{m.user.name}</span>
                             </div>
                           )
                         })}
