@@ -65,7 +65,7 @@ const mobileMenuItems = [
   { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['PARTNER', 'ADMIN', 'EXTERNAL'] },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financiën', roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['PARTNER', 'ADMIN'] },
+  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
   { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
   { href: '/dashboard/ai', icon: Icons.sparkles, label: 'AI Assistent', badge: 'AI' },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
