@@ -368,20 +368,7 @@ export default function DDProjectenPage() {
 
   const completedProjects = projects.filter(p => p.status === 'afgerond')
 
-  // ─── Role check ───
-  if (!loading && userRole && userRole !== 'PARTNER' && userRole !== 'ADMIN') {
-    return (
-      <div className="max-w-5xl mx-auto fade-in">
-        <div className="card p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center mx-auto mb-4">
-            <Icons.lock className="text-red-400" size={28} />
-          </div>
-          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>Geen toegang</h3>
-          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>DD Projecten is alleen beschikbaar voor partners en kantoormanagement.</p>
-        </div>
-      </div>
-    )
-  }
+  // DD Projecten is toegankelijk voor alle medewerkers
 
   if (loading) {
     return (
