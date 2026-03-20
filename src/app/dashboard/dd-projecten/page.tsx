@@ -602,13 +602,13 @@ export default function DDProjectenPage() {
         </div>
       )}
 
-      {/* ─── Handmatig toegevoegd ─── */}
+      {/* ─── Nieuwe projecten (nog op te starten) ─── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-workx-lime" />
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>
-              Handmatig toegevoegd
+              Nieuwe projecten (nog op te starten)
             </h2>
           </div>
           <button
@@ -687,7 +687,7 @@ export default function DDProjectenPage() {
         ) : (
           <div className="rounded-xl border border-dashed p-6 text-center" style={{ borderColor: 'var(--color-border)' }}>
             <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-              Nog geen handmatige projecten. Klik op &quot;Nieuw project&quot; om een zaak toe te voegen met teamtoewijzing.
+              Nog geen nieuwe projecten. Klik op &quot;Nieuw project&quot; om een zaak toe te voegen met teamtoewijzing.
             </p>
           </div>
         )}
