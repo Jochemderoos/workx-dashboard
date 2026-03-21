@@ -242,9 +242,9 @@ export default function WerkstudentPage() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
-          <div className="card p-6 w-full max-w-lg relative my-8" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
+          <div className="card w-full max-w-lg relative max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 pb-0">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {editingTask ? 'Opdracht bewerken' : 'Nieuwe opdracht'}
               </h2>
@@ -252,7 +252,7 @@ export default function WerkstudentPage() {
                 <Icons.x size={18} className="text-gray-400" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto p-6 pt-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Titel *</label>
                 <input
