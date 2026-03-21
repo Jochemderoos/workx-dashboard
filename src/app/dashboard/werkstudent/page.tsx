@@ -242,8 +242,8 @@ export default function WerkstudentPage() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
-          <div className="card p-6 w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
+          <div className="card p-6 w-full max-w-lg relative my-8" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {editingTask ? 'Opdracht bewerken' : 'Nieuwe opdracht'}
@@ -482,6 +482,11 @@ export default function WerkstudentPage() {
                           {task.description}
                         </p>
                       )}
+                      {task.feedbackNote && (
+                        <div className="mt-2 px-3 py-2 rounded-xl text-xs italic" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}>
+                          &quot;{task.feedbackNote}&quot;
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 mt-2.5 text-xs flex-wrap" style={{ color: 'var(--color-text-tertiary)' }}>
                         {(() => {
                           const photo = getPhotoUrl(task.assigner.name)
@@ -512,11 +517,15 @@ export default function WerkstudentPage() {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       <button
                         onClick={() => openFeedback(task)}
-                        className="p-2 rounded-lg transition-colors hover:bg-workx-lime/10"
-                        style={{ color: task.feedbackScore ? 'var(--color-text-secondary)' : 'var(--color-text-tertiary)' }}
-                        title="Feedback geven"
+                        className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                          task.feedbackScore
+                            ? 'bg-workx-lime/15 text-workx-lime border border-workx-lime/30'
+                            : 'hover:bg-white/10 border border-dashed border-white/20'
+                        }`}
+                        style={!task.feedbackScore ? { color: 'var(--color-text-tertiary)' } : undefined}
                       >
-                        <Icons.star size={15} />
+                        <Icons.edit size={12} />
+                        {task.feedbackScore ? 'Feedback' : 'Feedback geven'}
                       </button>
                       <button
                         onClick={() => startEdit(task)}
