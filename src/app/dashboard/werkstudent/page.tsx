@@ -475,7 +475,7 @@ export default function WerkstudentPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
           <div className="flex items-start justify-center min-h-full p-4 py-8">
-          <div className="card w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
+          <div className="card w-full max-w-2xl relative" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 pb-0">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {editingTask ? 'Opdracht bewerken' : 'Nieuwe opdracht'}
