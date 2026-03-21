@@ -208,17 +208,16 @@ export default function WerkstudentPage() {
 
   // === Stageverklaring functions ===
   const openStageverklaring = () => {
-    const completed = tasks.filter(t => t.status === 'klaar')
-    const all = tasks
-    const assignments: StageverklaringAssignment[] = completed.map(t => ({
+    // Alle taken inladen (niet alleen klaar) — user kan verwijderen wat niet relevant is
+    const assignments: StageverklaringAssignment[] = tasks.map(t => ({
       id: t.id,
       title: t.title,
       description: t.description || '',
       feedbackScore: t.feedbackScore || '',
       feedbackNote: t.feedbackNote || '',
     }))
-    const startDates = all.map(t => new Date(t.createdAt).getTime())
-    const endDates = completed.filter(t => t.completedAt).map(t => new Date(t.completedAt!).getTime())
+    const startDates = tasks.map(t => new Date(t.createdAt).getTime())
+    const endDates = tasks.filter(t => t.completedAt).map(t => new Date(t.completedAt!).getTime())
     setStageverklaring({
       internName: '',
       periodStart: startDates.length ? new Date(Math.min(...startDates)).toISOString().split('T')[0] : '',
@@ -293,9 +292,7 @@ export default function WerkstudentPage() {
     doc.setTextColor(40, 40, 40); doc.text(new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), 95, 10)
     doc.setTextColor(120, 120, 120); doc.text('Betreft:', 60, 17)
     doc.setTextColor(40, 40, 40); doc.text(sv.internName || 'Stagiair(e)', 95, 17)
-    doc.setTextColor(160, 160, 160); doc.setFontSize(8); doc.setFont('helvetica', 'italic')
-    doc.text('Gemaakt met de Workx App', m, 48)
-    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.4); doc.line(m, 53, pw - m, 53)
+    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.4); doc.line(m, 48, pw - m, 48)
 
     // Title
     y = 65
