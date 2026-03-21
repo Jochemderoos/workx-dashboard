@@ -5,6 +5,8 @@ import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
+import { jsPDF } from 'jspdf'
+import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
 
 interface TeamUser {
   id: string
@@ -25,6 +27,24 @@ interface Task {
   feedbackNote: string | null
   createdAt: string
   assigner: { id: string; name: string }
+}
+
+interface StageverklaringAssignment {
+  id: string
+  title: string
+  description: string
+  feedbackScore: string
+  feedbackNote: string
+}
+
+interface StageverklaringData {
+  internName: string
+  periodStart: string
+  periodEnd: string
+  department: string
+  assignments: StageverklaringAssignment[]
+  overallGrade: string
+  evaluation: string
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; sort: number }> = {
@@ -59,6 +79,8 @@ export default function WerkstudentPage() {
   const [feedbackForm, setFeedbackForm] = useState({ score: '', note: '' })
   const [savingFeedback, setSavingFeedback] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' })
+  const [showStageverklaring, setShowStageverklaring] = useState(false)
+  const [stageverklaring, setStageverklaring] = useState<StageverklaringData | null>(null)
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -183,6 +205,205 @@ export default function WerkstudentPage() {
     }
   }
 
+  // === Stageverklaring functions ===
+  const openStageverklaring = () => {
+    const completed = tasks.filter(t => t.status === 'klaar')
+    const all = tasks
+    const assignments: StageverklaringAssignment[] = completed.map(t => ({
+      id: t.id,
+      title: t.title,
+      description: t.description || '',
+      feedbackScore: t.feedbackScore || '',
+      feedbackNote: t.feedbackNote || '',
+    }))
+    const startDates = all.map(t => new Date(t.createdAt).getTime())
+    const endDates = completed.filter(t => t.completedAt).map(t => new Date(t.completedAt!).getTime())
+    setStageverklaring({
+      internName: '',
+      periodStart: startDates.length ? new Date(Math.min(...startDates)).toISOString().split('T')[0] : '',
+      periodEnd: endDates.length ? new Date(Math.max(...endDates)).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      department: 'Arbeidsrecht',
+      assignments,
+      overallGrade: '',
+      evaluation: '',
+    })
+    setShowStageverklaring(true)
+  }
+
+  const updateSVField = (field: keyof StageverklaringData, value: string) => {
+    setStageverklaring(prev => prev ? { ...prev, [field]: value } : prev)
+  }
+
+  const updateSVAssignment = (id: string, field: keyof StageverklaringAssignment, value: string) => {
+    setStageverklaring(prev => prev ? {
+      ...prev,
+      assignments: prev.assignments.map(a => a.id === id ? { ...a, [field]: value } : a)
+    } : prev)
+  }
+
+  const removeSVAssignment = (id: string) => {
+    setStageverklaring(prev => prev ? {
+      ...prev,
+      assignments: prev.assignments.filter(a => a.id !== id)
+    } : prev)
+  }
+
+  const addSVAssignment = () => {
+    setStageverklaring(prev => prev ? {
+      ...prev,
+      assignments: [...prev.assignments, {
+        id: Date.now().toString(),
+        title: '',
+        description: '',
+        feedbackScore: '',
+        feedbackNote: '',
+      }]
+    } : prev)
+  }
+
+  const downloadStageverklaringPDF = async () => {
+    if (!stageverklaring) return
+    const sv = stageverklaring
+    const logoDataUrl = await loadWorkxLogo()
+    const doc = new jsPDF()
+    const pw = doc.internal.pageSize.getWidth()
+    const ph = doc.internal.pageSize.getHeight()
+    const m = 20
+    const cw = pw - m * 2
+
+    const drawFooter = () => {
+      doc.setFillColor(80, 80, 80)
+      doc.rect(0, ph - 14, pw, 12, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Workx advocaten  \u2022  Herengracht 448, 1017 CA Amsterdam  \u2022  +31 (0)20 308 03 20  \u2022  info@workxadvocaten.nl', pw / 2, ph - 7, { align: 'center' })
+    }
+
+    let y = 0
+    const needPage = (needed: number) => {
+      if (y + needed > ph - 25) { doc.addPage(); y = 20 }
+    }
+
+    // Header
+    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal')
+    doc.setTextColor(120, 120, 120); doc.text('Datum:', 60, 10)
+    doc.setTextColor(40, 40, 40); doc.text(new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), 95, 10)
+    doc.setTextColor(120, 120, 120); doc.text('Betreft:', 60, 17)
+    doc.setTextColor(40, 40, 40); doc.text(sv.internName || 'Stagiair(e)', 95, 17)
+    doc.setTextColor(160, 160, 160); doc.setFontSize(8); doc.setFont('helvetica', 'italic')
+    doc.text('Gemaakt met de Workx App', m, 48)
+    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.4); doc.line(m, 53, pw - m, 53)
+
+    // Title
+    y = 65
+    doc.setTextColor(100, 100, 100); doc.setFontSize(11); doc.setFont('helvetica', 'normal')
+    doc.text('VERKLARING', m, y)
+    doc.setTextColor(35, 35, 35); doc.setFontSize(22); doc.setFont('helvetica', 'bold')
+    doc.text('STAGEVERKLARING', m, y + 10)
+
+    // Personal info box
+    y = 95
+    doc.setFillColor(250, 250, 250); doc.roundedRect(m, y - 5, cw, 30, 3, 3, 'F')
+    const c1 = m + 8, c2 = m + 65, c3 = m + 125
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100, 100, 100); doc.text('Stagiair(e)', c1, y + 3)
+    doc.setTextColor(35, 35, 35); doc.setFont('helvetica', 'bold'); doc.text(sv.internName || '-', c1, y + 11)
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100); doc.text('Stageperiode', c2, y + 3)
+    doc.setTextColor(35, 35, 35); doc.setFont('helvetica', 'bold')
+    const fmtD = (d: string) => d ? new Date(d).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
+    doc.text(`${fmtD(sv.periodStart)} t/m ${fmtD(sv.periodEnd)}`, c2, y + 11)
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100); doc.text('Afdeling', c3, y + 3)
+    doc.setTextColor(35, 35, 35); doc.setFont('helvetica', 'bold'); doc.text(sv.department || '-', c3, y + 11)
+    // Intro text
+    y += 35
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(50, 50, 50)
+    const introText = `Hierbij verklaart Workx advocaten dat ${sv.internName || '[naam]'} in de periode ${fmtD(sv.periodStart)} tot en met ${fmtD(sv.periodEnd)} stage heeft gelopen bij de afdeling ${sv.department || '[afdeling]'} van ons kantoor. Gedurende de stage zijn de volgende werkzaamheden uitgevoerd:`
+    const introLines = doc.splitTextToSize(introText, cw)
+    doc.text(introLines, m, y)
+    y += introLines.length * 5 + 8
+
+    // Assignments
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(35, 35, 35)
+    doc.text('Uitgevoerde werkzaamheden', m, y); y += 10
+
+    const fbColors: Record<string, [number, number, number]> = {
+      matig: [200, 50, 50], voldoende: [200, 120, 0], goed: [59, 130, 246], uitstekend: [16, 185, 129]
+    }
+    const fbLabels: Record<string, string> = { matig: 'Matig', voldoende: 'Voldoende', goed: 'Goed', uitstekend: 'Uitstekend' }
+
+    sv.assignments.forEach((a, i) => {
+      needPage(40)
+      // Number + title
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(35, 35, 35)
+      doc.text(`${i + 1}. ${a.title || 'Opdracht'}`, m, y); y += 6
+      // Description
+      if (a.description) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(80, 80, 80)
+        const descLines = doc.splitTextToSize(a.description, cw - 10)
+        needPage(descLines.length * 4.5)
+        doc.text(descLines, m + 5, y); y += descLines.length * 4.5 + 2
+      }
+      // Feedback
+      if (a.feedbackScore) {
+        const col = fbColors[a.feedbackScore] || [100, 100, 100]
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9)
+        doc.setTextColor(col[0], col[1], col[2])
+        doc.text(`Beoordeling: ${fbLabels[a.feedbackScore] || a.feedbackScore}`, m + 5, y); y += 5
+      }
+      if (a.feedbackNote) {
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(100, 100, 100)
+        const noteLines = doc.splitTextToSize(`"${a.feedbackNote}"`, cw - 10)
+        needPage(noteLines.length * 4.5)
+        doc.text(noteLines, m + 5, y); y += noteLines.length * 4.5 + 2
+      }
+      y += 4
+      // Separator
+      if (i < sv.assignments.length - 1) {
+        doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.2); doc.line(m, y, pw - m, y); y += 6
+      }
+    })
+
+    // Overall grade
+    if (sv.overallGrade) {
+      y += 6; needPage(30)
+      doc.setFillColor(249, 255, 133); doc.roundedRect(m, y, cw, 20, 4, 4, 'F')
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(35, 35, 35)
+      doc.text('Eindcijfer', m + 12, y + 13)
+      doc.setFontSize(18); doc.text(sv.overallGrade, pw - m - 12, y + 14, { align: 'right' })
+      y += 28
+    }
+
+    // Evaluation
+    if (sv.evaluation) {
+      y += 6; needPage(20)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(35, 35, 35)
+      doc.text('Algemene beoordeling', m, y); y += 7
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(60, 60, 60)
+      const evalLines = doc.splitTextToSize(sv.evaluation, cw)
+      needPage(evalLines.length * 5)
+      doc.text(evalLines, m, y); y += evalLines.length * 5 + 10
+    }
+
+    // Signature area
+    y += 10; needPage(40)
+    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3); doc.line(m, y, pw - m, y); y += 15
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 100, 100)
+    doc.text('Namens Workx advocaten,', m, y); y += 15
+    doc.setDrawColor(180, 180, 180); doc.line(m, y, m + 60, y)
+    doc.setFontSize(8); doc.text('Naam / Handtekening', m, y + 5)
+    doc.line(m + 80, y, m + 140, y); doc.text('Datum', m + 80, y + 5)
+
+    // Footers
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) { doc.setPage(i); drawFooter() }
+
+    const pdfBlob = doc.output('blob')
+    window.open(URL.createObjectURL(pdfBlob), '_blank')
+    toast.success('Stageverklaring PDF gegenereerd')
+  }
+
   const activeTasks = tasks.filter(t => t.status !== 'klaar')
   const completedTasks = tasks.filter(t => t.status === 'klaar')
 
@@ -216,13 +437,22 @@ export default function WerkstudentPage() {
             Opdrachten en taken voor de werkstudent
           </p>
         </div>
-        <button
-          onClick={() => { setShowForm(true); setEditingTask(null); setForm({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' }) }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Icons.plus size={16} />
-          Nieuwe opdracht
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openStageverklaring}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Icons.fileText size={16} />
+            Stageverklaring
+          </button>
+          <button
+            onClick={() => { setShowForm(true); setEditingTask(null); setForm({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' }) }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Icons.plus size={16} />
+            Nieuwe opdracht
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -425,6 +655,183 @@ export default function WerkstudentPage() {
           </div>
         )
       })()}
+
+      {/* Stageverklaring Modal */}
+      {showStageverklaring && stageverklaring && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowStageverklaring(false)}>
+          <div className="card w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>Stageverklaring</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Pas alle velden aan en download als PDF</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={downloadStageverklaringPDF} className="btn-primary flex items-center gap-2 text-sm">
+                  <Icons.download size={14} />
+                  Download PDF
+                </button>
+                <button onClick={() => setShowStageverklaring(false)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                  <Icons.x size={18} className="text-gray-400" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto p-6 space-y-6">
+              {/* Personal details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Naam stagiair(e)</label>
+                  <input
+                    type="text"
+                    value={stageverklaring.internName}
+                    onChange={e => updateSVField('internName', e.target.value)}
+                    className="input-field !py-2.5 text-sm"
+                    placeholder="Volledige naam"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Afdeling</label>
+                  <input
+                    type="text"
+                    value={stageverklaring.department}
+                    onChange={e => updateSVField('department', e.target.value)}
+                    className="input-field !py-2.5 text-sm"
+                    placeholder="Bijv. Arbeidsrecht"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Startdatum stage</label>
+                  <input
+                    type="date"
+                    value={stageverklaring.periodStart}
+                    onChange={e => updateSVField('periodStart', e.target.value)}
+                    className="input-field !py-2.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Einddatum stage</label>
+                  <input
+                    type="date"
+                    value={stageverklaring.periodEnd}
+                    onChange={e => updateSVField('periodEnd', e.target.value)}
+                    className="input-field !py-2.5 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Assignments */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Werkzaamheden</h3>
+                  <button onClick={addSVAssignment} className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 transition-colors">
+                    <Icons.plus size={12} />
+                    Toevoegen
+                  </button>
+                </div>
+
+                {stageverklaring.assignments.length === 0 && (
+                  <div className="rounded-2xl border border-dashed p-6 text-center" style={{ borderColor: 'var(--color-border)' }}>
+                    <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>Geen opdrachten. Voeg handmatig opdrachten toe.</p>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {stageverklaring.assignments.map((a, i) => {
+                    const fb = a.feedbackScore ? FEEDBACK_OPTIONS.find(o => o.value === a.feedbackScore) : null
+                    return (
+                      <div key={a.id} className="card p-4 relative group">
+                        <button
+                          onClick={() => removeSVAssignment(a.id)}
+                          className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-red-500/10 text-red-400/50 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Verwijderen"
+                        >
+                          <Icons.x size={14} />
+                        </button>
+
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-bold w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
+                            {i + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={a.title}
+                            onChange={e => updateSVAssignment(a.id, 'title', e.target.value)}
+                            className="input-field !py-1.5 !px-3 text-sm font-medium flex-1"
+                            placeholder="Naam opdracht"
+                          />
+                        </div>
+
+                        <textarea
+                          value={a.description}
+                          onChange={e => updateSVAssignment(a.id, 'description', e.target.value)}
+                          className="input-field !py-2 !px-3 text-sm mb-2"
+                          rows={2}
+                          placeholder="Beschrijving van de werkzaamheden..."
+                        />
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Beoordeling:</span>
+                          {FEEDBACK_OPTIONS.map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => updateSVAssignment(a.id, 'feedbackScore', a.feedbackScore === opt.value ? '' : opt.value)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border ${
+                                a.feedbackScore === opt.value
+                                  ? `${opt.bg} ${opt.color} ${opt.border}`
+                                  : 'border-transparent'
+                              }`}
+                              style={a.feedbackScore !== opt.value ? { background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' } : undefined}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {(a.feedbackScore || a.feedbackNote) && (
+                          <input
+                            type="text"
+                            value={a.feedbackNote}
+                            onChange={e => updateSVAssignment(a.id, 'feedbackNote', e.target.value)}
+                            className="input-field !py-1.5 !px-3 text-xs mt-2 italic"
+                            placeholder="Toelichting bij beoordeling..."
+                          />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Overall grade */}
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Eindcijfer (optioneel)</label>
+                <input
+                  type="text"
+                  value={stageverklaring.overallGrade}
+                  onChange={e => updateSVField('overallGrade', e.target.value)}
+                  className="input-field !py-2.5 text-sm w-32"
+                  placeholder="Bijv. 7.5"
+                />
+              </div>
+
+              {/* Evaluation */}
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-tertiary)' }}>Algemene beoordeling / toelichting</label>
+                <textarea
+                  value={stageverklaring.evaluation}
+                  onChange={e => updateSVField('evaluation', e.target.value)}
+                  className="input-field text-sm"
+                  rows={4}
+                  placeholder="Beschrijf de algehele indruk, ontwikkeling en aanbevelingen..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Active Tasks */}
       {activeTasks.length === 0 && completedTasks.length === 0 ? (
