@@ -7,6 +7,7 @@ import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
 import { jsPDF } from 'jspdf'
 import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface TeamUser {
   id: string
@@ -472,8 +473,9 @@ export default function WerkstudentPage() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
-          <div className="card w-full max-w-lg relative max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
+          <div className="flex items-start justify-center min-h-full p-4 py-8">
+          <div className="card w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 pb-0">
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {editingTask ? 'Opdracht bewerken' : 'Nieuwe opdracht'}
@@ -544,35 +546,32 @@ export default function WerkstudentPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Deadline</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={form.deadline}
-                      onChange={e => setForm({ ...form, deadline: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-workx-lime/40 transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                      style={{
-                        background: 'var(--color-bg-tertiary)',
-                        border: '1px solid var(--color-border)',
-                        color: form.deadline ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
-                      }}
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Icons.calendar size={16} className="text-workx-lime" />
-                    </div>
-                  </div>
+                  <DatePicker
+                    selected={form.deadline ? new Date(form.deadline) : null}
+                    onChange={(date) => setForm({ ...form, deadline: date ? date.toISOString().split('T')[0] : '' })}
+                    placeholder="Selecteer deadline..."
+                    isClearable
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Prioriteit</label>
-                  <select
-                    value={form.priority}
-                    onChange={e => setForm({ ...form, priority: e.target.value })}
-                    className="input-field !rounded-2xl"
-                  >
-                    <option value="laag">Laag</option>
-                    <option value="normaal">Normaal</option>
-                    <option value="hoog">Hoog</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setForm({ ...form, priority: key })}
+                        className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all border flex-1 ${
+                          form.priority === key
+                            ? `${cfg.bg} ${cfg.color} ${cfg.border}`
+                            : 'border-transparent'
+                        }`}
+                        style={form.priority !== key ? { background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' } : undefined}
+                      >
+                        {cfg.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
@@ -587,6 +586,7 @@ export default function WerkstudentPage() {
                 </button>
               </div>
             </form>
+          </div>
           </div>
         </div>
       )}
