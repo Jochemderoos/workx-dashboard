@@ -658,8 +658,9 @@ export default function WerkstudentPage() {
 
       {/* Stageverklaring Modal */}
       {showStageverklaring && stageverklaring && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowStageverklaring(false)}>
-          <div className="card w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" onClick={() => setShowStageverklaring(false)}>
+          <div className="flex items-start justify-center min-h-full p-4 py-8">
+          <div className="card w-full max-w-3xl" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between p-6 pb-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
               <div>
@@ -678,7 +679,7 @@ export default function WerkstudentPage() {
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto p-6 space-y-6">
+            <div className="p-6 space-y-6">
               {/* Personal details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -829,6 +830,7 @@ export default function WerkstudentPage() {
                 />
               </div>
             </div>
+          </div>
           </div>
         </div>
       )}
