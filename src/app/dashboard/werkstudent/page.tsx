@@ -473,10 +473,9 @@ export default function WerkstudentPage() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
-          <div className="flex items-start justify-center min-h-full p-4 py-8">
-          <div className="card w-full max-w-4xl relative" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 pb-0">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 sm:p-4" style={{ paddingTop: '2vh' }} onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
+          <div className="w-full max-w-2xl card flex flex-col" style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b shrink-0" style={{ borderColor: 'var(--color-border)' }}>
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {editingTask ? 'Opdracht bewerken' : 'Nieuwe opdracht'}
               </h2>
@@ -484,7 +483,7 @@ export default function WerkstudentPage() {
                 <Icons.x size={18} className="text-gray-400" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto p-6 pt-4">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Titel *</label>
                 <input
@@ -587,7 +586,6 @@ export default function WerkstudentPage() {
               </div>
             </form>
           </div>
-          </div>
         </div>
       )}
 
@@ -658,11 +656,10 @@ export default function WerkstudentPage() {
 
       {/* Stageverklaring Modal */}
       {showStageverklaring && stageverklaring && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" onClick={() => setShowStageverklaring(false)}>
-          <div className="flex items-start justify-center min-h-full p-4 py-8">
-          <div className="card w-full max-w-3xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 sm:p-4" style={{ paddingTop: '2vh' }} onClick={() => setShowStageverklaring(false)}>
+          <div className="w-full max-w-3xl card flex flex-col" style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }} onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center justify-between p-5 border-b shrink-0" style={{ borderColor: 'var(--color-border)' }}>
               <div>
                 <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>Stageverklaring</h2>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Pas alle velden aan en download als PDF</p>
@@ -679,7 +676,7 @@ export default function WerkstudentPage() {
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
               {/* Personal details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -830,7 +827,6 @@ export default function WerkstudentPage() {
                 />
               </div>
             </div>
-          </div>
           </div>
         </div>
       )}
