@@ -387,6 +387,7 @@ model WorkItem {
 
 model TransitieCalculation {
   id               String   @id @default(cuid())
+  userId           String?  // Wie heeft deze berekening gemaakt
   employerName     String?
   employeeName     String
   startDate        String   // ISO date string

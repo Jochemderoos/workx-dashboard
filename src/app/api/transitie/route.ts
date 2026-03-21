@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const calculations = await prisma.transitieCalculation.findMany({
+      where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
 
     const calculation = await prisma.transitieCalculation.create({
       data: {
+        userId: session.user.id,
         employerName: body.employerName || null,
         employeeName: body.employeeName,
         startDate: body.startDate,

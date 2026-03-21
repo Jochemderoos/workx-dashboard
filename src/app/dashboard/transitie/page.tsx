@@ -340,8 +340,9 @@ export default function TransitiePage() {
     return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  const downloadPDF = async () => {
+  const downloadPDF = async (lang: 'nl' | 'en' = 'nl') => {
     if (!result) return
+    const isEN = lang === 'en'
 
     // Pre-load the logo image
     const logoDataUrl = await loadWorkxLogo()
@@ -363,25 +364,25 @@ export default function TransitiePage() {
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(120, 120, 120)
-    doc.text('Aan:', infoX, hy)
+    doc.text(isEN ? 'To:' : 'Aan:', infoX, hy)
     doc.setTextColor(40, 40, 40)
     doc.text(form.employerName || '-', infoValueX, hy)
     hy += 7
     doc.setTextColor(120, 120, 120)
-    doc.text('Datum:', infoX, hy)
+    doc.text(isEN ? 'Date:' : 'Datum:', infoX, hy)
     doc.setTextColor(40, 40, 40)
-    doc.text(new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), infoValueX, hy)
+    doc.text(new Date().toLocaleDateString(isEN ? 'en-GB' : 'nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), infoValueX, hy)
     hy += 7
     doc.setTextColor(120, 120, 120)
-    doc.text('Betreft:', infoX, hy)
+    doc.text(isEN ? 'Re:' : 'Betreft:', infoX, hy)
     doc.setTextColor(40, 40, 40)
-    doc.text(form.employeeName || 'Werknemer', infoValueX, hy)
+    doc.text(form.employeeName || (isEN ? 'Employee' : 'Werknemer'), infoValueX, hy)
 
     // Tagline
     doc.setTextColor(160, 160, 160)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
-    doc.text('Gemaakt met de Workx App', margin, 48)
+    doc.text(isEN ? 'Generated with the Workx App' : 'Gemaakt met de Workx App', margin, 48)
 
     // Divider lijn
     doc.setDrawColor(200, 200, 200)
@@ -393,11 +394,11 @@ export default function TransitiePage() {
     doc.setTextColor(100, 100, 100)
     doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
-    doc.text('BEREKENING VAN DE', margin, y)
+    doc.text(isEN ? 'CALCULATION OF THE' : 'BEREKENING VAN DE', margin, y)
     doc.setTextColor(35, 35, 35)
     doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
-    doc.text('TRANSITIEVERGOEDING', margin, y + 10)
+    doc.text(isEN ? 'SEVERANCE PAYMENT' : 'TRANSITIEVERGOEDING', margin, y + 10)
 
     // === DIENSTVERBAND SECTIE ===
     y = 95
@@ -411,31 +412,31 @@ export default function TransitiePage() {
     const col3 = margin + 125
 
     doc.setTextColor(100, 100, 100)
-    doc.text('Datum in dienst', col1, y + 3)
+    doc.text(isEN ? 'Start date' : 'Datum in dienst', col1, y + 3)
     doc.setTextColor(35, 35, 35)
     doc.setFont('helvetica', 'bold')
     doc.text(formatDate(form.startDate), col1, y + 11)
 
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 100, 100)
-    doc.text('Datum uit dienst', col2, y + 3)
+    doc.text(isEN ? 'End date' : 'Datum uit dienst', col2, y + 3)
     doc.setTextColor(35, 35, 35)
     doc.setFont('helvetica', 'bold')
     doc.text(formatDate(form.endDate), col2, y + 11)
 
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 100, 100)
-    doc.text('Dienstverband', col3, y + 3)
+    doc.text(isEN ? 'Length of service' : 'Dienstverband', col3, y + 3)
     doc.setTextColor(35, 35, 35)
     doc.setFont('helvetica', 'bold')
-    doc.text(`${result.years} jaar en ${result.months} maanden`, col3, y + 11)
+    doc.text(isEN ? `${result.years} years and ${result.months} months` : `${result.years} jaar en ${result.months} maanden`, col3, y + 11)
 
     // === SALARIS COMPONENTEN ===
     y = 130
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(60, 60, 60)
-    doc.text('Salariscomponenten', margin, y)
+    doc.text(isEN ? 'Salary components' : 'Salariscomponenten', margin, y)
 
     y += 10
     const labelX = margin
@@ -456,16 +457,16 @@ export default function TransitiePage() {
       y += 9
     }
 
-    addDataRow('Bruto maandsalaris', formatCurrency(parseFloat(form.salary)))
-    addDataRow('Vakantiegeld', form.vacationMoney ? `Ja (${form.vacationPercent}%)` : 'Nee')
-    addDataRow('13e maand', form.thirteenthMonth ? 'Ja (8,3%)' : 'Nee')
-    addDataRow('Overwerk per maand', form.overtime ? formatCurrency(parseFloat(form.overtime)) : '—')
-    addDataRow('Bonus per maand', result.bonusPerMonth > 0 ? formatCurrency(result.bonusPerMonth) : '—')
-    addDataRow('Overige emolumenten', form.other ? formatCurrency(parseFloat(form.other)) : '—')
+    addDataRow(isEN ? 'Gross monthly salary' : 'Bruto maandsalaris', formatCurrency(parseFloat(form.salary)))
+    addDataRow(isEN ? 'Vacation allowance' : 'Vakantiegeld', form.vacationMoney ? `${isEN ? 'Yes' : 'Ja'} (${form.vacationPercent}%)` : (isEN ? 'No' : 'Nee'))
+    addDataRow(isEN ? '13th month' : '13e maand', form.thirteenthMonth ? `${isEN ? 'Yes' : 'Ja'} (8,3%)` : (isEN ? 'No' : 'Nee'))
+    addDataRow(isEN ? 'Overtime per month' : 'Overwerk per maand', form.overtime ? formatCurrency(parseFloat(form.overtime)) : '—')
+    addDataRow(isEN ? 'Bonus per month' : 'Bonus per maand', result.bonusPerMonth > 0 ? formatCurrency(result.bonusPerMonth) : '—')
+    addDataRow(isEN ? 'Other allowances' : 'Overige emolumenten', form.other ? formatCurrency(parseFloat(form.other)) : '—')
     y += 2
-    addDataRow('Totaal bruto maandsalaris', formatCurrency(result.totalSalary), true)
+    addDataRow(isEN ? 'Total gross monthly salary' : 'Totaal bruto maandsalaris', formatCurrency(result.totalSalary), true)
     y += 2
-    addDataRow('Pensioen-/AOW-leeftijd bereikt', form.isPensionAge ? 'Ja' : 'Nee')
+    addDataRow(isEN ? 'Reached pension/retirement age' : 'Pensioen-/AOW-leeftijd bereikt', form.isPensionAge ? (isEN ? 'Yes' : 'Ja') : (isEN ? 'No' : 'Nee'))
 
     // === RESULTAAT BOX ===
     y += 12
@@ -476,7 +477,7 @@ export default function TransitiePage() {
     doc.setTextColor(35, 35, 35)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
-    doc.text('Transitievergoeding', margin + 12, y + 12)
+    doc.text(isEN ? 'Severance payment' : 'Transitievergoeding', margin + 12, y + 12)
 
     doc.setFontSize(18)
     doc.text(formatCurrency(result.amount), pageWidth - margin - 12, y + 18, { align: 'right' })
@@ -486,7 +487,9 @@ export default function TransitiePage() {
       doc.setFontSize(8)
       doc.setFont('helvetica', 'italic')
       doc.setTextColor(120, 120, 120)
-      doc.text(`Wettelijk maximum toegepast: ${formatCurrency(result.maxUsed)} (berekend bedrag: ${formatCurrency(result.amountBeforeMax)})`, margin, y)
+      doc.text(isEN
+        ? `Statutory maximum applied: ${formatCurrency(result.maxUsed)} (calculated amount: ${formatCurrency(result.amountBeforeMax)})`
+        : `Wettelijk maximum toegepast: ${formatCurrency(result.maxUsed)} (berekend bedrag: ${formatCurrency(result.amountBeforeMax)})`, margin, y)
       y += 8
     }
 
@@ -500,7 +503,9 @@ export default function TransitiePage() {
     doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(130, 130, 130)
-    const disclaimer = `Disclaimer: Deze berekening is indicatief. Aan deze berekening kunnen geen rechten worden ontleend. De daadwerkelijke transitievergoeding kan afwijken door CAO-bepalingen of bijzondere omstandigheden. Wettelijke grondslag: Art. 7:673 BW. Maximum 2024: €94.000 | 2025: €98.000 | 2026: €102.000, of jaarsalaris indien hoger.`
+    const disclaimer = isEN
+      ? `Disclaimer: This calculation is indicative. No rights can be derived from this calculation. The actual severance payment may differ due to collective agreement provisions or special circumstances. Legal basis: Art. 7:673 Dutch Civil Code. Maximum 2024: €94,000 | 2025: €98,000 | 2026: €102,000, or annual salary if higher.`
+      : `Disclaimer: Deze berekening is indicatief. Aan deze berekening kunnen geen rechten worden ontleend. De daadwerkelijke transitievergoeding kan afwijken door CAO-bepalingen of bijzondere omstandigheden. Wettelijke grondslag: Art. 7:673 BW. Maximum 2024: €94.000 | 2025: €98.000 | 2026: €102.000, of jaarsalaris indien hoger.`
     const disclaimerLines = doc.splitTextToSize(disclaimer, contentWidth)
     doc.text(disclaimerLines, margin, y)
 
@@ -509,7 +514,7 @@ export default function TransitiePage() {
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(100, 100, 100)
-    doc.text('Vragen? Neem contact op met één van onze arbeidsrecht specialisten.', margin, y)
+    doc.text(isEN ? 'Questions? Contact one of our employment law specialists.' : 'Vragen? Neem contact op met één van onze arbeidsrecht specialisten.', margin, y)
 
     // === FOOTER ===
     const footerY = pageHeight - 14
@@ -1063,13 +1068,22 @@ export default function TransitiePage() {
                   <Icons.save size={16} />
                   {editingId ? 'Berekening bijwerken' : 'Berekening opslaan'}
                 </button>
-                <button
-                  onClick={downloadPDF}
-                  className="btn-secondary w-full flex items-center justify-center gap-2"
-                >
-                  <Icons.download size={16} />
-                  Download PDF rapport
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => downloadPDF('nl')}
+                    className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                  >
+                    <Icons.download size={16} />
+                    PDF (NL)
+                  </button>
+                  <button
+                    onClick={() => downloadPDF('en')}
+                    className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                  >
+                    <Icons.download size={16} />
+                    PDF (EN)
+                  </button>
+                </div>
               </div>
 
               {form.employeeName && (
