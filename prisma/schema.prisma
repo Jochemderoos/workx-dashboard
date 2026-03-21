@@ -1662,18 +1662,20 @@ model WorkConversation {
 // ==================== WERKSTUDENT OPDRACHTEN ====================
 
 model WerkstudentTask {
-  id          String    @id @default(cuid())
-  title       String
-  description String?   @db.Text
-  deadline    DateTime?
-  priority    String    @default("normaal") // laag, normaal, hoog, urgent
-  status      String    @default("open")    // open, bezig, klaar
-  assignedBy  String    // userId van medewerker die opdracht gaf
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  title         String
+  description   String?   @db.Text
+  deadline      DateTime?
+  priority      String    @default("normaal") // laag, normaal, hoog, urgent
+  status        String    @default("open")    // open, bezig, klaar
+  assignedBy    String    // userId van medewerker die opdracht gaf
+  completedAt   DateTime?
+  feedbackScore String?   // matig, voldoende, goed, uitstekend
+  feedbackNote  String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  assigner    User      @relation("WerkstudentAssigner", fields: [assignedBy], references: [id])
+  assigner      User      @relation("WerkstudentAssigner", fields: [assignedBy], references: [id])
 
   @@index([status])
   @@index([assignedBy])

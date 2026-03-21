@@ -60,7 +60,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { id, title, description, deadline, priority, status, assignerId } = await req.json()
+  const { id, title, description, deadline, priority, status, assignerId, feedbackScore, feedbackNote } = await req.json()
   if (!id) {
     return NextResponse.json({ error: 'ID is verplicht' }, { status: 400 })
   }
@@ -76,6 +76,8 @@ export async function PUT(req: NextRequest) {
     else updateData.completedAt = null
   }
   if (assignerId) updateData.assignedBy = assignerId
+  if (feedbackScore !== undefined) updateData.feedbackScore = feedbackScore || null
+  if (feedbackNote !== undefined) updateData.feedbackNote = feedbackNote?.trim() || null
 
   const task = await prisma.werkstudentTask.update({
     where: { id },

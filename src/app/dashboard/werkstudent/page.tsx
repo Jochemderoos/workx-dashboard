@@ -21,6 +21,8 @@ interface Task {
   status: string
   assignedBy: string
   completedAt: string | null
+  feedbackScore: string | null
+  feedbackNote: string | null
   createdAt: string
   assigner: { id: string; name: string }
 }
@@ -38,6 +40,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   klaar: { label: 'Klaar', color: 'text-emerald-400', bg: 'bg-emerald-500/15', icon: Icons.check },
 }
 
+const FEEDBACK_OPTIONS = [
+  { value: 'matig', label: 'Matig', color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/30' },
+  { value: 'voldoende', label: 'Voldoende', color: 'text-orange-400', bg: 'bg-orange-500/15', border: 'border-orange-500/30' },
+  { value: 'goed', label: 'Goed', color: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/30' },
+  { value: 'uitstekend', label: 'Uitstekend', color: 'text-emerald-400', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30' },
+]
+
 export default function WerkstudentPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([])
@@ -45,6 +54,10 @@ export default function WerkstudentPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [feedbackTaskId, setFeedbackTaskId] = useState<string | null>(null)
+  const [feedbackForm, setFeedbackForm] = useState({ score: '', note: '' })
+  const [savingFeedback, setSavingFeedback] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' })
 
   const fetchTasks = useCallback(async () => {
@@ -69,48 +82,56 @@ export default function WerkstudentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.title.trim()) return
+    if (!form.title.trim() || saving) return
 
+    setSaving(true)
     try {
       const payload = { ...form, deadline: form.deadline || null, assignerId: form.assignerId || undefined }
-      if (editingTask) {
-        const res = await fetch('/api/werkstudent', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingTask.id, ...payload }),
-        })
-        if (!res.ok) throw new Error()
-        toast.success('Opdracht bijgewerkt')
-      } else {
-        const res = await fetch('/api/werkstudent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-        if (!res.ok) throw new Error()
-        toast.success('Opdracht aangemaakt')
+      const res = editingTask
+        ? await fetch('/api/werkstudent', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: editingTask.id, ...payload }),
+          })
+        : await fetch('/api/werkstudent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error || 'Onbekende fout')
       }
+
+      toast.success(editingTask ? 'Opdracht bijgewerkt' : 'Opdracht aangemaakt')
       setForm({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' })
       setShowForm(false)
       setEditingTask(null)
       fetchTasks()
-    } catch {
-      toast.error('Kon opdracht niet opslaan')
+    } catch (err: any) {
+      toast.error(err?.message || 'Kon opdracht niet opslaan')
+    } finally {
+      setSaving(false)
     }
   }
 
   const toggleStatus = async (task: Task) => {
     const nextStatus = task.status === 'open' ? 'bezig' : task.status === 'bezig' ? 'klaar' : 'open'
+    // Optimistic update
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t))
     try {
-      await fetch('/api/werkstudent', {
+      const res = await fetch('/api/werkstudent', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: task.id, status: nextStatus }),
       })
+      if (!res.ok) throw new Error()
       fetchTasks()
       if (nextStatus === 'klaar') toast.success('Opdracht afgerond!')
     } catch {
       toast.error('Kon status niet bijwerken')
+      fetchTasks() // Revert
     }
   }
 
@@ -135,6 +156,31 @@ export default function WerkstudentPage() {
       assignerId: task.assignedBy,
     })
     setShowForm(true)
+  }
+
+  const openFeedback = (task: Task) => {
+    setFeedbackTaskId(task.id)
+    setFeedbackForm({ score: task.feedbackScore || '', note: task.feedbackNote || '' })
+  }
+
+  const saveFeedback = async () => {
+    if (!feedbackTaskId || savingFeedback) return
+    setSavingFeedback(true)
+    try {
+      const res = await fetch('/api/werkstudent', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: feedbackTaskId, feedbackScore: feedbackForm.score, feedbackNote: feedbackForm.note }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success('Feedback opgeslagen')
+      setFeedbackTaskId(null)
+      fetchTasks()
+    } catch {
+      toast.error('Kon feedback niet opslaan')
+    } finally {
+      setSavingFeedback(false)
+    }
   }
 
   const activeTasks = tasks.filter(t => t.status !== 'klaar')
@@ -196,14 +242,19 @@ export default function WerkstudentPage() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setShowForm(false); setEditingTask(null) }}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
           <div className="card p-6 w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-              {editingTask ? 'Opdracht bewerken' : 'Nieuwe opdracht'}
-            </h2>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {editingTask ? 'Opdracht bewerken' : 'Nieuwe opdracht'}
+              </h2>
+              <button onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                <Icons.x size={18} className="text-gray-400" />
+              </button>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Titel *</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Titel *</label>
                 <input
                   type="text"
                   value={form.title}
@@ -215,7 +266,7 @@ export default function WerkstudentPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Beschrijving</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Beschrijving</label>
                 <textarea
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
@@ -226,7 +277,7 @@ export default function WerkstudentPage() {
               </div>
               {/* Opdrachtgever */}
               <div>
-                <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Opdrachtgever</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Opdrachtgever</label>
                 <div className="flex flex-wrap gap-2">
                   {teamUsers.map(u => {
                     const photo = getPhotoUrl(u.name)
@@ -235,11 +286,11 @@ export default function WerkstudentPage() {
                       <button
                         key={u.id}
                         type="button"
-                        onClick={() => setForm(f => ({ ...f, assignerId: u.id }))}
+                        onClick={() => setForm(f => ({ ...f, assignerId: f.assignerId === u.id ? '' : u.id }))}
                         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                           isSelected
                             ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30'
-                            : 'border-transparent'
+                            : 'border-transparent hover:border-white/10'
                         }`}
                         style={{
                           background: isSelected ? undefined : 'var(--color-bg-tertiary)',
@@ -262,7 +313,7 @@ export default function WerkstudentPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Deadline</label>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Deadline</label>
                   <div className="relative">
                     <input
                       type="date"
@@ -281,7 +332,7 @@ export default function WerkstudentPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Prioriteit</label>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Prioriteit</label>
                   <select
                     value={form.priority}
                     onChange={e => setForm({ ...form, priority: e.target.value })}
@@ -295,10 +346,13 @@ export default function WerkstudentPage() {
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" className="btn-primary flex-1">
+                <button type="submit" disabled={saving || !form.title.trim()} className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50">
+                  {saving ? (
+                    <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                  ) : null}
                   {editingTask ? 'Opslaan' : 'Toevoegen'}
                 </button>
-                <button type="button" onClick={() => { setShowForm(false); setEditingTask(null) }} className="btn-secondary flex-1">
+                <button type="button" onClick={() => { setShowForm(false); setEditingTask(null) }} disabled={saving} className="btn-secondary flex-1 disabled:opacity-50">
                   Annuleren
                 </button>
               </div>
@@ -306,6 +360,71 @@ export default function WerkstudentPage() {
           </div>
         </div>
       )}
+
+      {/* Feedback Modal */}
+      {feedbackTaskId && (() => {
+        const task = tasks.find(t => t.id === feedbackTaskId)
+        if (!task) return null
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setFeedbackTaskId(null)}>
+            <div className="card p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>Feedback</h2>
+                <button onClick={() => setFeedbackTaskId(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                  <Icons.x size={18} className="text-gray-400" />
+                </button>
+              </div>
+              <p className="text-sm mb-4" style={{ color: 'var(--color-text-tertiary)' }}>
+                {task.title}
+              </p>
+
+              {/* Score buttons */}
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>Beoordeling</label>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {FEEDBACK_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFeedbackForm(f => ({ ...f, score: f.score === opt.value ? '' : opt.value }))}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all border text-center ${
+                      feedbackForm.score === opt.value
+                        ? `${opt.bg} ${opt.color} ${opt.border}`
+                        : 'border-transparent'
+                    }`}
+                    style={feedbackForm.score !== opt.value ? { background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' } : undefined}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Note */}
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Toelichting</label>
+              <textarea
+                value={feedbackForm.note}
+                onChange={e => setFeedbackForm(f => ({ ...f, note: e.target.value }))}
+                className="input-field mb-4"
+                rows={3}
+                placeholder="Wat ging goed? Wat kan beter?"
+              />
+
+              <div className="flex gap-3">
+                <button
+                  onClick={saveFeedback}
+                  disabled={savingFeedback}
+                  className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {savingFeedback && <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />}
+                  Opslaan
+                </button>
+                <button onClick={() => setFeedbackTaskId(null)} className="btn-secondary flex-1">
+                  Annuleren
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Active Tasks */}
       {activeTasks.length === 0 && completedTasks.length === 0 ? (
@@ -329,6 +448,7 @@ export default function WerkstudentPage() {
               const stat = STATUS_CONFIG[task.status] || STATUS_CONFIG.open
               const StatusIcon = stat.icon
               const overdue = task.status !== 'klaar' && isOverdue(task.deadline)
+              const fb = task.feedbackScore ? FEEDBACK_OPTIONS.find(o => o.value === task.feedbackScore) : null
 
               return (
                 <div key={task.id} className="card group hover:scale-[1.005] transition-all duration-200">
@@ -336,10 +456,10 @@ export default function WerkstudentPage() {
                     {/* Status toggle */}
                     <button
                       onClick={() => toggleStatus(task)}
-                      className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${stat.bg} hover:scale-110`}
+                      className={`mt-0.5 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${stat.bg} hover:scale-110`}
                       title={`Status: ${stat.label} → klik om te wijzigen`}
                     >
-                      <StatusIcon size={14} className={stat.color} />
+                      <StatusIcon size={15} className={stat.color} />
                     </button>
 
                     {/* Content */}
@@ -351,13 +471,18 @@ export default function WerkstudentPage() {
                         <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${pri.bg} ${pri.color} ${pri.border}`}>
                           {pri.label}
                         </span>
+                        {fb && (
+                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${fb.bg} ${fb.color}`}>
+                            {fb.label}
+                          </span>
+                        )}
                       </div>
                       {task.description && (
                         <p className="text-sm mt-1 line-clamp-2" style={{ color: 'var(--color-text-tertiary)' }}>
                           {task.description}
                         </p>
                       )}
-                      <div className="flex items-center gap-4 mt-2.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                      <div className="flex items-center gap-3 mt-2.5 text-xs flex-wrap" style={{ color: 'var(--color-text-tertiary)' }}>
                         {(() => {
                           const photo = getPhotoUrl(task.assigner.name)
                           return (
@@ -385,6 +510,14 @@ export default function WerkstudentPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      <button
+                        onClick={() => openFeedback(task)}
+                        className="p-2 rounded-lg transition-colors hover:bg-workx-lime/10"
+                        style={{ color: task.feedbackScore ? 'var(--color-text-secondary)' : 'var(--color-text-tertiary)' }}
+                        title="Feedback geven"
+                      >
+                        <Icons.star size={15} />
+                      </button>
                       <button
                         onClick={() => startEdit(task)}
                         className="p-2 rounded-lg transition-colors"
@@ -426,21 +559,34 @@ export default function WerkstudentPage() {
             <div className="space-y-2 opacity-60">
               {completedTasks.map(task => {
                 const pri = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.normaal
+                const fb = task.feedbackScore ? FEEDBACK_OPTIONS.find(o => o.value === task.feedbackScore) : null
                 return (
                   <div key={task.id} className="card group">
                     <div className="flex items-start gap-4 p-4">
                       <button
                         onClick={() => toggleStatus(task)}
-                        className="mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-500/15 hover:scale-110 transition-all"
+                        className="mt-0.5 w-8 h-8 rounded-xl flex items-center justify-center bg-emerald-500/15 hover:scale-110 transition-all"
                         title="Heropenen"
                       >
-                        <Icons.check size={14} className="text-emerald-400" />
+                        <Icons.check size={15} className="text-emerald-400" />
                       </button>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium line-through" style={{ color: 'var(--color-text-tertiary)' }}>
-                          {task.title}
-                        </h3>
-                        <div className="flex items-center gap-4 mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-medium line-through" style={{ color: 'var(--color-text-tertiary)' }}>
+                            {task.title}
+                          </h3>
+                          {fb && (
+                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${fb.bg} ${fb.color}`}>
+                              {fb.label}
+                            </span>
+                          )}
+                        </div>
+                        {task.feedbackNote && (
+                          <p className="text-xs mt-1 italic" style={{ color: 'var(--color-text-tertiary)' }}>
+                            &quot;{task.feedbackNote}&quot;
+                          </p>
+                        )}
+                        <div className="flex items-center gap-3 mt-1.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                           {(() => {
                             const photo = getPhotoUrl(task.assigner.name)
                             return (
@@ -466,6 +612,14 @@ export default function WerkstudentPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openFeedback(task)}
+                          className="p-2 rounded-lg transition-colors hover:bg-workx-lime/10"
+                          style={{ color: 'var(--color-text-tertiary)' }}
+                          title="Feedback"
+                        >
+                          <Icons.star size={15} />
+                        </button>
                         <button onClick={() => deleteTask(task.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors">
                           <Icons.trash size={15} />
                         </button>
