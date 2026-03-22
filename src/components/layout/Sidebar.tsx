@@ -47,8 +47,9 @@ function WorkxLogoBox() {
         const pixels = imgData.data
         for (let i = 0; i < pixels.length; i += 4) {
           const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2]
-          // Wit en lichte grijstinten → transparant (ruime drempel)
-          if (r > 220 && g > 220 && b > 220) {
+          // Verwijder wit/grijs maar behoud geel (geel heeft lage B ~133)
+          // Als B hoog is (>170) EN R en G ook hoog → wit/grijs → transparant
+          if (r > 190 && g > 190 && b > 170) {
             pixels[i + 3] = 0
           }
         }
