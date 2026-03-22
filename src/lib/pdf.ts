@@ -71,10 +71,8 @@ async function renderLogoPdfToCanvas(): Promise<string | null> {
   try {
     const pdfjsLib = await import('pdfjs-dist')
 
-    // Set worker source
-    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
-    }
+    // Use local worker to avoid CSP blocking external scripts
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
     const response = await fetch('/workx-logo.pdf')
     if (!response.ok) return null
