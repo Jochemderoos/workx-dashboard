@@ -39,8 +39,8 @@ function WorkxLogoBox() {
         canvas.width = viewport.width
         canvas.height = viewport.height
         const ctx = canvas.getContext('2d')!
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        // Transparante achtergrond (geen wit) voor dark mode
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
         await page.render({ canvas, canvasContext: ctx, viewport }).promise
         if (!cancelled) setLoaded(true)
       } catch {
