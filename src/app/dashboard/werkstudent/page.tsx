@@ -746,7 +746,7 @@ export default function WerkstudentPage() {
                       <div key={a.id} className="card p-4 relative group">
                         <button
                           onClick={() => removeSVAssignment(a.id)}
-                          className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center gap-1 text-xs"
+                          className="absolute top-3 right-3 z-10 px-2.5 py-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors flex items-center gap-1 text-xs font-medium"
                           title="Verwijderen"
                         >
                           <Icons.x size={12} />

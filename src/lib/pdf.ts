@@ -120,36 +120,41 @@ export function drawWorkxLogo(
   x: number = 0,
   y: number = 0,
   width: number = 55,
-  _logoDataUrl?: string | null
+  logoDataUrl?: string | null
 ) {
-  const height = width * 0.414
+  const height = width * 0.414 // Maintain logo aspect ratio (~210:87)
 
-  // Clean vector-style logo — geen afbeelding met schaduw
-  // Gebaseerd op het officiële Workx briefpapier
-  doc.setFillColor(249, 255, 133) // Workx geel
-  doc.roundedRect(x + 2, y + 1, width - 2, height - 1, 2, 2, 'F')
+  // Try to use the actual logo image first
+  const dataUrl = logoDataUrl || cachedLogoDataUrl
+  if (dataUrl) {
+    try {
+      doc.addImage(dataUrl, 'PNG', x, y, width, height)
+      return
+    } catch (error) {
+      console.error('Error adding logo image to PDF:', error)
+      // Fall through to text-based fallback
+    }
+  }
 
-  // Subtiele vouw-effect (zoals sticky note op briefpapier)
-  doc.setFillColor(235, 240, 110)
-  doc.triangle(
-    x + width - 2, y + 1,        // rechterbovenhoek
-    x + width, y + 1,
-    x + width, y + 5,
-    'F'
-  )
+  // Fallback: Draw text-based logo
+  const cornerRadius = 2
 
-  const centerX = x + width / 2 + 1
+  // Yellow background (#f9ff85)
+  doc.setFillColor(249, 255, 133)
+  doc.roundedRect(x, y, width, height, cornerRadius, cornerRadius, 'F')
 
-  // "Workx" — groot, bold
-  doc.setTextColor(25, 25, 25)
+  const centerX = x + width / 2
+
+  // "Workx" text - large, bold, centered
+  doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(width * 0.38)
-  doc.text('Workx', centerX, y + height * 0.52, { align: 'center' })
+  doc.setFontSize(width * 0.4)
+  doc.text('Workx', centerX, y + height * 0.55, { align: 'center' })
 
-  // "Advocaten" — kleiner, regular, rechts uitgelijnd
-  doc.setFontSize(width * 0.13)
+  // "ADVOCATEN" text
+  doc.setFontSize(width * 0.11)
   doc.setFont('helvetica', 'normal')
-  doc.text('Advocaten', x + width - 5, y + height * 0.82, { align: 'right' })
+  doc.text('A D V O C A T E N', centerX, y + height * 0.82, { align: 'center' })
 }
 
 // Create premium PDF header with Workx branding
