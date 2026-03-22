@@ -46,7 +46,9 @@ function WorkxLogoBox() {
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
         const pixels = imgData.data
         for (let i = 0; i < pixels.length; i += 4) {
-          if (pixels[i] > 240 && pixels[i + 1] > 240 && pixels[i + 2] > 240) {
+          const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2]
+          // Wit en lichte grijstinten → transparant (ruime drempel)
+          if (r > 220 && g > 220 && b > 220) {
             pixels[i + 3] = 0
           }
         }
