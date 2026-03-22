@@ -43,16 +43,14 @@ function WorkxLogoBox() {
         await page.render({ canvas, canvasContext: ctx, viewport }).promise
 
         // Witte pixels transparant maken (PDF heeft witte achtergrond ingebakken)
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const data = imageData.data
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i], g = data[i + 1], b = data[i + 2]
-          // Wit en bijna-wit → transparant
-          if (r > 240 && g > 240 && b > 240) {
-            data[i + 3] = 0
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const pixels = imgData.data
+        for (let i = 0; i < pixels.length; i += 4) {
+          if (pixels[i] > 240 && pixels[i + 1] > 240 && pixels[i + 2] > 240) {
+            pixels[i + 3] = 0
           }
         }
-        ctx.putImageData(imageData, 0, 0)
+        ctx.putImageData(imgData, 0, 0)
         if (!cancelled) setLoaded(true)
       } catch {
         // Fallback: keep canvas hidden, show nothing
