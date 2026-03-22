@@ -398,8 +398,15 @@ export default function WerkstudentPage() {
     for (let i = 1; i <= totalPages; i++) { doc.setPage(i); drawFooter() }
 
     const pdfBlob = doc.output('blob')
-    window.open(URL.createObjectURL(pdfBlob), '_blank')
-    toast.success('Stageverklaring PDF gegenereerd')
+    const url = URL.createObjectURL(pdfBlob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Stageverklaring_${sv.internName.replace(/\s+/g, '_') || 'stagiair'}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.success('Stageverklaring PDF gedownload')
   }
 
   const activeTasks = tasks.filter(t => t.status !== 'klaar')
