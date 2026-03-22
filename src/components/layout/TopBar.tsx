@@ -287,29 +287,23 @@ function TopBarComponent({ user }: TopBarProps) {
 
   return (
     <header className="h-16 border-b flex items-center justify-between px-4 md:px-8 relative z-[100]" style={{ borderColor: 'var(--color-border-subtle)', background: 'var(--color-bg-topbar)' }}>
-      {/* Mobile: Hamburger Menu + Home Button */}
-      <div className="md:hidden flex items-center gap-1">
+      {/* Mobile: Hamburger Menu + Logo */}
+      <div className="md:hidden flex items-center gap-2">
         <button
           onClick={() => setShowMobileMenu(!showMobileMenu)}
           className="p-2 rounded-lg transition-all" style={{ color: 'var(--color-text-secondary)' }}
         >
           {showMobileMenu ? <Icons.x size={24} /> : <Icons.menu size={24} />}
         </button>
-        {pathname !== '/dashboard' && (
-          <Link
-            href="/dashboard"
-            className="relative p-1.5 rounded-lg hover:bg-workx-lime/10 transition-all group"
-            title="Naar Dashboard"
-          >
-            <Image
-              src="/workx-pand.png"
-              alt="Home"
-              width={28}
-              height={28}
-              className="h-7 w-auto opacity-50 group-hover:opacity-90 transition-all drop-shadow-[0_0_8px_rgba(249,255,133,0.3)] group-hover:drop-shadow-[0_0_12px_rgba(249,255,133,0.5)]"
-            />
-          </Link>
-        )}
+        <Link href="/dashboard" title="Naar Dashboard">
+          <Image
+            src="/workx-logo.png"
+            alt="Workx Advocaten"
+            width={100}
+            height={32}
+            className="h-8 w-auto"
+          />
+        </Link>
       </div>
 
       {/* Left: Greeting (desktop only) */}
