@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import React, { memo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -17,16 +17,45 @@ interface SidebarProps {
   }
 }
 
-// Official Workx logo — SVG for crisp rendering on all backgrounds
+// Official Workx logo — rendered from vector PDF via canvas
 function WorkxLogoBox() {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null)
+  const [loaded, setLoaded] = React.useState(false)
+
+  React.useEffect(() => {
+    let cancelled = false
+    async function render() {
+      try {
+        const pdfjsLib = await import('pdfjs-dist')
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+        const response = await fetch('/workx-logo.pdf')
+        if (!response.ok || cancelled) return
+        const data = await response.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data }).promise
+        const page = await pdf.getPage(1)
+        const viewport = page.getViewport({ scale: 3 })
+        const canvas = canvasRef.current
+        if (!canvas || cancelled) return
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        await page.render({ canvas, canvasContext: ctx, viewport }).promise
+        if (!cancelled) setLoaded(true)
+      } catch {
+        // Fallback: keep canvas hidden, show nothing
+      }
+    }
+    render()
+    return () => { cancelled = true }
+  }, [])
+
   return (
-    <img
-      src="/workx-logo.svg"
-      alt="Workx Advocaten"
-      width={180}
-      height={56}
-      className="h-14 w-auto"
-      draggable={false}
+    <canvas
+      ref={canvasRef}
+      className={`h-14 w-auto transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      style={{ imageRendering: 'auto' }}
     />
   )
 }
