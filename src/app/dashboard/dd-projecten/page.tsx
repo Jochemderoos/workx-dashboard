@@ -729,10 +729,11 @@ export default function DDProjectenPage() {
                     <span className="text-xs font-mono tabular-nums font-semibold" style={{ color: 'var(--color-text-primary)' }}>{c.totalHours}u</span>
                     <button
                       onClick={(e) => { e.stopPropagation(); hideProject(c.fullProjectName) }}
-                      className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400/0 hover:text-red-400 transition-all"
-                      title="Project verbergen"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all text-[10px] font-medium"
+                      title="Project verbergen (komt niet meer terug)"
                     >
-                      <Icons.x size={12} />
+                      <Icons.x size={10} />
+                      Verberg
                     </button>
                   </div>
                 </div>
