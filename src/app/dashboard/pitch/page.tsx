@@ -1088,7 +1088,7 @@ export default function PitchPage() {
                 Live Preview
               </h2>
 
-              <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[calc(100dvh-200px)] overflow-y-auto pr-1">
                 {/* Draggable page previews */}
                 {previewPages.length > 0 ? (
                   <>

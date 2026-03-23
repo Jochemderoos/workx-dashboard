@@ -1468,7 +1468,7 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
     >
       <div
         className="w-full max-w-4xl bg-workx-dark border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl animate-modal-in flex flex-col"
-        style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }}
+        style={{ maxHeight: 'calc(100dvh - 4vh - 16px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {content}

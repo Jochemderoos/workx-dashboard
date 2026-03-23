@@ -131,7 +131,7 @@ export function Modal({
           left: '50%',
           transform: topPosition !== null ? 'translateX(-50%)' : 'translate(-50%, -50%)',
           opacity: isPositioned ? 1 : 0,
-          maxHeight: 'calc(100vh - 32px)',
+          maxHeight: 'calc(100dvh - 32px)',
         }}
         className={`bg-workx-gray rounded-2xl w-[calc(100%-32px)] ${maxWidthClasses[maxWidth]} border border-white/10 shadow-2xl transition-opacity duration-150 flex flex-col`}
         onClick={(e) => e.stopPropagation()}

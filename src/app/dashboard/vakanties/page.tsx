@@ -705,7 +705,7 @@ export default function VakantiesPage() {
 
   if (isLoading) {
     return (
-      <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
+      <div className="h-[calc(100dvh-10rem)] flex items-center justify-center">
         <div className="text-center">
           <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
           <p className="text-gray-400">Vakanties laden...</p>
@@ -2539,7 +2539,7 @@ export default function VakantiesPage() {
           onClick={() => { setShowPeriodModal(false); setEditingPeriod(null) }}
         >
           <div
-            className="w-full max-w-md bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[calc(100vh-32px)] overflow-y-auto animate-modal-in"
+            className="w-full max-w-md bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[calc(100dvh-32px)] overflow-y-auto animate-modal-in"
             onClick={e => e.stopPropagation()}
           >
             <div className="p-5 border-b border-white/5 flex items-center justify-between">
@@ -2586,7 +2586,7 @@ export default function VakantiesPage() {
           onClick={() => { setShowDayModal(false); setModalClickY(undefined) }}
         >
           <div
-            className="w-full max-w-lg bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[calc(100vh-32px)] overflow-hidden flex flex-col animate-modal-in"
+            className="w-full max-w-lg bg-workx-gray rounded-2xl border border-white/10 shadow-2xl max-h-[calc(100dvh-32px)] overflow-hidden flex flex-col animate-modal-in"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}

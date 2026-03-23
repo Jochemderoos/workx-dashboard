@@ -741,7 +741,7 @@ export default function OverdrachtPage() {
 
   if (isLoading) {
     return (
-      <div className="h-[calc(100vh-10rem)] flex items-center justify-center">
+      <div className="h-[calc(100dvh-10rem)] flex items-center justify-center">
         <div className="text-center">
           <span className="w-8 h-8 border-2 border-workx-lime border-t-transparent rounded-full animate-spin inline-block mb-4" />
           <p className="text-gray-400">Laden...</p>

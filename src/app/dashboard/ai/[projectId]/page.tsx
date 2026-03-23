@@ -365,7 +365,7 @@ export default function ProjectDetailPage() {
   const displayIcon = PROJECT_ICONS[project.icon] || project.icon
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 110px)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - 110px)' }}>
       {/* Compact project bar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/[0.06] flex-shrink-0">
         <div className="flex items-center gap-3">

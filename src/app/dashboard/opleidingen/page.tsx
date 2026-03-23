@@ -833,7 +833,7 @@ export default function OpleidingenPage() {
         <title>Certificaat - ${cert.trainingName}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #333; display: flex; align-items: center; justify-content: center; min-height: 100dvh; }
           .certificate { max-width: 650px; width: 100%; margin: 0 auto; text-align: center; border: 3px solid #f9ff85; padding: 50px 40px; border-radius: 12px; position: relative; }
           .certificate::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid #f0f0f0; border-radius: 8px; pointer-events: none; }
           .logo { margin-bottom: 10px; }
@@ -1008,7 +1008,7 @@ export default function OpleidingenPage() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; }
-          .certificate { padding: 40px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+          .certificate { padding: 40px; min-height: 100dvh; display: flex; align-items: center; justify-content: center; }
           .certificate-inner { max-width: 650px; width: 100%; text-align: center; border: 3px solid #f9ff85; padding: 50px 40px; border-radius: 12px; background: white; position: relative; }
           .certificate-inner::before { content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border: 1px solid #f0f0f0; border-radius: 8px; pointer-events: none; }
           .page-break { page-break-before: always; }
@@ -1634,7 +1634,7 @@ export default function OpleidingenPage() {
                                   if (cert.certificateUrl!.startsWith('data:application/pdf')) {
                                     w.document.write(`<iframe src="${cert.certificateUrl}" style="width:100%;height:100%;border:none;position:absolute;top:0;left:0;" /></iframe>`)
                                   } else {
-                                    w.document.write(`<html><head><title>${cert.trainingName}</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#111;}</style></head><body><img src="${cert.certificateUrl}" style="max-width:100%;max-height:100vh;" /></body></html>`)
+                                    w.document.write(`<html><head><title>${cert.trainingName}</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100dvh;background:#111;}</style></head><body><img src="${cert.certificateUrl}" style="max-width:100%;max-height:100dvh;" /></body></html>`)
                                   }
                                   w.document.title = cert.trainingName
                                 }

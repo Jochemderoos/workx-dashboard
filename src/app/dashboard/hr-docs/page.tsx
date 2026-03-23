@@ -476,7 +476,7 @@ export default function HRDocsPage() {
       <div className="flex gap-6 relative">
         {/* Sidebar - Table of Contents */}
         <aside className="hidden lg:block w-72 flex-shrink-0 self-start sticky top-2">
-          <div className="card p-4 max-h-[calc(100vh-6rem)] hr-docs-sidebar">
+          <div className="card p-4 max-h-[calc(100dvh-6rem)] hr-docs-sidebar">
             {/* Search */}
             <div className="relative mb-4">
               <Icons.search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={16} />
