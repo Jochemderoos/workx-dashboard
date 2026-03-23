@@ -479,8 +479,8 @@ export default function WerkstudentPage() {
 
       {/* Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 sm:p-4" style={{ paddingTop: '2vh' }} onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
-          <div className="w-full max-w-2xl card flex flex-col" style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-start justify-center sm:p-4 sm:pt-[2vh]" onClick={() => { if (!saving) { setShowForm(false); setEditingTask(null) } }}>
+          <div className="w-full sm:max-w-2xl card flex flex-col h-[85dvh] sm:h-auto sm:max-h-[calc(100vh-4vh-16px)] rounded-b-none sm:rounded-b-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 border-b shrink-0" style={{ borderColor: 'var(--color-border)' }}>
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {editingTask ? 'Opdracht bewerken' : 'Nieuwe opdracht'}
