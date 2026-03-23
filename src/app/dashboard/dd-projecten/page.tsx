@@ -694,43 +694,55 @@ export default function DDProjectenPage() {
                         </div>
                       )
                     })}
-                    {/* Add member button */}
+                    {/* Wijzig team button */}
                     <button
-                      onClick={() => setAddingMemberTo(addingMemberTo === c.fullProjectName ? null : c.fullProjectName)}
-                      className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors border border-dashed"
+                      onClick={(e) => { e.stopPropagation(); setAddingMemberTo(addingMemberTo === c.fullProjectName ? null : c.fullProjectName) }}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium border border-dashed transition-colors hover:border-workx-lime/30 hover:text-workx-lime"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
-                      title="Teamlid toevoegen"
                     >
-                      <Icons.plus size={12} />
+                      <Icons.edit size={10} />
+                      Wijzig team
                     </button>
-                    {/* Member picker dropdown */}
-                    {addingMemberTo === c.fullProjectName && (
-                      <div className="absolute top-8 left-0 z-20 rounded-xl border shadow-xl p-2 min-w-[200px] max-h-60 overflow-y-auto" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+                  </div>
+                  {/* Team edit panel */}
+                  {addingMemberTo === c.fullProjectName && (
+                    <div className="mt-2 rounded-xl border p-3" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Teamleden toevoegen / verwijderen</span>
+                        <button onClick={() => setAddingMemberTo(null)} className="p-1 rounded hover:bg-white/10 transition-colors">
+                          <Icons.x size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
                         {teamMembers.map(u => {
-                          const alreadyIn = c.memberNames.includes(u.name)
+                          const isIn = c.memberNames.includes(u.name)
                           const photo = getPhotoUrl(u.name)
                           return (
                             <button
                               key={u.id}
-                              onClick={() => { toggleExtraMember(c.fullProjectName, u.name, c.memberNames); setAddingMemberTo(null) }}
-                              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left ${alreadyIn ? 'opacity-50' : 'hover:opacity-80'}`}
-                              style={{ background: alreadyIn ? 'var(--color-bg-tertiary)' : 'transparent', color: 'var(--color-text-primary)' }}
+                              onClick={() => toggleExtraMember(c.fullProjectName, u.name, c.memberNames)}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all border ${
+                                isIn
+                                  ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30'
+                                  : 'border-transparent hover:border-white/10'
+                              }`}
+                              style={!isIn ? { background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' } : undefined}
                             >
                               {photo ? (
-                                <Image src={photo} alt={u.name} width={20} height={20} className="w-5 h-5 rounded-lg object-cover" />
+                                <Image src={photo} alt={u.name} width={18} height={18} className="w-[18px] h-[18px] rounded-md object-cover" />
                               ) : (
-                                <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                                  <span className="text-[9px] font-medium text-white">{u.name.charAt(0)}</span>
+                                <div className="w-[18px] h-[18px] rounded-md bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                                  <span className="text-[8px] font-medium text-white">{u.name.charAt(0)}</span>
                                 </div>
                               )}
-                              <span>{u.name}</span>
-                              {alreadyIn && <Icons.check size={12} className="ml-auto text-workx-lime" />}
+                              {u.name.split(' ')[0]}
+                              {isIn && <Icons.check size={10} />}
                             </button>
                           )
                         })}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {/* Expected hours inline edit */}
                   {isEditingEst ? (
                     <form className="flex items-center gap-1.5" onSubmit={e => { e.preventDefault(); const h = parseFloat(estimateInput); if (h > 0) saveEstimate(c.fullProjectName, h) }}>
