@@ -56,11 +56,11 @@ export default function StaleVersionGuard() {
       if (document.getElementById('workx-update-banner')) return // Already showing
       const banner = document.createElement('div')
       banner.id = 'workx-update-banner'
-      banner.style.cssText = 'position:fixed;top:12px;right:12px;z-index:9999;padding:10px 16px;border-radius:12px;background:rgba(30,30,30,0.95);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);font-size:12px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,0.3);'
+      banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;padding:8px 16px;background:rgba(249,255,133,0.95);color:rgba(30,30,30,0.9);font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,0.15);'
       banner.innerHTML = `
-        <span>Nieuwe versie beschikbaar</span>
-        <button onclick="window.location.reload()" style="padding:4px 12px;border-radius:8px;background:rgba(249,255,133,0.15);border:1px solid rgba(249,255,133,0.3);color:rgb(249,255,133);font-size:11px;font-weight:600;cursor:pointer;">Ververs</button>
-        <button onclick="this.parentElement.remove()" style="padding:2px 6px;border:none;background:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:14px;">&times;</button>
+        <span>Er is een nieuwe versie beschikbaar</span>
+        <button onclick="window.location.reload()" style="padding:5px 14px;border-radius:8px;background:rgba(30,30,30,0.9);border:none;color:rgb(249,255,133);font-size:12px;font-weight:600;cursor:pointer;">Ververs pagina</button>
+        <button onclick="this.parentElement.remove()" style="padding:2px 8px;border:none;background:none;color:rgba(30,30,30,0.4);cursor:pointer;font-size:16px;font-weight:bold;">&times;</button>
       `
       document.body.appendChild(banner)
     }
