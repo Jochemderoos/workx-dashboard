@@ -27,7 +27,17 @@ interface Task {
   feedbackScore: string | null
   feedbackNote: string | null
   createdAt: string
+  werkstudentId: string | null
   assigner: { id: string; name: string }
+}
+
+interface WerkstudentPerson {
+  id: string
+  name: string
+  startDate: string | null
+  endDate: string | null
+  isActive: boolean
+  _count: { tasks: number }
 }
 
 interface StageverklaringAssignment {
@@ -71,6 +81,10 @@ const FEEDBACK_OPTIONS = [
 export default function WerkstudentPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([])
+  const [werkstudenten, setWerkstudenten] = useState<WerkstudentPerson[]>([])
+  const [selectedWsId, setSelectedWsId] = useState<string | null>(null)
+  const [showNewWs, setShowNewWs] = useState(false)
+  const [newWsName, setNewWsName] = useState('')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -83,10 +97,27 @@ export default function WerkstudentPage() {
   const [showStageverklaring, setShowStageverklaring] = useState(false)
   const [stageverklaring, setStageverklaring] = useState<StageverklaringData | null>(null)
 
+  const fetchWerkstudenten = useCallback(async () => {
+    try {
+      const res = await fetch('/api/werkstudent?type=werkstudenten')
+      if (res.ok) {
+        const data = await res.json()
+        setWerkstudenten(data)
+        // Auto-select active werkstudent if none selected
+        if (!selectedWsId && data.length > 0) {
+          const active = data.find((w: WerkstudentPerson) => w.isActive)
+          if (active) setSelectedWsId(active.id)
+          else setSelectedWsId(data[0].id)
+        }
+      }
+    } catch { /* ignore */ }
+  }, [selectedWsId])
+
   const fetchTasks = useCallback(async () => {
     try {
+      const url = selectedWsId ? `/api/werkstudent?werkstudentId=${selectedWsId}` : '/api/werkstudent'
       const [taskRes, teamRes] = await Promise.all([
-        fetch('/api/werkstudent'),
+        fetch(url),
         fetch('/api/claude/users'),
       ])
       if (taskRes.ok) setTasks(await taskRes.json())
@@ -99,9 +130,30 @@ export default function WerkstudentPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [selectedWsId])
 
+  useEffect(() => { fetchWerkstudenten() }, [fetchWerkstudenten])
   useEffect(() => { fetchTasks() }, [fetchTasks])
+
+  const createWerkstudent = async () => {
+    if (!newWsName.trim()) return
+    try {
+      const res = await fetch('/api/werkstudent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'werkstudent', name: newWsName.trim() }),
+      })
+      if (!res.ok) throw new Error()
+      const ws = await res.json()
+      setSelectedWsId(ws.id)
+      setNewWsName('')
+      setShowNewWs(false)
+      fetchWerkstudenten()
+      toast.success(`${ws.name} aangemaakt`)
+    } catch {
+      toast.error('Kon werkstudent niet aanmaken')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,7 +161,7 @@ export default function WerkstudentPage() {
 
     setSaving(true)
     try {
-      const payload = { ...form, deadline: form.deadline || null, assignerId: form.assignerId || undefined }
+      const payload = { ...form, deadline: form.deadline || null, assignerId: form.assignerId || undefined, werkstudentId: selectedWsId }
       const res = editingTask
         ? await fetch('/api/werkstudent', {
             method: 'PUT',
@@ -208,6 +260,7 @@ export default function WerkstudentPage() {
 
   // === Stageverklaring functions ===
   const openStageverklaring = () => {
+    const selectedWs = werkstudenten.find(w => w.id === selectedWsId)
     // Alle taken inladen (niet alleen klaar) — user kan verwijderen wat niet relevant is
     const assignments: StageverklaringAssignment[] = tasks.map(t => ({
       id: t.id,
@@ -219,8 +272,8 @@ export default function WerkstudentPage() {
     const startDates = tasks.map(t => new Date(t.createdAt).getTime())
     const endDates = tasks.filter(t => t.completedAt).map(t => new Date(t.completedAt!).getTime())
     setStageverklaring({
-      internName: '',
-      periodStart: startDates.length ? new Date(Math.min(...startDates)).toISOString().split('T')[0] : '',
+      internName: selectedWs?.name || '',
+      periodStart: selectedWs?.startDate ? new Date(selectedWs.startDate).toISOString().split('T')[0] : (startDates.length ? new Date(Math.min(...startDates)).toISOString().split('T')[0] : ''),
       periodEnd: endDates.length ? new Date(Math.max(...endDates)).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       department: 'Arbeidsrecht',
       assignments,
@@ -459,6 +512,56 @@ export default function WerkstudentPage() {
             <span className="hidden sm:inline">Nieuwe opdracht</span>
             <span className="sm:hidden">Nieuw</span>
           </button>
+        </div>
+      </div>
+
+      {/* Werkstudent selector */}
+      <div className="card p-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Werkstudent:</span>
+          {werkstudenten.map(ws => (
+            <button
+              key={ws.id}
+              onClick={() => setSelectedWsId(ws.id)}
+              className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all border ${
+                selectedWsId === ws.id
+                  ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30'
+                  : 'border-transparent'
+              } ${!ws.isActive ? 'opacity-50' : ''}`}
+              style={selectedWsId !== ws.id ? { background: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' } : undefined}
+            >
+              {ws.name}
+              <span className="ml-1.5 text-xs opacity-60">({ws._count.tasks})</span>
+            </button>
+          ))}
+          {showNewWs ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newWsName}
+                onChange={e => setNewWsName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && createWerkstudent()}
+                className="input-field !py-1.5 !px-3 text-sm w-40"
+                placeholder="Naam..."
+                autoFocus
+              />
+              <button onClick={createWerkstudent} className="p-1.5 rounded-lg bg-workx-lime/15 text-workx-lime hover:bg-workx-lime/25 transition-colors">
+                <Icons.check size={14} />
+              </button>
+              <button onClick={() => { setShowNewWs(false); setNewWsName('') }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" style={{ color: 'var(--color-text-tertiary)' }}>
+                <Icons.x size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowNewWs(true)}
+              className="px-3 py-1.5 rounded-xl text-sm font-medium border border-dashed transition-colors hover:border-workx-lime/30 hover:text-workx-lime"
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
+            >
+              <Icons.plus size={12} className="inline mr-1" />
+              Nieuw
+            </button>
+          )}
         </div>
       </div>
 
