@@ -102,14 +102,37 @@ export async function POST(req: NextRequest) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const XLSX = require('xlsx')
-        const workbook = XLSX.read(buffer, { type: 'buffer' })
+        const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true, cellNF: true })
         const parts: string[] = [`--- Excel: ${meta.fileName} ---\n`]
+        parts.push(`Aantal tabbladen: ${workbook.SheetNames.length}\n`)
         for (const sheetName of workbook.SheetNames) {
           const sheet = workbook.Sheets[sheetName]
-          const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false })
-          if (csv.trim()) {
-            parts.push(`\n## Tabblad: ${sheetName}\n`)
-            parts.push(csv)
+          const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false }) as Record<string, string>[]
+          if (jsonData.length === 0) continue
+          const headers = Object.keys(jsonData[0])
+          parts.push(`\n## Tabblad: ${sheetName}`)
+          parts.push(`Aantal rijen: ${jsonData.length}`)
+          parts.push(`Kolommen: ${headers.join(' | ')}\n`)
+          parts.push(`| Rij | ${headers.join(' | ')} |`)
+          parts.push(`| --- | ${headers.map(() => '---').join(' | ')} |`)
+          for (let i = 0; i < jsonData.length; i++) {
+            const row = jsonData[i]
+            const values = headers.map(h => {
+              const val = String(row[h] || '').replace(/\|/g, '/').replace(/\n/g, ' ').trim()
+              return val.length > 100 ? val.substring(0, 97) + '...' : val
+            })
+            parts.push(`| ${i + 1} | ${values.join(' | ')} |`)
+          }
+          // Column value summaries for categorical data
+          for (const header of headers) {
+            const values = jsonData.map(r => String(r[header] || '').trim()).filter(v => v)
+            const unique = new Set(values)
+            if (unique.size > 1 && unique.size <= 20 && values.length >= 3) {
+              const counts: Record<string, number> = {}
+              for (const v of values) counts[v] = (counts[v] || 0) + 1
+              const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+              parts.push(`\nSamenvatting kolom "${header}": ${sorted.map(([v, c]) => `${v}: ${c}x`).join(', ')}`)
+            }
           }
         }
         textContent = parts.join('\n').trim() || '[Geen data gevonden in Excel bestand]'
