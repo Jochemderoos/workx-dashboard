@@ -1044,12 +1044,28 @@ export default function DDProjectenPage() {
                     </div>
 
                     {q.scope && (
-                      <p className="text-xs mt-2 line-clamp-2" style={{ color: 'var(--color-text-tertiary)' }}>{q.scope}</p>
+                      <div className="mt-3 rounded-xl border p-3 space-y-1" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-tertiary)' }}>
+                        {q.scope.split('\n').map((line, li) => {
+                          const trimmed = line.trim()
+                          if (!trimmed) return <div key={li} className="h-1" />
+                          if (trimmed === 'SCOPE:' || trimmed === 'ASSUMPTIES:' || trimmed === 'BUITEN SCOPE:' || trimmed === 'LEERPUNT:' || trimmed === 'TARIEVEN:') {
+                            const colors: Record<string, string> = {
+                              'SCOPE:': 'text-workx-lime',
+                              'ASSUMPTIES:': 'text-blue-400',
+                              'BUITEN SCOPE:': 'text-red-400',
+                              'LEERPUNT:': 'text-orange-400',
+                              'TARIEVEN:': 'text-purple-400',
+                            }
+                            return <p key={li} className={`text-[11px] font-bold uppercase tracking-wider mt-1 ${colors[trimmed] || ''}`}>{trimmed}</p>
+                          }
+                          return <p key={li} className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{trimmed}</p>
+                        })}
+                      </div>
                     )}
                     {q.notes && (
                       <details className="mt-2">
-                        <summary className="text-xs cursor-pointer" style={{ color: 'var(--color-text-tertiary)' }}>Notities</summary>
-                        <p className="text-xs mt-1 whitespace-pre-line" style={{ color: 'var(--color-text-secondary)' }}>{q.notes}</p>
+                        <summary className="text-xs cursor-pointer font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Notities & historie</summary>
+                        <p className="text-xs mt-1 whitespace-pre-line px-2" style={{ color: 'var(--color-text-secondary)' }}>{q.notes}</p>
                       </details>
                     )}
                   </div>
