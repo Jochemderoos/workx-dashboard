@@ -100,12 +100,36 @@ const MEMBER_COLORS = [
   'from-indigo-500 to-indigo-400',
 ]
 
+interface FeeQuote {
+  id: string
+  projectName: string
+  client: string
+  sector: string | null
+  targetName: string | null
+  employees: number | null
+  feeMin: number
+  feeMax: number
+  actualFee: number | null
+  actualHours: number | null
+  partnerRate: number | null
+  seniorRate: number | null
+  scope: string | null
+  notes: string | null
+  hasWorksCouncil: boolean
+  hasCao: boolean
+  hasPension: boolean
+  status: string
+  quotedAt: string
+}
+
 export default function DDProjectenPage() {
   const { data: session } = useSession()
+  const [activeTab, setActiveTab] = useState<'projecten' | 'feequotes'>('projecten')
   const [projects, setProjects] = useState<Project[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [workloadData, setWorkloadData] = useState<WorkloadEntry[]>([])
   const [estimates, setEstimates] = useState<DDEstimate[]>([])
+  const [feeQuotes, setFeeQuotes] = useState<FeeQuote[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
@@ -119,11 +143,12 @@ export default function DDProjectenPage() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [projRes, teamRes, wlRes, estRes] = await Promise.all([
+      const [projRes, teamRes, wlRes, estRes, fqRes] = await Promise.all([
         fetch('/api/dd-projecten'),
         fetch('/api/claude/users'),
         fetch('/api/workload/details?weeks=4'),
         fetch('/api/dd-projecten/estimates'),
+        fetch('/api/dd-projecten/fee-quotes'),
       ])
       if (projRes.ok) setProjects(await projRes.json())
       if (teamRes.ok) {
@@ -132,6 +157,7 @@ export default function DDProjectenPage() {
       }
       if (wlRes.ok) setWorkloadData(await wlRes.json())
       if (estRes.ok) setEstimates(await estRes.json())
+      if (fqRes.ok) setFeeQuotes(await fqRes.json())
     } catch {
       toast.error('Kon gegevens niet laden')
     } finally {
@@ -468,6 +494,27 @@ export default function DDProjectenPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setActiveTab('projecten')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            activeTab === 'projecten' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          Projecten
+        </button>
+        <button
+          onClick={() => setActiveTab('feequotes')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            activeTab === 'feequotes' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          Fee Quotes ({feeQuotes.length})
+        </button>
+      </div>
+
+      {activeTab === 'projecten' ? (<>
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-xl border p-4 transition-colors" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
@@ -939,6 +986,87 @@ export default function DDProjectenPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      </>) : (
+        /* Fee Quotes Tab */
+        <div className="space-y-4">
+          {/* Group by client */}
+          {DD_CLIENTS.map(client => {
+            const clientQuotes = feeQuotes.filter(q => q.client === client)
+            if (clientQuotes.length === 0) return null
+            const cc = CLIENT_COLORS[client] || CLIENT_COLORS['De Breij']
+            return (
+              <div key={client} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${cc.dot}`} />
+                  <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>{client}</h2>
+                  <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>({clientQuotes.length})</span>
+                </div>
+                {clientQuotes.map(q => (
+                  <div key={q.id} className="rounded-2xl border p-4 hover:shadow-md transition-all" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>{q.projectName}</span>
+                          {q.sector && <span className="px-2 py-0.5 text-[10px] rounded-full" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>{q.sector}</span>}
+                          {q.status === 'completed' && <span className="px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/15 text-emerald-400">Afgerond</span>}
+                        </div>
+                        {q.targetName && <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Target: {q.targetName}</p>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                          €{q.feeMin.toLocaleString('nl-NL')} – €{q.feeMax.toLocaleString('nl-NL')}
+                        </div>
+                        {q.actualFee && (
+                          <div className="text-xs text-orange-400">Werkelijk: €{q.actualFee.toLocaleString('nl-NL')}</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-2.5">
+                      {q.employees && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px]" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}>
+                          <Icons.users size={10} /> {q.employees} werknemers
+                        </span>
+                      )}
+                      {q.hasWorksCouncil && <span className="px-2 py-0.5 rounded-lg text-[11px] bg-blue-500/10 text-blue-400">OR</span>}
+                      {q.hasCao && <span className="px-2 py-0.5 rounded-lg text-[11px] bg-purple-500/10 text-purple-400">CAO</span>}
+                      {q.hasPension && <span className="px-2 py-0.5 rounded-lg text-[11px] bg-amber-500/10 text-amber-400">Pensioen</span>}
+                      {q.partnerRate && <span className="px-2 py-0.5 rounded-lg text-[11px]" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>Partner: €{q.partnerRate}/u</span>}
+                      {q.seniorRate && <span className="px-2 py-0.5 rounded-lg text-[11px]" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>Senior: €{q.seniorRate}/u</span>}
+                      <span className="px-2 py-0.5 rounded-lg text-[11px]" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
+                        {new Date(q.quotedAt).toLocaleDateString('nl-NL', { month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+
+                    {q.scope && (
+                      <p className="text-xs mt-2 line-clamp-2" style={{ color: 'var(--color-text-tertiary)' }}>{q.scope}</p>
+                    )}
+                    {q.notes && (
+                      <details className="mt-2">
+                        <summary className="text-xs cursor-pointer" style={{ color: 'var(--color-text-tertiary)' }}>Notities</summary>
+                        <p className="text-xs mt-1 whitespace-pre-line" style={{ color: 'var(--color-text-secondary)' }}>{q.notes}</p>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+          {/* Quotes without known client */}
+          {feeQuotes.filter(q => !DD_CLIENTS.includes(q.client)).length > 0 && (
+            <div className="space-y-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>Overig</h2>
+              {feeQuotes.filter(q => !DD_CLIENTS.includes(q.client)).map(q => (
+                <div key={q.id} className="rounded-2xl border p-4" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>{q.projectName}</span>
+                  <span className="ml-2 text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>€{q.feeMin.toLocaleString('nl-NL')} – €{q.feeMax.toLocaleString('nl-NL')}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

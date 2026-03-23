@@ -1771,6 +1771,33 @@ model DDProject {
 }
 
 // Verwachte uren voor werkdruk-gebaseerde DD projecten (key = projectName)
+model DDFeeQuote {
+  id              String   @id @default(cuid())
+  projectName     String
+  client          String   // DD client: De Breij, Stek, JB Law, etc.
+  sector          String?  // Branche/sector: horeca, automotive, uitzend, etc.
+  targetName      String?  // Naam target bedrijf
+  employees       Int?     // Aantal werknemers
+  feeMin          Float    // Minimum fee EUR excl. btw
+  feeMax          Float    // Maximum fee EUR excl. btw
+  actualFee       Float?   // Daadwerkelijk gedeclareerd
+  actualHours     Float?   // Daadwerkelijke uren
+  partnerRate     Float?   // Uurtarief partner
+  seniorRate      Float?   // Uurtarief senior medewerker
+  scope           String?  @db.Text // Scope beschrijving
+  notes           String?  @db.Text // Opmerkingen
+  hasWorksCouncil Boolean  @default(false)
+  hasCao          Boolean  @default(false)
+  hasPension      Boolean  @default(false)
+  status          String   @default("quoted") // quoted, active, completed
+  quotedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([client])
+  @@index([status])
+}
+
 model DDProjectEstimate {
   id              String   @id @default(cuid())
   projectName     String   @unique // Full project name from workload data
