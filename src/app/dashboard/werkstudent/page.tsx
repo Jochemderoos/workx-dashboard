@@ -433,7 +433,7 @@ export default function WerkstudentPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             Werkstudent
@@ -445,17 +445,19 @@ export default function WerkstudentPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={openStageverklaring}
-            className="btn-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2 text-sm"
           >
-            <Icons.fileText size={16} />
-            Stageverklaring
+            <Icons.fileText size={14} />
+            <span className="hidden sm:inline">Stageverklaring</span>
+            <span className="sm:hidden">Stage</span>
           </button>
           <button
             onClick={() => { setShowForm(true); setEditingTask(null); setForm({ title: '', description: '', deadline: '', priority: 'normaal', assignerId: '' }) }}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center gap-2 text-sm"
           >
-            <Icons.plus size={16} />
-            Nieuwe opdracht
+            <Icons.plus size={14} />
+            <span className="hidden sm:inline">Nieuwe opdracht</span>
+            <span className="sm:hidden">Nieuw</span>
           </button>
         </div>
       </div>
@@ -546,7 +548,7 @@ export default function WerkstudentPage() {
                 </div>
                 <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-tertiary)' }}>Leeg = jijzelf als opdrachtgever</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Deadline</label>
                   <DatePicker
@@ -558,13 +560,13 @@ export default function WerkstudentPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Prioriteit</label>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
                       <button
                         key={key}
                         type="button"
                         onClick={() => setForm({ ...form, priority: key })}
-                        className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all border flex-1 ${
+                        className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all border ${
                           form.priority === key
                             ? `${cfg.bg} ${cfg.color} ${cfg.border}`
                             : 'border-transparent'
@@ -612,7 +614,7 @@ export default function WerkstudentPage() {
 
               {/* Score buttons */}
               <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>Beoordeling</label>
-              <div className="grid grid-cols-4 gap-2 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                 {FEEDBACK_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
