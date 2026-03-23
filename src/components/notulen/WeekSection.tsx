@@ -247,8 +247,8 @@ export default function WeekSection({
             )}
           </div>
 
-          {/* Werkverdeling */}
-          {distributions.length > 0 && (
+          {/* Werkverdeling — altijd tonen zodat je kunt invullen */}
+          {(
             <div>
               <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3 px-1">Werkverdelingsgesprekken</h4>
               <WerkverdelingTable

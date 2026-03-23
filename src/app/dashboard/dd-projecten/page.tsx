@@ -239,10 +239,11 @@ export default function DDProjectenPage() {
       if (!client) continue
       const hours = entry.workedHours || entry.billableHours || 0
       if (hours <= 0 || entry.date < d10) continue
+      const cleanName = entry.projectName.includes('/') ? entry.projectName.split('/').slice(1).join('/').trim() : entry.projectName
       if (!teamProjectsMap.has(entry.personName)) teamProjectsMap.set(entry.personName, [])
-      const existing = teamProjectsMap.get(entry.personName)!.find(p => p.projectName === entry.projectName)
+      const existing = teamProjectsMap.get(entry.personName)!.find(p => p.projectName === cleanName)
       if (existing) existing.hours += hours
-      else teamProjectsMap.get(entry.personName)!.push({ projectName: entry.projectName.includes('/') ? entry.projectName.split('/').slice(1).join('/').trim() : entry.projectName, client, hours })
+      else teamProjectsMap.get(entry.personName)!.push({ projectName: cleanName, client, hours })
     }
     // Add manual project members
     for (const p of unmatched) {
