@@ -578,28 +578,81 @@ export default function DDProjectenPage() {
                       </button>
                     </div>
                   </div>
-                  {project.members.length > 0 && (
-                    <div className="px-4 pb-3 pt-1">
-                      <div className="ml-[46px] flex flex-wrap gap-2">
-                        {project.members.map((m, mi) => {
-                          const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
-                          const photo = getPhotoUrl(m.user.name)
-                          return (
-                            <div key={m.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ background: 'var(--color-bg-tertiary)' }}>
-                              {photo ? (
-                                <Image src={photo} alt={m.user.name} width={24} height={24} className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
-                              ) : (
-                                <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                                  <span className="text-[9px] font-medium text-white">{m.user.name.charAt(0)}</span>
-                                </div>
-                              )}
-                              <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{m.user.name}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
+                  <div className="px-4 pb-3 pt-1">
+                    <div className="ml-[46px] flex flex-wrap gap-2 items-center">
+                      {project.members.map((m, mi) => {
+                        const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
+                        const photo = getPhotoUrl(m.user.name)
+                        return (
+                          <div key={m.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ background: 'var(--color-bg-tertiary)' }}>
+                            {photo ? (
+                              <Image src={photo} alt={m.user.name} width={24} height={24} className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
+                            ) : (
+                              <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                                <span className="text-[9px] font-medium text-white">{m.user.name.charAt(0)}</span>
+                              </div>
+                            )}
+                            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{m.user.name}</span>
+                          </div>
+                        )
+                      })}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAddingMemberTo(addingMemberTo === `manual-${project.id}` ? null : `manual-${project.id}`) }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium border border-dashed transition-colors hover:border-workx-lime/30 hover:text-workx-lime"
+                        style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}
+                      >
+                        <Icons.edit size={10} />
+                        Wijzig team
+                      </button>
                     </div>
-                  )}
+                    {addingMemberTo === `manual-${project.id}` && (
+                      <div className="ml-[46px] mt-2 rounded-xl border p-3" style={{ background: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Teamleden toevoegen / verwijderen</span>
+                          <button onClick={() => setAddingMemberTo(null)} className="p-1 rounded hover:bg-white/10 transition-colors">
+                            <Icons.x size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {teamMembers.map(u => {
+                            const isIn = project.members.some(m => m.user.name === u.name)
+                            const photo = getPhotoUrl(u.name)
+                            return (
+                              <button
+                                key={u.id}
+                                onClick={async () => {
+                                  const currentIds = project.members.map(m => m.userId)
+                                  const newIds = isIn ? currentIds.filter(id => id !== u.id) : [...currentIds, u.id]
+                                  try {
+                                    await fetch('/api/dd-projecten', {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: project.id, memberIds: newIds }),
+                                    })
+                                    fetchAll()
+                                  } catch { toast.error('Kon team niet bijwerken') }
+                                }}
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all border ${
+                                  isIn ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30' : 'border-transparent hover:border-white/10'
+                                }`}
+                                style={!isIn ? { background: 'var(--color-bg-secondary)', color: 'var(--color-text-tertiary)' } : undefined}
+                              >
+                                {photo ? (
+                                  <Image src={photo} alt={u.name} width={18} height={18} className="w-[18px] h-[18px] rounded-md object-cover" />
+                                ) : (
+                                  <div className="w-[18px] h-[18px] rounded-md bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                                    <span className="text-[8px] font-medium text-white">{u.name.charAt(0)}</span>
+                                  </div>
+                                )}
+                                {u.name.split(' ')[0]}
+                                {isIn && <Icons.check size={10} />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
