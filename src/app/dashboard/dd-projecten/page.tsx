@@ -140,7 +140,7 @@ export default function DDProjectenPage() {
   useEffect(() => { fetchAll() }, [fetchAll])
 
   // ─── Process workload data into DD structures ───
-  const { clientGroups, stats, unmatchedManualProjects } = useMemo(() => {
+  const { clientGroups, stats, unmatchedManualProjects, teamProjects } = useMemo(() => {
     const now = new Date()
     const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
@@ -231,10 +231,33 @@ export default function DDProjectenPage() {
 
     const unmatched = projects.filter(p => !matchedProjectIds.has(p.id) && p.status !== 'afgerond')
 
+    // Build team member → projects map (last 10 days + manual projects)
+    const d10 = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const teamProjectsMap = new Map<string, { projectName: string; client: string; hours: number }[]>()
+    for (const entry of workloadData) {
+      const client = matchDDClient(entry.projectName)
+      if (!client) continue
+      const hours = entry.workedHours || entry.billableHours || 0
+      if (hours <= 0 || entry.date < d10) continue
+      if (!teamProjectsMap.has(entry.personName)) teamProjectsMap.set(entry.personName, [])
+      const existing = teamProjectsMap.get(entry.personName)!.find(p => p.projectName === entry.projectName)
+      if (existing) existing.hours += hours
+      else teamProjectsMap.get(entry.personName)!.push({ projectName: entry.projectName.includes('/') ? entry.projectName.split('/').slice(1).join('/').trim() : entry.projectName, client, hours })
+    }
+    // Add manual project members
+    for (const p of unmatched) {
+      for (const m of p.members) {
+        if (!teamProjectsMap.has(m.user.name)) teamProjectsMap.set(m.user.name, [])
+        const existing = teamProjectsMap.get(m.user.name)!.find(tp => tp.projectName === p.name)
+        if (!existing) teamProjectsMap.get(m.user.name)!.push({ projectName: p.name, client: p.client, hours: 0 })
+      }
+    }
+
     return {
       clientGroups: groups,
       stats: { totalHours: Math.round(totalHours * 10) / 10, totalHours7d: Math.round(totalHours7d * 10) / 10, totalCases, teamCount: allMembers.size },
       unmatchedManualProjects: unmatched,
+      teamProjects: teamProjectsMap,
     }
   }, [workloadData, projects, estimates])
 
@@ -425,6 +448,147 @@ export default function DDProjectenPage() {
         </div>
       </div>
 
+      {/* ─── Team overzicht ─── */}
+      {teamProjects.size > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>
+              Team ({teamProjects.size})
+            </h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Array.from(teamProjects.entries())
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([name, memberProjects]) => {
+                const photo = getPhotoUrl(name)
+                const isExpanded = expandedKey === `team-${name}`
+                return (
+                  <div key={name} className="relative">
+                    <button
+                      onClick={() => setExpandedKey(isExpanded ? null : `team-${name}`)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all border ${
+                        isExpanded ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' : 'border-transparent hover:border-white/10'
+                      }`}
+                      style={!isExpanded ? { background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' } : undefined}
+                    >
+                      {photo ? (
+                        <Image src={photo} alt={name} width={28} height={28} className="w-7 h-7 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                          <span className="text-[10px] font-medium text-white">{name.charAt(0)}</span>
+                        </div>
+                      )}
+                      <span className="font-medium">{name.split(' ')[0]}</span>
+                      <span className="text-xs opacity-60">({memberProjects.length})</span>
+                      <Icons.chevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: 'var(--color-text-tertiary)' }} />
+                    </button>
+                    {isExpanded && (
+                      <div className="absolute top-full left-0 mt-1 z-20 w-64 rounded-xl border shadow-xl p-2 space-y-1" style={{ background: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+                        {memberProjects.sort((a, b) => b.hours - a.hours).map((p, i) => {
+                          const pcc = CLIENT_COLORS[p.client] || CLIENT_COLORS['De Breij']
+                          return (
+                            <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs" style={{ background: 'var(--color-bg-tertiary)' }}>
+                              <div className={`w-2 h-2 rounded-full ${pcc.dot}`} />
+                              <span className="flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>{p.projectName}</span>
+                              {p.hours > 0 && <span style={{ color: 'var(--color-text-tertiary)' }}>{Math.round(p.hours * 10) / 10}u</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Nieuwe projecten (nog op te starten) ─── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-workx-lime" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>
+              Nieuwe projecten (nog op te starten)
+            </h2>
+          </div>
+          <button
+            onClick={() => { setShowForm(true); setEditingProject(null); setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [], expectedHours: '' }) }}
+            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
+          >
+            <Icons.plus size={14} />
+            Nieuw project
+          </button>
+        </div>
+        {unmatchedManualProjects.length > 0 ? (
+          <div className="space-y-2">
+            {unmatchedManualProjects.map(project => {
+              const cc = CLIENT_COLORS[project.client] || CLIENT_COLORS['De Breij']
+              return (
+                <div key={project.id} className="rounded-2xl border overflow-hidden hover:shadow-md" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                  <div className="flex items-center gap-3.5 px-4 py-3.5">
+                    <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                      <div className={`w-8 h-8 rounded-xl ${cc.bg} flex items-center justify-center flex-shrink-0`}>
+                        <Icons.briefcase size={14} className={cc.text} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{project.name}</span>
+                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${cc.bg} ${cc.text}`}>{project.client}</span>
+                        </div>
+                        {project.description && (
+                          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-text-tertiary)' }}>{project.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors hover:bg-emerald-500/10" title="Markeer als afgerond">
+                        <Icons.check size={15} className="text-emerald-400" />
+                      </button>
+                      <button onClick={() => startEdit(project)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Bewerken">
+                        <Icons.edit size={14} />
+                      </button>
+                      <button onClick={() => deleteProject(project.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" title="Verwijderen">
+                        <Icons.trash size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  {project.members.length > 0 && (
+                    <div className="px-4 pb-3 pt-1">
+                      <div className="ml-[46px] flex flex-wrap gap-2">
+                        {project.members.map((m, mi) => {
+                          const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
+                          const photo = getPhotoUrl(m.user.name)
+                          return (
+                            <div key={m.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ background: 'var(--color-bg-tertiary)' }}>
+                              {photo ? (
+                                <Image src={photo} alt={m.user.name} width={24} height={24} className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
+                              ) : (
+                                <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
+                                  <span className="text-[9px] font-medium text-white">{m.user.name.charAt(0)}</span>
+                                </div>
+                              )}
+                              <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{m.user.name}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed p-6 text-center" style={{ borderColor: 'var(--color-border)' }}>
+            <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+              Nog geen nieuwe projecten. Klik op &quot;Nieuw project&quot; om een zaak toe te voegen.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* ─── Per-client sections ─── */}
       {DD_CLIENTS.filter(c => clientGroups.has(c)).map(client => {
         const cases = clientGroups.get(client)!
@@ -601,97 +765,6 @@ export default function DDProjectenPage() {
           <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>Er zijn geen uren gevonden voor DD-clients in de afgelopen 4 weken. Upload werkdruk data of voeg handmatig een project toe.</p>
         </div>
       )}
-
-      {/* ─── Nieuwe projecten (nog op te starten) ─── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-workx-lime" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-primary)' }}>
-              Nieuwe projecten (nog op te starten)
-            </h2>
-          </div>
-          <button
-            onClick={() => { setShowForm(true); setEditingProject(null); setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [], expectedHours: '' }) }}
-            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
-          >
-            <Icons.plus size={14} />
-            Nieuw project
-          </button>
-        </div>
-
-        {unmatchedManualProjects.length > 0 ? (
-          <div className="space-y-2">
-            {unmatchedManualProjects.map(project => {
-              const cc = CLIENT_COLORS[project.client] || CLIENT_COLORS['De Breij']
-              const key = `manual-${project.id}`
-              const isExpanded = expandedKey === key
-              return (
-                <div key={project.id} className={`rounded-2xl border overflow-hidden transition-all ${
-                  isExpanded ? `${cc.border} ${cc.bg}` : 'hover:shadow-md'
-                }`} style={!isExpanded ? { borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' } : undefined}>
-                  <div className="flex items-center gap-3.5 px-4 py-3.5">
-                    <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                      <div className={`w-8 h-8 rounded-xl ${cc.bg} flex items-center justify-center flex-shrink-0`}>
-                        <Icons.briefcase size={14} className={cc.text} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{project.name}</span>
-                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${cc.bg} ${cc.text}`}>{project.client}</span>
-                        </div>
-                        {project.description && (
-                          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-text-tertiary)' }}>{project.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <button onClick={() => toggleProjectStatus(project)} className="p-2 rounded-lg transition-colors hover:bg-emerald-500/10" title="Markeer als afgerond">
-                        <Icons.check size={15} className="text-emerald-400" />
-                      </button>
-                      <button onClick={() => startEdit(project)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Bewerken">
-                        <Icons.edit size={14} />
-                      </button>
-                      <button onClick={() => deleteProject(project.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" title="Verwijderen">
-                        <Icons.trash size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {project.members.length > 0 && (
-                    <div className="px-4 pb-3 pt-1">
-                      <div className="ml-[46px] flex flex-wrap gap-2">
-                        {project.members.map((m, mi) => {
-                          const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
-                          const photo = getPhotoUrl(m.user.name)
-                          return (
-                            <div key={m.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ background: 'var(--color-bg-tertiary)' }}>
-                              {photo ? (
-                                <Image src={photo} alt={m.user.name} width={24} height={24} className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
-                              ) : (
-                                <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                                  <span className="text-[9px] font-medium text-white">{m.user.name.charAt(0)}</span>
-                                </div>
-                              )}
-                              <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{m.user.name}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed p-6 text-center" style={{ borderColor: 'var(--color-border)' }}>
-            <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-              Nog geen nieuwe projecten. Klik op &quot;Nieuw project&quot; om een zaak toe te voegen met teamtoewijzing.
-            </p>
-          </div>
-        )}
-      </div>
 
       {/* ─── Afgeronde projecten ─── */}
       {completedProjects.length > 0 && (
