@@ -1777,6 +1777,7 @@ model DDProjectEstimate {
   expectedHours   Float    @default(0)
   extraMembers    String?  @db.Text // JSON array of manually added member names
   removedMembers  String?  @db.Text // JSON array of manually removed member names (hides workload members)
+  hidden          Boolean  @default(false) // Verborgen project (niet tonen, ook niet na nieuwe Excel)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

@@ -45,8 +45,9 @@ interface DDEstimate {
   id: string
   projectName: string
   expectedHours: number
-  extraMembers: string | null // JSON array of manually added member names
-  removedMembers: string | null // JSON array of manually removed member names
+  extraMembers: string | null
+  removedMembers: string | null
+  hidden: boolean
 }
 
 interface DDCase {
@@ -169,7 +170,7 @@ export default function DDProjectenPage() {
     }
 
     // Build estimate lookup (expectedHours + extraMembers + removedMembers)
-    const estimateMap = new Map<string, { expectedHours: number; extraMembers: string[]; removedMembers: string[] }>()
+    const estimateMap = new Map<string, { expectedHours: number; extraMembers: string[]; removedMembers: string[]; hidden: boolean }>()
     for (const est of estimates) {
       let extra: string[] = []
       let removed: string[] = []
@@ -179,14 +180,18 @@ export default function DDProjectenPage() {
       if (est.removedMembers) {
         try { removed = JSON.parse(est.removedMembers) } catch { /* ignore */ }
       }
-      estimateMap.set(est.projectName, { expectedHours: est.expectedHours, extraMembers: extra, removedMembers: removed })
+      estimateMap.set(est.projectName, { expectedHours: est.expectedHours, extraMembers: extra, removedMembers: removed, hidden: est.hidden || false })
     }
 
-    // Build cases per client + link manual DDProjects
+    // Build cases per client + link manual DDProjects (skip hidden)
     const groups = new Map<string, DDCase[]>()
     const matchedProjectIds = new Set<string>()
+    const hiddenProjects = new Set<string>()
 
     for (const [fullName, data] of Array.from(projectMap.entries())) {
+      // Skip hidden projects
+      const estCheck = estimateMap.get(fullName)
+      if (estCheck?.hidden) { hiddenProjects.add(fullName); continue }
       const cleanName = fullName.includes('/') ? fullName.split('/').slice(1).join('/').trim() : fullName
       const workloadMembers = Array.from(data.members)
       const totalHours = Math.round(data.totalHours * 10) / 10
@@ -246,6 +251,7 @@ export default function DDProjectenPage() {
       if (!client) continue
       const hours = entry.workedHours || entry.billableHours || 0
       if (hours <= 0 || entry.date < d10) continue
+      if (hiddenProjects.has(entry.projectName)) continue // Skip hidden projects
       const cleanName = entry.projectName.includes('/') ? entry.projectName.split('/').slice(1).join('/').trim() : entry.projectName
       if (!teamProjectsMap.has(entry.personName)) teamProjectsMap.set(entry.personName, [])
       const existing = teamProjectsMap.get(entry.personName)!.find(p => p.projectName === cleanName)
@@ -353,7 +359,7 @@ export default function DDProjectenPage() {
       setEstimates(prev => {
         const existing = prev.find(e => e.projectName === projectName)
         if (existing) return prev.map(e => e.projectName === projectName ? { ...e, expectedHours: hours } : e)
-        return [...prev, { id: '', projectName, expectedHours: hours, extraMembers: null, removedMembers: null }]
+        return [...prev, { id: '', projectName, expectedHours: hours, extraMembers: null, removedMembers: null, hidden: false }]
       })
       setEditingEstimate(null)
       toast.success('Verwachte uren opgeslagen')
@@ -410,6 +416,28 @@ export default function DDProjectenPage() {
       }
     } catch {
       toast.error('Kon teamlid niet bijwerken')
+    }
+  }
+
+  const hideProject = async (fullProjectName: string) => {
+    if (!confirm('Dit project verbergen? Het komt niet meer terug, ook niet na nieuwe Excel uploads.')) return
+    try {
+      const res = await fetch('/api/dd-projecten/estimates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName: fullProjectName, hidden: true }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setEstimates(prev => {
+          const exists = prev.find(e => e.projectName === fullProjectName)
+          if (exists) return prev.map(e => e.projectName === fullProjectName ? updated : e)
+          return [...prev, updated]
+        })
+        toast.success('Project verborgen')
+      }
+    } catch {
+      toast.error('Kon project niet verbergen')
     }
   }
 
@@ -699,6 +727,13 @@ export default function DDProjectenPage() {
                       <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold tabular-nums ${cc.bg} ${cc.text}`}>{c.hours7d}u 7d</span>
                     )}
                     <span className="text-xs font-mono tabular-nums font-semibold" style={{ color: 'var(--color-text-primary)' }}>{c.totalHours}u</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); hideProject(c.fullProjectName) }}
+                      className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400/0 hover:text-red-400 transition-all"
+                      title="Project verbergen"
+                    >
+                      <Icons.x size={12} />
+                    </button>
                   </div>
                 </div>
 
