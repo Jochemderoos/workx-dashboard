@@ -56,11 +56,11 @@ export default function StaleVersionGuard() {
       if (document.getElementById('workx-update-banner')) return // Already showing
       const banner = document.createElement('div')
       banner.id = 'workx-update-banner'
-      banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;padding:8px 16px;background:rgba(249,255,133,0.95);color:rgba(30,30,30,0.9);font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 -2px 12px rgba(0,0,0,0.15);'
+      banner.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;padding:8px 14px;border-radius:12px;background:rgba(40,40,40,0.9);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);font-size:12px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(8px);'
       banner.innerHTML = `
-        <span>Er is een nieuwe versie beschikbaar</span>
-        <button onclick="window.location.reload()" style="padding:5px 14px;border-radius:8px;background:rgba(30,30,30,0.9);border:none;color:rgb(249,255,133);font-size:12px;font-weight:600;cursor:pointer;">Ververs pagina</button>
-        <button onclick="this.parentElement.remove()" style="padding:2px 8px;border:none;background:none;color:rgba(30,30,30,0.4);cursor:pointer;font-size:16px;font-weight:bold;">&times;</button>
+        <span>Update beschikbaar</span>
+        <button onclick="window.location.reload()" style="padding:3px 10px;border-radius:6px;background:rgba(249,255,133,0.15);border:1px solid rgba(249,255,133,0.3);color:rgb(249,255,133);font-size:11px;font-weight:500;cursor:pointer;">Ververs</button>
+        <button onclick="this.parentElement.remove()" style="padding:0 4px;border:none;background:none;color:rgba(255,255,255,0.2);cursor:pointer;font-size:14px;">&times;</button>
       `
       document.body.appendChild(banner)
     }
@@ -116,8 +116,8 @@ export default function StaleVersionGuard() {
       } else if (hiddenAt) {
         const hiddenDuration = Date.now() - hiddenAt
         hiddenAt = null
-        // Only check after 5+ minutes hidden
-        if (hiddenDuration > 5 * 60 * 1000) {
+        // Only check after 60+ minutes hidden
+        if (hiddenDuration > 60 * 60 * 1000) {
           const stale = await checkBuildVersion()
           if (stale) showUpdateBanner()
         }
@@ -135,14 +135,14 @@ export default function StaleVersionGuard() {
       if (stale) {
         showUpdateBanner()
         if (!staleDetectedAt) staleDetectedAt = Date.now()
-        // Auto-refresh after 1 hour stale (unless protected page)
-        if (!isProtectedPage && Date.now() - staleDetectedAt > 60 * 60 * 1000) {
+        // Auto-refresh after 8 hours stale (unless protected page)
+        if (!isProtectedPage && Date.now() - staleDetectedAt > 8 * 60 * 60 * 1000) {
           window.location.reload()
         }
       } else {
         staleDetectedAt = null
       }
-    }, 300000) // 5 minutes
+    }, 3600000) // 60 minutes
 
     window.addEventListener('error', handleError)
     window.addEventListener('unhandledrejection', handleRejection)
