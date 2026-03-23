@@ -131,16 +131,29 @@ export default function WerkverdelingTable({ distributions, employees, onUpdate 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
+  // Ensure all partners have a row, even if no distributions exist yet
+  const ensurePartnerRows = useCallback((dists: Distribution[]): Distribution[] => {
+    const partnersList = PARTNERS.map(name => name.split(' ')[0]) // First names: Marnix, Jochem, Juliette, Bas
+    const existing = new Set(dists.map(d => d.partnerName))
+    const result = [...dists]
+    for (const name of partnersList) {
+      if (!existing.has(name)) {
+        result.push({ partnerName: name, employeeName: null, employeeId: null })
+      }
+    }
+    return result
+  }, [])
+
   // Local state for editing — only saved on explicit "Opslaan" click
-  const [localDistributions, setLocalDistributions] = useState<Distribution[]>(distributions)
+  const [localDistributions, setLocalDistributions] = useState<Distribution[]>(ensurePartnerRows(distributions))
   const [hasChanges, setHasChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   // Sync local state when distributions prop changes (after save or external update)
   useEffect(() => {
-    setLocalDistributions(distributions)
+    setLocalDistributions(ensurePartnerRows(distributions))
     setHasChanges(false)
-  }, [distributions])
+  }, [distributions, ensurePartnerRows])
 
   // Filter out partners — they conduct the meetings, not attend them
   const partnerNames = new Set(PARTNERS.map(n => n.toLowerCase()))

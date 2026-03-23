@@ -45,7 +45,8 @@ interface DDEstimate {
   id: string
   projectName: string
   expectedHours: number
-  extraMembers: string | null // JSON array of member names
+  extraMembers: string | null // JSON array of manually added member names
+  removedMembers: string | null // JSON array of manually removed member names
 }
 
 interface DDCase {
@@ -167,14 +168,18 @@ export default function DDProjectenPage() {
       proj.members.add(entry.personName)
     }
 
-    // Build estimate lookup (expectedHours + extraMembers)
-    const estimateMap = new Map<string, { expectedHours: number; extraMembers: string[] }>()
+    // Build estimate lookup (expectedHours + extraMembers + removedMembers)
+    const estimateMap = new Map<string, { expectedHours: number; extraMembers: string[]; removedMembers: string[] }>()
     for (const est of estimates) {
       let extra: string[] = []
+      let removed: string[] = []
       if (est.extraMembers) {
         try { extra = JSON.parse(est.extraMembers) } catch { /* ignore */ }
       }
-      estimateMap.set(est.projectName, { expectedHours: est.expectedHours, extraMembers: extra })
+      if (est.removedMembers) {
+        try { removed = JSON.parse(est.removedMembers) } catch { /* ignore */ }
+      }
+      estimateMap.set(est.projectName, { expectedHours: est.expectedHours, extraMembers: extra, removedMembers: removed })
     }
 
     // Build cases per client + link manual DDProjects
@@ -202,9 +207,11 @@ export default function DDProjectenPage() {
 
       const est = estimateMap.get(fullName)
       const expectedHours = linkedProject?.expectedHours ?? est?.expectedHours ?? undefined
-      // Merge workload members + manually added extra members (deduplicated)
+      // Merge workload members + manually added, minus manually removed
       const extraMembers = est?.extraMembers || []
+      const removedMembers = est?.removedMembers || []
       const memberNames = [...workloadMembers, ...extraMembers.filter(n => !workloadMembers.includes(n))]
+        .filter(n => !removedMembers.includes(n))
 
       if (!groups.has(data.client)) groups.set(data.client, [])
       groups.get(data.client)!.push({ projectName: cleanName, fullProjectName: fullName, totalHours, hours7d, memberNames, linkedProject, expectedHours })
@@ -346,7 +353,7 @@ export default function DDProjectenPage() {
       setEstimates(prev => {
         const existing = prev.find(e => e.projectName === projectName)
         if (existing) return prev.map(e => e.projectName === projectName ? { ...e, expectedHours: hours } : e)
-        return [...prev, { id: '', projectName, expectedHours: hours, extraMembers: null }]
+        return [...prev, { id: '', projectName, expectedHours: hours, extraMembers: null, removedMembers: null }]
       })
       setEditingEstimate(null)
       toast.success('Verwachte uren opgeslagen')
@@ -358,15 +365,31 @@ export default function DDProjectenPage() {
   const toggleExtraMember = async (projectName: string, memberName: string, currentMembers: string[]) => {
     const est = estimates.find(e => e.projectName === projectName)
     let extraMembers: string[] = []
+    let removedMembers: string[] = []
     if (est?.extraMembers) {
       try { extraMembers = JSON.parse(est.extraMembers) } catch { /* ignore */ }
     }
+    if (est?.removedMembers) {
+      try { removedMembers = JSON.parse(est.removedMembers) } catch { /* ignore */ }
+    }
 
-    if (extraMembers.includes(memberName)) {
-      extraMembers = extraMembers.filter(n => n !== memberName)
+    const isCurrentlyShown = currentMembers.includes(memberName)
+    const isManuallyAdded = extraMembers.includes(memberName)
+    const isManuallyRemoved = removedMembers.includes(memberName)
+
+    if (isCurrentlyShown) {
+      // Remove: either remove from extraMembers or add to removedMembers
+      if (isManuallyAdded) {
+        extraMembers = extraMembers.filter(n => n !== memberName)
+      } else {
+        // Workload member — add to removed list
+        if (!isManuallyRemoved) removedMembers.push(memberName)
+      }
     } else {
-      // Only add if not already in workload members
-      if (!currentMembers.includes(memberName)) {
+      // Add: either add to extraMembers or remove from removedMembers
+      if (isManuallyRemoved) {
+        removedMembers = removedMembers.filter(n => n !== memberName)
+      } else {
         extraMembers.push(memberName)
       }
     }
@@ -375,7 +398,7 @@ export default function DDProjectenPage() {
       const res = await fetch('/api/dd-projecten/estimates', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectName, extraMembers }),
+        body: JSON.stringify({ projectName, extraMembers, removedMembers }),
       })
       if (res.ok) {
         const updated = await res.json()
@@ -652,7 +675,7 @@ export default function DDProjectenPage() {
                       const photo = getPhotoUrl(name)
                       const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
                       return (
-                        <div key={name} className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg" style={{ background: 'var(--color-bg-tertiary)' }}>
+                        <div key={name} className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg group/chip" style={{ background: 'var(--color-bg-tertiary)' }}>
                           {photo ? (
                             <Image src={photo} alt={name} width={22} height={22} className="w-[22px] h-[22px] rounded-md object-cover" />
                           ) : (
@@ -661,6 +684,13 @@ export default function DDProjectenPage() {
                             </div>
                           )}
                           <span className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>{name.split(' ')[0]}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleExtraMember(c.fullProjectName, name, c.memberNames) }}
+                            className="p-0.5 rounded hover:bg-red-500/20 text-red-400/0 group-hover/chip:text-red-400/60 hover:!text-red-400 transition-all"
+                            title={`${name} verwijderen`}
+                          >
+                            <Icons.x size={10} />
+                          </button>
                         </div>
                       )
                     })}
@@ -682,10 +712,9 @@ export default function DDProjectenPage() {
                           return (
                             <button
                               key={u.id}
-                              onClick={() => toggleExtraMember(c.fullProjectName, u.name, c.memberNames)}
+                              onClick={() => { toggleExtraMember(c.fullProjectName, u.name, c.memberNames); setAddingMemberTo(null) }}
                               className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left ${alreadyIn ? 'opacity-50' : 'hover:opacity-80'}`}
                               style={{ background: alreadyIn ? 'var(--color-bg-tertiary)' : 'transparent', color: 'var(--color-text-primary)' }}
-                              disabled={alreadyIn}
                             >
                               {photo ? (
                                 <Image src={photo} alt={u.name} width={20} height={20} className="w-5 h-5 rounded-lg object-cover" />

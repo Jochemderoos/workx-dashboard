@@ -1772,12 +1772,13 @@ model DDProject {
 
 // Verwachte uren voor werkdruk-gebaseerde DD projecten (key = projectName)
 model DDProjectEstimate {
-  id            String   @id @default(cuid())
-  projectName   String   @unique // Full project name from workload data
-  expectedHours Float    @default(0)
-  extraMembers  String?  @db.Text // JSON array of manually added member names
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  projectName     String   @unique // Full project name from workload data
+  expectedHours   Float    @default(0)
+  extraMembers    String?  @db.Text // JSON array of manually added member names
+  removedMembers  String?  @db.Text // JSON array of manually removed member names (hides workload members)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model DDProjectMember {
