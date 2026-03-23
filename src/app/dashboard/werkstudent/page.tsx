@@ -489,7 +489,7 @@ export default function WerkstudentPage() {
                 <Icons.x size={18} className="text-gray-400" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+            <form id="werkstudent-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>Titel *</label>
                 <input
@@ -579,18 +579,19 @@ export default function WerkstudentPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={saving || !form.title.trim()} className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50">
-                  {saving ? (
-                    <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
-                  ) : null}
-                  {editingTask ? 'Opslaan' : 'Toevoegen'}
-                </button>
-                <button type="button" onClick={() => { setShowForm(false); setEditingTask(null) }} disabled={saving} className="btn-secondary flex-1 disabled:opacity-50">
-                  Annuleren
-                </button>
-              </div>
             </form>
+            {/* Footer - vast onderaan, scrolt NIET mee */}
+            <div className="p-5 border-t shrink-0 flex gap-3" style={{ borderColor: 'var(--color-border)' }}>
+              <button type="submit" form="werkstudent-form" disabled={saving || !form.title.trim()} className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50">
+                {saving ? (
+                  <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
+                ) : null}
+                {editingTask ? 'Opslaan' : 'Toevoegen'}
+              </button>
+              <button type="button" onClick={() => { setShowForm(false); setEditingTask(null) }} disabled={saving} className="btn-secondary flex-1 disabled:opacity-50">
+                Annuleren
+              </button>
+            </div>
           </div>
         </div>
       )}
