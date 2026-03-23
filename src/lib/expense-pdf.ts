@@ -460,8 +460,14 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
           pdfDoc.destroy()
           console.log(`[PDF] PDF bijlage gerenderd: ${item.attachmentName}`)
         } catch (pdfErr) {
-          console.error('Error rendering PDF attachment:', item.attachmentName, pdfErr)
-          // Silently skip — user can download via Bijlage button
+          console.error('[PDF] Error rendering PDF attachment:', item.attachmentName, pdfErr)
+          // Fallback: add info page
+          const failPage = mergedPdf.addPage()
+          const { height } = failPage.getSize()
+          failPage.drawText(`BIJLAGE: ${item.attachmentName || 'onbekend'}`, { x: 50, y: height - 80, size: 14, color: rgb(0.2, 0.2, 0.2) })
+          failPage.drawText('Kon niet worden ingebed. Download apart via Bijlage-knop.', { x: 50, y: height - 110, size: 10, color: rgb(0.5, 0.5, 0.5) })
+          const errMsg = pdfErr instanceof Error ? pdfErr.message : String(pdfErr)
+          failPage.drawText(`Fout: ${errMsg.substring(0, 80)}`, { x: 50, y: height - 130, size: 8, color: rgb(0.7, 0.2, 0.2) })
         }
       }
 

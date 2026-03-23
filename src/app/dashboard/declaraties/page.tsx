@@ -706,6 +706,7 @@ function DeclarationOverview() {
 
       let found = false
       for (const item of fullDecl.items) {
+        console.log('[Bijlage] Item:', item.attachmentName, 'URL length:', item.attachmentUrl?.length || 0)
         if (!item.attachmentUrl || !item.attachmentName) continue
         const base64 = item.attachmentUrl.split(',')[1]
         if (!base64) continue
