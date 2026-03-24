@@ -167,9 +167,9 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
     setView('form')
   }
 
-  // Add new item
+  // Add new item — functional update to avoid stale closure
   const addItem = (type: 'reiskosten_auto' | 'overig') => {
-    setItems([...items, {
+    setItems(prev => [...prev, {
       description: '',
       date: new Date().toISOString().split('T')[0],
       amount: 0,
@@ -179,23 +179,25 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
     }])
   }
 
-  // Remove item
+  // Remove item — functional update to avoid stale closure
   const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index))
+    setItems(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Update item
+  // Update item — functional update to avoid stale closure
   const updateItem = (index: number, field: keyof ExpenseItem, value: string | number) => {
-    const newItems = [...items]
-    newItems[index] = { ...newItems[index], [field]: value }
+    setItems(prev => {
+      const newItems = [...prev]
+      newItems[index] = { ...newItems[index], [field]: value }
 
-    // If updating kilometers, recalculate amount
-    if (field === 'kilometers' && newItems[index].expenseType === 'reiskosten_auto') {
-      const km = typeof value === 'number' ? value : parseFloat(value as string) || 0
-      newItems[index].amount = Math.round(km * kilometerRate * 100) / 100
-    }
+      // If updating kilometers, recalculate amount
+      if (field === 'kilometers' && newItems[index].expenseType === 'reiskosten_auto') {
+        const km = typeof value === 'number' ? value : parseFloat(value as string) || 0
+        newItems[index].amount = Math.round(km * kilometerRate * 100) / 100
+      }
 
-    setItems(newItems)
+      return newItems
+    })
   }
 
   // Handle file attachment
@@ -246,17 +248,13 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
         setShowRateSettings(false)
         toast.success('Kilometertarief opgeslagen')
 
-        // Recalculate all auto travel items
-        const newItems = items.map(item => {
+        // Recalculate all auto travel items — functional update
+        setItems(prev => prev.map(item => {
           if (item.expenseType === 'reiskosten_auto' && item.kilometers) {
-            return {
-              ...item,
-              amount: Math.round(item.kilometers * newRate * 100) / 100
-            }
+            return { ...item, amount: Math.round(item.kilometers * newRate * 100) / 100 }
           }
           return item
-        })
-        setItems(newItems)
+        }))
       } else {
         throw new Error('Failed to save')
       }
