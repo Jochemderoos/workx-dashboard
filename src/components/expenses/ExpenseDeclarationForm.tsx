@@ -207,9 +207,9 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
       return
     }
 
-    // Check file size (max 4MB to stay within API limits)
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error('Bestand is te groot (max 4MB)')
+    // Check file size (max 3MB — base64 encoding adds ~33%, must fit within Vercel's 4.5MB body limit)
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error('Bestand is te groot (max 3MB)')
       return
     }
 
@@ -332,27 +332,28 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
         ? `/api/expenses/${currentDeclaration.id}`
         : '/api/expenses'
 
+      const payload = {
+        employeeName: employeeName.trim(),
+        bankAccount: bankAccount.replace(/\s/g, '').toUpperCase(),
+        items: validItems.map(item => ({
+          description: item.description,
+          date: item.date,
+          amount: item.amount,
+          attachmentUrl: item.attachmentUrl,
+          attachmentName: item.attachmentName,
+          expenseType: item.expenseType,
+          kilometers: item.expenseType === 'reiskosten_auto' ? item.kilometers : undefined,
+          chargeToClient: activeTab === 'medewerker' ? item.chargeToClient : undefined,
+        })),
+        note: note.trim(),
+        holdingName: activeTab === 'holding' ? holdingName.trim() : null,
+        invoiceNumber: invoiceNumber.trim() || null,
+        submit: false,
+      }
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeName: employeeName.trim(),
-          bankAccount: bankAccount.replace(/\s/g, '').toUpperCase(),
-          items: validItems.map(item => ({
-            description: item.description,
-            date: item.date,
-            amount: item.amount,
-            attachmentUrl: item.attachmentUrl,
-            attachmentName: item.attachmentName,
-            expenseType: item.expenseType,
-            kilometers: item.expenseType === 'reiskosten_auto' ? item.kilometers : undefined,
-            chargeToClient: activeTab === 'medewerker' ? item.chargeToClient : undefined,
-          })),
-          note: note.trim(),
-          holdingName: activeTab === 'holding' ? holdingName.trim() : null,
-          invoiceNumber: invoiceNumber.trim() || null,
-          submit: false,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {
