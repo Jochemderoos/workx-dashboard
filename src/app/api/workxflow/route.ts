@@ -11,10 +11,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    // Fetch own bundles + bundles shared with me
+    // Check if user is ADMIN — they can see all bundles
+    const currentUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } })
+    const isAdmin = currentUser?.role === 'ADMIN'
+
+    // Fetch own bundles + bundles shared with me (or ALL for admins)
     const [ownBundles, sharedAccess] = await Promise.all([
       prisma.workxflowBundle.findMany({
-        where: { createdById: session.user.id },
+        where: isAdmin ? {} : { createdById: session.user.id },
         include: {
           productions: { orderBy: { sortOrder: 'asc' } },
           lock: { include: { lockedBy: { select: { id: true, name: true } } } },
@@ -22,7 +26,7 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.bundleAccess.findMany({
+      isAdmin ? Promise.resolve([]) : prisma.bundleAccess.findMany({
         where: { userId: session.user.id },
         include: {
           bundle: {
@@ -38,10 +42,12 @@ export async function GET(req: NextRequest) {
 
     // Clean up expired locks
     const now = new Date()
-    const allBundles = [
-      ...ownBundles.map(b => ({ ...b, isOwner: true, accessLevel: 'OWNER' as const })),
-      ...sharedAccess.map(a => ({ ...a.bundle, isOwner: false, accessLevel: a.accessLevel })),
-    ].map(b => ({
+    const ownList = ownBundles.map(b => ({ ...b, isOwner: b.createdById === session.user.id, accessLevel: 'OWNER' as const }))
+    const sharedList = (sharedAccess as any[]).map((a: any) => ({ ...a.bundle, isOwner: false, accessLevel: a.accessLevel }))
+    // Deduplicate (admin sees all via ownBundles, no shared needed)
+    const seenIds = new Set(ownList.map(b => b.id))
+    const uniqueShared = sharedList.filter((b: any) => !seenIds.has(b.id))
+    const allBundles = [...ownList, ...uniqueShared].map(b => ({
       ...b,
       lock: b.lock && new Date(b.lock.expiresAt) > now ? b.lock : null,
     }))
