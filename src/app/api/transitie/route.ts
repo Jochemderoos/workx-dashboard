@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const calculations = await prisma.transitieCalculation.findMany({
-      where: { userId: session.user.id },
+      where: { OR: [{ userId: session.user.id }, { userId: null }] },
       orderBy: { createdAt: 'desc' }
     })
 
