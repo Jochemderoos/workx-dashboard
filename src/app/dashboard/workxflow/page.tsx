@@ -1579,14 +1579,7 @@ export default function WorkxflowPage() {
                             background: '#f9ff85'
                           }}
                         >
-                          {/* Workx logo (top-left, flush) - real image */}
-                          <div className="absolute top-0 left-0">
-                            <img
-                              src="/workx-logo.png"
-                              alt="Workx"
-                              className="h-6 w-auto"
-                            />
-                          </div>
+                          {/* No logo on production sheets — printed on yellow paper with logo */}
                           {/* Centered production text */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
                             <p className="text-[#1e1e1e] font-bold text-base tracking-wide">

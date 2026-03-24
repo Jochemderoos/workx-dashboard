@@ -7,16 +7,11 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 
-// Official Workx logo
+// Official Workx logo from PDF
+import WorkxLogo from '@/components/ui/WorkxLogo'
 function WorkxLogoBox() {
   return (
-    <Image
-      src="/workx-logo.png"
-      alt="Workx Advocaten"
-      width={200}
-      height={80}
-      className="h-20 w-auto mx-auto"
-      priority
+    <WorkxLogo height={80} className="mx-auto"
     />
   )
 }

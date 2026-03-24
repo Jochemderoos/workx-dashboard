@@ -19,11 +19,10 @@ import { CURRENT_CHANGELOG, CHANGELOG_VERSION } from '@/lib/changelog'
 import { buildExpensePDF } from '@/lib/expense-pdf'
 // import { BeamConnector } from '@/components/ui/AnimatedBeam'
 
-// Logo Component - uses actual Workx logo
+// Logo Component - official Workx logo from PDF
+import WorkxLogo from '@/components/ui/WorkxLogo'
 function WorkxLogoSmall() {
-  return (
-    <Image src="/workx-logo.png" alt="Workx Advocaten" width={180} height={56} className="h-14 w-auto" draggable={false} priority />
-  )
+  return <WorkxLogo height={56} />
 }
 
 // Helper: skip weekends - advance to next Monday if date falls on Saturday or Sunday

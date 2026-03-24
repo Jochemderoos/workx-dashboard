@@ -299,8 +299,7 @@ export async function POST(
         color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
       })
 
-      // Add Workx logo to production sheet (top-left)
-      await drawWorkxLogo(sheetPage, pdfDoc)
+      // No logo on production sheets — they are printed on yellow paper with logo already
 
       // Production number - large centered text
       const productionText = `${productionLabel} ${production.productionNumber}`

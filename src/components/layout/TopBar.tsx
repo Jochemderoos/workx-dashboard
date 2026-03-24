@@ -8,6 +8,11 @@ import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import { NotificationCenter } from '@/components/NotificationCenter'
+import WorkxLogo from '@/components/ui/WorkxLogo'
+
+function WorkxLogoMobile() {
+  return <WorkxLogo height={32} />
+}
 import { useTeam, useCalendarEvents, useWorkItems } from '@/lib/hooks/useData'
 import { ThemeToggleCompact } from '@/components/ui/ThemeToggle'
 
@@ -296,13 +301,7 @@ function TopBarComponent({ user }: TopBarProps) {
           {showMobileMenu ? <Icons.x size={24} /> : <Icons.menu size={24} />}
         </button>
         <Link href="/dashboard" title="Naar Dashboard">
-          <Image
-            src="/workx-logo.png"
-            alt="Workx Advocaten"
-            width={100}
-            height={32}
-            className="h-8 w-auto"
-          />
+          <WorkxLogoMobile />
         </Link>
       </div>
 
