@@ -8,6 +8,47 @@ import toast from 'react-hot-toast'
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
+// Small logo preview rendered from official PDF (same as Sidebar)
+function WorkxLogoPreview() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function render() {
+      try {
+        const pdfjsLib = await import('pdfjs-dist')
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+        const response = await fetch('/workx-logo.pdf')
+        if (!response.ok || cancelled) return
+        const data = await response.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data }).promise
+        const page = await pdf.getPage(1)
+        const viewport = page.getViewport({ scale: 1.5 })
+        const canvas = canvasRef.current
+        if (!canvas || cancelled) return
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        const ctx = canvas.getContext('2d')!
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        await page.render({ canvas, canvasContext: ctx, viewport }).promise
+        // Remove white pixels for transparency
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const pixels = imgData.data
+        for (let i = 0; i < pixels.length; i += 4) {
+          if (pixels[i] > 190 && pixels[i + 1] > 190 && pixels[i + 2] > 170) pixels[i + 3] = 0
+        }
+        ctx.putImageData(imgData, 0, 0)
+        if (!cancelled) setLoaded(true)
+      } catch { /* ignore */ }
+    }
+    render()
+    return () => { cancelled = true }
+  }, [])
+
+  return <canvas ref={canvasRef} className={`h-6 w-auto ${loaded ? 'opacity-100' : 'opacity-0'}`} />
+}
+
 // Debounce hook
 function useDebounceCallback<T extends (...args: any[]) => any>(
   callback: T,
@@ -1454,11 +1495,10 @@ export default function WorkxflowPage() {
                       onClick={() => mainDocInputRef.current?.click()}
                       title="Klik om te vervangen"
                     >
-                      {/* Workx logo overlay (top-left, flush) - clean text version */}
+                      {/* Workx logo overlay — same as Sidebar, rendered from official PDF */}
                       {includeLogoOnProcesstuk && (
-                        <div className="absolute top-0 left-0 z-10 bg-[#f9ff85] px-1.5 py-1 rounded-br-sm">
-                          <span className="text-[10px] font-bold text-[#1e1e1e] leading-none">Workx</span>
-                          <span className="block text-[5px] text-[#1e1e1e] leading-none -mt-0.5">Advocaten</span>
+                        <div className="absolute top-0 left-0 z-10">
+                          <WorkxLogoPreview />
                         </div>
                       )}
                       {/* Document preview */}
