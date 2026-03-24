@@ -104,6 +104,7 @@ export default function ExpandableText({
 }: ExpandableTextProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const [isTruncated, setIsTruncated] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLParagraphElement>(null)
@@ -192,21 +193,24 @@ export default function ExpandableText({
             className={`text-sm text-gray-400 whitespace-pre-wrap leading-relaxed transition-colors ${
               onChange && !readOnly ? 'group-hover/text:text-gray-300' : ''
             }`}
-            style={{
+            style={!isExpanded ? {
               display: '-webkit-box',
               WebkitLineClamp: maxLines,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
-            }}
+            } : undefined}
           >
             {displayText}
           </p>
-          {/* Gradient fade-out + expand hint */}
+          {/* Expand hint — no gradient overlay (caused ugly gray line on light mode) */}
           {isTruncated && (
-            <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-workx-dark/90 via-workx-dark/40 to-transparent pointer-events-none rounded-b flex items-end justify-end pb-0.5 pr-1">
-              <span className="text-[10px] text-workx-lime/50 font-medium tracking-wide opacity-0 group-hover/text:opacity-100 transition-opacity">
-                hover voor meer
-              </span>
+            <div className="flex items-center justify-end mt-0.5">
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded) }}
+                className="text-[10px] text-workx-lime/60 font-medium tracking-wide cursor-pointer hover:text-workx-lime transition-colors"
+              >
+                {isExpanded ? 'minder tonen ▴' : 'meer tonen ▾'}
+              </button>
             </div>
           )}
         </div>
