@@ -49,36 +49,7 @@ async function drawWorkxLogo(
   const marginLeft = 0 // Flush left
   const marginTop = 0  // Flush top
 
-  // Try to embed the official logo
-  const logoBytes = await loadLogoPdf()
-
-  if (logoBytes) {
-    try {
-      const logoPdf = await PDFDocument.load(logoBytes)
-      const [embeddedPage] = await pdfDoc.embedPdf(logoPdf, [0])
-
-      // Get original dimensions and scale to fit
-      const { width: origWidth, height: origHeight } = embeddedPage
-      const scale = Math.min(LOGO_WIDTH / origWidth, LOGO_HEIGHT / origHeight)
-      const scaledWidth = origWidth * scale
-      const scaledHeight = origHeight * scale
-
-      // Position: top-left, flush against top
-      const logoY = pageHeight - scaledHeight - marginTop
-
-      page.drawPage(embeddedPage, {
-        x: marginLeft,
-        y: logoY,
-        width: scaledWidth,
-        height: scaledHeight,
-      })
-      return
-    } catch (err) {
-      console.error('Error embedding logo PDF:', err)
-    }
-  }
-
-  // Fallback to text-based logo if PDF fails
+  // Clean text-based logo (no shadow, works perfectly server-side)
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
   const logoY = pageHeight - LOGO_HEIGHT - marginTop
 
