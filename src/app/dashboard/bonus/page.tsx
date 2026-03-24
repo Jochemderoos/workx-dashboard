@@ -951,15 +951,9 @@ export default function BonusPage() {
                     {calc.status === 'PAID' && (
                       <span className="px-2 py-1 text-[10px] font-medium rounded-lg bg-emerald-500/15 text-emerald-400 mr-1">Betaald</span>
                     )}
-                    {/* Submit button — only for DRAFT */}
+                    {/* Concept badge for DRAFT */}
                     {(!calc.status || calc.status === 'DRAFT') && (
-                      <button
-                        onClick={() => { if (confirm('Bonus indienen? Hanna ontvangt een melding.')) submitCalculation(calc.id) }}
-                        className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-workx-lime/15 text-workx-lime hover:bg-workx-lime/25 transition-colors mr-1"
-                        title="Indienen"
-                      >
-                        Indienen
-                      </button>
+                      <span className="px-2 py-1 text-[10px] font-medium rounded-lg bg-white/5 text-gray-400 mr-1">Concept</span>
                     )}
                     <button onClick={() => downloadPDF(calc)} className="p-2.5 text-gray-400 hover:text-workx-lime rounded-lg hover:bg-white/5 transition-colors" title="Download PDF">
                       <Icons.download size={16} />
