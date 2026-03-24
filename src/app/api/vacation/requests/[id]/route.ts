@@ -88,13 +88,20 @@ export async function PATCH(
       })
 
       // Update vacation balance based on status change
+      // Only count regular vacation, NOT zwangerschaps/ouderschaps/bevallings/geboorteverlof
+      const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
+      const reason = (request.reason || '').toLowerCase()
+      const isVerlof = verlofTypes.some(t => reason.includes(t))
       const currentYear = new Date().getFullYear()
+
       if (status === 'APPROVED' && !wasApproved) {
-        // Newly approved - add days
-        await prisma.vacationBalance.updateMany({
-          where: { userId: request.userId, year: currentYear },
-          data: { opgenomenLopendJaar: { increment: request.days } }
-        })
+        // Newly approved - add days (only for regular vacation)
+        if (!isVerlof) {
+          await prisma.vacationBalance.updateMany({
+            where: { userId: request.userId, year: currentYear },
+            data: { opgenomenLopendJaar: { increment: request.days } }
+          })
+        }
 
         // Create VacationPeriod for the calendar/agenda
         const balance = await prisma.vacationBalance.findFirst({
@@ -117,11 +124,13 @@ export async function PATCH(
           }).catch((e: any) => console.error('Error creating VacationPeriod:', e))
         }
       } else if (status === 'REJECTED' && wasApproved) {
-        // Was approved, now rejected - remove days
-        await prisma.vacationBalance.updateMany({
-          where: { userId: request.userId, year: currentYear },
-          data: { opgenomenLopendJaar: { decrement: request.days } }
-        })
+        // Was approved, now rejected - remove days (only for regular vacation)
+        if (!isVerlof) {
+          await prisma.vacationBalance.updateMany({
+            where: { userId: request.userId, year: currentYear },
+            data: { opgenomenLopendJaar: { decrement: request.days } }
+          })
+        }
       }
 
       // Notify the employee about the decision

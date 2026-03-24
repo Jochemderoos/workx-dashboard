@@ -49,15 +49,21 @@ export async function GET(req: NextRequest) {
     // Dit voorkomt drift door dubbele incrementen of race conditions
     const approvedRequests = await prisma.vacationRequest.findMany({
       where: { status: 'APPROVED' },
-      select: { userId: true, days: true, startDate: true },
+      select: { userId: true, days: true, startDate: true, reason: true },
     })
 
     // Som per gebruiker voor het huidige jaar (op basis van startDate)
+    // Exclude zwangerschaps/ouderschaps/bevallings/geboorteverlof — die tellen NIET als vakantiedagen
+    const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
     const approvedDaysMap = new Map<string, number>()
     for (const r of approvedRequests) {
       const reqYear = new Date(r.startDate).getFullYear()
       if (reqYear === currentYear) {
-        approvedDaysMap.set(r.userId, (approvedDaysMap.get(r.userId) || 0) + r.days)
+        const reason = (r.reason || '').toLowerCase()
+        const isVerlof = verlofTypes.some(t => reason.includes(t))
+        if (!isVerlof) {
+          approvedDaysMap.set(r.userId, (approvedDaysMap.get(r.userId) || 0) + r.days)
+        }
       }
     }
 

@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Herbereken opgenomenLopendJaar uit daadwerkelijke APPROVED requests
-    const approvedRequests = await prisma.vacationRequest.aggregate({
+    // Exclude zwangerschaps/ouderschaps/bevallings/geboorteverlof
+    const approvedRequests = await prisma.vacationRequest.findMany({
       where: {
         userId: session.user.id,
         status: 'APPROVED',
@@ -42,9 +43,12 @@ export async function GET(req: NextRequest) {
           lt: new Date(currentYear + 1, 0, 1),
         },
       },
-      _sum: { days: true },
+      select: { days: true, reason: true },
     })
-    const actualOpgenomen = approvedRequests._sum.days || 0
+    const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
+    const actualOpgenomen = approvedRequests
+      .filter(r => !verlofTypes.some(t => (r.reason || '').toLowerCase().includes(t)))
+      .reduce((sum, r) => sum + r.days, 0)
 
     // Return in a format compatible with existing code
     return NextResponse.json({
