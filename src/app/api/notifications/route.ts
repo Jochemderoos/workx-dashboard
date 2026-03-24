@@ -170,6 +170,31 @@ export async function GET() {
       })
     }
 
+    // 6b. Submitted bonuses (for ADMIN/PARTNER only)
+    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER') {
+      const submittedBonuses = await prisma.bonusCalculation.findMany({
+        where: { status: 'SUBMITTED' },
+        include: { user: { select: { name: true } } },
+        orderBy: { submittedAt: 'desc' },
+        take: 5,
+      })
+      submittedBonuses.forEach((bonus) => {
+        const key = `bonus-${bonus.id}`
+        if (!dismissedKeys.has(key)) {
+          const amount = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(bonus.bonusAmount)
+          notifications.push({
+            id: key,
+            type: 'bonus',
+            title: 'Bonus ingediend',
+            message: `${bonus.user.name} — ${amount}`,
+            createdAt: bonus.submittedAt || bonus.createdAt,
+            read: false,
+            href: '/dashboard/bonus',
+          })
+        }
+      })
+    }
+
     // 7. Werkverdelingsgesprekken - for current week
     {
       // Skip weekends: advance to next Monday if date falls on Saturday or Sunday

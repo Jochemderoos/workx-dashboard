@@ -11,16 +11,23 @@ interface Calculation {
   id: string
   invoiceAmount: number
   bonusPercentage: number
-  invoicePaid: boolean  // Factuur is betaald door klant
-  bonusPaid: boolean    // Bonus is uitbetaald aan medewerker
+  invoicePaid: boolean
+  bonusPaid: boolean
   bonusAmount: number
   invoiceNumber: string | null
   clientName: string | null
+  status: string // DRAFT, SUBMITTED, PAID
+  submittedAt: string | null
+  paidAt: string | null
   createdAt: string
+  user?: { id: string; name: string }
 }
 
 export default function BonusPage() {
   const [calculations, setCalculations] = useState<Calculation[]>([])
+  const [adminCalculations, setAdminCalculations] = useState<Calculation[]>([])
+  const [activeTab, setActiveTab] = useState<'mijn' | 'overzicht'>('mijn')
+  const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showBonusOverview, setShowBonusOverview] = useState(false)
@@ -29,10 +36,24 @@ export default function BonusPage() {
 
   const calculatedBonus = form.invoiceAmount ? parseFloat(form.invoiceAmount) * (parseFloat(form.bonusPercentage) / 100) : 0
 
+  // Check admin role
+  useEffect(() => {
+    fetch('/api/user/profile').then(r => r.json()).then(u => {
+      if (u.role === 'ADMIN' || u.role === 'PARTNER') setIsAdmin(true)
+    }).catch(() => {})
+  }, [])
+
   // Fetch calculations from API on mount
   useEffect(() => {
     fetchCalculations()
   }, [])
+
+  // Fetch admin overview when tab changes
+  useEffect(() => {
+    if (activeTab === 'overzicht' && isAdmin) {
+      fetchAdminCalculations()
+    }
+  }, [activeTab, isAdmin])
 
   const fetchCalculations = async () => {
     try {
@@ -46,6 +67,48 @@ export default function BonusPage() {
       toast.error('Kon berekeningen niet laden')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchAdminCalculations = async () => {
+    try {
+      const res = await fetch('/api/bonus?view=admin')
+      if (res.ok) setAdminCalculations(await res.json())
+    } catch { /* ignore */ }
+  }
+
+  const submitCalculation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/bonus/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submit' }),
+      })
+      if (res.ok) {
+        toast.success('Bonus ingediend!')
+        fetchCalculations()
+      } else {
+        toast.error('Indienen mislukt')
+      }
+    } catch {
+      toast.error('Kon niet indienen')
+    }
+  }
+
+  const toggleAdminPaid = async (id: string, currentStatus: string) => {
+    const action = currentStatus === 'PAID' ? 'unpaid' : 'paid'
+    try {
+      const res = await fetch(`/api/bonus/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      if (res.ok) {
+        toast.success(action === 'paid' ? 'Gemarkeerd als betaald' : 'Teruggedraaid')
+        fetchAdminCalculations()
+      }
+    } catch {
+      toast.error('Kon status niet wijzigen')
     }
   }
 
@@ -412,6 +475,16 @@ export default function BonusPage() {
             <h1 className="text-xl sm:text-2xl font-semibold text-white">Bonus Calculator</h1>
           </div>
           <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Bereken en beheer je bonussen op basis van facturaties</p>
+          {isAdmin && (
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setActiveTab('mijn')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'mijn' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
+                Mijn bonussen
+              </button>
+              <button onClick={() => setActiveTab('overzicht')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'overzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
+                Overzicht (alle medewerkers)
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Popover.Root open={showBonusOverview} onOpenChange={setShowBonusOverview}>
@@ -834,16 +907,37 @@ export default function BonusPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
+                    {/* Status badge */}
+                    {calc.status === 'SUBMITTED' && (
+                      <span className="px-2 py-1 text-[10px] font-medium rounded-lg bg-blue-500/15 text-blue-400 mr-1">Ingediend</span>
+                    )}
+                    {calc.status === 'PAID' && (
+                      <span className="px-2 py-1 text-[10px] font-medium rounded-lg bg-emerald-500/15 text-emerald-400 mr-1">Betaald</span>
+                    )}
+                    {/* Submit button — only for DRAFT */}
+                    {(!calc.status || calc.status === 'DRAFT') && (
+                      <button
+                        onClick={() => { if (confirm('Bonus indienen? Hanna ontvangt een melding.')) submitCalculation(calc.id) }}
+                        className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-workx-lime/15 text-workx-lime hover:bg-workx-lime/25 transition-colors mr-1"
+                        title="Indienen"
+                      >
+                        Indienen
+                      </button>
+                    )}
                     <button onClick={() => downloadPDF(calc)} className="p-2.5 text-gray-400 hover:text-workx-lime rounded-lg hover:bg-white/5 transition-colors" title="Download PDF">
                       <Icons.download size={16} />
                     </button>
-                    <button onClick={() => handleEdit(calc)} className="p-2.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors" title="Bewerken">
-                      <Icons.edit size={16} />
-                    </button>
-                    <button onClick={() => handleDelete(calc.id)} className="p-2.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors" title="Verwijderen">
-                      <Icons.trash size={16} />
-                    </button>
+                    {(!calc.status || calc.status === 'DRAFT') && (
+                      <>
+                        <button onClick={() => handleEdit(calc)} className="p-2.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors" title="Bewerken">
+                          <Icons.edit size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(calc.id)} className="p-2.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors" title="Verwijderen">
+                          <Icons.trash size={16} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )
@@ -851,6 +945,55 @@ export default function BonusPage() {
           </div>
         )}
       </div>
+      {/* Admin Overzicht */}
+      {activeTab === 'overzicht' && isAdmin && (
+        <div className="card p-4 sm:p-6">
+          <h2 className="font-medium text-white flex items-center gap-2 mb-4">
+            <Icons.users size={16} className="text-green-400" />
+            Alle ingediende bonussen
+          </h2>
+          {adminCalculations.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">Geen ingediende bonussen</p>
+          ) : (
+            <div className="space-y-3">
+              {adminCalculations.map(calc => (
+                <div key={calc.id} className={`rounded-xl border p-4 ${calc.status === 'PAID' ? 'opacity-60' : ''}`} style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-white">{calc.user?.name || 'Onbekend'}</span>
+                        {calc.clientName && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>{calc.clientName}</span>}
+                        {calc.invoiceNumber && <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>#{calc.invoiceNumber}</span>}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${calc.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                          {calc.status === 'PAID' ? 'Betaald' : 'Ingediend'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                        <span>Factuur: €{calc.invoiceAmount.toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</span>
+                        <span>{calc.bonusPercentage}%</span>
+                        {calc.submittedAt && <span>Ingediend: {new Date(calc.submittedAt).toLocaleDateString('nl-NL')}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-lg font-bold text-green-400">€{calc.bonusAmount.toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</div>
+                      <button
+                        onClick={() => toggleAdminPaid(calc.id, calc.status)}
+                        className={`mt-1 text-xs px-3 py-1 rounded-lg transition-colors ${
+                          calc.status === 'PAID'
+                            ? 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'
+                            : 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                        }`}
+                      >
+                        {calc.status === 'PAID' ? 'Onbetaald' : 'Markeer betaald'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

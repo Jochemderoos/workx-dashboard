@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// GET - Fetch all bonus calculations for the current user
+// GET - Fetch bonus calculations (own for employees, all submitted for admins)
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -11,6 +11,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(req.url)
+    const view = searchParams.get('view')
+
+    // Admin overview: all submitted/paid bonuses from everyone
+    if (view === 'admin') {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+      })
+      if (currentUser?.role !== 'ADMIN' && currentUser?.role !== 'PARTNER') {
+        return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+      }
+
+      const calculations = await prisma.bonusCalculation.findMany({
+        where: { status: { in: ['SUBMITTED', 'PAID'] } },
+        include: { user: { select: { id: true, name: true } } },
+        orderBy: { submittedAt: 'desc' },
+      })
+      return NextResponse.json(calculations)
+    }
+
+    // Normal: own calculations
     const calculations = await prisma.bonusCalculation.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' }
