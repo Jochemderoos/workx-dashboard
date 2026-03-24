@@ -48,7 +48,7 @@ const nextConfig = {
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               "connect-src 'self' https:",
-              "frame-src 'self'",
+              "frame-src 'self' data: blob: https:",
               "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",
