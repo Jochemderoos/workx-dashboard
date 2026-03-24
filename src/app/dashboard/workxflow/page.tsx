@@ -146,6 +146,7 @@ export default function WorkxflowPage() {
   const [isDetectingBins, setIsDetectingBins] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
   const [includeLogoOnProcesstuk, setIncludeLogoOnProcesstuk] = useState(true)
+  const [includeLogoOnProductieblad, setIncludeLogoOnProductieblad] = useState(false)
 
   // Sharing & locking state
   const [showSharePanel, setShowSharePanel] = useState(false)
@@ -775,7 +776,7 @@ export default function WorkxflowPage() {
       const res = await fetch(`/api/workxflow/${activeBundle.id}/pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ includeLogoOnProcesstuk, split, maxSizeMB: 20 }),
+        body: JSON.stringify({ includeLogoOnProcesstuk, includeLogoOnProductieblad, split, maxSizeMB: 20 }),
       })
 
       if (res.ok) {
@@ -1308,6 +1309,15 @@ export default function WorkxflowPage() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
+                      checked={includeLogoOnProductieblad}
+                      onChange={(e) => setIncludeLogoOnProductieblad(e.target.checked)}
+                      className="w-4 h-4 rounded text-workx-lime bg-white/10 border-white/20 focus:ring-workx-lime"
+                    />
+                    <span className="text-sm text-gray-300">Logo toevoegen aan productiebladen in PDF</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
                       checked={activeBundle.includeProductielijst}
                       onChange={async (e) => {
                         const val = e.target.checked
@@ -1579,7 +1589,12 @@ export default function WorkxflowPage() {
                             background: '#f9ff85'
                           }}
                         >
-                          {/* No logo on production sheets — printed on yellow paper with logo */}
+                          {/* Logo on production sheet only if enabled */}
+                          {includeLogoOnProductieblad && (
+                            <div className="absolute top-0 left-0 z-10">
+                              <WorkxLogoPreview />
+                            </div>
+                          )}
                           {/* Centered production text */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
                             <p className="text-[#1e1e1e] font-bold text-base tracking-wide">

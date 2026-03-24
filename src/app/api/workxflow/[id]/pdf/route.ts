@@ -147,12 +147,16 @@ export async function POST(
 
     // Get options from request body (optional)
     let includeLogoOnProcesstuk = true // default: include logo
+    let includeLogoOnProductieblad = false // default: no logo on production sheets (printed on yellow paper)
     let splitMode = false
     let maxSizeMB = 20
     try {
       const body = await req.json()
       if (typeof body.includeLogoOnProcesstuk === 'boolean') {
         includeLogoOnProcesstuk = body.includeLogoOnProcesstuk
+      }
+      if (typeof body.includeLogoOnProductieblad === 'boolean') {
+        includeLogoOnProductieblad = body.includeLogoOnProductieblad
       }
       if (typeof body.split === 'boolean') {
         splitMode = body.split
@@ -299,7 +303,10 @@ export async function POST(
         color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
       })
 
-      // No logo on production sheets — they are printed on yellow paper with logo already
+      // Logo on production sheet only if enabled (for digital PDF, not print)
+      if (includeLogoOnProductieblad) {
+        await drawWorkxLogo(sheetPage, pdfDoc)
+      }
 
       // Production number - large centered text
       const productionText = `${productionLabel} ${production.productionNumber}`
