@@ -63,9 +63,16 @@ export async function DELETE(
   }
 
   try {
-    await prisma.transitieCalculation.delete({
-      where: { id: params.id }
-    })
+    // Check if this is the user's own calculation
+    const calc = await prisma.transitieCalculation.findUnique({ where: { id: params.id } })
+    if (!calc) return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
+
+    if (calc.userId === session.user.id || calc.userId === null) {
+      // Own or unclaimed: actually delete
+      await prisma.transitieCalculation.delete({ where: { id: params.id } })
+    } else {
+      return NextResponse.json({ error: 'Niet jouw berekening' }, { status: 403 })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

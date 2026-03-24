@@ -16,7 +16,13 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json(calculations)
+    // Tag each calculation with isOwn flag
+    const tagged = calculations.map(c => ({
+      ...c,
+      isOwn: c.userId === session.user.id,
+    }))
+
+    return NextResponse.json(tagged)
   } catch (error) {
     console.error('Error fetching transitie calculations:', error)
     return NextResponse.json({ error: 'Kon niet ophalen calculations' }, { status: 500 })

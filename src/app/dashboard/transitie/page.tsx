@@ -1183,7 +1183,7 @@ export default function TransitiePage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-white/50 mb-3">
-                  <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}</span>
+                  <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}{!(calc as any).isOwn && ' (gedeeld)'}</span>
                   <span>{calc.years}j {calc.months}m</span>
                   <span>{formatCurrency(calc.totalSalary)}/m</span>
                 </div>
@@ -1228,7 +1228,8 @@ export default function TransitiePage() {
                     }`}
                   >
                     <td className="py-3 px-2 text-gray-400">
-                      {new Date(calc.createdAt).toLocaleDateString('nl-NL')}
+                      <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}</span>
+                      {!(calc as any).isOwn && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/30">gedeeld</span>}
                     </td>
                     <td className="py-3 px-2 text-white">{calc.employerName || '-'}</td>
                     <td className="py-3 px-2 text-white">{calc.employeeName || '-'}</td>
