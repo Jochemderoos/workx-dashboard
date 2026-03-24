@@ -67,11 +67,22 @@ export async function DELETE(
     const calc = await prisma.transitieCalculation.findUnique({ where: { id: params.id } })
     if (!calc) return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
 
-    if (calc.userId === session.user.id || calc.userId === null) {
-      // Own or unclaimed: actually delete
+    if (calc.userId === session.user.id) {
+      // Own calculation: actually delete from database
       await prisma.transitieCalculation.delete({ where: { id: params.id } })
     } else {
-      return NextResponse.json({ error: 'Niet jouw berekening' }, { status: 403 })
+      // Shared/andermans berekening: alleen verbergen voor deze user
+      let hiddenFor: string[] = []
+      if (calc.hiddenFor) {
+        try { hiddenFor = JSON.parse(calc.hiddenFor) } catch { /* ignore */ }
+      }
+      if (!hiddenFor.includes(session.user.id)) {
+        hiddenFor.push(session.user.id)
+      }
+      await prisma.transitieCalculation.update({
+        where: { id: params.id },
+        data: { hiddenFor: JSON.stringify(hiddenFor) }
+      })
     }
 
     return NextResponse.json({ success: true })

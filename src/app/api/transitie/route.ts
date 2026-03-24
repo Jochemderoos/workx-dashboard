@@ -16,11 +16,16 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    // Tag each calculation with isOwn flag
-    const tagged = calculations.map(c => ({
-      ...c,
-      isOwn: c.userId === session.user.id,
-    }))
+    // Filter out calculations hidden by this user + tag with isOwn
+    const tagged = calculations
+      .filter(c => {
+        if (!c.hiddenFor) return true
+        try { return !JSON.parse(c.hiddenFor).includes(session.user.id) } catch { return true }
+      })
+      .map(c => ({
+        ...c,
+        isOwn: c.userId === session.user.id,
+      }))
 
     return NextResponse.json(tagged)
   } catch (error) {

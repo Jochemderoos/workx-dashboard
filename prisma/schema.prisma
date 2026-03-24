@@ -388,6 +388,7 @@ model WorkItem {
 model TransitieCalculation {
   id               String   @id @default(cuid())
   userId           String?  // Wie heeft deze berekening gemaakt
+  hiddenFor        String?  @db.Text // JSON array van userIds die dit niet meer willen zien
   employerName     String?
   employeeName     String
   startDate        String   // ISO date string
