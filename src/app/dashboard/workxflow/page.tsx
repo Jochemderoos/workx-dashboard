@@ -1454,14 +1454,11 @@ export default function WorkxflowPage() {
                       onClick={() => mainDocInputRef.current?.click()}
                       title="Klik om te vervangen"
                     >
-                      {/* Workx logo overlay (top-left, flush) - using actual image */}
+                      {/* Workx logo overlay (top-left, flush) - clean text version */}
                       {includeLogoOnProcesstuk && (
-                        <div className="absolute top-0 left-0 z-10">
-                          <img
-                            src="/workx-logo.png"
-                            alt="Workx"
-                            className="h-6 w-auto"
-                          />
+                        <div className="absolute top-0 left-0 z-10 bg-[#f9ff85] px-1.5 py-1 rounded-br-sm">
+                          <span className="text-[10px] font-bold text-[#1e1e1e] leading-none">Workx</span>
+                          <span className="block text-[5px] text-[#1e1e1e] leading-none -mt-0.5">Advocaten</span>
                         </div>
                       )}
                       {/* Document preview */}
