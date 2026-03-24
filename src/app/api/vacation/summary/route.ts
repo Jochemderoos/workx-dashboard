@@ -166,11 +166,17 @@ export async function GET() {
     ])
 
     // Herbereken opgenomenLopendJaar uit daadwerkelijke APPROVED requests
+    // Exclude zwangerschaps/ouderschaps/bevallings/geboorteverlof — die tellen NIET als vakantiedagen
+    const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
     const approvedDaysMap = new Map<string, number>()
     for (const v of vacations) {
       const reqYear = new Date(v.startDate).getFullYear()
       if (reqYear === currentYear) {
-        approvedDaysMap.set(v.userId, (approvedDaysMap.get(v.userId) || 0) + v.days)
+        const reason = ((v as any).reason || '').toLowerCase()
+        const isVerlof = verlofTypes.some(t => reason.includes(t))
+        if (!isVerlof) {
+          approvedDaysMap.set(v.userId, (approvedDaysMap.get(v.userId) || 0) + v.days)
+        }
       }
     }
 
