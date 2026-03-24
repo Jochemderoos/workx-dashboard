@@ -692,7 +692,7 @@ export default function WorkxflowPage() {
     }
   }
 
-  // Drag and drop handlers
+  // Drag and drop handlers — only reorder locally during drag, save on drop
   const handleDragStart = (index: number) => {
     setDraggedIndex(index)
   }
@@ -700,11 +700,29 @@ export default function WorkxflowPage() {
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault()
     if (draggedIndex === null || draggedIndex === index) return
-    reorderProductions(draggedIndex, index)
+    if (!activeBundle) return
+
+    // Local reorder only (no API call)
+    const newProductions = [...activeBundle.productions]
+    const [moved] = newProductions.splice(draggedIndex, 1)
+    newProductions.splice(index, 0, moved)
+    const updated = newProductions.map((p, i) => ({ ...p, sortOrder: i, productionNumber: String(i + 1) }))
+    setActiveBundle(prev => prev ? { ...prev, productions: updated } : null)
     setDraggedIndex(index)
   }
 
   const handleDragEnd = () => {
+    // Save to server on drop
+    if (activeBundle && draggedIndex !== null) {
+      const sorted = [...activeBundle.productions].sort((a, b) => a.sortOrder - b.sortOrder)
+      fetch(`/api/workxflow/${activeBundle.id}/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productionIds: sorted.map(p => p.id) }),
+      }).then(res => {
+        if (!res.ok) toast.error('Kon volgorde niet opslaan')
+      }).catch(() => toast.error('Kon volgorde niet opslaan'))
+    }
     setDraggedIndex(null)
   }
 
