@@ -95,6 +95,29 @@ export default function BonusPage() {
     }
   }
 
+  const submitAllDrafts = async () => {
+    const drafts = calculations.filter(c => !c.status || c.status === 'DRAFT')
+    if (drafts.length === 0) {
+      toast.error('Geen openstaande bonussen om in te dienen')
+      return
+    }
+    if (!confirm(`${drafts.length} bonus${drafts.length !== 1 ? 'sen' : ''} indienen? Hanna ontvangt een melding.`)) return
+
+    let success = 0
+    for (const calc of drafts) {
+      try {
+        const res = await fetch(`/api/bonus/${calc.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'submit' }),
+        })
+        if (res.ok) success++
+      } catch { /* continue */ }
+    }
+    toast.success(`${success} bonus${success !== 1 ? 'sen' : ''} ingediend!`)
+    fetchCalculations()
+  }
+
   const toggleAdminPaid = async (id: string, currentStatus: string) => {
     const action = currentStatus === 'PAID' ? 'unpaid' : 'paid'
     try {
@@ -487,6 +510,19 @@ export default function BonusPage() {
           )}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          {calculations.some(c => !c.status || c.status === 'DRAFT') && (
+            <button
+              onClick={submitAllDrafts}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-workx-lime/15 border border-workx-lime/30 rounded-lg sm:rounded-xl text-workx-lime hover:bg-workx-lime/25 transition-all text-xs sm:text-base font-medium"
+            >
+              <Icons.send size={14} />
+              <span className="hidden sm:inline">Alles indienen</span>
+              <span className="sm:hidden">Indienen</span>
+              <span className="px-1.5 py-0.5 bg-workx-lime/20 rounded-full text-[10px]">
+                {calculations.filter(c => !c.status || c.status === 'DRAFT').length}
+              </span>
+            </button>
+          )}
           <Popover.Root open={showBonusOverview} onOpenChange={setShowBonusOverview}>
             <Popover.Trigger asChild>
               <button
