@@ -1529,11 +1529,7 @@ export default function WorkxflowPage() {
                             <Icons.gripVertical size={16} />
                           </div>
 
-                          <div
-                            className={`w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0 ${production.documentUrl && production.documentType === 'pdf' ? 'cursor-pointer hover:bg-yellow-500/30 transition-colors' : ''}`}
-                            onClick={() => production.documentUrl && production.documentType === 'pdf' && openPageManager(production)}
-                            title={production.documentUrl && production.documentType === 'pdf' ? 'Pagina\'s beheren' : undefined}
-                          >
+                          <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
                             <span className="text-yellow-400 font-bold text-sm">
                               {production.productionNumber}
                             </span>
@@ -1561,6 +1557,17 @@ export default function WorkxflowPage() {
                               title="Nummer (bijv. 1, 1a, 1b)"
                               placeholder="Nr"
                             />
+                            {/* Pagina's beheren knop */}
+                            {production.documentUrl && production.documentType === 'pdf' && (
+                              <button
+                                onClick={() => openPageManager(production)}
+                                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-yellow-400 hover:bg-yellow-500/15 transition-colors border border-yellow-500/20 hover:border-yellow-500/40"
+                                title="Pagina's beheren (draaien, verwijderen)"
+                              >
+                                <Icons.rotateCw size={12} />
+                                <span>Pagina&apos;s</span>
+                              </button>
+                            )}
                             {/* Download this production's document */}
                             {production.documentUrl && (
                               <button
@@ -2158,8 +2165,8 @@ export default function WorkxflowPage() {
       )}
       {/* Page Manager Modal */}
       {pageManagerProd && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center sm:p-4 sm:pt-[2vh]" onClick={() => !pmSaving && setPageManagerProd(null)}>
-          <div className="w-full sm:max-w-4xl card flex flex-col h-[85dvh] sm:h-auto sm:max-h-[calc(100dvh-4vh-16px)]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 sm:p-4" style={{ paddingTop: '2vh' }} onClick={() => !pmSaving && setPageManagerProd(null)}>
+          <div className="w-full max-w-4xl card flex flex-col" style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }} onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b shrink-0 flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
               <div>
                 <h3 className="font-semibold text-white">Pagina&apos;s beheren</h3>
