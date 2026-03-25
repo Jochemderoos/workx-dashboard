@@ -2165,8 +2165,8 @@ export default function WorkxflowPage() {
       )}
       {/* Page Manager Modal */}
       {pageManagerProd && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-2 sm:p-4" style={{ paddingTop: '2vh' }} onClick={() => !pmSaving && setPageManagerProd(null)}>
-          <div className="w-full max-w-4xl card flex flex-col" style={{ maxHeight: 'calc(100vh - 4vh - 16px)' }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4" onClick={() => !pmSaving && setPageManagerProd(null)}>
+          <div className="w-full max-w-4xl card flex flex-col" style={{ maxHeight: 'calc(100vh - 2rem)' }} onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b shrink-0 flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
               <div>
                 <h3 className="font-semibold text-white">Pagina&apos;s beheren</h3>
