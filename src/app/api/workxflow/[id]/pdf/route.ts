@@ -461,47 +461,42 @@ export async function POST(
         const context = pdfDoc.context
         const pages = pdfDoc.getPages()
 
-        // Create outline items
-        const outlineItems = bookmarks.map((bm) => {
-          const page = pages[Math.min(bm.pageIndex, pages.length - 1)]
-          const pageRef = pdfDoc.getPage(Math.min(bm.pageIndex, pages.length - 1)).ref
+        // Create outline item refs
+        const itemRefs = bookmarks.map((bm) => {
+          const pageIdx = Math.min(bm.pageIndex, pages.length - 1)
+          const pageRef = pages[pageIdx].ref
 
-          const item = context.obj({
-            [PDFName.of('Title').toString()]: PDFHexString.fromText(bm.title),
-            [PDFName.of('Dest').toString()]: context.obj([pageRef, PDFName.of('Fit')]),
-          })
-          return context.register(item)
+          const dict = context.obj({})
+          const itemDict = context.lookup(dict) as PDFDict
+          itemDict.set(PDFName.of('Title'), PDFHexString.fromText(bm.title))
+          const destArray = context.obj([pageRef, PDFName.of('Fit')])
+          itemDict.set(PDFName.of('Dest'), destArray)
+
+          return context.register(itemDict)
         })
-
-        // Link items together (Prev/Next chain)
-        for (let i = 0; i < outlineItems.length; i++) {
-          const item = context.lookup(outlineItems[i]) as PDFDict
-          if (i > 0) item.set(PDFName.of('Prev'), outlineItems[i - 1])
-          if (i < outlineItems.length - 1) item.set(PDFName.of('Next'), outlineItems[i + 1])
-        }
 
         // Create outline root
-        const outlineRoot = context.obj({
-          [PDFName.of('Type').toString()]: PDFName.of('Outlines'),
-          [PDFName.of('First').toString()]: outlineItems[0],
-          [PDFName.of('Last').toString()]: outlineItems[outlineItems.length - 1],
-          [PDFName.of('Count').toString()]: PDFNumber.of(outlineItems.length),
-        })
-        const outlineRef = context.register(outlineRoot)
+        const rootDict = context.obj({})
+        const root = context.lookup(rootDict) as PDFDict
+        root.set(PDFName.of('Type'), PDFName.of('Outlines'))
+        root.set(PDFName.of('First'), itemRefs[0])
+        root.set(PDFName.of('Last'), itemRefs[itemRefs.length - 1])
+        root.set(PDFName.of('Count'), PDFNumber.of(itemRefs.length))
+        const rootRef = context.register(root)
 
-        // Set Parent on all items
-        for (const itemRef of outlineItems) {
-          const item = context.lookup(itemRef) as PDFDict
-          item.set(PDFName.of('Parent'), outlineRef)
+        // Set Parent and Prev/Next on items
+        for (let i = 0; i < itemRefs.length; i++) {
+          const item = context.lookup(itemRefs[i]) as PDFDict
+          item.set(PDFName.of('Parent'), rootRef)
+          if (i > 0) item.set(PDFName.of('Prev'), itemRefs[i - 1])
+          if (i < itemRefs.length - 1) item.set(PDFName.of('Next'), itemRefs[i + 1])
         }
 
-        // Set outlines on catalog
-        pdfDoc.catalog.set(PDFName.of('Outlines'), outlineRef)
-        // Open outline panel by default
+        // Set on catalog
+        pdfDoc.catalog.set(PDFName.of('Outlines'), rootRef)
         pdfDoc.catalog.set(PDFName.of('PageMode'), PDFName.of('UseOutlines'))
       } catch (err) {
         console.error('Error adding bookmarks:', err)
-        // Continue without bookmarks
       }
     }
 
