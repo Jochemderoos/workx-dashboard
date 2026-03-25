@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib'
+import { PDFDocument, PDFPage, rgb, StandardFonts, PDFName, PDFDict, PDFArray, PDFString, PDFNumber, PDFHexString } from 'pdf-lib'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -211,14 +211,17 @@ export async function POST(
     const pageWidth = 595.28
     const pageHeight = 841.89
 
+    // Bookmark tracking: { title, pageIndex }
+    const bookmarks: { title: string; pageIndex: number }[] = []
+
     // ============================================
     // 1. PROCESSTUK (main document) - FIRST
     // ============================================
     const mainDocType = detectDocumentType(bundle.mainDocumentUrl, bundle.mainDocumentType)
-    if (!productionsOnly)
 
-    if (bundle.mainDocumentUrl && mainDocType === 'pdf') {
+    if (!productionsOnly && bundle.mainDocumentUrl && mainDocType === 'pdf') {
       try {
+        bookmarks.push({ title: 'Processtuk', pageIndex: pdfDoc.getPageCount() })
         const mainDocBytes = await getDocumentBytes(bundle.mainDocumentUrl)
         if (mainDocBytes) {
           const mainPdf = await PDFDocument.load(mainDocBytes)
@@ -243,6 +246,7 @@ export async function POST(
     const listTitle = productionLabel === 'BIJLAGE' ? 'Bijlagenlijst' : 'Productielijst'
 
     if (bundle.productions.length > 0 && bundle.includeProductielijst) {
+      bookmarks.push({ title: listTitle, pageIndex: pdfDoc.getPageCount() })
       const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
 
       // Add Workx logo (top-left)
@@ -303,6 +307,9 @@ export async function POST(
     // 3. PRODUCTIONS (sheet + documents for each)
     // ============================================
     for (const production of bundle.productions) {
+      // Bookmark for this production
+      bookmarks.push({ title: `${productionLabel} ${production.productionNumber} - ${production.title}`, pageIndex: pdfDoc.getPageCount() })
+
       // Add production sheet (yellow page with logo)
       const sheetPage = pdfDoc.addPage([pageWidth, pageHeight])
 
@@ -440,6 +447,56 @@ export async function POST(
           font: helvetica,
           color: rgb(0.5, 0.5, 0.5),
         })
+      }
+    }
+
+    // Add bookmarks/outlines for navigation
+    if (bookmarks.length > 0) {
+      try {
+        const context = pdfDoc.context
+        const pages = pdfDoc.getPages()
+
+        // Create outline items
+        const outlineItems = bookmarks.map((bm) => {
+          const page = pages[Math.min(bm.pageIndex, pages.length - 1)]
+          const pageRef = pdfDoc.getPage(Math.min(bm.pageIndex, pages.length - 1)).ref
+
+          const item = context.obj({
+            [PDFName.of('Title').toString()]: PDFHexString.fromText(bm.title),
+            [PDFName.of('Dest').toString()]: context.obj([pageRef, PDFName.of('Fit')]),
+          })
+          return context.register(item)
+        })
+
+        // Link items together (Prev/Next chain)
+        for (let i = 0; i < outlineItems.length; i++) {
+          const item = context.lookup(outlineItems[i]) as PDFDict
+          if (i > 0) item.set(PDFName.of('Prev'), outlineItems[i - 1])
+          if (i < outlineItems.length - 1) item.set(PDFName.of('Next'), outlineItems[i + 1])
+        }
+
+        // Create outline root
+        const outlineRoot = context.obj({
+          [PDFName.of('Type').toString()]: PDFName.of('Outlines'),
+          [PDFName.of('First').toString()]: outlineItems[0],
+          [PDFName.of('Last').toString()]: outlineItems[outlineItems.length - 1],
+          [PDFName.of('Count').toString()]: PDFNumber.of(outlineItems.length),
+        })
+        const outlineRef = context.register(outlineRoot)
+
+        // Set Parent on all items
+        for (const itemRef of outlineItems) {
+          const item = context.lookup(itemRef) as PDFDict
+          item.set(PDFName.of('Parent'), outlineRef)
+        }
+
+        // Set outlines on catalog
+        pdfDoc.catalog.set(PDFName.of('Outlines'), outlineRef)
+        // Open outline panel by default
+        pdfDoc.catalog.set(PDFName.of('PageMode'), PDFName.of('UseOutlines'))
+      } catch (err) {
+        console.error('Error adding bookmarks:', err)
+        // Continue without bookmarks
       }
     }
 
