@@ -499,12 +499,15 @@ export default function WorkxflowPage() {
   const addProduction = async (file?: File) => {
     if (!activeBundle) return
 
-    const nextNumber = activeBundle.productions.length + 1
+    // Next number based on max existing sortOrder (not array length, to avoid gaps)
+    const maxSort = activeBundle.productions.reduce((max, p) => Math.max(max, p.sortOrder), -1)
+    const nextSort = maxSort + 1
+    const nextNumber = nextSort + 1
     const label = activeBundle.productionLabel === 'BIJLAGE' ? 'Bijlage' : 'Productie'
     const production: Partial<Production> = {
       productionNumber: String(nextNumber),
       title: file ? file.name.replace(/\.[^/.]+$/, '') : `${label} ${nextNumber}`,
-      sortOrder: nextNumber - 1,
+      sortOrder: nextSort,
       pageCount: 1,
     }
 
