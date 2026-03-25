@@ -1446,6 +1446,58 @@ export default function WorkxflowPage() {
                               title="Nummer (bijv. 1, 1a, 1b)"
                               placeholder="Nr"
                             />
+                            {/* Add extra PDF to this production */}
+                            <label
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-workx-lime hover:bg-workx-lime/10 cursor-pointer transition-colors"
+                              title="Extra PDF toevoegen aan deze productie"
+                            >
+                              <Icons.plus size={14} />
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0]
+                                  e.target.value = ''
+                                  if (!file || !activeBundle) return
+                                  toast.loading('PDF\'s samenvoegen...', { id: 'merging' })
+                                  try {
+                                    const { PDFDocument } = await import('pdf-lib')
+                                    const mergedPdf = await PDFDocument.create()
+
+                                    // Load existing PDF
+                                    if (production.documentUrl) {
+                                      const existingBytes = production.documentUrl.startsWith('data:')
+                                        ? Uint8Array.from(atob(production.documentUrl.split(',')[1]), c => c.charCodeAt(0))
+                                        : new Uint8Array(await (await fetch(production.documentUrl)).arrayBuffer())
+                                      const existingPdf = await PDFDocument.load(existingBytes)
+                                      const pages = await mergedPdf.copyPages(existingPdf, existingPdf.getPageIndices())
+                                      pages.forEach(p => mergedPdf.addPage(p))
+                                    }
+
+                                    // Load new PDF
+                                    const newBytes = new Uint8Array(await file.arrayBuffer())
+                                    const newPdf = await PDFDocument.load(newBytes)
+                                    const newPages = await mergedPdf.copyPages(newPdf, newPdf.getPageIndices())
+                                    newPages.forEach(p => mergedPdf.addPage(p))
+
+                                    // Upload merged PDF
+                                    const mergedBytes = await mergedPdf.save()
+                                    const mergedBlob = new Blob([mergedBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
+                                    const uploaded = await uploadToBlob(production.documentName || 'merged.pdf', mergedBlob)
+
+                                    await updateProduction(production.id, {
+                                      documentUrl: uploaded.url,
+                                      pageCount: mergedPdf.getPageCount(),
+                                    })
+                                    toast.success(`PDF toegevoegd (${mergedPdf.getPageCount()} pagina's totaal)`, { id: 'merging' })
+                                  } catch (err) {
+                                    console.error('Merge error:', err)
+                                    toast.error('Kon PDF niet samenvoegen', { id: 'merging' })
+                                  }
+                                }}
+                              />
+                            </label>
                             <button
                               onClick={() => deleteProduction(production.id)}
                               className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10"
