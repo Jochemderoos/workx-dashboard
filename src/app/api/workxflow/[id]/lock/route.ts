@@ -24,7 +24,14 @@ export async function POST(
       return NextResponse.json({ error: 'Bundle niet gevonden' }, { status: 404 })
     }
 
-    const hasAccess = bundle.createdById === session.user.id ||
+    // Check access — ADMIN users always have access
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    })
+    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+
+    const hasAccess = isAdmin || bundle.createdById === session.user.id ||
       await prisma.bundleAccess.findUnique({
         where: { bundleId_userId: { bundleId: params.id, userId: session.user.id } },
       })
@@ -54,8 +61,8 @@ export async function POST(
         return NextResponse.json(updated)
       }
 
-      if (new Date(existingLock.expiresAt) > now) {
-        // Someone else has an active lock
+      if (new Date(existingLock.expiresAt) > now && !isAdmin) {
+        // Someone else has an active lock — ADMIN can always override
         return NextResponse.json({
           error: `${existingLock.lockedBy.name} is deze bundle aan het bewerken`,
           lock: existingLock,
@@ -112,14 +119,15 @@ export async function DELETE(
       return NextResponse.json({ success: true })
     }
 
-    // Only the lock holder or the bundle owner can release
+    // Only the lock holder, bundle owner, or ADMIN can release
     if (existingLock.lockedById !== session.user.id) {
-      const bundle = await prisma.workxflowBundle.findUnique({
-        where: { id: params.id },
-        select: { createdById: true },
-      })
-      if (bundle?.createdById !== session.user.id) {
-        return NextResponse.json({ error: 'Alleen de lock-houder of eigenaar kan ontgrendelen' }, { status: 403 })
+      const [bundle, user] = await Promise.all([
+        prisma.workxflowBundle.findUnique({ where: { id: params.id }, select: { createdById: true } }),
+        prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
+      ])
+      const canRelease = bundle?.createdById === session.user.id || user?.role === 'ADMIN' || user?.role === 'PARTNER'
+      if (!canRelease) {
+        return NextResponse.json({ error: 'Alleen de lock-houder, eigenaar of admin kan ontgrendelen' }, { status: 403 })
       }
     }
 
