@@ -149,9 +149,10 @@ export async function POST(
     }
 
     // Get options from request body (optional)
-    let includeLogoOnProcesstuk = true // default: include logo
-    let includeLogoOnProductieblad = false // default: no logo on production sheets (printed on yellow paper)
+    let includeLogoOnProcesstuk = true
+    let includeLogoOnProductieblad = false
     let splitMode = false
+    let productionsOnly = false
     let maxSizeMB = 20
     try {
       const body = await req.json()
@@ -163,6 +164,9 @@ export async function POST(
       }
       if (typeof body.split === 'boolean') {
         splitMode = body.split
+      }
+      if (typeof body.productionsOnly === 'boolean') {
+        productionsOnly = body.productionsOnly
       }
       if (typeof body.maxSizeMB === 'number') {
         maxSizeMB = body.maxSizeMB
@@ -207,6 +211,7 @@ export async function POST(
     // 1. PROCESSTUK (main document) - FIRST
     // ============================================
     const mainDocType = detectDocumentType(bundle.mainDocumentUrl, bundle.mainDocumentType)
+    if (!productionsOnly)
 
     if (bundle.mainDocumentUrl && mainDocType === 'pdf') {
       try {
@@ -233,7 +238,7 @@ export async function POST(
     const productionLabel = bundle.productionLabel || 'PRODUCTIE'
     const listTitle = productionLabel === 'BIJLAGE' ? 'Bijlagenlijst' : 'Productielijst'
 
-    if (bundle.productions.length > 0 && bundle.includeProductielijst) {
+    if (bundle.productions.length > 0 && bundle.includeProductielijst && !productionsOnly) {
       const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
 
       // Add Workx logo (top-left)

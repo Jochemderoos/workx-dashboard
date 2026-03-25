@@ -768,7 +768,7 @@ export default function WorkxflowPage() {
     setDraggedIndex(null)
   }
 
-  const generatePdf = async (split = false) => {
+  const generatePdf = async (split = false, productionsOnly = false) => {
     if (!activeBundle) return
     setIsGeneratingPdf(true)
 
@@ -776,7 +776,7 @@ export default function WorkxflowPage() {
       const res = await fetch(`/api/workxflow/${activeBundle.id}/pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ includeLogoOnProcesstuk, includeLogoOnProductieblad, split, maxSizeMB: 20 }),
+        body: JSON.stringify({ includeLogoOnProcesstuk, includeLogoOnProductieblad, split, productionsOnly, maxSizeMB: 20 }),
       })
 
       if (res.ok) {
@@ -809,7 +809,7 @@ export default function WorkxflowPage() {
           const url = window.URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url
-          a.download = `${activeBundle.title.replace(/\s+/g, '-')}-compleet.pdf`
+          a.download = `${activeBundle.title.replace(/\s+/g, '-')}${productionsOnly ? '-producties' : '-compleet'}.pdf`
           document.body.appendChild(a)
           a.click()
           window.URL.revokeObjectURL(url)
@@ -1144,26 +1144,35 @@ export default function WorkxflowPage() {
                       </button>
                     )}
 
-                    {/* PDF & Print group */}
-                    <div className="flex items-center rounded-lg border border-white/10 overflow-hidden">
+                    {/* PDF Downloads */}
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => generatePdf(false)}
                         disabled={isGeneratingPdf}
-                        className="flex items-center gap-2 px-3 py-2 bg-red-500/20 text-red-300 hover:bg-red-500/30 text-sm font-medium border-r border-white/10"
-                        title="Download complete PDF met processtuk, overzicht en alle producties"
+                        className="flex items-center gap-2 px-3 py-2 bg-red-500/20 text-red-300 hover:bg-red-500/30 rounded-lg text-sm font-medium"
+                        title="Complete PDF: processtuk + productielijst + alle producties"
                       >
                         {isGeneratingPdf ? (
                           <span className="w-4 h-4 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Icons.download size={16} />
                         )}
-                        PDF
+                        Complete PDF
+                      </button>
+                      <button
+                        onClick={() => generatePdf(false, true)}
+                        disabled={isGeneratingPdf}
+                        className="flex items-center gap-2 px-3 py-2 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 rounded-lg text-sm font-medium"
+                        title="Alleen producties downloaden (zonder processtuk)"
+                      >
+                        <Icons.download size={16} />
+                        Producties
                       </button>
                       <button
                         onClick={() => generatePdf(true)}
                         disabled={isGeneratingPdf}
-                        className="flex items-center gap-1.5 px-2.5 py-2 bg-white/5 text-gray-300 hover:bg-white/10 text-sm"
-                        title="Download PDF in delen (max 20 MB per bestand)"
+                        className="flex items-center gap-1.5 px-2.5 py-2 bg-white/5 text-gray-400 hover:bg-white/10 rounded-lg text-xs"
+                        title="Download in delen (max 20 MB per bestand)"
                       >
                         <Icons.layers size={14} />
                         In delen
