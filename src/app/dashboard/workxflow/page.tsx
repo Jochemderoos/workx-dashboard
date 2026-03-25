@@ -687,10 +687,23 @@ export default function WorkxflowPage() {
         method: 'DELETE',
       })
       if (res.ok) {
-        setActiveBundle(prev => prev ? {
-          ...prev,
-          productions: prev.productions.filter(p => p.id !== productionId)
-        } : null)
+        // Remove and renumber remaining productions
+        const remaining = activeBundle.productions
+          .filter(p => p.id !== productionId)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((p, i) => ({ ...p, sortOrder: i, productionNumber: String(i + 1) }))
+
+        setActiveBundle(prev => prev ? { ...prev, productions: remaining } : null)
+
+        // Save new order to server
+        if (remaining.length > 0) {
+          fetch(`/api/workxflow/${activeBundle.id}/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productionIds: remaining.map(p => p.id) }),
+          }).catch(() => {})
+        }
+
         toast.success('Productie verwijderd')
       }
     } catch (error) {
