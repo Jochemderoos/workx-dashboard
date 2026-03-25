@@ -1144,39 +1144,34 @@ export default function WorkxflowPage() {
                       </button>
                     )}
 
-                    {/* PDF Downloads */}
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => generatePdf(false)}
-                        disabled={isGeneratingPdf}
-                        className="flex items-center gap-2 px-3 py-2 bg-red-500/20 text-red-300 hover:bg-red-500/30 rounded-lg text-sm font-medium"
-                        title="Complete PDF: processtuk + productielijst + alle producties"
-                      >
-                        {isGeneratingPdf ? (
-                          <span className="w-4 h-4 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Icons.download size={16} />
-                        )}
-                        Complete PDF
-                      </button>
-                      <button
-                        onClick={() => generatePdf(false, true)}
-                        disabled={isGeneratingPdf}
-                        className="flex items-center gap-2 px-3 py-2 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 rounded-lg text-sm font-medium"
-                        title="Alleen producties downloaden (zonder processtuk)"
-                      >
-                        <Icons.download size={16} />
-                        Producties
-                      </button>
-                      <button
-                        onClick={() => generatePdf(true)}
-                        disabled={isGeneratingPdf}
-                        className="flex items-center gap-1.5 px-2.5 py-2 bg-white/5 text-gray-400 hover:bg-white/10 rounded-lg text-xs"
-                        title="Download in delen (max 20 MB per bestand)"
-                      >
-                        <Icons.layers size={14} />
-                        In delen
-                      </button>
+                    {/* PDF Download kader */}
+                    <div className="rounded-xl border p-3" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                      <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
+                        <Icons.download size={12} className="inline mr-1" />
+                        Download als PDF
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          onClick={() => generatePdf(false)}
+                          disabled={isGeneratingPdf}
+                          className="flex items-center justify-center gap-2 px-3 py-2 bg-red-500/20 text-red-300 hover:bg-red-500/30 rounded-lg text-sm font-medium flex-1"
+                        >
+                          {isGeneratingPdf ? (
+                            <span className="w-4 h-4 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Icons.download size={15} />
+                          )}
+                          Alles (processtuk + producties)
+                        </button>
+                        <button
+                          onClick={() => generatePdf(false, true)}
+                          disabled={isGeneratingPdf}
+                          className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 rounded-lg text-sm font-medium flex-1"
+                        >
+                          <Icons.download size={15} />
+                          Alleen producties
+                        </button>
+                      </div>
                     </div>
 
                     {isElectron && (
