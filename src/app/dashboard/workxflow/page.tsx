@@ -1449,6 +1449,24 @@ export default function WorkxflowPage() {
                               title="Nummer (bijv. 1, 1a, 1b)"
                               placeholder="Nr"
                             />
+                            {/* Download this production's document */}
+                            {production.documentUrl && (
+                              <button
+                                onClick={() => {
+                                  const a = document.createElement('a')
+                                  a.href = production.documentUrl!
+                                  a.download = production.documentName || `${production.productionNumber}.pdf`
+                                  a.target = '_blank'
+                                  document.body.appendChild(a)
+                                  a.click()
+                                  document.body.removeChild(a)
+                                }}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                                title="Download deze productie"
+                              >
+                                <Icons.download size={14} />
+                              </button>
+                            )}
                             {/* Add extra PDF to this production */}
                             <label
                               className="p-1.5 rounded-lg text-gray-400 hover:text-workx-lime hover:bg-workx-lime/10 cursor-pointer transition-colors"
