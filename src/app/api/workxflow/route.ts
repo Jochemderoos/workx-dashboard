@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
       prisma.workxflowBundle.findMany({
         where: isAdmin ? {} : { createdById: session.user.id },
         include: {
-          productions: { orderBy: { sortOrder: 'asc' } },
+          productions: {
+            orderBy: { sortOrder: 'asc' },
+            select: { id: true, productionNumber: true, title: true, documentName: true, documentType: true, documentUrl: true, pageCount: true, sortOrder: true },
+          },
           lock: { include: { lockedBy: { select: { id: true, name: true } } } },
           access: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
         },
@@ -31,7 +34,10 @@ export async function GET(req: NextRequest) {
         include: {
           bundle: {
             include: {
-              productions: { orderBy: { sortOrder: 'asc' } },
+              productions: {
+                orderBy: { sortOrder: 'asc' },
+                select: { id: true, productionNumber: true, title: true, documentName: true, documentType: true, documentUrl: true, pageCount: true, sortOrder: true },
+              },
               lock: { include: { lockedBy: { select: { id: true, name: true } } } },
               access: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
             },
