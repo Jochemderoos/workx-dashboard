@@ -146,6 +146,12 @@ export default function WorkxflowPage() {
   const [isDetectingBins, setIsDetectingBins] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
   const [includeLogoOnProcesstuk, setIncludeLogoOnProcesstuk] = useState(true)
+
+  // Page manager state
+  const [pageManagerProd, setPageManagerProd] = useState<Production | null>(null)
+  const [pmPages, setPmPages] = useState<{ pageIndex: number; rotation: number; deleted: boolean; thumb: string }[]>([])
+  const [pmLoading, setPmLoading] = useState(false)
+  const [pmSaving, setPmSaving] = useState(false)
   const [includeLogoOnProductieblad, setIncludeLogoOnProductieblad] = useState(false)
 
   // Sharing & locking state
@@ -782,6 +788,92 @@ export default function WorkxflowPage() {
       }).catch(() => toast.error('Kon volgorde niet opslaan'))
     }
     setDraggedIndex(null)
+  }
+
+  // === Page Manager functions ===
+  const openPageManager = async (production: Production) => {
+    if (!production.documentUrl || production.documentType !== 'pdf') {
+      toast.error('Alleen PDF documenten kunnen worden beheerd')
+      return
+    }
+    setPageManagerProd(production)
+    setPmLoading(true)
+    setPmPages([])
+    try {
+      const pdfjsLib = await import('pdfjs-dist')
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+      let data: ArrayBuffer
+      if (production.documentUrl.startsWith('data:')) {
+        const base64 = production.documentUrl.split(',')[1]
+        const bin = atob(base64)
+        const bytes = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+        data = bytes.buffer as ArrayBuffer
+      } else {
+        data = await (await fetch(production.documentUrl)).arrayBuffer()
+      }
+      const pdf = await pdfjsLib.getDocument({ data }).promise
+      const pages: typeof pmPages = []
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const viewport = page.getViewport({ scale: 0.3 })
+        const canvas = document.createElement('canvas')
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        await page.render({ canvas, canvasContext: ctx, viewport }).promise
+        pages.push({ pageIndex: i - 1, rotation: 0, deleted: false, thumb: canvas.toDataURL('image/jpeg', 0.6) })
+      }
+      pdf.destroy()
+      setPmPages(pages)
+    } catch (err) {
+      console.error('Error loading PDF pages:', err)
+      toast.error('Kon PDF pagina\'s niet laden')
+      setPageManagerProd(null)
+    } finally {
+      setPmLoading(false)
+    }
+  }
+
+  const savePageManager = async () => {
+    if (!pageManagerProd || !activeBundle || pmSaving) return
+    const activePages = pmPages.filter(p => !p.deleted)
+    if (activePages.length === 0) { toast.error('Minimaal 1 pagina vereist'); return }
+    setPmSaving(true)
+    try {
+      const { PDFDocument, degrees } = await import('pdf-lib')
+      let srcData: ArrayBuffer
+      if (pageManagerProd.documentUrl!.startsWith('data:')) {
+        const base64 = pageManagerProd.documentUrl!.split(',')[1]
+        const bin = atob(base64)
+        const bytes = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+        srcData = bytes.buffer as ArrayBuffer
+      } else {
+        srcData = await (await fetch(pageManagerProd.documentUrl!)).arrayBuffer()
+      }
+      const srcPdf = await PDFDocument.load(srcData)
+      const newPdf = await PDFDocument.create()
+      for (const page of activePages) {
+        const [copied] = await newPdf.copyPages(srcPdf, [page.pageIndex])
+        const existing = copied.getRotation().angle
+        copied.setRotation(degrees(existing + page.rotation))
+        newPdf.addPage(copied)
+      }
+      const pdfBytes = await newPdf.save()
+      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
+      const uploaded = await uploadToBlob(pageManagerProd.documentName || 'bewerkt.pdf', blob)
+      await updateProduction(pageManagerProd.id, { documentUrl: uploaded.url, pageCount: newPdf.getPageCount() })
+      toast.success(`Opgeslagen (${newPdf.getPageCount()} pagina's)`)
+      setPageManagerProd(null)
+    } catch (err) {
+      console.error('Error saving page changes:', err)
+      toast.error('Kon wijzigingen niet opslaan')
+    } finally {
+      setPmSaving(false)
+    }
   }
 
   const generatePdf = async (split = false, productionsOnly = false, listOnly = false) => {
@@ -1437,7 +1529,11 @@ export default function WorkxflowPage() {
                             <Icons.gripVertical size={16} />
                           </div>
 
-                          <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                          <div
+                            className={`w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center flex-shrink-0 ${production.documentUrl && production.documentType === 'pdf' ? 'cursor-pointer hover:bg-yellow-500/30 transition-colors' : ''}`}
+                            onClick={() => production.documentUrl && production.documentType === 'pdf' && openPageManager(production)}
+                            title={production.documentUrl && production.documentType === 'pdf' ? 'Pagina\'s beheren' : undefined}
+                          >
                             <span className="text-yellow-400 font-bold text-sm">
                               {production.productionNumber}
                             </span>
@@ -2056,6 +2152,101 @@ export default function WorkxflowPage() {
               >
                 Opslaan
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Page Manager Modal */}
+      {pageManagerProd && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center sm:p-4 sm:pt-[2vh]" onClick={() => !pmSaving && setPageManagerProd(null)}>
+          <div className="w-full sm:max-w-4xl card flex flex-col h-[85dvh] sm:h-auto sm:max-h-[calc(100dvh-4vh-16px)]" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b shrink-0 flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+              <div>
+                <h3 className="font-semibold text-white">Pagina&apos;s beheren</h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>{pageManagerProd.title}</p>
+              </div>
+              <button onClick={() => !pmSaving && setPageManagerProd(null)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                <Icons.x size={18} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              {pmLoading ? (
+                <div className="flex items-center justify-center h-40">
+                  <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--color-border)', borderTopColor: '#f9ff85' }} />
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  {pmPages.map((page, i) => (
+                    <div key={i} className={`relative group rounded-xl border overflow-hidden transition-all ${page.deleted ? 'opacity-30 border-red-500/30' : 'border-white/10 hover:border-white/20'}`}>
+                      <div className="bg-white aspect-[210/297] flex items-center justify-center overflow-hidden">
+                        <img
+                          src={page.thumb}
+                          alt={`Pagina ${page.pageIndex + 1}`}
+                          className="w-full h-full object-contain"
+                          style={{ transform: `rotate(${page.rotation}deg)` }}
+                        />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1.5 flex items-end justify-between">
+                        <span className="text-[10px] text-white font-medium">{page.pageIndex + 1}</span>
+                        {page.rotation !== 0 && <span className="text-[9px] text-yellow-300">{page.rotation}°</span>}
+                      </div>
+                      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {!page.deleted ? (
+                          <>
+                            <button
+                              onClick={() => setPmPages(prev => prev.map((p, j) => j === i ? { ...p, rotation: (p.rotation + 90) % 360 } : p))}
+                              className="p-1.5 rounded-lg bg-black/60 text-white hover:bg-blue-500/80 transition-colors"
+                              title="90° draaien"
+                            >
+                              <Icons.rotateCw size={12} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                const activeCount = pmPages.filter(p => !p.deleted).length
+                                if (activeCount <= 1) { toast.error('Minimaal 1 pagina vereist'); return }
+                                setPmPages(prev => prev.map((p, j) => j === i ? { ...p, deleted: true } : p))
+                              }}
+                              className="p-1.5 rounded-lg bg-black/60 text-white hover:bg-red-500/80 transition-colors"
+                              title="Verwijderen"
+                            >
+                              <Icons.x size={12} />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => setPmPages(prev => prev.map((p, j) => j === i ? { ...p, deleted: false } : p))}
+                            className="p-1.5 rounded-lg bg-black/60 text-white hover:bg-emerald-500/80 transition-colors"
+                            title="Herstellen"
+                          >
+                            <Icons.refresh size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 border-t shrink-0 flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+              <span className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+                {pmPages.filter(p => !p.deleted).length} van {pmPages.length} pagina&apos;s
+                {pmPages.some(p => p.rotation !== 0) && ` • ${pmPages.filter(p => p.rotation !== 0 && !p.deleted).length} gedraaid`}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setPageManagerProd(null)} disabled={pmSaving} className="btn-secondary px-4 py-2 text-sm">
+                  Annuleren
+                </button>
+                <button
+                  onClick={savePageManager}
+                  disabled={pmSaving || pmPages.filter(p => !p.deleted).length === 0 || (!pmPages.some(p => p.deleted) && !pmPages.some(p => p.rotation !== 0))}
+                  className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
+                >
+                  {pmSaving && <span className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />}
+                  Opslaan
+                </button>
+              </div>
             </div>
           </div>
         </div>

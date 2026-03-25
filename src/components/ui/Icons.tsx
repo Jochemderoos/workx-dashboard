@@ -240,6 +240,13 @@ export const Icons = {
     </svg>
   ),
 
+  rotateCw: ({ className, size = 20 }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 12a9 9 0 11-3-6.7L21 2" />
+      <polyline points="21 2 21 8 15 8" />
+    </svg>
+  ),
+
   refresh: ({ className, size = 20 }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M23 4v6h-6M1 20v-6h6" />
