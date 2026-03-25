@@ -817,10 +817,13 @@ export default function WorkxflowPage() {
           toast.success('PDF gedownload')
         }
       } else {
-        toast.error('Kon PDF niet genereren')
+        const errData = await res.text().catch(() => '')
+        console.error('[PDF] Server error:', res.status, errData)
+        toast.error(`Kon PDF niet genereren (${res.status})`)
       }
     } catch (error) {
-      toast.error('Kon PDF niet genereren')
+      console.error('[PDF] Client error:', error)
+      toast.error(`PDF fout: ${error instanceof Error ? error.message : 'onbekend'}`)
     } finally {
       setIsGeneratingPdf(false)
     }
