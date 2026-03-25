@@ -46,36 +46,39 @@ async function drawWorkxLogo(
   pdfDoc: PDFDocument
 ) {
   const pageHeight = page.getHeight()
-  const marginLeft = 0 // Flush left
-  const marginTop = 0  // Flush top
+  const marginLeft = 0
+  const marginTop = 0
 
-  // Clean text-based logo (no shadow, works perfectly server-side)
+  // Embed the official logo PDF (Logo Workx-RGB)
+  const logoBytes = await loadLogoPdf()
+  if (logoBytes) {
+    try {
+      const logoPdf = await PDFDocument.load(logoBytes)
+      const [embeddedPage] = await pdfDoc.embedPdf(logoPdf, [0])
+      const { width: origWidth, height: origHeight } = embeddedPage
+      const scale = Math.min(LOGO_WIDTH / origWidth, LOGO_HEIGHT / origHeight)
+      const scaledWidth = origWidth * scale
+      const scaledHeight = origHeight * scale
+      const logoY = pageHeight - scaledHeight - marginTop
+
+      page.drawPage(embeddedPage, {
+        x: marginLeft,
+        y: logoY,
+        width: scaledWidth,
+        height: scaledHeight,
+      })
+      return
+    } catch (err) {
+      console.error('Error embedding logo PDF:', err)
+    }
+  }
+
+  // Fallback only if logo PDF completely unavailable
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica)
   const logoY = pageHeight - LOGO_HEIGHT - marginTop
-
-  page.drawRectangle({
-    x: marginLeft,
-    y: logoY,
-    width: LOGO_WIDTH,
-    height: LOGO_HEIGHT,
-    color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
-  })
-
-  page.drawText('Workx', {
-    x: marginLeft + 20,
-    y: logoY + 35,
-    size: 42,
-    font: helvetica,
-    color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-  })
-
-  page.drawText('ADVOCATEN', {
-    x: marginLeft + 20,
-    y: logoY + 12,
-    size: 14,
-    font: helvetica,
-    color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-  })
+  page.drawRectangle({ x: marginLeft, y: logoY, width: LOGO_WIDTH, height: LOGO_HEIGHT, color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b) })
+  page.drawText('Workx', { x: marginLeft + 20, y: logoY + 35, size: 42, font: helvetica, color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b) })
+  page.drawText('ADVOCATEN', { x: marginLeft + 20, y: logoY + 12, size: 14, font: helvetica, color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b) })
 }
 
 /**
