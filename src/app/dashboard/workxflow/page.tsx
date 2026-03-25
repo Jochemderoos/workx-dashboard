@@ -784,7 +784,7 @@ export default function WorkxflowPage() {
     setDraggedIndex(null)
   }
 
-  const generatePdf = async (split = false, productionsOnly = false) => {
+  const generatePdf = async (split = false, productionsOnly = false, listOnly = false) => {
     if (!activeBundle) return
     setIsGeneratingPdf(true)
 
@@ -792,7 +792,7 @@ export default function WorkxflowPage() {
       const res = await fetch(`/api/workxflow/${activeBundle.id}/pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ includeLogoOnProcesstuk, includeLogoOnProductieblad, split, productionsOnly, maxSizeMB: 20 }),
+        body: JSON.stringify({ includeLogoOnProcesstuk, includeLogoOnProductieblad, split, productionsOnly, listOnly, maxSizeMB: 20 }),
       })
 
       if (res.ok) {
@@ -825,7 +825,7 @@ export default function WorkxflowPage() {
           const url = window.URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url
-          a.download = `${activeBundle.title.replace(/\s+/g, '-')}${productionsOnly ? '-producties' : '-compleet'}.pdf`
+          a.download = `${activeBundle.title.replace(/\s+/g, '-')}${listOnly ? '-productielijst' : productionsOnly ? '-producties' : '-compleet'}.pdf`
           document.body.appendChild(a)
           a.click()
           window.URL.revokeObjectURL(url)
@@ -1188,7 +1188,15 @@ export default function WorkxflowPage() {
                           className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 rounded-lg text-sm font-medium flex-1"
                         >
                           <Icons.download size={15} />
-                          Alleen producties
+                          Producties + lijst
+                        </button>
+                        <button
+                          onClick={() => generatePdf(false, false, true)}
+                          disabled={isGeneratingPdf}
+                          className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 rounded-lg text-sm font-medium flex-1"
+                        >
+                          <Icons.download size={15} />
+                          Alleen productielijst
                         </button>
                       </div>
                     </div>

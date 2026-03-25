@@ -153,6 +153,7 @@ export async function POST(
     let includeLogoOnProductieblad = false
     let splitMode = false
     let productionsOnly = false
+    let listOnly = false
     let maxSizeMB = 20
     try {
       const body = await req.json()
@@ -167,6 +168,9 @@ export async function POST(
       }
       if (typeof body.productionsOnly === 'boolean') {
         productionsOnly = body.productionsOnly
+      }
+      if (typeof body.listOnly === 'boolean') {
+        listOnly = body.listOnly
       }
       if (typeof body.maxSizeMB === 'number') {
         maxSizeMB = body.maxSizeMB
@@ -219,7 +223,7 @@ export async function POST(
     // ============================================
     const mainDocType = detectDocumentType(bundle.mainDocumentUrl, bundle.mainDocumentType)
 
-    if (!productionsOnly && bundle.mainDocumentUrl && mainDocType === 'pdf') {
+    if (!productionsOnly && !listOnly && bundle.mainDocumentUrl && mainDocType === 'pdf') {
       try {
         bookmarks.push({ title: 'Processtuk', pageIndex: pdfDoc.getPageCount() })
         const mainDocBytes = await getDocumentBytes(bundle.mainDocumentUrl)
@@ -304,8 +308,9 @@ export async function POST(
     }
 
     // ============================================
-    // 3. PRODUCTIONS (sheet + documents for each)
+    // 3. PRODUCTIONS (sheet + documents for each) — skip if listOnly
     // ============================================
+    if (!listOnly)
     for (const production of bundle.productions) {
       // Bookmark for this production
       bookmarks.push({ title: `${productionLabel} ${production.productionNumber} - ${production.title}`, pageIndex: pdfDoc.getPageCount() })
