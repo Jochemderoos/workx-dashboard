@@ -40,12 +40,16 @@ export async function POST(
       return NextResponse.json({ error: 'Bundle niet gevonden' }, { status: 404 })
     }
 
-    // Check access: owner or shared user
+    // Check access: owner, shared user, or ADMIN/PARTNER
     if (bundle.createdById !== session.user.id) {
-      const access = await prisma.bundleAccess.findUnique({
-        where: { bundleId_userId: { bundleId: params.id, userId: session.user.id } },
-      })
-      if (!access) {
+      const [access, currentUser] = await Promise.all([
+        prisma.bundleAccess.findUnique({
+          where: { bundleId_userId: { bundleId: params.id, userId: session.user.id } },
+        }),
+        prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
+      ])
+      const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER'
+      if (!access && !isAdmin) {
         return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
       }
     }
