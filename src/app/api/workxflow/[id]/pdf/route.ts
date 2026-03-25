@@ -242,7 +242,7 @@ export async function POST(
     const productionLabel = bundle.productionLabel || 'PRODUCTIE'
     const listTitle = productionLabel === 'BIJLAGE' ? 'Bijlagenlijst' : 'Productielijst'
 
-    if (bundle.productions.length > 0 && bundle.includeProductielijst && !productionsOnly) {
+    if (bundle.productions.length > 0 && bundle.includeProductielijst) {
       const indexPage = pdfDoc.addPage([pageWidth, pageHeight])
 
       // Add Workx logo (top-left)
