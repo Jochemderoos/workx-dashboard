@@ -332,24 +332,44 @@ export async function POST(
         await drawWorkxLogo(sheetPage, pdfDoc)
       }
 
-      // Production number - large centered text
-      const productionText = `${productionLabel} ${production.productionNumber}`
-      const textWidth = helveticaBold.widthOfTextAtSize(productionText, 48)
-
-      sheetPage.drawText(productionText, {
-        x: (pageWidth - textWidth) / 2,
-        y: pageHeight / 2,
-        size: 48,
+      // Production label - large centered
+      const labelText = productionLabel
+      const labelWidth = helveticaBold.widthOfTextAtSize(labelText, 72)
+      sheetPage.drawText(labelText, {
+        x: (pageWidth - labelWidth) / 2,
+        y: pageHeight / 2 + 40,
+        size: 72,
         font: helveticaBold,
         color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
       })
 
-      // Production title below
-      const titleWidth = helvetica.widthOfTextAtSize(production.title, 16)
+      // Production number - even larger below
+      const numText = String(production.productionNumber)
+      const numWidth = helveticaBold.widthOfTextAtSize(numText, 96)
+      sheetPage.drawText(numText, {
+        x: (pageWidth - numWidth) / 2,
+        y: pageHeight / 2 - 60,
+        size: 96,
+        font: helveticaBold,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
+
+      // Horizontal line between number and title
+      const lineY = pageHeight / 2 - 90
+      sheetPage.drawRectangle({
+        x: pageWidth / 2 - 100,
+        y: lineY,
+        width: 200,
+        height: 1.5,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
+
+      // Production title below line
+      const titleWidth = helvetica.widthOfTextAtSize(production.title, 18)
       sheetPage.drawText(production.title, {
         x: (pageWidth - titleWidth) / 2,
-        y: pageHeight / 2 - 50,
-        size: 16,
+        y: lineY - 30,
+        size: 18,
         font: helvetica,
         color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
       })

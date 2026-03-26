@@ -151,14 +151,44 @@ export async function POST(
       const sheetFont = await sheetPdf.embedFont(StandardFonts.HelveticaBold)
       const sheetPage = sheetPdf.addPage([pageWidth, pageHeight])
 
-      const productionText = `${label} ${production.productionNumber}`
-      const textWidth = sheetFont.widthOfTextAtSize(productionText, 48)
-
-      sheetPage.drawText(productionText, {
-        x: (pageWidth - textWidth) / 2,
-        y: pageHeight / 2,
-        size: 48,
+      // Production label - large centered
+      const labelWidth = sheetFont.widthOfTextAtSize(label, 72)
+      sheetPage.drawText(label, {
+        x: (pageWidth - labelWidth) / 2,
+        y: pageHeight / 2 + 40,
+        size: 72,
         font: sheetFont,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
+
+      // Production number - even larger below
+      const numText = String(production.productionNumber)
+      const numWidth = sheetFont.widthOfTextAtSize(numText, 96)
+      sheetPage.drawText(numText, {
+        x: (pageWidth - numWidth) / 2,
+        y: pageHeight / 2 - 60,
+        size: 96,
+        font: sheetFont,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
+
+      // Horizontal line
+      sheetPage.drawRectangle({
+        x: pageWidth / 2 - 100,
+        y: pageHeight / 2 - 90,
+        width: 200,
+        height: 1.5,
+        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+      })
+
+      // Production title below line
+      const titleFont = await sheetPdf.embedFont(StandardFonts.Helvetica)
+      const titleWidth = titleFont.widthOfTextAtSize(production.title, 18)
+      sheetPage.drawText(production.title, {
+        x: (pageWidth - titleWidth) / 2,
+        y: pageHeight / 2 - 120,
+        size: 18,
+        font: titleFont,
         color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
       })
 

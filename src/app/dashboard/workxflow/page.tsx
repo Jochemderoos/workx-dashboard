@@ -1793,10 +1793,14 @@ export default function WorkxflowPage() {
                           )}
                           {/* Centered production text */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <p className="text-[#1e1e1e] font-bold text-base tracking-wide">
-                              {activeBundle.productionLabel === 'BIJLAGE' ? 'BIJLAGE' : 'PRODUCTIE'} {production.productionNumber}
+                            <p className="text-[#1e1e1e] font-bold text-sm tracking-widest uppercase">
+                              {activeBundle.productionLabel === 'BIJLAGE' ? 'BIJLAGE' : 'PRODUCTIE'}
                             </p>
-                            <p className="text-[#1e1e1e]/60 text-[9px] mt-2 px-4 text-center line-clamp-2">
+                            <p className="text-[#1e1e1e] font-bold text-2xl mt-0.5">
+                              {production.productionNumber}
+                            </p>
+                            <div className="w-8 h-px bg-[#1e1e1e]/40 mt-1.5 mb-1.5" />
+                            <p className="text-[#1e1e1e]/60 text-[8px] px-4 text-center line-clamp-2">
                               {production.title}
                             </p>
                           </div>
