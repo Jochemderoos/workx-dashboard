@@ -63,9 +63,33 @@ const ROLE_LABELS: Record<string, string> = {
   EMPLOYEE: 'Medewerker',
 }
 
+// === SLAAPSTAND: zet op true om AI Assistent tijdelijk uit te schakelen ===
+const AI_MAINTENANCE = true
+
 export default function AIAssistentPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  if (AI_MAINTENANCE) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-6">
+            <Icons.sparkles size={40} className="text-gray-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-3">AI Assistent in slaapstand</h1>
+          <p className="text-gray-400 mb-6">
+            De AI Assistent is tijdelijk niet beschikbaar. We werken aan verbeteringen om de kwaliteit te verhogen.
+          </p>
+          <p className="text-sm text-gray-500">
+            Heb je een dringende juridische vraag? Gebruik dan{' '}
+            <a href="https://claude.ai" target="_blank" rel="noopener noreferrer" className="text-workx-lime hover:underline">claude.ai</a>{' '}
+            als alternatief.
+          </p>
+        </div>
+      </div>
+    )
+  }
   const { setCollapsed: setSidebarCollapsed } = useSidebar()
   const [projects, setProjects] = useState<Project[]>([])
   const [recentConversations, setRecentConversations] = useState<Conversation[]>([])

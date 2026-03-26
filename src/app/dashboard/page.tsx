@@ -3358,7 +3358,8 @@ export default function DashboardHome() {
                 { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakantie aanvragen', color: 'text-yellow-400', bg: 'bg-yellow-500/10 hover:bg-yellow-500/20' },
                 { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback geven', color: 'text-purple-400', bg: 'bg-purple-500/10 hover:bg-purple-500/20' },
                 { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Event toevoegen', color: 'text-blue-400', bg: 'bg-blue-500/10 hover:bg-blue-500/20' },
-                { href: '/dashboard/chat', icon: Icons.chat, label: 'Chat openen', color: 'text-green-400', bg: 'bg-green-500/10 hover:bg-green-500/20' },
+                // AI Assistent in slaapstand - chat knop verborgen
+                // { href: '/dashboard/chat', icon: Icons.chat, label: 'Chat openen', color: 'text-green-400', bg: 'bg-green-500/10 hover:bg-green-500/20' },
               ].map((action) => (
                 <MagneticButton
                   key={action.label}

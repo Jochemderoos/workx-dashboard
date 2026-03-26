@@ -130,22 +130,8 @@ function SidebarComponent({ user }: SidebarProps) {
     )
     const isLustrum = href === '/dashboard/lustrum'
 
-    if (isAI) {
-      return (
-        <Link href={href} className={`nav-link group relative ${isActive ? 'active' : ''}`}>
-          <div className="absolute -inset-1 bg-gradient-to-r from-[#f9ff85]/30 via-[#60a5fa]/20 to-[#f9ff85]/30 rounded-xl opacity-0 group-hover:opacity-100 blur-md transition-opacity" />
-          <div className="relative flex items-center gap-3 w-full">
-            <span className="icon-animated">
-              <Icon size={18} />
-            </span>
-            <span className="flex-1">{label}</span>
-            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-gradient-to-r from-workx-lime/20 to-blue-500/20 text-workx-lime border border-workx-lime/20">
-              AI
-            </span>
-          </div>
-        </Link>
-      )
-    }
+    // AI Assistent verborgen (slaapstand)
+    if (isAI) return null
 
     return (
       <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link group/lustrum' : ''}`}>
