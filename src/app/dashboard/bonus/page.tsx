@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import toast from 'react-hot-toast'
 import { jsPDF } from 'jspdf'
 import * as Popover from '@radix-ui/react-popover'
@@ -578,6 +579,8 @@ export default function BonusPage() {
         </div>
       </div>
 
+      {/* Modals via portal - buiten DOM-boom */}
+      {typeof document !== 'undefined' && createPortal(<>
       {/* Bonus preview modal */}
       {showBonusPreview && (() => {
         const eligible = calculations.filter(c => (!c.status || c.status === 'DRAFT') && c.invoicePaid)
@@ -734,6 +737,7 @@ export default function BonusPage() {
           </div>
         </div>
       )}
+      </>, document.body)}
 
       {/* === TAB: Mijn bonussen === */}
       {activeTab === 'mijn' && (<>
