@@ -583,8 +583,8 @@ export default function BonusPage() {
         const eligible = calculations.filter(c => (!c.status || c.status === 'DRAFT') && c.invoicePaid)
         const totalBonus = eligible.reduce((s, c) => s + c.bonusAmount, 0)
         return (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4" onClick={() => setShowBonusPreview(false)}>
-            <div className="w-full max-w-2xl card flex flex-col" style={{ maxHeight: 'calc(100vh - 2rem)' }} onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowBonusPreview(false)}>
+            <div className="w-full max-w-2xl bg-workx-gray border border-white/10 rounded-2xl flex flex-col shadow-2xl" style={{ maxHeight: 'min(600px, calc(100vh - 2rem))' }} onClick={e => e.stopPropagation()}>
               <div className="p-5 border-b shrink-0 flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
                 <div>
                   <h3 className="font-semibold text-white">Overzicht betaalde facturen voor bonus</h3>
@@ -625,8 +625,8 @@ export default function BonusPage() {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4" onClick={() => resetForm()}>
-          <div className="w-full max-w-lg card p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => resetForm()}>
+          <div className="w-full max-w-lg bg-workx-gray border border-white/10 rounded-2xl p-6 shadow-2xl overflow-y-auto" style={{ maxHeight: 'min(700px, calc(100vh - 2rem))' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
