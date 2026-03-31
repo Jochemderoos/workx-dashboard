@@ -531,7 +531,7 @@ export default function BonusPage() {
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-workx-lime/15 border border-workx-lime/30 rounded-lg sm:rounded-xl text-workx-lime hover:bg-workx-lime/25 transition-all text-xs sm:text-base font-medium"
             >
               <Icons.send size={14} />
-              <span className="hidden sm:inline">Betaalde indienen</span>
+              <span className="hidden sm:inline">Indienen bij Hanna</span>
               <span className="sm:hidden">Indienen</span>
               <span className="px-1.5 py-0.5 bg-workx-lime/20 rounded-full text-[10px]">
                 {calculations.filter(c => (!c.status || c.status === 'DRAFT') && c.invoicePaid).length}
