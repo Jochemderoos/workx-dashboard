@@ -26,7 +26,7 @@ interface Calculation {
 export default function BonusPage() {
   const [calculations, setCalculations] = useState<Calculation[]>([])
   const [adminCalculations, setAdminCalculations] = useState<Calculation[]>([])
-  const [activeTab, setActiveTab] = useState<'mijn' | 'overzicht'>('mijn')
+  const [activeTab, setActiveTab] = useState<'mijn' | 'ingediend' | 'overzicht'>('mijn')
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -96,15 +96,22 @@ export default function BonusPage() {
   }
 
   const submitAllDrafts = async () => {
-    const drafts = calculations.filter(c => !c.status || c.status === 'DRAFT')
-    if (drafts.length === 0) {
-      toast.error('Geen openstaande bonussen om in te dienen')
+    // Alleen betaalde facturen indienen — onbetaalde blijven als concept staan
+    const paidDrafts = calculations.filter(c => (!c.status || c.status === 'DRAFT') && c.invoicePaid)
+    const unpaidDrafts = calculations.filter(c => (!c.status || c.status === 'DRAFT') && !c.invoicePaid)
+    if (paidDrafts.length === 0) {
+      if (unpaidDrafts.length > 0) {
+        toast.error(`Geen betaalde facturen om in te dienen. ${unpaidDrafts.length} factuur${unpaidDrafts.length !== 1 ? 'en' : ''} wacht${unpaidDrafts.length === 1 ? '' : 'en'} nog op betaling.`)
+      } else {
+        toast.error('Geen openstaande bonussen om in te dienen')
+      }
       return
     }
-    if (!confirm(`${drafts.length} bonus${drafts.length !== 1 ? 'sen' : ''} indienen? Hanna ontvangt een melding.`)) return
+    const msg = `${paidDrafts.length} betaalde bonus${paidDrafts.length !== 1 ? 'sen' : ''} indienen? Hanna ontvangt een melding.${unpaidDrafts.length > 0 ? `\n\n${unpaidDrafts.length} onbetaalde factuur${unpaidDrafts.length !== 1 ? 'en' : ''} blijf${unpaidDrafts.length === 1 ? 't' : 'ven'} staan voor de volgende ronde.` : ''}`
+    if (!confirm(msg)) return
 
     let success = 0
-    for (const calc of drafts) {
+    for (const calc of paidDrafts) {
       try {
         const res = await fetch(`/api/bonus/${calc.id}`, {
           method: 'PATCH',
@@ -498,28 +505,36 @@ export default function BonusPage() {
             <h1 className="text-xl sm:text-2xl font-semibold text-white">Bonus Calculator</h1>
           </div>
           <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Bereken en beheer je bonussen op basis van facturaties</p>
-          {isAdmin && (
-            <div className="flex gap-2 mt-2">
-              <button onClick={() => setActiveTab('mijn')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'mijn' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
-                Mijn bonussen
-              </button>
+          <div className="flex gap-2 mt-2">
+            <button onClick={() => setActiveTab('mijn')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'mijn' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
+              Mijn bonussen
+            </button>
+            <button onClick={() => setActiveTab('ingediend')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'ingediend' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
+              Ingediende bonussen
+              {calculations.filter(c => c.status === 'SUBMITTED' || c.status === 'PAID').length > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 bg-white/10 rounded-full text-[10px]">
+                  {calculations.filter(c => c.status === 'SUBMITTED' || c.status === 'PAID').length}
+                </span>
+              )}
+            </button>
+            {isAdmin && (
               <button onClick={() => setActiveTab('overzicht')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'overzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
                 Overzicht (alle medewerkers)
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          {calculations.some(c => !c.status || c.status === 'DRAFT') && (
+          {calculations.some(c => (!c.status || c.status === 'DRAFT') && c.invoicePaid) && (
             <button
               onClick={submitAllDrafts}
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-workx-lime/15 border border-workx-lime/30 rounded-lg sm:rounded-xl text-workx-lime hover:bg-workx-lime/25 transition-all text-xs sm:text-base font-medium"
             >
               <Icons.send size={14} />
-              <span className="hidden sm:inline">Alles indienen</span>
+              <span className="hidden sm:inline">Betaalde indienen</span>
               <span className="sm:hidden">Indienen</span>
               <span className="px-1.5 py-0.5 bg-workx-lime/20 rounded-full text-[10px]">
-                {calculations.filter(c => !c.status || c.status === 'DRAFT').length}
+                {calculations.filter(c => (!c.status || c.status === 'DRAFT') && c.invoicePaid).length}
               </span>
             </button>
           )}
@@ -764,6 +779,9 @@ export default function BonusPage() {
         </div>
       </div>
 
+      {/* === TAB: Mijn bonussen === */}
+      {activeTab === 'mijn' && (<>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <div className="card p-4 sm:p-6 relative overflow-hidden group">
@@ -975,55 +993,194 @@ export default function BonusPage() {
           </div>
         )}
       </div>
-      {/* Admin Overzicht */}
-      {activeTab === 'overzicht' && isAdmin && (
-        <div className="card p-4 sm:p-6">
-          <h2 className="font-medium text-white flex items-center gap-2 mb-4">
-            <Icons.users size={16} className="text-green-400" />
-            Alle ingediende bonussen
-          </h2>
-          {adminCalculations.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">Geen ingediende bonussen</p>
-          ) : (
-            <div className="space-y-3">
-              {adminCalculations.map(calc => (
-                <div key={calc.id} className={`rounded-xl border p-4 ${calc.status === 'PAID' ? 'opacity-60' : ''}`} style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-white">{calc.user?.name || 'Onbekend'}</span>
-                        {calc.clientName && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>{calc.clientName}</span>}
-                        {calc.invoiceNumber && <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>#{calc.invoiceNumber}</span>}
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${calc.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/15 text-blue-400'}`}>
-                          {calc.status === 'PAID' ? 'Betaald' : 'Ingediend'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4 mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                        <span>Factuur: €{calc.invoiceAmount.toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</span>
-                        <span>{calc.bonusPercentage}%</span>
-                        {calc.submittedAt && <span>Ingediend: {new Date(calc.submittedAt).toLocaleDateString('nl-NL')}</span>}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-lg font-bold text-green-400">€{calc.bonusAmount.toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</div>
-                      <button
-                        onClick={() => toggleAdminPaid(calc.id, calc.status)}
-                        className={`mt-1 text-xs px-3 py-1 rounded-lg transition-colors ${
-                          calc.status === 'PAID'
-                            ? 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'
-                            : 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                        }`}
-                      >
-                        {calc.status === 'PAID' ? 'Onbetaald' : 'Markeer betaald'}
-                      </button>
-                    </div>
+      </>)}
+
+      {/* === TAB: Ingediende bonussen === */}
+      {activeTab === 'ingediend' && (() => {
+        const submitted = calculations.filter(c => c.status === 'SUBMITTED' || c.status === 'PAID')
+        // Groepeer per kwartaal van indiening
+        const grouped = submitted.reduce((acc, calc) => {
+          const date = calc.submittedAt ? new Date(calc.submittedAt) : new Date(calc.createdAt)
+          const q = Math.ceil((date.getMonth() + 1) / 3)
+          const key = `Q${q} ${date.getFullYear()}`
+          if (!acc[key]) acc[key] = []
+          acc[key].push(calc)
+          return acc
+        }, {} as Record<string, Calculation[]>)
+        const totalSubmitted = submitted.reduce((s, c) => s + c.bonusAmount, 0)
+
+        return (
+          <div className="space-y-6">
+            {/* Totaal overzicht */}
+            <div className="card p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Totaal ingediend</p>
+                  <p className="text-3xl font-semibold text-white">{formatCurrency(totalSubmitted)}</p>
+                  <p className="text-xs text-gray-500 mt-1">{submitted.length} bonussen in {Object.keys(grouped).length} periode{Object.keys(grouped).length !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-semibold text-blue-400">{submitted.filter(c => c.status === 'SUBMITTED').length}</p>
+                    <p className="text-[10px] text-gray-500">Ingediend</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-semibold text-emerald-400">{submitted.filter(c => c.status === 'PAID').length}</p>
+                    <p className="text-[10px] text-gray-500">Uitbetaald</p>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          )}
-        </div>
-      )}
+
+            {submitted.length === 0 ? (
+              <div className="card p-16 text-center">
+                <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <Icons.send className="text-gray-600" size={32} />
+                </div>
+                <h3 className="text-lg font-medium text-white mb-2">Nog geen ingediende bonussen</h3>
+                <p className="text-gray-400 max-w-sm mx-auto">
+                  Zodra je betaalde facturen indient, verschijnen ze hier met een overzicht per kwartaal.
+                </p>
+              </div>
+            ) : (
+              Object.entries(grouped).sort(([a], [b]) => b.localeCompare(a)).map(([period, calcs]) => {
+                const periodTotal = calcs.reduce((s, c) => s + c.bonusAmount, 0)
+                return (
+                  <div key={period}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-white flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center text-[10px] text-blue-400 font-bold">{calcs.length}</span>
+                        {period}
+                      </h3>
+                      <span className="text-sm font-semibold text-white">{formatCurrency(periodTotal)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {calcs.map(calc => (
+                        <div key={calc.id} className="card p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${calc.status === 'PAID' ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}>
+                              {calc.status === 'PAID' ? <Icons.check className="text-emerald-400" size={18} /> : <Icons.send className="text-blue-400" size={18} />}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-white">{formatCurrency(calc.bonusAmount)}</span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full ${calc.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                                  {calc.status === 'PAID' ? 'Uitbetaald' : 'Ingediend'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                                <span>{formatCurrency(calc.invoiceAmount)} × {calc.bonusPercentage}%</span>
+                                {calc.clientName && <><span>·</span><span>{calc.clientName}</span></>}
+                                {calc.invoiceNumber && <><span>·</span><span>#{calc.invoiceNumber}</span></>}
+                                {calc.submittedAt && <><span>·</span><span>{new Date(calc.submittedAt).toLocaleDateString('nl-NL')}</span></>}
+                              </div>
+                            </div>
+                          </div>
+                          <button onClick={() => downloadPDF(calc)} className="p-2 text-gray-400 hover:text-workx-lime rounded-lg hover:bg-white/5 transition-colors" title="Download PDF">
+                            <Icons.download size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )
+      })()}
+
+      {/* Admin Overzicht */}
+      {activeTab === 'overzicht' && isAdmin && (() => {
+        // Groepeer per medewerker
+        const byEmployee = adminCalculations.reduce((acc, calc) => {
+          const name = calc.user?.name || 'Onbekend'
+          if (!acc[name]) acc[name] = []
+          acc[name].push(calc)
+          return acc
+        }, {} as Record<string, Calculation[]>)
+        const grandTotal = adminCalculations.filter(c => c.status === 'SUBMITTED').reduce((s, c) => s + c.bonusAmount, 0)
+
+        return (
+          <div className="space-y-6">
+            {/* Totaal overzicht */}
+            {grandTotal > 0 && (
+              <div className="card p-6 border-workx-lime/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-400">Totaal uit te betalen</p>
+                    <p className="text-3xl font-bold text-workx-lime">{formatCurrency(grandTotal)}</p>
+                  </div>
+                  <p className="text-sm text-gray-500">{adminCalculations.filter(c => c.status === 'SUBMITTED').length} bonussen van {Object.keys(byEmployee).filter(name => byEmployee[name].some(c => c.status === 'SUBMITTED')).length} medewerker{Object.keys(byEmployee).filter(name => byEmployee[name].some(c => c.status === 'SUBMITTED')).length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+            )}
+
+            {adminCalculations.length === 0 ? (
+              <div className="card p-16 text-center">
+                <p className="text-sm text-gray-400">Geen ingediende bonussen</p>
+              </div>
+            ) : (
+              Object.entries(byEmployee).sort(([a], [b]) => a.localeCompare(b)).map(([name, calcs]) => {
+                const employeeTotal = calcs.reduce((s, c) => s + c.bonusAmount, 0)
+                const unpaid = calcs.filter(c => c.status === 'SUBMITTED')
+                return (
+                  <div key={name} className="card p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                          <span className="text-blue-400 font-bold text-sm">{name.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-white">{name}</h3>
+                          <p className="text-xs text-gray-500">{calcs.length} bonussen · {unpaid.length} openstaand</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-green-400">{formatCurrency(employeeTotal)}</p>
+                        {unpaid.length > 0 && (
+                          <p className="text-xs text-blue-400">{formatCurrency(unpaid.reduce((s, c) => s + c.bonusAmount, 0))} uit te betalen</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {calcs.map(calc => (
+                        <div key={calc.id} className={`rounded-xl border p-3 flex items-center justify-between ${calc.status === 'PAID' ? 'opacity-50' : ''}`} style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap text-sm">
+                              <span className="font-medium text-white">{formatCurrency(calc.bonusAmount)}</span>
+                              {calc.clientName && <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400">{calc.clientName}</span>}
+                              {calc.invoiceNumber && <span className="text-xs text-gray-500">#{calc.invoiceNumber}</span>}
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${calc.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                                {calc.status === 'PAID' ? 'Betaald' : 'Ingediend'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
+                              <span>{formatCurrency(calc.invoiceAmount)} × {calc.bonusPercentage}%</span>
+                              {calc.submittedAt && <span>{new Date(calc.submittedAt).toLocaleDateString('nl-NL')}</span>}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => toggleAdminPaid(calc.id, calc.status)}
+                            className={`shrink-0 text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                              calc.status === 'PAID'
+                                ? 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'
+                                : 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                            }`}
+                          >
+                            {calc.status === 'PAID' ? 'Onbetaald' : 'Markeer betaald'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
