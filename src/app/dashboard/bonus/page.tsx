@@ -107,7 +107,7 @@ export default function BonusPage() {
       }
       return
     }
-    const msg = `${paidDrafts.length} betaalde bonus${paidDrafts.length !== 1 ? 'sen' : ''} indienen? Hanna ontvangt een melding.${unpaidDrafts.length > 0 ? `\n\n${unpaidDrafts.length} onbetaalde factuur${unpaidDrafts.length !== 1 ? 'en' : ''} blijf${unpaidDrafts.length === 1 ? 't' : 'ven'} staan voor de volgende ronde.` : ''}`
+    const msg = `${paidDrafts.length} betaalde bonus${paidDrafts.length !== 1 ? 'sen' : ''} indienen bij Hanna?\n\nLet op: bonussen worden 1× per kwartaal ingediend, na afloop van het kwartaal.${unpaidDrafts.length > 0 ? `\n\n${unpaidDrafts.length} onbetaalde factuur${unpaidDrafts.length !== 1 ? 'en' : ''} blijf${unpaidDrafts.length === 1 ? 't' : 'ven'} staan voor de volgende ronde.` : ''}`
     if (!confirm(msg)) return
 
     let success = 0
