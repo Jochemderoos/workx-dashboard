@@ -504,7 +504,7 @@ export default function BonusPage() {
             </div>
             <h1 className="text-xl sm:text-2xl font-semibold text-white">Bonus Calculator</h1>
           </div>
-          <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Bereken en beheer je bonussen op basis van facturaties</p>
+          <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Houd je eigen omzet bij en dien betaalde facturen in — <span className="text-workx-lime">1× per kwartaal, na afloop van het kwartaal</span></p>
           <div className="flex gap-2 mt-2">
             <button onClick={() => setActiveTab('mijn')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'mijn' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
               Mijn bonussen
