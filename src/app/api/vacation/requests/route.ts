@@ -195,19 +195,24 @@ export async function POST(req: NextRequest) {
     })
 
     // If auto-approved, update vacation balance
+    // Verlof-types (zwangerschapsverlof etc.) tellen NIET als vakantiedagen
     if (status === 'APPROVED') {
-      const currentYear = new Date().getFullYear()
-      await prisma.vacationBalance.updateMany({
-        where: {
-          userId: targetUserId,
-          year: currentYear,
-        },
-        data: {
-          opgenomenLopendJaar: {
-            increment: calculatedDays
+      const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
+      const isVerlof = verlofTypes.some(t => (reason || '').toLowerCase().includes(t))
+      if (!isVerlof) {
+        const requestYear = start.getFullYear()
+        await prisma.vacationBalance.updateMany({
+          where: {
+            userId: targetUserId,
+            year: requestYear,
+          },
+          data: {
+            opgenomenLopendJaar: {
+              increment: calculatedDays
+            }
           }
-        }
-      })
+        })
+      }
     }
 
     // Notify admin(s) when a non-admin creates a PENDING request

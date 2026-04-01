@@ -92,13 +92,13 @@ export async function PATCH(
       const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
       const reason = (request.reason || '').toLowerCase()
       const isVerlof = verlofTypes.some(t => reason.includes(t))
-      const currentYear = new Date().getFullYear()
+      const requestYear = new Date(request.startDate).getFullYear()
 
       if (status === 'APPROVED' && !wasApproved) {
         // Newly approved - add days (only for regular vacation)
         if (!isVerlof) {
           await prisma.vacationBalance.updateMany({
-            where: { userId: request.userId, year: currentYear },
+            where: { userId: request.userId, year: requestYear },
             data: { opgenomenLopendJaar: { increment: request.days } }
           })
         }
@@ -113,7 +113,7 @@ export async function PATCH(
             data: {
               userId: request.userId,
               balanceId: balance.id,
-              year: currentYear,
+              year: requestYear,
               startDate: request.startDate,
               endDate: request.endDate,
               werkdagen: userWerkdagen,
@@ -127,7 +127,7 @@ export async function PATCH(
         // Was approved, now rejected - remove days (only for regular vacation)
         if (!isVerlof) {
           await prisma.vacationBalance.updateMany({
-            where: { userId: request.userId, year: currentYear },
+            where: { userId: request.userId, year: requestYear },
             data: { opgenomenLopendJaar: { decrement: request.days } }
           })
         }
@@ -206,15 +206,19 @@ export async function PATCH(
         newDays = 0.5
       }
 
-      // If approved, adjust vacation balance
+      // If approved, adjust vacation balance (not for verlof types)
       if (request.status === 'APPROVED') {
-        const daysDiff = newDays - request.days
-        if (daysDiff !== 0) {
-          const currentYear = new Date().getFullYear()
-          await prisma.vacationBalance.updateMany({
-            where: { userId: request.userId, year: currentYear },
-            data: { opgenomenLopendJaar: { increment: daysDiff } }
-          })
+        const verlofTypesEdit = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
+        const isVerlofEdit = verlofTypesEdit.some(t => (request.reason || '').toLowerCase().includes(t))
+        if (!isVerlofEdit) {
+          const daysDiff = newDays - request.days
+          if (daysDiff !== 0) {
+            const editYear = new Date(request.startDate).getFullYear()
+            await prisma.vacationBalance.updateMany({
+              where: { userId: request.userId, year: editYear },
+              data: { opgenomenLopendJaar: { increment: daysDiff } }
+            })
+          }
         }
       }
 
@@ -288,19 +292,24 @@ export async function DELETE(
     }
 
     // If deleting an approved request, restore the vacation balance
+    // Verlof-types tellen niet als vakantiedagen — dus ook niet terugboeken
     if (request.status === 'APPROVED') {
-      const currentYear = new Date().getFullYear()
-      await prisma.vacationBalance.updateMany({
-        where: {
-          userId: request.userId,
-          year: currentYear,
-        },
-        data: {
-          opgenomenLopendJaar: {
-            decrement: request.days
+      const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
+      const isVerlof = verlofTypes.some(t => (request.reason || '').toLowerCase().includes(t))
+      if (!isVerlof) {
+        const requestYear = new Date(request.startDate).getFullYear()
+        await prisma.vacationBalance.updateMany({
+          where: {
+            userId: request.userId,
+            year: requestYear,
+          },
+          data: {
+            opgenomenLopendJaar: {
+              decrement: request.days
+            }
           }
-        }
-      })
+        })
+      }
     }
 
     await prisma.vacationRequest.delete({

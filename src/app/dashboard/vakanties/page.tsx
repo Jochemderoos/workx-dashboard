@@ -1501,7 +1501,7 @@ export default function VakantiesPage() {
                               <input
                                 type="number"
                                 step="0.5"
-                                value={balanceForm.overgedragenVorigJaar || ''}
+                                value={balanceForm.overgedragenVorigJaar ?? ''}
                                 onChange={e => setBalanceForm({ ...balanceForm, overgedragenVorigJaar: parseFloat(e.target.value) || 0 })}
                                 className="input-field text-sm py-2"
                               />
@@ -1511,7 +1511,7 @@ export default function VakantiesPage() {
                               <input
                                 type="number"
                                 step="0.5"
-                                value={balanceForm.opbouwLopendJaar || ''}
+                                value={balanceForm.opbouwLopendJaar ?? ''}
                                 onChange={e => setBalanceForm({ ...balanceForm, opbouwLopendJaar: parseFloat(e.target.value) || 0 })}
                                 className="input-field text-sm py-2"
                               />
@@ -1521,7 +1521,7 @@ export default function VakantiesPage() {
                               <input
                                 type="number"
                                 step="0.5"
-                                value={balanceForm.bijgekocht || ''}
+                                value={balanceForm.bijgekocht ?? ''}
                                 onChange={e => setBalanceForm({ ...balanceForm, bijgekocht: parseFloat(e.target.value) || 0 })}
                                 className="input-field text-sm py-2"
                               />
@@ -1531,7 +1531,7 @@ export default function VakantiesPage() {
                               <input
                                 type="number"
                                 step="0.5"
-                                value={balanceForm.opgenomenLopendJaar || ''}
+                                value={balanceForm.opgenomenLopendJaar ?? ''}
                                 onChange={e => setBalanceForm({ ...balanceForm, opgenomenLopendJaar: parseFloat(e.target.value) || 0 })}
                                 className="input-field text-sm py-2"
                               />

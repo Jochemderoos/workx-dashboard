@@ -45,33 +45,12 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' }
     })
 
-    // Herbereken opgenomenLopendJaar uit daadwerkelijke APPROVED requests
-    // Dit voorkomt drift door dubbele incrementen of race conditions
-    const approvedRequests = await prisma.vacationRequest.findMany({
-      where: { status: 'APPROVED' },
-      select: { userId: true, days: true, startDate: true, reason: true },
-    })
-
-    // Som per gebruiker voor het huidige jaar (op basis van startDate)
-    // Exclude zwangerschaps/ouderschaps/bevallings/geboorteverlof — die tellen NIET als vakantiedagen
-    const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
-    const approvedDaysMap = new Map<string, number>()
-    for (const r of approvedRequests) {
-      const reqYear = new Date(r.startDate).getFullYear()
-      if (reqYear === currentYear) {
-        const reason = (r.reason || '').toLowerCase()
-        const isVerlof = verlofTypes.some(t => reason.includes(t))
-        if (!isVerlof) {
-          approvedDaysMap.set(r.userId, (approvedDaysMap.get(r.userId) || 0) + r.days)
-        }
-      }
-    }
-
-    // Format response - show existing balance regardless of year (prevents data loss at year boundaries)
+    // Gebruik opgeslagen waarde — NIET herberekenen.
+    // opgenomenLopendJaar wordt bijgewerkt bij goedkeuring/afwijzing van requests
+    // EN bij handmatige aanpassing door admin. Herberekenen overschrijft handmatige correcties.
     const balances = users.map(user => {
       const balance = user.vacationBalance
       const isPartner = user.role === 'PARTNER'
-      const actualOpgenomen = approvedDaysMap.get(user.id) || 0
 
       return {
         userId: user.id,
@@ -81,23 +60,11 @@ export async function GET(req: NextRequest) {
         overgedragenVorigJaar: balance?.overgedragenVorigJaar || 0,
         opbouwLopendJaar: balance?.opbouwLopendJaar ?? (isPartner ? 0 : 25),
         bijgekocht: balance?.bijgekocht || 0,
-        opgenomenLopendJaar: actualOpgenomen,
+        opgenomenLopendJaar: balance?.opgenomenLopendJaar || 0,
         note: isPartner ? 'Partner' : '',
         needsYearUpdate: balance ? balance.year !== currentYear : false,
       }
     })
-
-    // Auto-heal: sync opgeslagen tellers met werkelijkheid
-    for (const user of users) {
-      const balance = user.vacationBalance
-      const actualOpgenomen = approvedDaysMap.get(user.id) || 0
-      if (balance && balance.opgenomenLopendJaar !== actualOpgenomen) {
-        prisma.vacationBalance.update({
-          where: { id: balance.id },
-          data: { opgenomenLopendJaar: actualOpgenomen },
-        }).catch(() => {}) // fire-and-forget, niet blokkeren
-      }
-    }
 
     return NextResponse.json(balances)
   } catch (error) {

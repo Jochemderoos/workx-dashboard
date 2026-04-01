@@ -32,31 +32,15 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // Herbereken opgenomenLopendJaar uit daadwerkelijke APPROVED requests
-    // Exclude zwangerschaps/ouderschaps/bevallings/geboorteverlof
-    const approvedRequests = await prisma.vacationRequest.findMany({
-      where: {
-        userId: session.user.id,
-        status: 'APPROVED',
-        startDate: {
-          gte: new Date(currentYear, 0, 1),
-          lt: new Date(currentYear + 1, 0, 1),
-        },
-      },
-      select: { days: true, reason: true },
-    })
-    const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
-    const actualOpgenomen = approvedRequests
-      .filter(r => !verlofTypes.some(t => (r.reason || '').toLowerCase().includes(t)))
-      .reduce((sum, r) => sum + r.days, 0)
+    // Gebruik opgeslagen waarde — NIET herberekenen
+    const opgenomen = vacationBalance.opgenomenLopendJaar
+    const totalDays = vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar + (vacationBalance.bijgekocht || 0)
 
-    // Return in a format compatible with existing code
     return NextResponse.json({
       ...vacationBalance,
-      opgenomenLopendJaar: actualOpgenomen,
-      totalDays: vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar,
-      usedDays: actualOpgenomen,
-      remainingDays: vacationBalance.overgedragenVorigJaar + vacationBalance.opbouwLopendJaar - actualOpgenomen,
+      totalDays,
+      usedDays: opgenomen,
+      remainingDays: totalDays - opgenomen,
     })
   } catch (error) {
     console.error('Error fetching vacation balance:', error)
