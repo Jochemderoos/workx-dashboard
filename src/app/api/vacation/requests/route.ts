@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const { startDate, endDate, days, reason, userId: requestedUserId } = await req.json()
+    const { startDate, endDate, days, reason, userId: requestedUserId, isHalfDay } = await req.json()
 
     if (!startDate || !endDate) {
       return NextResponse.json(
@@ -143,7 +143,11 @@ export async function POST(req: NextRequest) {
     // Calculate days if not provided - use werkdagen (excludes weekends + holidays)
     const start = parseLocalDate(startDate)
     const end = parseLocalDate(endDate)
-    const calculatedDays = days || calculateWorkdays(start, end)
+    let calculatedDays = days || calculateWorkdays(start, end)
+    // Halve dag: als start === eind en isHalfDay is true, 0.5 dag
+    if (isHalfDay && start.toDateString() === end.toDateString()) {
+      calculatedDays = 0.5
+    }
 
     // Check available days (skip for admin when creating for others)
     if (!isAdmin || targetUserId === session.user.id) {

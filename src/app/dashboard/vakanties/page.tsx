@@ -168,6 +168,7 @@ export default function VakantiesPage() {
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [reason, setReason] = useState('')
+  const [isHalfDay, setIsHalfDay] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
   const [showParentalMemberDropdown, setShowParentalMemberDropdown] = useState(false)
@@ -252,6 +253,7 @@ export default function VakantiesPage() {
     setStartDate(null)
     setEndDate(null)
     setReason('')
+    setIsHalfDay(false)
     setEditingId(null)
     setShowForm(false)
     setShowTeamDropdown(false)
@@ -278,7 +280,7 @@ export default function VakantiesPage() {
         const res = await fetch(`/api/vacation/requests/${editingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startDate: startDateStr, endDate: endDateStr, reason }),
+          body: JSON.stringify({ startDate: startDateStr, endDate: endDateStr, reason, isHalfDay }),
         })
         if (!res.ok) {
           const data = await res.json()
@@ -295,6 +297,7 @@ export default function VakantiesPage() {
             endDate: endDateStr,
             reason,
             userId: targetUserId,
+            isHalfDay,
           }),
         })
         if (!res.ok) {
@@ -352,8 +355,10 @@ export default function VakantiesPage() {
     const start = new Date(vacReqStartDate)
     const end = new Date(vacReqEndDate)
     if (end < start) return null
-    return calculateWorkdays(start, end)
-  }, [vacReqStartDate, vacReqEndDate])
+    const days = calculateWorkdays(start, end)
+    if (isHalfDay && start.toDateString() === end.toDateString()) return 0.5
+    return days
+  }, [vacReqStartDate, vacReqEndDate, isHalfDay])
 
   // Delete vacation
   const handleDelete = async (id: string) => {
@@ -997,6 +1002,23 @@ export default function VakantiesPage() {
             />
           </div>
         </div>
+
+        {/* Halve dag optie — alleen als start === eind */}
+        {startDate && endDate && startDate.toDateString() === endDate.toDateString() && (
+          <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${isHalfDay ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+            <input
+              type="checkbox"
+              checked={isHalfDay}
+              onChange={(e) => setIsHalfDay(e.target.checked)}
+              className="w-5 h-5 rounded accent-yellow-400"
+            />
+            <div>
+              <span className="text-white text-sm font-medium">Halve dag (0,5)</span>
+              <p className="text-xs text-gray-400">Alleen een ochtend of middag vrij</p>
+            </div>
+            {isHalfDay && <Icons.check size={18} className="ml-auto text-yellow-400" />}
+          </label>
+        )}
 
         <div>
           <label className="block text-sm text-gray-400 mb-2">Reden (optioneel)</label>

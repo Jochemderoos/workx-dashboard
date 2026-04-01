@@ -41,7 +41,7 @@ export async function PATCH(
     const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
 
     const body = await req.json()
-    const { status, startDate, endDate, reason, rejectionReason } = body
+    const { status, startDate, endDate, reason, rejectionReason, isHalfDay } = body
 
     const request = await prisma.vacationRequest.findUnique({
       where: { id: params.id }
@@ -201,7 +201,10 @@ export async function PATCH(
     if (startDate || endDate) {
       const newStart = startDate ? parseLocalDate(startDate) : request.startDate
       const newEnd = endDate ? parseLocalDate(endDate) : request.endDate
-      const newDays = calculateWorkdays(newStart, newEnd)
+      let newDays = calculateWorkdays(newStart, newEnd)
+      if (isHalfDay && newStart.toDateString() === newEnd.toDateString()) {
+        newDays = 0.5
+      }
 
       // If approved, adjust vacation balance
       if (request.status === 'APPROVED') {
