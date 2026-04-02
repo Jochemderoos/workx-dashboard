@@ -127,6 +127,28 @@ export default function BonusPage() {
     fetchCalculations()
   }
 
+  const markAllPaidForEmployee = async (calcs: Calculation[]) => {
+    const unpaid = calcs.filter(c => c.status === 'SUBMITTED')
+    if (unpaid.length === 0) return
+    const total = formatCurrency(unpaid.reduce((s, c) => s + c.bonusAmount, 0))
+    const name = unpaid[0].user?.name || 'deze medewerker'
+    if (!confirm(`${total} bonus uitbetalen aan ${name}? Alle ${unpaid.length} ingediende bonussen worden op betaald gezet.`)) return
+
+    let success = 0
+    for (const calc of unpaid) {
+      try {
+        const res = await fetch(`/api/bonus/${calc.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'paid' }),
+        })
+        if (res.ok) success++
+      } catch { /* continue */ }
+    }
+    toast.success(`${success} bonussen betaald gezet`)
+    fetchAdminCalculations()
+  }
+
   const toggleAdminPaid = async (id: string, currentStatus: string) => {
     const action = currentStatus === 'PAID' ? 'unpaid' : 'paid'
     try {
@@ -1065,40 +1087,39 @@ export default function BonusPage() {
                           <p className="text-xs text-gray-500">{calcs.length} bonussen · {unpaid.length} openstaand</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-green-400">{formatCurrency(employeeTotal)}</p>
-                        {unpaid.length > 0 && (
-                          <p className="text-xs text-blue-400">{formatCurrency(unpaid.reduce((s, c) => s + c.bonusAmount, 0))} uit te betalen</p>
+                      <div className="text-right flex items-center gap-3">
+                        <div>
+                          <p className="text-xl font-bold text-green-400">{formatCurrency(employeeTotal)}</p>
+                          {unpaid.length > 0 && (
+                            <p className="text-xs text-blue-400">{unpaid.length} bonussen</p>
+                          )}
+                        </div>
+                        {unpaid.length > 0 ? (
+                          <button
+                            onClick={() => markAllPaidForEmployee(calcs)}
+                            className="px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors text-sm font-medium"
+                          >
+                            Uitbetalen
+                          </button>
+                        ) : (
+                          <span className="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400/60 text-sm">Uitbetaald</span>
                         )}
                       </div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {calcs.map(calc => (
-                        <div key={calc.id} className={`rounded-xl border p-3 flex items-center justify-between ${calc.status === 'PAID' ? 'opacity-50' : ''}`} style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap text-sm">
-                              <span className="font-medium text-white">{formatCurrency(calc.bonusAmount)}</span>
-                              {calc.clientName && <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400">{calc.clientName}</span>}
-                              {calc.invoiceNumber && <span className="text-xs text-gray-500">#{calc.invoiceNumber}</span>}
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${calc.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/15 text-blue-400'}`}>
-                                {calc.status === 'PAID' ? 'Betaald' : 'Ingediend'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
-                              <span>{formatCurrency(calc.invoiceAmount)} × {calc.bonusPercentage}%</span>
-                              {calc.submittedAt && <span>{new Date(calc.submittedAt).toLocaleDateString('nl-NL')}</span>}
-                            </div>
+                        <div key={calc.id} className={`rounded-lg border p-2.5 flex items-center justify-between ${calc.status === 'PAID' ? 'opacity-40' : ''}`} style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="font-medium text-white">{formatCurrency(calc.bonusAmount)}</span>
+                            {calc.clientName && <span className="text-xs text-gray-400">{calc.clientName}</span>}
+                            {calc.invoiceNumber && <span className="text-xs text-gray-500">#{calc.invoiceNumber}</span>}
                           </div>
-                          <button
-                            onClick={() => toggleAdminPaid(calc.id, calc.status)}
-                            className={`shrink-0 text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                              calc.status === 'PAID'
-                                ? 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'
-                                : 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                            }`}
-                          >
-                            {calc.status === 'PAID' ? 'Onbetaald' : 'Markeer betaald'}
-                          </button>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{formatCurrency(calc.invoiceAmount)} × {calc.bonusPercentage}%</span>
+                            <span className={`px-1.5 py-0.5 rounded-full ${calc.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/15 text-blue-400'}`}>
+                              {calc.status === 'PAID' ? 'Betaald' : 'Ingediend'}
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>
