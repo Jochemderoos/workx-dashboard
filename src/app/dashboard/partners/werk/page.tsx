@@ -1439,15 +1439,15 @@ export default function PartnersWerkPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-white/[0.02] border-b border-white/5">
-                      <th className="text-left py-3 px-4 font-medium text-white/60 sticky left-0 bg-workx-gray z-10 min-w-[200px]">
+                      <th className="text-left py-3 px-3 font-medium text-white/60 sticky left-0 bg-workx-gray z-10 min-w-[160px]">
                         Medewerker
                       </th>
                       {MONTH_NAMES.map((month, idx) => (
-                        <th key={idx} className="text-center py-3 px-3 font-medium text-white/60 min-w-[70px]">
+                        <th key={idx} className="text-center py-3 px-1.5 font-medium text-white/60 min-w-[52px] text-xs">
                           {month}
                         </th>
                       ))}
-                      <th className="text-center py-3 px-4 font-semibold text-workx-lime bg-workx-lime/5 min-w-[90px]">
+                      <th className="text-center py-3 px-3 font-semibold text-workx-lime bg-workx-lime/5 min-w-[70px]">
                         Totaal
                       </th>
                     </tr>
@@ -1459,20 +1459,20 @@ export default function PartnersWerkPage() {
 
                       return (
                         <tr key={emp} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="py-3 px-4 sticky left-0 bg-workx-gray z-10">
-                            <div className="flex items-center gap-3">
+                          <td className="py-2.5 px-3 sticky left-0 bg-workx-gray z-10">
+                            <div className="flex items-center gap-2">
                               {photoUrl ? (
                                 <img
                                   src={photoUrl}
                                   alt={emp}
-                                  className="w-9 h-9 rounded-xl object-cover ring-2 ring-white/10"
+                                  className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-                                  <Icons.user className="text-gray-400" size={16} />
+                                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
+                                  <Icons.user className="text-gray-400" size={12} />
                                 </div>
                               )}
-                              <span className="font-medium text-white">{emp}</span>
+                              <span className="font-medium text-white text-xs">{emp}</span>
                             </div>
                           </td>
                           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => {
@@ -1480,20 +1480,20 @@ export default function PartnersWerkPage() {
                             const hasData = hours.billable > 0
 
                             return (
-                              <td key={month} className="py-3 px-3 text-center">
+                              <td key={month} className="py-2.5 px-1.5 text-center">
                                 {hasData ? (
-                                  <span className="text-white font-medium">
-                                    {hours.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                                  <span className="text-white font-medium text-xs">
+                                    {hours.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                   </span>
                                 ) : (
-                                  <span className="text-white/20">-</span>
+                                  <span className="text-white/20 text-xs">-</span>
                                 )}
                               </td>
                             )
                           })}
-                          <td className="py-3 px-4 text-center bg-workx-lime/5">
-                            <span className="text-workx-lime font-bold">
-                              {total.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
+                          <td className="py-2.5 px-3 text-center bg-workx-lime/5">
+                            <span className="text-workx-lime font-bold text-xs">
+                              {total.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </span>
                           </td>
                         </tr>
@@ -1502,7 +1502,7 @@ export default function PartnersWerkPage() {
                   </tbody>
                   <tfoot>
                     <tr className="bg-workx-lime/10 border-t-2 border-workx-lime/30">
-                      <td className="py-4 px-4 font-bold text-white sticky left-0 bg-workx-gray z-10">
+                      <td className="py-3 px-3 font-bold text-white sticky left-0 bg-workx-gray z-10 text-xs">
                         Totaal
                       </td>
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => {
@@ -1510,19 +1510,19 @@ export default function PartnersWerkPage() {
                         const hasData = totals.billable > 0
 
                         return (
-                          <td key={month} className="py-4 px-3 text-center">
+                          <td key={month} className="py-3 px-1.5 text-center">
                             {hasData ? (
-                              <span className="text-white font-bold">
+                              <span className="text-white font-bold text-xs">
                                 {totals.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </span>
                             ) : (
-                              <span className="text-white/20">-</span>
+                              <span className="text-white/20 text-xs">-</span>
                             )}
                           </td>
                         )
                       })}
-                      <td className="py-4 px-4 text-center bg-workx-lime/20">
-                        <span className="text-workx-lime font-bold text-lg">
+                      <td className="py-3 px-3 text-center bg-workx-lime/20">
+                        <span className="text-workx-lime font-bold text-sm">
                           {monthlyHoursData.grandTotal.billable.toLocaleString('nl-NL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </span>
                       </td>
