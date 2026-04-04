@@ -155,14 +155,14 @@ export default function PartnersWerkPage() {
 
   const last3Workdays = daysToDisplay
 
-  // Partners are only visible Friday 20:00 – Monday 20:00
+  // Partners altijd tonen: bovenaan op weekend/maandag, onderaan op werkdagen
   const today = new Date()
   const currentDayOfWeek = today.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
   const currentHourNow = today.getHours()
-  const showPartners = currentDayOfWeek === 0 || currentDayOfWeek === 6  // Sat & Sun: always
-    || (currentDayOfWeek === 5 && currentHourNow >= 20)                  // Friday from 20:00
-    || (currentDayOfWeek === 1 && currentHourNow < 20)                   // Monday until 20:00
-  const peopleToShow = showPartners ? [...PARTNERS, ...ADVOCATEN] : ADVOCATEN
+  const partnersFirst = currentDayOfWeek === 0 || currentDayOfWeek === 6  // Sat & Sun: always
+    || (currentDayOfWeek === 5 && currentHourNow >= 20)                   // Friday from 20:00
+    || (currentDayOfWeek === 1 && currentHourNow < 20)                    // Monday until 20:00
+  const peopleToShow = partnersFirst ? [...PARTNERS, ...ADVOCATEN] : [...ADVOCATEN, ...PARTNERS]
 
   // Helper to check if a date is a weekend
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
@@ -822,7 +822,7 @@ export default function PartnersWerkPage() {
               <div className="min-w-0">
                 {/* Table header */}
                 <div className="grid gap-1 px-2 sm:px-4 py-2 sm:py-3 bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider"
-                  style={{ gridTemplateColumns: showPartners ? `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` : `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr)` }}
+                  style={{ gridTemplateColumns: partnersFirst ? `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` : `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr)` }}
                 >
                   <div className="text-[10px] sm:text-xs">Naam</div>
               {last3Workdays.map(day => {
@@ -835,7 +835,7 @@ export default function PartnersWerkPage() {
                   </div>
                 )
               })}
-              {showPartners && <div className="text-center text-[10px] sm:text-xs">Week</div>}
+              {partnersFirst && <div className="text-center text-[10px] sm:text-xs">Week</div>}
             </div>
 
             {/* Table body */}
@@ -851,7 +851,7 @@ export default function PartnersWerkPage() {
                   <ScrollRevealItem key={person}>
                   <div
                     className={`grid gap-1 px-2 sm:px-4 py-1.5 sm:py-3 items-center hover:bg-white/[0.02] transition-colors ${isPartner ? 'bg-workx-lime/[0.02]' : ''}`}
-                    style={{ gridTemplateColumns: showPartners ? `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` : `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr)` }}
+                    style={{ gridTemplateColumns: partnersFirst ? `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` : `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr)` }}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <img
@@ -916,7 +916,7 @@ export default function PartnersWerkPage() {
                       )
                     })}
                     {/* Week total - only on Sat/Sun/Mon */}
-                    {showPartners && (
+                    {partnersFirst && (
                     <div className="flex justify-center items-center">
                       <span className={`text-xs sm:text-sm font-bold ${
                         weekTotal > 25 ? 'text-red-400' : weekTotal > 20 ? 'text-orange-400' : weekTotal > 0 ? 'text-white/60' : 'text-white/15'
