@@ -1205,65 +1205,60 @@ export default function PartnersWerkPage() {
           </div>
           </ScrollReveal>
 
-          {/* Persoonlijke ontwikkeling — sparklines per medewerker */}
+          {/* Uren per persoon — gestapelde balkgrafiek */}
           {monthlyHoursData.employees.length > 0 && (() => {
-            // Laatste maand met data
             let lastDataMonth = 0
             for (let m = 1; m <= 12; m++) {
               if (Object.values(monthlyHoursData.monthlyTotals[m] || {}).some(v => v > 0)) lastDataMonth = m
             }
             if (lastDataMonth === 0) lastDataMonth = 12
+            const monthColors = [
+              'rgba(249,255,133,0.15)', 'rgba(249,255,133,0.20)', 'rgba(249,255,133,0.25)',
+              'rgba(249,255,133,0.30)', 'rgba(249,255,133,0.38)', 'rgba(249,255,133,0.45)',
+              'rgba(249,255,133,0.50)', 'rgba(249,255,133,0.55)', 'rgba(249,255,133,0.60)',
+              'rgba(249,255,133,0.68)', 'rgba(249,255,133,0.75)', 'rgba(249,255,133,0.85)',
+            ]
+            // Per medewerker: maanduren + totaal, gesorteerd op totaal
+            const empData = monthlyHoursData.employees.map(emp => {
+              const months: number[] = []
+              for (let m = 1; m <= lastDataMonth; m++) months.push(monthlyHoursData.data[emp][m]?.billable || 0)
+              return { emp, months, total: months.reduce((s, v) => s + v, 0) }
+            }).sort((a, b) => b.total - a.total)
+            const maxTotal = empData[0]?.total || 1
 
             return (
             <div className="card p-5">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
-                  <Icons.activity className="text-workx-lime" size={16} />
-                </div>
-                <h2 className="font-medium text-white">Persoonlijke ontwikkeling {selectedYear}</h2>
-                <span className="text-xs text-gray-500 ml-auto">{lastDataMonth === 12 ? 'Heel jaar' : `Jan – ${MONTH_NAMES[lastDataMonth - 1]}`}</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {monthlyHoursData.employees.map(emp => {
-                  const months: number[] = []
-                  for (let m = 1; m <= lastDataMonth; m++) months.push(monthlyHoursData.data[emp][m]?.billable || 0)
-                  const maxMonth = Math.max(...months) || 1
-                  const total = months.reduce((s, v) => s + v, 0)
-                  const avg = total / months.filter(v => v > 0).length || 0
-                  // Trend: laatste maand vs gemiddelde
-                  const lastMonth = months[months.length - 1]
-                  const trend = avg > 0 ? ((lastMonth - avg) / avg) * 100 : 0
-
-                  return (
-                    <div key={emp} className="rounded-xl border border-white/5 bg-white/[0.02] p-3 hover:border-white/10 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-white truncate">{emp.split(' ')[0]}</span>
-                        <span className="text-[10px] text-gray-500">{total.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}u</span>
-                      </div>
-                      {/* Mini bar chart */}
-                      <div className="flex items-end gap-px h-10 mb-1.5">
-                        {months.map((val, i) => (
+              <div className="space-y-1.5">
+                {empData.map(({ emp, months, total }) => (
+                  <div key={emp} className="flex items-center gap-2 group">
+                    <span className="text-[11px] text-white/60 w-20 truncate text-right shrink-0">{emp.split(' ')[0]}</span>
+                    <div className="flex-1 h-5 bg-white/[0.02] rounded-sm overflow-hidden flex">
+                      {months.map((val, i) => (
+                        val > 0 ? (
                           <div
                             key={i}
-                            className="flex-1 rounded-sm transition-all"
+                            className="h-full transition-all"
                             style={{
-                              height: `${Math.max((val / maxMonth) * 100, val > 0 ? 8 : 0)}%`,
-                              backgroundColor: val > 0 ? (i === months.length - 1 ? '#f9ff85' : 'rgba(249,255,133,0.3)') : 'rgba(255,255,255,0.03)',
+                              width: `${(val / maxTotal) * 100}%`,
+                              backgroundColor: monthColors[i],
                             }}
+                            title={`${MONTH_NAMES[i]}: ${val.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}u`}
                           />
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500">gem. {avg.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}/mnd</span>
-                        {trend !== 0 && months.filter(v => v > 0).length >= 2 && (
-                          <span className={`text-[10px] font-medium ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {trend > 0 ? '↑' : '↓'}{Math.abs(trend).toFixed(0)}%
-                          </span>
-                        )}
-                      </div>
+                        ) : null
+                      ))}
                     </div>
-                  )
-                })}
+                    <span className="text-[11px] text-white/40 w-10 text-right tabular-nums shrink-0">{total.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Maand-legenda */}
+              <div className="flex gap-1 mt-3 pt-3 border-t border-white/5 justify-center">
+                {MONTH_NAMES.slice(0, lastDataMonth).map((m, i) => (
+                  <div key={m} className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: monthColors[i] }} />
+                    <span className="text-[9px] text-white/30">{m}</span>
+                  </div>
+                ))}
               </div>
             </div>
             )
