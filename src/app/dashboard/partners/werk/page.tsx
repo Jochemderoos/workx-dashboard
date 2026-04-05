@@ -1465,11 +1465,12 @@ export default function PartnersWerkPage() {
               if (Object.values(monthlyHoursData.monthlyTotals[m] || {}).some(v => v > 0)) lastDataMonth = m
             }
             if (lastDataMonth === 0) lastDataMonth = 12
+            // Geeltinten van licht naar donker
             const monthColors = [
-              'rgba(96,165,250,0.45)',  'rgba(139,92,246,0.45)', 'rgba(236,72,153,0.4)',
-              'rgba(249,115,22,0.4)',   'rgba(234,179,8,0.45)',  'rgba(34,197,94,0.4)',
-              'rgba(20,184,166,0.4)',   'rgba(96,165,250,0.35)', 'rgba(168,85,247,0.35)',
-              'rgba(249,255,133,0.4)',  'rgba(244,63,94,0.35)',  'rgba(6,182,212,0.4)',
+              'rgba(249,255,133,0.20)', 'rgba(249,255,133,0.25)', 'rgba(249,255,133,0.30)',
+              'rgba(249,255,133,0.35)', 'rgba(249,255,133,0.40)', 'rgba(249,255,133,0.45)',
+              'rgba(249,255,133,0.50)', 'rgba(249,255,133,0.55)', 'rgba(249,255,133,0.60)',
+              'rgba(249,255,133,0.65)', 'rgba(249,255,133,0.72)', 'rgba(249,255,133,0.80)',
             ]
             const empData = monthlyHoursData.employees.map(emp => {
               const months: number[] = []
@@ -1487,20 +1488,12 @@ export default function PartnersWerkPage() {
                     <div className="flex-1 h-5 bg-white/[0.02] rounded-sm overflow-hidden flex">
                       {months.map((val, i) => (
                         val > 0 ? (
-                          <div key={i} className="h-full" style={{ width: `${(val / maxTotal) * 100}%`, backgroundColor: monthColors[i] }}
+                          <div key={i} className="h-full border-r border-workx-gray/80" style={{ width: `${(val / maxTotal) * 100}%`, backgroundColor: monthColors[i] }}
                             title={`${MONTH_NAMES[i]}: ${val.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}u`} />
                         ) : null
                       ))}
                     </div>
                     <span className="text-[11px] text-white/40 w-10 text-right tabular-nums shrink-0">{total.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 pt-3 border-t border-white/5 justify-center">
-                {MONTH_NAMES.slice(0, lastDataMonth).map((m, i) => (
-                  <div key={m} className="flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: monthColors[i] }} />
-                    <span className="text-[9px] text-white/30">{m}</span>
                   </div>
                 ))}
               </div>
