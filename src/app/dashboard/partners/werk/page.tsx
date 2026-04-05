@@ -1205,8 +1205,53 @@ export default function PartnersWerkPage() {
           </div>
           </ScrollReveal>
 
-          {/* Cumulative Hours Chart */}
-          {monthlyHoursData.employees.length > 0 && (
+          {/* Ranking + Cumulative Chart */}
+          {monthlyHoursData.employees.length > 0 && (() => {
+            const empColors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6', '#6366f1', '#d946ef', '#0ea5e9', '#84cc16', '#f43f5e', '#8b5cf6', '#10b981', '#fb923c']
+            // Sorteer op totaal uren
+            const ranked = monthlyHoursData.employees
+              .map((emp, idx) => ({ emp, total: monthlyHoursData.totals[emp]?.billable || 0, color: empColors[idx % empColors.length] }))
+              .sort((a, b) => b.total - a.total)
+            const maxTotal = ranked[0]?.total || 1
+            const top5Names = new Set(ranked.slice(0, 5).map(r => r.emp))
+            // Laatste maand met data
+            let lastDataMonth = 0
+            for (let m = 1; m <= 12; m++) {
+              if (Object.values(monthlyHoursData.monthlyTotals[m] || {}).some(v => v > 0)) lastDataMonth = m
+            }
+            if (lastDataMonth === 0) lastDataMonth = 12
+            const monthsToShow = MONTH_NAMES.slice(0, lastDataMonth)
+
+            return (<>
+            {/* Ranking */}
+            <div className="card p-5">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
+                  <Icons.chart className="text-workx-lime" size={16} />
+                </div>
+                <h2 className="font-medium text-white">Ranking {selectedYear}</h2>
+                <span className="text-xs text-gray-500 ml-auto">{lastDataMonth === 12 ? 'Heel jaar' : `Jan – ${MONTH_NAMES[lastDataMonth - 1]}`}</span>
+              </div>
+              <div className="space-y-2">
+                {ranked.map((r, i) => (
+                  <div key={r.emp} className="flex items-center gap-3">
+                    <span className={`w-5 text-right text-xs font-bold ${i < 3 ? 'text-workx-lime' : 'text-gray-500'}`}>{i + 1}</span>
+                    <span className="text-sm text-white w-32 truncate">{r.emp.split(' ')[0]}</span>
+                    <div className="flex-1 h-5 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${(r.total / maxTotal) * 100}%`, backgroundColor: r.color, opacity: i < 5 ? 0.8 : 0.3 }}
+                      />
+                    </div>
+                    <span className={`text-xs font-medium w-14 text-right ${i < 5 ? 'text-white' : 'text-gray-500'}`}>
+                      {r.total.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cumulatieve ontwikkeling — alleen tot huidige maand, top 5 gehighlight */}
             <div className="card p-5">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center">
@@ -1215,80 +1260,66 @@ export default function PartnersWerkPage() {
                 <h2 className="font-medium text-white">Cumulatieve ontwikkeling {selectedYear}</h2>
               </div>
               <div className="h-64 relative">
-                <svg width="100%" height="100%" viewBox="0 0 800 250" preserveAspectRatio="xMidYMid meet">
+                <svg width="100%" height="100%" viewBox={`0 0 ${60 + lastDataMonth * 60 + 20} 250`} preserveAspectRatio="xMidYMid meet">
                   {/* Grid lines */}
                   {[0, 1, 2, 3, 4].map(i => (
-                    <line key={i} x1="60" y1={50 + i * 45} x2="780" y2={50 + i * 45} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                    <line key={i} x1="50" y1={50 + i * 45} x2={50 + lastDataMonth * 60} y2={50 + i * 45} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
                   ))}
+                  {/* Y-axis labels */}
+                  {[0, 1, 2, 3, 4].map(i => {
+                    const val = Math.round(maxTotal * (4 - i) / 4)
+                    return <text key={i} x="45" y={54 + i * 45} fill="rgba(255,255,255,0.25)" fontSize="9" textAnchor="end">{val}</text>
+                  })}
                   {/* Month labels */}
-                  {MONTH_NAMES.map((month, idx) => (
-                    <text key={idx} x={80 + idx * 60} y="240" fill="rgba(255,255,255,0.4)" fontSize="11" textAnchor="middle">{month}</text>
+                  {monthsToShow.map((month, idx) => (
+                    <text key={idx} x={80 + idx * 60} y="245" fill="rgba(255,255,255,0.4)" fontSize="10" textAnchor="middle">{month}</text>
                   ))}
-                  {/* Lines for each employee */}
+                  {/* Non-top-5 lines first (grey background) */}
                   {monthlyHoursData.employees.map((emp, empIdx) => {
-                    const colors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6', '#6366f1', '#d946ef', '#0ea5e9', '#84cc16', '#f43f5e', '#8b5cf6', '#10b981', '#fb923c']
-                    const color = colors[empIdx % colors.length]
-
-                    // Calculate cumulative hours
+                    if (top5Names.has(emp)) return null
                     let cumulative = 0
                     const points: string[] = []
-                    const maxCumulative = Math.max(...monthlyHoursData.employees.map(e => {
-                      let sum = 0
-                      for (let m = 1; m <= 12; m++) sum += monthlyHoursData.data[e][m]?.billable || 0
-                      return sum
-                    })) || 1
-
-                    for (let m = 1; m <= 12; m++) {
+                    for (let m = 1; m <= lastDataMonth; m++) {
                       cumulative += monthlyHoursData.data[emp][m]?.billable || 0
-                      if (cumulative > 0) {
-                        const x = 80 + (m - 1) * 60
-                        const y = 230 - (cumulative / maxCumulative) * 180
-                        points.push(`${x},${y}`)
-                      }
+                      if (cumulative > 0) points.push(`${80 + (m - 1) * 60},${230 - (cumulative / maxTotal) * 180}`)
                     }
-
-                    if (points.length === 0) return null
-
+                    if (points.length < 2) return null
+                    return <polyline key={emp} points={points.join(' ')} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  })}
+                  {/* Top 5 lines */}
+                  {ranked.filter(r => top5Names.has(r.emp)).map(r => {
+                    let cumulative = 0
+                    const points: string[] = []
+                    for (let m = 1; m <= lastDataMonth; m++) {
+                      cumulative += monthlyHoursData.data[r.emp][m]?.billable || 0
+                      if (cumulative > 0) points.push(`${80 + (m - 1) * 60},${230 - (cumulative / maxTotal) * 180}`)
+                    }
+                    if (points.length < 2) return null
+                    const lastPt = points[points.length - 1].split(',')
                     return (
-                      <g key={emp}>
-                        {points.length >= 2 && (
-                          <polyline
-                            points={points.join(' ')}
-                            fill="none"
-                            stroke={color}
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            opacity="0.8"
-                          />
-                        )}
-                        {/* End point */}
-                        <circle
-                          cx={parseFloat(points[points.length - 1].split(',')[0])}
-                          cy={parseFloat(points[points.length - 1].split(',')[1])}
-                          r="4"
-                          fill={color}
-                        />
+                      <g key={r.emp}>
+                        <polyline points={points.join(' ')} fill="none" stroke={r.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx={parseFloat(lastPt[0])} cy={parseFloat(lastPt[1])} r="4" fill={r.color} />
+                        <text x={parseFloat(lastPt[0]) + 8} y={parseFloat(lastPt[1]) + 4} fill={r.color} fontSize="9" fontWeight="600">{r.emp.split(' ')[0]}</text>
                       </g>
                     )
                   })}
                 </svg>
               </div>
-              {/* Legend */}
-              <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-white/5">
-                {monthlyHoursData.employees.map((emp, empIdx) => {
-                  const colors = ['#f9ff85', '#06b6d4', '#f97316', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#3b82f6', '#ef4444', '#14b8a6', '#6366f1', '#d946ef', '#0ea5e9', '#84cc16', '#f43f5e', '#8b5cf6', '#10b981', '#fb923c']
-                  const color = colors[empIdx % colors.length]
-                  return (
-                    <div key={emp} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                      <span className="text-xs text-white/60">{emp.split(' ')[0]}</span>
-                    </div>
-                  )
-                })}
+              {/* Legend — top 5 */}
+              <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/5">
+                {ranked.slice(0, 5).map(r => (
+                  <div key={r.emp} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: r.color }} />
+                    <span className="text-xs text-white/70">{r.emp.split(' ')[0]}</span>
+                    <span className="text-xs text-white/30">{r.total.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}u</span>
+                  </div>
+                ))}
+                <span className="text-xs text-white/20">+ {ranked.length - 5} anderen</span>
               </div>
             </div>
-          )}
+            </>)
+          })()}
 
           {/* Year Comparison Chart */}
           {prevYearHours.length > 0 && (
