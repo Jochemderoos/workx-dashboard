@@ -1330,63 +1330,6 @@ export default function PartnersWerkPage() {
             </div>
           )}
 
-          {/* Uren per persoon — gestapelde balkgrafiek */}
-          {monthlyHoursData.employees.length > 0 && (() => {
-            let lastDataMonth = 0
-            for (let m = 1; m <= 12; m++) {
-              if (Object.values(monthlyHoursData.monthlyTotals[m] || {}).some(v => v > 0)) lastDataMonth = m
-            }
-            if (lastDataMonth === 0) lastDataMonth = 12
-            const monthColors = [
-              '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e',
-              '#f97316', '#eab308', '#84cc16', '#22c55e',
-              '#14b8a6', '#06b6d4', '#6366f1', '#d946ef',
-            ]
-            const empData = monthlyHoursData.employees.map(emp => {
-              const months: number[] = []
-              for (let m = 1; m <= lastDataMonth; m++) months.push(monthlyHoursData.data[emp][m]?.billable || 0)
-              return { emp, months, total: months.reduce((s, v) => s + v, 0) }
-            }).sort((a, b) => b.total - a.total)
-            const maxTotal = empData[0]?.total || 1
-
-            return (
-            <div className="card p-5">
-              <div className="space-y-1.5">
-                {empData.map(({ emp, months, total }) => (
-                  <div key={emp} className="flex items-center gap-2">
-                    <span className="text-[11px] text-white/60 w-20 truncate text-right shrink-0">{emp.split(' ')[0]}</span>
-                    <div className="flex-1 h-5 bg-white/[0.02] rounded-sm overflow-hidden flex">
-                      {months.map((val, i) => (
-                        val > 0 ? (
-                          <div
-                            key={i}
-                            className="h-full transition-all"
-                            style={{
-                              width: `${(val / maxTotal) * 100}%`,
-                              backgroundColor: monthColors[i],
-                              opacity: 0.75,
-                            }}
-                            title={`${MONTH_NAMES[i]}: ${val.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}u`}
-                          />
-                        ) : null
-                      ))}
-                    </div>
-                    <span className="text-[11px] text-white/40 w-10 text-right tabular-nums shrink-0">{total.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 pt-3 border-t border-white/5 justify-center">
-                {MONTH_NAMES.slice(0, lastDataMonth).map((m, i) => (
-                  <div key={m} className="flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: monthColors[i], opacity: 0.75 }} />
-                    <span className="text-[9px] text-white/30">{m}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            )
-          })()}
-
           {/* Monthly Hours Table */}
           <div className="card overflow-hidden">
             <div className="p-4 sm:p-5 border-b border-white/5 flex items-center gap-3">
@@ -1514,6 +1457,56 @@ export default function PartnersWerkPage() {
               </div>
             )}
           </div>
+
+          {/* Uren per persoon — gestapelde balkgrafiek */}
+          {monthlyHoursData.employees.length > 0 && (() => {
+            let lastDataMonth = 0
+            for (let m = 1; m <= 12; m++) {
+              if (Object.values(monthlyHoursData.monthlyTotals[m] || {}).some(v => v > 0)) lastDataMonth = m
+            }
+            if (lastDataMonth === 0) lastDataMonth = 12
+            const monthColors = [
+              'rgba(96,165,250,0.45)',  'rgba(139,92,246,0.45)', 'rgba(236,72,153,0.4)',
+              'rgba(249,115,22,0.4)',   'rgba(234,179,8,0.45)',  'rgba(34,197,94,0.4)',
+              'rgba(20,184,166,0.4)',   'rgba(96,165,250,0.35)', 'rgba(168,85,247,0.35)',
+              'rgba(249,255,133,0.4)',  'rgba(244,63,94,0.35)',  'rgba(6,182,212,0.4)',
+            ]
+            const empData = monthlyHoursData.employees.map(emp => {
+              const months: number[] = []
+              for (let m = 1; m <= lastDataMonth; m++) months.push(monthlyHoursData.data[emp][m]?.billable || 0)
+              return { emp, months, total: months.reduce((s, v) => s + v, 0) }
+            }).sort((a, b) => b.total - a.total)
+            const maxTotal = empData[0]?.total || 1
+
+            return (
+            <div className="card p-5">
+              <div className="space-y-1.5">
+                {empData.map(({ emp, months, total }) => (
+                  <div key={emp} className="flex items-center gap-2">
+                    <span className="text-[11px] text-white/60 w-20 truncate text-right shrink-0">{emp.split(' ')[0]}</span>
+                    <div className="flex-1 h-5 bg-white/[0.02] rounded-sm overflow-hidden flex">
+                      {months.map((val, i) => (
+                        val > 0 ? (
+                          <div key={i} className="h-full" style={{ width: `${(val / maxTotal) * 100}%`, backgroundColor: monthColors[i] }}
+                            title={`${MONTH_NAMES[i]}: ${val.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}u`} />
+                        ) : null
+                      ))}
+                    </div>
+                    <span className="text-[11px] text-white/40 w-10 text-right tabular-nums shrink-0">{total.toLocaleString('nl-NL', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 pt-3 border-t border-white/5 justify-center">
+                {MONTH_NAMES.slice(0, lastDataMonth).map((m, i) => (
+                  <div key={m} className="flex items-center gap-1">
+                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: monthColors[i] }} />
+                    <span className="text-[9px] text-white/30">{m}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            )
+          })()}
 
           {/* Info card */}
           <div className="card p-5 border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
