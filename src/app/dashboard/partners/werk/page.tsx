@@ -96,6 +96,14 @@ export default function PartnersWerkPage() {
   // State for navigating history
   const [historyOffset, setHistoryOffset] = useState(0)
 
+  // Refresh bij pagina-focus (tab wissel, terugkomen na slaapstand)
+  const [refreshTick, setRefreshTick] = useState(0)
+  useEffect(() => {
+    const onFocus = () => setRefreshTick(t => t + 1)
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [])
+
   // Calculate workdays with offset for navigation
   // Only show today after 20:00 CET
   const workdaysToShow = useMemo(() => {
@@ -124,7 +132,7 @@ export default function PartnersWerkPage() {
     }
 
     return days.reverse() // Oldest first
-  }, [historyOffset])
+  }, [historyOffset, refreshTick])
 
   // Toon weekendkolommen wanneer er data voor is
   // Weekend = de za/zo direct na de laatste vrijdag in het bereik
@@ -156,13 +164,15 @@ export default function PartnersWerkPage() {
   const last3Workdays = daysToDisplay
 
   // Partners altijd tonen: bovenaan op weekend/maandag, onderaan op werkdagen
-  const today = new Date()
-  const currentDayOfWeek = today.getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-  const currentHourNow = today.getHours()
-  const partnersFirst = currentDayOfWeek === 0 || currentDayOfWeek === 6  // Sat & Sun: always
-    || (currentDayOfWeek === 5 && currentHourNow >= 20)                   // Friday from 20:00
-    || (currentDayOfWeek === 1 && currentHourNow < 20)                    // Monday until 20:00
-  const peopleToShow = partnersFirst ? [...PARTNERS, ...ADVOCATEN] : [...ADVOCATEN, ...PARTNERS]
+  const { partnersFirst, peopleToShow } = useMemo(() => {
+    const now = new Date()
+    const day = now.getDay()
+    const hour = now.getHours()
+    const first = day === 0 || day === 6
+      || (day === 5 && hour >= 20)
+      || (day === 1 && hour < 20)
+    return { partnersFirst: first, peopleToShow: first ? [...PARTNERS, ...ADVOCATEN] : [...ADVOCATEN, ...PARTNERS] }
+  }, [refreshTick])
 
   // Helper to check if a date is a weekend
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
@@ -314,12 +324,12 @@ export default function PartnersWerkPage() {
     checkAuthorization()
   }, [])
 
-  // Fetch workload when authorized
+  // Fetch workload when authorized + bij focus-refresh
   useEffect(() => {
     if (isAuthorized) {
       fetchWorkload()
     }
-  }, [isAuthorized])
+  }, [isAuthorized, refreshTick])
 
   // Fetch monthly hours when year changes or when switching to urenoverzicht
   useEffect(() => {
