@@ -134,28 +134,34 @@ export default function PartnersWerkPage() {
     return days.reverse() // Oldest first
   }, [historyOffset, refreshTick])
 
-  // Toon weekendkolommen wanneer er data voor is
-  // Weekend = de za/zo direct na de laatste vrijdag in het bereik
+  // Toon weekendkolommen als er uren voor zijn — voor elk weekend in het bereik
   const daysToDisplay = useMemo(() => {
     if (workdaysToShow.length === 0) return workdaysToShow
 
-    // Find the last Friday in the range and add Sat/Sun after it (if data exists)
-    const lastWorkday = workdaysToShow[workdaysToShow.length - 1]
-    const result = [...workdaysToShow]
+    const result: Date[] = []
+    const earliest = workdaysToShow[0]
+    const latest = workdaysToShow[workdaysToShow.length - 1]
 
-    const saturday = new Date(lastWorkday)
-    saturday.setDate(saturday.getDate() + 1)
-    const sunday = new Date(lastWorkday)
-    sunday.setDate(sunday.getDate() + 2)
+    // Loop door alle dagen van earliest tot latest+2 (voor weekend na laatste vrijdag)
+    const cursor = new Date(earliest)
+    cursor.setDate(cursor.getDate() - (earliest.getDay() === 1 ? 2 : 0)) // Start bij zaterdag als earliest is maandag
+    const endDate = new Date(latest)
+    endDate.setDate(endDate.getDate() + 2) // Tot en met zondag na laatste dag
 
-    const satStr = formatDateForAPI(saturday)
-    const sunStr = formatDateForAPI(sunday)
+    while (cursor <= endDate) {
+      const dayOfWeek = cursor.getDay()
+      const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6
 
-    if (saturday.getDay() === 6 && workloadEntries.some(e => e.date === satStr)) {
-      result.push(saturday)
-    }
-    if (sunday.getDay() === 0 && workloadEntries.some(e => e.date === sunStr)) {
-      result.push(sunday)
+      if (isWeekendDay) {
+        // Weekend: alleen tonen als er data voor is
+        const dateStr = formatDateForAPI(cursor)
+        if (workloadEntries.some(e => e.date === dateStr)) {
+          result.push(new Date(cursor))
+        }
+      } else if (workdaysToShow.some(d => formatDateForAPI(d) === formatDateForAPI(cursor))) {
+        result.push(new Date(cursor))
+      }
+      cursor.setDate(cursor.getDate() + 1)
     }
 
     return result
@@ -832,7 +838,7 @@ export default function PartnersWerkPage() {
               <div className="min-w-0">
                 {/* Table header */}
                 <div className="grid gap-1 px-2 sm:px-4 py-2 sm:py-3 bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider"
-                  style={{ gridTemplateColumns: partnersFirst ? `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` : `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr)` }}
+                  style={{ gridTemplateColumns: `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` }}
                 >
                   <div className="text-[10px] sm:text-xs">Naam</div>
               {last3Workdays.map(day => {
@@ -845,7 +851,7 @@ export default function PartnersWerkPage() {
                   </div>
                 )
               })}
-              {partnersFirst && <div className="text-center text-[10px] sm:text-xs">Week</div>}
+              <div className="text-center text-[10px] sm:text-xs">Week</div>
             </div>
 
             {/* Table body */}
@@ -861,7 +867,7 @@ export default function PartnersWerkPage() {
                   <ScrollRevealItem key={person}>
                   <div
                     className={`grid gap-1 px-2 sm:px-4 py-1.5 sm:py-3 items-center hover:bg-white/[0.02] transition-colors ${isPartner ? 'bg-workx-lime/[0.02]' : ''}`}
-                    style={{ gridTemplateColumns: partnersFirst ? `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` : `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr)` }}
+                    style={{ gridTemplateColumns: `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` }}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <img
@@ -925,8 +931,7 @@ export default function PartnersWerkPage() {
                         </div>
                       )
                     })}
-                    {/* Week total - only on Sat/Sun/Mon */}
-                    {partnersFirst && (
+                    {/* Week total */}
                     <div className="flex justify-center items-center">
                       <span className={`text-xs sm:text-sm font-bold ${
                         weekTotal > 25 ? 'text-red-400' : weekTotal > 20 ? 'text-orange-400' : weekTotal > 0 ? 'text-white/60' : 'text-white/15'
@@ -934,7 +939,6 @@ export default function PartnersWerkPage() {
                         {weekTotal > 0 ? weekTotal.toFixed(1).replace('.', ',') : '-'}
                       </span>
                     </div>
-                    )}
                   </div>
                   </ScrollRevealItem>
                 )
