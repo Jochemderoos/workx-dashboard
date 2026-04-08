@@ -1314,69 +1314,95 @@ export default function FinancienPage() {
             </div>
           </div>
 
-          {/* Year Comparison - Horizontal Bars */}
-          <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-            <h3 className="text-white font-medium mb-6">Jaarlijkse Vergelijking</h3>
-            <div className="space-y-8">
-              {[
-                { label: 'Omzet', values: years.map(y => calculations.totals.omzet[y]), isCurrency: true, positiveIsGood: true },
-                { label: 'Totale Kosten', values: years.map(y => calculations.totals.totaleKosten[y]), isCurrency: true, positiveIsGood: false },
-                { label: 'Saldo', values: years.map(y => calculations.saldoTotals[y]), isCurrency: true, positiveIsGood: true },
-                { label: 'Uren', values: years.map(y => calculations.totals.uren[y]), isCurrency: false, positiveIsGood: true },
-              ].map((metric) => {
-                const maxVal = Math.max(...metric.values.map(Math.abs)) || 1
-                const barColors = ['rgba(249,115,22,0.3)', 'rgba(6,182,212,0.4)', 'rgba(249,255,133,0.5)']
-                const borderColors = ['rgba(249,115,22,0.5)', 'rgba(6,182,212,0.6)', 'rgba(249,255,133,0.8)']
-                const textColors = ['text-orange-400/60', 'text-cyan-400/80', 'text-workx-lime']
+          {/* Year Comparison - on same month basis */}
+          {(() => {
+            // Bepaal laatste maand met data in huidig jaar
+            const currentData = getDataForYear(years[2])
+            let lastMonth = 0
+            for (let m = 0; m < 12; m++) {
+              if (currentData.omzet[m] !== 0 || currentData.werkgeverslasten[m] !== 0) lastMonth = m + 1
+            }
+            if (lastMonth === 0) lastMonth = 12
+            const periodLabel = lastMonth === 12 ? 'Heel jaar' : `P1–P${lastMonth}`
 
-                return (
-                  <div key={metric.label}>
-                    <p className="text-white/80 text-sm font-medium mb-3">{metric.label}</p>
-                    <div className="space-y-2">
-                      {years.map((year, i) => {
-                        const pctChange = i > 0 && metric.values[i - 1] !== 0
-                          ? ((metric.values[i] - metric.values[i - 1]) / Math.abs(metric.values[i - 1])) * 100
-                          : null
-                        const barPct = Math.max((Math.abs(metric.values[i]) / maxVal) * 100, 2)
-                        const isGoodChange = pctChange !== null
-                          ? (metric.positiveIsGood ? pctChange > 0 : pctChange < 0)
-                          : null
+            // Bereken totalen tot en met lastMonth voor elk jaar
+            const sumTo = (arr: number[], months: number) => arr.slice(0, months).reduce((s, v) => s + v, 0)
+            const metrics = [
+              { label: 'Omzet', values: years.map(y => sumTo(getDataForYear(y).omzet, lastMonth)), isCurrency: true, positiveIsGood: true },
+              { label: 'Totale Kosten', values: years.map(y => {
+                const d = getDataForYear(y)
+                return sumTo(d.werkgeverslasten, lastMonth) + sumTo(d.kostenZzp || [], lastMonth) + sumTo(d.kostenExtern, lastMonth)
+              }), isCurrency: true, positiveIsGood: false },
+              { label: 'Saldo', values: years.map(y => {
+                const d = getDataForYear(y)
+                return sumTo(d.omzet, lastMonth) - sumTo(d.werkgeverslasten, lastMonth) - sumTo(d.kostenZzp || [], lastMonth) - sumTo(d.kostenExtern, lastMonth)
+              }), isCurrency: true, positiveIsGood: true },
+              { label: 'Uren', values: years.map(y => sumTo(getDataForYear(y).uren, lastMonth)), isCurrency: false, positiveIsGood: true },
+            ]
 
-                        return (
-                          <div key={year} className="flex items-center gap-3">
-                            <span className={`w-10 text-xs font-medium ${textColors[i]}`}>{year}</span>
-                            <div className="flex-1 h-7 bg-white/5 rounded-lg overflow-hidden relative">
-                              <div
-                                className="h-full rounded-lg transition-all duration-500"
-                                style={{
-                                  width: `${barPct}%`,
-                                  background: barColors[i],
-                                  borderRight: `2px solid ${borderColors[i]}`,
-                                  boxShadow: i === 2 ? `0 0 12px ${borderColors[i]}` : 'none'
-                                }}
-                              />
-                              <span className={`absolute inset-y-0 left-3 flex items-center text-xs font-medium ${textColors[i]}`}>
-                                {metric.isCurrency ? formatCurrency(metric.values[i]) : formatNumber(metric.values[i])}
-                              </span>
-                            </div>
-                            <div className="w-16 text-right">
-                              {pctChange !== null ? (
-                                <span className={`text-xs font-medium ${isGoodChange ? 'text-green-400' : 'text-red-400'}`}>
-                                  {pctChange > 0 ? '+' : ''}{pctChange.toFixed(1)}%
+            return (
+            <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-white font-medium">Vergelijking op dezelfde periode</h3>
+                <span className="text-xs text-gray-500 bg-white/5 px-3 py-1 rounded-full">{periodLabel} van elk jaar</span>
+              </div>
+              <div className="space-y-8">
+                {metrics.map((metric) => {
+                  const maxVal = Math.max(...metric.values.map(Math.abs)) || 1
+                  const barColors = ['rgba(249,115,22,0.3)', 'rgba(6,182,212,0.4)', 'rgba(249,255,133,0.5)']
+                  const borderColors = ['rgba(249,115,22,0.5)', 'rgba(6,182,212,0.6)', 'rgba(249,255,133,0.8)']
+                  const textColors = ['text-orange-400/60', 'text-cyan-400/80', 'text-workx-lime']
+
+                  return (
+                    <div key={metric.label}>
+                      <p className="text-white/80 text-sm font-medium mb-3">{metric.label}</p>
+                      <div className="space-y-2">
+                        {years.map((year, i) => {
+                          const pctChange = i > 0 && metric.values[i - 1] !== 0
+                            ? ((metric.values[i] - metric.values[i - 1]) / Math.abs(metric.values[i - 1])) * 100
+                            : null
+                          const barPct = Math.max((Math.abs(metric.values[i]) / maxVal) * 100, 2)
+                          const isGoodChange = pctChange !== null
+                            ? (metric.positiveIsGood ? pctChange > 0 : pctChange < 0)
+                            : null
+
+                          return (
+                            <div key={year} className="flex items-center gap-3">
+                              <span className={`w-10 text-xs font-medium ${textColors[i]}`}>{year}</span>
+                              <div className="flex-1 h-7 bg-white/5 rounded-lg overflow-hidden relative">
+                                <div
+                                  className="h-full rounded-lg transition-all duration-500"
+                                  style={{
+                                    width: `${barPct}%`,
+                                    background: barColors[i],
+                                    borderRight: `2px solid ${borderColors[i]}`,
+                                    boxShadow: i === 2 ? `0 0 12px ${borderColors[i]}` : 'none'
+                                  }}
+                                />
+                                <span className={`absolute inset-y-0 left-3 flex items-center text-xs font-medium ${textColors[i]}`}>
+                                  {metric.isCurrency ? formatCurrency(metric.values[i]) : formatNumber(metric.values[i])}
                                 </span>
-                              ) : (
-                                <span className="text-xs text-white/20">-</span>
-                              )}
+                              </div>
+                              <div className="w-16 text-right">
+                                {pctChange !== null ? (
+                                  <span className={`text-xs font-medium ${isGoodChange ? 'text-green-400' : 'text-red-400'}`}>
+                                    {pctChange > 0 ? '+' : ''}{pctChange.toFixed(1)}%
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-white/20">-</span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
+            )
+          })()}
 
           {/* Current Year Input Section */}
           <div className="bg-workx-dark/40 rounded-2xl border border-white/5 overflow-hidden">
