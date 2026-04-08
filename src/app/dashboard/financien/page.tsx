@@ -1181,6 +1181,143 @@ export default function FinancienPage() {
             )
           })()}
 
+          {/* Cumulative Saldo Chart */}
+          {(() => {
+            const svgW = 800, svgH = 260
+            const pL = 70, pR = svgW - 20, pT = 20, pB = svgH - 40
+            const pH = pB - pT, pW = pR - pL
+
+            const currentData = getDataForYear(years[2])
+            let lastMonth = 0
+            for (let i = 11; i >= 0; i--) {
+              if (currentData.omzet[i] !== 0 || currentData.werkgeverslasten[i] !== 0) { lastMonth = i + 1; break }
+            }
+            if (lastMonth === 0) return null
+
+            // Cumulatief saldo per jaar
+            const cumSaldo = (year: number, months: number) => {
+              const d = getDataForYear(year)
+              const result: number[] = []
+              let sum = 0
+              for (let m = 0; m < months; m++) {
+                sum += d.omzet[m] - d.werkgeverslasten[m] - (d.kostenZzp?.[m] || 0) - (d.kostenExtern[m] || 0)
+                result.push(sum)
+              }
+              return result
+            }
+
+            const cum0 = cumSaldo(years[0], 12)
+            const cum1 = cumSaldo(years[1], 12)
+            const cum2 = cumSaldo(years[2], lastMonth)
+
+            const allVals = [...cum0, ...cum1, ...cum2]
+            const yMin = Math.min(0, ...allVals) * 1.1
+            const yMax = Math.max(...allVals) * 1.15
+            const range = yMax - yMin || 1
+
+            const getX = (i: number) => pL + (i / 11) * pW
+            const getY = (v: number) => pB - ((v - yMin) / range) * pH
+
+            const smoothPath = (points: { x: number; y: number }[]) => {
+              if (points.length < 2) return ''
+              let d = `M ${points[0].x},${points[0].y}`
+              for (let i = 1; i < points.length; i++) {
+                const prev = points[i - 1], curr = points[i]
+                const cpx = (prev.x + curr.x) / 2
+                d += ` C ${cpx},${prev.y} ${cpx},${curr.y} ${curr.x},${curr.y}`
+              }
+              return d
+            }
+
+            const areaPath = (points: { x: number; y: number }[]) => {
+              if (points.length < 2) return ''
+              const line = smoothPath(points)
+              return `${line} L ${points[points.length - 1].x},${pB} L ${points[0].x},${pB} Z`
+            }
+
+            const pts0 = cum0.map((v, i) => ({ x: getX(i), y: getY(v) }))
+            const pts1 = cum1.map((v, i) => ({ x: getX(i), y: getY(v) }))
+            const pts2 = cum2.map((v, i) => ({ x: getX(i), y: getY(v) }))
+
+            // Y-as ticks
+            const yTicks: number[] = []
+            const step = Math.ceil((yMax - yMin) / 5 / 100000) * 100000
+            for (let v = Math.floor(yMin / step) * step; v <= yMax; v += step) yTicks.push(v)
+
+            return (
+              <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
+                <h3 className="text-white font-medium mb-4">Cumulatief saldo</h3>
+                <div className="relative" style={{ height: svgH }}>
+                  <svg width="100%" height="100%" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <linearGradient id="cumGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f9ff85" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#f9ff85" stopOpacity="0.02" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Grid + Y labels */}
+                    {yTicks.map(v => (
+                      <g key={v}>
+                        <line x1={pL} y1={getY(v)} x2={pR} y2={getY(v)} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+                        <text x={pL - 8} y={getY(v) + 4} textAnchor="end" fill="rgba(255,255,255,0.4)" fontSize="11" fontFamily="system-ui">
+                          {v >= 1000000 || v <= -1000000 ? `€${(v / 1000000).toFixed(1)}M` : v >= 1000 || v <= -1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v}`}
+                        </text>
+                      </g>
+                    ))}
+
+                    {/* Zero line */}
+                    {yMin < 0 && <line x1={pL} y1={getY(0)} x2={pR} y2={getY(0)} stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="4,4" />}
+
+                    {/* Previous years (thin dashed) */}
+                    <path d={smoothPath(pts0)} fill="none" stroke="rgba(249,115,22,0.35)" strokeWidth="1.5" strokeDasharray="4,3" />
+                    <path d={smoothPath(pts1)} fill="none" stroke="rgba(6,182,212,0.5)" strokeWidth="1.5" strokeDasharray="6,3" />
+
+                    {/* Current year (filled) */}
+                    <path d={areaPath(pts2)} fill="url(#cumGradient)" />
+                    <path d={smoothPath(pts2)} fill="none" stroke="#f9ff85" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    {pts2.map((pt, i) => (
+                      <g key={i}>
+                        <circle cx={pt.x} cy={pt.y} r="5" fill="#f9ff85" opacity="0.2" />
+                        <circle cx={pt.x} cy={pt.y} r="3" fill="#f9ff85" />
+                      </g>
+                    ))}
+
+                    {/* End labels */}
+                    {pts2.length > 0 && (
+                      <text x={pts2[pts2.length - 1].x + 8} y={pts2[pts2.length - 1].y + 4} fill="#f9ff85" fontSize="11" fontWeight="600" fontFamily="system-ui">
+                        {cum2[cum2.length - 1] >= 1000000 ? `€${(cum2[cum2.length - 1] / 1000000).toFixed(1)}M` : `€${(cum2[cum2.length - 1] / 1000).toFixed(0)}k`}
+                      </text>
+                    )}
+
+                    {/* X-axis labels */}
+                    {periods.map((p, i) => (
+                      <text key={p} x={getX(i)} y={pB + 20} textAnchor="middle" fill={i < lastMonth ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)'} fontSize="12" fontFamily="system-ui">
+                        {p}
+                      </text>
+                    ))}
+                  </svg>
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 rounded-sm bg-workx-lime/40" />
+                    <span className="text-xs text-white/70">{years[2]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5" style={{ borderTop: '2px dashed rgba(6,182,212,0.5)' }} />
+                    <span className="text-xs text-white/40">{years[1]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5" style={{ borderTop: '2px dashed rgba(249,115,22,0.35)' }} />
+                    <span className="text-xs text-white/30">{years[0]}</span>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Data Table */}
           <div className="bg-workx-dark/40 rounded-2xl border border-white/5 overflow-hidden">
             <div className="p-6 border-b border-white/5">
