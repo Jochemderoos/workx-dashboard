@@ -116,7 +116,7 @@ interface EmployeeData {
   parentalLeaves: ParentalLeave[]
 }
 
-type TabType = 'overzicht' | 'grafieken' | 'budgetten' | 'salarishuis' | 'inzichten'
+type TabType = 'overzicht' | 'budgetten' | 'salarishuis' | 'inzichten'
 
 export default function FinancienPage() {
   const { data: session } = useSession()
@@ -920,7 +920,6 @@ export default function FinancienPage() {
         <div className="flex gap-2">
           {[
             { id: 'overzicht' as TabType, label: 'Overzicht', icon: Icons.chart },
-            { id: 'grafieken' as TabType, label: 'Grafieken', icon: Icons.activity },
             { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
             { id: 'salarishuis' as TabType, label: 'Salarishuis', icon: Icons.euro },
             ...(isManager ? [{ id: 'inzichten' as TabType, label: 'Inzichten', icon: Icons.activity }] : []),
@@ -988,18 +987,199 @@ export default function FinancienPage() {
             ))}
           </div>
 
-          {/* Main Chart - all 3 years */}
-          <LineChart
-            data={[
-              calculations.saldo[years[0]],
-              calculations.saldo[years[1]],
-              calculations.saldo[years[2]]
-            ]}
-            labels={periods}
-            title="Saldo per periode (Omzet - Werkgeverslasten)"
-            colors={['#f97316', '#06b6d4', '#f9ff85']}
-            height={250}
-          />
+          {/* Area Chart - Omzet vs Kosten */}
+          {(() => {
+            const chartHeight = 280
+            const chartPadding = { top: 20, right: 20, bottom: 40, left: 70 }
+            const plotWidth = 100 - chartPadding.left * 100 / 800 - chartPadding.right * 100 / 800
+            const svgWidth = 800
+            const svgHeight = chartHeight
+
+            // Current year data
+            const currentYrData = getDataForYear(years[2])
+            const currentOmzet = currentYrData.omzet
+            const currentKosten = currentYrData.werkgeverslasten.map((v, i) => v + (currentYrData.kostenZzp?.[i] || 0) + (currentYrData.kostenExtern[i] || 0))
+
+            // Find last month with actual data for current year (non-zero omzet or kosten)
+            let lastDataMonth = -1
+            for (let i = 11; i >= 0; i--) {
+              if (currentOmzet[i] !== 0 || currentKosten[i] !== 0) {
+                lastDataMonth = i
+                break
+              }
+            }
+            // If no data, show nothing
+            const monthsToShow = lastDataMonth + 1
+
+            // Previous years data (full 12 months)
+            const prevYear1Data = getDataForYear(years[0])
+            const prevYear2Data = getDataForYear(years[1])
+            const prev1Omzet = prevYear1Data.omzet
+            const prev1Kosten = prevYear1Data.werkgeverslasten.map((v, i) => v + (prevYear1Data.kostenZzp?.[i] || 0) + (prevYear1Data.kostenExtern[i] || 0))
+            const prev2Omzet = prevYear2Data.omzet
+            const prev2Kosten = prevYear2Data.werkgeverslasten.map((v, i) => v + (prevYear2Data.kostenZzp?.[i] || 0) + (prevYear2Data.kostenExtern[i] || 0))
+
+            // Find global min/max for Y scale
+            const allVals = [
+              ...prev1Omzet, ...prev1Kosten,
+              ...prev2Omzet, ...prev2Kosten,
+              ...currentOmzet.slice(0, monthsToShow),
+              ...currentKosten.slice(0, monthsToShow)
+            ].filter(v => v !== 0)
+            const yMin = Math.min(0, ...allVals) * 1.1
+            const yMax = Math.max(...allVals) * 1.15
+
+            const plotLeft = 70
+            const plotRight = svgWidth - 20
+            const plotTop = 20
+            const plotBottom = svgHeight - 40
+            const plotH = plotBottom - plotTop
+            const plotW = plotRight - plotLeft
+
+            const getX = (i: number) => plotLeft + (i / 11) * plotW
+            const getY = (v: number) => plotBottom - ((v - yMin) / (yMax - yMin)) * plotH
+
+            // Build smooth path using cubic bezier
+            const smoothPath = (points: { x: number; y: number }[]) => {
+              if (points.length < 2) return ''
+              let d = `M ${points[0].x},${points[0].y}`
+              for (let i = 1; i < points.length; i++) {
+                const prev = points[i - 1]
+                const curr = points[i]
+                const cpx = (prev.x + curr.x) / 2
+                d += ` C ${cpx},${prev.y} ${cpx},${curr.y} ${curr.x},${curr.y}`
+              }
+              return d
+            }
+
+            // Build area path (path + close to bottom)
+            const areaPath = (points: { x: number; y: number }[]) => {
+              if (points.length < 2) return ''
+              const line = smoothPath(points)
+              const lastPt = points[points.length - 1]
+              const firstPt = points[0]
+              return `${line} L ${lastPt.x},${plotBottom} L ${firstPt.x},${plotBottom} Z`
+            }
+
+            const currentOmzetPts = currentOmzet.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
+            const currentKostenPts = currentKosten.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
+
+            const prev1OmzetPts = prev1Omzet.map((v, i) => ({ x: getX(i), y: getY(v) }))
+            const prev1KostenPts = prev1Kosten.map((v, i) => ({ x: getX(i), y: getY(v) }))
+            const prev2OmzetPts = prev2Omzet.map((v, i) => ({ x: getX(i), y: getY(v) }))
+            const prev2KostenPts = prev2Kosten.map((v, i) => ({ x: getX(i), y: getY(v) }))
+
+            // Y-axis ticks
+            const yTicks: number[] = []
+            const tickStep = Math.ceil((yMax - yMin) / 5 / 50000) * 50000
+            for (let v = Math.ceil(yMin / tickStep) * tickStep; v <= yMax; v += tickStep) {
+              yTicks.push(v)
+            }
+
+            return (
+              <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
+                <h3 className="text-white font-medium mb-4">Omzet vs Kosten per periode</h3>
+                <div className="relative" style={{ height: chartHeight }}>
+                  <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <linearGradient id="omzetGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#22c55e" stopOpacity="0.05" />
+                      </linearGradient>
+                      <linearGradient id="kostenGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#f97316" stopOpacity="0.05" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Grid lines and Y labels */}
+                    {yTicks.map(v => (
+                      <g key={v}>
+                        <line x1={plotLeft} y1={getY(v)} x2={plotRight} y2={getY(v)} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+                        <text x={plotLeft - 8} y={getY(v) + 4} textAnchor="end" fill="rgba(255,255,255,0.4)" fontSize="11" fontFamily="system-ui">
+                          {v >= 1000 || v <= -1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v}`}
+                        </text>
+                      </g>
+                    ))}
+
+                    {/* Zero line */}
+                    {yMin < 0 && (
+                      <line x1={plotLeft} y1={getY(0)} x2={plotRight} y2={getY(0)} stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="4,4" />
+                    )}
+
+                    {/* Previous year lines (thin, subtle) */}
+                    {/* Year 0 - omzet */}
+                    <path d={smoothPath(prev1OmzetPts)} fill="none" stroke="#22c55e" strokeWidth="1.2" strokeOpacity="0.25" strokeDasharray="4,3" />
+                    {/* Year 0 - kosten */}
+                    <path d={smoothPath(prev1KostenPts)} fill="none" stroke="#f97316" strokeWidth="1.2" strokeOpacity="0.25" strokeDasharray="4,3" />
+                    {/* Year 1 - omzet */}
+                    <path d={smoothPath(prev2OmzetPts)} fill="none" stroke="#22c55e" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="6,3" />
+                    {/* Year 1 - kosten */}
+                    <path d={smoothPath(prev2KostenPts)} fill="none" stroke="#f97316" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="6,3" />
+
+                    {/* Current year filled areas */}
+                    {monthsToShow >= 2 && (
+                      <>
+                        <path d={areaPath(currentOmzetPts)} fill="url(#omzetGradient)" />
+                        <path d={smoothPath(currentOmzetPts)} fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={areaPath(currentKostenPts)} fill="url(#kostenGradient)" />
+                        <path d={smoothPath(currentKostenPts)} fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                        {/* Data points for current year */}
+                        {currentOmzetPts.map((pt, i) => (
+                          <g key={`o-${i}`}>
+                            <circle cx={pt.x} cy={pt.y} r="5" fill="#22c55e" opacity="0.2" />
+                            <circle cx={pt.x} cy={pt.y} r="3" fill="#22c55e" />
+                          </g>
+                        ))}
+                        {currentKostenPts.map((pt, i) => (
+                          <g key={`k-${i}`}>
+                            <circle cx={pt.x} cy={pt.y} r="5" fill="#f97316" opacity="0.2" />
+                            <circle cx={pt.x} cy={pt.y} r="3" fill="#f97316" />
+                          </g>
+                        ))}
+                      </>
+                    )}
+
+                    {/* X-axis labels */}
+                    {periods.map((p, i) => (
+                      <text key={p} x={getX(i)} y={plotBottom + 20} textAnchor="middle" fill={i < monthsToShow ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)'} fontSize="12" fontFamily="system-ui">
+                        {p}
+                      </text>
+                    ))}
+                  </svg>
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 rounded-sm bg-green-500/60" />
+                    <span className="text-xs text-white/70">Omzet {years[2]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-3 rounded-sm bg-orange-500/60" />
+                    <span className="text-xs text-white/70">Kosten {years[2]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 bg-green-500/40" style={{ borderTop: '2px dashed rgba(34,197,94,0.4)' }} />
+                    <span className="text-xs text-white/40">Omzet {years[1]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 bg-orange-500/40" style={{ borderTop: '2px dashed rgba(249,115,22,0.4)' }} />
+                    <span className="text-xs text-white/40">Kosten {years[1]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 bg-green-500/25" style={{ borderTop: '2px dashed rgba(34,197,94,0.25)' }} />
+                    <span className="text-xs text-white/30">Omzet {years[0]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 bg-orange-500/25" style={{ borderTop: '2px dashed rgba(249,115,22,0.25)' }} />
+                    <span className="text-xs text-white/30">Kosten {years[0]}</span>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Data Table */}
           <div className="bg-workx-dark/40 rounded-2xl border border-white/5 overflow-hidden">
@@ -1134,6 +1314,70 @@ export default function FinancienPage() {
             </div>
           </div>
 
+          {/* Year Comparison - Horizontal Bars */}
+          <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
+            <h3 className="text-white font-medium mb-6">Jaarlijkse Vergelijking</h3>
+            <div className="space-y-8">
+              {[
+                { label: 'Omzet', values: years.map(y => calculations.totals.omzet[y]), isCurrency: true, positiveIsGood: true },
+                { label: 'Totale Kosten', values: years.map(y => calculations.totals.totaleKosten[y]), isCurrency: true, positiveIsGood: false },
+                { label: 'Saldo', values: years.map(y => calculations.saldoTotals[y]), isCurrency: true, positiveIsGood: true },
+                { label: 'Uren', values: years.map(y => calculations.totals.uren[y]), isCurrency: false, positiveIsGood: true },
+              ].map((metric) => {
+                const maxVal = Math.max(...metric.values.map(Math.abs)) || 1
+                const barColors = ['rgba(249,115,22,0.3)', 'rgba(6,182,212,0.4)', 'rgba(249,255,133,0.5)']
+                const borderColors = ['rgba(249,115,22,0.5)', 'rgba(6,182,212,0.6)', 'rgba(249,255,133,0.8)']
+                const textColors = ['text-orange-400/60', 'text-cyan-400/80', 'text-workx-lime']
+
+                return (
+                  <div key={metric.label}>
+                    <p className="text-white/80 text-sm font-medium mb-3">{metric.label}</p>
+                    <div className="space-y-2">
+                      {years.map((year, i) => {
+                        const pctChange = i > 0 && metric.values[i - 1] !== 0
+                          ? ((metric.values[i] - metric.values[i - 1]) / Math.abs(metric.values[i - 1])) * 100
+                          : null
+                        const barPct = Math.max((Math.abs(metric.values[i]) / maxVal) * 100, 2)
+                        const isGoodChange = pctChange !== null
+                          ? (metric.positiveIsGood ? pctChange > 0 : pctChange < 0)
+                          : null
+
+                        return (
+                          <div key={year} className="flex items-center gap-3">
+                            <span className={`w-10 text-xs font-medium ${textColors[i]}`}>{year}</span>
+                            <div className="flex-1 h-7 bg-white/5 rounded-lg overflow-hidden relative">
+                              <div
+                                className="h-full rounded-lg transition-all duration-500"
+                                style={{
+                                  width: `${barPct}%`,
+                                  background: barColors[i],
+                                  borderRight: `2px solid ${borderColors[i]}`,
+                                  boxShadow: i === 2 ? `0 0 12px ${borderColors[i]}` : 'none'
+                                }}
+                              />
+                              <span className={`absolute inset-y-0 left-3 flex items-center text-xs font-medium ${textColors[i]}`}>
+                                {metric.isCurrency ? formatCurrency(metric.values[i]) : formatNumber(metric.values[i])}
+                              </span>
+                            </div>
+                            <div className="w-16 text-right">
+                              {pctChange !== null ? (
+                                <span className={`text-xs font-medium ${isGoodChange ? 'text-green-400' : 'text-red-400'}`}>
+                                  {pctChange > 0 ? '+' : ''}{pctChange.toFixed(1)}%
+                                </span>
+                              ) : (
+                                <span className="text-xs text-white/20">-</span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Current Year Input Section */}
           <div className="bg-workx-dark/40 rounded-2xl border border-white/5 overflow-hidden">
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
@@ -1201,94 +1445,6 @@ export default function FinancienPage() {
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Grafieken Tab */}
-      {activeTab === 'grafieken' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          <LineChart
-            data={[
-              getDataForYear(years[0]).omzet,
-              getDataForYear(years[1]).omzet,
-              getDataForYear(years[2]).omzet
-            ]}
-            labels={periods}
-            title="Omzet Ontwikkeling"
-            colors={['#f97316', '#06b6d4', '#f9ff85']}
-            height={200}
-          />
-
-          <LineChart
-            data={years.map(year => {
-              const d = getDataForYear(year)
-              return d.werkgeverslasten.map((v, i) => v + (d.kostenZzp?.[i] || 0) + (d.kostenExtern[i] || 0))
-            })}
-            labels={periods}
-            title="Totale Kosten (Werkgeverslasten + ZZP + Extern)"
-            colors={['#f97316', '#06b6d4', '#f9ff85']}
-            height={200}
-          />
-
-          <LineChart
-            data={[
-              getDataForYear(years[0]).uren,
-              getDataForYear(years[1]).uren,
-              getDataForYear(years[2]).uren
-            ]}
-            labels={periods}
-            title="Uren Ontwikkeling"
-            colors={['#f97316', '#06b6d4', '#f9ff85']}
-            height={200}
-          />
-
-          <LineChart
-            data={[
-              calculations.saldo[years[0]],
-              calculations.saldo[years[1]],
-              calculations.saldo[years[2]]
-            ]}
-            labels={periods}
-            title="Saldo Ontwikkeling"
-            colors={['#f97316', '#06b6d4', '#f9ff85']}
-            height={200}
-          />
-
-          {/* Year comparison - all 3 years */}
-          <div className="md:col-span-2 bg-workx-dark/40 rounded-2xl p-4 sm:p-6 border border-white/5">
-            <h3 className="text-white font-medium mb-4 sm:mb-6">Jaarlijkse Vergelijking</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8">
-              {['Omzet', 'Totale Kosten', 'Saldo', 'Uren'].map((label, idx) => {
-                const values = [
-                  [calculations.totals.omzet[years[0]], calculations.totals.omzet[years[1]], calculations.totals.omzet[years[2]]],
-                  [calculations.totals.totaleKosten[years[0]], calculations.totals.totaleKosten[years[1]], calculations.totals.totaleKosten[years[2]]],
-                  [calculations.saldoTotals[years[0]], calculations.saldoTotals[years[1]], calculations.saldoTotals[years[2]]],
-                  [calculations.totals.uren[years[0]], calculations.totals.uren[years[1]], calculations.totals.uren[years[2]]]
-                ][idx]
-                const max = Math.max(...values.map(Math.abs)) || 1
-                const isUren = idx === 3
-                const barColors = ['bg-orange-500', 'bg-cyan-500', 'bg-workx-lime']
-
-                return (
-                  <div key={label}>
-                    <p className="text-white/60 text-sm mb-4 text-center">{label}</p>
-                    <div className="flex items-end justify-center gap-3 h-32">
-                      {values.map((v, i) => (
-                        <div key={i} className="flex flex-col items-center gap-2">
-                          <div
-                            className={`w-10 rounded-t-lg transition-all ${barColors[i]}`}
-                            style={{ height: `${(Math.abs(v) / max) * 100}%`, minHeight: 20 }}
-                          />
-                          <span className="text-xs text-gray-400">{years[i]}</span>
-                          <span className="text-xs text-gray-200">{isUren ? formatNumber(v) : formatCurrency(v)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
             </div>
           </div>
         </div>
