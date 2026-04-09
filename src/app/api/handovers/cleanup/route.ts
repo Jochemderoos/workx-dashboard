@@ -22,8 +22,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Bewaar overdrachten 90 dagen na afloop (was 7 dagen)
+    // Zodat medewerkers oude overdrachten als referentie kunnen gebruiken
     const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 7)
+    cutoff.setDate(cutoff.getDate() - 90)
 
     const result = await prisma.handover.deleteMany({
       where: {

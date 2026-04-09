@@ -510,6 +510,8 @@ function formatDateLong(dateStr: string) {
 
 export default function OverdrachtPage() {
   const [handovers, setHandovers] = useState<Handover[]>([])
+  const [expiredHandovers, setExpiredHandovers] = useState<Handover[]>([])
+  const [showExpired, setShowExpired] = useState(false)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [activeTab, setActiveTab] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -529,9 +531,10 @@ export default function OverdrachtPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [userRes, handoverRes, teamRes] = await Promise.all([
+        const [userRes, handoverRes, allHandoverRes, teamRes] = await Promise.all([
           fetch('/api/user/profile'),
           fetch('/api/handovers'),
+          fetch('/api/handovers?all=true'),
           fetch('/api/responsibilities'),
         ])
 
@@ -540,11 +543,15 @@ export default function OverdrachtPage() {
           setCurrentUser({ id: user.id, name: user.name, role: user.role })
         }
 
-        if (handoverRes.ok) {
-          const data = await handoverRes.json()
-          setHandovers(data)
-          if (data.length > 0 && !activeTab) {
-            setActiveTab(data[0].id)
+        if (handoverRes.ok && allHandoverRes.ok) {
+          const active = await handoverRes.json()
+          const all = await allHandoverRes.json()
+          const activeIds = new Set(active.map((h: Handover) => h.id))
+          const expired = all.filter((h: Handover) => !activeIds.has(h.id))
+          setHandovers(active)
+          setExpiredHandovers(expired)
+          if (active.length > 0 && !activeTab) {
+            setActiveTab(active[0].id)
           }
         }
 
@@ -750,7 +757,7 @@ export default function OverdrachtPage() {
     )
   }
 
-  const activeHandover = handovers.find(h => h.id === activeTab)
+  const activeHandover = handovers.find(h => h.id === activeTab) || expiredHandovers.find(h => h.id === activeTab)
 
   return (
     <div className="space-y-6 fade-in relative">
@@ -924,7 +931,7 @@ export default function OverdrachtPage() {
       ) : null}
 
       {/* Tabs + Content */}
-      {searchResults !== null ? null : handovers.length === 0 ? (
+      {searchResults !== null ? null : handovers.length === 0 && expiredHandovers.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <Icons.fileText size={48} className="mx-auto mb-4 opacity-20" />
           <p className="text-lg">Geen overdrachtsdocumenten</p>
@@ -937,9 +944,9 @@ export default function OverdrachtPage() {
             {handovers.map(h => (
               <button
                 key={h.id}
-                onClick={() => setActiveTab(h.id)}
+                onClick={() => { setActiveTab(h.id); setShowExpired(false) }}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-medium transition-all whitespace-nowrap ${
-                  activeTab === h.id
+                  activeTab === h.id && !showExpired
                     ? 'bg-white/[0.05] text-white border-b-2 border-workx-lime'
                     : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]'
                 }`}
@@ -953,7 +960,47 @@ export default function OverdrachtPage() {
                 </span>
               </button>
             ))}
+            {/* Verlopen tab */}
+            {expiredHandovers.length > 0 && (
+              <button
+                onClick={() => { setShowExpired(!showExpired); if (!showExpired && expiredHandovers.length > 0) setActiveTab(expiredHandovers[0].id) }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-sm font-medium transition-all whitespace-nowrap ${
+                  showExpired
+                    ? 'bg-white/[0.05] text-white border-b-2 border-gray-500'
+                    : 'text-gray-600 hover:text-gray-400 hover:bg-white/[0.02]'
+                }`}
+              >
+                <Icons.clock size={14} />
+                <span>Verlopen</span>
+                <span className="text-[10px] px-1.5 py-0.5 bg-white/5 rounded-full">{expiredHandovers.length}</span>
+              </button>
+            )}
           </div>
+
+          {/* Expired sub-tabs */}
+          {showExpired && expiredHandovers.length > 0 && (
+            <div className="flex gap-1 overflow-x-auto py-2 px-1 bg-white/[0.01] rounded-b-xl mb-2">
+              {expiredHandovers.map(h => (
+                <button
+                  key={h.id}
+                  onClick={() => setActiveTab(h.id)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                    activeTab === h.id
+                      ? 'bg-white/[0.05] text-white'
+                      : 'text-gray-600 hover:text-gray-400'
+                  }`}
+                >
+                  {getPhotoUrl(h.user.name) && (
+                    <img src={getPhotoUrl(h.user.name)!} alt={h.user.name} className="w-4 h-4 rounded object-cover opacity-60" />
+                  )}
+                  <span>{h.user.name.split(' ')[0]}</span>
+                  <span className="text-[10px] text-gray-600">
+                    {formatDateShort(h.periodStart)} - {formatDateShort(h.periodEnd)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Active document */}
           {activeHandover && (
