@@ -572,7 +572,7 @@ export default function OverdrachtPage() {
   // Get cases for editing (local state)
   const getCases = (handoverId: string): HandoverCase[] => {
     if (editedCases[handoverId]) return editedCases[handoverId]
-    const h = handovers.find(h => h.id === handoverId)
+    const h = handovers.find(h => h.id === handoverId) || expiredHandovers.find(h => h.id === handoverId)
     return h?.cases || []
   }
 
