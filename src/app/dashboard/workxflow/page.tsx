@@ -1222,7 +1222,23 @@ export default function WorkxflowPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="font-medium text-white">{activeBundle.title}</h2>
+                      <input
+                        type="text"
+                        value={activeBundle.title}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setActiveBundle(prev => prev ? { ...prev, title: val } : null)
+                          setBundles(prev => prev.map(b => b.id === activeBundle.id ? { ...b, title: val } : b))
+                        }}
+                        onBlur={async () => {
+                          await fetch(`/api/workxflow/${activeBundle.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ title: activeBundle.title }),
+                          })
+                        }}
+                        className="font-medium text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-workx-lime/50 focus:outline-none px-0 py-0.5 transition-colors"
+                      />
                       {activeBundle.access && activeBundle.access.length > 0 && (
                         <div className="flex -space-x-1.5">
                           {activeBundle.access.slice(0, 3).map(a => (
