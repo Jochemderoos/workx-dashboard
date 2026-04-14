@@ -55,7 +55,7 @@ export async function PUT(
     }
 
     const { id } = await params
-    const { periodStart, periodEnd, note, cases } = await req.json()
+    const { periodStart, periodEnd, note, generalWaarnemers, cases } = await req.json()
 
     // Delete existing cases and recreate
     await prisma.handoverCase.deleteMany({ where: { handoverId: id } })
@@ -66,6 +66,7 @@ export async function PUT(
         ...(periodStart && { periodStart: new Date(periodStart) }),
         ...(periodEnd && { periodEnd: new Date(periodEnd) }),
         ...(note !== undefined && { note: note || null }),
+        ...(generalWaarnemers !== undefined && { generalWaarnemers: generalWaarnemers || null }),
         ...(cases && {
           cases: {
             create: cases.map((c: { dossiernaam: string; contactpersoon?: string; beschrijving?: string; waarnemers: string }) => ({

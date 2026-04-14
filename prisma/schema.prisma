@@ -1517,14 +1517,15 @@ model Receipt {
 
 // Overdrachtsdocument per persoon/periode
 model Handover {
-  id          String   @id @default(cuid())
-  userId      String
-  periodStart DateTime
-  periodEnd   DateTime
-  note        String?  @db.Text
-  notifiedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String
+  periodStart        DateTime
+  periodEnd          DateTime
+  note               String?  @db.Text
+  generalWaarnemers  String?  @db.Text // JSON: [{ periodStart, periodEnd, waarnemer }]
+  notifiedAt         DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user        User     @relation("UserHandovers", fields: [userId], references: [id])
   cases       HandoverCase[]

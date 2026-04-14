@@ -20,12 +20,19 @@ interface HandoverCase {
   waarnemers: string
 }
 
+interface GeneralWaarnemer {
+  periodStart: string
+  periodEnd: string
+  waarnemer: string
+}
+
 interface Handover {
   id: string
   userId: string
   periodStart: string
   periodEnd: string
   note: string | null
+  generalWaarnemers: string | null // JSON: GeneralWaarnemer[]
   notifiedAt: string | null
   user: { id: string; name: string; avatarUrl: string | null }
   cases: HandoverCase[]
@@ -632,6 +639,7 @@ export default function OverdrachtPage() {
           periodStart: h.periodStart,
           periodEnd: h.periodEnd,
           note: h.note,
+          generalWaarnemers: h.generalWaarnemers,
           cases: cases.filter(c => c.dossiernaam.trim()).map(c => ({
             dossiernaam: c.dossiernaam,
             contactpersoon: c.contactpersoon,
@@ -1126,6 +1134,115 @@ export default function OverdrachtPage() {
               {activeHandover.note && (
                 <div className="px-5 py-3 border-b border-white/5 bg-blue-500/5">
                   <p className="text-sm text-blue-300">{activeHandover.note}</p>
+                </div>
+              )}
+
+              {/* Algemene waarneming — wie neemt waar per periode */}
+              {activeHandover.userId === currentUser?.id && (
+                <div className="px-5 py-4 border-b border-white/5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Icons.users size={14} className="text-purple-400" />
+                      <span className="text-xs font-medium text-white/70 uppercase tracking-wider">Algemene waarneming</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const current: GeneralWaarnemer[] = JSON.parse(activeHandover.generalWaarnemers || '[]')
+                        current.push({ periodStart: activeHandover.periodStart.slice(0, 10), periodEnd: activeHandover.periodEnd.slice(0, 10), waarnemer: '' })
+                        setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(current) } : h))
+                        setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-colors"
+                    >
+                      <Icons.plus size={12} />
+                      Periode toevoegen
+                    </button>
+                  </div>
+                  {(() => {
+                    const waarnemers: GeneralWaarnemer[] = JSON.parse(activeHandover.generalWaarnemers || '[]')
+                    if (waarnemers.length === 0) return (
+                      <p className="text-xs text-gray-600 italic">Voeg een periode toe om aan te geven wie er waarneemt en in je out-of-office staat</p>
+                    )
+                    return (
+                      <div className="space-y-2">
+                        {waarnemers.map((w, i) => (
+                          <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                            <div className="flex items-center gap-2 flex-1">
+                              <input
+                                type="date"
+                                value={w.periodStart.slice(0, 10)}
+                                onChange={(e) => {
+                                  const updated = [...waarnemers]
+                                  updated[i] = { ...updated[i], periodStart: e.target.value }
+                                  setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
+                                  setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
+                                }}
+                                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50"
+                              />
+                              <span className="text-xs text-gray-500">t/m</span>
+                              <input
+                                type="date"
+                                value={w.periodEnd.slice(0, 10)}
+                                onChange={(e) => {
+                                  const updated = [...waarnemers]
+                                  updated[i] = { ...updated[i], periodEnd: e.target.value }
+                                  setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
+                                  setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
+                                }}
+                                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50"
+                              />
+                              <span className="text-xs text-gray-500 mx-1">→</span>
+                              <select
+                                value={w.waarnemer}
+                                onChange={(e) => {
+                                  const updated = [...waarnemers]
+                                  updated[i] = { ...updated[i], waarnemer: e.target.value }
+                                  setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
+                                  setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
+                                }}
+                                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50 flex-1"
+                              >
+                                <option value="">Kies waarnemer...</option>
+                                {WAARNEMER_OPTIONS.map(name => (
+                                  <option key={name} value={name}>{name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const updated = waarnemers.filter((_, j) => j !== i)
+                                setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
+                                setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
+                              }}
+                              className="p-1.5 text-gray-600 hover:text-red-400 transition-colors"
+                            >
+                              <Icons.x size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {/* Read-only general waarneming for others */}
+              {activeHandover.userId !== currentUser?.id && activeHandover.generalWaarnemers && JSON.parse(activeHandover.generalWaarnemers).length > 0 && (
+                <div className="px-5 py-3 border-b border-white/5 bg-purple-500/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icons.users size={14} className="text-purple-400" />
+                    <span className="text-xs font-medium text-purple-300">Algemene waarneming</span>
+                  </div>
+                  <div className="space-y-1">
+                    {(JSON.parse(activeHandover.generalWaarnemers) as GeneralWaarnemer[]).map((w, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-gray-300">
+                        <span>{new Date(w.periodStart).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} – {new Date(w.periodEnd).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</span>
+                        <span className="text-gray-500">→</span>
+                        {w.waarnemer && getPhotoUrl(w.waarnemer) && <img src={getPhotoUrl(w.waarnemer)!} alt={w.waarnemer} className="w-4 h-4 rounded object-cover" />}
+                        <span className="text-purple-300 font-medium">{w.waarnemer || 'Niet toegewezen'}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
