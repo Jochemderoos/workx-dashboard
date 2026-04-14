@@ -788,8 +788,9 @@ export default function OverdrachtPage() {
           setTimeout(() => setToastMessage(null), 3000)
         }
       } else {
-        setToastMessage('Kon spraak niet verwerken')
-        setTimeout(() => setToastMessage(null), 3000)
+        const errData = await res.json().catch(() => ({}))
+        setToastMessage(errData.error || 'Kon spraak niet verwerken')
+        setTimeout(() => setToastMessage(null), 5000)
       }
     } catch {
       setToastMessage('Fout bij verwerken spraak')
