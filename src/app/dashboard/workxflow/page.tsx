@@ -502,8 +502,10 @@ export default function WorkxflowPage() {
     }
   }
 
+  const [isAddingProduction, setIsAddingProduction] = useState(false)
   const addProduction = async (file?: File) => {
-    if (!activeBundle) return
+    if (!activeBundle || isAddingProduction) return
+    setIsAddingProduction(true)
 
     // Next number based on max existing sortOrder (not array length, to avoid gaps)
     const maxSort = activeBundle.productions.reduce((max, p) => Math.max(max, p.sortOrder), -1)
@@ -520,6 +522,7 @@ export default function WorkxflowPage() {
     if (file) {
       if (file.size > MAX_FILE_SIZE) {
         toast.error(`Bestand "${file.name}" is te groot (max 50MB)`)
+        setIsAddingProduction(false)
         return
       }
 
@@ -592,6 +595,7 @@ export default function WorkxflowPage() {
           } catch {
             toast.error('Upload mislukt')
             setIsConverting(false)
+            setIsAddingProduction(false)
             return
           }
         } finally {
@@ -615,6 +619,7 @@ export default function WorkxflowPage() {
         } catch (err) {
           console.error('Upload error:', err)
           toast.error('Upload mislukt', { id: `upload-${nextNumber}` })
+          setIsAddingProduction(false)
           return
         }
       }
@@ -623,6 +628,7 @@ export default function WorkxflowPage() {
     } else {
       await saveProduction(production)
     }
+    setIsAddingProduction(false)
   }
 
   const saveProduction = async (production: Partial<Production>) => {
