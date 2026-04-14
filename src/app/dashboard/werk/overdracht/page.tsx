@@ -526,6 +526,9 @@ export default function OverdrachtPage() {
   const activeWaarnemerBtnRef = useRef<HTMLButtonElement | null>(null)
   const [notifyingId, setNotifyingId] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const recognitionRef = useRef<any>(null)
 
   // Fetch user + handovers + team
   useEffect(() => {
@@ -706,6 +709,93 @@ export default function OverdrachtPage() {
       console.error('Notificatie versturen mislukt:', error)
     } finally {
       setNotifyingId(null)
+    }
+  }
+
+  // Voice recording
+  const startRecording = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setToastMessage('Spraakherkenning wordt niet ondersteund in deze browser')
+      setTimeout(() => setToastMessage(null), 3000)
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'nl-NL'
+    recognition.continuous = true
+    recognition.interimResults = false
+
+    let fullTranscript = ''
+
+    recognition.onresult = (event: any) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          fullTranscript += event.results[i][0].transcript + ' '
+        }
+      }
+    }
+
+    recognition.onerror = () => {
+      setIsRecording(false)
+    }
+
+    recognitionRef.current = recognition
+    recognitionRef.current._getTranscript = () => fullTranscript
+    recognition.start()
+    setIsRecording(true)
+  }
+
+  const stopRecording = async () => {
+    if (!recognitionRef.current || !activeTab) return
+
+    const getTranscript = recognitionRef.current._getTranscript
+    recognitionRef.current.stop()
+    setIsRecording(false)
+
+    // Wait a moment for final results
+    await new Promise(resolve => setTimeout(resolve, 500))
+    const transcript = getTranscript()
+
+    if (!transcript.trim()) {
+      setToastMessage('Geen spraak gedetecteerd')
+      setTimeout(() => setToastMessage(null), 3000)
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      const allNames = [...PARTNERS, ...ADVOCATEN]
+      const res = await fetch('/api/handovers/parse-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript, teamMembers: allNames }),
+      })
+
+      if (res.ok) {
+        const { cases: newCases } = await res.json()
+        if (newCases && newCases.length > 0) {
+          const existing = getCases(activeTab)
+          const merged = [...existing, ...newCases.map((c: any) => ({
+            dossiernaam: c.dossiernaam || '',
+            contactpersoon: c.contactpersoon || null,
+            beschrijving: c.beschrijving || null,
+            waarnemers: c.waarnemers || '',
+          }))]
+          setEditedCases(prev => ({ ...prev, [activeTab]: merged }))
+          setHasChanges(prev => ({ ...prev, [activeTab]: true }))
+          setToastMessage(`${newCases.length} zaak${newCases.length !== 1 ? 'en' : ''} toegevoegd via spraak`)
+          setTimeout(() => setToastMessage(null), 3000)
+        }
+      } else {
+        setToastMessage('Kon spraak niet verwerken')
+        setTimeout(() => setToastMessage(null), 3000)
+      }
+    } catch {
+      setToastMessage('Fout bij verwerken spraak')
+      setTimeout(() => setToastMessage(null), 3000)
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -1091,15 +1181,48 @@ export default function OverdrachtPage() {
                 )
               })()}
 
-              {/* Add row + Save/Cancel */}
+              {/* Add row + Voice + Save/Cancel */}
               <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between">
-                <button
-                  onClick={() => addLocalCase(activeHandover.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white text-xs transition-all"
-                >
-                  <Icons.plus size={12} />
-                  Dossier toevoegen
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => addLocalCase(activeHandover.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white text-xs transition-all"
+                  >
+                    <Icons.plus size={12} />
+                    Dossier toevoegen
+                  </button>
+
+                  {currentUser && activeHandover.userId === currentUser.id && (
+                    <button
+                      onClick={isRecording ? stopRecording : startRecording}
+                      disabled={isProcessing}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                        isRecording
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
+                          : isProcessing
+                            ? 'bg-white/5 text-gray-500'
+                            : 'bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20'
+                      }`}
+                    >
+                      {isRecording ? (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                          Stoppen
+                        </>
+                      ) : isProcessing ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                          Verwerken...
+                        </>
+                      ) : (
+                        <>
+                          <Icons.mic size={14} />
+                          Inspreken
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
 
                 {hasChanges[activeHandover.id] && (
                   <div className="flex items-center gap-2">
