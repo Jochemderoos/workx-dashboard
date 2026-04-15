@@ -21,3 +21,13 @@ ALTER TABLE "TeamAnnouncement"
     ADD CONSTRAINT "TeamAnnouncement_senderId_fkey"
     FOREIGN KEY ("senderId") REFERENCES "User"("id")
     ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Extra kolommen voor icoon-picker, custom titel en bewerken (mag los gedraaid worden):
+ALTER TABLE "TeamAnnouncement"
+    ADD COLUMN IF NOT EXISTS "icon" TEXT;
+
+ALTER TABLE "TeamAnnouncement"
+    ADD COLUMN IF NOT EXISTS "title" TEXT;
+
+ALTER TABLE "TeamAnnouncement"
+    ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

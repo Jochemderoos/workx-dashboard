@@ -430,7 +430,7 @@ function TopBarComponent({ user }: TopBarProps) {
         )}
 
         {/* Notification bell */}
-        <NotificationCenter userId={user.id} />
+        <NotificationCenter userId={user.id} userRole={user.role} />
 
         {/* Command Palette trigger */}
         <button

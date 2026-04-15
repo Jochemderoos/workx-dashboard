@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import { useTeam } from '@/lib/hooks/useData'
+import { getAnnouncementIcon } from '@/lib/announcement-icon'
 
 interface TeamMember {
   id: string
@@ -14,15 +15,38 @@ interface TeamMember {
   avatarUrl?: string | null
 }
 
+export interface AnnouncementInitial {
+  id: string
+  title: string | null
+  message: string
+  recipients: string // "ALL" or JSON array
+  priority: string
+  icon: string | null
+}
+
 interface AnnouncementModalProps {
   isOpen: boolean
   onClose: () => void
+  initial?: AnnouncementInitial | null
+  onSaved?: () => void
 }
 
-export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
+const ICON_CHOICES = [
+  '📢', '🚨', '🎉', '🥂', '🎁', '🎂', '🍰', '💐',
+  '🍻', '🍕', '🍽️', '☕', '👋', '👶', '💍', '🤝',
+  '📅', '⏰', '🎓', '📁', '📄', '🧾', '💶', '⚖️',
+  '🌴', '🤒', '🏢', '💻', '🖨️', '📧', '📞', '🚗',
+  '🚲', '🚆', '☀️', '🌧️', '🙏', '⭐', '❤️', '✅',
+]
+
+export function AnnouncementModal({ isOpen, onClose, initial, onSaved }: AnnouncementModalProps) {
+  const isEdit = !!initial
+  const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [priority, setPriority] = useState<'normal' | 'urgent'>('normal')
+  const [icon, setIcon] = useState<string | null>(null)
+  const [iconAuto, setIconAuto] = useState(true) // true = let getAnnouncementIcon decide
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const { data: teamData } = useTeam()
@@ -31,16 +55,37 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
     (m: TeamMember) => m.role !== 'EXTERNAL'
   )
 
-  // Reset state when modal opens
+  // Reset / load state when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return
+    if (initial) {
+      setTitle(initial.title ?? '')
+      setMessage(initial.message)
+      setPriority((initial.priority === 'urgent' ? 'urgent' : 'normal') as 'normal' | 'urgent')
+      setIcon(initial.icon)
+      setIconAuto(initial.icon === null)
+      if (initial.recipients === 'ALL') {
+        setSelectedIds(teamMembers.map((m) => m.id))
+      } else {
+        try {
+          const ids = JSON.parse(initial.recipients)
+          setSelectedIds(Array.isArray(ids) ? ids : [])
+        } catch {
+          setSelectedIds([])
+        }
+      }
+    } else {
+      setTitle('')
       setMessage('')
       setSelectedIds([])
       setPriority('normal')
-      setSending(false)
-      setSuccess(false)
+      setIcon(null)
+      setIconAuto(true)
     }
-  }, [isOpen])
+    setSending(false)
+    setSuccess(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initial])
 
   // Close on escape
   useEffect(() => {
@@ -53,6 +98,7 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
   }, [isOpen, onClose])
 
   const allSelected = teamMembers.length > 0 && selectedIds.length === teamMembers.length
+  const previewIcon = iconAuto ? getAnnouncementIcon(message, priority) : (icon || '📢')
 
   const toggleMember = (id: string) => {
     setSelectedIds((prev) =>
@@ -74,21 +120,32 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
     setSending(true)
     try {
       const recipientIds = allSelected ? ['ALL'] : selectedIds
+      const payload = {
+        title: title.trim() || null,
+        message,
+        recipientIds,
+        priority,
+        icon: iconAuto ? null : icon,
+      }
 
-      const res = await fetch('/api/announcements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, recipientIds, priority }),
-      })
+      const res = await fetch(
+        isEdit ? `/api/announcements/${initial!.id}` : '/api/announcements',
+        {
+          method: isEdit ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      )
 
       if (res.ok) {
         setSuccess(true)
+        onSaved?.()
         setTimeout(() => {
           onClose()
-        }, 1500)
+        }, 1200)
       }
     } catch (error) {
-      console.error('Error sending announcement:', error)
+      console.error('Error saving announcement:', error)
     } finally {
       setSending(false)
     }
@@ -109,17 +166,21 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
       {/* Modal */}
       <div
         className="relative w-full max-w-lg bg-workx-gray border border-white/10 rounded-2xl shadow-2xl flex flex-col"
-        style={{ maxHeight: 'min(600px, calc(100vh - 2rem))' }}
+        style={{ maxHeight: 'min(700px, calc(100vh - 2rem))' }}
       >
         {/* Fixed header */}
         <div className="flex items-center justify-between p-5 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-workx-lime/20 flex items-center justify-center">
-              <span className="text-lg">📢</span>
+              <span className="text-lg">{previewIcon}</span>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Mededeling versturen</h2>
-              <p className="text-xs text-gray-400">Stuur een bericht naar het team</p>
+              <h2 className="text-lg font-semibold text-white">
+                {isEdit ? 'Melding bewerken' : 'Melding versturen'}
+              </h2>
+              <p className="text-xs text-gray-400">
+                {isEdit ? 'Werk de melding bij' : 'Stuur een bericht naar het team'}
+              </p>
             </div>
           </div>
           <button
@@ -137,21 +198,84 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
               <div className="w-16 h-16 rounded-full bg-workx-lime/20 flex items-center justify-center mb-4">
                 <Icons.check size={32} className="text-workx-lime" />
               </div>
-              <p className="text-lg font-semibold text-white">Mededeling verstuurd!</p>
-              <p className="text-sm text-gray-400 mt-1">Het team is op de hoogte gebracht</p>
+              <p className="text-lg font-semibold text-white">
+                {isEdit ? 'Melding bijgewerkt!' : 'Melding verstuurd!'}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {isEdit ? 'De wijzigingen zijn opgeslagen' : 'Het team is op de hoogte gebracht'}
+              </p>
             </div>
           ) : (
             <>
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Titel <span className="text-gray-500 font-normal">(optioneel)</span>
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="bv. Lustrum Alert"
+                  maxLength={60}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-workx-lime/40 transition-all"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Leeg laten = jouw naam wordt gebruikt als titel.
+                </p>
+              </div>
+
               {/* Message */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Bericht</label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Typ je mededeling..."
+                  placeholder="Typ je melding..."
                   rows={4}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-workx-lime/40 transition-all resize-none"
                 />
+              </div>
+
+              {/* Icon picker */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-300">Icoon</label>
+                  <button
+                    onClick={() => {
+                      setIconAuto(true)
+                      setIcon(null)
+                    }}
+                    className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all ${
+                      iconAuto
+                        ? 'bg-workx-lime/20 text-workx-lime border border-workx-lime/40'
+                        : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    Auto
+                  </button>
+                </div>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {ICON_CHOICES.map((emoji) => {
+                    const isSelected = !iconAuto && icon === emoji
+                    return (
+                      <button
+                        key={emoji}
+                        onClick={() => {
+                          setIcon(emoji)
+                          setIconAuto(false)
+                        }}
+                        className={`aspect-square flex items-center justify-center rounded-xl text-lg transition-all ${
+                          isSelected
+                            ? 'bg-workx-lime/20 border border-workx-lime/60 ring-1 ring-workx-lime/30'
+                            : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        {emoji}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* Priority toggle */}
@@ -273,7 +397,7 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
               ) : (
                 <>
                   <Icons.send size={16} />
-                  Verstuur mededeling
+                  {isEdit ? 'Wijzigingen opslaan' : 'Verstuur melding'}
                 </>
               )}
             </button>

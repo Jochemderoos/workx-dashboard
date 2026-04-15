@@ -6,6 +6,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { formatDistanceToNow } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { useNotifications } from '@/lib/hooks/useData'
+import { AnnouncementModal, type AnnouncementInitial } from '@/components/AnnouncementModal'
 
 interface Notification {
   id: string
@@ -17,15 +18,20 @@ interface Notification {
   href?: string
   icon?: string
   priority?: string
+  announcementId?: string
+  senderId?: string
+  senderName?: string
 }
 
 interface NotificationCenterProps {
   userId: string
+  userRole?: string
 }
 
-export function NotificationCenter({ userId }: NotificationCenterProps) {
+export function NotificationCenter({ userId, userRole }: NotificationCenterProps) {
   const { data, isLoading, mutate } = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
+  const [editing, setEditing] = useState<AnnouncementInitial | null>(null)
   const seenAnnouncementIds = useRef<Set<string> | null>(null)
 
   const notifications: Notification[] = data?.notifications || []
@@ -78,6 +84,31 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
       // Audio playback can fail (autoplay policy) — silently ignore.
     }
   }, [notifications])
+
+  // Open edit modal — fetch full announcement data first
+  const openEdit = async (announcementId: string) => {
+    try {
+      const res = await fetch(`/api/announcements/${announcementId}`)
+      if (!res.ok) return
+      const a = await res.json()
+      setEditing({
+        id: a.id,
+        title: a.title ?? null,
+        message: a.message,
+        recipients: a.recipients,
+        priority: a.priority,
+        icon: a.icon ?? null,
+      })
+      setIsOpen(false)
+    } catch (e) {
+      console.error('Kon melding niet laden:', e)
+    }
+  }
+
+  const canEditAnnouncement = (n: Notification) =>
+    n.type === 'announcement' &&
+    !!n.announcementId &&
+    (n.senderId === userId || userRole === 'ADMIN')
 
   // Dismiss a single notification (permanently hide it)
   const dismissNotification = async (notificationId: string) => {
@@ -241,16 +272,30 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                           <p className="text-sm font-medium truncate text-white">
                             {notification.title}
                           </p>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              dismissNotification(notification.id)
-                            }}
-                            className="p-1 rounded-lg text-gray-600 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover/notif:opacity-100 flex-shrink-0"
-                            title="Verwijderen"
-                          >
-                            <Icons.x size={14} />
-                          </button>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {canEditAnnouncement(notification) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openEdit(notification.announcementId!)
+                                }}
+                                className="p-1 rounded-lg text-gray-600 hover:text-workx-lime hover:bg-white/10 transition-all opacity-0 group-hover/notif:opacity-100"
+                                title="Bewerken"
+                              >
+                                <Icons.edit size={14} />
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                dismissNotification(notification.id)
+                              }}
+                              className="p-1 rounded-lg text-gray-600 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover/notif:opacity-100"
+                              title="Verwijderen"
+                            >
+                              <Icons.x size={14} />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5 whitespace-pre-wrap break-words">
                           {notification.message}
@@ -284,6 +329,14 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
           <Popover.Arrow className="fill-workx-dark" />
         </Popover.Content>
       </Popover.Portal>
+
+      {/* Edit modal voor bestaande melding */}
+      <AnnouncementModal
+        isOpen={!!editing}
+        onClose={() => setEditing(null)}
+        initial={editing}
+        onSaved={() => mutate()}
+      />
     </Popover.Root>
   )
 }

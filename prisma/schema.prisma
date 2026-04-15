@@ -1838,10 +1838,13 @@ model DDProjectMember {
 model TeamAnnouncement {
   id          String   @id @default(cuid())
   senderId    String
+  title       String?  // optional custom title, falls back to sender name
   message     String   @db.Text
   recipients  String   @db.Text // JSON array of userIds, or "ALL" for everyone
   priority    String   @default("normal") // normal, urgent
+  icon        String?  // chosen emoji, falls back to keyword-based when null
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   sender      User     @relation("AnnouncementSender", fields: [senderId], references: [id])
 

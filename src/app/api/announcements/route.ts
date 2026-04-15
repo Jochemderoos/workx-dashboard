@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { message, recipientIds, priority } = body
+    const { title, message, recipientIds, priority, icon } = body
 
     if (!message || !recipientIds || !Array.isArray(recipientIds) || recipientIds.length === 0) {
       return NextResponse.json({ error: 'Bericht en ontvangers zijn verplicht' }, { status: 400 })
@@ -34,9 +34,11 @@ export async function POST(request: Request) {
     const announcement = await prisma.teamAnnouncement.create({
       data: {
         senderId: session.user.id,
+        title: title?.trim() || null,
         message,
         recipients,
         priority: priority || 'normal',
+        icon: icon || null,
       },
       include: {
         sender: {

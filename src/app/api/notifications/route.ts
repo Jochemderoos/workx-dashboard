@@ -433,18 +433,23 @@ export async function GET() {
         if (isRecipient) {
           const key = `announcement-${announcement.id}`
           if (!dismissedKeys.has(key)) {
-            const icon = getAnnouncementIcon(announcement.message, announcement.priority)
-            const urgentMark = announcement.priority === 'urgent' ? ' · urgent' : ''
+            const icon =
+              announcement.icon ||
+              getAnnouncementIcon(announcement.message, announcement.priority)
+            const title = announcement.title?.trim() || announcement.sender.name
             notifications.push({
               id: key,
               type: 'announcement',
-              title: `${announcement.sender.name}${urgentMark}`,
+              title,
               message: announcement.message,
               createdAt: announcement.createdAt,
               read: false,
               href: '/dashboard',
               icon,
               priority: announcement.priority,
+              announcementId: announcement.id,
+              senderId: announcement.senderId,
+              senderName: announcement.sender.name,
             })
           }
         }
