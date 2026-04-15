@@ -110,18 +110,26 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
     !!n.announcementId &&
     (n.senderId === userId || userRole === 'ADMIN')
 
-  // Dismiss a single notification (permanently hide it)
-  const dismissNotification = async (notificationId: string) => {
+  // Dismiss a single notification.
+  // If the user is the sender (or admin) of an announcement, this DELETES it
+  // for the whole team. Otherwise it just hides it for the current user.
+  const dismissNotification = async (notification: Notification) => {
+    const fullDelete = canEditAnnouncement(notification)
+
     // Optimistic update — remove from list
     mutate(
       {
-        notifications: notifications.filter(n => n.id !== notificationId),
+        notifications: notifications.filter(n => n.id !== notification.id),
         unreadCount: Math.max(0, unreadCount - 1),
       },
       false
     )
     try {
-      await fetch(`/api/notifications/${notificationId}/read`, { method: 'POST' })
+      if (fullDelete) {
+        await fetch(`/api/announcements/${notification.announcementId}`, { method: 'DELETE' })
+      } else {
+        await fetch(`/api/notifications/${notification.id}/read`, { method: 'POST' })
+      }
       mutate()
     } catch (error) {
       console.error('Error dismissing notification:', error)
@@ -129,9 +137,9 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
     }
   }
 
-  // Dismiss all notifications
+  // "Alles wissen" hides everything from the bell for THIS user only —
+  // it never deletes other people's announcements from the DB.
   const dismissAll = async () => {
-    // Optimistic update — clear list
     mutate(
       {
         notifications: [],
@@ -140,7 +148,6 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
       false
     )
     try {
-      // Dismiss each notification individually
       await Promise.all(
         notifications.map(n =>
           fetch(`/api/notifications/${n.id}/read`, { method: 'POST' })
@@ -288,10 +295,13 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                dismissNotification(notification.id)
+                                if (canEditAnnouncement(notification)) {
+                                  if (!confirm('Deze melding voor het hele team verwijderen?')) return
+                                }
+                                dismissNotification(notification)
                               }}
                               className="p-1 rounded-lg text-gray-600 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover/notif:opacity-100"
-                              title="Verwijderen"
+                              title={canEditAnnouncement(notification) ? 'Verwijderen voor iedereen' : 'Verwijderen'}
                             >
                               <Icons.x size={14} />
                             </button>
