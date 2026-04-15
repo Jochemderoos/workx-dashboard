@@ -1210,7 +1210,7 @@ export default function OverdrachtPage() {
                                 <Icons.trash size={12} />
                               </button>
                             </div>
-                            {/* Waarnemer selectie met foto's */}
+                            {/* Waarnemer — toont alleen gekozen persoon, of keuze als nog niet gekozen */}
                             {w.waarnemer ? (
                               <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-purple-500/15 border border-purple-500/30">
