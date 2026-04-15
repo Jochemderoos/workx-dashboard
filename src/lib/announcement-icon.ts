@@ -3,7 +3,7 @@
 // Korte ambigue woorden (≤4 letters) vereisen een woordgrens om false positives te vermijden.
 const ICON_RULES: Array<{ keywords: string[]; icon: string }> = [
   // --- Feestelijk / cadeaus / mijlpalen ---
-  { keywords: ['cadeau', 'cadeautje', 'pakje', 'gift', 'verras'], icon: '🎁' },
+  { keywords: ['cadeau', 'cadeautje', 'kado', 'kadootje', 'presentje', 'present', 'pakje', 'pakketje', 'gift', 'verras', 'verrassing', 'attentie', 'goodie', 'beloning'], icon: '🎁' },
   { keywords: ['lustrum', 'jubileum', 'mijlpaal', 'jubilaris'], icon: '🥂' },
   { keywords: ['jarig', 'verjaardag', 'birthday', 'gefeliciteerd', 'proficiat', 'felicitaties', 'feliciteren'], icon: '🎂' },
   { keywords: ['taart', 'gebak', 'cake'], icon: '🍰' },
