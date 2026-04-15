@@ -187,18 +187,18 @@ function parseXLSFile(buffer: ArrayBuffer): { aggregated: WorkloadEntry[]; detai
     workedHours: Math.round(d.workedHours * 100) / 100,
   }))
 
-  // Aggregeer tot totaal uren per persoon+dag (voor Workload tabel)
+  // Aggregeer tot totaal FACTUREERBARE uren per persoon+dag (voor Workload tabel)
   const aggMap = new Map<string, WorkloadEntry>()
   for (const detail of details) {
     const key = `${detail.personName}|${detail.date}`
     const existing = aggMap.get(key)
     if (existing) {
-      existing.hours += detail.workedHours
+      existing.hours += detail.billableHours
     } else {
       aggMap.set(key, {
         personName: detail.personName,
         date: detail.date,
-        hours: detail.workedHours,
+        hours: detail.billableHours,
       })
     }
   }
