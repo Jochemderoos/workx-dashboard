@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import * as Popover from '@radix-ui/react-popover'
 import { formatDistanceToNow } from 'date-fns'
@@ -9,13 +9,14 @@ import { useNotifications } from '@/lib/hooks/useData'
 
 interface Notification {
   id: string
-  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system' | 'lustrum' | 'overdracht'
+  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system' | 'lustrum' | 'overdracht' | 'announcement'
   title: string
   message: string
   createdAt: Date
   read: boolean
   href?: string
   icon?: string
+  priority?: string
 }
 
 interface NotificationCenterProps {
@@ -25,9 +26,58 @@ interface NotificationCenterProps {
 export function NotificationCenter({ userId }: NotificationCenterProps) {
   const { data, isLoading, mutate } = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
+  const seenAnnouncementIds = useRef<Set<string> | null>(null)
 
   const notifications: Notification[] = data?.notifications || []
   const unreadCount: number = data?.unreadCount || 0
+
+  // Play a short two-tone "bing" via Web Audio API when a new announcement arrives.
+  useEffect(() => {
+    const announcementIds = notifications
+      .filter((n) => n.type === 'announcement')
+      .map((n) => n.id)
+
+    // First load: prime the set without playing a sound.
+    if (seenAnnouncementIds.current === null) {
+      seenAnnouncementIds.current = new Set(announcementIds)
+      return
+    }
+
+    const newOnes = announcementIds.filter((id) => !seenAnnouncementIds.current!.has(id))
+    if (newOnes.length === 0) return
+
+    // Update seen set and play sound.
+    newOnes.forEach((id) => seenAnnouncementIds.current!.add(id))
+
+    try {
+      const AudioCtx =
+        typeof window !== 'undefined' &&
+        (window.AudioContext || (window as any).webkitAudioContext)
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      const now = ctx.currentTime
+
+      const playTone = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0, now + start)
+        gain.gain.linearRampToValueAtTime(0.18, now + start + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration)
+        osc.connect(gain).connect(ctx.destination)
+        osc.start(now + start)
+        osc.stop(now + start + duration + 0.05)
+      }
+
+      playTone(880, 0, 0.18) // A5
+      playTone(1175, 0.14, 0.22) // D6
+
+      setTimeout(() => ctx.close().catch(() => {}), 700)
+    } catch {
+      // Audio playback can fail (autoplay policy) — silently ignore.
+    }
+  }, [notifications])
 
   // Dismiss a single notification (permanently hide it)
   const dismissNotification = async (notificationId: string) => {
@@ -73,8 +123,8 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
   }
 
   // Get icon for notification type
-  const getNotificationIcon = (type: Notification['type']) => {
-    switch (type) {
+  const getNotificationIcon = (notification: Notification) => {
+    switch (notification.type) {
       case 'zaak':
         return <Icons.briefcase size={16} className="text-blue-400" />
       case 'vacation':
@@ -87,6 +137,8 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         return <Icons.users size={16} className="text-yellow-400" />
       case 'overdracht':
         return <Icons.fileText size={16} className="text-blue-400" />
+      case 'announcement':
+        return <span className="inline-block text-base">{notification.icon || '📢'}</span>
       case 'lustrum':
         return <span className="inline-block animate-bounce text-base">🎉</span>
       default:
@@ -177,8 +229,12 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                     }}
                   >
                     <div className="flex gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                        {getNotificationIcon(notification.type)}
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        notification.type === 'announcement' && notification.priority === 'urgent'
+                          ? 'bg-red-500/20'
+                          : 'bg-white/5'
+                      }`}>
+                        {getNotificationIcon(notification)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">

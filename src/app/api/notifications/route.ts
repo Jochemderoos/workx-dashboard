@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getAnnouncementIcon } from '@/lib/announcement-icon'
 
 // GET - Fetch notifications for current user
 export async function GET() {
@@ -404,6 +405,54 @@ export async function GET() {
     }
 
     // 11. AI Assistent tips — uitgeschakeld (slaapstand)
+
+    // 13. Team announcements (last 7 days)
+    try {
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const allAnnouncements = await prisma.teamAnnouncement.findMany({
+        where: {
+          createdAt: { gte: sevenDaysAgo },
+        },
+        include: {
+          sender: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      })
+
+      allAnnouncements.forEach((announcement) => {
+        // Check if this user is a recipient
+        let isRecipient = announcement.recipients === 'ALL'
+        if (!isRecipient) {
+          try {
+            const ids = JSON.parse(announcement.recipients)
+            isRecipient = Array.isArray(ids) && ids.includes(userId)
+          } catch { /* ignore parse errors */ }
+        }
+
+        if (isRecipient) {
+          const key = `announcement-${announcement.id}`
+          if (!dismissedKeys.has(key)) {
+            const icon = getAnnouncementIcon(announcement.message, announcement.priority)
+            const urgentMark = announcement.priority === 'urgent' ? ' · urgent' : ''
+            notifications.push({
+              id: key,
+              type: 'announcement',
+              title: `${announcement.sender.name}${urgentMark}`,
+              message: announcement.message,
+              createdAt: announcement.createdAt,
+              read: false,
+              href: '/dashboard',
+              icon,
+              priority: announcement.priority,
+            })
+          }
+        }
+      })
+    } catch (e) {
+      // TeamAnnouncement table may not exist yet on prod — log and continue.
+      console.warn('TeamAnnouncement query skipped:', (e as Error)?.message)
+    }
 
     // Sort by createdAt (newest first)
     notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())

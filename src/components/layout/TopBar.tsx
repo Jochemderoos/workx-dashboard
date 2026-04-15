@@ -8,6 +8,7 @@ import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import { NotificationCenter } from '@/components/NotificationCenter'
+import { AnnouncementModal } from '@/components/AnnouncementModal'
 import WorkxLogo from '@/components/ui/WorkxLogo'
 
 function WorkxLogoMobile() {
@@ -98,6 +99,7 @@ function TopBarComponent({ user }: TopBarProps) {
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
   const [greeting, setGreeting] = useState('')
   const [dateString, setDateString] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -415,6 +417,18 @@ function TopBarComponent({ user }: TopBarProps) {
           </Link>
         )}
 
+        {/* Announcement button (PARTNER/ADMIN only) */}
+        {(user.role === 'PARTNER' || user.role === 'ADMIN') && (
+          <button
+            onClick={() => setShowAnnouncementModal(true)}
+            className="relative p-2 rounded-xl border bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20 transition-all group"
+            aria-label="Mededeling versturen"
+            title="Mededeling versturen"
+          >
+            <span className="text-base leading-none group-hover:scale-110 transition-transform inline-block">📢</span>
+          </button>
+        )}
+
         {/* Notification bell */}
         <NotificationCenter userId={user.id} />
 
@@ -452,6 +466,14 @@ function TopBarComponent({ user }: TopBarProps) {
           </span>
         </div>
       </div>
+
+      {/* Announcement Modal */}
+      {(user.role === 'PARTNER' || user.role === 'ADMIN') && (
+        <AnnouncementModal
+          isOpen={showAnnouncementModal}
+          onClose={() => setShowAnnouncementModal(false)}
+        />
+      )}
 
       {/* Mobile Menu Dropdown - using very high z-index to ensure it's above everything */}
       {showMobileMenu && (
