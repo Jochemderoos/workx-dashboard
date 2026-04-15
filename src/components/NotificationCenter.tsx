@@ -252,7 +252,7 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                             <Icons.x size={14} />
                           </button>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">
+                        <p className="text-xs text-gray-400 mt-0.5 whitespace-pre-wrap break-words">
                           {notification.message}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
