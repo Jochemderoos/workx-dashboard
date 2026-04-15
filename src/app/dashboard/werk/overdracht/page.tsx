@@ -1145,79 +1145,99 @@ export default function OverdrachtPage() {
                       <Icons.users size={14} className="text-purple-400" />
                       <span className="text-xs font-medium text-white/70 uppercase tracking-wider">Algemene waarneming</span>
                     </div>
-                    <button
-                      onClick={() => {
-                        const current: GeneralWaarnemer[] = JSON.parse(activeHandover.generalWaarnemers || '[]')
-                        current.push({ periodStart: activeHandover.periodStart.slice(0, 10), periodEnd: activeHandover.periodEnd.slice(0, 10), waarnemer: '' })
-                        setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(current) } : h))
-                        setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-colors"
-                    >
-                      <Icons.plus size={12} />
-                      Periode toevoegen
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const current: GeneralWaarnemer[] = JSON.parse(activeHandover.generalWaarnemers || '[]')
+                          current.push({ periodStart: activeHandover.periodStart.slice(0, 10), periodEnd: activeHandover.periodEnd.slice(0, 10), waarnemer: '' })
+                          setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(current) } : h))
+                          setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-colors"
+                      >
+                        <Icons.plus size={12} />
+                        Periode
+                      </button>
+                      {hasChanges[activeHandover.id] && (
+                        <button
+                          onClick={() => saveHandover(activeHandover.id)}
+                          disabled={isSaving}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs text-workx-lime bg-workx-lime/10 hover:bg-workx-lime/20 transition-colors font-medium"
+                        >
+                          {isSaving ? <span className="w-3 h-3 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" /> : <Icons.check size={12} />}
+                          Opslaan
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {(() => {
                     const waarnemers: GeneralWaarnemer[] = JSON.parse(activeHandover.generalWaarnemers || '[]')
                     if (waarnemers.length === 0) return (
                       <p className="text-xs text-gray-600 italic">Voeg een periode toe om aan te geven wie er waarneemt en in je out-of-office staat</p>
                     )
+                    const updateWaarnemer = (index: number, field: keyof GeneralWaarnemer, value: string) => {
+                      const updated = [...waarnemers]
+                      updated[index] = { ...updated[index], [field]: value }
+                      setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
+                      setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
+                    }
                     return (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {waarnemers.map((w, i) => (
-                          <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
-                            <div className="flex items-center gap-2 flex-1">
-                              <input
-                                type="date"
-                                value={w.periodStart.slice(0, 10)}
-                                onChange={(e) => {
-                                  const updated = [...waarnemers]
-                                  updated[i] = { ...updated[i], periodStart: e.target.value }
+                          <div key={i} className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/10">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="flex items-center gap-2 flex-1">
+                                <DatePicker
+                                  selected={w.periodStart ? new Date(w.periodStart + 'T12:00:00') : null}
+                                  onChange={(date) => date && updateWaarnemer(i, 'periodStart', `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`)}
+                                  placeholder="Van..."
+                                />
+                                <span className="text-xs text-gray-500 shrink-0">t/m</span>
+                                <DatePicker
+                                  selected={w.periodEnd ? new Date(w.periodEnd + 'T12:00:00') : null}
+                                  onChange={(date) => date && updateWaarnemer(i, 'periodEnd', `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`)}
+                                  placeholder="Tot..."
+                                />
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const updated = waarnemers.filter((_, j) => j !== i)
                                   setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
                                   setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
                                 }}
-                                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50"
-                              />
-                              <span className="text-xs text-gray-500">t/m</span>
-                              <input
-                                type="date"
-                                value={w.periodEnd.slice(0, 10)}
-                                onChange={(e) => {
-                                  const updated = [...waarnemers]
-                                  updated[i] = { ...updated[i], periodEnd: e.target.value }
-                                  setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
-                                  setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
-                                }}
-                                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50"
-                              />
-                              <span className="text-xs text-gray-500 mx-1">→</span>
-                              <select
-                                value={w.waarnemer}
-                                onChange={(e) => {
-                                  const updated = [...waarnemers]
-                                  updated[i] = { ...updated[i], waarnemer: e.target.value }
-                                  setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
-                                  setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
-                                }}
-                                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500/50 flex-1"
+                                className="p-1.5 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                               >
-                                <option value="">Kies waarnemer...</option>
-                                {WAARNEMER_OPTIONS.map(name => (
-                                  <option key={name} value={name}>{name}</option>
-                                ))}
-                              </select>
+                                <Icons.trash size={12} />
+                              </button>
                             </div>
-                            <button
-                              onClick={() => {
-                                const updated = waarnemers.filter((_, j) => j !== i)
-                                setHandovers(prev => prev.map(h => h.id === activeHandover.id ? { ...h, generalWaarnemers: JSON.stringify(updated) } : h))
-                                setHasChanges(prev => ({ ...prev, [activeHandover.id]: true }))
-                              }}
-                              className="p-1.5 text-gray-600 hover:text-red-400 transition-colors"
-                            >
-                              <Icons.x size={12} />
-                            </button>
+                            {/* Waarnemer selectie met foto's */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {WAARNEMER_OPTIONS.map(name => {
+                                const photo = getPhotoUrl(name)
+                                const selected = w.waarnemer === name
+                                return (
+                                  <button
+                                    key={name}
+                                    onClick={() => updateWaarnemer(i, 'waarnemer', selected ? '' : name)}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-all ${
+                                      selected
+                                        ? 'bg-purple-500/20 border border-purple-500/40 text-purple-300'
+                                        : 'bg-white/5 border border-white/10 text-gray-500 hover:text-white hover:border-white/20'
+                                    }`}
+                                  >
+                                    {photo ? (
+                                      <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[9px] font-bold text-purple-300">
+                                        {name.charAt(0)}
+                                      </div>
+                                    )}
+                                    <span>{name.split(' ')[0]}</span>
+                                    {selected && <Icons.check size={10} className="text-purple-400" />}
+                                  </button>
+                                )
+                              })}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1233,13 +1253,27 @@ export default function OverdrachtPage() {
                     <Icons.users size={14} className="text-purple-400" />
                     <span className="text-xs font-medium text-purple-300">Algemene waarneming</span>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {(JSON.parse(activeHandover.generalWaarnemers) as GeneralWaarnemer[]).map((w, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-gray-300">
-                        <span>{new Date(w.periodStart).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} – {new Date(w.periodEnd).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</span>
-                        <span className="text-gray-500">→</span>
-                        {w.waarnemer && getPhotoUrl(w.waarnemer) && <img src={getPhotoUrl(w.waarnemer)!} alt={w.waarnemer} className="w-4 h-4 rounded object-cover" />}
-                        <span className="text-purple-300 font-medium">{w.waarnemer || 'Niet toegewezen'}</span>
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <span className="text-xs text-gray-400">
+                          {new Date(w.periodStart + 'T12:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} – {new Date(w.periodEnd + 'T12:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                        </span>
+                        <span className="text-gray-600">→</span>
+                        {w.waarnemer ? (
+                          <div className="flex items-center gap-2">
+                            {getPhotoUrl(w.waarnemer) ? (
+                              <img src={getPhotoUrl(w.waarnemer)!} alt={w.waarnemer} className="w-6 h-6 rounded-full object-cover ring-1 ring-purple-500/30" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-300">
+                                {w.waarnemer.charAt(0)}
+                              </div>
+                            )}
+                            <span className="text-purple-300 font-medium text-xs">{w.waarnemer.split(' ')[0]}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-600 text-xs italic">Niet toegewezen</span>
+                        )}
                       </div>
                     ))}
                   </div>
