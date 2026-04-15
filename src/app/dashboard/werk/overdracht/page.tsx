@@ -1211,33 +1211,49 @@ export default function OverdrachtPage() {
                               </button>
                             </div>
                             {/* Waarnemer selectie met foto's */}
-                            <div className="flex flex-wrap gap-1.5">
-                              {WAARNEMER_OPTIONS.map(name => {
-                                const photo = getPhotoUrl(name)
-                                const selected = w.waarnemer === name
-                                return (
-                                  <button
-                                    key={name}
-                                    onClick={() => updateWaarnemer(i, 'waarnemer', selected ? '' : name)}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs transition-all ${
-                                      selected
-                                        ? 'bg-purple-500/20 border border-purple-500/40 text-purple-300'
-                                        : 'bg-white/5 border border-white/10 text-gray-500 hover:text-white hover:border-white/20'
-                                    }`}
-                                  >
-                                    {photo ? (
-                                      <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
-                                    ) : (
-                                      <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[9px] font-bold text-purple-300">
-                                        {name.charAt(0)}
-                                      </div>
-                                    )}
-                                    <span>{name.split(' ')[0]}</span>
-                                    {selected && <Icons.check size={10} className="text-purple-400" />}
-                                  </button>
-                                )
-                              })}
-                            </div>
+                            {w.waarnemer ? (
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-purple-500/15 border border-purple-500/30">
+                                  {getPhotoUrl(w.waarnemer) ? (
+                                    <img src={getPhotoUrl(w.waarnemer)!} alt={w.waarnemer} className="w-6 h-6 rounded-full object-cover ring-1 ring-purple-500/30" />
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-300">
+                                      {w.waarnemer.charAt(0)}
+                                    </div>
+                                  )}
+                                  <span className="text-sm text-purple-300 font-medium">{w.waarnemer}</span>
+                                </div>
+                                <button
+                                  onClick={() => updateWaarnemer(i, 'waarnemer', '')}
+                                  className="p-1.5 rounded-full text-gray-600 hover:text-white hover:bg-white/10 transition-colors"
+                                  title="Wijzigen"
+                                >
+                                  <Icons.edit size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5">
+                                {WAARNEMER_OPTIONS.map(name => {
+                                  const photo = getPhotoUrl(name)
+                                  return (
+                                    <button
+                                      key={name}
+                                      onClick={() => updateWaarnemer(i, 'waarnemer', name)}
+                                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs bg-white/5 border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-all"
+                                    >
+                                      {photo ? (
+                                        <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
+                                      ) : (
+                                        <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[9px] font-bold text-purple-300">
+                                          {name.charAt(0)}
+                                        </div>
+                                      )}
+                                      <span>{name.split(' ')[0]}</span>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
