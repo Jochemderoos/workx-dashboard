@@ -324,17 +324,6 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
             )}
           </div>
 
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-white/10 text-center">
-              <a
-                href="/dashboard/notifications"
-                className="text-xs text-workx-lime hover:underline"
-              >
-                Alle notificaties bekijken
-              </a>
-            </div>
-          )}
 
           <Popover.Arrow className="fill-workx-dark" />
         </Popover.Content>
