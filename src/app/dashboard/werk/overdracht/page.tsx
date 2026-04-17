@@ -486,11 +486,13 @@ function CaseRow({
             <Icons.trash size={14} />
           </button>
         </div>
-        {caseData.beschrijving ? (
-          <p className="text-xs text-gray-400 whitespace-pre-wrap leading-relaxed">{caseData.beschrijving}</p>
-        ) : (
-          <p className="text-xs text-white/20 italic">Geen beschrijving</p>
-        )}
+        <textarea
+          value={caseData.beschrijving || ''}
+          onChange={e => onUpdate({ ...caseData, beschrijving: e.target.value || null })}
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-gray-300 placeholder-white/20 focus:outline-none focus:border-workx-lime/50 resize-none"
+          placeholder="Status / beschrijving"
+          rows={2}
+        />
         <WaarnemerBadges
           waarnemers={waarnemerNames}
           onRemove={handleRemoveWaarnemer}
