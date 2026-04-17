@@ -1424,30 +1424,32 @@ export default function OverdrachtPage() {
               {/* Notify team button — for the creator or admin/partner */}
               {currentUser && (activeHandover.userId === currentUser.id || currentUser.role === 'ADMIN' || currentUser.role === 'PARTNER') && (
                 <div className="px-4 py-3 border-t border-white/5">
-                  {activeHandover.notifiedAt ? (
-                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime/5 border border-workx-lime/10 text-workx-lime/60 text-sm w-fit">
-                      <Icons.check size={16} />
-                      Verstuurd ✓
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => notifyTeam(activeHandover.id)}
-                      disabled={notifyingId === activeHandover.id}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all disabled:opacity-50 border border-workx-lime/20 hover:border-workx-lime/40"
-                    >
-                      {notifyingId === activeHandover.id ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
-                          Versturen...
-                        </>
-                      ) : (
-                        <>
-                          <Icons.bell size={16} />
-                          Verstuur notificatie aan Team Workx
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => notifyTeam(activeHandover.id)}
+                    disabled={notifyingId === activeHandover.id}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all disabled:opacity-50 border ${
+                      activeHandover.notifiedAt
+                        ? 'bg-white/5 text-gray-400 border-white/10 hover:bg-workx-lime/10 hover:text-workx-lime hover:border-workx-lime/20'
+                        : 'bg-workx-lime/10 text-workx-lime border-workx-lime/20 hover:bg-workx-lime/20 hover:border-workx-lime/40'
+                    }`}
+                  >
+                    {notifyingId === activeHandover.id ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
+                        Versturen...
+                      </>
+                    ) : activeHandover.notifiedAt ? (
+                      <>
+                        <Icons.rotateCw size={16} />
+                        Opnieuw versturen
+                      </>
+                    ) : (
+                      <>
+                        <Icons.bell size={16} />
+                        Verstuur notificatie aan Team Workx
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
