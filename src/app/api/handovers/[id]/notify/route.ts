@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// POST - Notificatie versturen voor een overdrachtsdocument
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -18,17 +17,39 @@ export async function POST(
 
     const handover = await prisma.handover.findUnique({
       where: { id },
-      select: { userId: true },
+      include: {
+        user: { select: { name: true } },
+        cases: { select: { dossiernaam: true } },
+      },
     })
 
     if (!handover) {
       return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
     }
 
-    await prisma.handover.update({
-      where: { id },
-      data: { notifiedAt: new Date() },
-    })
+    const start = handover.periodStart.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
+    const end = handover.periodEnd.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+    const caseCount = handover.cases.length
+    const caseSummary = caseCount > 0
+      ? `${caseCount} ${caseCount === 1 ? 'zaak' : 'zaken'} overgedragen`
+      : 'Geen specifieke zaken'
+
+    await Promise.all([
+      prisma.handover.update({
+        where: { id },
+        data: { notifiedAt: new Date() },
+      }),
+      prisma.teamAnnouncement.create({
+        data: {
+          senderId: session.user.id,
+          title: `Overdracht ${handover.user.name}`,
+          message: `${handover.user.name} is afwezig van ${start} t/m ${end}. ${caseSummary}. Bekijk de overdracht voor details.`,
+          recipients: 'ALL',
+          priority: 'normal',
+          icon: '📋',
+        },
+      }),
+    ])
 
     return NextResponse.json({ success: true })
   } catch (error) {
