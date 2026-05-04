@@ -477,7 +477,7 @@ export default function NotulenPage() {
             onChange={(e) => setNewMonthYear(parseInt(e.target.value))}
             className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
           >
-            {[2024, 2025, 2026].map(y => (
+            {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
