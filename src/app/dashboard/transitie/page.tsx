@@ -49,6 +49,8 @@ interface SavedCalculation {
   amountBeforeMax: number
   years: number
   months: number
+  days?: number
+  totalMonths?: number
   isPensionAge: boolean
 }
 
@@ -97,6 +99,7 @@ export default function TransitiePage() {
   const [result, setResult] = useState<{
     years: number
     months: number
+    days: number
     totalMonths: number
     amount: number
     amountBeforeMax: number
@@ -157,18 +160,27 @@ export default function TransitiePage() {
     const end = new Date(form.endDate)
     if (end <= start) return toast.error('Einddatum moet na startdatum')
 
-    // Calculate years and months
-    let years = end.getFullYear() - start.getFullYear()
-    let months = end.getMonth() - start.getMonth()
-    const days = end.getDate() - start.getDate()
-
-    if (days < 0) months--
-    if (months < 0) {
-      years--
-      months += 12
+    // Calculate total months including partial months (pro rata per dag)
+    let fullMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    // Remaining days after the last full month boundary
+    const tempDate = new Date(start)
+    tempDate.setMonth(tempDate.getMonth() + fullMonths)
+    if (tempDate > end) {
+      fullMonths--
+      tempDate.setMonth(tempDate.getMonth() - 1)
     }
+    const remainingDays = (end.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24)
+    // Days in the partial month (the month after the last full month)
+    const partialMonthStart = new Date(tempDate)
+    const partialMonthEnd = new Date(partialMonthStart)
+    partialMonthEnd.setMonth(partialMonthEnd.getMonth() + 1)
+    const daysInPartialMonth = (partialMonthEnd.getTime() - partialMonthStart.getTime()) / (1000 * 60 * 60 * 24)
+    const partialFraction = daysInPartialMonth > 0 ? remainingDays / daysInPartialMonth : 0
 
-    const totalMonths = years * 12 + months
+    const totalMonths = fullMonths + partialFraction
+    const years = Math.floor(fullMonths / 12)
+    const months = fullMonths % 12
+    const extraDays = Math.round(remainingDays)
 
     // Calculate salary components
     const base = parseFloat(form.salary)
@@ -198,6 +210,7 @@ export default function TransitiePage() {
     setResult({
       years,
       months,
+      days: extraDays,
       totalMonths,
       amount: Math.round(amount * 100) / 100,
       amountBeforeMax: Math.round(amountBeforeMax * 100) / 100,
@@ -238,6 +251,8 @@ export default function TransitiePage() {
       amountBeforeMax: result.amountBeforeMax,
       years: result.years,
       months: result.months,
+      days: result.days,
+      totalMonths: result.totalMonths,
       isPensionAge: form.isPensionAge,
     }
 
@@ -293,7 +308,8 @@ export default function TransitiePage() {
     setResult({
       years: calc.years,
       months: calc.months,
-      totalMonths: calc.years * 12 + calc.months,
+      days: calc.days || 0,
+      totalMonths: calc.totalMonths || (calc.years * 12 + calc.months),
       amount: calc.amount,
       amountBeforeMax: calc.amountBeforeMax || calc.amount,
       totalSalary: calc.totalSalary,
@@ -429,7 +445,7 @@ export default function TransitiePage() {
     doc.text(isEN ? 'Length of service' : 'Dienstverband', col3, y + 3)
     doc.setTextColor(35, 35, 35)
     doc.setFont('helvetica', 'bold')
-    doc.text(isEN ? `${result.years} years and ${result.months} months` : `${result.years} jaar en ${result.months} maanden`, col3, y + 11)
+    doc.text(isEN ? `${result.years} years, ${result.months} months${result.days > 0 ? ` and ${result.days} days` : ''}` : `${result.years} jaar, ${result.months} maanden${result.days > 0 ? ` en ${result.days} dagen` : ''}`, col3, y + 11)
 
     // === SALARIS COMPONENTEN ===
     y = 130
@@ -1005,7 +1021,7 @@ export default function TransitiePage() {
                     Dienstverband
                   </span>
                   <span className="text-sm font-medium text-white">
-                    {result.years} jaar, {result.months} maanden
+                    {result.years} jaar, {result.months} maanden{result.days > 0 ? `, ${result.days} dagen` : ''}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
@@ -1184,7 +1200,7 @@ export default function TransitiePage() {
                 </div>
                 <div className="flex items-center gap-4 text-xs text-white/50 mb-3">
                   <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}{!(calc as any).isOwn && ' (gedeeld)'}</span>
-                  <span>{calc.years}j {calc.months}m</span>
+                  <span>{calc.years}j {calc.months}m{calc.days ? ` ${calc.days}d` : ''}</span>
                   <span>{formatCurrency(calc.totalSalary)}/m</span>
                 </div>
                 <div className="flex gap-3">
