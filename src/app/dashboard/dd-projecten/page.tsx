@@ -153,7 +153,7 @@ export default function DDProjectenPage() {
       if (projRes.ok) setProjects(await projRes.json())
       if (teamRes.ok) {
         const users = await teamRes.json()
-        setTeamMembers(users.filter((u: TeamMember) => u.role !== 'EXTERNAL'))
+        setTeamMembers(users)
       }
       if (wlRes.ok) setWorkloadData(await wlRes.json())
       if (estRes.ok) setEstimates(await estRes.json())
