@@ -552,13 +552,28 @@ export default function NotulenPage() {
         <div className="card p-8 text-center">
           <Icons.calendar size={32} className="text-gray-500 mx-auto mb-3 opacity-50" />
           <p className="text-gray-400 mb-4">Nog geen weken in {selectedMonth.label}</p>
-          <button
-            onClick={() => setIsAddingWeek(true)}
-            className="btn-primary px-4 py-2 text-sm"
-          >
-            <Icons.plus size={14} className="inline mr-1" />
-            Eerste week toevoegen
-          </button>
+          {isAddingWeek ? (
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-64">
+                <DatePicker
+                  selected={newWeekDate}
+                  onChange={(date) => setNewWeekDate(date)}
+                  placeholder="Kies vergaderdatum..."
+                  dateFormat="EEEE d MMMM yyyy"
+                />
+              </div>
+              <button onClick={handleAddWeek} disabled={!newWeekDate} className="btn-primary px-4 py-2.5 text-sm rounded-xl disabled:opacity-30">Toevoegen</button>
+              <button onClick={() => { setIsAddingWeek(false); setNewWeekDate(null) }} className="btn-secondary px-4 py-2.5 text-sm rounded-xl">Annuleren</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAddingWeek(true)}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              <Icons.plus size={14} className="inline mr-1" />
+              Eerste week toevoegen
+            </button>
+          )}
         </div>
       ) : months.length === 0 ? (
         <div className="card p-8 text-center">

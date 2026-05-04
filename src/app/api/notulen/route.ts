@@ -13,30 +13,25 @@ export async function GET() {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
-    // Automatisch huidige maand + volgende maand aanmaken als die nog niet bestaan
+    // Automatisch huidige maand aanmaken als die nog niet bestaat
     const now = new Date()
     const currentYear = now.getFullYear()
     const currentMonth = now.getMonth() + 1 // 1-12
     const monthNames = ['', 'Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
       'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December']
 
-    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1
-    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear
-
-    for (const { y, m } of [{ y: currentYear, m: currentMonth }, { y: nextYear, m: nextMonth }]) {
-      const existing = await prisma.meetingMonth.findFirst({
-        where: { year: y, month: m, isLustrum: false },
+    const existing = await prisma.meetingMonth.findFirst({
+      where: { year: currentYear, month: currentMonth, isLustrum: false },
+    })
+    if (!existing) {
+      await prisma.meetingMonth.create({
+        data: {
+          year: currentYear,
+          month: currentMonth,
+          label: `${monthNames[currentMonth]} ${currentYear}`,
+          isLustrum: false,
+        },
       })
-      if (!existing) {
-        await prisma.meetingMonth.create({
-          data: {
-            year: y,
-            month: m,
-            label: `${monthNames[m]} ${y}`,
-            isLustrum: false,
-          },
-        })
-      }
     }
 
     const months = await prisma.meetingMonth.findMany({
