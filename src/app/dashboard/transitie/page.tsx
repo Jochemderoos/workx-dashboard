@@ -72,6 +72,7 @@ interface FormState {
   overtime: string
   other: string
   isPensionAge: boolean
+  pensionDate: string
 }
 
 const initialForm: FormState = {
@@ -92,6 +93,7 @@ const initialForm: FormState = {
   overtime: '',
   other: '',
   isPensionAge: false,
+  pensionDate: '',
 }
 
 export default function TransitiePage() {
@@ -185,7 +187,7 @@ export default function TransitiePage() {
     // Calculate salary components
     const base = parseFloat(form.salary)
     const vacation = form.vacationMoney ? base * (parseFloat(form.vacationPercent) / 100) : 0
-    const thirteenth = form.thirteenthMonth ? base * 0.083 : 0 // 8.3%
+    const thirteenth = form.thirteenthMonth ? base / 12 : 0 // 1/12 conform Besluit loonbegrip
     const bonusPerMonth = calculateBonusPerMonth()
     const overtime = parseFloat(form.overtime) || 0
     const other = parseFloat(form.other) || 0
@@ -194,7 +196,21 @@ export default function TransitiePage() {
     const yearlySalary = totalSalary * 12
 
     // Transitievergoeding = 1/3 maandsalaris per jaar (naar rato)
-    const amountBeforeMax = (totalSalary / 3) * (totalMonths / 12)
+    let amountBeforeMax = (totalSalary / 3) * (totalMonths / 12)
+
+    // AOW-cap: als werknemer AOW-leeftijd heeft bereikt, is de transitievergoeding
+    // maximaal het loon dat de werknemer zou ontvangen tot AOW-datum (art. 7:673 lid 4 BW)
+    let pensionCap = Infinity
+    if (form.isPensionAge && form.pensionDate) {
+      const pension = new Date(form.pensionDate)
+      if (pension > end) {
+        const msToAOW = pension.getTime() - end.getTime()
+        const monthsToAOW = msToAOW / (1000 * 60 * 60 * 24 * 30.44)
+        pensionCap = totalSalary * monthsToAOW
+      } else {
+        pensionCap = 0
+      }
+    }
 
     // Determine maximum based on end date year
     const endYear = end.getFullYear()
@@ -204,8 +220,14 @@ export default function TransitiePage() {
 
     // Maximum is the HIGHER of: statutory max OR yearly salary
     const maxUsed = Math.max(statutoryMax, yearlySalary)
-    const maxApplied = amountBeforeMax > maxUsed
-    const amount = maxApplied ? maxUsed : amountBeforeMax
+    let maxApplied = amountBeforeMax > maxUsed
+    let amount = maxApplied ? maxUsed : amountBeforeMax
+
+    // AOW-cap kan lager zijn dan het wettelijk maximum
+    if (pensionCap < amount) {
+      amount = Math.max(0, pensionCap)
+      maxApplied = true
+    }
 
     setResult({
       years,
@@ -304,6 +326,7 @@ export default function TransitiePage() {
       overtime: calc.overtime.toString(),
       other: calc.other.toString(),
       isPensionAge: calc.isPensionAge,
+      pensionDate: (calc as any).pensionDate || '',
     })
     setResult({
       years: calc.years,
@@ -962,20 +985,32 @@ export default function TransitiePage() {
           </div>
 
           {/* Pensioen/AOW */}
-          <label className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
-            <input
-              type="checkbox"
-              checked={form.isPensionAge}
-              onChange={(e) => setForm({ ...form, isPensionAge: e.target.checked })}
-              className="w-5 h-5 rounded accent-workx-lime"
-            />
-            <div className="flex-1">
-              <span className="text-white text-sm font-medium">
-                Pensioen of AOW-leeftijd bereikt?
-              </span>
-              <p className="text-xs text-gray-400">Relevant voor de berekening</p>
-            </div>
-          </label>
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
+            <label className="flex items-center gap-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isPensionAge}
+                onChange={(e) => setForm({ ...form, isPensionAge: e.target.checked })}
+                className="w-5 h-5 rounded accent-workx-lime"
+              />
+              <div className="flex-1">
+                <span className="text-white text-sm font-medium">
+                  Werknemer nadert of heeft AOW-leeftijd bereikt
+                </span>
+                <p className="text-xs text-gray-400">Transitievergoeding wordt gekapt op restloon tot AOW-datum (art. 7:673 lid 4 BW)</p>
+              </div>
+            </label>
+            {form.isPensionAge && (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1.5">AOW-datum</label>
+                <DatePicker
+                  selected={form.pensionDate ? new Date(form.pensionDate) : null}
+                  onChange={(date) => setForm({ ...form, pensionDate: date ? formatDateForAPI(date) : '' })}
+                  placeholder="AOW-ingangsdatum..."
+                />
+              </div>
+            )}
+          </div>
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
