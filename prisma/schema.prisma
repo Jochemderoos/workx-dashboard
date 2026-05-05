@@ -37,6 +37,8 @@ model User {
   werkdagen      String?   @default("1,2,3,4,5") // Standaard werkdagen patroon (1=Ma, 2=Di, etc)
   iban           String?   // Opgeslagen IBAN voor declaraties
   isActive       Boolean   @default(true) // Voor medewerkers die uit dienst zijn
+  lastPasswordChangeAt    DateTime? // Audit: wanneer wachtwoord laatst gewijzigd
+  lastPasswordChangedById String?   // Audit: User.id van wie het wijzigde (= self bij self-reset)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

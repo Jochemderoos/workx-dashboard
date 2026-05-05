@@ -73,7 +73,11 @@ export async function PATCH(req: NextRequest) {
     // Update password
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { password: hashedPassword }
+      data: {
+        password: hashedPassword,
+        lastPasswordChangeAt: new Date(),
+        lastPasswordChangedById: session.user.id,
+      }
     })
 
     return NextResponse.json({ success: true })
