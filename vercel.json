@@ -1,5 +1,5 @@
 {
-  "buildCommand": "tsx scripts/add-password-audit-columns.ts && prisma generate && tsx scripts/migrate-heleen-receipts.ts && tsx scripts/migrate-zzp-to-extern.ts && next build",
+  "buildCommand": "tsx scripts/add-password-audit-columns.ts && prisma generate && tsx scripts/migrate-heleen-receipts.ts && tsx scripts/migrate-zzp-to-extern.ts && tsx scripts/import-marnix-handover-may-2026.ts && next build",
   "framework": "nextjs",
   "crons": [
     {

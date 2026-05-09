@@ -626,6 +626,46 @@ export default function OverdrachtPage() {
     setHasChanges(prev => ({ ...prev, [handoverId]: false }))
   }
 
+  // Hergebruik: maak een nieuwe handover op basis van een bestaande
+  // (zelfde user, zelfde zaken; periode standaard volgende week, zelfde duur)
+  const duplicateHandover = async (h: Handover) => {
+    const dur = new Date(h.periodEnd).getTime() - new Date(h.periodStart).getTime()
+    const newStart = new Date()
+    newStart.setHours(0, 0, 0, 0)
+    newStart.setDate(newStart.getDate() + 7)
+    const newEnd = new Date(newStart.getTime() + dur)
+
+    try {
+      const res = await fetch('/api/handovers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: h.userId,
+          periodStart: newStart.toISOString(),
+          periodEnd: newEnd.toISOString(),
+          note: h.note,
+          cases: h.cases.map(c => ({
+            dossiernaam: c.dossiernaam,
+            contactpersoon: c.contactpersoon,
+            beschrijving: c.beschrijving,
+            waarnemers: c.waarnemers,
+          })),
+        }),
+      })
+      if (!res.ok) {
+        setToastMessage('Kopiëren mislukt')
+        return
+      }
+      const created: Handover = await res.json()
+      setHandovers(prev => [...prev, created])
+      setShowExpired(false)
+      setActiveTab(created.id)
+      setToastMessage('Overdracht gekopieerd — pas periode en zaken aan')
+    } catch {
+      setToastMessage('Kopiëren mislukt')
+    }
+  }
+
   // Save changes
   const saveHandover = async (handoverId: string) => {
     const cases = getCases(handoverId)
@@ -1123,13 +1163,23 @@ export default function OverdrachtPage() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setDeleteId(activeHandover.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-medium transition-all"
-                >
-                  <Icons.trash size={12} />
-                  Verwijderen
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => duplicateHandover(activeHandover)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs font-medium transition-all"
+                    title="Maak een nieuwe overdracht op basis van deze (zelfde zaken, andere periode)"
+                  >
+                    <Icons.copy size={12} />
+                    Dupliceren
+                  </button>
+                  <button
+                    onClick={() => setDeleteId(activeHandover.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-medium transition-all"
+                  >
+                    <Icons.trash size={12} />
+                    Verwijderen
+                  </button>
+                </div>
               </div>
 
               {/* Note */}
