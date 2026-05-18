@@ -715,6 +715,31 @@ export default function VakantiesPage() {
     v.status === 'APPROVED' && nextWeek.some(d => isDateInRange(d, v.startDate, v.endDate))
   )
 
+  // Welke werkdagen (ma-vr) van een gegeven week iemand afwezig is,
+  // als leesbare tekst: "hele week", "maandag", "donderdag, vrijdag",
+  // "maandag t/m woensdag", etc.
+  const WORKDAY_NAMES = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag']
+  const formatAbsenceDays = (weekDays: Date[], startDate: string, endDate: string): string => {
+    const indices: number[] = []
+    for (let i = 0; i < 5; i++) {
+      if (isDateInRange(weekDays[i], startDate, endDate)) indices.push(i)
+    }
+    if (indices.length === 0) return ''
+    if (indices.length === 5) return 'hele week'
+    const groups: number[][] = []
+    let current: number[] = [indices[0]]
+    for (let i = 1; i < indices.length; i++) {
+      if (indices[i] === indices[i - 1] + 1) current.push(indices[i])
+      else { groups.push(current); current = [indices[i]] }
+    }
+    groups.push(current)
+    return groups
+      .map(g => g.length === 1
+        ? WORKDAY_NAMES[g[0]]
+        : `${WORKDAY_NAMES[g[0]]} t/m ${WORKDAY_NAMES[g[g.length - 1]]}`)
+      .join(', ')
+  }
+
   if (isLoading) {
     return (
       <div className="h-[calc(100dvh-10rem)] flex items-center justify-center">
@@ -2325,6 +2350,7 @@ export default function VakantiesPage() {
                 {awayThisWeek.map(v => {
                   const color = getColorForUser(v.user.name)
                   const photo = getPhotoUrl(v.user.name)
+                  const absenceLabel = formatAbsenceDays(thisWeek, v.startDate, v.endDate)
                   return (
                     <div
                       key={v.id}
@@ -2339,9 +2365,7 @@ export default function VakantiesPage() {
                         </div>
                       )}
                       <span className="font-medium text-white">{v.user.name}</span>
-                      <span className="text-gray-400 text-xs">
-                        {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
-                      </span>
+                      <span className="text-gray-400 text-xs">{absenceLabel}</span>
                     </div>
                   )
                 })}
@@ -2363,6 +2387,7 @@ export default function VakantiesPage() {
                 {awayNextWeek.map(v => {
                   const color = getColorForUser(v.user.name)
                   const photo = getPhotoUrl(v.user.name)
+                  const absenceLabel = formatAbsenceDays(nextWeek, v.startDate, v.endDate)
                   return (
                     <div
                       key={v.id}
@@ -2377,9 +2402,7 @@ export default function VakantiesPage() {
                         </div>
                       )}
                       <span className="font-medium text-white">{v.user.name}</span>
-                      <span className="text-gray-400 text-xs">
-                        {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
-                      </span>
+                      <span className="text-gray-400 text-xs">{absenceLabel}</span>
                     </div>
                   )
                 })}
