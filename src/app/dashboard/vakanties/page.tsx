@@ -12,6 +12,7 @@ import WorkdaysCalculator from '@/components/vacation/WorkdaysCalculator'
 import { werkdagenToString, parseWerkdagen, DEFAULT_WERKDAGEN, calculateWorkdays } from '@/lib/vacation-utils'
 import { SCHOOL_HOLIDAYS, COLORS, getColorForUser, type SchoolHoliday } from '@/lib/config'
 import { formatDateForAPI } from '@/lib/date-utils'
+import { getPhotoUrl } from '@/lib/team-photos'
 import SpotlightCard from '@/components/ui/SpotlightCard'
 import AnimatedNumber from '@/components/ui/AnimatedNumber'
 import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
@@ -706,6 +707,12 @@ export default function VakantiesPage() {
   const thisWeek = getWeekDays(new Date())
   const awayThisWeek = vacations.filter(v =>
     v.status === 'APPROVED' && thisWeek.some(d => isDateInRange(d, v.startDate, v.endDate))
+  )
+  const nextWeekRef = new Date()
+  nextWeekRef.setDate(nextWeekRef.getDate() + 7)
+  const nextWeek = getWeekDays(nextWeekRef)
+  const awayNextWeek = vacations.filter(v =>
+    v.status === 'APPROVED' && nextWeek.some(d => isDateInRange(d, v.startDate, v.endDate))
   )
 
   if (isLoading) {
@@ -2312,19 +2319,63 @@ export default function VakantiesPage() {
                   <Icons.alertTriangle className="text-yellow-400" size={16} />
                 </div>
                 <h2 className="font-medium text-white">Afwezig deze week</h2>
+                <span className="text-xs text-gray-500">{awayThisWeek.length}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {awayThisWeek.map(v => {
                   const color = getColorForUser(v.user.name)
+                  const photo = getPhotoUrl(v.user.name)
                   return (
                     <div
                       key={v.id}
                       className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
                       style={{ backgroundColor: color + '20' }}
                     >
-                      <div className="w-6 h-6 rounded-lg flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: color + '30', color }}>
-                        {v.user.name.charAt(0)}
-                      </div>
+                      {photo ? (
+                        <img src={photo} alt={v.user.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: color + '30', color }}>
+                          {v.user.name.charAt(0)}
+                        </div>
+                      )}
+                      <span className="font-medium text-white">{v.user.name}</span>
+                      <span className="text-gray-400 text-xs">
+                        {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Away Next Week */}
+          {awayNextWeek.length > 0 && (
+            <div className="card p-5 border-blue-500/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Icons.calendar className="text-blue-400" size={16} />
+                </div>
+                <h2 className="font-medium text-white">Afwezig volgende week</h2>
+                <span className="text-xs text-gray-500">{awayNextWeek.length}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {awayNextWeek.map(v => {
+                  const color = getColorForUser(v.user.name)
+                  const photo = getPhotoUrl(v.user.name)
+                  return (
+                    <div
+                      key={v.id}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
+                      style={{ backgroundColor: color + '20' }}
+                    >
+                      {photo ? (
+                        <img src={photo} alt={v.user.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: color + '30', color }}>
+                          {v.user.name.charAt(0)}
+                        </div>
+                      )}
                       <span className="font-medium text-white">{v.user.name}</span>
                       <span className="text-gray-400 text-xs">
                         {formatDateFull(v.startDate)} - {formatDateFull(v.endDate)}
