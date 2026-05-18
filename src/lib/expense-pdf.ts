@@ -156,39 +156,53 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     ? [15, 40, 120, 150, 175]
     : [15, 43, 135, 170]
 
-  doc.setFillColor(249, 255, 133)
-  doc.rect(15, y, pageWidth - 30, 8, 'F')
+  // Ruimte voor footer (12mm dark bar bij Workx) + buffer zodat
+  // rows er niet tegenaan duwen.
+  const bottomMargin = isHolding ? 18 : 22
+  const rowHeight = 10
+  const topOnNewPage = 18
 
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(30, 30, 30)
-  doc.text('Datum', colX[0] + 2, y + 5.5)
-  doc.text('Omschrijving', colX[1] + 2, y + 5.5)
-  if (hasChargeColumn) {
-    doc.text('Doorbelasten', colX[2] + 2, y + 5.5)
-    doc.text('Bedrag', colX[3] + 2, y + 5.5)
-  } else {
-    doc.text('Bedrag', colX[2] + 2, y + 5.5)
-    doc.text('Bijlage', colX[3] + 2, y + 5.5)
+  const drawTableHeader = () => {
+    doc.setFillColor(249, 255, 133)
+    doc.rect(15, y, pageWidth - 30, 8, 'F')
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 30, 30)
+    doc.text('Datum', colX[0] + 2, y + 5.5)
+    doc.text('Omschrijving', colX[1] + 2, y + 5.5)
+    if (hasChargeColumn) {
+      doc.text('Doorbelasten', colX[2] + 2, y + 5.5)
+      doc.text('Bedrag', colX[3] + 2, y + 5.5)
+    } else {
+      doc.text('Bedrag', colX[2] + 2, y + 5.5)
+      doc.text('Bijlage', colX[3] + 2, y + 5.5)
+    }
+    y += 8
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
   }
 
-  y += 8
+  drawTableHeader()
 
-  // Table rows
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-
+  // Table rows met automatische page-break
   const validItems = data.items.filter(i => i.description && i.date && i.amount > 0)
-  validItems.forEach((item, index) => {
-    const rowY = y + (index * 10)
+  let rowOnPage = 0
+  for (const item of validItems) {
+    if (y + rowHeight > pageHeight - bottomMargin) {
+      doc.addPage()
+      y = topOnNewPage
+      drawTableHeader()
+      rowOnPage = 0
+    }
+    const rowY = y
 
-    if (index % 2 === 1) {
+    if (rowOnPage % 2 === 1) {
       doc.setFillColor(250, 250, 250)
-      doc.rect(15, rowY, pageWidth - 30, 10, 'F')
+      doc.rect(15, rowY, pageWidth - 30, rowHeight, 'F')
     }
 
     doc.setDrawColor(230, 230, 230)
-    doc.line(15, rowY + 10, pageWidth - 15, rowY + 10)
+    doc.line(15, rowY + rowHeight, pageWidth - 15, rowY + rowHeight)
 
     doc.setTextColor(50, 50, 50)
     doc.text(formatDate(item.date), colX[0] + 2, rowY + 6.5)
@@ -219,12 +233,19 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
         doc.text(attachName, colX[3] + 2, rowY + 6.5)
       }
     }
-  })
 
-  y += validItems.length * 10 + 5
+    y += rowHeight
+    rowOnPage++
+  }
 
-  // Total row
+  y += 5
+
+  // Total row \u2014 start nieuwe pagina als 'ie er niet meer bij past
   const totalAmount = validItems.reduce((sum, item) => sum + item.amount, 0)
+  if (y + 12 > pageHeight - bottomMargin) {
+    doc.addPage()
+    y = topOnNewPage
+  }
   doc.setFillColor(249, 255, 133)
   doc.rect(15, y, pageWidth - 30, 12, 'F')
 
@@ -239,6 +260,14 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
 
   // === NOTES ===
   if (data.note?.trim()) {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    const noteLines = doc.splitTextToSize(data.note, pageWidth - 30)
+    const notesHeight = 6 + noteLines.length * 4 + 10
+    if (y + notesHeight > pageHeight - bottomMargin) {
+      doc.addPage()
+      y = topOnNewPage
+    }
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(30, 30, 30)
@@ -248,25 +277,32 @@ export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPD
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
     doc.setTextColor(80, 80, 80)
-    const noteLines = doc.splitTextToSize(data.note, pageWidth - 30)
     doc.text(noteLines, 15, y)
     y += noteLines.length * 4 + 10
   }
 
-  // === FOOTER ===
+  // === FOOTER op elke pagina ===
   if (!isHolding) {
-    doc.setFillColor(80, 80, 80)
-    doc.rect(0, pageHeight - 12, pageWidth, 12, 'F')
+    const pageCount = doc.getNumberOfPages()
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p)
+      doc.setFillColor(80, 80, 80)
+      doc.rect(0, pageHeight - 12, pageWidth, 12, 'F')
 
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(7)
-    doc.setFont('helvetica', 'normal')
-    doc.text(
-      'Workx advocaten  \u2022  Herengracht 448, 1017 CA Amsterdam  \u2022  +31 (0)20 308 03 20  \u2022  info@workxadvocaten.nl',
-      pageWidth / 2,
-      pageHeight - 5,
-      { align: 'center' }
-    )
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'normal')
+      doc.text(
+        'Workx advocaten  \u2022  Herengracht 448, 1017 CA Amsterdam  \u2022  +31 (0)20 308 03 20  \u2022  info@workxadvocaten.nl',
+        pageWidth / 2,
+        pageHeight - 5,
+        { align: 'center' }
+      )
+      if (pageCount > 1) {
+        doc.setFontSize(7)
+        doc.text(`${p} / ${pageCount}`, pageWidth - 8, pageHeight - 5, { align: 'right' })
+      }
+    }
   }
 
   const fileName = isHolding
