@@ -201,9 +201,9 @@ export default function VerantwoordelijkPage() {
       ) : (
         <div className="space-y-6">
           {chapters.map(chapter => (
-            <div key={chapter.id} className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
+            <div key={chapter.id} className="bg-white/[0.03] border border-white/10 rounded-2xl">
               {/* Chapter header */}
-              <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+              <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02] rounded-t-2xl">
                 <h2 className="text-lg font-semibold text-white">{chapter.name}</h2>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">{chapter.tasks.length} taken</span>
@@ -288,8 +288,8 @@ export default function VerantwoordelijkPage() {
                       </button>
                       {openMenuTaskId === task.id && (
                         <>
-                          <div className="fixed inset-0 z-10" onClick={() => setOpenMenuTaskId(null)} />
-                          <div className="absolute right-0 mt-1 w-64 max-h-72 overflow-y-auto bg-workx-dark border border-white/10 rounded-xl shadow-2xl z-20 py-1">
+                          <div className="fixed inset-0 z-40" onClick={() => setOpenMenuTaskId(null)} />
+                          <div className="absolute right-0 mt-1 w-64 max-h-72 overflow-y-auto bg-workx-dark border border-white/10 rounded-xl shadow-2xl z-50 py-1">
                             {task.responsibleId && (
                               <button
                                 onClick={() => { updateTask(task.id, { responsibleId: null }); setOpenMenuTaskId(null) }}
