@@ -382,52 +382,62 @@ export default function KostenPage() {
               </div>
             ) : (
               <div className="divide-y divide-white/5">
-                {byMonth[activeMonth].map(c => (
-                  <div key={c.id} className="px-5 py-2.5 flex items-center gap-3 hover:bg-white/[0.02]">
-                    {editingId === c.id ? (
-                      <>
-                        <input
-                          value={editDesc}
-                          onChange={e => setEditDesc(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(c.id); if (e.key === 'Escape') setEditingId(null) }}
-                          autoFocus
-                          className="flex-1 bg-white/5 border border-workx-lime/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none"
-                        />
-                        <input
-                          value={editAmount}
-                          onChange={e => setEditAmount(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(c.id); if (e.key === 'Escape') setEditingId(null) }}
-                          inputMode="decimal"
-                          className="w-28 bg-white/5 border border-workx-lime/50 rounded-lg px-2 py-1 text-sm text-white text-right focus:outline-none"
-                        />
-                        <button onClick={() => saveEdit(c.id)} className="p-1.5 rounded-lg text-workx-lime hover:bg-workx-lime/10">
-                          <Icons.check size={14} />
-                        </button>
-                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg text-gray-500 hover:bg-white/5">
-                          <Icons.x size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => { setEditingId(c.id); setEditAmount(String(c.amount)); setEditDesc(c.description) }}
-                          className="flex-1 text-left text-sm text-white hover:text-workx-lime transition-colors min-w-0 truncate"
-                          title="Klik om te bewerken"
-                        >
-                          {c.description}
-                        </button>
-                        <span className="text-sm font-medium text-workx-lime/90 tabular-nums">{formatEUR(c.amount)}</span>
-                        <button
-                          onClick={() => deleteCost(c.id)}
-                          className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                          title="Verwijderen"
-                        >
-                          <Icons.trash size={14} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
+                {byMonth[activeMonth].map(c => {
+                  const startEdit = () => { setEditingId(c.id); setEditAmount(String(c.amount)); setEditDesc(c.description) }
+                  return (
+                    <div key={c.id} className="group px-5 py-2.5 flex items-center gap-3 hover:bg-white/[0.02]">
+                      {editingId === c.id ? (
+                        <>
+                          <input
+                            value={editDesc}
+                            onChange={e => setEditDesc(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveEdit(c.id); if (e.key === 'Escape') setEditingId(null) }}
+                            autoFocus
+                            className="flex-1 bg-white/5 border border-workx-lime/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none"
+                          />
+                          <input
+                            value={editAmount}
+                            onChange={e => setEditAmount(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveEdit(c.id); if (e.key === 'Escape') setEditingId(null) }}
+                            inputMode="decimal"
+                            className="w-28 bg-white/5 border border-workx-lime/50 rounded-lg px-2 py-1 text-sm text-white text-right focus:outline-none"
+                          />
+                          <button onClick={() => saveEdit(c.id)} className="p-1.5 rounded-lg text-workx-lime hover:bg-workx-lime/10" title="Opslaan (Enter)">
+                            <Icons.check size={14} />
+                          </button>
+                          <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg text-gray-500 hover:bg-white/5" title="Annuleer (Esc)">
+                            <Icons.x size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={startEdit}
+                            className="flex-1 text-left text-sm text-white hover:text-workx-lime transition-colors min-w-0 truncate"
+                            title="Klik om te bewerken"
+                          >
+                            {c.description}
+                          </button>
+                          <span className="text-sm font-medium text-workx-lime/90 tabular-nums">{formatEUR(c.amount)}</span>
+                          <button
+                            onClick={startEdit}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Bewerken"
+                          >
+                            <Icons.edit size={14} />
+                          </button>
+                          <button
+                            onClick={() => deleteCost(c.id)}
+                            className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Verwijderen"
+                          >
+                            <Icons.trash size={14} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
