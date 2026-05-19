@@ -95,6 +95,9 @@ model User {
   // Wie doet Wat
   responsibilities  Responsibility[]  @relation("ResponsibleUser")
 
+  // Verantwoordelijk (partner) — taken die partners onder elkaar verdelen
+  partnerTasks      PartnerTask[]     @relation("PartnerTasks")
+
   // Nieuwsbrief artikelen planning
   newsletterAssignments  NewsletterAssignment[] @relation("NewsletterAssignee")
   newsletterCreated      NewsletterAssignment[] @relation("NewsletterCreator")
@@ -1104,11 +1107,45 @@ model Responsibility {
   task            String   // Beschrijving van de taak/verantwoordelijkheid
   responsibleId   String   // Wie is verantwoordelijk
   sortOrder       Int      @default(0)
+  partnerTaskId   String?  @unique // Optionele link: deze entry is gepubliceerd vanuit een PartnerTask
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  responsible     User     @relation("ResponsibleUser", fields: [responsibleId], references: [id], onDelete: Cascade)
+  responsible     User         @relation("ResponsibleUser", fields: [responsibleId], references: [id], onDelete: Cascade)
+  partnerTask     PartnerTask? @relation(fields: [partnerTaskId], references: [id], onDelete: SetNull)
 
+  @@index([responsibleId])
+}
+
+// Hoofdstuk in 'Verantwoordelijk (partner)' overzicht (bv. 'Accountmanagement')
+model PartnerTaskChapter {
+  id          String        @id @default(cuid())
+  name        String
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tasks       PartnerTask[]
+
+  @@index([sortOrder])
+}
+
+// Subonderdeel binnen een hoofdstuk
+model PartnerTask {
+  id            String   @id @default(cuid())
+  chapterId     String
+  task          String
+  responsibleId String?
+  sortOrder     Int      @default(0)
+  isPublic      Boolean  @default(false) // gepubliceerd naar Wie doet Wat
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  chapter       PartnerTaskChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  responsible   User?              @relation("PartnerTasks", fields: [responsibleId], references: [id], onDelete: SetNull)
+  publishedAs   Responsibility?
+
+  @@index([chapterId])
   @@index([responsibleId])
 }
 
