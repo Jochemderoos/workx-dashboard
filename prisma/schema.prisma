@@ -1117,6 +1117,20 @@ model Responsibility {
   @@index([responsibleId])
 }
 
+// Maandelijkse kostenpost voor de Kosten-pagina (partners + Hanna + Lotte)
+model MonthlyCost {
+  id          String   @id @default(cuid())
+  year        Int
+  month       Int      // 1-12
+  amount      Float
+  description String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([year, month])
+}
+
 // Hoofdstuk in 'Verantwoordelijk (partner)' overzicht (bv. 'Accountmanagement')
 model PartnerTaskChapter {
   id          String        @id @default(cuid())
