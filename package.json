@@ -9,6 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:full": "prisma generate && next build",
+    "build:vercel": "tsx scripts/add-password-audit-columns.ts && tsx scripts/add-partner-task-tables.ts && prisma generate && tsx scripts/migrate-heleen-receipts.ts && tsx scripts/migrate-zzp-to-extern.ts && tsx scripts/import-marnix-handover-may-2026.ts && tsx scripts/seed-partner-tasks.ts && next build",
     "start": "next start",
     "lint": "next lint",
     "prisma": "node prisma/guard.js",
