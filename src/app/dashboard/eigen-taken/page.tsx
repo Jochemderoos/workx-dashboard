@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import { parseTaskDate } from '@/lib/parse-task-date'
 
 interface Task {
   id: string
@@ -64,6 +65,7 @@ export default function EigenTakenPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [newTitle, setNewTitle] = useState('')
+  const [newDueDate, setNewDueDate] = useState<Date | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
@@ -82,16 +84,25 @@ export default function EigenTakenPage() {
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
+  // Live parse: detecteer datum in de titel-tekst voor preview
+  const parsedNew = useMemo(() => parseTaskDate(newTitle), [newTitle])
+  // Handmatige keuze heeft voorrang op auto-detect
+  const effectiveNewDueDate = newDueDate || parsedNew.dueDate
+
   const addTask = async () => {
-    const title = newTitle.trim()
-    if (!title) return
+    const raw = newTitle.trim()
+    if (!raw) return
+    const parsed = parseTaskDate(raw)
+    const title = parsed.title
+    const dueDate = newDueDate || parsed.dueDate
     setNewTitle('')
+    setNewDueDate(null)
     // Optimistic
     const optimistic: Task = {
       id: `tmp-${Date.now()}`,
       title,
       description: null,
-      dueDate: null,
+      dueDate: dueDate ? dueDate.toISOString() : null,
       sortOrder: tasks.length,
       createdAt: new Date().toISOString(),
     }
@@ -100,7 +111,7 @@ export default function EigenTakenPage() {
       const res = await fetch('/api/personal-tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title, dueDate: dueDate ? dueDate.toISOString() : null }),
       })
       if (!res.ok) throw new Error()
       const saved = await res.json()
@@ -232,15 +243,63 @@ export default function EigenTakenPage() {
             value={newTitle}
             onChange={e => setNewTitle(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') addTask() }}
-            placeholder="Nieuwe taak — typ en druk Enter"
-            className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none"
+            placeholder='Nieuwe taak — typ bv. "morgen Jochem mailen" en druk Enter'
+            className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none min-w-0"
           />
           {newTitle.trim() && (
             <button
               onClick={addTask}
-              className="px-3 py-1 rounded-lg bg-workx-lime text-workx-dark text-xs font-medium hover:bg-workx-lime/90 transition-colors"
+              className="px-3 py-1 rounded-lg bg-workx-lime text-workx-dark text-xs font-medium hover:bg-workx-lime/90 transition-colors shrink-0"
             >
               Toevoegen
+            </button>
+          )}
+        </div>
+
+        {/* Datum-chips + datumkiezer */}
+        <div className="flex items-center gap-2 mt-2 flex-wrap pl-1">
+          <span className="text-[10px] text-gray-600 uppercase tracking-wider mr-1">Datum</span>
+          <button
+            onClick={() => { const d = new Date(); d.setHours(0, 0, 0, 0); setNewDueDate(d) }}
+            className="text-[11px] px-2.5 py-1 rounded-full border bg-white/5 text-gray-400 border-white/10 hover:text-workx-lime hover:border-workx-lime/40 transition-colors"
+          >
+            Vandaag
+          </button>
+          <button
+            onClick={() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 1); setNewDueDate(d) }}
+            className="text-[11px] px-2.5 py-1 rounded-full border bg-white/5 text-gray-400 border-white/10 hover:text-blue-300 hover:border-blue-500/40 transition-colors"
+          >
+            Morgen
+          </button>
+          <div className="inline-block">
+            <DatePicker
+              selected={newDueDate}
+              onChange={(date) => setNewDueDate(date as Date | null)}
+              placeholder="Kies datum"
+              isClearable
+            />
+          </div>
+          {effectiveNewDueDate && (
+            <span className={`text-[11px] flex items-center gap-1 ${newDueDate ? 'text-workx-lime' : 'text-workx-lime/70'}`}>
+              <Icons.check size={10} />
+              {newDueDate ? 'gekozen: ' : 'herkend: '}
+              {(() => {
+                const today = new Date(); today.setHours(0, 0, 0, 0)
+                const d = new Date(effectiveNewDueDate); d.setHours(0, 0, 0, 0)
+                const diff = (d.getTime() - today.getTime()) / 86400000
+                if (diff === 0) return 'vandaag'
+                if (diff === 1) return 'morgen'
+                if (diff === -1) return 'gisteren'
+                return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+              })()}
+            </span>
+          )}
+          {newDueDate && (
+            <button
+              onClick={() => setNewDueDate(null)}
+              className="text-[10px] text-gray-500 hover:text-red-400 transition-colors"
+            >
+              Datum weghalen
             </button>
           )}
         </div>
