@@ -121,26 +121,52 @@ function parseBlock(block: string, invoiceNumber: string, year: number, period: 
 }
 
 /**
- * Match een ruwe advocaat-naam uit de PDF aan een User op naam (initialen + achternaam).
+ * Match een ruwe advocaat-naam uit de PDF aan een User op naam.
+ * Ondersteunt:
+ *   - "mr. M. Ritmeester" (één initiaal)
+ *   - "M.S. van Pesch" (meerdere initialen, roepnaam Wies)
+ *   - "E.L.H van der Vos" (Emma)
+ *   - "A.L. Heunen" (Alain)
+ *   - "J de Roos" (initiaal zonder punt)
+ * Eerst exact: initialen-prefix + achternaam matchen.
+ * Anders alleen op achternaam — werkt voor gevallen waar de eerste
+ * initiaal niet overeenkomt met de roepnaam (Wies, Emma, Alain etc.).
  */
+function parseRawAttorney(raw: string): { initialFirst: string; lastname: string } | null {
+  const stripped = raw
+    .replace(/^(mr\.|mevr\.|dhr\.|mevrouw|de\s+heer)\s+/i, '')
+    .trim()
+  const tokens = stripped.split(/\s+/).filter(Boolean)
+  if (tokens.length < 2) return null
+
+  // Initialen-prefix: eerste tokens die uit (letter[.]letter[.]…) bestaan
+  const isInitialToken = (t: string) => /^[A-Za-z](?:\.\s*[A-Za-z])*\.?$/.test(t)
+  let idx = 0
+  while (idx < tokens.length && isInitialToken(tokens[idx])) idx++
+  if (idx === 0 || idx >= tokens.length) return null
+
+  const firstInitialChar = tokens[0].charAt(0).toUpperCase()
+  const lastname = tokens.slice(idx).join(' ').toLowerCase().replace(/\s+/g, ' ')
+  return { initialFirst: firstInitialChar, lastname }
+}
+
 export function matchAttorney(
   raw: string,
   users: Array<{ id: string; name: string }>
 ): { id: string; name: string } | null {
-  const stripped = raw
-    .replace(/^(mr\.|mevr\.|dhr\.|mevrouw|de\s+heer)\s+/i, '')
-    .trim()
-  const m = stripped.match(/^([A-Za-z])\.?\s+([\s\S]+)$/)
-  if (!m) return null
-  const initial = m[1].toUpperCase()
-  const lastname = m[2].trim().toLowerCase().replace(/\s+/g, ' ')
+  const parsed = parseRawAttorney(raw)
+  if (!parsed) return null
+  const { initialFirst, lastname } = parsed
 
+  // Eerst: eerste initiaal + achternaam exact
   for (const u of users) {
     const parts = u.name.split(' ').filter(Boolean)
     const uInit = parts[0].charAt(0).toUpperCase()
     const uLast = parts.slice(1).join(' ').toLowerCase()
-    if (uInit === initial && uLast === lastname) return u
+    if (uInit === initialFirst && uLast === lastname) return u
   }
+  // Fallback: alleen achternaam (voor multi-initialen waarvan de
+  // roepnaam-letter afwijkt zoals Wies, Emma, Alain)
   for (const u of users) {
     const parts = u.name.split(' ').filter(Boolean)
     const uLast = parts.slice(1).join(' ').toLowerCase()
