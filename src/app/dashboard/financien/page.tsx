@@ -1512,7 +1512,6 @@ export default function FinancienPage() {
             const cur = getDataForYear(currentYear)
             const totalCosts2026 = monthlyCosts2026.reduce((s, v) => s + v, 0)
             const baseCosts = cur.werkgeverslasten.reduce((s, v) => s + v, 0) + cur.kostenExtern.reduce((s, v) => s + v, 0)
-            if (totalCosts2026 === 0) return null
             const omzetTotal = cur.omzet.reduce((s, v) => s + v, 0)
             return (
               <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
@@ -1528,6 +1527,11 @@ export default function FinancienPage() {
                     <p className="text-lg font-bold text-orange-400 tabular-nums">+{formatCurrency(totalCosts2026)}</p>
                   </div>
                 </div>
+                {totalCosts2026 === 0 && (
+                  <div className="mt-3 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs text-gray-400">
+                    Nog geen dagelijkse kosten ingeladen voor {currentYear}. Voeg ze toe via <a href="/dashboard/kosten" className="text-workx-lime hover:underline">/dashboard/kosten</a> (handmatig of via MT940-import).
+                  </div>
+                )}
 
                 <div className="overflow-x-auto mt-4">
                   <table className="w-full text-sm">
