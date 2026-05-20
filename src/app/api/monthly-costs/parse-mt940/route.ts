@@ -42,19 +42,31 @@ export async function POST(req: NextRequest) {
     })
     const dupSet = new Set(existingRefs.map(r => r.externalRef).filter(Boolean))
 
+    // Leer-aliassen toepassen: voor elke unieke rawKey kijken of de
+    // gebruiker eerder een handmatige correctie heeft opgeslagen, en die
+    // dan gebruiken in plaats van de standaard-vendornaam.
+    const rawKeys = Array.from(new Set(txs.map(t => t.rawKey).filter(Boolean)))
+    const learned = rawKeys.length > 0
+      ? await prisma.vendorAlias.findMany({ where: { rawKey: { in: rawKeys } } })
+      : []
+    const learnedMap = new Map(learned.map(l => [l.rawKey, l.vendorName]))
+
     const result = txs.map(t => ({
       date: t.date.toISOString().slice(0, 10),
       year: t.date.getFullYear(),
       month: t.date.getMonth() + 1,
       amount: t.amount,
-      description: t.description,
+      description: learnedMap.get(t.rawKey) ?? t.description,
+      rawKey: t.rawKey,
       externalRef: t.externalRef,
       isDuplicate: dupSet.has(t.externalRef),
+      isLearned: learnedMap.has(t.rawKey),
     }))
 
     return NextResponse.json({
       transactions: result,
       duplicateCount: result.filter(r => r.isDuplicate).length,
+      learnedCount: result.filter(r => r.isLearned).length,
     })
   } catch (error) {
     console.error('Error parsing MT940:', error)

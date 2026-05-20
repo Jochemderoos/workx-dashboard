@@ -1147,12 +1147,24 @@ model MonthlyCost {
   amount      Float
   description String
   externalRef String?  // Hash uit MT940 (date|amount|desc) om dubbele import te voorkomen
+  rawKey      String?  // Genormaliseerde counterparty uit MT940 (voor 'leren' van handmatige correcties)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([year, month])
   @@index([externalRef])
+  @@index([rawKey])
+}
+
+// Leer-tabel: koppelt een MT940-counterparty (rawKey) aan de vendor-naam
+// die de gebruiker handmatig heeft gekozen. Bij volgende imports wordt
+// deze mapping eerst gecheckt — daarna pas de ingebouwde aliassen.
+model VendorAlias {
+  rawKey     String   @id
+  vendorName String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // Hoofdstuk in 'Verantwoordelijk (partner)' overzicht (bv. 'Accountmanagement')

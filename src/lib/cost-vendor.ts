@@ -123,6 +123,37 @@ function cleanName(raw: string): string {
   ) || '(geen omschrijving)'
 }
 
+// Een stabiele 'fingerprint' van de tegenpartij, ongevoelig voor
+// winkelnummers, stadcodes en rechtsvorm. Gebruikt voor leer-aliassen:
+// als de gebruiker een omschrijving handmatig aanpast slaan we deze key
+// op naast de nieuwe naam.
+function toRawKey(counterparty: string): string {
+  return counterparty
+    .toLowerCase()
+    .replace(/\s*,?\s*pas\d+\s*$/i, '')
+    .replace(/\s*,\s*[a-z]{2,4}\s*$/i, '')   // ", ams" / ", nld"
+    .replace(/\s+\d+\s*$/, '')                 // trailing winkelnummer
+    .replace(/\b(b\.?\s?v\.?|n\.?\s?v\.?|bvba)\b/gi, '')
+    .replace(/[.,]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Pakt de tegenpartij-string uit een MT940 :86:-regel, ongeacht de
+// formattering (SWIFT-subvelden, BEA/GEA, free-text Nederlandse stijl).
+function extractCounterparty(raw: string): string | null {
+  const s = raw.replace(/>\d{2}/g, ' ').replace(/\s+/g, ' ').trim()
+  const swift = s.match(/\/NAME\/([^/]+)/i)?.[1]
+  if (swift) return swift.trim()
+  const card = s.match(/\b(?:BEA|GEA|eCom|ECOM)\b[\s\S]*?\d{2}[:.]\d{2}\s+(.+?)$/i)
+  if (card) return card[1].trim()
+  const dutch = s.match(/\bNaam:?\s*([^]+?)(?=\s*(?:Machtiging|Omschrijving|Kenmerk|IBAN|BIC|Incassant|MARF|EREF)\b|$)/i)?.[1]
+  if (dutch) return dutch.trim()
+  const remi = s.match(/\/REMI\/([^/]+)/i)?.[1]
+  if (remi) return remi.trim()
+  return null
+}
+
 // Voor groeperen in overzicht (vervangt de oude groupKey in page.tsx).
 export function groupKey(desc: string): string {
   const m = aliasMatch(desc)
@@ -138,44 +169,32 @@ export function groupKey(desc: string): string {
     .join(' ')
 }
 
+export interface NormalizedVendor {
+  vendorName: string  // korte, leesbare naam ("Vlaams Broodhuys")
+  rawKey: string      // stabiele fingerprint van de tegenpartij ("vlaams broodhuys") — voor leer-aliassen
+}
+
 // Normaliseer een MT940 :86:-string (of een eerder grof opgeschoonde
 // variant daarvan) naar een korte, leesbare omschrijving in dezelfde
-// stijl als de handmatig ingevoerde posten.
-export function normalizeVendor(raw: string): string {
-  if (!raw || !raw.trim()) return '(geen omschrijving)'
+// stijl als de handmatig ingevoerde posten. Geeft ook een rawKey terug:
+// een stabiele fingerprint van de tegenpartij waaraan leer-aliassen
+// gekoppeld kunnen worden.
+export function normalizeVendor(raw: string): NormalizedVendor {
+  if (!raw || !raw.trim()) {
+    return { vendorName: '(geen omschrijving)', rawKey: '' }
+  }
+  const cp = extractCounterparty(raw)
+  if (cp) {
+    const key = toRawKey(cp) || cp.toLowerCase()
+    const alias = aliasMatch(cp)
+    return { vendorName: alias ?? cleanName(cp), rawKey: key }
+  }
+  // Niets gestructureerd herkenbaar — probeer alias op de hele string
   const s = raw.replace(/>\d{2}/g, ' ').replace(/\s+/g, ' ').trim()
-
-  // 1) SWIFT-subvelden: /TRTP/.../NAME/<COUNTERPARTY>/REMI/...
-  const swiftName = s.match(/\/NAME\/([^/]+)/i)?.[1]
-  if (swiftName) {
-    return aliasMatch(swiftName) ?? cleanName(swiftName)
-  }
-
-  // 2) Kaarttransactie (BEA/GEA/eCom):
-  //    "BEA, Betaalpas 1234, 19.05.26/18:42 ALBERT HEIJN 1234,AMS,PAS123"
-  const card = s.match(/\b(?:BEA|GEA|eCom|ECOM)\b[\s\S]*?\d{2}[:.]\d{2}\s+(.+?)$/i)
-  if (card) {
-    const name = card[1].trim()
-    return aliasMatch(name) ?? cleanName(name)
-  }
-
-  // 3) Free-text Nederlandse stijl: "Naam: <COUNTERPARTY> Omschrijving: ..."
-  const dutchName = s.match(/\bNaam:?\s*([^]+?)(?=\s*(?:Machtiging|Omschrijving|Kenmerk|IBAN|BIC|Incassant|MARF|EREF)\b|$)/i)?.[1]
-  if (dutchName) {
-    return aliasMatch(dutchName) ?? cleanName(dutchName)
-  }
-
-  // 4) Soms staat de naam direct na "/REMI/" zonder /NAME/
-  const remiName = s.match(/\/REMI\/([^/]+)/i)?.[1]
-  if (remiName) {
-    const alias = aliasMatch(remiName)
-    if (alias) return alias
-  }
-
-  // 5) Niets gestructureerd gevonden → probeer alias op de hele string
   const alias = aliasMatch(s)
-  if (alias) return alias
-
-  // 6) Laatste redmiddel: eerste 60 tekens, opgeschoond
-  return cleanName(s.slice(0, 60))
+  const fallback = s.slice(0, 60)
+  return {
+    vendorName: alias ?? cleanName(fallback),
+    rawKey: toRawKey(fallback) || fallback.toLowerCase(),
+  }
 }

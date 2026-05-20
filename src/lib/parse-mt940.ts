@@ -8,11 +8,12 @@ export interface MT940Transaction {
   date: Date          // valutadatum
   amount: number      // positief getal in euros
   description: string // genormaliseerde vendornaam (zelfde stijl als handmatige posten)
+  rawKey: string      // stabiele counterparty-fingerprint (voor leer-aliassen)
   externalRef: string // hash voor duplicaat-detectie
 }
 
-function hashTransaction(dateIso: string, amount: number, description: string): string {
-  const key = `${dateIso}|${amount.toFixed(2)}|${description.toLowerCase()}`
+function hashTransaction(dateIso: string, amount: number, rawKey: string): string {
+  const key = `${dateIso}|${amount.toFixed(2)}|${rawKey}`
   return crypto.createHash('sha256').update(key).digest('hex').slice(0, 20)
 }
 
@@ -27,13 +28,14 @@ export function parseMT940(content: string): MT940Transaction[] {
   const flush = () => {
     if (!currentTx) return
     if (currentTx.isDebet && currentTx.amount > 0) {
-      const description = normalizeVendor(currentTx.desc)
+      const { vendorName, rawKey } = normalizeVendor(currentTx.desc)
       const dateIso = currentTx.date.toISOString().slice(0, 10)
       transactions.push({
         date: currentTx.date,
         amount: currentTx.amount,
-        description,
-        externalRef: hashTransaction(dateIso, currentTx.amount, description),
+        description: vendorName,
+        rawKey,
+        externalRef: hashTransaction(dateIso, currentTx.amount, rawKey),
       })
     }
     currentTx = null

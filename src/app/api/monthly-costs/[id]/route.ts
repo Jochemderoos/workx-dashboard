@@ -18,10 +18,31 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (guard.error) return guard.error
   try {
     const body = await req.json()
+    const existing = await prisma.monthlyCost.findUnique({ where: { id: params.id } })
+    if (!existing) return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
+
     const data: { amount?: number; description?: string } = {}
     if (body.amount !== undefined) data.amount = Number(body.amount)
     if (body.description !== undefined) data.description = String(body.description).trim()
+
     const updated = await prisma.monthlyCost.update({ where: { id: params.id }, data })
+
+    // Leer-stap: als de gebruiker de naam handmatig aanpast op een
+    // MT940-geimporteerde post (heeft rawKey), slaan we de mapping op.
+    // Toekomstige imports van dezelfde counterparty krijgen dan
+    // automatisch de nieuwe naam.
+    if (
+      data.description &&
+      data.description !== existing.description &&
+      existing.rawKey
+    ) {
+      await prisma.vendorAlias.upsert({
+        where: { rawKey: existing.rawKey },
+        update: { vendorName: data.description },
+        create: { rawKey: existing.rawKey, vendorName: data.description },
+      })
+    }
+
     return NextResponse.json(updated)
   } catch (error) {
     console.error('Error updating monthly cost:', error)

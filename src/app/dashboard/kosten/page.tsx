@@ -43,7 +43,8 @@ export default function KostenPage() {
   const [importing, setImporting] = useState(false)
   const [importItems, setImportItems] = useState<Array<{
     date: string; year: number; month: number; amount: number;
-    description: string; externalRef: string; isDuplicate: boolean; selected: boolean
+    description: string; rawKey: string; externalRef: string;
+    isDuplicate: boolean; isLearned: boolean; selected: boolean
   }>>([])
   const [importError, setImportError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -148,7 +149,7 @@ export default function KostenPage() {
         setImportError('Geen kosten-transacties gevonden in dit bestand (alleen inkomsten?).')
         return
       }
-      setImportItems(data.transactions.map((t: { date: string; year: number; month: number; amount: number; description: string; externalRef: string; isDuplicate: boolean }) => ({
+      setImportItems(data.transactions.map((t: { date: string; year: number; month: number; amount: number; description: string; rawKey: string; externalRef: string; isDuplicate: boolean; isLearned: boolean }) => ({
         ...t,
         selected: !t.isDuplicate,
       })))
@@ -177,6 +178,7 @@ export default function KostenPage() {
             amount: s.amount,
             description: s.description,
             externalRef: s.externalRef,
+            rawKey: s.rawKey,
           })),
         }),
       })
@@ -633,6 +635,9 @@ export default function KostenPage() {
                               {new Date(it.date).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })}
                               {it.isDuplicate && (
                                 <span className="ml-1 text-[9px] text-orange-400">DUP</span>
+                              )}
+                              {it.isLearned && !it.isDuplicate && (
+                                <span className="ml-1 text-[9px] text-workx-lime" title="Naam onthouden van eerdere correctie">★</span>
                               )}
                             </td>
                             <td className="px-2 py-1.5">

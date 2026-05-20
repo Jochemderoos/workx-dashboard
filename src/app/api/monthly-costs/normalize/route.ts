@@ -25,21 +25,34 @@ export async function POST() {
   try {
     const imported = await prisma.monthlyCost.findMany({
       where: { externalRef: { not: null } },
-      select: { id: true, description: true },
+      select: { id: true, description: true, rawKey: true },
     })
 
+    // Verzamel alle rawKeys (waar al bekend) + bereken ontbrekende.
+    const normalized = imported.map(row => {
+      const { vendorName, rawKey } = normalizeVendor(row.description)
+      return { id: row.id, oldDesc: row.description, vendorName, rawKey: row.rawKey || rawKey }
+    })
+
+    // Eerder geleerde aliassen ophalen — die overrulen de standaard-naam.
+    const rawKeys = Array.from(new Set(normalized.map(n => n.rawKey).filter(Boolean)))
+    const learned = rawKeys.length > 0
+      ? await prisma.vendorAlias.findMany({ where: { rawKey: { in: rawKeys } } })
+      : []
+    const learnedMap = new Map(learned.map(l => [l.rawKey, l.vendorName]))
+
     let updated = 0
-    for (const row of imported) {
-      const next = normalizeVendor(row.description)
-      if (next && next !== row.description) {
+    for (const n of normalized) {
+      const finalDesc = learnedMap.get(n.rawKey) ?? n.vendorName
+      if (finalDesc && (finalDesc !== n.oldDesc || !n.rawKey)) {
         await prisma.monthlyCost.update({
-          where: { id: row.id },
-          data: { description: next },
+          where: { id: n.id },
+          data: { description: finalDesc, rawKey: n.rawKey || null },
         })
-        updated++
+        if (finalDesc !== n.oldDesc) updated++
       }
     }
-    return NextResponse.json({ scanned: imported.length, updated })
+    return NextResponse.json({ scanned: imported.length, updated, learnedApplied: learned.length })
   } catch (error) {
     console.error('Error normalizing monthly costs:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
