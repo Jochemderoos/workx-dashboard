@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -521,10 +522,15 @@ export default function KostenPage() {
         </>
       )}
 
-      {/* MT940 Import Modal */}
-      {showImport && (
+      {/* MT940 Import Modal — portal naar document.body zodat geen parent
+          (relative / backdrop-filter / overflow) de fixed-positionering breekt */}
+      {typeof document !== 'undefined' && showImport && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { if (!importing) { setShowImport(false); setImportItems([]); setImportError(null) } }}>
-          <div className="bg-workx-dark border border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div
+            className="w-full max-w-4xl bg-workx-gray border border-white/10 rounded-2xl shadow-2xl flex flex-col"
+            style={{ maxHeight: 'min(700px, calc(100vh - 2rem))' }}
+            onClick={e => e.stopPropagation()}
+          >
             {/* Modal header — vast */}
             <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
               <div>
@@ -690,7 +696,8 @@ export default function KostenPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
