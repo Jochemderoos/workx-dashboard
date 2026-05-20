@@ -102,6 +102,10 @@ model User {
   // Persoonlijke todo-lijst
   personalTasks     PersonalTask[]    @relation("PersonalTasks")
 
+  // Openstaande debiteuren waarvan deze advocaat primair verantwoordelijk is
+  primaryOpenInvoices  OpenInvoice[]     @relation("OpenInvoicePrimary")
+  openInvoiceLines     OpenInvoiceLine[] @relation("OpenInvoiceLines")
+
   // Nieuwsbrief artikelen planning
   newsletterAssignments  NewsletterAssignment[] @relation("NewsletterAssignee")
   newsletterCreated      NewsletterAssignment[] @relation("NewsletterCreator")
@@ -1120,6 +1124,47 @@ model Responsibility {
 
   @@index([responsibleId])
   @@index([partnerTaskId])
+}
+
+// Openstaande debiteur uit BaseNet PDF-rapport (Verkoopboek)
+model OpenInvoice {
+  id              String   @id @default(cuid())
+  invoiceNumber   String   @unique
+  bookYear        Int
+  bookPeriod      Int
+  projectCode     String?
+  projectName     String?
+  clientName      String?
+  totalExcl       Float    @default(0)
+  totalIncl       Float    @default(0)
+  totalBtw        Float    @default(0)
+  primaryUserId   String?
+  reminderSentAt  DateTime?
+  importedAt      DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  primaryUser     User?             @relation("OpenInvoicePrimary", fields: [primaryUserId], references: [id], onDelete: SetNull)
+  lines           OpenInvoiceLine[]
+
+  @@index([primaryUserId])
+  @@index([bookYear, bookPeriod])
+}
+
+// Regel binnen een openstaande factuur: per advocaat zijn uren/bedrag
+model OpenInvoiceLine {
+  id            String   @id @default(cuid())
+  invoiceId     String
+  attorneyName  String
+  userId        String?
+  hours         Float
+  hourlyRate    Float
+  amount        Float
+
+  invoice       OpenInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  user          User?       @relation("OpenInvoiceLines", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@index([userId])
 }
 
 // Persoonlijke takenlijst (Notion-stijl), alleen zichtbaar voor eigenaar

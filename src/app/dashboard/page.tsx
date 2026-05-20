@@ -22,6 +22,7 @@ import { buildExpensePDF } from '@/lib/expense-pdf'
 // Logo Component - official Workx logo from PDF
 import WorkxLogo from '@/components/ui/WorkxLogo'
 import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget'
+import OpenInvoicesWidget from '@/components/dashboard/OpenInvoicesWidget'
 function WorkxLogoSmall() {
   return <WorkxLogo height={56} />
 }
@@ -1606,6 +1607,9 @@ export default function DashboardHome() {
 
       {/* Eigen taken — vandaag */}
       <TodayTasksWidget />
+
+      {/* Openstaande debiteuren — alleen reminders die nu nodig zijn */}
+      <OpenInvoicesWidget />
 
       {/* Quick Links Grid + Appjeplekje (Desktop) */}
       <ScrollReveal direction="up" distance={40} duration={0.5} staggerChildren={0.08} className="grid grid-cols-1 lg:grid-cols-5 gap-6">
