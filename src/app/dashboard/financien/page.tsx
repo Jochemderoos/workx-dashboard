@@ -935,48 +935,69 @@ export default function FinancienPage() {
       {/* Overzicht Tab */}
       {activeTab === 'overzicht' && (
         <div className="space-y-6">
-          {/* KPI Cards — focus op huidig jaar. Voor Totale Kosten en Saldo
+          {/* KPI Cards — focus op huidig jaar tot en met laatst ingevulde
+              maand. 2025 wordt voor dezelfde periode (P1-PX) erbij gehouden
+              zodat de vergelijking eerlijk is. Voor Totale Kosten en Saldo
               tonen we twee diff-regels: incl. dagelijkse kosten (volledig
-              beeld, niet appels-met-appels want 2025 mist die post) en
-              excl. (gelijke basis voor jaar-op-jaar vergelijk). */}
+              beeld) en excl. (gelijke basis want 2025 mist die post). */}
           {(() => {
-            const totalKostenPagina = monthlyCosts2026.reduce((s, v) => s + v, 0)
-            const kostenIncl = calculations.totals.totaleKosten[years[2]] + totalKostenPagina
-            const kostenExcl = calculations.totals.totaleKosten[years[2]]
-            const saldoIncl = calculations.totals.omzet[years[2]] - kostenIncl
-            const saldoExcl = calculations.totals.omzet[years[2]] - kostenExcl
-            const prevKosten = calculations.totals.totaleKosten[years[1]]
-            const prevSaldo = calculations.saldoTotals[years[1]]
+            // Bepaal laatste maand met data in 2026
+            const cur = getDataForYear(years[2])
+            let lastMonth = 0
+            for (let m = 0; m < 12; m++) {
+              if (cur.omzet[m] !== 0 || cur.werkgeverslasten[m] !== 0) lastMonth = m + 1
+            }
+            if (lastMonth === 0) lastMonth = 12
+            const sumTo = (arr: number[], n: number) => arr.slice(0, n).reduce((s, v) => s + (v || 0), 0)
+            const periodLabel = lastMonth === 12 ? 'heel jaar' : `P1–P${lastMonth}`
+
+            const prev = getDataForYear(years[1])
+
+            // 2026 t/m lastMonth
+            const omzetCur = sumTo(cur.omzet, lastMonth)
+            const kostenExcl = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(cur.kostenExtern, lastMonth)
+            const dagKostenCur = sumTo(monthlyCosts2026, lastMonth)
+            const kostenIncl = kostenExcl + dagKostenCur
+            const saldoExcl = omzetCur - kostenExcl
+            const saldoIncl = omzetCur - kostenIncl
+            const urenCur = sumTo(cur.uren, lastMonth)
+
+            // 2025 t/m dezelfde lastMonth — fair vergelijking
+            const omzetPrev = sumTo(prev.omzet, lastMonth)
+            const kostenPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(prev.kostenExtern, lastMonth)
+            const saldoPrev = omzetPrev - kostenPrev
+            const urenPrev = sumTo(prev.uren, lastMonth)
+
             type Diff = { amount: number; label: string; positive: boolean; isNumber?: boolean }
             const kpis: Array<{ label: string; value: string; diffs: Diff[] }> = [
               {
-                label: `Omzet ${years[2]}`,
-                value: formatCurrency(calculations.totals.omzet[years[2]]),
+                label: `Omzet ${years[2]} (${periodLabel})`,
+                value: formatCurrency(omzetCur),
                 diffs: [
-                  { amount: calculations.totals.omzet[years[2]] - calculations.totals.omzet[years[1]], label: `vs ${years[1]}`, positive: true },
+                  { amount: omzetCur - omzetPrev, label: `vs ${years[1]} ${periodLabel}`, positive: true },
                 ],
               },
               {
-                label: `Totale Kosten ${years[2]}`,
+                label: `Totale Kosten ${years[2]} (${periodLabel})`,
                 value: formatCurrency(kostenIncl),
                 diffs: [
-                  { amount: kostenIncl - prevKosten, label: 'incl. dagelijkse kosten', positive: false },
-                  { amount: kostenExcl - prevKosten, label: 'excl., gelijke basis', positive: false },
+                  { amount: kostenIncl - kostenPrev, label: `incl. dagelijkse kosten vs ${years[1]}`, positive: false },
+                  { amount: kostenExcl - kostenPrev, label: `excl., gelijke basis vs ${years[1]}`, positive: false },
                 ],
               },
               {
-                label: `Saldo ${years[2]}`,
+                label: `Saldo ${years[2]} (${periodLabel})`,
                 value: formatCurrency(saldoIncl),
                 diffs: [
-                  { amount: saldoIncl - prevSaldo, label: 'incl. dagelijkse kosten', positive: true },
-                  { amount: saldoExcl - prevSaldo, label: 'excl., gelijke basis', positive: true },
+                  { amount: saldoIncl - saldoPrev, label: `incl. dagelijkse kosten vs ${years[1]}`, positive: true },
+                  { amount: saldoExcl - saldoPrev, label: `excl., gelijke basis vs ${years[1]}`, positive: true },
                 ],
               },
               {
-                label: `Uren ${years[2]}`,
-                value: formatNumber(calculations.totals.uren[years[2]]),
+                label: `Uren ${years[2]} (${periodLabel})`,
+                value: formatNumber(urenCur),
                 diffs: [
-                  { amount: calculations.totals.uren[years[2]] - calculations.totals.uren[years[1]], label: `vs ${years[1]}`, positive: true, isNumber: true },
+                  { amount: urenCur - urenPrev, label: `vs ${years[1]} ${periodLabel}`, positive: true, isNumber: true },
                 ],
               },
             ]
