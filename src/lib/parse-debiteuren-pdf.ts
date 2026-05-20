@@ -133,9 +133,12 @@ function parseBlock(block: string, invoiceNumber: string, year: number, period: 
  * initiaal niet overeenkomt met de roepnaam (Wies, Emma, Alain etc.).
  */
 function parseRawAttorney(raw: string): { initialFirst: string; lastname: string } | null {
-  const stripped = raw
-    .replace(/^(mr\.|mevr\.|dhr\.|mevrouw|de\s+heer)\s+/i, '')
-    .trim()
+  // Strip alle voortitels herhaaldelijk (bv "mr. dr." = twee titels)
+  let stripped = raw.trim()
+  const titleRe = /^(mr\.|mevr\.|mw\.|dhr\.|mevrouw|de\s+heer|dr\.|prof\.|ir\.|drs\.)\s+/i
+  while (titleRe.test(stripped)) {
+    stripped = stripped.replace(titleRe, '')
+  }
   const tokens = stripped.split(/\s+/).filter(Boolean)
   if (tokens.length < 2) return null
 
