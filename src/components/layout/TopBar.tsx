@@ -53,31 +53,44 @@ const navigationItems = [
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', keywords: ['profiel', 'wachtwoord', 'account'] },
 ]
 
+// Volgorde gespiegeld aan desktop-sidebar (src/components/layout/Sidebar.tsx)
+// zodat mobiel + desktop dezelfde menu's tonen.
 const mobileMenuItems = [
+  // Menu (iedereen)
   { href: '/dashboard', icon: Icons.home, label: 'Dashboard' },
   { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', badge: '15 jaar!' },
   { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+  { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen' },
   { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat' },
+  { href: '/dashboard/eigen-taken', icon: Icons.check, label: 'Eigen taken' },
   { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht' },
   { href: '/dashboard/werkstudent', icon: Icons.clipboard, label: 'Werkstudent' },
   { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg' },
-  { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen' },
   { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+  { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+
+  // Partners (PARTNER/ADMIN)
   { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk (Partners)', roles: ['PARTNER', 'ADMIN'] },
+  { href: '/dashboard/partners/verantwoordelijk', icon: Icons.users, label: 'Verantwoordelijk', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Notulen', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['PARTNER', 'ADMIN', 'EXTERNAL'] },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+  { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', roles: ['PARTNER', 'ADMIN'] },
+
+  // Tools
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding' },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling' },
   { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
   { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+
+  // Beheer
   { href: '/dashboard/team', icon: Icons.users, label: 'Team' },
   { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
