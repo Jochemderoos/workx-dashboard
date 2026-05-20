@@ -288,6 +288,109 @@ export default function DebiteurenPage() {
         </div>
       ) : (
         <>
+          {/* Mijn debiteuren — persoonlijk overzicht voor ingelogde gebruiker */}
+          {(() => {
+            const mine = invoices.filter(i => i.primaryUserId === currentUserId)
+            if (mine.length === 0) return null
+            // Sorteer oudste eerst
+            const sorted = [...mine].sort((a, b) => daysSincePeriod(b.bookYear, b.bookPeriod) - daysSincePeriod(a.bookYear, a.bookPeriod))
+            // Leeftijds-buckets
+            const buckets = [
+              { key: '0-30', label: '< 30 dgn', max: 30, color: 'text-gray-300', bg: 'bg-white/5 border-white/10' },
+              { key: '30-60', label: '30–60 dgn', max: 60, color: 'text-yellow-300', bg: 'bg-yellow-500/5 border-yellow-500/20' },
+              { key: '60-90', label: '60–90 dgn', max: 90, color: 'text-orange-300', bg: 'bg-orange-500/5 border-orange-500/20' },
+              { key: '90-180', label: '90–180 dgn', max: 180, color: 'text-red-300', bg: 'bg-red-500/5 border-red-500/20' },
+              { key: '180+', label: '180+ dgn', max: Infinity, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30' },
+            ] as const
+            const bucketOf = (age: number) => {
+              for (const b of buckets) if (age < b.max) return b
+              return buckets[buckets.length - 1]
+            }
+            const totals = buckets.map(b => {
+              const items = sorted.filter(i => bucketOf(daysSincePeriod(i.bookYear, i.bookPeriod)).key === b.key)
+              return { ...b, count: items.length, sum: items.reduce((s, i) => s + i.totalIncl, 0) }
+            })
+            const totalMine = mine.reduce((s, i) => s + i.totalIncl, 0)
+            const dueMine = mine.filter(i => isReminderDue(i.reminderSentAt)).length
+
+            return (
+              <div className="mb-6 bg-gradient-to-br from-workx-lime/10 via-workx-lime/5 to-transparent border border-workx-lime/20 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-workx-lime/20 flex items-center justify-center">
+                      <Icons.user size={14} className="text-workx-lime" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-white">Mijn openstaande debiteuren</h2>
+                      <p className="text-[10px] text-gray-500">
+                        {mine.length} factu(u)r(en) · {formatEUR(totalMine)}
+                        {dueMine > 0 && <span className="text-orange-400 ml-2">· {dueMine} reminder nodig</span>}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aging buckets */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+                  {totals.map(b => (
+                    <div key={b.key} className={`rounded-xl p-2.5 border ${b.bg}`}>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">{b.label}</p>
+                      <p className={`text-lg font-bold tabular-nums ${b.color}`}>{b.count}</p>
+                      {b.count > 0 && <p className="text-[10px] text-gray-500 tabular-nums">{formatEUR(b.sum)}</p>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Lijst — oudste eerst */}
+                <div className="space-y-1.5">
+                  {sorted.map(inv => {
+                    const age = daysSincePeriod(inv.bookYear, inv.bookPeriod)
+                    const b = bucketOf(age)
+                    const reminderDue = isReminderDue(inv.reminderSentAt)
+                    // Lengte-balk: schaal op log(age) zodat oude facturen visueel domineren
+                    const barPct = Math.min(100, Math.round((age / 200) * 100))
+                    return (
+                      <div key={inv.id} className={`relative rounded-xl border ${b.bg} hover:bg-white/[0.04] transition-colors overflow-hidden`}>
+                        {/* Achtergrond-balk leeftijd */}
+                        <div className={`absolute inset-y-0 left-0 ${b.color.replace('text-', 'bg-').replace('-300', '-500/10').replace('-400', '-500/15')}`} style={{ width: `${barPct}%` }} />
+                        <div className="relative flex items-center gap-3 px-3 py-2">
+                          <span className={`text-[10px] font-medium tabular-nums w-16 shrink-0 ${b.color}`}>
+                            {age} dgn
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white truncate">
+                              {inv.projectName || inv.clientName || `#${inv.invoiceNumber}`}
+                            </p>
+                            <p className="text-[10px] text-gray-500 truncate">
+                              #{inv.invoiceNumber} · {MONTHS[inv.bookPeriod]} {inv.bookYear}
+                              {inv.reminderSentAt && !reminderDue && (
+                                <span className="ml-2 text-gray-600">
+                                  · laatst herinnerd {new Date(inv.reminderSentAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <span className="text-sm font-medium text-workx-lime tabular-nums shrink-0">{formatEUR(inv.totalIncl)}</span>
+                          {reminderDue ? (
+                            <button
+                              onClick={() => markReminded(inv.id)}
+                              className="px-2.5 py-1 rounded-lg bg-orange-500/20 text-orange-300 text-[11px] font-medium hover:bg-orange-500/30 transition-colors shrink-0"
+                              title="Markeer als aangeschreven (14 dagen verborgen)"
+                            >
+                              ✓ Aangeschreven
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-gray-600 shrink-0 px-2">recent</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
