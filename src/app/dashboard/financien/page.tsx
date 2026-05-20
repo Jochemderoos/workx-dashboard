@@ -1328,36 +1328,25 @@ export default function FinancienPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Werkgeverslasten - all 3 years */}
-                  {years.map((year, yearIdx) => (
-                    <tr key={`wl-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
-                      {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Werkgeverslasten</td>}
-                      <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
-                      {getDataForYear(year).werkgeverslasten.map((v, i) => (
-                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
-                          {formatCurrency(v)}
-                        </td>
-                      ))}
-                      <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
-                        {formatCurrency(calculations.totals.werkgeverslasten[year])}
-                      </td>
-                    </tr>
-                  ))}
-
-                  {/* Kosten Extern - all 3 years */}
+                  {/* Werkgeverslasten (incl. Kosten Extern zoals Lodewijk) - all 3 years */}
                   {years.map((year, yearIdx) => {
-                    const hasData = getDataForYear(year).kostenExtern.some(v => v > 0)
+                    const yearData = getDataForYear(year)
+                    const combined = yearData.werkgeverslasten.map((v, i) => v + (yearData.kostenExtern[i] || 0))
                     return (
-                      <tr key={`ke-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
-                        {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white/70 font-medium align-top text-sm">Kosten Extern</td>}
+                      <tr key={`wl-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
+                        {yearIdx === 0 && (
+                          <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top" title="Inclusief Kosten Extern (zoals Lodewijk). Zie Saldo incl. dagelijkse kosten onderaan voor 2026 details.">
+                            Werkgeverslasten
+                          </td>
+                        )}
                         <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
-                        {getDataForYear(year).kostenExtern.map((v, i) => (
-                          <td key={i} className={`text-right py-3 px-4 text-sm ${!hasData ? 'text-white/20' : yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
+                        {combined.map((v, i) => (
+                          <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
                             {formatCurrency(v)}
                           </td>
                         ))}
-                        <td className={`text-right py-3 px-4 font-medium ${!hasData ? 'text-white/20' : yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
-                          {formatCurrency(calculations.totals.kostenExtern[year])}
+                        <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
+                          {formatCurrency(calculations.totals.totaleKosten[year])}
                         </td>
                       </tr>
                     )
