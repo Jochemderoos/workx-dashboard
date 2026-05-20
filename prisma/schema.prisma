@@ -1146,11 +1146,13 @@ model MonthlyCost {
   month       Int      // 1-12
   amount      Float
   description String
+  externalRef String?  // Hash uit MT940 (date|amount|desc) om dubbele import te voorkomen
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([year, month])
+  @@index([externalRef])
 }
 
 // Hoofdstuk in 'Verantwoordelijk (partner)' overzicht (bv. 'Accountmanagement')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -156,6 +156,15 @@ export default function KostenPage() {
   const [editDesc, setEditDesc] = useState('')
   const [newAmount, setNewAmount] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  // MT940 import state
+  const [showImport, setShowImport] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importItems, setImportItems] = useState<Array<{
+    date: string; year: number; month: number; amount: number;
+    description: string; externalRef: string; isDuplicate: boolean; selected: boolean
+  }>>([])
+  const [importError, setImportError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -223,6 +232,69 @@ export default function KostenPage() {
     }
   }
 
+  const handleMT940File = async (file: File) => {
+    setImporting(true)
+    setImportError(null)
+    setImportItems([])
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/monthly-costs/parse-mt940', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) {
+        setImportError(data.error || 'Kon bestand niet verwerken')
+        return
+      }
+      if (data.transactions.length === 0) {
+        setImportError('Geen kosten-transacties gevonden in dit bestand (alleen inkomsten?).')
+        return
+      }
+      setImportItems(data.transactions.map((t: { date: string; year: number; month: number; amount: number; description: string; externalRef: string; isDuplicate: boolean }) => ({
+        ...t,
+        selected: !t.isDuplicate,
+      })))
+    } catch {
+      setImportError('Kon bestand niet verwerken')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const confirmImport = async () => {
+    const selected = importItems.filter(i => i.selected && !i.isDuplicate)
+    if (selected.length === 0) {
+      toast.error('Geen regels geselecteerd')
+      return
+    }
+    setImporting(true)
+    try {
+      const res = await fetch('/api/monthly-costs/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: selected.map(s => ({
+            year: s.year,
+            month: s.month,
+            amount: s.amount,
+            description: s.description,
+            externalRef: s.externalRef,
+          })),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error()
+      toast.success(`${data.added} toegevoegd${data.skipped > 0 ? `, ${data.skipped} overgeslagen` : ''}`)
+      setShowImport(false)
+      setImportItems([])
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      await fetchData()
+    } catch {
+      toast.error('Importeren mislukt')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const byMonth = useMemo(() => {
     const map: Record<number, Cost[]> = {}
     for (let m = 1; m <= 12; m++) map[m] = []
@@ -274,7 +346,7 @@ export default function KostenPage() {
       <div className="absolute top-40 left-[5%] w-48 h-48 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <div className="mb-8 relative">
+      <div className="mb-8 relative flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
             <Icons.euro size={20} className="text-workx-lime" />
@@ -284,6 +356,14 @@ export default function KostenPage() {
             <p className="text-sm text-white/40">Per maand bijhouden, onderaan inzicht in terugkerende kosten</p>
           </div>
         </div>
+        <button
+          onClick={() => setShowImport(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
+          title="Bankafschrift in MT940-formaat uploaden (ABN AMRO → Mutaties → Downloaden)"
+        >
+          <Icons.upload size={14} />
+          Importeer MT940
+        </button>
       </div>
 
       {loading ? (
@@ -527,6 +607,175 @@ export default function KostenPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* MT940 Import Modal */}
+      {showImport && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { if (!importing) { setShowImport(false); setImportItems([]); setImportError(null) } }}>
+          <div className="bg-workx-dark border border-white/10 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Modal header — vast */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="text-lg font-semibold text-white">MT940 importeren</h2>
+                <p className="text-xs text-gray-400 mt-0.5">ABN AMRO → Mutaties → Downloaden in MT940-formaat</p>
+              </div>
+              <button
+                onClick={() => { if (!importing) { setShowImport(false); setImportItems([]); setImportError(null) } }}
+                className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <Icons.x size={16} />
+              </button>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="overflow-y-auto p-6 flex-1">
+              {importItems.length === 0 ? (
+                <div className="space-y-4">
+                  {importError && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-300">
+                      {importError}
+                    </div>
+                  )}
+                  <div className="bg-white/[0.02] border border-dashed border-white/15 rounded-2xl p-10 text-center">
+                    <Icons.upload size={32} className="mx-auto text-gray-500 mb-3" />
+                    <p className="text-sm text-white mb-1">Kies een MT940-bestand (.940 of .txt)</p>
+                    <p className="text-xs text-gray-500 mb-4">Alleen kosten (debet) worden geïmporteerd. Inkomsten worden overgeslagen.</p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".940,.txt,.sta"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) handleMT940File(f)
+                      }}
+                      disabled={importing}
+                      className="block mx-auto text-xs text-gray-400 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-workx-lime file:text-workx-dark file:text-xs file:font-medium hover:file:bg-workx-lime/90 file:cursor-pointer"
+                    />
+                    {importing && (
+                      <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-400">
+                        <div className="w-3 h-3 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
+                        Bezig met inlezen…
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <p className="text-sm text-white">
+                      {importItems.length} transacties gevonden
+                      {importItems.filter(i => i.isDuplicate).length > 0 && (
+                        <span className="text-orange-400 ml-2">
+                          ({importItems.filter(i => i.isDuplicate).length} al bekend)
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setImportItems(items => items.map(i => ({ ...i, selected: !i.isDuplicate })))}
+                        className="text-xs text-gray-400 hover:text-workx-lime transition-colors"
+                      >
+                        Alleen nieuwe
+                      </button>
+                      <span className="text-xs text-gray-700">·</span>
+                      <button
+                        onClick={() => setImportItems(items => items.map(i => ({ ...i, selected: true })))}
+                        className="text-xs text-gray-400 hover:text-workx-lime transition-colors"
+                      >
+                        Alles aan
+                      </button>
+                      <span className="text-xs text-gray-700">·</span>
+                      <button
+                        onClick={() => setImportItems(items => items.map(i => ({ ...i, selected: false })))}
+                        className="text-xs text-gray-400 hover:text-red-400 transition-colors"
+                      >
+                        Alles uit
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border border-white/10 rounded-xl overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-white/[0.03]">
+                        <tr className="text-left text-xs text-gray-400">
+                          <th className="px-2 py-2 w-8"></th>
+                          <th className="px-2 py-2 font-medium w-24">Datum</th>
+                          <th className="px-2 py-2 font-medium">Omschrijving</th>
+                          <th className="px-2 py-2 font-medium text-right w-28">Bedrag</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importItems.map((it, idx) => (
+                          <tr key={idx} className={`border-t border-white/5 ${it.isDuplicate ? 'opacity-40' : ''}`}>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="checkbox"
+                                checked={it.selected}
+                                disabled={it.isDuplicate}
+                                onChange={(e) => {
+                                  const checked = e.target.checked
+                                  setImportItems(items => items.map((i, j) => j === idx ? { ...i, selected: checked } : i))
+                                }}
+                                className="accent-workx-lime"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-gray-400 tabular-nums whitespace-nowrap">
+                              {new Date(it.date).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })}
+                              {it.isDuplicate && (
+                                <span className="ml-1 text-[9px] text-orange-400">DUP</span>
+                              )}
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                value={it.description}
+                                onChange={(e) => {
+                                  const v = e.target.value
+                                  setImportItems(items => items.map((i, j) => j === idx ? { ...i, description: v } : i))
+                                }}
+                                disabled={it.isDuplicate}
+                                className="w-full bg-transparent text-xs text-white focus:outline-none focus:bg-white/5 rounded px-1"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-right text-workx-lime/90 tabular-nums">{formatEUR(it.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal footer — vast */}
+            <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between gap-3 shrink-0">
+              <div className="text-xs text-gray-500">
+                {importItems.length > 0 && (
+                  <>
+                    <span className="text-workx-lime font-medium">{importItems.filter(i => i.selected && !i.isDuplicate).length}</span> regels worden geïmporteerd
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { if (!importing) { setShowImport(false); setImportItems([]); setImportError(null) } }}
+                  disabled={importing}
+                  className="px-4 py-2 rounded-xl bg-white/5 text-gray-300 text-sm hover:bg-white/10 transition-colors disabled:opacity-40"
+                >
+                  Annuleren
+                </button>
+                {importItems.length > 0 && (
+                  <button
+                    onClick={confirmImport}
+                    disabled={importing || importItems.filter(i => i.selected && !i.isDuplicate).length === 0}
+                    className="px-4 py-2 rounded-xl bg-workx-lime text-workx-dark text-sm font-medium hover:bg-workx-lime/90 transition-colors disabled:opacity-40"
+                  >
+                    {importing ? 'Importeren…' : 'Importeren'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
