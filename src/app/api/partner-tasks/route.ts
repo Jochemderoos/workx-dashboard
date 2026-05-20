@@ -13,7 +13,7 @@ async function requirePartnerOrAdmin() {
   return { session, user }
 }
 
-// GET - hoofdstukken + taken + team
+// GET - hoofdstukken + taken (met assignments) + team
 export async function GET() {
   const guard = await requirePartnerOrAdmin()
   if (guard.error) return guard.error
@@ -25,7 +25,11 @@ export async function GET() {
           tasks: {
             orderBy: { sortOrder: 'asc' },
             include: {
-              responsible: { select: { id: true, name: true, avatarUrl: true } },
+              assignments: {
+                include: {
+                  user: { select: { id: true, name: true, avatarUrl: true } },
+                },
+              },
             },
           },
         },
@@ -59,8 +63,11 @@ export async function POST(req: NextRequest) {
         task,
         responsibleId: responsibleId || null,
         sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+        assignments: responsibleId ? { create: [{ userId: responsibleId }] } : undefined,
       },
-      include: { responsible: { select: { id: true, name: true, avatarUrl: true } } },
+      include: {
+        assignments: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
+      },
     })
     return NextResponse.json(created)
   } catch (error) {

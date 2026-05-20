@@ -13,43 +13,41 @@ async function requirePartnerOrAdmin() {
   return { session, user }
 }
 
-// Synchroniseer de gepubliceerde Responsibility met de PartnerTask:
-// - isPublic true + responsibleId aanwezig → Responsibility upsert
-// - isPublic false → Responsibility verwijderen
+// Synchroniseer Wie doet Wat: één Responsibility-record per assignment.
+// Bij isPublic=false of zonder assignments: verwijder gepubliceerde regels.
 async function syncPublication(taskId: string) {
   const task = await prisma.partnerTask.findUnique({
     where: { id: taskId },
-    include: { chapter: { select: { name: true } } },
+    include: {
+      chapter: { select: { name: true } },
+      assignments: { select: { userId: true } },
+    },
   })
   if (!task) return
 
   const taskLabel = `${task.chapter.name} — ${task.task}`
 
-  if (task.isPublic && task.responsibleId) {
-    const existing = await prisma.responsibility.findUnique({ where: { partnerTaskId: task.id } })
-    if (existing) {
-      await prisma.responsibility.update({
-        where: { id: existing.id },
-        data: { task: taskLabel, responsibleId: task.responsibleId },
-      })
-    } else {
-      const maxSort = await prisma.responsibility.aggregate({ _max: { sortOrder: true } })
+  // Stap 1: verwijder alle bestaande Responsibility-records voor deze PartnerTask
+  await prisma.responsibility.deleteMany({ where: { partnerTaskId: task.id } })
+
+  // Stap 2: als gepubliceerd én er zijn verantwoordelijken: één record per persoon
+  if (task.isPublic && task.assignments.length > 0) {
+    const maxSort = await prisma.responsibility.aggregate({ _max: { sortOrder: true } })
+    let nextSort = (maxSort._max.sortOrder ?? -1) + 1
+    for (const a of task.assignments) {
       await prisma.responsibility.create({
         data: {
           task: taskLabel,
-          responsibleId: task.responsibleId,
-          sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+          responsibleId: a.userId,
+          sortOrder: nextSort++,
           partnerTaskId: task.id,
         },
       })
     }
-  } else {
-    // Niet gepubliceerd of geen verantwoordelijke → verwijder eventuele bestaande link
-    await prisma.responsibility.deleteMany({ where: { partnerTaskId: task.id } })
   }
 }
 
-// PATCH - taak bijwerken (task, responsibleId, isPublic, sortOrder)
+// PATCH - taak bijwerken
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const guard = await requirePartnerOrAdmin()
   if (guard.error) return guard.error
@@ -61,10 +59,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (body.isPublic !== undefined) data.isPublic = !!body.isPublic
     if (body.sortOrder !== undefined) data.sortOrder = body.sortOrder
 
+    // Multi-persoon update via responsibleIds
+    if (Array.isArray(body.responsibleIds)) {
+      const ids: string[] = body.responsibleIds.filter((v: unknown) => typeof v === 'string' && v.length > 0)
+      // Reset assignments
+      await prisma.partnerTaskAssignment.deleteMany({ where: { taskId: params.id } })
+      if (ids.length > 0) {
+        await prisma.partnerTaskAssignment.createMany({
+          data: ids.map(userId => ({ taskId: params.id, userId })),
+          skipDuplicates: true,
+        })
+      }
+      // Eerste persoon ook in legacy responsibleId-veld zetten (voor backward compat)
+      data.responsibleId = ids[0] || null
+    }
+
     const updated = await prisma.partnerTask.update({
       where: { id: params.id },
       data,
-      include: { responsible: { select: { id: true, name: true, avatarUrl: true } } },
+      include: {
+        assignments: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
+      },
     })
 
     await syncPublication(params.id)
@@ -76,12 +91,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-// DELETE - taak verwijderen (cascade verwijdert ook gekoppelde Responsibility)
+// DELETE - taak verwijderen
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const guard = await requirePartnerOrAdmin()
   if (guard.error) return guard.error
   try {
-    // Verwijder eerst eventuele Responsibility-link (anders blijft die met partnerTaskId=null staan)
     await prisma.responsibility.deleteMany({ where: { partnerTaskId: params.id } })
     await prisma.partnerTask.delete({ where: { id: params.id } })
     return NextResponse.json({ success: true })

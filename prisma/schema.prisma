@@ -96,7 +96,8 @@ model User {
   responsibilities  Responsibility[]  @relation("ResponsibleUser")
 
   // Verantwoordelijk (partner) — taken die partners onder elkaar verdelen
-  partnerTasks      PartnerTask[]     @relation("PartnerTasks")
+  partnerTasks            PartnerTask[]           @relation("PartnerTasks")
+  partnerTaskAssignments  PartnerTaskAssignment[] @relation("PartnerTaskAssignments")
 
   // Persoonlijke todo-lijst
   personalTasks     PersonalTask[]    @relation("PersonalTasks")
@@ -1110,7 +1111,7 @@ model Responsibility {
   task            String   // Beschrijving van de taak/verantwoordelijkheid
   responsibleId   String   // Wie is verantwoordelijk
   sortOrder       Int      @default(0)
-  partnerTaskId   String?  @unique // Optionele link: deze entry is gepubliceerd vanuit een PartnerTask
+  partnerTaskId   String?  // Optionele link: deze entry is gepubliceerd vanuit een PartnerTask (1-op-veel bij meerdere verantwoordelijken)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -1118,6 +1119,7 @@ model Responsibility {
   partnerTask     PartnerTask? @relation(fields: [partnerTaskId], references: [id], onDelete: SetNull)
 
   @@index([responsibleId])
+  @@index([partnerTaskId])
 }
 
 // Persoonlijke takenlijst (Notion-stijl), alleen zichtbaar voor eigenaar
@@ -1169,18 +1171,34 @@ model PartnerTask {
   id            String   @id @default(cuid())
   chapterId     String
   task          String
-  responsibleId String?
+  responsibleId String?  // Legacy: eerste verantwoordelijke — voor meerdere personen, zie assignments
   sortOrder     Int      @default(0)
   isPublic      Boolean  @default(false) // gepubliceerd naar Wie doet Wat
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  chapter       PartnerTaskChapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  responsible   User?              @relation("PartnerTasks", fields: [responsibleId], references: [id], onDelete: SetNull)
-  publishedAs   Responsibility?
+  chapter       PartnerTaskChapter      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  responsible   User?                   @relation("PartnerTasks", fields: [responsibleId], references: [id], onDelete: SetNull)
+  assignments   PartnerTaskAssignment[]
+  publishedAs   Responsibility[]
 
   @@index([chapterId])
   @@index([responsibleId])
+}
+
+// Join-tabel: meerdere personen verantwoordelijk voor één PartnerTask
+model PartnerTaskAssignment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  task      PartnerTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User        @relation("PartnerTaskAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
 }
 
 // Nieuwsbrief artikelen planning - onder Wie doet Wat

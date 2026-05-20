@@ -138,6 +138,8 @@ export default function FinancienPage() {
   const [isEditingSalarishuis, setIsEditingSalarishuis] = useState(false)
   const [editingVacation, setEditingVacation] = useState<string | null>(null)
   const [sickDaysTotals, setSickDaysTotals] = useState<SickDaysTotals[]>([])
+  // Dagelijkse kosten 2026 uit Kosten-pagina (geaggregeerd per maand)
+  const [monthlyCosts2026, setMonthlyCosts2026] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
   // Check if user is PARTNER or ADMIN
   const isManager = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -177,6 +179,19 @@ export default function FinancienPage() {
         if (empRes.ok) {
           const empData = await empRes.json()
           setEmployees(empData)
+        }
+
+        // Load monthly costs 2026 (Kosten-pagina) — alleen voor partners/Hanna/Lotte zichtbaar
+        if (session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN') {
+          const costsRes = await fetch('/api/monthly-costs?year=2026')
+          if (costsRes.ok) {
+            const items: { month: number; amount: number }[] = await costsRes.json()
+            const totals = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            for (const it of items) {
+              if (it.month >= 1 && it.month <= 12) totals[it.month - 1] += it.amount
+            }
+            setMonthlyCosts2026(totals)
+          }
         }
 
         // Load sick days for managers
@@ -1489,6 +1504,118 @@ export default function FinancienPage() {
                 })}
               </div>
             </div>
+            )
+          })()}
+
+          {/* Saldo incl. dagelijkse kosten (alleen 2026) */}
+          {(() => {
+            const cur = getDataForYear(currentYear)
+            const totalCosts2026 = monthlyCosts2026.reduce((s, v) => s + v, 0)
+            const baseCosts = cur.werkgeverslasten.reduce((s, v) => s + v, 0) + cur.kostenExtern.reduce((s, v) => s + v, 0)
+            if (totalCosts2026 === 0) return null
+            const omzetTotal = cur.omzet.reduce((s, v) => s + v, 0)
+            return (
+              <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
+                <div className="flex items-start justify-between mb-1 gap-4 flex-wrap">
+                  <div>
+                    <h3 className="text-white font-medium">Saldo incl. dagelijkse kosten (alleen {currentYear})</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Werkgeverslasten + Kosten Extern + Kostenoverzicht uit <a href="/dashboard/kosten" className="text-workx-lime hover:underline">Kosten-pagina</a>. Vorige jaren ontbreekt deze data, dus de jaarvergelijking hierboven blijft zonder deze post.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Extra t.o.v. werkgeverslasten</p>
+                    <p className="text-lg font-bold text-orange-400 tabular-nums">+{formatCurrency(totalCosts2026)}</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto mt-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-500 border-b border-white/10">
+                        <th className="py-2 px-3 font-medium">Maand</th>
+                        <th className="py-2 px-3 font-medium text-right">Werkgeverslasten + Extern</th>
+                        <th className="py-2 px-3 font-medium text-right">Dagelijkse kosten</th>
+                        <th className="py-2 px-3 font-medium text-right">Totale kosten</th>
+                        <th className="py-2 px-3 font-medium text-right">Omzet</th>
+                        <th className="py-2 px-3 font-medium text-right">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {periods.map((p, i) => {
+                        const wkz = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0)
+                        const dag = monthlyCosts2026[i] || 0
+                        const tot = wkz + dag
+                        const om = cur.omzet[i] || 0
+                        const sld = om - tot
+                        if (wkz === 0 && dag === 0 && om === 0) return null
+                        return (
+                          <tr key={p} className="border-b border-white/5 hover:bg-white/[0.02]">
+                            <td className="py-2 px-3 text-white">{p}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-gray-300">{formatCurrency(wkz)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-orange-300">{formatCurrency(dag)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-white font-medium">{formatCurrency(tot)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-gray-300">{formatCurrency(om)}</td>
+                            <td className={`py-2 px-3 text-right tabular-nums font-medium ${sld >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>{formatCurrency(sld)}</td>
+                          </tr>
+                        )
+                      })}
+                      <tr className="border-t-2 border-white/10 bg-white/[0.02]">
+                        <td className="py-2 px-3 text-white font-bold">Totaal</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-gray-300 font-bold">{formatCurrency(baseCosts)}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-orange-300 font-bold">{formatCurrency(totalCosts2026)}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-white font-bold">{formatCurrency(baseCosts + totalCosts2026)}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-gray-300 font-bold">{formatCurrency(omzetTotal)}</td>
+                        <td className={`py-2 px-3 text-right tabular-nums font-bold ${(omzetTotal - baseCosts - totalCosts2026) >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>
+                          {formatCurrency(omzetTotal - baseCosts - totalCosts2026)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-6 space-y-2">
+                  <p className="text-xs font-medium text-white/70 mb-2">Per maand: omzet vs. totale kosten</p>
+                  {(() => {
+                    const monthMaxes = periods.map((_, i) => Math.max(cur.omzet[i] || 0, (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0) + (monthlyCosts2026[i] || 0)))
+                    const overallMax = Math.max(...monthMaxes, 1)
+                    return periods.map((p, i) => {
+                      const om = cur.omzet[i] || 0
+                      const wkz = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0)
+                      const dag = monthlyCosts2026[i] || 0
+                      const tot = wkz + dag
+                      const omPct = (Math.max(om, 0) / overallMax) * 100
+                      const wkzPct = (wkz / overallMax) * 100
+                      const dagPct = (dag / overallMax) * 100
+                      if (om === 0 && tot === 0) return null
+                      return (
+                        <div key={p} className="text-xs">
+                          <div className="flex items-baseline justify-between mb-0.5">
+                            <span className="text-white/60 w-10 shrink-0">{p}</span>
+                            <span className="text-[10px] text-gray-500 tabular-nums">
+                              omzet {formatCurrency(om)} · kosten {formatCurrency(tot)}
+                            </span>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="h-2.5 bg-white/5 rounded overflow-hidden">
+                              <div className="h-full bg-workx-lime/70 rounded" style={{ width: `${omPct}%` }} />
+                            </div>
+                            <div className="h-2.5 bg-white/5 rounded overflow-hidden flex">
+                              <div className="h-full bg-gray-400/60" style={{ width: `${wkzPct}%` }} title="Werkgeverslasten + Extern" />
+                              <div className="h-full bg-orange-500/70" style={{ width: `${dagPct}%` }} title="Dagelijkse kosten" />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  })()}
+                  <div className="flex items-center gap-4 text-[10px] text-gray-500 mt-3 pt-3 border-t border-white/5">
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-workx-lime/70" /> Omzet</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-gray-400/60" /> Werkgeverslasten + Extern</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-orange-500/70" /> Dagelijkse kosten</span>
+                  </div>
+                </div>
+              </div>
             )
           })()}
 

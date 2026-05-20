@@ -13,6 +13,11 @@ interface TeamMember {
   role: string
 }
 
+interface Assignment {
+  userId: string
+  user: { id: string; name: string; avatarUrl: string | null }
+}
+
 interface PartnerTask {
   id: string
   chapterId: string
@@ -20,7 +25,7 @@ interface PartnerTask {
   responsibleId: string | null
   sortOrder: number
   isPublic: boolean
-  responsible: { id: string; name: string; avatarUrl: string | null } | null
+  assignments: Assignment[]
 }
 
 interface Chapter {
@@ -65,7 +70,7 @@ export default function VerantwoordelijkPage() {
     else setLoading(false)
   }, [hasAccess, fetchData])
 
-  const updateTask = async (taskId: string, patch: Partial<PartnerTask>) => {
+  const updateTask = async (taskId: string, patch: Record<string, unknown>) => {
     try {
       const res = await fetch(`/api/partner-tasks/${taskId}`, {
         method: 'PATCH',
@@ -79,8 +84,18 @@ export default function VerantwoordelijkPage() {
     }
   }
 
+  const toggleResponsible = async (task: PartnerTask, userId: string) => {
+    const current = task.assignments.map(a => a.userId)
+    const next = current.includes(userId) ? current.filter(id => id !== userId) : [...current, userId]
+    await updateTask(task.id, { responsibleIds: next })
+  }
+
+  const clearResponsibles = async (task: PartnerTask) => {
+    await updateTask(task.id, { responsibleIds: [] })
+  }
+
   const togglePublic = async (task: PartnerTask) => {
-    if (!task.isPublic && !task.responsibleId) {
+    if (!task.isPublic && task.assignments.length === 0) {
       toast.error('Kies eerst iemand voor deze taak')
       return
     }
@@ -257,26 +272,44 @@ export default function VerantwoordelijkPage() {
                       )}
                     </div>
 
-                    {/* Responsible dropdown */}
+                    {/* Responsible dropdown (multi-select) */}
                     <div className="relative shrink-0">
                       <button
                         onClick={() => setOpenMenuTaskId(openMenuTaskId === task.id ? null : task.id)}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all min-w-[180px] ${
-                          task.responsible
+                          task.assignments.length > 0
                             ? 'bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20'
                             : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-dashed border-white/20'
                         }`}
                       >
-                        {task.responsible ? (
+                        {task.assignments.length > 0 ? (
                           <>
-                            {getPhotoUrl(task.responsible.name) ? (
-                              <img src={getPhotoUrl(task.responsible.name)!} alt={task.responsible.name} className="w-5 h-5 rounded-md object-cover" />
-                            ) : (
-                              <div className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-[10px] font-bold">
-                                {task.responsible.name.charAt(0)}
-                              </div>
-                            )}
-                            <span className="flex-1 text-left">{task.responsible.name}</span>
+                            <div className="flex -space-x-1.5">
+                              {task.assignments.slice(0, 3).map(a => (
+                                getPhotoUrl(a.user.name) ? (
+                                  <img
+                                    key={a.userId}
+                                    src={getPhotoUrl(a.user.name)!}
+                                    alt={a.user.name}
+                                    title={a.user.name}
+                                    className="w-5 h-5 rounded-md object-cover ring-1 ring-workx-dark"
+                                  />
+                                ) : (
+                                  <div
+                                    key={a.userId}
+                                    title={a.user.name}
+                                    className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-[10px] font-bold ring-1 ring-workx-dark"
+                                  >
+                                    {a.user.name.charAt(0)}
+                                  </div>
+                                )
+                              ))}
+                            </div>
+                            <span className="flex-1 text-left truncate">
+                              {task.assignments.length === 1
+                                ? task.assignments[0].user.name
+                                : `${task.assignments[0].user.name} +${task.assignments.length - 1}`}
+                            </span>
                           </>
                         ) : (
                           <>
@@ -290,35 +323,46 @@ export default function VerantwoordelijkPage() {
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setOpenMenuTaskId(null)} />
                           <div className="absolute right-0 mt-1 w-64 max-h-72 overflow-y-auto bg-workx-dark border border-white/10 rounded-xl shadow-2xl z-50 py-1">
-                            {task.responsibleId && (
+                            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/5">
+                              Klik om toe te voegen of weg te halen
+                            </div>
+                            {task.assignments.length > 0 && (
                               <button
-                                onClick={() => { updateTask(task.id, { responsibleId: null }); setOpenMenuTaskId(null) }}
+                                onClick={() => clearResponsibles(task)}
                                 className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-white/5 flex items-center gap-2"
                               >
                                 <Icons.x size={12} />
-                                Verwijder verantwoordelijke
+                                Alle verantwoordelijken weghalen
                               </button>
                             )}
-                            {team.map(m => (
-                              <button
-                                key={m.id}
-                                onClick={() => { updateTask(task.id, { responsibleId: m.id }); setOpenMenuTaskId(null) }}
-                                className={`w-full px-3 py-2 text-left text-xs hover:bg-white/5 flex items-center gap-2 ${
-                                  m.id === task.responsibleId ? 'bg-workx-lime/10 text-workx-lime' : 'text-white'
-                                }`}
-                              >
-                                {getPhotoUrl(m.name) ? (
-                                  <img src={getPhotoUrl(m.name)!} alt={m.name} className="w-5 h-5 rounded-md object-cover" />
-                                ) : (
-                                  <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-bold">
-                                    {m.name.charAt(0)}
+                            {team.map(m => {
+                              const selected = task.assignments.some(a => a.userId === m.id)
+                              return (
+                                <button
+                                  key={m.id}
+                                  onClick={() => toggleResponsible(task, m.id)}
+                                  className={`w-full px-3 py-2 text-left text-xs hover:bg-white/5 flex items-center gap-2 ${
+                                    selected ? 'bg-workx-lime/10 text-workx-lime' : 'text-white'
+                                  }`}
+                                >
+                                  <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
+                                    selected ? 'bg-workx-lime border-workx-lime' : 'border-white/20'
+                                  }`}>
+                                    {selected && <Icons.check size={9} className="text-workx-dark" />}
                                   </div>
-                                )}
-                                <span className="flex-1">{m.name}</span>
-                                {m.role === 'PARTNER' && <span className="text-[9px] text-workx-lime/60">P</span>}
-                                {m.role === 'ADMIN' && <span className="text-[9px] text-blue-400/60">A</span>}
-                              </button>
-                            ))}
+                                  {getPhotoUrl(m.name) ? (
+                                    <img src={getPhotoUrl(m.name)!} alt={m.name} className="w-5 h-5 rounded-md object-cover" />
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-bold">
+                                      {m.name.charAt(0)}
+                                    </div>
+                                  )}
+                                  <span className="flex-1 truncate">{m.name}</span>
+                                  {m.role === 'PARTNER' && <span className="text-[9px] text-workx-lime/60">P</span>}
+                                  {m.role === 'ADMIN' && <span className="text-[9px] text-blue-400/60">A</span>}
+                                </button>
+                              )
+                            })}
                           </div>
                         </>
                       )}
@@ -327,7 +371,7 @@ export default function VerantwoordelijkPage() {
                     {/* Publish button */}
                     <button
                       onClick={() => togglePublic(task)}
-                      disabled={!task.responsibleId && !task.isPublic}
+                      disabled={task.assignments.length === 0 && !task.isPublic}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
                         task.isPublic
                           ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
