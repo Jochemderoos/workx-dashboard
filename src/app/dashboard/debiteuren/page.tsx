@@ -208,13 +208,64 @@ export default function DebiteurenPage() {
           </div>
         </div>
         {isManager && (
-          <button
-            onClick={() => { setShowImport(true); setImportResult(null) }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
-          >
-            <Icons.upload size={14} />
-            Importeer BaseNet PDF
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => { setShowImport(v => !v); if (!showImport) setImportResult(null) }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
+            >
+              <Icons.upload size={14} />
+              Importeer BaseNet PDF
+            </button>
+            {showImport && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => { if (!importing) setShowImport(false) }} />
+                <div className="absolute right-0 top-full mt-2 w-[min(420px,calc(100vw-2rem))] z-40 bg-workx-dark border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-sm font-semibold text-white">BaseNet PDF importeren</h2>
+                      <p className="text-[11px] text-gray-400 mt-0.5">Overzicht Openstaande debiteuren</p>
+                    </div>
+                    <button onClick={() => { if (!importing) setShowImport(false) }} className="p-1 rounded text-gray-500 hover:text-white">
+                      <Icons.x size={14} />
+                    </button>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div className="bg-white/[0.02] border border-dashed border-white/15 rounded-xl p-4 text-center">
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f) }}
+                        disabled={importing}
+                        className="block mx-auto text-xs text-gray-400 file:mr-2 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-workx-lime file:text-workx-dark file:text-xs file:font-medium hover:file:bg-workx-lime/90 file:cursor-pointer"
+                      />
+                      {importing && (
+                        <div className="mt-2 flex items-center justify-center gap-2 text-xs text-gray-400">
+                          <div className="w-3 h-3 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
+                          Verwerken…
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      Volledige sync: facturen die niet meer in de PDF staan worden weggehaald (presumed betaald). Reminder-status blijft behouden.
+                    </p>
+                    {importResult && (
+                      <div className="bg-workx-lime/10 border border-workx-lime/30 rounded-lg p-2 text-[11px]">
+                        <p className="text-workx-lime font-medium">
+                          {importResult.upserted} bijgewerkt · {importResult.removed} weggehaald
+                        </p>
+                        {importResult.unmatchedAttorneys.length > 0 && (
+                          <p className="text-orange-300 mt-1">
+                            Niet gekoppeld: {importResult.unmatchedAttorneys.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -437,68 +488,6 @@ export default function DebiteurenPage() {
         </>
       )}
 
-      {/* Import modal */}
-      {showImport && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { if (!importing) setShowImport(false) }}>
-          <div className="bg-workx-dark border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-white">BaseNet PDF importeren</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Upload het 'Overzicht Openstaande debiteuren'-rapport</p>
-              </div>
-              <button onClick={() => { if (!importing) setShowImport(false) }} className="p-1.5 rounded-lg text-gray-500 hover:text-white">
-                <Icons.x size={16} />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-white/[0.02] border border-dashed border-white/15 rounded-2xl p-8 text-center">
-                <Icons.upload size={32} className="mx-auto text-gray-500 mb-3" />
-                <p className="text-sm text-white mb-3">Kies het PDF-bestand</p>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f) }}
-                  disabled={importing}
-                  className="block mx-auto text-xs text-gray-400 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-workx-lime file:text-workx-dark file:text-xs file:font-medium hover:file:bg-workx-lime/90 file:cursor-pointer"
-                />
-                {importing && (
-                  <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-400">
-                    <div className="w-3 h-3 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
-                    Verwerken…
-                  </div>
-                )}
-              </div>
-              <p className="text-[11px] text-gray-500 leading-relaxed">
-                Bij elke upload synchroniseert het systeem volledig met de PDF. Facturen die niet meer in het rapport staan
-                (presumed betaald) worden uit dit overzicht verwijderd. Bestaande reminder-status blijft behouden voor facturen
-                die nog open staan.
-              </p>
-              {importResult && (
-                <div className="bg-workx-lime/10 border border-workx-lime/30 rounded-xl p-3 text-xs">
-                  <p className="text-workx-lime font-medium">
-                    {importResult.total} facturen ingelezen · {importResult.upserted} bijgewerkt · {importResult.removed} weggehaald
-                  </p>
-                  {importResult.unmatchedAttorneys.length > 0 && (
-                    <p className="text-orange-300 mt-2">
-                      Niet gekoppeld aan team: {importResult.unmatchedAttorneys.join(', ')}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="px-6 py-4 border-t border-white/10 flex justify-end">
-              <button
-                onClick={() => { if (!importing) setShowImport(false) }}
-                disabled={importing}
-                className="px-4 py-2 rounded-xl bg-white/5 text-gray-300 text-sm hover:bg-white/10 transition-colors disabled:opacity-40"
-              >
-                {importResult ? 'Sluiten' : 'Annuleren'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
