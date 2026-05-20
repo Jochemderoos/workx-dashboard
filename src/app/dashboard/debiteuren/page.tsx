@@ -372,35 +372,6 @@ export default function DebiteurenPage() {
                     </div>
                   </div>
 
-                  {/* Uitsplitsing per advocaat */}
-                  <details className="border-t border-white/5">
-                    <summary className="px-4 py-2 text-[11px] text-gray-500 cursor-pointer hover:text-white transition-colors select-none">
-                      Uitsplitsing per advocaat ({inv.lines.length})
-                    </summary>
-                    <div className="px-4 pb-3">
-                      <table className="w-full text-xs">
-                        <tbody>
-                          {inv.lines.map(l => (
-                            <tr key={l.id} className="border-t border-white/5">
-                              <td className="py-1.5">
-                                <div className="flex items-center gap-1.5">
-                                  {l.user && getPhotoUrl(l.user.name) ? (
-                                    <img src={getPhotoUrl(l.user.name)!} alt={l.user.name} className="w-4 h-4 rounded object-cover" />
-                                  ) : (
-                                    <div className="w-4 h-4 rounded bg-white/10" />
-                                  )}
-                                  <span className="text-white/80">{l.user?.name || l.attorneyName}</span>
-                                </div>
-                              </td>
-                              <td className="py-1.5 text-right text-gray-400 tabular-nums">{l.hours.toFixed(1)} u</td>
-                              <td className="py-1.5 text-right text-gray-500 tabular-nums">×{formatEUR(l.hourlyRate)}</td>
-                              <td className="py-1.5 text-right text-workx-lime tabular-nums font-medium">{formatEUR(l.amount)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </details>
                 </div>
               )
             })}
