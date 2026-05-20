@@ -2,21 +2,13 @@
 // transacties (kosten) en hun omschrijving uit :86:-regels.
 
 import crypto from 'crypto'
+import { normalizeVendor } from './cost-vendor'
 
 export interface MT940Transaction {
   date: Date          // valutadatum
   amount: number      // positief getal in euros
-  description: string // samengevoegde :86: regels
+  description: string // genormaliseerde vendornaam (zelfde stijl als handmatige posten)
   externalRef: string // hash voor duplicaat-detectie
-}
-
-function cleanDescription(raw: string): string {
-  // ABN gebruikt vaak >20, >21, ... subvelden binnen :86:. Strip die en
-  // plak alles samen tot een leesbare zin.
-  return raw
-    .replace(/>\d{2}/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
 }
 
 function hashTransaction(dateIso: string, amount: number, description: string): string {
@@ -35,7 +27,7 @@ export function parseMT940(content: string): MT940Transaction[] {
   const flush = () => {
     if (!currentTx) return
     if (currentTx.isDebet && currentTx.amount > 0) {
-      const description = cleanDescription(currentTx.desc) || '(geen omschrijving)'
+      const description = normalizeVendor(currentTx.desc)
       const dateIso = currentTx.date.toISOString().slice(0, 10)
       transactions.push({
         date: currentTx.date,

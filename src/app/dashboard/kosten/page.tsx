@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import { groupKey } from '@/lib/cost-vendor'
 
 interface Cost {
   id: string
@@ -22,125 +23,6 @@ const MONTHS = [
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
-}
-
-// Heuristic: groepeer kosten op een leesbare key (vendor / categorie),
-// gebaseerd op de eerste woorden van de description.
-function groupKey(desc: string): string {
-  const cleaned = desc.toLowerCase()
-    .replace(/\(.*?\)/g, '')      // haal alles tussen () weg
-    .replace(/[.,]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  // Specifieke aliases voor herkenbare vendors
-  const aliases: [RegExp, string][] = [
-    [/^vlaams broodhuys/, 'Vlaams Broodhuys'],
-    [/^albert heijn/, 'Albert Heijn'],
-    [/^bol\.?com/, 'Bol.com'],
-    [/^viking/, 'Viking kantoorspullen'],
-    [/^google ireland/, 'Google Ireland'],
-    [/^spotify/, 'Spotify'],
-    [/^iside/, 'Iside'],
-    [/^kpn/, 'KPN'],
-    [/^constant it/, 'Constant IT'],
-    [/^basenet/, 'Basenet'],
-    [/^herengracht investments/, 'Herengracht Investments (huur)'],
-    [/^norm finance/, 'Norm Finance'],
-    [/^international card services/, 'International Card Services'],
-    [/^digihero/, 'Digihero'],
-    [/^financ.+dagblad/, 'Financieele Dagblad'],
-    [/^kamer van koophandel/, 'Kamer van Koophandel'],
-    [/^abn amro/, 'ABN AMRO'],
-    [/^stadhouders/, 'Stadhouders Advocaten'],
-    [/^kwps/, 'KWPS (doorbelast)'],
-    [/^chambers/, 'Chambers'],
-    [/^bright pensioen/, 'Bright Pensioen'],
-    [/^delfts? congress/, 'Delfts Congress Support'],
-    [/^delft congress/, 'Delfts Congress Support'],
-    [/^vereniging arbeidsrecht/, 'Vereniging Arbeidsrecht'],
-    [/^vereniging voor arbeidsrecht/, 'Vereniging Arbeidsrecht'],
-    [/^nederlandse orde/, 'Nederlandse Orde van Advocaten' ],
-    [/^contributie nederlandse orde/, 'Nederlandse Orde van Advocaten' ],
-    [/^amsterdamse orde/, 'Amsterdamse Orde van Advocaten'],
-    [/^international card/, 'International Card Services'],
-    [/^spontaanja/, 'Spontaanja schoonmaker'],
-    [/^spontaan ja/, 'Spontaanja schoonmaker'],
-    [/^smartcoffee/, 'Smartcoffee (Boonchance)' ],
-    [/^bocca coffee/, 'Bocca Coffee'],
-    [/^bocca koffie/, 'Bocca Coffee'],
-    [/^dba .*bary/, 'DBA / Bary (koffie)'],
-    [/^de bary/, 'DBA / Bary (koffie)'],
-    [/^gamma business/, 'Gamma Business'],
-    [/^froot/, 'Froot' ],
-    [/^tentoo/, 'Tentoo'],
-    [/^fleurop/, 'Fleurop bloemen'],
-    [/^postnl/, 'PostNL'],
-    [/^post nl/, 'PostNL'],
-    [/^marie-?stella/, 'Marie-Stella-Maris'],
-    [/^marie stella/, 'Marie-Stella-Maris'],
-    [/^hema/, 'HEMA'],
-    [/^rituals/, 'Rituals'],
-    [/^topgeschenken/, 'Topgeschenken'],
-    [/^brownie box/, 'Brownie box (relatiegeschenken)' ],
-    [/^cadeau brownie box/, 'Brownie box (relatiegeschenken)'],
-    [/^asr verzuim/, 'ASR Verzuimverzekering'],
-    [/^declaratieformulier|^declaratie/, 'Declaratieformulieren medewerkers'],
-    [/^fietskoerier/, 'Fietskoerier'],
-    [/^zerozero|^zero zero/, 'Zerozero broodjes'],
-    [/^broodjes zero/, 'Zerozero broodjes'],
-    [/^krua thai/, 'Krua Thai (partnerdiner)'],
-    [/^stichting opleiding/, 'Stichting Opleiding Advocaten'],
-    [/^stichting idfa/, 'Stichting IDFA'],
-    [/^proceskosten/, 'Proceskosten'],
-    [/^mooi boules/, 'Mooi Boules (borrel)'],
-    [/^hotel arena/, 'Hotel Arena (borrel)'],
-    [/^merch/, 'Merchandise (lustrum)'],
-    [/^legal mike|^legalmike/, 'Legal Mike'],
-    [/^doxflow/, 'Doxflow'],
-    [/^vurich/, 'Vurich gerechtsdeurwaarder'],
-    [/^ttwwoo/, 'TTWWOO'],
-    [/^milieuservice/, 'Milieuservice'],
-    [/^jonge balie/, 'Jonge Balie Amsterdam'],
-    [/^ndsm/, 'NDSM Apotheek'],
-    [/^bram willems/, 'Bram Willems Photography'],
-    [/^van loman/, 'Van Loman (doorbelast)'],
-    [/^van benthem/, 'Van Benthem & Keulen'],
-    [/^hj advocaten/, 'HJ Advocaten & Mediators'],
-    [/^stichting spuistraat/, 'Stichting Spuistraat 10'],
-    [/^coolblue/, 'Coolblue'],
-    [/^adobe/, 'Adobe'],
-    [/^athenaeum/, 'Athenaeum'],
-    [/^pci/, 'PCI (printer)'],
-    [/^de lage landen/, 'De Lage Landen Vendorlease'],
-    [/^marleenkookt/, 'Marleenkookt'],
-    [/^nectaro/, 'Nectaro (Lodewijk)'],
-    [/^buffet van odette/, 'Buffet van Odette'],
-    [/^ns reizigers|^ns /, 'NS'],
-    [/^mediationgenootschap/, 'Mediationgenootschap'],
-    [/^alo .*mediation|^partners in mediation/, 'ALO (Partners in Mediation)'],
-    [/^citius/, 'Citius Advocaten'],
-    [/^avocare/, 'Avocare'],
-    [/^pallas/, 'Pallas Advocaten'],
-    [/^youman fisher/, 'Youman Fisher'],
-    [/^academie voor de rechtspraak/, 'Academie voor de Rechtspraak'],
-    [/^amstelveld/, 'Amstelveld (borrel)'],
-    [/^merchado/, 'Merchado (lustrum)'],
-    [/^merchlab/, 'Merchlab (lustrum)'],
-    [/^dutch arbitration/, 'Dutch Arbitration Association'],
-    [/^ministerie van justitie/, 'Ministerie van Justitie (doorbelast)'],
-    [/^kosten buitenlandse/, 'Buitenlandse overboeking-kosten'],
-    [/^abonnement|^abo /, 'Diverse abonnementen'],
-    [/^fiets workx/, 'Fiets Workx (medewerker)'],
-    [/^cadeau|^boekenbon|^nijntje/, 'Cadeaus medewerkers/relaties'],
-  ]
-  for (const [re, label] of aliases) {
-    if (re.test(cleaned)) return label
-  }
-  return cleaned
-    .split(' ')
-    .slice(0, 2)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
 }
 
 export default function KostenPage() {
@@ -229,6 +111,23 @@ export default function KostenPage() {
       await fetchData()
     } catch {
       toast.error('Kon niet verwijderen')
+    }
+  }
+
+  const [normalizing, setNormalizing] = useState(false)
+  const normalizeImported = async () => {
+    if (!confirm('Alle geïmporteerde omschrijvingen herschrijven naar korte vendor-namen?')) return
+    setNormalizing(true)
+    try {
+      const res = await fetch('/api/monthly-costs/normalize', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error()
+      toast.success(`${data.updated} van ${data.scanned} omschrijvingen opgeschoond`)
+      await fetchData()
+    } catch {
+      toast.error('Normaliseren mislukt')
+    } finally {
+      setNormalizing(false)
     }
   }
 
@@ -356,14 +255,25 @@ export default function KostenPage() {
             <p className="text-sm text-white/40">Per maand bijhouden, onderaan inzicht in terugkerende kosten</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowImport(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
-          title="Bankafschrift in MT940-formaat uploaden (ABN AMRO → Mutaties → Downloaden)"
-        >
-          <Icons.upload size={14} />
-          Importeer MT940
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={normalizeImported}
+            disabled={normalizing}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 text-gray-300 text-sm font-medium border border-white/10 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40"
+            title="Geïmporteerde bank-omschrijvingen omzetten naar korte vendor-namen"
+          >
+            <Icons.sparkles size={14} />
+            {normalizing ? 'Bezig…' : 'Maak omschrijvingen netter'}
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
+            title="Bankafschrift in MT940-formaat uploaden (ABN AMRO → Mutaties → Downloaden)"
+          >
+            <Icons.upload size={14} />
+            Importeer MT940
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -501,14 +411,14 @@ export default function KostenPage() {
                           <span className="text-sm font-medium text-workx-lime/90 tabular-nums">{formatEUR(c.amount)}</span>
                           <button
                             onClick={startEdit}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-workx-lime hover:bg-workx-lime/10 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Bewerken"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-workx-lime hover:bg-workx-lime/10 transition-colors"
+                            title="Bewerk naam & bedrag"
                           >
                             <Icons.edit size={14} />
                           </button>
                           <button
                             onClick={() => deleteCost(c.id)}
-                            className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                             title="Verwijderen"
                           >
                             <Icons.trash size={14} />
