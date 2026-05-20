@@ -459,6 +459,36 @@ export async function GET() {
       console.warn('TeamAnnouncement query skipped:', (e as Error)?.message)
     }
 
+    // 9. Openstaande debiteuren — herinnering om aan te schrijven
+    // Verschijnt zolang er facturen open staan waar 14+ dagen niets mee is
+    // gedaan (of nog nooit aangeschreven). Sluit zichzelf af zodra alle
+    // due-facturen op 'Aangeschreven' zijn gezet.
+    try {
+      const dueInvoices = await prisma.openInvoice.findMany({
+        where: { primaryUserId: userId },
+        select: { id: true, reminderSentAt: true, totalIncl: true },
+      })
+      const reminderWindowMs = 14 * 24 * 60 * 60 * 1000
+      const due = dueInvoices.filter(i =>
+        !i.reminderSentAt || (now.getTime() - new Date(i.reminderSentAt).getTime()) >= reminderWindowMs
+      )
+      if (due.length > 0) {
+        const totalDue = due.reduce((s, i) => s + i.totalIncl, 0)
+        const totalLabel = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(totalDue)
+        notifications.push({
+          id: 'debiteuren-reminder',
+          type: 'debiteuren',
+          title: `${due.length} debiteur${due.length === 1 ? '' : 'en'} aanschrijven`,
+          message: `Totaal ${totalLabel} · al 14+ dagen geen herinnering verstuurd`,
+          createdAt: now,
+          read: false,
+          href: '/dashboard/debiteuren',
+        })
+      }
+    } catch {
+      // silent: tabel kan nog niet bestaan bij allereerste deploy
+    }
+
     // Sort by createdAt (newest first)
     notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 

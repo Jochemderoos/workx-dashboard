@@ -67,19 +67,29 @@ export default function OpenInvoicesWidget() {
 
   const totalDue = dueInvoices.reduce((s, i) => s + i.totalIncl, 0)
 
+  const alarmMode = dueInvoices.length > 0
+
   return (
-    <div className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent p-5">
+    <div className={`rounded-2xl border p-5 ${
+      alarmMode
+        ? 'border-orange-500/40 bg-gradient-to-br from-orange-500/15 via-orange-500/8 to-transparent shadow-lg shadow-orange-500/10'
+        : 'border-green-500/20 bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent'
+    }`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-orange-500/20 flex items-center justify-center">
-            <Icons.alertTriangle size={14} className="text-orange-400" />
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+            alarmMode ? 'bg-orange-500/25 animate-pulse' : 'bg-green-500/20'
+          }`}>
+            <Icons.alertTriangle size={14} className={alarmMode ? 'text-orange-400' : 'text-green-400'} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Aan te schrijven debiteuren</h3>
+            <h3 className="text-sm font-semibold text-white">
+              {alarmMode ? '🔔 Aan te schrijven debiteuren' : 'Debiteuren bijgewerkt'}
+            </h3>
             <p className="text-[10px] text-gray-500">
-              {dueInvoices.length === 0
-                ? 'Alles is recent aangeschreven — niets te doen'
-                : `${dueInvoices.length} factu(u)r(en), totaal ${formatEUR(totalDue)}`}
+              {alarmMode
+                ? `${dueInvoices.length} factu(u)r(en), totaal ${formatEUR(totalDue)} — 14+ dagen niets gedaan`
+                : 'Alles recent aangeschreven — geen actie nodig'}
             </p>
           </div>
         </div>
