@@ -372,6 +372,44 @@ export default function DebiteurenPage() {
                     </div>
                   </div>
 
+                  {/* Uitklapbare uitsplitsing per advocaat — voor afstemming met collega's */}
+                  {inv.lines.length > 1 && (
+                    <details className="border-t border-white/5 group">
+                      <summary className="px-4 py-2 text-[11px] text-gray-500 cursor-pointer hover:text-white transition-colors select-none flex items-center gap-1">
+                        <span className="group-open:rotate-90 transition-transform inline-block">›</span>
+                        Wie heeft op deze factuur gewerkt? ({inv.lines.length} advocaten)
+                      </summary>
+                      <div className="px-4 pb-3">
+                        <table className="w-full text-xs">
+                          <tbody>
+                            {inv.lines.map(l => {
+                              const isPrimary = l.userId && l.userId === inv.primaryUserId
+                              return (
+                                <tr key={l.id} className={`border-t border-white/5 ${isPrimary ? 'bg-workx-lime/5' : ''}`}>
+                                  <td className="py-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      {l.user && getPhotoUrl(l.user.name) ? (
+                                        <img src={getPhotoUrl(l.user.name)!} alt={l.user.name} className="w-4 h-4 rounded object-cover" />
+                                      ) : (
+                                        <div className="w-4 h-4 rounded bg-white/10" />
+                                      )}
+                                      <span className={isPrimary ? 'text-workx-lime font-medium' : 'text-white/80'}>
+                                        {l.user?.name || l.attorneyName}
+                                      </span>
+                                      {isPrimary && <span className="text-[9px] text-workx-lime/70 uppercase">primair</span>}
+                                    </div>
+                                  </td>
+                                  <td className="py-1.5 text-right text-gray-400 tabular-nums">{l.hours.toFixed(1)} u</td>
+                                  <td className="py-1.5 text-right text-gray-500 tabular-nums">×{formatEUR(l.hourlyRate)}</td>
+                                  <td className="py-1.5 text-right text-workx-lime/80 tabular-nums">{formatEUR(l.amount)}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  )}
                 </div>
               )
             })}
