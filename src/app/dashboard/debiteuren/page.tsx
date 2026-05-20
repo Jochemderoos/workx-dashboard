@@ -155,9 +155,25 @@ export default function DebiteurenPage() {
     setImporting(true)
     setImportResult(null)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/open-invoices/import', { method: 'POST', body: fd })
+      // Client-side PDF text-extractie via pdfjs-dist (Vercel serverless
+      // ondersteunt geen pdf-parse betrouwbaar).
+      const pdfjsLib = await import('pdfjs-dist')
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+      const buf = await file.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise
+      let text = ''
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const content = await page.getTextContent()
+        text += content.items.map(it => ('str' in it ? it.str : '')).join('\n') + '\n'
+      }
+      pdf.destroy()
+
+      const res = await fetch('/api/open-invoices/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
       const data = await res.json()
       if (!res.ok) {
         toast.error(data.error || 'Import mislukt')
@@ -166,8 +182,9 @@ export default function DebiteurenPage() {
       setImportResult(data)
       await fetchData()
       toast.success(`${data.upserted} facturen bijgewerkt${data.removed > 0 ? `, ${data.removed} betaald (weg)` : ''}`)
-    } catch {
-      toast.error('Import mislukt')
+    } catch (err) {
+      console.error('Import error:', err)
+      toast.error('Import mislukt — kon PDF niet uitlezen')
     } finally {
       setImporting(false)
     }

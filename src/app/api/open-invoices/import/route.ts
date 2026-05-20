@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseDebiteurenPDF, matchAttorney } from '@/lib/parse-debiteuren-pdf'
-import { PDFParse } from 'pdf-parse'
 
 async function requireManager() {
   const session = await getServerSession(authOptions)
@@ -15,35 +14,32 @@ async function requireManager() {
   return { session }
 }
 
-// POST - upload BaseNet PDF → parse + synchroniseer database
-// Volledige replace: facturen die niet in nieuwe PDF zitten worden verwijderd
-// (presumed betaald). reminderSentAt wordt behouden voor bestaande facturen.
+// POST - ontvangt tekst die client-side uit de PDF is gehaald (via pdfjs)
+// en synchroniseert de OpenInvoice-tabel met de PDF-inhoud.
+// Body: { text: string }
+// Volledige replace: facturen die niet in de PDF zitten worden verwijderd
+// (presumed betaald). reminderSentAt blijft behouden voor bestaande facturen.
 export async function POST(req: NextRequest) {
   const guard = await requireManager()
   if (guard.error) return guard.error
 
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File | null
-    if (!file) {
-      return NextResponse.json({ error: 'Geen bestand ontvangen' }, { status: 400 })
+    const body = await req.json()
+    const text: string = typeof body?.text === 'string' ? body.text : ''
+    if (!text || text.length < 100) {
+      return NextResponse.json({ error: 'Geen of te weinig tekst ontvangen' }, { status: 400 })
     }
-    const ab = await file.arrayBuffer()
-    const parser = new PDFParse({ data: new Uint8Array(ab) })
-    const pdfData = await parser.getText()
-    const parsed = parseDebiteurenPDF(pdfData.text)
 
+    const parsed = parseDebiteurenPDF(text)
     if (parsed.length === 0) {
       return NextResponse.json({ error: 'Geen facturen gevonden in PDF (verkeerd rapport?).' }, { status: 400 })
     }
 
-    // Match advocaten op user-id
     const users = await prisma.user.findMany({
       where: { isActive: true },
       select: { id: true, name: true },
     })
 
-    // Bestaande facturen ophalen (om reminderSentAt te bewaren)
     const existing = await prisma.openInvoice.findMany({
       select: { invoiceNumber: true, reminderSentAt: true },
     })
@@ -55,13 +51,10 @@ export async function POST(req: NextRequest) {
 
     for (const inv of parsed) {
       newInvoiceNumbers.add(inv.invoiceNumber)
-
-      // Lines: match users + bepaal primary
       const linesData = inv.lines.map(l => {
         const user = matchAttorney(l.attorneyName, users)
         return { ...l, userId: user?.id || null }
       })
-      // Primary = advocaat met meeste uren (met matched userId)
       const matched = linesData.filter(l => l.userId)
       const primary = matched.length > 0
         ? matched.reduce((a, b) => (a.hours >= b.hours ? a : b))
@@ -69,7 +62,6 @@ export async function POST(req: NextRequest) {
 
       const previousReminder = existingMap.get(inv.invoiceNumber) || null
 
-      // Upsert: bestaande factuur updaten, anders nieuw
       await prisma.openInvoice.upsert({
         where: { invoiceNumber: inv.invoiceNumber },
         update: {
@@ -119,7 +111,6 @@ export async function POST(req: NextRequest) {
       upserted++
     }
 
-    // Facturen die niet meer in PDF zitten = waarschijnlijk betaald → verwijderen
     const toRemove = await prisma.openInvoice.findMany({
       where: { invoiceNumber: { notIn: Array.from(newInvoiceNumbers) } },
       select: { id: true },
@@ -139,7 +130,7 @@ export async function POST(req: NextRequest) {
       )),
     })
   } catch (error) {
-    console.error('Error importing open invoices PDF:', error)
+    console.error('Error importing open invoices:', error)
     return NextResponse.json({ error: 'Kon PDF niet verwerken' }, { status: 500 })
   }
 }
