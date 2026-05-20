@@ -67,6 +67,7 @@ export default function EigenTakenPage() {
   const [newTitle, setNewTitle] = useState('')
   const [newDueDate, setNewDueDate] = useState<Date | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [filterDateKey, setFilterDateKey] = useState<string | null>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
   const completingRef = useRef<Set<string>>(new Set())
@@ -161,12 +162,44 @@ export default function EigenTakenPage() {
     const g: Record<BucketKey, Task[]> = {
       overdue: [], today: [], tomorrow: [], upcoming: [], undated: [],
     }
-    for (const t of tasks) g[bucketOf(t)].push(t)
+    const source = filterDateKey
+      ? tasks.filter(t => {
+          if (!t.dueDate) return false
+          const d = startOfDay(new Date(t.dueDate))
+          return d.toISOString().slice(0, 10) === filterDateKey
+        })
+      : tasks
+    for (const t of source) g[bucketOf(t)].push(t)
     for (const k of Object.keys(g) as BucketKey[]) {
       g[k].sort((a, b) => a.sortOrder - b.sortOrder)
     }
     return g
-  }, [tasks])
+  }, [tasks, filterDateKey])
+
+  // Week-overzicht: huidige week (ma t/m zo) met taken per dag
+  const weekDays = useMemo(() => {
+    const today = startOfDay(new Date())
+    const dayIdx = today.getDay() // 0=zondag, 1=maandag…
+    const offset = dayIdx === 0 ? -6 : 1 - dayIdx
+    const monday = new Date(today); monday.setDate(monday.getDate() + offset)
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday); d.setDate(d.getDate() + i); return d
+    })
+  }, [])
+
+  const tasksByDayKey = useMemo(() => {
+    const map: Record<string, Task[]> = {}
+    for (const d of weekDays) map[d.toISOString().slice(0, 10)] = []
+    for (const t of tasks) {
+      if (!t.dueDate) continue
+      const key = startOfDay(new Date(t.dueDate)).toISOString().slice(0, 10)
+      if (map[key]) map[key].push(t)
+    }
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => a.sortOrder - b.sortOrder)
+    }
+    return map
+  }, [tasks, weekDays])
 
   // Drag handlers (binnen dezelfde bucket)
   const handleDragOver = (e: React.DragEvent, taskId: string) => {
@@ -315,6 +348,68 @@ export default function EigenTakenPage() {
           <p className="text-sm text-gray-400">Nog geen taken. Voeg er hierboven een toe.</p>
         </div>
       ) : (
+        <>
+        {/* Week-overzicht */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Deze week</h2>
+            {filterDateKey && (
+              <button
+                onClick={() => setFilterDateKey(null)}
+                className="text-[10px] text-workx-lime hover:underline flex items-center gap-1"
+              >
+                <Icons.x size={10} /> Filter weghalen
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-7 gap-1.5 overflow-x-auto">
+            {weekDays.map(d => {
+              const key = d.toISOString().slice(0, 10)
+              const dayTasks = tasksByDayKey[key]
+              const today = startOfDay(new Date())
+              const isToday = d.getTime() === today.getTime()
+              const isPast = d.getTime() < today.getTime()
+              const isFiltered = filterDateKey === key
+              const dayName = d.toLocaleDateString('nl-NL', { weekday: 'short' }).replace('.', '')
+              return (
+                <button
+                  key={key}
+                  onClick={() => setFilterDateKey(isFiltered ? null : key)}
+                  className={`text-left rounded-xl p-2 border min-h-[100px] transition-all min-w-0 ${
+                    isFiltered
+                      ? 'bg-workx-lime/15 border-workx-lime/50 ring-1 ring-workx-lime/40'
+                      : isToday
+                        ? 'bg-workx-lime/5 border-workx-lime/30 hover:bg-workx-lime/10'
+                        : isPast
+                          ? 'bg-white/[0.01] border-white/5 hover:bg-white/[0.03]'
+                          : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.05]'
+                  }`}
+                  title={d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                >
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className={`text-[10px] uppercase tracking-wider ${isToday ? 'text-workx-lime' : 'text-gray-500'}`}>{dayName}</span>
+                    <span className={`text-sm font-bold ${isToday ? 'text-workx-lime' : isPast ? 'text-gray-600' : 'text-white'}`}>{d.getDate()}</span>
+                  </div>
+                  {dayTasks.length === 0 ? (
+                    <p className="text-[10px] text-gray-600 italic">—</p>
+                  ) : (
+                    <div className="space-y-0.5">
+                      {dayTasks.slice(0, 3).map(t => (
+                        <p key={t.id} className={`text-[10px] truncate ${isPast ? 'text-gray-500 line-through' : 'text-white/70'}`}>
+                          {t.title}
+                        </p>
+                      ))}
+                      {dayTasks.length > 3 && (
+                        <p className="text-[10px] text-gray-500">+{dayTasks.length - 3} meer</p>
+                      )}
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         <div className="space-y-5">
           {BUCKETS.map(b => {
             const items = grouped[b.key]
@@ -455,6 +550,7 @@ export default function EigenTakenPage() {
             )
           })}
         </div>
+        </>
       )}
     </div>
   )
