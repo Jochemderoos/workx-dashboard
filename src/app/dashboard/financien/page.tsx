@@ -935,49 +935,57 @@ export default function FinancienPage() {
       {/* Overzicht Tab */}
       {activeTab === 'overzicht' && (
         <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {[
+          {/* KPI Cards — focus op huidig jaar, totale kosten incl. dagelijkse kosten uit Kosten-pagina */}
+          {(() => {
+            const totalKostenPagina = monthlyCosts2026.reduce((s, v) => s + v, 0)
+            const kostenCur = calculations.totals.totaleKosten[years[2]] + totalKostenPagina
+            const saldoCur = calculations.totals.omzet[years[2]] - kostenCur
+            const kpis = [
               {
-                label: `Omzet ${years[1]}`,
-                value: formatCurrency(calculations.totals.omzet[years[1]]),
-                diff: calculations.totals.omzet[years[1]] - calculations.totals.omzet[years[0]],
+                label: `Omzet ${years[2]}`,
+                value: formatCurrency(calculations.totals.omzet[years[2]]),
+                diff: calculations.totals.omzet[years[2]] - calculations.totals.omzet[years[1]],
                 positive: true
               },
               {
-                label: `Totale Kosten ${years[1]}`,
-                value: formatCurrency(calculations.totals.totaleKosten[years[1]]),
-                diff: calculations.totals.totaleKosten[years[1]] - calculations.totals.totaleKosten[years[0]],
+                label: `Totale Kosten ${years[2]}`,
+                value: formatCurrency(kostenCur),
+                diff: kostenCur - calculations.totals.totaleKosten[years[1]],
                 positive: false
               },
               {
-                label: `Saldo ${years[1]}`,
-                value: formatCurrency(calculations.saldoTotals[years[1]]),
-                diff: calculations.saldoTotals[years[1]] - calculations.saldoTotals[years[0]],
+                label: `Saldo ${years[2]}`,
+                value: formatCurrency(saldoCur),
+                diff: saldoCur - calculations.saldoTotals[years[1]],
                 positive: true
               },
               {
-                label: `Uren ${years[1]}`,
-                value: formatNumber(calculations.totals.uren[years[1]]),
-                diff: calculations.totals.uren[years[1]] - calculations.totals.uren[years[0]],
+                label: `Uren ${years[2]}`,
+                value: formatNumber(calculations.totals.uren[years[2]]),
+                diff: calculations.totals.uren[years[2]] - calculations.totals.uren[years[1]],
                 positive: true
               }
-            ].map((kpi, i) => (
-              <div key={i} className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
-                <p className="text-gray-400 text-xs sm:text-sm truncate">{kpi.label}</p>
-                <p className="text-lg sm:text-2xl font-semibold text-white mt-1 truncate">{kpi.value}</p>
-                <div className={`flex items-center gap-1 mt-1 sm:mt-2 text-xs sm:text-sm ${
-                  (kpi.positive && kpi.diff > 0) || (!kpi.positive && kpi.diff < 0)
-                    ? 'text-green-400'
-                    : 'text-red-400'
-                }`}>
-                  {kpi.diff > 0 ? <Icons.trendingUp size={12} className="flex-shrink-0 sm:w-[14px] sm:h-[14px]" /> : <Icons.trendingDown size={12} className="flex-shrink-0 sm:w-[14px] sm:h-[14px]" />}
-                  <span className="truncate">{kpi.diff > 0 ? '+' : ''}{i === 3 ? formatNumber(kpi.diff) : formatCurrency(kpi.diff)}</span>
-                  <span className="text-white/30 hidden sm:inline">vs {years[0]}</span>
-                </div>
+            ]
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {kpis.map((kpi, i) => (
+                  <div key={i} className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
+                    <p className="text-gray-400 text-xs sm:text-sm truncate">{kpi.label}</p>
+                    <p className="text-lg sm:text-2xl font-semibold text-white mt-1 truncate">{kpi.value}</p>
+                    <div className={`flex items-center gap-1 mt-1 sm:mt-2 text-xs sm:text-sm ${
+                      (kpi.positive && kpi.diff > 0) || (!kpi.positive && kpi.diff < 0)
+                        ? 'text-green-400'
+                        : 'text-red-400'
+                    }`}>
+                      {kpi.diff > 0 ? <Icons.trendingUp size={12} className="flex-shrink-0 sm:w-[14px] sm:h-[14px]" /> : <Icons.trendingDown size={12} className="flex-shrink-0 sm:w-[14px] sm:h-[14px]" />}
+                      <span className="truncate">{kpi.diff > 0 ? '+' : ''}{i === 3 ? formatNumber(kpi.diff) : formatCurrency(kpi.diff)}</span>
+                      <span className="text-white/30 hidden sm:inline">vs {years[1]}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )
+          })()}
 
           {/* Area Chart - Omzet vs Kosten */}
           {(() => {
