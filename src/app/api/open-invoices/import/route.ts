@@ -3,9 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseDebiteurenPDF, matchAttorney } from '@/lib/parse-debiteuren-pdf'
-
-// PDF-parsing via pdf-parse (CJS package)
-const pdfParse = require('pdf-parse')
+import { PDFParse } from 'pdf-parse'
 
 async function requireManager() {
   const session = await getServerSession(authOptions)
@@ -30,8 +28,9 @@ export async function POST(req: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: 'Geen bestand ontvangen' }, { status: 400 })
     }
-    const buf = Buffer.from(await file.arrayBuffer())
-    const pdfData: { text: string; numpages: number } = await pdfParse(buf)
+    const ab = await file.arrayBuffer()
+    const parser = new PDFParse({ data: new Uint8Array(ab) })
+    const pdfData = await parser.getText()
     const parsed = parseDebiteurenPDF(pdfData.text)
 
     if (parsed.length === 0) {
