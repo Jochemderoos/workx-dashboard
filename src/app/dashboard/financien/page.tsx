@@ -1039,11 +1039,13 @@ export default function FinancienPage() {
             const currentYrData = getDataForYear(years[2])
             const currentOmzet = currentYrData.omzet
             const currentKosten = currentYrData.werkgeverslasten.map((v, i) => v + (currentYrData.kostenExtern[i] || 0))
+            // Kosten incl. dagelijkse kosten uit Kosten-pagina (alleen 2026)
+            const currentKostenIncl = currentKosten.map((v, i) => v + (monthlyCosts2026[i] || 0))
 
-            // Find last month with actual data for current year (non-zero omzet or kosten)
+            // Find last month with actual data for current year (non-zero omzet of kosten of dagelijkse kosten)
             let lastDataMonth = -1
             for (let i = 11; i >= 0; i--) {
-              if (currentOmzet[i] !== 0 || currentKosten[i] !== 0) {
+              if (currentOmzet[i] !== 0 || currentKosten[i] !== 0 || (monthlyCosts2026[i] || 0) !== 0) {
                 lastDataMonth = i
                 break
               }
@@ -1064,7 +1066,8 @@ export default function FinancienPage() {
               ...prev1Omzet, ...prev1Kosten,
               ...prev2Omzet, ...prev2Kosten,
               ...currentOmzet.slice(0, monthsToShow),
-              ...currentKosten.slice(0, monthsToShow)
+              ...currentKosten.slice(0, monthsToShow),
+              ...currentKostenIncl.slice(0, monthsToShow)
             ].filter(v => v !== 0)
             const yMin = Math.min(0, ...allVals) * 1.1
             const yMax = Math.max(...allVals) * 1.15
@@ -1103,6 +1106,8 @@ export default function FinancienPage() {
 
             const currentOmzetPts = currentOmzet.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
             const currentKostenPts = currentKosten.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
+            const currentKostenInclPts = currentKostenIncl.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
+            const hasKostenIncl = monthlyCosts2026.slice(0, monthsToShow).some(v => v !== 0)
 
             const prev1OmzetPts = prev1Omzet.map((v, i) => ({ x: getX(i), y: getY(v) }))
             const prev1KostenPts = prev1Kosten.map((v, i) => ({ x: getX(i), y: getY(v) }))
@@ -1165,6 +1170,19 @@ export default function FinancienPage() {
                         <path d={areaPath(currentKostenPts)} fill="url(#kostenGradient)" />
                         <path d={smoothPath(currentKostenPts)} fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
+                        {/* Kosten incl. dagelijkse kosten — alleen lijn, geen area-fill */}
+                        {hasKostenIncl && (
+                          <>
+                            <path d={smoothPath(currentKostenInclPts)} fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                            {currentKostenInclPts.map((pt, i) => (
+                              <g key={`ki-${i}`}>
+                                <circle cx={pt.x} cy={pt.y} r="5" fill="#ef4444" opacity="0.2" />
+                                <circle cx={pt.x} cy={pt.y} r="3" fill="#ef4444" />
+                              </g>
+                            ))}
+                          </>
+                        )}
+
                         {/* Data points for current year */}
                         {currentOmzetPts.map((pt, i) => (
                           <g key={`o-${i}`}>
@@ -1200,6 +1218,12 @@ export default function FinancienPage() {
                     <div className="w-4 h-3 rounded-sm bg-orange-500/60" />
                     <span className="text-xs text-white/70">Kosten {years[2]}</span>
                   </div>
+                  {hasKostenIncl && (
+                    <div className="flex items-center gap-2" title="Werkgeverslasten + Kosten Extern + dagelijkse kosten uit Kosten-pagina">
+                      <div className="w-4 h-0.5 bg-red-500" />
+                      <span className="text-xs text-red-300/80">Kosten incl. dagelijks {years[2]}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-0.5 bg-green-500/40" style={{ borderTop: '2px dashed rgba(34,197,94,0.4)' }} />
                     <span className="text-xs text-white/40">Omzet {years[1]}</span>
