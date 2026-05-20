@@ -935,36 +935,50 @@ export default function FinancienPage() {
       {/* Overzicht Tab */}
       {activeTab === 'overzicht' && (
         <div className="space-y-6">
-          {/* KPI Cards — focus op huidig jaar, totale kosten incl. dagelijkse kosten uit Kosten-pagina */}
+          {/* KPI Cards — focus op huidig jaar. Voor Totale Kosten en Saldo
+              tonen we twee diff-regels: incl. dagelijkse kosten (volledig
+              beeld, niet appels-met-appels want 2025 mist die post) en
+              excl. (gelijke basis voor jaar-op-jaar vergelijk). */}
           {(() => {
             const totalKostenPagina = monthlyCosts2026.reduce((s, v) => s + v, 0)
-            const kostenCur = calculations.totals.totaleKosten[years[2]] + totalKostenPagina
-            const saldoCur = calculations.totals.omzet[years[2]] - kostenCur
-            const kpis = [
+            const kostenIncl = calculations.totals.totaleKosten[years[2]] + totalKostenPagina
+            const kostenExcl = calculations.totals.totaleKosten[years[2]]
+            const saldoIncl = calculations.totals.omzet[years[2]] - kostenIncl
+            const saldoExcl = calculations.totals.omzet[years[2]] - kostenExcl
+            const prevKosten = calculations.totals.totaleKosten[years[1]]
+            const prevSaldo = calculations.saldoTotals[years[1]]
+            type Diff = { amount: number; label: string; positive: boolean; isNumber?: boolean }
+            const kpis: Array<{ label: string; value: string; diffs: Diff[] }> = [
               {
                 label: `Omzet ${years[2]}`,
                 value: formatCurrency(calculations.totals.omzet[years[2]]),
-                diff: calculations.totals.omzet[years[2]] - calculations.totals.omzet[years[1]],
-                positive: true
+                diffs: [
+                  { amount: calculations.totals.omzet[years[2]] - calculations.totals.omzet[years[1]], label: `vs ${years[1]}`, positive: true },
+                ],
               },
               {
                 label: `Totale Kosten ${years[2]}`,
-                value: formatCurrency(kostenCur),
-                diff: kostenCur - calculations.totals.totaleKosten[years[1]],
-                positive: false
+                value: formatCurrency(kostenIncl),
+                diffs: [
+                  { amount: kostenIncl - prevKosten, label: 'incl. dagelijkse kosten', positive: false },
+                  { amount: kostenExcl - prevKosten, label: 'excl., gelijke basis', positive: false },
+                ],
               },
               {
                 label: `Saldo ${years[2]}`,
-                value: formatCurrency(saldoCur),
-                diff: saldoCur - calculations.saldoTotals[years[1]],
-                positive: true
+                value: formatCurrency(saldoIncl),
+                diffs: [
+                  { amount: saldoIncl - prevSaldo, label: 'incl. dagelijkse kosten', positive: true },
+                  { amount: saldoExcl - prevSaldo, label: 'excl., gelijke basis', positive: true },
+                ],
               },
               {
                 label: `Uren ${years[2]}`,
                 value: formatNumber(calculations.totals.uren[years[2]]),
-                diff: calculations.totals.uren[years[2]] - calculations.totals.uren[years[1]],
-                positive: true
-              }
+                diffs: [
+                  { amount: calculations.totals.uren[years[2]] - calculations.totals.uren[years[1]], label: `vs ${years[1]}`, positive: true, isNumber: true },
+                ],
+              },
             ]
             return (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -972,14 +986,19 @@ export default function FinancienPage() {
                   <div key={i} className="bg-workx-dark/40 rounded-2xl p-3 sm:p-6 border border-white/5">
                     <p className="text-gray-400 text-xs sm:text-sm truncate">{kpi.label}</p>
                     <p className="text-lg sm:text-2xl font-semibold text-white mt-1 truncate">{kpi.value}</p>
-                    <div className={`flex items-center gap-1 mt-1 sm:mt-2 text-xs sm:text-sm ${
-                      (kpi.positive && kpi.diff > 0) || (!kpi.positive && kpi.diff < 0)
-                        ? 'text-green-400'
-                        : 'text-red-400'
-                    }`}>
-                      {kpi.diff > 0 ? <Icons.trendingUp size={12} className="flex-shrink-0 sm:w-[14px] sm:h-[14px]" /> : <Icons.trendingDown size={12} className="flex-shrink-0 sm:w-[14px] sm:h-[14px]" />}
-                      <span className="truncate">{kpi.diff > 0 ? '+' : ''}{i === 3 ? formatNumber(kpi.diff) : formatCurrency(kpi.diff)}</span>
-                      <span className="text-white/30 hidden sm:inline">vs {years[1]}</span>
+                    <div className="mt-1 sm:mt-2 space-y-0.5">
+                      {kpi.diffs.map((d, j) => {
+                        const good = (d.positive && d.amount > 0) || (!d.positive && d.amount < 0)
+                        return (
+                          <div key={j} className={`flex items-center gap-1 text-[11px] sm:text-xs ${good ? 'text-green-400' : 'text-red-400'}`}>
+                            {d.amount > 0
+                              ? <Icons.trendingUp size={11} className="flex-shrink-0" />
+                              : <Icons.trendingDown size={11} className="flex-shrink-0" />}
+                            <span className="tabular-nums">{d.amount > 0 ? '+' : ''}{d.isNumber ? formatNumber(d.amount) : formatCurrency(d.amount)}</span>
+                            <span className="text-white/40 truncate">{d.label}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 ))}
