@@ -16,7 +16,7 @@ for (const t of txs) {
   e.n++; e.sum += t.amount; byCat.set(k, e)
 }
 console.log('Per category:')
-for (const [k, v] of byCat) console.log(`  ${k}: ${v.n}x EUR ${v.sum.toFixed(0)}`)
+Array.from(byCat.entries()).forEach(([k, v]) => console.log(`  ${k}: ${v.n}x EUR ${v.sum.toFixed(0)}`))
 
 // Mogelijke persoonsnamen: vendors met regelmatige betalingen (>=4)
 // die geen bekende organisatie zijn
