@@ -86,17 +86,45 @@ export default function DebiteurenPage() {
   const wordRef = useRef<HTMLInputElement>(null)
   const [pendingPdf, setPendingPdf] = useState<File | null>(null)
   const [pendingWord, setPendingWord] = useState<File | null>(null)
+  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; avatarUrl: string | null }>>([])
+  const [assignMenuId, setAssignMenuId] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch('/api/open-invoices')
-      if (res.ok) setInvoices(await res.json())
+      const [invRes, teamRes] = await Promise.all([
+        fetch('/api/open-invoices'),
+        fetch('/api/responsibilities'),
+      ])
+      if (invRes.ok) setInvoices(await invRes.json())
+      if (teamRes.ok) {
+        const data = await teamRes.json()
+        setTeamMembers(data.teamMembers || [])
+      }
     } catch {
       toast.error('Kon facturen niet laden')
     } finally {
       setLoading(false)
     }
   }, [])
+
+  const assignPrimary = async (invoiceId: string, userId: string | null) => {
+    setInvoices(prev => prev.map(i => {
+      if (i.id !== invoiceId) return i
+      const u = userId ? teamMembers.find(m => m.id === userId) : null
+      return { ...i, primaryUserId: userId, primaryUser: u ? { id: u.id, name: u.name, avatarUrl: u.avatarUrl } : null }
+    }))
+    setAssignMenuId(null)
+    try {
+      await fetch(`/api/open-invoices/${invoiceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryUserId: userId }),
+      })
+    } catch {
+      toast.error('Kon niet toewijzen')
+      fetchData()
+    }
+  }
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -557,19 +585,71 @@ export default function DebiteurenPage() {
                       {inv.clientName && <p className="text-xs text-gray-500 truncate">{inv.clientName}</p>}
                     </div>
 
-                    {/* Primary attorney */}
-                    {inv.primaryUser ? (
-                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime text-xs">
-                        {getPhotoUrl(inv.primaryUser.name) ? (
-                          <img src={getPhotoUrl(inv.primaryUser.name)!} alt={inv.primaryUser.name} className="w-5 h-5 rounded object-cover" />
+                    {/* Primary attorney — klikbaar om te wijzigen (managers) */}
+                    <div className="relative">
+                      <button
+                        onClick={() => isManager && setAssignMenuId(assignMenuId === inv.id ? null : inv.id)}
+                        disabled={!isManager}
+                        className={`flex items-center gap-2 px-2 py-1 rounded-lg text-xs transition-colors ${
+                          inv.primaryUser
+                            ? 'bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20'
+                            : 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border border-dashed border-orange-500/30'
+                        } ${!isManager && 'cursor-default'}`}
+                        title={isManager ? 'Klik om advocaat te wijzigen' : ''}
+                      >
+                        {inv.primaryUser ? (
+                          <>
+                            {getPhotoUrl(inv.primaryUser.name) ? (
+                              <img src={getPhotoUrl(inv.primaryUser.name)!} alt={inv.primaryUser.name} className="w-5 h-5 rounded object-cover" />
+                            ) : (
+                              <div className="w-5 h-5 rounded bg-workx-lime/20 flex items-center justify-center text-[10px] font-bold">{inv.primaryUser.name.charAt(0)}</div>
+                            )}
+                            <span>{inv.primaryUser.name.split(' ')[0]}</span>
+                          </>
                         ) : (
-                          <div className="w-5 h-5 rounded bg-workx-lime/20 flex items-center justify-center text-[10px] font-bold">{inv.primaryUser.name.charAt(0)}</div>
+                          <>
+                            <Icons.userPlus size={10} />
+                            <span>Niet gekoppeld</span>
+                          </>
                         )}
-                        <span>{inv.primaryUser.name.split(' ')[0]}</span>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] px-2 py-1 rounded-lg bg-orange-500/10 text-orange-400">Niet gekoppeld</span>
-                    )}
+                        {isManager && <Icons.chevronDown size={10} className="opacity-60" />}
+                      </button>
+                      {assignMenuId === inv.id && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setAssignMenuId(null)} />
+                          <div className="absolute right-0 mt-1 w-56 max-h-72 overflow-y-auto bg-workx-dark border border-white/10 rounded-xl shadow-2xl z-50 py-1">
+                            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-gray-500 border-b border-white/5">
+                              Wijs advocaat toe
+                            </div>
+                            {inv.primaryUserId && (
+                              <button
+                                onClick={() => assignPrimary(inv.id, null)}
+                                className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-white/5 flex items-center gap-2"
+                              >
+                                <Icons.x size={12} />
+                                Loskoppelen
+                              </button>
+                            )}
+                            {teamMembers.map(m => (
+                              <button
+                                key={m.id}
+                                onClick={() => assignPrimary(inv.id, m.id)}
+                                className={`w-full px-3 py-2 text-left text-xs hover:bg-white/5 flex items-center gap-2 ${
+                                  m.id === inv.primaryUserId ? 'bg-workx-lime/10 text-workx-lime' : 'text-white'
+                                }`}
+                              >
+                                {getPhotoUrl(m.name) ? (
+                                  <img src={getPhotoUrl(m.name)!} alt={m.name} className="w-5 h-5 rounded object-cover" />
+                                ) : (
+                                  <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[10px] font-bold">{m.name.charAt(0)}</div>
+                                )}
+                                <span className="flex-1">{m.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
 
                     <div className="text-right shrink-0">
                       <p className="text-base font-bold text-workx-lime tabular-nums">{formatEUR(inv.totalIncl)}</p>
