@@ -24,6 +24,8 @@ interface Invoice {
   projectCode: string | null
   projectName: string | null
   clientName: string | null
+  issueDate: string | null
+  dueDate: string | null
   totalExcl: number
   totalIncl: number
   totalBtw: number
@@ -45,10 +47,17 @@ function periodLabel(year: number, period: number) {
   return `${MONTHS[period] || '?'} ${year}`
 }
 
-// Dagen te laat = dagen sinds einde boekperiode minus 30 dagen
-// betalingstermijn. Negatief = factuur nog binnen termijn.
-function daysOverdue(year: number, period: number) {
-  const periodEnd = new Date(year, period, 0)
+// Dagen te laat — wanneer dueDate beschikbaar (uit BaseNet Word-export),
+// gebruik die exact. Anders fallback op einde boekperiode + 30 dagen.
+function daysOverdue(invoice: { dueDate: string | null; bookYear: number; bookPeriod: number }) {
+  if (invoice.dueDate) {
+    const due = new Date(invoice.dueDate)
+    due.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return Math.floor((today.getTime() - due.getTime()) / 86400000)
+  }
+  const periodEnd = new Date(invoice.bookYear, invoice.bookPeriod, 0)
   const diff = (Date.now() - periodEnd.getTime()) / 86400000 - 30
   return Math.floor(diff)
 }
@@ -72,8 +81,11 @@ export default function DebiteurenPage() {
   const [filter, setFilter] = useState<'all' | 'mine' | string>(currentUserId ? 'mine' : 'all')
   const [showImport, setShowImport] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<{ total: number; upserted: number; removed: number; unmatchedAttorneys: string[] } | null>(null)
+  const [importResult, setImportResult] = useState<{ total: number; upserted: number; removed: number; matchedDates?: number; unmatchedAttorneys: string[] } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const wordRef = useRef<HTMLInputElement>(null)
+  const [pendingPdf, setPendingPdf] = useState<File | null>(null)
+  const [pendingWord, setPendingWord] = useState<File | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -153,15 +165,13 @@ export default function DebiteurenPage() {
     }
   }
 
-  const handleImport = async (file: File) => {
+  const handleImport = async (pdfFile: File, wordFile?: File | null) => {
     setImporting(true)
     setImportResult(null)
     try {
-      // Client-side PDF text-extractie via pdfjs-dist (Vercel serverless
-      // ondersteunt geen pdf-parse betrouwbaar).
       const pdfjsLib = await import('pdfjs-dist')
       pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-      const buf = await file.arrayBuffer()
+      const buf = await pdfFile.arrayBuffer()
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise
       let text = ''
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -171,10 +181,20 @@ export default function DebiteurenPage() {
       }
       pdf.destroy()
 
+      // Optioneel: parse de Word met mammoth (client-side via dynamic import)
+      let wordText = ''
+      if (wordFile) {
+        // @ts-expect-error — mammoth.browser heeft geen .d.ts maar werkt prima
+        const mammoth = await import('mammoth/mammoth.browser')
+        const wbuf = await wordFile.arrayBuffer()
+        const out = await mammoth.extractRawText({ arrayBuffer: wbuf })
+        wordText = out.value
+      }
+
       const res = await fetch('/api/open-invoices/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, wordText }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -186,7 +206,7 @@ export default function DebiteurenPage() {
       toast.success(`${data.upserted} facturen bijgewerkt${data.removed > 0 ? `, ${data.removed} betaald (weg)` : ''}`)
     } catch (err) {
       console.error('Import error:', err)
-      toast.error('Import mislukt — kon PDF niet uitlezen')
+      toast.error('Import mislukt — kon bestand niet uitlezen')
     } finally {
       setImporting(false)
     }
@@ -232,29 +252,50 @@ export default function DebiteurenPage() {
                     </button>
                   </div>
                   <div className="p-4 space-y-3">
-                    <div className="bg-white/[0.02] border border-dashed border-white/15 rounded-xl p-4 text-center">
+                    {/* PDF input */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase tracking-wider text-gray-500">PDF — 'Overzicht openstaande debiteuren'</label>
                       <input
                         ref={fileRef}
                         type="file"
                         accept=".pdf,application/pdf"
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f) }}
+                        onChange={(e) => setPendingPdf(e.target.files?.[0] || null)}
                         disabled={importing}
-                        className="block mx-auto text-xs text-gray-400 file:mr-2 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-workx-lime file:text-workx-dark file:text-xs file:font-medium hover:file:bg-workx-lime/90 file:cursor-pointer"
+                        className="block w-full text-xs text-gray-400 file:mr-2 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-workx-lime/10 file:text-workx-lime file:text-xs file:font-medium hover:file:bg-workx-lime/20 file:cursor-pointer"
                       />
-                      {importing && (
-                        <div className="mt-2 flex items-center justify-center gap-2 text-xs text-gray-400">
-                          <div className="w-3 h-3 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
-                          Verwerken…
-                        </div>
-                      )}
                     </div>
+                    {/* Word input (optioneel — voor exacte data) */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase tracking-wider text-gray-500">
+                        Word — overzicht met data <span className="text-gray-600 normal-case">(optioneel, voor exacte vervaldatum)</span>
+                      </label>
+                      <input
+                        ref={wordRef}
+                        type="file"
+                        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={(e) => setPendingWord(e.target.files?.[0] || null)}
+                        disabled={importing}
+                        className="block w-full text-xs text-gray-400 file:mr-2 file:px-3 file:py-1 file:rounded-lg file:border-0 file:bg-white/10 file:text-gray-300 file:text-xs file:font-medium hover:file:bg-white/20 file:cursor-pointer"
+                      />
+                    </div>
+                    <button
+                      onClick={() => { if (pendingPdf) handleImport(pendingPdf, pendingWord) }}
+                      disabled={!pendingPdf || importing}
+                      className="w-full px-3 py-2 rounded-lg bg-workx-lime text-workx-dark text-xs font-medium hover:bg-workx-lime/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    >
+                      {importing && <div className="w-3 h-3 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />}
+                      {importing ? 'Verwerken…' : 'Importeren'}
+                    </button>
                     <p className="text-[10px] text-gray-500 leading-relaxed">
-                      Volledige sync: facturen die niet meer in de PDF staan worden weggehaald (presumed betaald). Reminder-status blijft behouden.
+                      Volledige sync: facturen die niet meer in de PDF staan worden weggehaald (presumed betaald). Reminder-status blijft behouden. Met Word erbij wordt de exacte vervaldatum gebruikt voor "dagen te laat".
                     </p>
                     {importResult && (
                       <div className="bg-workx-lime/10 border border-workx-lime/30 rounded-lg p-2 text-[11px]">
                         <p className="text-workx-lime font-medium">
                           {importResult.upserted} bijgewerkt · {importResult.removed} weggehaald
+                          {typeof importResult.matchedDates === 'number' && importResult.matchedDates > 0 && (
+                            <> · {importResult.matchedDates} exacte vervaldatums gekoppeld</>
+                          )}
                         </p>
                         {importResult.unmatchedAttorneys.length > 0 && (
                           <p className="text-orange-300 mt-1">
@@ -295,7 +336,7 @@ export default function DebiteurenPage() {
             const mine = invoices.filter(i => i.primaryUserId === currentUserId)
             if (mine.length === 0) return null
             // Sorteer oudste eerst
-            const sorted = [...mine].sort((a, b) => daysOverdue(b.bookYear, b.bookPeriod) - daysOverdue(a.bookYear, a.bookPeriod))
+            const sorted = [...mine].sort((a, b) => daysOverdue(b) - daysOverdue(a))
             // Leeftijds-buckets
             const buckets = [
               { key: 'binnen', label: 'Binnen termijn', max: 0, color: 'text-green-300', bg: 'bg-green-500/5 border-green-500/20' },
@@ -311,7 +352,7 @@ export default function DebiteurenPage() {
               return buckets[buckets.length - 1]
             }
             const totals = buckets.map(b => {
-              const items = sorted.filter(i => bucketOf(daysOverdue(i.bookYear, i.bookPeriod)).key === b.key)
+              const items = sorted.filter(i => bucketOf(daysOverdue(i)).key === b.key)
               return { ...b, count: items.length, sum: items.reduce((s, i) => s + i.totalIncl, 0) }
             })
             const totalMine = mine.reduce((s, i) => s + i.totalIncl, 0)
@@ -348,7 +389,7 @@ export default function DebiteurenPage() {
                 {/* Lijst — oudste eerst */}
                 <div className="space-y-1.5">
                   {sorted.map(inv => {
-                    const age = daysOverdue(inv.bookYear, inv.bookPeriod)
+                    const age = daysOverdue(inv)
                     const b = bucketOf(age)
                     const reminderDue = isReminderDue(inv.reminderSentAt)
                     const barPct = age > 0 ? Math.min(100, Math.round((age / 200) * 100)) : 0
@@ -478,7 +519,7 @@ export default function DebiteurenPage() {
           {/* Invoice list */}
           <div className="space-y-2">
             {filtered.map(inv => {
-              const age = daysOverdue(inv.bookYear, inv.bookPeriod)
+              const age = daysOverdue(inv)
               const reminderDue = isReminderDue(inv.reminderSentAt)
               return (
                 <div key={inv.id} className={`bg-white/[0.03] border rounded-2xl overflow-hidden transition-opacity ${

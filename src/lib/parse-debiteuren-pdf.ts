@@ -121,6 +121,61 @@ function parseBlock(block: string, invoiceNumber: string, year: number, period: 
 }
 
 /**
+ * Parse BaseNet 'Overzicht' Word-export tekst naar { factuurnr → datums }.
+ * Het Word bevat per factuur o.a.:
+ *   17620
+ *   Open bedrag: 123,42
+ *   ...
+ *   Verval datum: 03-04-2024
+ *   ...
+ *   Verzenddatum: 04-03-2024
+ */
+export function parseDebiteurenWord(text: string): Map<string, { issueDate: Date; dueDate: Date }> {
+  const result = new Map<string, { issueDate: Date; dueDate: Date }>()
+  const lines = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean)
+
+  let currentInv: string | null = null
+  let issueDate: Date | null = null
+  let dueDate: Date | null = null
+
+  const flush = () => {
+    if (currentInv && issueDate && dueDate) {
+      result.set(currentInv, { issueDate, dueDate })
+    }
+    currentInv = null
+    issueDate = null
+    dueDate = null
+  }
+
+  const parseDate = (s: string): Date | null => {
+    const m = s.match(/(\d{2})-(\d{2})-(\d{4})/)
+    if (!m) return null
+    const d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10))
+    if (isNaN(d.getTime())) return null
+    return d
+  }
+
+  for (const line of lines) {
+    // Factuurnummer = puur cijfers, 4-8 chars
+    if (/^\d{4,8}$/.test(line)) {
+      flush()
+      currentInv = line
+      continue
+    }
+    if (!currentInv) continue
+    if (/Verval\s*datum\s*:/i.test(line)) {
+      const d = parseDate(line)
+      if (d) dueDate = d
+    } else if (/Verzenddatum\s*:/i.test(line)) {
+      const d = parseDate(line)
+      if (d) issueDate = d
+    }
+  }
+  flush()
+  return result
+}
+
+/**
  * Match een ruwe advocaat-naam uit de PDF aan een User op naam.
  * Ondersteunt:
  *   - "mr. M. Ritmeester" (één initiaal)

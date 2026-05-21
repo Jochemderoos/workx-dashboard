@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { parseDebiteurenPDF, matchAttorney } from '@/lib/parse-debiteuren-pdf'
+import { parseDebiteurenPDF, parseDebiteurenWord, matchAttorney } from '@/lib/parse-debiteuren-pdf'
 
 async function requireManager() {
   const session = await getServerSession(authOptions)
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const text: string = typeof body?.text === 'string' ? body.text : ''
+    const wordText: string = typeof body?.wordText === 'string' ? body.wordText : ''
     if (!text || text.length < 100) {
       return NextResponse.json({ error: 'Geen of te weinig tekst ontvangen' }, { status: 400 })
     }
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest) {
     if (parsed.length === 0) {
       return NextResponse.json({ error: 'Geen facturen gevonden in PDF (verkeerd rapport?).' }, { status: 400 })
     }
+
+    // Optionele exacte datums uit Word-export
+    const dateMap = wordText ? parseDebiteurenWord(wordText) : new Map()
 
     const users = await prisma.user.findMany({
       where: { isActive: true },
@@ -61,6 +65,7 @@ export async function POST(req: NextRequest) {
       // er weer een herinnering uit moet. De 'Aangeschreven'-vink is dus
       // alleen geldig tot de volgende upload.
 
+      const dates = dateMap.get(inv.invoiceNumber)
       await prisma.openInvoice.upsert({
         where: { invoiceNumber: inv.invoiceNumber },
         update: {
@@ -69,6 +74,8 @@ export async function POST(req: NextRequest) {
           projectCode: inv.projectCode || null,
           projectName: inv.projectName || null,
           clientName: inv.clientName || null,
+          issueDate: dates?.issueDate || null,
+          dueDate: dates?.dueDate || null,
           totalExcl: inv.totalExcl,
           totalIncl: inv.totalIncl,
           totalBtw: inv.totalBtw,
@@ -92,6 +99,8 @@ export async function POST(req: NextRequest) {
           projectCode: inv.projectCode || null,
           projectName: inv.projectName || null,
           clientName: inv.clientName || null,
+          issueDate: dates?.issueDate || null,
+          dueDate: dates?.dueDate || null,
           totalExcl: inv.totalExcl,
           totalIncl: inv.totalIncl,
           totalBtw: inv.totalBtw,
@@ -124,6 +133,7 @@ export async function POST(req: NextRequest) {
       total: parsed.length,
       upserted,
       removed,
+      matchedDates: dateMap.size,
       unmatchedAttorneys: Array.from(new Set(
         parsed.flatMap(inv => inv.lines.map(l => l.attorneyName))
           .filter(name => !matchAttorney(name, users))

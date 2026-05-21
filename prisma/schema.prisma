@@ -1135,6 +1135,8 @@ model OpenInvoice {
   projectCode     String?
   projectName     String?
   clientName      String?
+  issueDate       DateTime? // Verzenddatum (uit BaseNet Word-export)
+  dueDate         DateTime? // Vervaldatum betalingstermijn
   totalExcl       Float    @default(0)
   totalIncl       Float    @default(0)
   totalBtw        Float    @default(0)
@@ -1148,6 +1150,7 @@ model OpenInvoice {
 
   @@index([primaryUserId])
   @@index([bookYear, bookPeriod])
+  @@index([dueDate])
 }
 
 // Regel binnen een openstaande factuur: per advocaat zijn uren/bedrag
