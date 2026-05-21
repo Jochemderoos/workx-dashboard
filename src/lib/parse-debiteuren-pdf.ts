@@ -120,39 +120,55 @@ function parseBlock(block: string, invoiceNumber: string, year: number, period: 
   return inv
 }
 
+export interface WordInvoiceInfo {
+  issueDate: Date
+  dueDate: Date
+  openAmount: number     // Open bedrag incl. BTW
+  clientName?: string
+}
+
 /**
- * Parse BaseNet 'Overzicht' Word-export tekst naar { factuurnr → datums }.
- * Het Word bevat per factuur o.a.:
- *   17620
- *   Open bedrag: 123,42
- *   ...
- *   Verval datum: 03-04-2024
- *   ...
- *   Verzenddatum: 04-03-2024
+ * Parse BaseNet 'Overzicht' Word-export tekst naar { factuurnr → volledige info }.
+ * Word is de master-bron: bevat ALLE openstaande facturen (ook discounts,
+ * doorbelastingen etc) — anders dan PDF die alleen facturen met uren toont.
  */
-export function parseDebiteurenWord(text: string): Map<string, { issueDate: Date; dueDate: Date }> {
-  const result = new Map<string, { issueDate: Date; dueDate: Date }>()
+export function parseDebiteurenWord(text: string): Map<string, WordInvoiceInfo> {
+  const result = new Map<string, WordInvoiceInfo>()
   const lines = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean)
 
   let currentInv: string | null = null
   let issueDate: Date | null = null
   let dueDate: Date | null = null
+  let openAmount: number | null = null
+  let clientName: string | null = null
+  let captureClient = false
 
   const flush = () => {
-    if (currentInv && issueDate && dueDate) {
-      result.set(currentInv, { issueDate, dueDate })
+    if (currentInv && issueDate && dueDate && openAmount !== null) {
+      const entry: WordInvoiceInfo = { issueDate, dueDate, openAmount }
+      if (clientName) entry.clientName = clientName
+      result.set(currentInv, entry)
     }
     currentInv = null
     issueDate = null
     dueDate = null
+    openAmount = null
+    clientName = null
+    captureClient = false
   }
 
   const parseDate = (s: string): Date | null => {
     const m = s.match(/(\d{2})-(\d{2})-(\d{4})/)
     if (!m) return null
     const d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10))
-    if (isNaN(d.getTime())) return null
-    return d
+    return isNaN(d.getTime()) ? null : d
+  }
+
+  const parseAmount = (s: string): number | null => {
+    const m = s.match(/(-?[\d.]+),(\d{2})/)
+    if (!m) return null
+    const v = parseFloat(m[1].replace(/\./g, '') + '.' + m[2])
+    return isNaN(v) ? null : v
   }
 
   for (const line of lines) {
@@ -163,12 +179,23 @@ export function parseDebiteurenWord(text: string): Map<string, { issueDate: Date
       continue
     }
     if (!currentInv) continue
-    if (/Verval\s*datum\s*:/i.test(line)) {
+
+    if (/^Open bedrag\s*:/i.test(line)) {
+      const v = parseAmount(line)
+      if (v !== null) openAmount = v
+    } else if (/Verval\s*datum\s*:/i.test(line)) {
       const d = parseDate(line)
       if (d) dueDate = d
     } else if (/Verzenddatum\s*:/i.test(line)) {
       const d = parseDate(line)
       if (d) issueDate = d
+      captureClient = true // volgende niet-systeemregel is de klantnaam
+    } else if (captureClient && !clientName) {
+      // Eerste regel na 'Verzenddatum:' is de klantnaam (geen header/email)
+      if (!/^(Email|Open bedrag|Originele bedrag|Dagen|Verval|Verzend|Factnr|Bedragen)/i.test(line)) {
+        clientName = line
+        captureClient = false
+      }
     }
   }
   flush()

@@ -32,12 +32,14 @@ export async function POST(req: NextRequest) {
     }
 
     const parsed = parseDebiteurenPDF(text)
-    if (parsed.length === 0) {
+    if (parsed.length === 0 && !wordText) {
       return NextResponse.json({ error: 'Geen facturen gevonden in PDF (verkeerd rapport?).' }, { status: 400 })
     }
 
-    // Optionele exacte datums uit Word-export
-    const dateMap = wordText ? parseDebiteurenWord(wordText) : new Map()
+    // Word = master-bron voor welke facturen openstaan, bedragen en datums.
+    // PDF = bron voor advocaat-uren-uitsplitsing per factuurnummer.
+    const wordMap = wordText ? parseDebiteurenWord(wordText) : new Map()
+    const pdfMap = new Map(parsed.map(p => [p.invoiceNumber, p]))
 
     const users = await prisma.user.findMany({
       where: { isActive: true },
@@ -48,37 +50,59 @@ export async function POST(req: NextRequest) {
     let removed = 0
     const newInvoiceNumbers = new Set<string>()
 
-    for (const inv of parsed) {
-      newInvoiceNumbers.add(inv.invoiceNumber)
-      const linesData = inv.lines.map(l => {
-        const user = matchAttorney(l.attorneyName, users)
-        return { ...l, userId: user?.id || null }
-      })
+    // Bepaal de master-set facturen: alle in Word + alle in PDF (Word usually
+    // is een superset). Voor de tweede uitzondering (alleen-PDF) blijven we
+    // backward-compatible — geen Word geupload? Dan is PDF de master.
+    const allInvoiceNumbers = new Set<string>([
+      ...Array.from(wordMap.keys()),
+      ...Array.from(pdfMap.keys()),
+    ])
+
+    for (const invoiceNumber of Array.from(allInvoiceNumbers)) {
+      newInvoiceNumbers.add(invoiceNumber)
+      const pdfData = pdfMap.get(invoiceNumber)
+      const wordData = wordMap.get(invoiceNumber)
+
+      // Lines uit PDF (alleen beschikbaar als factuur ook in PDF zat)
+      const linesData = pdfData
+        ? pdfData.lines.map(l => {
+            const user = matchAttorney(l.attorneyName, users)
+            return { ...l, userId: user?.id || null }
+          })
+        : []
       const matched = linesData.filter(l => l.userId)
       const primary = matched.length > 0
         ? matched.reduce((a, b) => (a.hours >= b.hours ? a : b))
         : null
 
-      // Bewust: bij elke nieuwe upload reset reminderSentAt naar null.
-      // Als de factuur nog steeds open staat na een nieuwe BaseNet-export,
-      // betekent dat dat-ie betaald-of-onbetaald-status onbekend is en
-      // er weer een herinnering uit moet. De 'Aangeschreven'-vink is dus
-      // alleen geldig tot de volgende upload.
+      // Bedrag: Word is leidend (= open bedrag na deelbetalingen).
+      // Voor records zonder Word: fallback op PDF totalIncl.
+      const totalIncl = wordData?.openAmount ?? pdfData?.totalIncl ?? 0
+      // Voor totalExcl/totalBtw: alleen uit PDF beschikbaar; anders berekenen
+      const totalBtw = pdfData?.totalBtw ?? +(totalIncl * 0.21 / 1.21).toFixed(2)
+      const totalExcl = pdfData?.totalExcl ?? +(totalIncl - totalBtw).toFixed(2)
 
-      const dates = dateMap.get(inv.invoiceNumber)
+      // bookYear/bookPeriod: PDF heeft Verkoopboek; anders uit Word-issueDate
+      const issueDate = wordData?.issueDate ?? null
+      const dueDate = wordData?.dueDate ?? null
+      const bookYear = pdfData?.bookYear ?? (issueDate?.getFullYear() ?? new Date().getFullYear())
+      const bookPeriod = pdfData?.bookPeriod ?? ((issueDate?.getMonth() ?? 0) + 1)
+
+      const clientName = pdfData?.clientName || wordData?.clientName || null
+
       await prisma.openInvoice.upsert({
-        where: { invoiceNumber: inv.invoiceNumber },
+        where: { invoiceNumber },
         update: {
-          bookYear: inv.bookYear,
-          bookPeriod: inv.bookPeriod,
-          projectCode: inv.projectCode || null,
-          projectName: inv.projectName || null,
-          clientName: inv.clientName || null,
-          issueDate: dates?.issueDate || null,
-          dueDate: dates?.dueDate || null,
-          totalExcl: inv.totalExcl,
-          totalIncl: inv.totalIncl,
-          totalBtw: inv.totalBtw,
+          bookYear,
+          bookPeriod,
+          projectCode: pdfData?.projectCode || null,
+          projectName: pdfData?.projectName || null,
+          clientName,
+          issueDate,
+          dueDate,
+          totalExcl,
+          totalIncl,
+          totalBtw,
           primaryUserId: primary?.userId || null,
           reminderSentAt: null,
           lines: {
@@ -93,17 +117,17 @@ export async function POST(req: NextRequest) {
           },
         },
         create: {
-          invoiceNumber: inv.invoiceNumber,
-          bookYear: inv.bookYear,
-          bookPeriod: inv.bookPeriod,
-          projectCode: inv.projectCode || null,
-          projectName: inv.projectName || null,
-          clientName: inv.clientName || null,
-          issueDate: dates?.issueDate || null,
-          dueDate: dates?.dueDate || null,
-          totalExcl: inv.totalExcl,
-          totalIncl: inv.totalIncl,
-          totalBtw: inv.totalBtw,
+          invoiceNumber,
+          bookYear,
+          bookPeriod,
+          projectCode: pdfData?.projectCode || null,
+          projectName: pdfData?.projectName || null,
+          clientName,
+          issueDate,
+          dueDate,
+          totalExcl,
+          totalIncl,
+          totalBtw,
           primaryUserId: primary?.userId || null,
           reminderSentAt: null,
           lines: {
@@ -130,10 +154,12 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      total: parsed.length,
+      total: allInvoiceNumbers.size,
+      pdfOnly: parsed.filter(p => !wordMap.has(p.invoiceNumber)).length,
+      wordOnly: Array.from(wordMap.keys()).filter(inv => !pdfMap.has(inv)).length,
       upserted,
       removed,
-      matchedDates: dateMap.size,
+      matchedDates: wordMap.size,
       unmatchedAttorneys: Array.from(new Set(
         parsed.flatMap(inv => inv.lines.map(l => l.attorneyName))
           .filter(name => !matchAttorney(name, users))
