@@ -40,11 +40,6 @@ export async function POST(req: NextRequest) {
       select: { id: true, name: true },
     })
 
-    const existing = await prisma.openInvoice.findMany({
-      select: { invoiceNumber: true, reminderSentAt: true },
-    })
-    const existingMap = new Map(existing.map(e => [e.invoiceNumber, e.reminderSentAt]))
-
     let upserted = 0
     let removed = 0
     const newInvoiceNumbers = new Set<string>()
@@ -60,7 +55,11 @@ export async function POST(req: NextRequest) {
         ? matched.reduce((a, b) => (a.hours >= b.hours ? a : b))
         : null
 
-      const previousReminder = existingMap.get(inv.invoiceNumber) || null
+      // Bewust: bij elke nieuwe upload reset reminderSentAt naar null.
+      // Als de factuur nog steeds open staat na een nieuwe BaseNet-export,
+      // betekent dat dat-ie betaald-of-onbetaald-status onbekend is en
+      // er weer een herinnering uit moet. De 'Aangeschreven'-vink is dus
+      // alleen geldig tot de volgende upload.
 
       await prisma.openInvoice.upsert({
         where: { invoiceNumber: inv.invoiceNumber },
@@ -74,6 +73,7 @@ export async function POST(req: NextRequest) {
           totalIncl: inv.totalIncl,
           totalBtw: inv.totalBtw,
           primaryUserId: primary?.userId || null,
+          reminderSentAt: null,
           lines: {
             deleteMany: {},
             create: linesData.map(l => ({
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
           totalIncl: inv.totalIncl,
           totalBtw: inv.totalBtw,
           primaryUserId: primary?.userId || null,
-          reminderSentAt: previousReminder,
+          reminderSentAt: null,
           lines: {
             create: linesData.map(l => ({
               attorneyName: l.attorneyName,
