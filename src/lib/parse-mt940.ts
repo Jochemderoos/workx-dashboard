@@ -10,7 +10,31 @@ export interface MT940Transaction {
   description: string // genormaliseerde vendornaam (zelfde stijl als handmatige posten)
   rawKey: string      // stabiele counterparty-fingerprint (voor leer-aliassen)
   externalRef: string // hash voor duplicaat-detectie
-  category?: 'UWV' | 'ASR' | 'ZZP' | 'WGL' // UWV/ASR = retours, ZZP = externe advocaten, WGL = pensioenpremie
+  category?: 'UWV' | 'ASR' | 'ZZP' | 'WGL' | 'MGMT' // UWV/ASR = retours, ZZP = externe advocaten, WGL = pensioenpremie, MGMT = management fee partners
+}
+
+// Skip transacties die geen 'bedrijfskost' zijn maar al elders in de
+// administratie zitten:
+//   - Belastingdienst (loonheffing zit in werkgeverslasten-invoer; VPB
+//     is apart)
+//   - Interne overboekingen tussen Workx-rekeningen
+// Management fee naar partner-holdings (Les Dents Du Midi / Meneer Nilsson /
+// Cavalieri / Jader) NIET skippen — dat is een echte kostenpost.
+function shouldSkipDebet(desc: string): boolean {
+  const lower = desc.toLowerCase()
+  if (/\bbelastingdienst\b/.test(lower)) return true
+  if (/\bworkx\s+advocaten\b/.test(lower)) return true
+  return false
+}
+
+// Specifieke management-fee holdings → krijgen een nette omschrijving.
+function managementFeeLabel(desc: string): string | null {
+  const lower = desc.toLowerCase()
+  if (/\bles\s+dents\s+du\s+midi\b/.test(lower)) return 'Management fee — Les Dents Du Midi'
+  if (/\bmeneer\s+nilsson\b/.test(lower)) return 'Management fee — Meneer Nilsson'
+  if (/\bcavalieri\b/.test(lower)) return 'Management fee — Cavalieri'
+  if (/\bjader\b/.test(lower)) return 'Management fee — Jader'
+  return null
 }
 
 // Detecteer in de omschrijving:
@@ -49,16 +73,23 @@ export function parseMT940(content: string): MT940Transaction[] {
       const detected = detectCategory(currentTx.desc)
 
       if (currentTx.isDebet) {
-        // Debet: ZZP of WGL apart taggen voor opt-in bij respectievelijk
-        // advocatenkosten of werkgeverslasten. Anders gewone overige kost.
-        const category = (detected === 'ZZP' || detected === 'WGL') ? detected : undefined
+        // Skip belastingdienst (loonheffing) en interne Workx-overboekingen
+        if (shouldSkipDebet(currentTx.desc)) { currentTx = null; inDesc = false; return }
+        // Management fee → eigen category MGMT zodat we 'waarvan…' kunnen tonen
+        const mgmtLabel = managementFeeLabel(currentTx.desc)
+        // Debet: MGMT > ZZP > WGL > regulier
+        const category: 'MGMT' | 'ZZP' | 'WGL' | undefined =
+          mgmtLabel ? 'MGMT' :
+          (detected === 'ZZP' || detected === 'WGL') ? detected : undefined
         const labelSuffix = category === 'ZZP' ? ' (ZZP)' : category === 'WGL' ? ' (pensioen)' : ''
+        const finalDesc = mgmtLabel ?? (vendorName + labelSuffix)
+        const finalRawKey = category ? `${category}:${rawKey}` : rawKey
         transactions.push({
           date: currentTx.date,
           amount: currentTx.amount,
-          description: vendorName + labelSuffix,
-          rawKey: category ? `${category}:${rawKey}` : rawKey,
-          externalRef: hashTransaction(dateIso, currentTx.amount, category ? `${category}:${rawKey}` : rawKey),
+          description: finalDesc,
+          rawKey: finalRawKey,
+          externalRef: hashTransaction(dateIso, currentTx.amount, finalRawKey),
           category,
         })
       } else if (detected === 'UWV' || detected === 'ASR') {

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import { groupKey } from '@/lib/cost-vendor'
+import { amountExVat, vatRateFor } from '@/lib/cost-vat'
 
 interface Cost {
   id: string
@@ -15,6 +16,7 @@ interface Cost {
   description: string
   sortOrder: number
   createdAt: string
+  category?: string | null
 }
 
 const MONTHS = [
@@ -32,7 +34,9 @@ export default function KostenPage() {
   const hasAccess = role === 'PARTNER' || role === 'ADMIN'
 
   const [costs, setCosts] = useState<Cost[]>([])
+  const [costsOther, setCostsOther] = useState<Cost[]>([]) // ander jaar t.b.v. vergelijking
   const [loading, setLoading] = useState(true)
+  const [year, setYear] = useState<number>(2026)
   const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth() + 1)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editAmount, setEditAmount] = useState('')
@@ -52,15 +56,21 @@ export default function KostenPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchData = useCallback(async () => {
+    setLoading(true)
     try {
-      const res = await fetch('/api/monthly-costs?year=2026')
-      if (res.ok) setCosts(await res.json())
+      const otherYear = year === 2026 ? 2025 : 2026
+      const [r1, r2] = await Promise.all([
+        fetch(`/api/monthly-costs?year=${year}`),
+        fetch(`/api/monthly-costs?year=${otherYear}`),
+      ])
+      if (r1.ok) setCosts(await r1.json())
+      if (r2.ok) setCostsOther(await r2.json())
     } catch {
       toast.error('Kon kosten niet laden')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [year])
 
   useEffect(() => {
     if (hasAccess) fetchData()
@@ -77,7 +87,7 @@ export default function KostenPage() {
       const res = await fetch('/api/monthly-costs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: 2026, month: activeMonth, amount, description: newDesc.trim() }),
+        body: JSON.stringify({ year, month: activeMonth, amount, description: newDesc.trim() }),
       })
       if (!res.ok) throw new Error()
       setNewAmount('')
@@ -207,14 +217,16 @@ export default function KostenPage() {
   }, [costs])
 
   const monthTotal = (m: number) => byMonth[m].reduce((s, c) => s + c.amount, 0)
+  const monthTotalExBtw = (m: number) => byMonth[m].reduce((s, c) => s + amountExVat(c), 0)
+  const monthMgmtTotal = (m: number) => byMonth[m].filter(c => c.category === 'MGMT').reduce((s, c) => s + amountExVat(c), 0)
 
-  // Top vendors voor grafiek (op basis van groupKey)
+  // Top vendors voor grafiek (op basis van groupKey, ex BTW)
   const vendorStats = useMemo(() => {
     const stats: Record<string, { total: number; count: number }> = {}
     for (const c of costs) {
       const key = groupKey(c.description)
       if (!stats[key]) stats[key] = { total: 0, count: 0 }
-      stats[key].total += c.amount
+      stats[key].total += amountExVat(c)
       stats[key].count++
     }
     return Object.entries(stats)
@@ -228,8 +240,88 @@ export default function KostenPage() {
   )
 
   const totalYear = costs.reduce((s, c) => s + c.amount, 0)
-  const maxMonthTotal = Math.max(...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(monthTotal), 1)
+  const totalYearExBtw = costs.reduce((s, c) => s + amountExVat(c), 0)
+  const mgmtYearExBtw = costs.filter(c => c.category === 'MGMT').reduce((s, c) => s + amountExVat(c), 0)
+  const maxMonthTotal = Math.max(...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(monthTotalExBtw), 1)
   const maxVendor = recurringVendors[0]?.total || 1
+
+  // Appels-appels vergelijking — tot de laatste maand waarvoor 2026 data heeft.
+  const yearCompare = useMemo(() => {
+    const cur2026 = year === 2026 ? costs : costsOther
+    const cur2025 = year === 2025 ? costs : costsOther
+    // Bepaal lastMonth in 2026
+    const months2026 = new Set(cur2026.map(c => c.month))
+    let lastMonth = 0
+    for (let m = 1; m <= 12; m++) if (months2026.has(m)) lastMonth = m
+    if (lastMonth === 0) return null
+
+    const sumExBtw = (rows: Cost[], cat?: string | null) =>
+      rows
+        .filter(c => c.month <= lastMonth && (cat === undefined || (c.category ?? null) === cat))
+        .reduce((s, c) => s + amountExVat(c), 0)
+
+    const total2026 = sumExBtw(cur2026)
+    const total2025 = sumExBtw(cur2025)
+    const mgmt2026 = sumExBtw(cur2026, 'MGMT')
+    const mgmt2025 = sumExBtw(cur2025, 'MGMT')
+
+    // Per maand t/m lastMonth
+    const monthly = (rows: Cost[]) => {
+      const arr = Array(lastMonth).fill(0)
+      for (const c of rows) {
+        if (c.month >= 1 && c.month <= lastMonth) arr[c.month - 1] += amountExVat(c)
+      }
+      return arr
+    }
+    const mgmtMonthly = (rows: Cost[]) => {
+      const arr = Array(lastMonth).fill(0)
+      for (const c of rows) {
+        if (c.category === 'MGMT' && c.month >= 1 && c.month <= lastMonth) arr[c.month - 1] += amountExVat(c)
+      }
+      return arr
+    }
+    const m2026 = monthly(cur2026)
+    const m2025 = monthly(cur2025)
+    const mgmtM2026 = mgmtMonthly(cur2026)
+    const mgmtM2025 = mgmtMonthly(cur2025)
+
+    return {
+      lastMonth,
+      periodLabel: lastMonth === 12 ? 'heel jaar' : `t/m ${MONTHS[lastMonth]}`,
+      total2026, total2025,
+      mgmt2026, mgmt2025,
+      m2026, m2025,
+      mgmtM2026, mgmtM2025,
+    }
+  }, [year, costs, costsOther])
+
+  // Top terugkerende vendors — ontwikkeling 2025 → 2026 (ex BTW, tot lastMonth)
+  const vendorTrend = useMemo(() => {
+    if (!yearCompare) return null
+    const cur2026 = year === 2026 ? costs : costsOther
+    const cur2025 = year === 2025 ? costs : costsOther
+    const lastMonth = yearCompare.lastMonth
+    const accum = (rows: Cost[]) => {
+      const map = new Map<string, number>()
+      for (const c of rows) {
+        if (c.month > lastMonth) continue
+        if (c.category === 'MGMT') continue // mgmt apart benoemd, niet bij vendors
+        const k = groupKey(c.description)
+        map.set(k, (map.get(k) || 0) + amountExVat(c))
+      }
+      return map
+    }
+    const m2026 = accum(cur2026)
+    const m2025 = accum(cur2025)
+    const keys = new Set<string>([...Array.from(m2026.keys()), ...Array.from(m2025.keys())])
+    const rows = Array.from(keys).map(k => ({
+      key: k,
+      v2025: m2025.get(k) || 0,
+      v2026: m2026.get(k) || 0,
+    }))
+    rows.sort((a, b) => Math.max(b.v2025, b.v2026) - Math.max(a.v2025, a.v2026))
+    return rows.slice(0, 15)
+  }, [year, costs, costsOther, yearCompare])
 
   if (!session) return null
   if (!hasAccess) {
@@ -256,11 +348,27 @@ export default function KostenPage() {
             <Icons.euro size={20} className="text-workx-lime" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Kosten 2026</h1>
+            <h1 className="text-2xl font-bold text-white">Kosten {year}</h1>
             <p className="text-sm text-white/40">Per maand bijhouden, onderaan inzicht in terugkerende kosten</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Jaar-switch */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
+            {[2025, 2026].map(y => (
+              <button
+                key={y}
+                onClick={() => setYear(y)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  year === y
+                    ? 'bg-workx-lime text-workx-dark'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {y}
+              </button>
+            ))}
+          </div>
           <button
             onClick={normalizeImported}
             disabled={normalizing}
@@ -290,22 +398,32 @@ export default function KostenPage() {
           {/* Year-stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <p className="text-xs text-white/40 mb-1">Totaal jaar</p>
-              <p className="text-2xl font-bold text-workx-lime">{formatEUR(totalYear)}</p>
+              <p className="text-xs text-white/40 mb-1">Totaal jaar (ex BTW)</p>
+              <p className="text-2xl font-bold text-workx-lime">{formatEUR(totalYearExBtw)}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">bruto {formatEUR(totalYear)}</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <p className="text-xs text-white/40 mb-1">waarvan Management fee</p>
+              <p className="text-2xl font-bold text-cyan-400">{formatEUR(mgmtYearExBtw)}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                {totalYearExBtw > 0 ? `${((mgmtYearExBtw / totalYearExBtw) * 100).toFixed(0)}% van totaal` : '—'}
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+              <p className="text-xs text-white/40 mb-1">Maandgemiddelde (ex BTW)</p>
+              <p className="text-2xl font-bold text-white">
+                {(() => {
+                  const monthsWithData = [1,2,3,4,5,6,7,8,9,10,11,12].filter(m => monthTotal(m) > 0)
+                  if (monthsWithData.length === 0) return '—'
+                  const avg = monthsWithData.reduce((s, m) => s + monthTotalExBtw(m), 0) / monthsWithData.length
+                  return formatEUR(avg)
+                })()}
+              </p>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <p className="text-xs text-white/40 mb-1">Aantal posten</p>
               <p className="text-2xl font-bold text-white">{costs.length}</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <p className="text-xs text-white/40 mb-1">Maandgemiddelde (jan–apr)</p>
-              <p className="text-2xl font-bold text-white">
-                {formatEUR((monthTotal(1) + monthTotal(2) + monthTotal(3) + monthTotal(4)) / 4)}
-              </p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <p className="text-xs text-white/40 mb-1">Unieke vendors</p>
-              <p className="text-2xl font-bold text-white">{vendorStats.length}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">{vendorStats.length} vendors</p>
             </div>
           </div>
 
@@ -335,12 +453,18 @@ export default function KostenPage() {
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl mb-8">
             <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between rounded-t-2xl bg-white/[0.02]">
               <div>
-                <h2 className="text-lg font-semibold text-white">{MONTHS[activeMonth]} 2026</h2>
+                <h2 className="text-lg font-semibold text-white">{MONTHS[activeMonth]} {year}</h2>
                 <p className="text-xs text-gray-500">{byMonth[activeMonth].length} posten</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500">Subtotaal</p>
-                <p className="text-xl font-bold text-workx-lime">{formatEUR(monthTotal(activeMonth))}</p>
+                <p className="text-xs text-gray-500">Subtotaal ex BTW</p>
+                <p className="text-xl font-bold text-workx-lime">{formatEUR(monthTotalExBtw(activeMonth))}</p>
+                {monthMgmtTotal(activeMonth) > 0 && (
+                  <p className="text-[10px] text-cyan-400/80 mt-0.5">
+                    waarvan {formatEUR(monthMgmtTotal(activeMonth))} management fee
+                  </p>
+                )}
+                <p className="text-[10px] text-gray-500">bruto {formatEUR(monthTotal(activeMonth))}</p>
               </div>
             </div>
 
@@ -441,19 +565,28 @@ export default function KostenPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Maand-bar */}
             <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
-              <h3 className="text-white font-semibold mb-1">Totaal per maand</h3>
-              <p className="text-xs text-gray-500 mb-4">Hoogte is relatief t.o.v. de duurste maand</p>
+              <h3 className="text-white font-semibold mb-1">Totaal per maand (ex BTW)</h3>
+              <p className="text-xs text-gray-500 mb-4">Cyaan = management fee, lime = overige kosten</p>
               <div className="space-y-2">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => {
-                  const total = monthTotal(m)
-                  const pct = (total / maxMonthTotal) * 100
+                  const total = monthTotalExBtw(m)
+                  const mgmt = monthMgmtTotal(m)
+                  const rest = Math.max(0, total - mgmt)
+                  const mgmtPct = (mgmt / maxMonthTotal) * 100
+                  const restPct = (rest / maxMonthTotal) * 100
                   return (
                     <div key={m} className="flex items-center gap-3">
                       <span className="text-xs text-gray-400 w-20 shrink-0">{MONTHS[m]}</span>
-                      <div className="flex-1 h-6 bg-white/5 rounded-lg overflow-hidden">
+                      <div className="flex-1 h-6 bg-white/5 rounded-lg overflow-hidden flex">
                         <div
-                          className="h-full bg-gradient-to-r from-workx-lime/60 to-workx-lime rounded-lg transition-all"
-                          style={{ width: `${pct}%` }}
+                          className="h-full bg-gradient-to-r from-cyan-500/60 to-cyan-400"
+                          style={{ width: `${mgmtPct}%` }}
+                          title={mgmt > 0 ? `Management fee: ${formatEUR(mgmt)}` : undefined}
+                        />
+                        <div
+                          className="h-full bg-gradient-to-r from-workx-lime/60 to-workx-lime"
+                          style={{ width: `${restPct}%` }}
+                          title={rest > 0 ? `Overige kosten: ${formatEUR(rest)}` : undefined}
                         />
                       </div>
                       <span className="text-xs font-medium text-white tabular-nums w-24 text-right">
@@ -493,6 +626,147 @@ export default function KostenPage() {
               )}
             </div>
           </div>
+
+          {/* Appels-appels vergelijking 2025 vs 2026 */}
+          {yearCompare && (yearCompare.total2025 > 0 || yearCompare.total2026 > 0) && (
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-6">
+              <h3 className="text-white font-semibold mb-1">Vergelijking 2025 vs 2026 ({yearCompare.periodLabel})</h3>
+              <p className="text-xs text-gray-500 mb-4">
+                Bedragen ex BTW. Tot de laatste maand met data in 2026 — appels-appels.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                {(() => {
+                  const diffTotal = yearCompare.total2026 - yearCompare.total2025
+                  const diffMgmt = yearCompare.mgmt2026 - yearCompare.mgmt2025
+                  const overig2026 = yearCompare.total2026 - yearCompare.mgmt2026
+                  const overig2025 = yearCompare.total2025 - yearCompare.mgmt2025
+                  const diffOverig = overig2026 - overig2025
+                  return (
+                    <>
+                      <div className="bg-workx-dark/40 rounded-xl p-4 border border-white/5">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Totaal kosten</p>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-gray-400">2025</span>
+                          <span className="text-sm text-gray-200 tabular-nums">{formatEUR(yearCompare.total2025)}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-workx-lime">2026</span>
+                          <span className="text-base font-bold text-workx-lime tabular-nums">{formatEUR(yearCompare.total2026)}</span>
+                        </div>
+                        <p className={`text-xs font-medium tabular-nums mt-1 ${diffTotal > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {diffTotal > 0 ? '+' : ''}{formatEUR(diffTotal)} ({yearCompare.total2025 > 0 ? `${((diffTotal / yearCompare.total2025) * 100).toFixed(1)}%` : '—'})
+                        </p>
+                      </div>
+                      <div className="bg-workx-dark/40 rounded-xl p-4 border border-white/5">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Management fee</p>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-gray-400">2025</span>
+                          <span className="text-sm text-gray-200 tabular-nums">{formatEUR(yearCompare.mgmt2025)}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-cyan-400">2026</span>
+                          <span className="text-base font-bold text-cyan-400 tabular-nums">{formatEUR(yearCompare.mgmt2026)}</span>
+                        </div>
+                        <p className={`text-xs font-medium tabular-nums mt-1 ${diffMgmt > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {diffMgmt > 0 ? '+' : ''}{formatEUR(diffMgmt)}
+                        </p>
+                      </div>
+                      <div className="bg-workx-dark/40 rounded-xl p-4 border border-white/5">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Overige kosten</p>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-gray-400">2025</span>
+                          <span className="text-sm text-gray-200 tabular-nums">{formatEUR(overig2025)}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-workx-lime">2026</span>
+                          <span className="text-base font-bold text-workx-lime tabular-nums">{formatEUR(overig2026)}</span>
+                        </div>
+                        <p className={`text-xs font-medium tabular-nums mt-1 ${diffOverig > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {diffOverig > 0 ? '+' : ''}{formatEUR(diffOverig)} ({overig2025 > 0 ? `${((diffOverig / overig2025) * 100).toFixed(1)}%` : '—'})
+                        </p>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+
+              {/* Maand-grafiek 2025 vs 2026 */}
+              <h4 className="text-sm text-white/80 font-medium mb-2">Per maand</h4>
+              <div className="space-y-1.5">
+                {(() => {
+                  const maxV = Math.max(...yearCompare.m2025, ...yearCompare.m2026, 1)
+                  return Array.from({ length: yearCompare.lastMonth }, (_, i) => {
+                    const v25 = yearCompare.m2025[i] || 0
+                    const v26 = yearCompare.m2026[i] || 0
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <span className="text-[11px] text-gray-400 w-16 shrink-0">{MONTHS[i + 1]}</span>
+                        <div className="flex-1 grid grid-rows-2 gap-0.5">
+                          <div className="h-3 bg-white/5 rounded overflow-hidden flex items-center" title={`2025: ${formatEUR(v25)}`}>
+                            <div className="h-full bg-gray-500/60" style={{ width: `${(v25 / maxV) * 100}%` }} />
+                          </div>
+                          <div className="h-3 bg-white/5 rounded overflow-hidden flex items-center" title={`2026: ${formatEUR(v26)}`}>
+                            <div className="h-full bg-workx-lime" style={{ width: `${(v26 / maxV) * 100}%` }} />
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-gray-500 tabular-nums w-20 text-right">{formatEUR(v25)}</span>
+                        <span className="text-[10px] text-workx-lime tabular-nums w-20 text-right">{formatEUR(v26)}</span>
+                      </div>
+                    )
+                  })
+                })()}
+                <div className="flex items-center gap-3 pt-2 mt-1 border-t border-white/5 text-[10px]">
+                  <span className="w-16 shrink-0" />
+                  <div className="flex-1 flex items-center gap-3">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-gray-500/60" /> 2025</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-workx-lime" /> 2026</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Top terugkerende kosten — ontwikkeling */}
+          {vendorTrend && vendorTrend.length > 0 && (
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-6">
+              <h3 className="text-white font-semibold mb-1">Ontwikkeling top terugkerende kosten</h3>
+              <p className="text-xs text-gray-500 mb-4">
+                Top 15 vendors (excl. management fee), ex BTW, {yearCompare ? yearCompare.periodLabel : 'jaar'}.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-gray-500 border-b border-white/10">
+                      <th className="py-2 px-2 font-medium">Vendor</th>
+                      <th className="py-2 px-2 font-medium text-right">2025</th>
+                      <th className="py-2 px-2 font-medium text-right">2026</th>
+                      <th className="py-2 px-2 font-medium text-right">Δ</th>
+                      <th className="py-2 px-2 font-medium text-right">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendorTrend.map(v => {
+                      const diff = v.v2026 - v.v2025
+                      const pct = v.v2025 > 0 ? (diff / v.v2025) * 100 : null
+                      return (
+                        <tr key={v.key} className="border-b border-white/5 hover:bg-white/[0.02]">
+                          <td className="py-2 px-2 text-white truncate max-w-xs" title={v.key}>{v.key}</td>
+                          <td className="py-2 px-2 text-right text-gray-300 tabular-nums">{v.v2025 > 0 ? formatEUR(v.v2025) : '—'}</td>
+                          <td className="py-2 px-2 text-right text-workx-lime tabular-nums font-medium">{v.v2026 > 0 ? formatEUR(v.v2026) : '—'}</td>
+                          <td className={`py-2 px-2 text-right tabular-nums ${diff > 0 ? 'text-red-400' : diff < 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                            {diff !== 0 ? (diff > 0 ? '+' : '') + formatEUR(diff) : '—'}
+                          </td>
+                          <td className={`py-2 px-2 text-right tabular-nums text-xs ${pct === null ? 'text-gray-500' : pct > 0 ? 'text-red-400' : pct < 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                            {pct === null ? 'nieuw' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Full vendor table */}
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-8">

@@ -7,6 +7,7 @@ import InzichtenTab from '@/components/financien/InzichtenTab'
 import jsPDF from 'jspdf'
 import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
+import { amountExVat } from '@/lib/cost-vat'
 
 // Get dynamic years (current year and 2 previous years)
 const currentYear = new Date().getFullYear()
@@ -139,7 +140,12 @@ export default function FinancienPage() {
   const [editingVacation, setEditingVacation] = useState<string | null>(null)
   const [sickDaysTotals, setSickDaysTotals] = useState<SickDaysTotals[]>([])
   // Overige kosten 2026 uit Kosten-pagina (alleen reguliere, exclusief UWV/ASR)
+  // Overige kosten 2026 (ex BTW, exclusief MGMT/UWV/ASR/WGL)
   const [monthlyCosts2026, setMonthlyCosts2026] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+  // Overige kosten per jaar (ex BTW, exclusief MGMT/UWV/ASR/WGL) — voor appels-appels
+  const [overigKostenPerYear, setOverigKostenPerYear] = useState<Record<number, number[]>>({})
+  // Management fee per jaar/maand (ex BTW)
+  const [mgmtPerMonth, setMgmtPerMonth] = useState<Record<number, number[]>>({})
   // UWV (zwangerschapsverlof) en ASR (verzuim) per jaar/maand — bijschrijvingen
   // tellen mee als negatieve correctie op werkgeverslasten.
   const [uwvPerMonth, setUwvPerMonth] = useState<Record<number, number[]>>({})
@@ -203,8 +209,11 @@ export default function FinancienPage() {
           const asr: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
           const zzp: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
           const wgl: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
-          for (const it of [...d2026, ...d2025] as { year: number; month: number; amount: number; category?: string | null }[]) {
+          const mgmt: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
+          const overigPerYear: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
+          for (const it of [...d2026, ...d2025] as { year: number; month: number; amount: number; description?: string; category?: string | null }[]) {
             if (it.month < 1 || it.month > 12) continue
+            const exBtw = amountExVat({ amount: it.amount, description: it.description, category: it.category })
             if (it.category === 'UWV') {
               if (!uwv[it.year]) uwv[it.year] = Array(12).fill(0)
               uwv[it.year][it.month - 1] += Math.abs(it.amount)
@@ -215,12 +224,18 @@ export default function FinancienPage() {
               // Pensioen e.d. — telt bij werkgeverslasten, NIET bij overige kosten
               if (!wgl[it.year]) wgl[it.year] = Array(12).fill(0)
               wgl[it.year][it.month - 1] += it.amount
+            } else if (it.category === 'MGMT') {
+              // Management fee — apart bijgehouden, telt mee in totale kosten
+              if (!mgmt[it.year]) mgmt[it.year] = Array(12).fill(0)
+              mgmt[it.year][it.month - 1] += exBtw
             } else {
-              // Reguliere kost (incl. ZZP) — telt mee bij Overige Kosten 2026
-              if (it.year === 2026) reg2026[it.month - 1] += it.amount
+              // Reguliere kost (incl. ZZP) — ex BTW
+              if (!overigPerYear[it.year]) overigPerYear[it.year] = Array(12).fill(0)
+              overigPerYear[it.year][it.month - 1] += exBtw
+              if (it.year === 2026) reg2026[it.month - 1] += exBtw
               if (it.category === 'ZZP') {
                 if (!zzp[it.year]) zzp[it.year] = Array(12).fill(0)
-                zzp[it.year][it.month - 1] += it.amount
+                zzp[it.year][it.month - 1] += exBtw
               }
             }
           }
@@ -229,6 +244,8 @@ export default function FinancienPage() {
           setAsrPerMonth(asr)
           setZzpPerMonth(zzp)
           setWglPerMonth(wgl)
+          setMgmtPerMonth(mgmt)
+          setOverigKostenPerYear(overigPerYear)
         }
 
         // Load sick days for managers
@@ -991,6 +1008,10 @@ export default function FinancienPage() {
             const zzpPrevArr = zzpPerMonth[years[1]] || Array(12).fill(0)
             const wglCurArr = wglPerMonth[years[2]] || Array(12).fill(0)
             const wglPrevArr = wglPerMonth[years[1]] || Array(12).fill(0)
+            const mgmtCurArr = mgmtPerMonth[years[2]] || Array(12).fill(0)
+            const mgmtPrevArr = mgmtPerMonth[years[1]] || Array(12).fill(0)
+            const overigCurArr = overigKostenPerYear[years[2]] || Array(12).fill(0)
+            const overigPrevArr = overigKostenPerYear[years[1]] || Array(12).fill(0)
 
             // 2026 t/m lastMonth — Werkgeverslasten = bruto loon + pensioen − UWV − ASR
             const omzetCur = sumTo(cur.omzet, lastMonth)
@@ -1000,8 +1021,9 @@ export default function FinancienPage() {
             const wkzNet = wkzBruto - uwvCur - asrCur
             const zzpCur = sumTo(zzpCurArr, lastMonth)
             const advocatenKosten = wkzNet + zzpCur  // info-cijfer: totale advocatenkosten
-            const overigeKosten = sumTo(monthlyCosts2026, lastMonth)
-            const totaleKosten = wkzNet + overigeKosten
+            const mgmtCur = sumTo(mgmtCurArr, lastMonth)
+            const overigeKosten = sumTo(overigCurArr, lastMonth)
+            const totaleKosten = wkzNet + overigeKosten + mgmtCur
             const saldoTotaal = omzetCur - totaleKosten
             const saldoExcl = omzetCur - wkzNet
             const urenCur = sumTo(cur.uren, lastMonth)
@@ -1014,10 +1036,14 @@ export default function FinancienPage() {
             const wkzNetPrev = wkzBrutoPrev - uwvPrev - asrPrev
             const zzpPrev = sumTo(zzpPrevArr, lastMonth)
             const advocatenKostenPrev = wkzNetPrev + zzpPrev
-            const saldoPrev = omzetPrev - wkzNetPrev
+            const mgmtPrev = sumTo(mgmtPrevArr, lastMonth)
+            const overigPrev = sumTo(overigPrevArr, lastMonth)
+            const totaleKostenPrev = wkzNetPrev + overigPrev + mgmtPrev
+            const saldoPrev = omzetPrev - totaleKostenPrev
             const urenPrev = sumTo(prev.uren, lastMonth)
             const hasUwvAsr = (uwvCur + asrCur + uwvPrev + asrPrev) > 0
             const hasZzp = (zzpCur + zzpPrev) > 0
+            const hasMgmt = (mgmtCur + mgmtPrev) > 0
 
             type Diff = { amount: number; label: string; positive: boolean; isNumber?: boolean }
             const kpis: Array<{ label: string; value: string; diffs: Diff[] }> = [
@@ -1032,8 +1058,9 @@ export default function FinancienPage() {
                 label: `Totale Kosten ${years[2]} (${periodLabel})`,
                 value: formatCurrency(totaleKosten),
                 diffs: [
-                  { amount: totaleKosten - wkzNetPrev, label: `Totale Kosten vs ${years[1]}`, positive: false },
-                  { amount: wkzNet - wkzNetPrev, label: `Werkgeverslasten vs ${years[1]} (appels-appels)`, positive: false },
+                  { amount: totaleKosten - totaleKostenPrev, label: `Totale Kosten vs ${years[1]} (appels-appels)`, positive: false },
+                  { amount: wkzNet - wkzNetPrev, label: `Werkgeverslasten vs ${years[1]}`, positive: false },
+                  ...(hasMgmt ? [{ amount: mgmtCur - mgmtPrev, label: `waarvan Management fee vs ${years[1]}`, positive: false }] : []),
                   ...(hasZzp ? [{ amount: advocatenKosten - advocatenKostenPrev, label: `Advocaten (loon + ZZP) vs ${years[1]}`, positive: false }] : []),
                 ],
               },
@@ -1041,8 +1068,8 @@ export default function FinancienPage() {
                 label: `Saldo ${years[2]} (${periodLabel})`,
                 value: formatCurrency(saldoTotaal),
                 diffs: [
-                  { amount: saldoTotaal - saldoPrev, label: `na Totale Kosten vs ${years[1]}`, positive: true },
-                  { amount: saldoExcl - saldoPrev, label: `na Werkgeverslasten vs ${years[1]} (appels-appels)`, positive: true },
+                  { amount: saldoTotaal - saldoPrev, label: `na Totale Kosten vs ${years[1]} (appels-appels)`, positive: true },
+                  { amount: saldoExcl - (omzetPrev - wkzNetPrev), label: `na Werkgeverslasten vs ${years[1]}`, positive: true },
                 ],
               },
               {
@@ -1075,6 +1102,128 @@ export default function FinancienPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )
+          })()}
+
+          {/* Totale kosten 2025 vs 2026 — appels-appels tot laatste invoer 2026 */}
+          {(() => {
+            const cur = getDataForYear(years[2])
+            const prev = getDataForYear(years[1])
+            let lastMonth = 0
+            for (let m = 0; m < 12; m++) {
+              if (cur.omzet[m] !== 0 || cur.werkgeverslasten[m] !== 0) lastMonth = m + 1
+            }
+            if (lastMonth === 0) return null
+            const sumTo = (arr: number[], n: number) => arr.slice(0, n).reduce((s, v) => s + (v || 0), 0)
+            const periodLabel = lastMonth === 12 ? 'heel jaar' : `P1–P${lastMonth}`
+
+            const wglCurArr = wglPerMonth[years[2]] || Array(12).fill(0)
+            const wglPrevArr = wglPerMonth[years[1]] || Array(12).fill(0)
+            const uwvCurArr = uwvPerMonth[years[2]] || Array(12).fill(0)
+            const uwvPrevArr = uwvPerMonth[years[1]] || Array(12).fill(0)
+            const asrCurArr = asrPerMonth[years[2]] || Array(12).fill(0)
+            const asrPrevArr = asrPerMonth[years[1]] || Array(12).fill(0)
+            const mgmtCurArr = mgmtPerMonth[years[2]] || Array(12).fill(0)
+            const mgmtPrevArr = mgmtPerMonth[years[1]] || Array(12).fill(0)
+            const overigCurArr = overigKostenPerYear[years[2]] || Array(12).fill(0)
+            const overigPrevArr = overigKostenPerYear[years[1]] || Array(12).fill(0)
+
+            const wkzCur = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(wglCurArr, lastMonth) - sumTo(uwvCurArr, lastMonth) - sumTo(asrCurArr, lastMonth)
+            const wkzPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(wglPrevArr, lastMonth) - sumTo(uwvPrevArr, lastMonth) - sumTo(asrPrevArr, lastMonth)
+            const mgmtCur = sumTo(mgmtCurArr, lastMonth)
+            const mgmtPrev = sumTo(mgmtPrevArr, lastMonth)
+            const overigCur = sumTo(overigCurArr, lastMonth)
+            const overigPrev = sumTo(overigPrevArr, lastMonth)
+            const totCur = wkzCur + mgmtCur + overigCur
+            const totPrev = wkzPrev + mgmtPrev + overigPrev
+
+            if (totCur === 0 && totPrev === 0) return null
+
+            const Row = ({ label, v2025, v2026, accent, tooltip }: { label: string; v2025: number; v2026: number; accent: string; tooltip?: string }) => {
+              const diff = v2026 - v2025
+              const pct = v2025 > 0 ? (diff / v2025) * 100 : null
+              return (
+                <tr className="border-b border-white/5">
+                  <td className="py-2.5 px-3 text-sm text-white" title={tooltip}>{label}</td>
+                  <td className="py-2.5 px-3 text-right tabular-nums text-gray-300">{formatCurrency(v2025)}</td>
+                  <td className={`py-2.5 px-3 text-right tabular-nums font-medium ${accent}`}>{formatCurrency(v2026)}</td>
+                  <td className={`py-2.5 px-3 text-right tabular-nums text-sm ${diff > 0 ? 'text-red-400' : diff < 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                    {diff !== 0 ? (diff > 0 ? '+' : '') + formatCurrency(diff) : '—'}
+                  </td>
+                  <td className={`py-2.5 px-3 text-right tabular-nums text-xs ${pct === null ? 'text-gray-500' : pct > 0 ? 'text-red-400' : pct < 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                    {pct === null ? '—' : `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`}
+                  </td>
+                </tr>
+              )
+            }
+
+            return (
+              <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
+                <div className="flex items-start justify-between mb-1 gap-4 flex-wrap">
+                  <div>
+                    <h3 className="text-white font-medium">Totale Kosten — {years[1]} vs {years[2]} ({periodLabel})</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Werkgeverslasten + Management fee + Overige kosten, ex BTW. Appels-appels tot laatste invoer {years[2]}.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Δ Totale Kosten</p>
+                    <p className={`text-lg font-bold tabular-nums ${(totCur - totPrev) > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      {(totCur - totPrev) > 0 ? '+' : ''}{formatCurrency(totCur - totPrev)}
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                      {totPrev > 0 ? `${(((totCur - totPrev) / totPrev) * 100).toFixed(1)}% vs ${years[1]}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto mt-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-500 border-b border-white/10">
+                        <th className="py-2 px-3 font-medium">Kostenpost</th>
+                        <th className="py-2 px-3 font-medium text-right">{years[1]} {periodLabel}</th>
+                        <th className="py-2 px-3 font-medium text-right">{years[2]} {periodLabel}</th>
+                        <th className="py-2 px-3 font-medium text-right">Δ</th>
+                        <th className="py-2 px-3 font-medium text-right">%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <Row
+                        label="Werkgeverslasten (bruto loon + pensioen − UWV/ASR)"
+                        v2025={wkzPrev}
+                        v2026={wkzCur}
+                        accent="text-workx-lime"
+                        tooltip="Bruto loon van eigen medewerkers plus Bright pensioen minus UWV/ASR-vergoedingen"
+                      />
+                      <Row
+                        label="Management fee partners"
+                        v2025={mgmtPrev}
+                        v2026={mgmtCur}
+                        accent="text-cyan-400"
+                        tooltip="Uitkeringen naar partner-holdings (Les Dents Du Midi, Meneer Nilsson, Cavalieri, Jader)"
+                      />
+                      <Row
+                        label="Overige kosten"
+                        v2025={overigPrev}
+                        v2026={overigCur}
+                        accent="text-orange-300"
+                        tooltip="Alle overige bedrijfskosten (huur, software, advocaten, kantoor) ex BTW"
+                      />
+                      <tr className="border-t-2 border-white/10 bg-white/[0.02]">
+                        <td className="py-3 px-3 text-white font-bold">Totale Kosten</td>
+                        <td className="py-3 px-3 text-right tabular-nums text-gray-200 font-bold">{formatCurrency(totPrev)}</td>
+                        <td className="py-3 px-3 text-right tabular-nums text-white font-bold">{formatCurrency(totCur)}</td>
+                        <td className={`py-3 px-3 text-right tabular-nums font-bold ${(totCur - totPrev) > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {(totCur - totPrev) > 0 ? '+' : ''}{formatCurrency(totCur - totPrev)}
+                        </td>
+                        <td className={`py-3 px-3 text-right tabular-nums font-bold ${totPrev > 0 && (totCur - totPrev) > 0 ? 'text-red-400' : totPrev > 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                          {totPrev > 0 ? `${(totCur - totPrev) > 0 ? '+' : ''}${(((totCur - totPrev) / totPrev) * 100).toFixed(1)}%` : '—'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )
           })()}
