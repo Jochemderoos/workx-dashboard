@@ -10,18 +10,21 @@ export interface MT940Transaction {
   description: string // genormaliseerde vendornaam (zelfde stijl als handmatige posten)
   rawKey: string      // stabiele counterparty-fingerprint (voor leer-aliassen)
   externalRef: string // hash voor duplicaat-detectie
-  category?: 'UWV' | 'ASR' | 'ZZP' // UWV/ASR = retours, ZZP = externe advocaten
+  category?: 'UWV' | 'ASR' | 'ZZP' | 'WGL' // UWV/ASR = retours, ZZP = externe advocaten, WGL = pensioenpremie
 }
 
-// Detecteer UWV (zwangerschapsverlof, bijschrijving), ASR
-// (verzuimverzekering, bijschrijving) of ZZP (externe advocaten, debet)
-// in de omschrijving.
-function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | null {
+// Detecteer in de omschrijving:
+//   UWV (zwangerschapsverlof, bijschrijving) → negatieve correctie op WGL
+//   ASR (verzuimverzekering, bijschrijving)  → idem
+//   ZZP (externe advocaten, debet, alleen Nectaro/Lodewijk)
+//   WGL (werkgeverslasten-aanvulling: pensioenpremie) → optellen bij WGL
+// Tentoo is alleen payrolling-administratie → gewone overige kost (geen tag).
+function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | 'WGL' | null {
   const lower = desc.toLowerCase()
   if (/\buwv\b/.test(lower) || /\bwazo\b/.test(lower)) return 'UWV'
   if (/\basr\b/.test(lower) || /verzuimverzekering/.test(lower)) return 'ASR'
-  // Externe advocaten / ZZP: Nectaro = Lodewijk, Tentoo = payrolling
-  if (/\bnectaro\b/.test(lower) || /\blodewijk\b/.test(lower) || /\btentoo\b/.test(lower)) return 'ZZP'
+  if (/\bnectaro\b/.test(lower) || /\blodewijk\b/.test(lower)) return 'ZZP'
+  if (/\bbright\s*pensioen\b/.test(lower) || /\bpensioen\b/.test(lower)) return 'WGL'
   return null
 }
 
@@ -46,12 +49,14 @@ export function parseMT940(content: string): MT940Transaction[] {
       const detected = detectCategory(currentTx.desc)
 
       if (currentTx.isDebet) {
-        // Debet: reguliere kost; eventueel als ZZP gemarkeerd
-        const category = detected === 'ZZP' ? 'ZZP' : undefined
+        // Debet: ZZP of WGL apart taggen voor opt-in bij respectievelijk
+        // advocatenkosten of werkgeverslasten. Anders gewone overige kost.
+        const category = (detected === 'ZZP' || detected === 'WGL') ? detected : undefined
+        const labelSuffix = category === 'ZZP' ? ' (ZZP)' : category === 'WGL' ? ' (pensioen)' : ''
         transactions.push({
           date: currentTx.date,
           amount: currentTx.amount,
-          description: category === 'ZZP' ? `${vendorName} (ZZP)` : vendorName,
+          description: vendorName + labelSuffix,
           rawKey: category ? `${category}:${rawKey}` : rawKey,
           externalRef: hashTransaction(dateIso, currentTx.amount, category ? `${category}:${rawKey}` : rawKey),
           category,

@@ -144,10 +144,13 @@ export default function FinancienPage() {
   // tellen mee als negatieve correctie op werkgeverslasten.
   const [uwvPerMonth, setUwvPerMonth] = useState<Record<number, number[]>>({})
   const [asrPerMonth, setAsrPerMonth] = useState<Record<number, number[]>>({})
-  // ZZP per jaar/maand — externe advocaten (Lodewijk, Tentoo). Onderdeel
-  // van Overige Kosten, maar apart bijgehouden voor inzicht in totale
+  // ZZP per jaar/maand — externe advocaten (Lodewijk). Onderdeel van
+  // Overige Kosten, maar apart bijgehouden voor inzicht in totale
   // advocatenkosten (loon + ZZP).
   const [zzpPerMonth, setZzpPerMonth] = useState<Record<number, number[]>>({})
+  // WGL per jaar/maand — werkgeverslasten-aanvulling (Bright Pensioen).
+  // Telt mee bij Werkgeverslasten, NIET bij Overige Kosten.
+  const [wglPerMonth, setWglPerMonth] = useState<Record<number, number[]>>({})
 
   // Check if user is PARTNER or ADMIN
   const isManager = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -199,6 +202,7 @@ export default function FinancienPage() {
           const uwv: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
           const asr: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
           const zzp: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
+          const wgl: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
           for (const it of [...d2026, ...d2025] as { year: number; month: number; amount: number; category?: string | null }[]) {
             if (it.month < 1 || it.month > 12) continue
             if (it.category === 'UWV') {
@@ -207,6 +211,10 @@ export default function FinancienPage() {
             } else if (it.category === 'ASR') {
               if (!asr[it.year]) asr[it.year] = Array(12).fill(0)
               asr[it.year][it.month - 1] += Math.abs(it.amount)
+            } else if (it.category === 'WGL') {
+              // Pensioen e.d. — telt bij werkgeverslasten, NIET bij overige kosten
+              if (!wgl[it.year]) wgl[it.year] = Array(12).fill(0)
+              wgl[it.year][it.month - 1] += it.amount
             } else {
               // Reguliere kost (incl. ZZP) — telt mee bij Overige Kosten 2026
               if (it.year === 2026) reg2026[it.month - 1] += it.amount
@@ -220,6 +228,7 @@ export default function FinancienPage() {
           setUwvPerMonth(uwv)
           setAsrPerMonth(asr)
           setZzpPerMonth(zzp)
+          setWglPerMonth(wgl)
         }
 
         // Load sick days for managers
@@ -980,10 +989,12 @@ export default function FinancienPage() {
             const asrPrevArr = asrPerMonth[years[1]] || Array(12).fill(0)
             const zzpCurArr = zzpPerMonth[years[2]] || Array(12).fill(0)
             const zzpPrevArr = zzpPerMonth[years[1]] || Array(12).fill(0)
+            const wglCurArr = wglPerMonth[years[2]] || Array(12).fill(0)
+            const wglPrevArr = wglPerMonth[years[1]] || Array(12).fill(0)
 
-            // 2026 t/m lastMonth — Werkgeverslasten = alleen bruto loon eigen mensen − UWV − ASR
+            // 2026 t/m lastMonth — Werkgeverslasten = bruto loon + pensioen − UWV − ASR
             const omzetCur = sumTo(cur.omzet, lastMonth)
-            const wkzBruto = sumTo(cur.werkgeverslasten, lastMonth)
+            const wkzBruto = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(wglCurArr, lastMonth)
             const uwvCur = sumTo(uwvCurArr, lastMonth)
             const asrCur = sumTo(asrCurArr, lastMonth)
             const wkzNet = wkzBruto - uwvCur - asrCur
@@ -995,9 +1006,9 @@ export default function FinancienPage() {
             const saldoExcl = omzetCur - wkzNet
             const urenCur = sumTo(cur.uren, lastMonth)
 
-            // 2025 t/m dezelfde lastMonth — incl. UWV/ASR (appels-appels)
+            // 2025 t/m dezelfde lastMonth — incl. pensioen + UWV/ASR (appels-appels)
             const omzetPrev = sumTo(prev.omzet, lastMonth)
-            const wkzBrutoPrev = sumTo(prev.werkgeverslasten, lastMonth)
+            const wkzBrutoPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(wglPrevArr, lastMonth)
             const uwvPrev = sumTo(uwvPrevArr, lastMonth)
             const asrPrev = sumTo(asrPrevArr, lastMonth)
             const wkzNetPrev = wkzBrutoPrev - uwvPrev - asrPrev
@@ -1616,7 +1627,9 @@ export default function FinancienPage() {
             const asr = asrPerMonth[currentYear] || Array(12).fill(0)
             const totalUwv = uwv.reduce((s, v) => s + v, 0)
             const totalAsr = asr.reduce((s, v) => s + v, 0)
-            const baseCosts = cur.werkgeverslasten.reduce((s, v) => s + v, 0)
+            const wglYear = wglPerMonth[currentYear] || Array(12).fill(0)
+            const totalWgl = wglYear.reduce((s, v) => s + v, 0)
+            const baseCosts = cur.werkgeverslasten.reduce((s, v) => s + v, 0) + totalWgl
             const omzetTotal = cur.omzet.reduce((s, v) => s + v, 0)
             const totalNetKosten = baseCosts + totalCosts2026 - totalUwv - totalAsr
             // ZZP voor info-rij "Totaal advocatenkosten (loon + ZZP)"
@@ -1661,7 +1674,7 @@ export default function FinancienPage() {
                     </thead>
                     <tbody>
                       {periods.map((p, i) => {
-                        const bruto = cur.werkgeverslasten[i] || 0
+                        const bruto = (cur.werkgeverslasten[i] || 0) + (wglYear[i] || 0)
                         const dag = monthlyCosts2026[i] || 0
                         const retour = (uwv[i] || 0) + (asr[i] || 0)
                         const wkzNet = bruto - retour
@@ -1784,13 +1797,13 @@ export default function FinancienPage() {
                   <p className="text-xs font-medium text-white/70 mb-2">Per maand: Omzet vs. Totale Kosten</p>
                   {(() => {
                     const monthMaxes = periods.map((_, i) => {
-                      const wkzNetVal = (cur.werkgeverslasten[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
+                      const wkzNetVal = (cur.werkgeverslasten[i] || 0) + (wglYear[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
                       return Math.max(cur.omzet[i] || 0, wkzNetVal + (monthlyCosts2026[i] || 0))
                     })
                     const overallMax = Math.max(...monthMaxes, 1)
                     return periods.map((p, i) => {
                       const om = cur.omzet[i] || 0
-                      const wkzNet = (cur.werkgeverslasten[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
+                      const wkzNet = (cur.werkgeverslasten[i] || 0) + (wglYear[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
                       const dag = monthlyCosts2026[i] || 0
                       const tot = wkzNet + dag
                       const omPct = (Math.max(om, 0) / overallMax) * 100
