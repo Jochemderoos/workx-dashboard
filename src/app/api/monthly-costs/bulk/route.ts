@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     // Per maand sortOrder bijhouden
     const sortByMonth: Record<string, number> = {}
 
-    for (const it of items as Array<{ year: number; month: number; amount: number; description: string; externalRef?: string; rawKey?: string }>) {
+    for (const it of items as Array<{ year: number; month: number; amount: number; description: string; externalRef?: string; rawKey?: string; category?: string }>) {
       if (it.externalRef && dupSet.has(it.externalRef)) {
         skipped++
         continue
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
           month: Number(it.month),
           amount: Number(it.amount),
           description: String(it.description).trim(),
+          category: it.category || null,
           externalRef: it.externalRef || null,
           rawKey: it.rawKey || null,
           sortOrder: sortByMonth[key]++,

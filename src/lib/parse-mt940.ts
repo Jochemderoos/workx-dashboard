@@ -6,10 +6,21 @@ import { normalizeVendor } from './cost-vendor'
 
 export interface MT940Transaction {
   date: Date          // valutadatum
-  amount: number      // positief getal in euros
+  amount: number      // positief getal in euros (negatief = bijschrijving die als correctie meetelt)
   description: string // genormaliseerde vendornaam (zelfde stijl als handmatige posten)
   rawKey: string      // stabiele counterparty-fingerprint (voor leer-aliassen)
   externalRef: string // hash voor duplicaat-detectie
+  category?: 'UWV' | 'ASR' // bijschrijvingen die we als terugbetaling meenemen
+}
+
+// Detecteer UWV (zwangerschapsverlof) of ASR (verzuimverzekering) in omschrijving
+function detectCategory(desc: string): 'UWV' | 'ASR' | null {
+  const lower = desc.toLowerCase()
+  // UWV bijschrijvingen: WAZO/Wet arbeid en zorg / zwangerschapsuitkering / uwv
+  if (/\buwv\b/.test(lower) || /\bwazo\b/.test(lower)) return 'UWV'
+  // ASR verzuimverzekering: 'asr' of variaties
+  if (/\basr\b/.test(lower) || /verzuimverzekering/.test(lower)) return 'ASR'
+  return null
 }
 
 function hashTransaction(dateIso: string, amount: number, rawKey: string): string {
@@ -27,16 +38,38 @@ export function parseMT940(content: string): MT940Transaction[] {
 
   const flush = () => {
     if (!currentTx) return
-    if (currentTx.isDebet && currentTx.amount > 0) {
-      const { vendorName, rawKey } = normalizeVendor(currentTx.desc)
+    if (currentTx.amount > 0) {
       const dateIso = currentTx.date.toISOString().slice(0, 10)
-      transactions.push({
-        date: currentTx.date,
-        amount: currentTx.amount,
-        description: vendorName,
-        rawKey,
-        externalRef: hashTransaction(dateIso, currentTx.amount, rawKey),
-      })
+      if (currentTx.isDebet) {
+        // Reguliere kost (debet)
+        const { vendorName, rawKey } = normalizeVendor(currentTx.desc)
+        transactions.push({
+          date: currentTx.date,
+          amount: currentTx.amount,
+          description: vendorName,
+          rawKey,
+          externalRef: hashTransaction(dateIso, currentTx.amount, rawKey),
+        })
+      } else {
+        // Bijschrijving (credit): alleen UWV/ASR meenemen als negatieve correctie
+        const category = detectCategory(currentTx.desc)
+        if (category) {
+          const { rawKey } = normalizeVendor(currentTx.desc)
+          const label = category === 'UWV'
+            ? 'UWV-uitkering (zwangerschapsverlof)'
+            : 'ASR-vergoeding (verzuimverzekering)'
+          // Bedrag negatief opslaan zodat het kosten verlaagt
+          const negAmount = -currentTx.amount
+          transactions.push({
+            date: currentTx.date,
+            amount: negAmount,
+            description: label,
+            rawKey: `${category}:${rawKey}`,
+            externalRef: hashTransaction(dateIso, negAmount, `${category}:${rawKey}`),
+            category,
+          })
+        }
+      }
     }
     currentTx = null
     inDesc = false

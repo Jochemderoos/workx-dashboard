@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       description: learnedMap.get(t.rawKey) ?? t.description,
       rawKey: t.rawKey,
       externalRef: t.externalRef,
+      category: t.category || null,
       isDuplicate: dupSet.has(t.externalRef),
       isLearned: learnedMap.has(t.rawKey),
     }))

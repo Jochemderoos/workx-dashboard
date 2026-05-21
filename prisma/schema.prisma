@@ -1189,10 +1189,11 @@ model MonthlyCost {
   id          String   @id @default(cuid())
   year        Int
   month       Int      // 1-12
-  amount      Float
+  amount      Float    // Negatief = terugbetaling (bv UWV-uitkering, ASR-vergoeding)
   description String
-  externalRef String?  // Hash uit MT940 (date|amount|desc) om dubbele import te voorkomen
-  rawKey      String?  // Genormaliseerde counterparty uit MT940 (voor 'leren' van handmatige correcties)
+  category    String?  // 'UWV' | 'ASR' | null (= reguliere kost)
+  externalRef String?
+  rawKey      String?
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1200,6 +1201,7 @@ model MonthlyCost {
   @@index([year, month])
   @@index([externalRef])
   @@index([rawKey])
+  @@index([category])
 }
 
 // Leer-tabel: koppelt een MT940-counterparty (rawKey) aan de vendor-naam

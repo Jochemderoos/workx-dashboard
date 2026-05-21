@@ -138,8 +138,12 @@ export default function FinancienPage() {
   const [isEditingSalarishuis, setIsEditingSalarishuis] = useState(false)
   const [editingVacation, setEditingVacation] = useState<string | null>(null)
   const [sickDaysTotals, setSickDaysTotals] = useState<SickDaysTotals[]>([])
-  // Dagelijkse kosten 2026 uit Kosten-pagina (geaggregeerd per maand)
+  // Dagelijkse kosten 2026 uit Kosten-pagina (alleen reguliere, exclusief UWV/ASR)
   const [monthlyCosts2026, setMonthlyCosts2026] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+  // UWV (zwangerschapsverlof) en ASR (verzuim) per jaar/maand — bijschrijvingen
+  // tellen mee als negatieve correctie op werkgeverslasten.
+  const [uwvPerMonth, setUwvPerMonth] = useState<Record<number, number[]>>({})
+  const [asrPerMonth, setAsrPerMonth] = useState<Record<number, number[]>>({})
 
   // Check if user is PARTNER or ADMIN
   const isManager = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -181,17 +185,30 @@ export default function FinancienPage() {
           setEmployees(empData)
         }
 
-        // Load monthly costs 2026 (Kosten-pagina) — alleen voor partners/Hanna/Lotte zichtbaar
+        // Load monthly costs 2025 + 2026 (Kosten-pagina) en split op UWV/ASR
         if (session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN') {
-          const costsRes = await fetch('/api/monthly-costs?year=2026')
-          if (costsRes.ok) {
-            const items: { month: number; amount: number }[] = await costsRes.json()
-            const totals = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            for (const it of items) {
-              if (it.month >= 1 && it.month <= 12) totals[it.month - 1] += it.amount
+          const [d2026, d2025] = await Promise.all([
+            fetch('/api/monthly-costs?year=2026').then(r => r.ok ? r.json() : []),
+            fetch('/api/monthly-costs?year=2025').then(r => r.ok ? r.json() : []),
+          ])
+          const reg2026 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          const uwv: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
+          const asr: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
+          for (const it of [...d2026, ...d2025] as { year: number; month: number; amount: number; category?: string | null }[]) {
+            if (it.month < 1 || it.month > 12) continue
+            if (it.category === 'UWV') {
+              if (!uwv[it.year]) uwv[it.year] = Array(12).fill(0)
+              uwv[it.year][it.month - 1] += Math.abs(it.amount)
+            } else if (it.category === 'ASR') {
+              if (!asr[it.year]) asr[it.year] = Array(12).fill(0)
+              asr[it.year][it.month - 1] += Math.abs(it.amount)
+            } else if (it.year === 2026) {
+              reg2026[it.month - 1] += it.amount
             }
-            setMonthlyCosts2026(totals)
           }
+          setMonthlyCosts2026(reg2026)
+          setUwvPerMonth(uwv)
+          setAsrPerMonth(asr)
         }
 
         // Load sick days for managers
@@ -1568,29 +1585,36 @@ export default function FinancienPage() {
             )
           })()}
 
-          {/* Saldo incl. dagelijkse kosten (alleen 2026) */}
+          {/* Saldo incl. dagelijkse kosten + UWV/ASR (alleen 2026) */}
           {(() => {
             const cur = getDataForYear(currentYear)
             const totalCosts2026 = monthlyCosts2026.reduce((s, v) => s + v, 0)
+            const uwv = uwvPerMonth[currentYear] || Array(12).fill(0)
+            const asr = asrPerMonth[currentYear] || Array(12).fill(0)
+            const totalUwv = uwv.reduce((s, v) => s + v, 0)
+            const totalAsr = asr.reduce((s, v) => s + v, 0)
             const baseCosts = cur.werkgeverslasten.reduce((s, v) => s + v, 0) + cur.kostenExtern.reduce((s, v) => s + v, 0)
             const omzetTotal = cur.omzet.reduce((s, v) => s + v, 0)
+            const totalNetKosten = baseCosts + totalCosts2026 - totalUwv - totalAsr
             return (
               <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
                 <div className="flex items-start justify-between mb-1 gap-4 flex-wrap">
                   <div>
-                    <h3 className="text-white font-medium">Saldo incl. dagelijkse kosten (alleen {currentYear})</h3>
+                    <h3 className="text-white font-medium">Saldo incl. dagelijkse kosten en UWV/ASR (alleen {currentYear})</h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      Werkgeverslasten + Kosten Extern + Kostenoverzicht uit <a href="/dashboard/kosten" className="text-workx-lime hover:underline">Kosten-pagina</a>. Vorige jaren ontbreekt deze data, dus de jaarvergelijking hierboven blijft zonder deze post.
+                      Werkgeverslasten + Kosten Extern + dagelijkse kosten uit <a href="/dashboard/kosten" className="text-workx-lime hover:underline">Kosten-pagina</a>, minus UWV (zwangerschapsverlof) en ASR (verzuim) terugbetalingen. Vorige jaren ontbreekt de dagelijkse-kosten-data, dus de jaarvergelijking hierboven blijft zonder die post.
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Extra t.o.v. werkgeverslasten</p>
-                    <p className="text-lg font-bold text-orange-400 tabular-nums">+{formatCurrency(totalCosts2026)}</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Netto effect</p>
+                    <p className={`text-lg font-bold tabular-nums ${(totalCosts2026 - totalUwv - totalAsr) >= 0 ? 'text-orange-400' : 'text-green-400'}`}>
+                      {(totalCosts2026 - totalUwv - totalAsr) >= 0 ? '+' : ''}{formatCurrency(totalCosts2026 - totalUwv - totalAsr)}
+                    </p>
                   </div>
                 </div>
-                {totalCosts2026 === 0 && (
+                {totalCosts2026 === 0 && totalUwv === 0 && totalAsr === 0 && (
                   <div className="mt-3 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs text-gray-400">
-                    Nog geen dagelijkse kosten ingeladen voor {currentYear}. Voeg ze toe via <a href="/dashboard/kosten" className="text-workx-lime hover:underline">/dashboard/kosten</a> (handmatig of via MT940-import).
+                    Nog geen dagelijkse kosten of UWV/ASR ingeladen voor {currentYear}. Voeg ze toe via <a href="/dashboard/kosten" className="text-workx-lime hover:underline">/dashboard/kosten</a>.
                   </div>
                 )}
 
@@ -1601,7 +1625,8 @@ export default function FinancienPage() {
                         <th className="py-2 px-3 font-medium">Maand</th>
                         <th className="py-2 px-3 font-medium text-right">Werkgeverslasten + Extern</th>
                         <th className="py-2 px-3 font-medium text-right">Dagelijkse kosten</th>
-                        <th className="py-2 px-3 font-medium text-right">Totale kosten</th>
+                        <th className="py-2 px-3 font-medium text-right">UWV/ASR retour</th>
+                        <th className="py-2 px-3 font-medium text-right">Netto kosten</th>
                         <th className="py-2 px-3 font-medium text-right">Omzet</th>
                         <th className="py-2 px-3 font-medium text-right">Saldo</th>
                       </tr>
@@ -1610,15 +1635,17 @@ export default function FinancienPage() {
                       {periods.map((p, i) => {
                         const wkz = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0)
                         const dag = monthlyCosts2026[i] || 0
-                        const tot = wkz + dag
+                        const retour = (uwv[i] || 0) + (asr[i] || 0)
+                        const tot = wkz + dag - retour
                         const om = cur.omzet[i] || 0
                         const sld = om - tot
-                        if (wkz === 0 && dag === 0 && om === 0) return null
+                        if (wkz === 0 && dag === 0 && retour === 0 && om === 0) return null
                         return (
                           <tr key={p} className="border-b border-white/5 hover:bg-white/[0.02]">
                             <td className="py-2 px-3 text-white">{p}</td>
                             <td className="py-2 px-3 text-right tabular-nums text-gray-300">{formatCurrency(wkz)}</td>
                             <td className="py-2 px-3 text-right tabular-nums text-orange-300">{formatCurrency(dag)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-green-400">{retour > 0 ? `−${formatCurrency(retour)}` : '—'}</td>
                             <td className="py-2 px-3 text-right tabular-nums text-white font-medium">{formatCurrency(tot)}</td>
                             <td className="py-2 px-3 text-right tabular-nums text-gray-300">{formatCurrency(om)}</td>
                             <td className={`py-2 px-3 text-right tabular-nums font-medium ${sld >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>{formatCurrency(sld)}</td>
@@ -1629,15 +1656,86 @@ export default function FinancienPage() {
                         <td className="py-2 px-3 text-white font-bold">Totaal</td>
                         <td className="py-2 px-3 text-right tabular-nums text-gray-300 font-bold">{formatCurrency(baseCosts)}</td>
                         <td className="py-2 px-3 text-right tabular-nums text-orange-300 font-bold">{formatCurrency(totalCosts2026)}</td>
-                        <td className="py-2 px-3 text-right tabular-nums text-white font-bold">{formatCurrency(baseCosts + totalCosts2026)}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-green-400 font-bold">{(totalUwv + totalAsr) > 0 ? `−${formatCurrency(totalUwv + totalAsr)}` : '—'}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-white font-bold">{formatCurrency(totalNetKosten)}</td>
                         <td className="py-2 px-3 text-right tabular-nums text-gray-300 font-bold">{formatCurrency(omzetTotal)}</td>
-                        <td className={`py-2 px-3 text-right tabular-nums font-bold ${(omzetTotal - baseCosts - totalCosts2026) >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>
-                          {formatCurrency(omzetTotal - baseCosts - totalCosts2026)}
+                        <td className={`py-2 px-3 text-right tabular-nums font-bold ${(omzetTotal - totalNetKosten) >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>
+                          {formatCurrency(omzetTotal - totalNetKosten)}
                         </td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
+
+                {/* 2025 vs 2026 vergelijking — appels/appels voor UWV/ASR (beide jaren data) */}
+                {(() => {
+                  const prev = getDataForYear(years[1])
+                  const uwvPrev = uwvPerMonth[years[1]] || Array(12).fill(0)
+                  const asrPrev = asrPerMonth[years[1]] || Array(12).fill(0)
+                  // Bepaal lastMonth in 2026 voor periodieke vergelijking
+                  let lastMonth = 0
+                  for (let m = 0; m < 12; m++) {
+                    if (cur.omzet[m] !== 0 || cur.werkgeverslasten[m] !== 0) lastMonth = m + 1
+                  }
+                  if (lastMonth === 0) lastMonth = 12
+                  const sumTo = (arr: number[], n: number) => arr.slice(0, n).reduce((s, v) => s + (v || 0), 0)
+                  const periodLabel = lastMonth === 12 ? 'heel jaar' : `P1–P${lastMonth}`
+
+                  const wkzCur = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(cur.kostenExtern, lastMonth)
+                  const wkzPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(prev.kostenExtern, lastMonth)
+                  const uwvCurSum = sumTo(uwv, lastMonth)
+                  const uwvPrevSum = sumTo(uwvPrev, lastMonth)
+                  const asrCurSum = sumTo(asr, lastMonth)
+                  const asrPrevSum = sumTo(asrPrev, lastMonth)
+                  const netCur = wkzCur - uwvCurSum - asrCurSum
+                  const netPrev = wkzPrev - uwvPrevSum - asrPrevSum
+                  const dagCurSum = sumTo(monthlyCosts2026, lastMonth)
+
+                  if (uwvCurSum === 0 && asrCurSum === 0 && uwvPrevSum === 0 && asrPrevSum === 0) return null
+
+                  return (
+                    <div className="mt-6 border-t border-white/10 pt-5">
+                      <h4 className="text-sm font-medium text-white mb-1">Vergelijking met {years[1]} — UWV/ASR appels-appels</h4>
+                      <p className="text-[11px] text-gray-500 mb-3">
+                        Voor UWV en ASR hebben we beide jaren data, dus over {periodLabel} kunnen we netjes vergelijken.
+                        Dagelijkse kosten staat los want die hebben we alleen voor {currentYear}.
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Werkgeverslasten + Extern {periodLabel}</p>
+                          <p className="text-lg font-bold text-white tabular-nums">{formatCurrency(wkzCur)}</p>
+                          <p className={`text-[11px] tabular-nums ${(wkzCur - wkzPrev) > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                            {wkzCur - wkzPrev > 0 ? '+' : ''}{formatCurrency(wkzCur - wkzPrev)} vs {years[1]}
+                          </p>
+                        </div>
+                        <div className="bg-green-500/5 rounded-xl p-3 border border-green-500/20">
+                          <p className="text-[10px] text-green-300/70 uppercase tracking-wider">UWV {periodLabel}</p>
+                          <p className="text-lg font-bold text-green-400 tabular-nums">{formatCurrency(uwvCurSum)}</p>
+                          <p className={`text-[11px] tabular-nums ${(uwvCurSum - uwvPrevSum) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {uwvCurSum - uwvPrevSum > 0 ? '+' : ''}{formatCurrency(uwvCurSum - uwvPrevSum)} vs {years[1]}
+                          </p>
+                        </div>
+                        <div className="bg-green-500/5 rounded-xl p-3 border border-green-500/20">
+                          <p className="text-[10px] text-green-300/70 uppercase tracking-wider">ASR {periodLabel}</p>
+                          <p className="text-lg font-bold text-green-400 tabular-nums">{formatCurrency(asrCurSum)}</p>
+                          <p className={`text-[11px] tabular-nums ${(asrCurSum - asrPrevSum) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {asrCurSum - asrPrevSum > 0 ? '+' : ''}{formatCurrency(asrCurSum - asrPrevSum)} vs {years[1]}
+                          </p>
+                        </div>
+                        <div className="bg-workx-lime/10 rounded-xl p-3 border border-workx-lime/30">
+                          <p className="text-[10px] text-workx-lime/70 uppercase tracking-wider">Netto werkgeverslasten {periodLabel}</p>
+                          <p className="text-lg font-bold text-workx-lime tabular-nums">{formatCurrency(netCur)}</p>
+                          <p className={`text-[11px] tabular-nums ${(netCur - netPrev) > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                            {netCur - netPrev > 0 ? '+' : ''}{formatCurrency(netCur - netPrev)} vs {years[1]}
+                          </p>
+                          {dagCurSum > 0 && (
+                            <p className="text-[10px] text-gray-500 mt-1">excl. {formatCurrency(dagCurSum)} dagelijkse kosten {currentYear}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 <div className="mt-6 space-y-2">
                   <p className="text-xs font-medium text-white/70 mb-2">Per maand: omzet vs. totale kosten</p>

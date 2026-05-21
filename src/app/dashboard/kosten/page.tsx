@@ -45,6 +45,7 @@ export default function KostenPage() {
   const [importItems, setImportItems] = useState<Array<{
     date: string; year: number; month: number; amount: number;
     description: string; rawKey: string; externalRef: string;
+    category?: string | null;
     isDuplicate: boolean; isLearned: boolean; selected: boolean
   }>>([])
   const [importError, setImportError] = useState<string | null>(null)
@@ -178,6 +179,7 @@ export default function KostenPage() {
             month: s.month,
             amount: s.amount,
             description: s.description,
+            category: s.category || null,
             externalRef: s.externalRef,
             rawKey: s.rawKey,
           })),
