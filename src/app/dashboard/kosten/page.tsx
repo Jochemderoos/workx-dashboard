@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
-import { groupKey } from '@/lib/cost-vendor'
+import { groupKey, vendorCategory } from '@/lib/cost-vendor'
 import { amountExVat, vatRateFor } from '@/lib/cost-vat'
 
 interface Cost {
@@ -316,6 +316,50 @@ export default function KostenPage() {
     }
   }, [yearCompare])
 
+  // Per categorie totaal voor het huidige jaar (ex BTW)
+  const categoryStats = useMemo(() => {
+    const map = new Map<string, { total: number; count: number }>()
+    for (const c of costs) {
+      if (c.category === 'MGMT') continue  // management fee tonen we apart in KPI
+      const cat = vendorCategory(c.description)
+      const e = map.get(cat) || { total: 0, count: 0 }
+      e.total += amountExVat(c)
+      e.count++
+      map.set(cat, e)
+    }
+    return Array.from(map.entries())
+      .map(([cat, v]) => ({ category: cat, ...v }))
+      .sort((a, b) => b.total - a.total)
+  }, [costs])
+
+  // Per categorie 2025 vs 2026 — appels-appels tot lastMonth 2026
+  const categoryCompare = useMemo(() => {
+    if (!yearCompare) return null
+    const cur2026 = year === 2026 ? costs : costsOther
+    const cur2025 = year === 2025 ? costs : costsOther
+    const lastMonth = yearCompare.lastMonth
+    const aggregate = (rows: Cost[]) => {
+      const map = new Map<string, number>()
+      for (const c of rows) {
+        if (c.month > lastMonth) continue
+        if (c.category === 'MGMT') continue  // mgmt apart
+        const cat = vendorCategory(c.description)
+        map.set(cat, (map.get(cat) || 0) + amountExVat(c))
+      }
+      return map
+    }
+    const m2025 = aggregate(cur2025)
+    const m2026 = aggregate(cur2026)
+    const keys = new Set([...Array.from(m2025.keys()), ...Array.from(m2026.keys())])
+    const rows = Array.from(keys).map(k => ({
+      category: k,
+      v2025: m2025.get(k) || 0,
+      v2026: m2026.get(k) || 0,
+    }))
+    rows.sort((a, b) => Math.max(b.v2025, b.v2026) - Math.max(a.v2025, a.v2026))
+    return rows
+  }, [year, costs, costsOther, yearCompare])
+
   // Top terugkerende vendors — ontwikkeling 2025 → 2026 (ex BTW, tot lastMonth)
   const vendorTrend = useMemo(() => {
     if (!yearCompare) return null
@@ -531,6 +575,47 @@ export default function KostenPage() {
               )}
             </div>
           </div>
+
+          {/* Per categorie — geaggregeerde inzichts-blokken */}
+          {categoryStats.length > 0 && (() => {
+            const maxCat = categoryStats[0].total || 1
+            const colors = [
+              'from-workx-lime/60 to-workx-lime',
+              'from-cyan-500/60 to-cyan-400',
+              'from-orange-500/60 to-orange-400',
+              'from-purple-500/60 to-purple-400',
+              'from-pink-500/60 to-pink-400',
+              'from-blue-500/60 to-blue-400',
+              'from-emerald-500/60 to-emerald-400',
+              'from-yellow-500/60 to-yellow-400',
+              'from-red-500/60 to-red-400',
+              'from-teal-500/60 to-teal-400',
+              'from-indigo-500/60 to-indigo-400',
+            ]
+            return (
+              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-6">
+                <h3 className="text-white font-semibold mb-1">Top categorieën {year}</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Vendors gegroepeerd naar type kost. Management fee staat apart in de KPI.
+                </p>
+                <div className="space-y-2">
+                  {categoryStats.map((c, i) => {
+                    const pct = (c.total / maxCat) * 100
+                    return (
+                      <div key={c.category} className="flex items-center gap-3">
+                        <span className="text-xs text-white w-44 shrink-0 truncate" title={c.category}>{c.category}</span>
+                        <div className="flex-1 h-5 bg-white/5 rounded-md overflow-hidden">
+                          <div className={`h-full bg-gradient-to-r ${colors[i % colors.length]} rounded-md`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-gray-500 w-10 text-right">×{c.count}</span>
+                        <span className="text-xs font-medium text-white tabular-nums w-24 text-right">{formatEUR(c.total)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* === Hier begint de gedetailleerde maand-data === */}
           <div className="mb-3 pt-2 border-t border-white/5">
@@ -900,6 +985,47 @@ export default function KostenPage() {
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-workx-lime" /> 2026 overig</span>
                 </div>
               </div>
+
+              {/* Per categorie 2025 vs 2026 */}
+              {categoryCompare && categoryCompare.length > 0 && (() => {
+                const maxV = Math.max(...categoryCompare.map(c => Math.max(c.v2025, c.v2026)), 1)
+                return (
+                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-6">
+                    <h3 className="text-white font-semibold mb-1">Per categorie 2025 vs 2026 ({yearCompare.periodLabel})</h3>
+                    <p className="text-xs text-gray-500 mb-4">
+                      Vendors gegroepeerd naar type kost. Cijfers ex BTW, excl. management fee.
+                    </p>
+                    <div className="space-y-2">
+                      {categoryCompare.map(c => {
+                        const diff = c.v2026 - c.v2025
+                        const pct = c.v2025 > 0 ? (diff / c.v2025) * 100 : null
+                        return (
+                          <div key={c.category} className="grid grid-cols-[10rem_1fr_5rem_5rem_4rem] gap-3 items-center">
+                            <span className="text-xs text-white truncate" title={c.category}>{c.category}</span>
+                            <div className="grid grid-rows-2 gap-0.5">
+                              <div className="h-3 bg-white/5 rounded overflow-hidden" title={`2025: ${formatEUR(c.v2025)}`}>
+                                <div className="h-full bg-gray-500/70" style={{ width: `${(c.v2025 / maxV) * 100}%` }} />
+                              </div>
+                              <div className="h-3 bg-white/5 rounded overflow-hidden" title={`2026: ${formatEUR(c.v2026)}`}>
+                                <div className="h-full bg-workx-lime" style={{ width: `${(c.v2026 / maxV) * 100}%` }} />
+                              </div>
+                            </div>
+                            <span className="text-[11px] text-gray-300 tabular-nums text-right">{c.v2025 > 0 ? formatEUR(c.v2025) : '—'}</span>
+                            <span className="text-[11px] text-workx-lime tabular-nums text-right font-medium">{c.v2026 > 0 ? formatEUR(c.v2026) : '—'}</span>
+                            <span className={`text-[10px] tabular-nums text-right ${pct === null ? 'text-gray-500' : pct > 0 ? 'text-red-400' : pct < 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                              {pct === null ? 'nieuw' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="flex items-center gap-4 pt-3 mt-2 border-t border-white/5 text-[10px] text-gray-400">
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gray-500/70" /> 2025</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-workx-lime" /> 2026</span>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Top vendors trend tabel */}
               {vendorTrend && vendorTrend.length > 0 && (

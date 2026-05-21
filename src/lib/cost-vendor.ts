@@ -196,6 +196,54 @@ function extractCounterparty(raw: string): string | null {
   return null
 }
 
+// Hoger-niveau categorie-indeling voor inzichts-overzichten ("Borrels",
+// "Etentjes / Lunch", "Software & IT", etc.). De regex matcht op de
+// groupKey-naam (= de alias) zodat we per vendor één categorie krijgen.
+const CATEGORY_RULES: Array<[RegExp, string]> = [
+  // Eten & drinken kantoor (lunch, koffie, AH-bestellingen)
+  [/albert heijn|vlaams broodhuys|zerozero|bocca|de bary|smartcoffee|ceppi|jones brothers|froot|broodjes|krua thai|buffet van odette|marleenkookt|fleurop/i, 'Eten & drinken kantoor'],
+  // Borrels & netwerkevenementen
+  [/hotel arena|mooi boules|amstelveld|merchandise|borrel|otterlo|alpina|het helderhuys|het koekemannetje/i, 'Borrels & netwerk'],
+  // Cadeaus & relatiegeschenken (incl. medewerker-cadeaus)
+  [/cadeau|topgeschenken|brownie box|marie-stella-maris|rituals|five city spa|nijntje|boekenbon|hema/i, 'Cadeaus & relatiegeschenken'],
+  // Externe advocaten / doorbelaste advocatenkosten
+  [/stadhouders|citius|pallas|youman fisher|legal mike|legal planet|the data lawyers|hj advocaten|van benthem|van loman|nectaro|avocare|bram willems/i, 'Externe advocaten'],
+  // Lidmaatschap / beroepsverenigingen
+  [/orde van advocaten|nederlandse orde|amsterdamse orde|jonge balie|vereniging voor arbeidsrecht|chambers|stichting idfa|dutch arbitration|mediationgenootschap|alo \(partners|stichting opleiding|stichting spuistraat/i, 'Lidmaatschap & beroep'],
+  // Opleiding & cursus
+  [/academie voor de rechtspraak|delfts congress|opleiding advocaten/i, 'Opleidingen & cursus'],
+  // Software & IT
+  [/constant it|adobe|google ireland|digihero|basenet|doxflow|spotify|coolblue|ttwwoo|pci|sdu uitgevers|legal planet/i, 'Software & IT'],
+  // Huur & vaste kantoorlasten
+  [/herengracht investments|stichting spuistraat/i, 'Huur'],
+  // Verzekering
+  [/asr verzuim|aegon|nationale-nederlanden|chambers/i, 'Verzekeringen'],
+  // Banken & financieel
+  [/abn amro|international card services|norm finance|kwps|bright pensioen/i, 'Bank & financieel'],
+  // Kantoorbenodigdheden / inkopen
+  [/viking|gamma business|fiets workx|coolblue|hema|milieuservice|fleurop/i, 'Kantoorbenodigdheden'],
+  // Vervoer, post & koeriers
+  [/postnl|ns reizigers|ns groep|fietskoerier|veloretti/i, 'Vervoer & post'],
+  // Pers & abonnementen
+  [/financieele dagblad|sdu uitgevers|athenaeum|abonnement/i, 'Pers & abonnementen'],
+  // Kamer van Koophandel / overheden
+  [/kamer van koophandel|ministerie van justitie|vurich|proceskosten|kosten buitenlandse/i, 'Overheid & deurwaarder'],
+  // Personeel & declaraties (Workx-medewerkers)
+  [/declaratieformulier|fiets workx|maaike de jong|isma\s+—\s+declaratie/i, 'Declaraties & personeel'],
+  // Management fee (apart)
+  [/^management fee/i, 'Management fee partners'],
+]
+
+// Geef een hogere categorie terug voor een (al genormaliseerde) vendor-naam
+// of -description. Gebruikt voor de "Per categorie" overzichten.
+export function vendorCategory(descriptionOrKey: string): string {
+  const s = descriptionOrKey || ''
+  for (const [re, label] of CATEGORY_RULES) {
+    if (re.test(s)) return label
+  }
+  return 'Overig'
+}
+
 // Voor groeperen in overzicht. Probeert eerst alias-match op de ruwe
 // description, dan op de schoongemaakte naam (zonder Mollie/Stripe-noise),
 // en valt anders terug op de eerste 2 woorden van de schoonmaakte naam.
