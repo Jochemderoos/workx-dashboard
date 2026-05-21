@@ -100,10 +100,17 @@ export default function DebiteurenPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Toon alleen facturen die de betalingstermijn voorbij zijn. Facturen
+  // binnen termijn zijn (nog) geen actiepunt en horen niet in dit overzicht.
+  const overdueInvoices = useMemo(
+    () => invoices.filter(i => daysOverdue(i) >= 0),
+    [invoices]
+  )
+
   // Voor het filter-overzicht: lijst van advocaten die als primair gekoppeld zijn
   const attorneys = useMemo(() => {
     const map = new Map<string, { id: string; name: string; avatarUrl: string | null; count: number; total: number }>()
-    for (const inv of invoices) {
+    for (const inv of overdueInvoices) {
       if (!inv.primaryUser) continue
       const u = inv.primaryUser
       const entry = map.get(u.id) || { id: u.id, name: u.name, avatarUrl: u.avatarUrl, count: 0, total: 0 }
@@ -112,14 +119,14 @@ export default function DebiteurenPage() {
       map.set(u.id, entry)
     }
     return Array.from(map.values()).sort((a, b) => b.total - a.total)
-  }, [invoices])
+  }, [overdueInvoices])
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return invoices
-    if (filter === 'mine') return invoices.filter(i => i.primaryUserId === currentUserId)
-    if (filter === 'unassigned') return invoices.filter(i => !i.primaryUserId)
-    return invoices.filter(i => i.primaryUserId === filter)
-  }, [invoices, filter, currentUserId])
+    if (filter === 'all') return overdueInvoices
+    if (filter === 'mine') return overdueInvoices.filter(i => i.primaryUserId === currentUserId)
+    if (filter === 'unassigned') return overdueInvoices.filter(i => !i.primaryUserId)
+    return overdueInvoices.filter(i => i.primaryUserId === filter)
+  }, [overdueInvoices, filter, currentUserId])
 
   const totals = useMemo(() => {
     const total = filtered.reduce((s, i) => s + i.totalIncl, 0)
@@ -333,22 +340,20 @@ export default function DebiteurenPage() {
         <>
           {/* Mijn debiteuren — persoonlijk overzicht voor ingelogde gebruiker */}
           {(() => {
-            const mine = invoices.filter(i => i.primaryUserId === currentUserId)
+            const mine = overdueInvoices.filter(i => i.primaryUserId === currentUserId)
             if (mine.length === 0) return null
             // Sorteer oudste eerst
             const sorted = [...mine].sort((a, b) => daysOverdue(b) - daysOverdue(a))
-            // Leeftijds-buckets
+            // Leeftijds-buckets — alleen te-late facturen, 'binnen termijn' is uitgefilterd
             const buckets = [
-              { key: 'binnen', label: 'Binnen termijn', max: 0, color: 'text-green-300', bg: 'bg-green-500/5 border-green-500/20' },
-              { key: '0-30', label: '< 30 dgn te laat', max: 30, color: 'text-gray-300', bg: 'bg-white/5 border-white/10' },
-              { key: '30-60', label: '30–60 dgn te laat', max: 60, color: 'text-yellow-300', bg: 'bg-yellow-500/5 border-yellow-500/20' },
-              { key: '60-90', label: '60–90 dgn te laat', max: 90, color: 'text-orange-300', bg: 'bg-orange-500/5 border-orange-500/20' },
+              { key: '0-30', label: '< 30 dgn te laat', max: 30, color: 'text-yellow-300', bg: 'bg-yellow-500/5 border-yellow-500/20' },
+              { key: '30-60', label: '30–60 dgn te laat', max: 60, color: 'text-orange-300', bg: 'bg-orange-500/5 border-orange-500/20' },
+              { key: '60-90', label: '60–90 dgn te laat', max: 90, color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30' },
               { key: '90-180', label: '90–180 dgn te laat', max: 180, color: 'text-red-300', bg: 'bg-red-500/5 border-red-500/20' },
               { key: '180+', label: '180+ dgn te laat', max: Infinity, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30' },
             ] as const
             const bucketOf = (age: number) => {
-              if (age < 0) return buckets[0]
-              for (const b of buckets.slice(1)) if (age < b.max) return b
+              for (const b of buckets) if (age < b.max) return b
               return buckets[buckets.length - 1]
             }
             const totals = buckets.map(b => {
@@ -485,7 +490,7 @@ export default function DebiteurenPage() {
                 filter === 'all' ? 'bg-workx-lime text-workx-dark' : 'bg-white/5 text-gray-400 hover:bg-white/10'
               }`}
             >
-              Alle ({invoices.length})
+              Alle ({overdueInvoices.length})
             </button>
             <button
               onClick={() => setFilter('unassigned')}
