@@ -1,0 +1,4702 @@
+[
+  {
+    "date": "2026-01-01",
+    "year": 2026,
+    "month": 1,
+    "amount": 28297.78,
+    "description": "Asr",
+    "rawKey": "asr",
+    "externalRef": "d7cf9d7bcb3393788ae7",
+    "category": null
+  },
+  {
+    "date": "2026-01-03",
+    "year": 2026,
+    "month": 1,
+    "amount": 208.5,
+    "description": "Greenstars .",
+    "rawKey": "greenstars",
+    "externalRef": "00374ec06a7d3f0de466",
+    "category": null
+  },
+  {
+    "date": "2026-01-04",
+    "year": 2026,
+    "month": 1,
+    "amount": 225,
+    "description": "Delfts Congres Support Via Icepay",
+    "rawKey": "delfts congres support via icepay",
+    "externalRef": "75168a37191a3245d0df",
+    "category": null
+  },
+  {
+    "date": "2026-01-04",
+    "year": 2026,
+    "month": 1,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "4a7d6e276037555485bc",
+    "category": null
+  },
+  {
+    "date": "2026-01-04",
+    "year": 2026,
+    "month": 1,
+    "amount": 157.3,
+    "description": "Academie Voor De Rechtspra Ktijk .",
+    "rawKey": "academie voor de rechtspra ktijk",
+    "externalRef": "5c4faa3b8e3199ba123d",
+    "category": null
+  },
+  {
+    "date": "2026-01-04",
+    "year": 2026,
+    "month": 1,
+    "amount": 170.64,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "72dd9620d94b2bd4aad0",
+    "category": null
+  },
+  {
+    "date": "2026-01-04",
+    "year": 2026,
+    "month": 1,
+    "amount": 20.51,
+    "description": "Netherlink.Nl",
+    "rawKey": "netherlink nl",
+    "externalRef": "86cd1f7fa748c8e43e94",
+    "category": null
+  },
+  {
+    "date": "2026-01-04",
+    "year": 2026,
+    "month": 1,
+    "amount": 15.6,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "bc34ab4c16edb3bcddf7",
+    "category": null
+  },
+  {
+    "date": "2026-01-04",
+    "year": 2026,
+    "month": 1,
+    "amount": 449,
+    "description": "Iside",
+    "rawKey": "iside",
+    "externalRef": "2372606db69ff0263990",
+    "category": null
+  },
+  {
+    "date": "2026-01-05",
+    "year": 2026,
+    "month": 1,
+    "amount": 12.99,
+    "description": "Spotify",
+    "rawKey": "spotifyab",
+    "externalRef": "617d63f6535bbac41cef",
+    "category": null
+  },
+  {
+    "date": "2026-01-06",
+    "year": 2026,
+    "month": 1,
+    "amount": 423.04,
+    "description": "Google Ireland",
+    "rawKey": "google ireland limited",
+    "externalRef": "4d238de239f8f4a459b8",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 379.98,
+    "description": "Milieu Service Nederland BV",
+    "rawKey": "milieu service nederland",
+    "externalRef": "bd9f91dc6f7de339327e",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 36.28,
+    "description": "Milieu Service Nederland BV",
+    "rawKey": "milieu service nederland",
+    "externalRef": "81caa1f723cb25e675e5",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 12.75,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "296fba84ba526a71172d",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 125.48,
+    "description": "Viking kantoorspullen",
+    "rawKey": "viking netherlands via paypal europe",
+    "externalRef": "9154d6558eea46223473",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 65.15,
+    "description": "Viking kantoorspullen",
+    "rawKey": "viking netherlands via paypal europe",
+    "externalRef": "056b5bf960d2f2745931",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 17.48,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e95843b9370aef118456",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 1.39,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "5d7639ccda1eb2790724",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 10.9,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "07e6a096000e82b0210b",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 81.5,
+    "description": "Five City Spa",
+    "rawKey": "five city spa",
+    "externalRef": "05342e42dc45a12c3382",
+    "category": null
+  },
+  {
+    "date": "2026-01-07",
+    "year": 2026,
+    "month": 1,
+    "amount": 19.74,
+    "description": "Viking kantoorspullen",
+    "rawKey": "viking netherlands via paypal europe",
+    "externalRef": "d48ace58f1be5cf2b724",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 106.54,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "20ee74387a887c306e83",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "16514a006624c1b6ef58",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 10015.79,
+    "description": "KWPS (doorbelast)",
+    "rawKey": "kwps",
+    "externalRef": "600856291ebf9078e221",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 136.13,
+    "description": "Stadhouders Advocaten",
+    "rawKey": "stadhouders advocaten",
+    "externalRef": "8773259340a4301c38e3",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 545.11,
+    "description": "Stadhouders Advocaten",
+    "rawKey": "stadhouders advocaten",
+    "externalRef": "98fc0918ab1ff264e575",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 121,
+    "description": "Avocare",
+    "rawKey": "avocare arbeidsrecht",
+    "externalRef": "622989061a2ba9708829",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 565.9,
+    "description": "NDSM Apotheek",
+    "rawKey": "ndsm apotheek",
+    "externalRef": "98b0643dfcfb78b5b324",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 13123.73,
+    "description": "Herengracht Investments (huur)",
+    "rawKey": "herengracht investments",
+    "externalRef": "2038f8ce52d0fb482c0f",
+    "category": null
+  },
+  {
+    "date": "2026-01-11",
+    "year": 2026,
+    "month": 1,
+    "amount": 132.32,
+    "description": "Ceppi.S Deli .",
+    "rawKey": "ceppi s deli",
+    "externalRef": "7cf1bd77271f991b46fe",
+    "category": null
+  },
+  {
+    "date": "2026-01-12",
+    "year": 2026,
+    "month": 1,
+    "amount": 151.25,
+    "description": "Legal Mike",
+    "rawKey": "legalmike",
+    "externalRef": "6b1494be337bc38861f3",
+    "category": null
+  },
+  {
+    "date": "2026-01-14",
+    "year": 2026,
+    "month": 1,
+    "amount": 120,
+    "description": "Mickey Philips",
+    "rawKey": "mickey philips",
+    "externalRef": "8b676ed68c85ac0387fa",
+    "category": null
+  },
+  {
+    "date": "2026-01-14",
+    "year": 2026,
+    "month": 1,
+    "amount": 44.45,
+    "description": "PostNL",
+    "rawKey": "postnl pakketten benelux b v",
+    "externalRef": "1d2b965fdc15b8f0f21b",
+    "category": null
+  },
+  {
+    "date": "2026-01-14",
+    "year": 2026,
+    "month": 1,
+    "amount": 10.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "6a4dc91fc7273082230e",
+    "category": null
+  },
+  {
+    "date": "2026-01-14",
+    "year": 2026,
+    "month": 1,
+    "amount": 41.3,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "68bbc87338eb2703ca62",
+    "category": null
+  },
+  {
+    "date": "2026-01-15",
+    "year": 2026,
+    "month": 1,
+    "amount": 84,
+    "description": "Bocca Coffee",
+    "rawKey": "bocca coffee via stripe technology europe ltd",
+    "externalRef": "13d5da2e26ce4bd3ad32",
+    "category": null
+  },
+  {
+    "date": "2026-01-18",
+    "year": 2026,
+    "month": 1,
+    "amount": 257.23,
+    "description": "Gamma Business",
+    "rawKey": "gamma business services",
+    "externalRef": "f25c861d8514971e1962",
+    "category": null
+  },
+  {
+    "date": "2026-01-18",
+    "year": 2026,
+    "month": 1,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "276841a78a4fb68d1e72",
+    "category": null
+  },
+  {
+    "date": "2026-01-19",
+    "year": 2026,
+    "month": 1,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "07d7d279ccfb51aa6bbe",
+    "category": null
+  },
+  {
+    "date": "2026-01-19",
+    "year": 2026,
+    "month": 1,
+    "amount": 108.33,
+    "description": "ABN AMRO",
+    "rawKey": "abn amro bank uw maandtariferingsnota is beschikbaar on",
+    "externalRef": "92b98af14e0ec21d2e41",
+    "category": null
+  },
+  {
+    "date": "2026-01-21",
+    "year": 2026,
+    "month": 1,
+    "amount": 500,
+    "description": "Google Ireland",
+    "rawKey": "google ireland limited",
+    "externalRef": "8cdaf3db4cd0f115559e",
+    "category": null
+  },
+  {
+    "date": "2026-01-21",
+    "year": 2026,
+    "month": 1,
+    "amount": 72.67,
+    "description": "Digihero",
+    "rawKey": "digihero",
+    "externalRef": "4ed19cf825099c26d5f7",
+    "category": null
+  },
+  {
+    "date": "2026-01-21",
+    "year": 2026,
+    "month": 1,
+    "amount": 6.38,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "96472ee2b3057c66a14a",
+    "category": null
+  },
+  {
+    "date": "2026-01-21",
+    "year": 2026,
+    "month": 1,
+    "amount": 369.05,
+    "description": "Les Dents Du Midi — declaratie",
+    "rawKey": "les dents du midi",
+    "externalRef": "f2d5159043ee29cb98c2",
+    "category": null
+  },
+  {
+    "date": "2026-01-21",
+    "year": 2026,
+    "month": 1,
+    "amount": 7062,
+    "description": "Ministerie Van Veiligheid En Justitie Betalingskenm.: 2000859104721823",
+    "rawKey": "ministerie van veiligheid en justitie betalingskenm :",
+    "externalRef": "a515e1bd47ce537ab598",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 909.54,
+    "description": "Int Card Services",
+    "rawKey": "int card services",
+    "externalRef": "932d06d79357c95b38cf",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 54,
+    "description": "Financieele Dagblad",
+    "rawKey": "het financieele dagblad",
+    "externalRef": "3ac08a43138ade83080d",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 2290.24,
+    "description": "Norm Finance",
+    "rawKey": "norm finance",
+    "externalRef": "51d1e55ed9c5a1e822d0",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 2643.22,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "f93ba4c8cbdd5c7dec87",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 13123.73,
+    "description": "Herengracht Investments (huur)",
+    "rawKey": "herengracht investments",
+    "externalRef": "357c48ad8f5b7a27ca87",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 225,
+    "description": "Delfts Congress Support",
+    "rawKey": "delft congress support",
+    "externalRef": "463a177ec539a0eea11d",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 97.68,
+    "description": "Froot",
+    "rawKey": "froot",
+    "externalRef": "b10075d774c182adbaf6",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 206.05,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "dae95c45daa06589eb23",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 101.16,
+    "description": "Froot",
+    "rawKey": "froot",
+    "externalRef": "a9c128c512880b748fa2",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 20.51,
+    "description": "Netherlink.Nl",
+    "rawKey": "netherlink nl",
+    "externalRef": "51fb716eeabb7166bfac",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 4.25,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "84db148fc8a341cb0b4b",
+    "category": null
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 18442.82,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "912c4f40e6c5d2c3069c",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 7775.48,
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "7fb624211c45c9f987d5",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 18442.82,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "2a72c23233345ab803df",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 18442.82,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "97e09735e73798775261",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-01-22",
+    "year": 2026,
+    "month": 1,
+    "amount": 18442.82,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "b31669670ad4d127afb4",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-01-23",
+    "year": 2026,
+    "month": 1,
+    "amount": 1750,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "b2ba680e13a73b5cf1e0",
+    "category": null
+  },
+  {
+    "date": "2026-01-25",
+    "year": 2026,
+    "month": 1,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "053cfeba8b4bc32e2f95",
+    "category": null
+  },
+  {
+    "date": "2026-01-27",
+    "year": 2026,
+    "month": 1,
+    "amount": 645.5,
+    "description": "KPN",
+    "rawKey": "kpn voor kpn een",
+    "externalRef": "382abae08069ce0aa8b4",
+    "category": null
+  },
+  {
+    "date": "2026-01-27",
+    "year": 2026,
+    "month": 1,
+    "amount": 8.55,
+    "description": "Kamer van Koophandel",
+    "rawKey": "kamer van koophandel",
+    "externalRef": "e94faf106dc4df2ad891",
+    "category": null
+  },
+  {
+    "date": "2026-01-27",
+    "year": 2026,
+    "month": 1,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "fed3ebe764a5a54ef312",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 38.85,
+    "description": "Topgeschenken",
+    "rawKey": "topgeschenken nederland",
+    "externalRef": "e03db147e03ca23f2744",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 16.98,
+    "description": "Bol.com",
+    "rawKey": "bol com",
+    "externalRef": "25f4b61df759253ffa89",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 60.5,
+    "description": "Vereniging Voor Arbeidsrec Ht",
+    "rawKey": "vereniging voor arbeidsrec ht",
+    "externalRef": "1cf81c9d8c35634eaa67",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 65.4,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "db6c98563e781b2016e0",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 902.06,
+    "description": "Spontaanja schoonmaker",
+    "rawKey": "spontaan ja",
+    "externalRef": "67db6d8f79df20645765",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 139,
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van justitie en veiligheid betalingskenm :",
+    "externalRef": "62e27d69149a9861ea75",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 1329.11,
+    "description": "Basenet",
+    "rawKey": "basenet internet projects",
+    "externalRef": "fa33863a5a43c4f36ab6",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 296.97,
+    "description": "Tentoo",
+    "rawKey": "tentoo",
+    "externalRef": "cb3bca8f4c4b5fe3b10a",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 152.68,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "bdef27bd0f64e7054143",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 58.49,
+    "description": "Bol.com",
+    "rawKey": "bol com",
+    "externalRef": "a756bdec3918cd9e5325",
+    "category": null
+  },
+  {
+    "date": "2026-01-28",
+    "year": 2026,
+    "month": 1,
+    "amount": 24.39,
+    "description": "Brownie box (relatiegeschenken)",
+    "rawKey": "the brownie box via sti chting mollie payments",
+    "externalRef": "8c74dccc0aac85e70116",
+    "category": null
+  },
+  {
+    "date": "2026-02-01",
+    "year": 2026,
+    "month": 2,
+    "amount": 4.25,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "221e0986fac157a40a91",
+    "category": null
+  },
+  {
+    "date": "2026-02-02",
+    "year": 2026,
+    "month": 2,
+    "amount": 13.03,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "67bf134f6fbccb69050f",
+    "category": null
+  },
+  {
+    "date": "2026-02-02",
+    "year": 2026,
+    "month": 2,
+    "amount": 79.9,
+    "description": "Bol.com",
+    "rawKey": "bol com",
+    "externalRef": "57eacfc8c09a502526e9",
+    "category": null
+  },
+  {
+    "date": "2026-02-03",
+    "year": 2026,
+    "month": 2,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "6527529e3adaf209ffb1",
+    "category": null
+  },
+  {
+    "date": "2026-02-04",
+    "year": 2026,
+    "month": 2,
+    "amount": 418.33,
+    "description": "Google Ireland",
+    "rawKey": "google ireland limited",
+    "externalRef": "a4a7105472da0cf64180",
+    "category": null
+  },
+  {
+    "date": "2026-02-04",
+    "year": 2026,
+    "month": 2,
+    "amount": 12.99,
+    "description": "Spotify",
+    "rawKey": "spotifyab",
+    "externalRef": "d45f7ba215e3dc51155a",
+    "category": null
+  },
+  {
+    "date": "2026-02-04",
+    "year": 2026,
+    "month": 2,
+    "amount": 10.45,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "3e24f7ca5142d761ad3d",
+    "category": null
+  },
+  {
+    "date": "2026-02-04",
+    "year": 2026,
+    "month": 2,
+    "amount": 254.1,
+    "description": "Hr P J M Remmerswaal",
+    "rawKey": "hr p j m remmerswaal",
+    "externalRef": "6a06948ba1438b296474",
+    "category": null
+  },
+  {
+    "date": "2026-02-04",
+    "year": 2026,
+    "month": 2,
+    "amount": 611,
+    "description": "Gerardo Bekoba Siale",
+    "rawKey": "gerardo bekoba siale",
+    "externalRef": "08b6eacfa3d0de0b3281",
+    "category": null
+  },
+  {
+    "date": "2026-02-04",
+    "year": 2026,
+    "month": 2,
+    "amount": 220,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "7c7b4b0019721ee9387f",
+    "category": null
+  },
+  {
+    "date": "2026-02-05",
+    "year": 2026,
+    "month": 2,
+    "amount": 34.62,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "91051eda22d55b41a47d",
+    "category": null
+  },
+  {
+    "date": "2026-02-05",
+    "year": 2026,
+    "month": 2,
+    "amount": 56.13,
+    "description": "Fleurop bloemen",
+    "rawKey": "fleurop-interflora nederla nd",
+    "externalRef": "fbba676a27634b9e40ff",
+    "category": null
+  },
+  {
+    "date": "2026-02-05",
+    "year": 2026,
+    "month": 2,
+    "amount": 46.13,
+    "description": "Fleurop bloemen",
+    "rawKey": "fleurop-interflora nederla nd",
+    "externalRef": "c41817c1b3ea4270d045",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "68f0a4a63343ce08f42a",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 785.29,
+    "description": "Norm Finance",
+    "rawKey": "norm finance",
+    "externalRef": "c4ecee6ea5f5ba18da9e",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 210.54,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "768fa3c19032d65b6e90",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 266.2,
+    "description": "TTWWOO",
+    "rawKey": "ttwwoo",
+    "externalRef": "70aca6e6ccf1b8160a4d",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 181.39,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "2976a8887260dd297be0",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 1210,
+    "description": "Vanloman",
+    "rawKey": "vanloman",
+    "externalRef": "999d8644883d6e6ccf10",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 92.31,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "3ddec6101142108c09b3",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 526.35,
+    "description": "Stichting Spuistraat 10",
+    "rawKey": "stichting spuistraat 10 ad vocaten",
+    "externalRef": "ec5df11706a3ebb77541",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 44.9,
+    "description": "Kamer van Koophandel",
+    "rawKey": "kamer van koophandel",
+    "externalRef": "8e30d8cb94830e96eb4a",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 449,
+    "description": "Iside",
+    "rawKey": "iside",
+    "externalRef": "b41427fe7eb6994182ac",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 80.16,
+    "description": "Stadhouders Advocaten",
+    "rawKey": "stadhouders advocaten",
+    "externalRef": "f9ce471855a674a22e75",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 166.38,
+    "description": "Stadhouders Advocaten",
+    "rawKey": "stadhouders advocaten",
+    "externalRef": "7f17c9334d72fee55d06",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 4495.76,
+    "description": "A.F. Pere",
+    "rawKey": "a f pere",
+    "externalRef": "2eab225d2408bb352fde",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 2952.8,
+    "description": "L.L. Worm Eo A. Worm-Ter",
+    "rawKey": "l l worm eo a worm-ter",
+    "externalRef": "d766a93f9a8aceea0dda",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 70.35,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "d520e9089428a966f84c",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 30,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "b2439baa880c53b7463f",
+    "category": null
+  },
+  {
+    "date": "2026-02-08",
+    "year": 2026,
+    "month": 2,
+    "amount": 108.9,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "a97ee3ef9f7f673df8b7",
+    "category": null
+  },
+  {
+    "date": "2026-02-09",
+    "year": 2026,
+    "month": 2,
+    "amount": 72.83,
+    "description": "Digihero",
+    "rawKey": "digihero",
+    "externalRef": "2ea61058c5ea18752cf3",
+    "category": null
+  },
+  {
+    "date": "2026-02-09",
+    "year": 2026,
+    "month": 2,
+    "amount": 4.58,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "ff20d8b7291f3f16a5e8",
+    "category": null
+  },
+  {
+    "date": "2026-02-09",
+    "year": 2026,
+    "month": 2,
+    "amount": 867.33,
+    "description": "Merchandise (lustrum)",
+    "rawKey": "merchlab via stichtin g mollie payments",
+    "externalRef": "d41d113d269ad853bcc7",
+    "category": null
+  },
+  {
+    "date": "2026-02-09",
+    "year": 2026,
+    "month": 2,
+    "amount": 740.29,
+    "description": "Norm Finance",
+    "rawKey": "norm finance",
+    "externalRef": "e17f77cccb7493253496",
+    "category": null
+  },
+  {
+    "date": "2026-02-10",
+    "year": 2026,
+    "month": 2,
+    "amount": 151.25,
+    "description": "Legal Mike",
+    "rawKey": "legalmike",
+    "externalRef": "ccfa993e1e378091f6ef",
+    "category": null
+  },
+  {
+    "date": "2026-02-10",
+    "year": 2026,
+    "month": 2,
+    "amount": 12,
+    "description": "Kosten Tg1102003043184 Transferprov Eur 12,00",
+    "rawKey": "kosten tg1102003043184 transferprov eur 12 00",
+    "externalRef": "1ea67c708d6d18a22dfd",
+    "category": null
+  },
+  {
+    "date": "2026-02-10",
+    "year": 2026,
+    "month": 2,
+    "amount": -18203.66,
+    "description": "UWV-uitkering (zwangerschapsverlof)",
+    "rawKey": "UWV:uwv",
+    "externalRef": "d47038fd932e5d23e6fe",
+    "category": "UWV"
+  },
+  {
+    "date": "2026-02-10",
+    "year": 2026,
+    "month": 2,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e3902d4e698ce8db82f2",
+    "category": null
+  },
+  {
+    "date": "2026-02-10",
+    "year": 2026,
+    "month": 2,
+    "amount": 15.98,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "38e1462e27cad12b2b92",
+    "category": null
+  },
+  {
+    "date": "2026-02-10",
+    "year": 2026,
+    "month": 2,
+    "amount": 7250,
+    "description": "Delfts Congress Support",
+    "rawKey": "delft congress support",
+    "externalRef": "9534bc21cb06fe41289b",
+    "category": null
+  },
+  {
+    "date": "2026-02-11",
+    "year": 2026,
+    "month": 2,
+    "amount": 852.5,
+    "description": "Iside",
+    "rawKey": "iside",
+    "externalRef": "316ddaf2b6a34a021203",
+    "category": null
+  },
+  {
+    "date": "2026-02-11",
+    "year": 2026,
+    "month": 2,
+    "amount": 14.13,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "be46eaac84aa01a4363e",
+    "category": null
+  },
+  {
+    "date": "2026-02-11",
+    "year": 2026,
+    "month": 2,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "051c517ea70a5d423610",
+    "category": null
+  },
+  {
+    "date": "2026-02-11",
+    "year": 2026,
+    "month": 2,
+    "amount": 24.99,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "5cbcad0da9ccddb3dc7a",
+    "category": null
+  },
+  {
+    "date": "2026-02-11",
+    "year": 2026,
+    "month": 2,
+    "amount": 67,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "f9b713e1cc58867edbec",
+    "category": null
+  },
+  {
+    "date": "2026-02-11",
+    "year": 2026,
+    "month": 2,
+    "amount": 23.39,
+    "description": "Brownie box (relatiegeschenken)",
+    "rawKey": "the brownie box",
+    "externalRef": "90fea34e9e4daef9ac53",
+    "category": null
+  },
+  {
+    "date": "2026-02-12",
+    "year": 2026,
+    "month": 2,
+    "amount": 5.58,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "64241ddc9d02b79a4cfd",
+    "category": null
+  },
+  {
+    "date": "2026-02-15",
+    "year": 2026,
+    "month": 2,
+    "amount": 1500,
+    "description": "International Card Service S .",
+    "rawKey": "international card service s",
+    "externalRef": "9f6f047b79a08cd22cf5",
+    "category": null
+  },
+  {
+    "date": "2026-02-15",
+    "year": 2026,
+    "month": 2,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "289f3c99373225c46acc",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 598.95,
+    "description": "Van Benthem & Keulen",
+    "rawKey": "van benthem & keulen",
+    "externalRef": "0fbdb5b0c57b327e977d",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 90.75,
+    "description": "Citius Advocaten",
+    "rawKey": "citius advocaten",
+    "externalRef": "5c839f5004078fcbafab",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 13123.73,
+    "description": "Herengracht Investments (huur)",
+    "rawKey": "herengracht investments",
+    "externalRef": "5680a9d7f2a84057b2b3",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 101.15,
+    "description": "Froot",
+    "rawKey": "froot",
+    "externalRef": "7c9430ef8677c5719e35",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 226.03,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "1b9c9a52572148f10875",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 344.85,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht ad vocaten nederland (vaan)",
+    "externalRef": "067c94564386418a5ce0",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 344.85,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht ad vocaten nederland (vaan)",
+    "externalRef": "067c94564386418a5ce0",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 275.28,
+    "description": "HJ Advocaten & Mediators",
+    "rawKey": "hj advocaten mediators",
+    "externalRef": "50b350b0bf2c15346ce7",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 1815,
+    "description": "Bingh Advocaten",
+    "rawKey": "bingh advocaten",
+    "externalRef": "e42f485763a3e3a446d1",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 344.85,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht ad vocaten nederland (vaan)",
+    "externalRef": "067c94564386418a5ce0",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 344.85,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht ad vocaten nederland (vaan)",
+    "externalRef": "067c94564386418a5ce0",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 344.85,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht ad vocaten nederland (vaan)",
+    "externalRef": "067c94564386418a5ce0",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 48.89,
+    "description": "Viking kantoorspullen",
+    "rawKey": "viking netherlands via paypal europe",
+    "externalRef": "76ad3e55daddbe3d74c2",
+    "category": null
+  },
+  {
+    "date": "2026-02-16",
+    "year": 2026,
+    "month": 2,
+    "amount": 98.07,
+    "description": "ABN AMRO",
+    "rawKey": "abn amro bank uw maandtariferingsnota is beschikbaar on",
+    "externalRef": "c8766c218b2682daa29a",
+    "category": null
+  },
+  {
+    "date": "2026-02-17",
+    "year": 2026,
+    "month": 2,
+    "amount": 3.19,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "5a6d452d8c7b3c78309c",
+    "category": null
+  },
+  {
+    "date": "2026-02-17",
+    "year": 2026,
+    "month": 2,
+    "amount": 12,
+    "description": "Kosten Sw1702003142492 Transferprov Eur 12,00 Eref. Ibg Of 2",
+    "rawKey": "kosten sw1702003142492 transferprov eur 12 00 eref ibg of",
+    "externalRef": "69919b81e802f64f8484",
+    "category": null
+  },
+  {
+    "date": "2026-02-18",
+    "year": 2026,
+    "month": 2,
+    "amount": 257.23,
+    "description": "Gamma Business",
+    "rawKey": "gamma business services",
+    "externalRef": "ea934ceaf5b7a578b8cc",
+    "category": null
+  },
+  {
+    "date": "2026-02-18",
+    "year": 2026,
+    "month": 2,
+    "amount": 500,
+    "description": "Google Ireland",
+    "rawKey": "google ireland limited",
+    "externalRef": "facc4ea5f59491600f04",
+    "category": null
+  },
+  {
+    "date": "2026-02-18",
+    "year": 2026,
+    "month": 2,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "d500545ce581a0862e6b",
+    "category": null
+  },
+  {
+    "date": "2026-02-18",
+    "year": 2026,
+    "month": 2,
+    "amount": 1393.87,
+    "description": "Basenet",
+    "rawKey": "basenet internet projects",
+    "externalRef": "8e1ff8ced2832e3f0453",
+    "category": null
+  },
+  {
+    "date": "2026-02-18",
+    "year": 2026,
+    "month": 2,
+    "amount": 4924.7,
+    "description": "KWPS (doorbelast)",
+    "rawKey": "kwps",
+    "externalRef": "adfca9c5d07eba23672e",
+    "category": null
+  },
+  {
+    "date": "2026-02-18",
+    "year": 2026,
+    "month": 2,
+    "amount": 1331,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "6ff184d8695dbc995992",
+    "category": null
+  },
+  {
+    "date": "2026-02-18",
+    "year": 2026,
+    "month": 2,
+    "amount": 344.85,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht ad vocaten nederland (vaan)",
+    "externalRef": "cbef42c783cf9f82b0a3",
+    "category": null
+  },
+  {
+    "date": "2026-02-18",
+    "year": 2026,
+    "month": 2,
+    "amount": 33.85,
+    "description": "Topgeschenken",
+    "rawKey": "topgeschenken nederland",
+    "externalRef": "69f9c8c80049bff2d9cc",
+    "category": null
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 12.75,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "68e8ba72aa6450821618",
+    "category": null
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 2643.22,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "65d77dcf12e20a6c9ee6",
+    "category": null
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 185.41,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "ec1b9d7118fcceae9204",
+    "category": null
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 7.55,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "671e718b21c6fd5a4ab1",
+    "category": null
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 896.4,
+    "description": "Diyar Wakkas",
+    "rawKey": "diyar wakkas",
+    "externalRef": "17414e48c55445d2cb5e",
+    "category": null
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 18442.82,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "2ca1708971613379d80d",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 18442.82,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "e7ba79215de166263251",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 20491.45,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "dd479711a6d3502d9aa5",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 2048.53,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "cbdd103facdd90ef5bef",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 18442.82,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "406b6f3666dde05b5bd3",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 7775.48,
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "235ca39a4ebcc42cd380",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 1285.39,
+    "description": "Spontaanja schoonmaker",
+    "rawKey": "spontaan ja",
+    "externalRef": "a9d7f105fdacb0c3d3ab",
+    "category": null
+  },
+  {
+    "date": "2026-02-22",
+    "year": 2026,
+    "month": 2,
+    "amount": 24.99,
+    "description": "Coolbl Ue",
+    "rawKey": "coolbl ue",
+    "externalRef": "72e3c8c1333b6729eb49",
+    "category": null
+  },
+  {
+    "date": "2026-02-23",
+    "year": 2026,
+    "month": 2,
+    "amount": 503.76,
+    "description": "Int Card Services",
+    "rawKey": "int card services",
+    "externalRef": "ed7c625bc36c0697d5ae",
+    "category": null
+  },
+  {
+    "date": "2026-02-23",
+    "year": 2026,
+    "month": 2,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e168370eb393e356661a",
+    "category": null
+  },
+  {
+    "date": "2026-02-24",
+    "year": 2026,
+    "month": 2,
+    "amount": 6.38,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "06b3b6ea9afbbd36332e",
+    "category": null
+  },
+  {
+    "date": "2026-02-25",
+    "year": 2026,
+    "month": 2,
+    "amount": 22.99,
+    "description": "Bol.Co M",
+    "rawKey": "bol co m",
+    "externalRef": "b4914e15a3d26d08ae16",
+    "category": null
+  },
+  {
+    "date": "2026-02-25",
+    "year": 2026,
+    "month": 2,
+    "amount": 12.75,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "337d78fe498b777f8d89",
+    "category": null
+  },
+  {
+    "date": "2026-02-25",
+    "year": 2026,
+    "month": 2,
+    "amount": 331.16,
+    "description": "Tentoo",
+    "rawKey": "tentoo",
+    "externalRef": "eeecee5f80a9ba6e34b0",
+    "category": null
+  },
+  {
+    "date": "2026-02-25",
+    "year": 2026,
+    "month": 2,
+    "amount": 77.97,
+    "description": "Smart Coffee Via Stichting Mollie Payments",
+    "rawKey": "smart coffee via stichting mollie payments",
+    "externalRef": "61a76e7520652af48baf",
+    "category": null
+  },
+  {
+    "date": "2026-02-25",
+    "year": 2026,
+    "month": 2,
+    "amount": 5.49,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "befbaebb6c8ef5e24482",
+    "category": null
+  },
+  {
+    "date": "2026-02-25",
+    "year": 2026,
+    "month": 2,
+    "amount": 22.99,
+    "description": "Bol.Co M",
+    "rawKey": "bol co m",
+    "externalRef": "b4914e15a3d26d08ae16",
+    "category": null
+  },
+  {
+    "date": "2026-02-25",
+    "year": 2026,
+    "month": 2,
+    "amount": 775.53,
+    "description": "Y. Ruijters",
+    "rawKey": "y ruijters",
+    "externalRef": "3f3ea6d9de39504ed5e6",
+    "category": null
+  },
+  {
+    "date": "2026-02-26",
+    "year": 2026,
+    "month": 2,
+    "amount": 29.95,
+    "description": "Kamer van Koophandel",
+    "rawKey": "kamer van koophandel",
+    "externalRef": "77c526dbae95ec6582d1",
+    "category": null
+  },
+  {
+    "date": "2026-02-26",
+    "year": 2026,
+    "month": 2,
+    "amount": 54,
+    "description": "Financieele Dagblad",
+    "rawKey": "het financieele dagblad",
+    "externalRef": "f64b8e715aaacee71279",
+    "category": null
+  },
+  {
+    "date": "2026-03-01",
+    "year": 2026,
+    "month": 3,
+    "amount": 34.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "8217284b588891b475a7",
+    "category": null
+  },
+  {
+    "date": "2026-03-01",
+    "year": 2026,
+    "month": 3,
+    "amount": 210.69,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "930b97b077b580b0b34e",
+    "category": null
+  },
+  {
+    "date": "2026-03-01",
+    "year": 2026,
+    "month": 3,
+    "amount": 449,
+    "description": "Is Ide",
+    "rawKey": "is ide",
+    "externalRef": "82e972055897eb463eb0",
+    "category": null
+  },
+  {
+    "date": "2026-03-02",
+    "year": 2026,
+    "month": 3,
+    "amount": 639.45,
+    "description": "KPN",
+    "rawKey": "kpn voor kpn een",
+    "externalRef": "5ef485ec516e808c262b",
+    "category": null
+  },
+  {
+    "date": "2026-03-02",
+    "year": 2026,
+    "month": 3,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "492c081f16827fb5ac60",
+    "category": null
+  },
+  {
+    "date": "2026-03-02",
+    "year": 2026,
+    "month": 3,
+    "amount": 178.35,
+    "description": "Norm Finance",
+    "rawKey": "norm finance",
+    "externalRef": "53ad7026ac3c299d4700",
+    "category": null
+  },
+  {
+    "date": "2026-03-03",
+    "year": 2026,
+    "month": 3,
+    "amount": 3.19,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "7c3bb5aacbf46586ef3e",
+    "category": null
+  },
+  {
+    "date": "2026-03-04",
+    "year": 2026,
+    "month": 3,
+    "amount": 427.55,
+    "description": "Go Ogle Ireland Limited",
+    "rawKey": "go ogle ireland limited",
+    "externalRef": "735f076b1f52a2aabe86",
+    "category": null
+  },
+  {
+    "date": "2026-03-04",
+    "year": 2026,
+    "month": 3,
+    "amount": 12.99,
+    "description": "Spotify",
+    "rawKey": "spotifyab",
+    "externalRef": "cf1832f0b63b1bf5992d",
+    "category": null
+  },
+  {
+    "date": "2026-03-04",
+    "year": 2026,
+    "month": 3,
+    "amount": 12,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "c5d8634ff0c813ef5d5c",
+    "category": null
+  },
+  {
+    "date": "2026-03-04",
+    "year": 2026,
+    "month": 3,
+    "amount": 99.19,
+    "description": "Vi King Netherlands Via Paypal .Europe.",
+    "rawKey": "vi king netherlands via paypal europe",
+    "externalRef": "8b6524503c99f9f1f214",
+    "category": null
+  },
+  {
+    "date": "2026-03-08",
+    "year": 2026,
+    "month": 3,
+    "amount": 899.31,
+    "description": "De Lage Landen Vendorlease",
+    "rawKey": "de lage landen vendorlease",
+    "externalRef": "b5e2bbb468e6ee370f1b",
+    "category": null
+  },
+  {
+    "date": "2026-03-08",
+    "year": 2026,
+    "month": 3,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "0cb3ba96183bf7cf8c77",
+    "category": null
+  },
+  {
+    "date": "2026-03-08",
+    "year": 2026,
+    "month": 3,
+    "amount": 23.98,
+    "description": "Bol.Co M",
+    "rawKey": "bol co m",
+    "externalRef": "b58513e82877f9c55b81",
+    "category": null
+  },
+  {
+    "date": "2026-03-09",
+    "year": 2026,
+    "month": 3,
+    "amount": 8.65,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "41c8dfbc721b45c7b9cc",
+    "category": null
+  },
+  {
+    "date": "2026-03-09",
+    "year": 2026,
+    "month": 3,
+    "amount": 42.13,
+    "description": "Fleuro P-Interflora Nederland",
+    "rawKey": "fleuro p-interflora nederland",
+    "externalRef": "d42cf9e16928594f9a58",
+    "category": null
+  },
+  {
+    "date": "2026-03-10",
+    "year": 2026,
+    "month": 3,
+    "amount": 151.25,
+    "description": "Legal Mike",
+    "rawKey": "legalmike",
+    "externalRef": "e266598795f4e563266f",
+    "category": null
+  },
+  {
+    "date": "2026-03-10",
+    "year": 2026,
+    "month": 3,
+    "amount": 6.38,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "c5b78f850f070aa7f7ea",
+    "category": null
+  },
+  {
+    "date": "2026-03-11",
+    "year": 2026,
+    "month": 3,
+    "amount": 6.19,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "9491e18f08f8ca017288",
+    "category": null
+  },
+  {
+    "date": "2026-03-12",
+    "year": 2026,
+    "month": 3,
+    "amount": 72.93,
+    "description": "Digihero",
+    "rawKey": "digihero",
+    "externalRef": "0bd2aa3aba0c7e3d0861",
+    "category": null
+  },
+  {
+    "date": "2026-03-15",
+    "year": 2026,
+    "month": 3,
+    "amount": 50.94,
+    "description": "PCI (printer)",
+    "rawKey": "pci nederland",
+    "externalRef": "e9d589c622c80f3dc6ef",
+    "category": null
+  },
+  {
+    "date": "2026-03-15",
+    "year": 2026,
+    "month": 3,
+    "amount": 12,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e4e4263f772cd2728e26",
+    "category": null
+  },
+  {
+    "date": "2026-03-15",
+    "year": 2026,
+    "month": 3,
+    "amount": 75,
+    "description": "Amstel Veld 12 . Via Stichting Mollie Payments",
+    "rawKey": "amstel veld 12 via stichting mollie payments",
+    "externalRef": "0acf310e8eafb54cb127",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 8.5,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e3486b96c17377f01044",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 208.73,
+    "description": "TTWWOO",
+    "rawKey": "ttwwoo",
+    "externalRef": "28d737d640ac6cb09bb3",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 5313.42,
+    "description": "KWPS (doorbelast)",
+    "rawKey": "kwps",
+    "externalRef": "fdae56263bbc5df6ace6",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 127.05,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "302cf1c9ac0ad29882da",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 581,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "8cf5646a92373bbee914",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 1162,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "66114cd5454b8d70c2fd",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 16.35,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "c4b1fabc47cd76e8ef50",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 49.75,
+    "description": "Marnix Ritmeester",
+    "rawKey": "marnix ritmeester",
+    "externalRef": "c4364da749405cab42c5",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 193.62,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "64f4db9850d4ed0cc5cf",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 291,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "c670af679b0578370746",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 225,
+    "description": "Delfts Congress Support",
+    "rawKey": "delft congress support",
+    "externalRef": "43468fcccc15f3850fe0",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 1394.16,
+    "description": "Basenet",
+    "rawKey": "basenet internet projects",
+    "externalRef": "156400f1d4a691999476",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 362.92,
+    "description": "Herengracht Investments (huur)",
+    "rawKey": "herengracht investments",
+    "externalRef": "54e4f396d7083ba136e7",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 581,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "8cf5646a92373bbee914",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 1744,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "8f75e4e02f42f290c0d9",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 225,
+    "description": "Delfts Congress Support",
+    "rawKey": "delft congress support",
+    "externalRef": "43468fcccc15f3850fe0",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 101.15,
+    "description": "Froot",
+    "rawKey": "froot",
+    "externalRef": "ee10c33e6256d5a14cc1",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 121,
+    "description": "Youmanfischer .",
+    "rawKey": "youmanfischer",
+    "externalRef": "cef5c2e8257653953088",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 291,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "c670af679b0578370746",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 2713.43,
+    "description": "HJ Advocaten & Mediators",
+    "rawKey": "hj advocaten mediators",
+    "externalRef": "ebb16b042ff5deafca27",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 291,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "c670af679b0578370746",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 182.85,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "e719452d120fe5db4358",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 529.07,
+    "description": "Stadhouders Advocaten",
+    "rawKey": "stadhouders advocaten",
+    "externalRef": "4bfa77a52ff32a385027",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 726,
+    "description": "Bram Willems Photography",
+    "rawKey": "bram willems photography ez",
+    "externalRef": "f322358c219521888b1c",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 344.85,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht advocaten nederland (vaan)",
+    "externalRef": "b0ab64198b95e3b1d8d6",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 984.94,
+    "description": "Three Boys .",
+    "rawKey": "three boys",
+    "externalRef": "83a15a7aca77cebc9f35",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 302.5,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht advocaten nederland (vaan)",
+    "externalRef": "84ac78b877879c7a71fc",
+    "category": null
+  },
+  {
+    "date": "2026-03-16",
+    "year": 2026,
+    "month": 3,
+    "amount": 135,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e24910db8fe1dff11d8f",
+    "category": null
+  },
+  {
+    "date": "2026-03-17",
+    "year": 2026,
+    "month": 3,
+    "amount": 4.28,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "ce24555efd8a6e8d1542",
+    "category": null
+  },
+  {
+    "date": "2026-03-17",
+    "year": 2026,
+    "month": 3,
+    "amount": 0.01,
+    "description": "Ad Obe Systems Software Ireland Limited",
+    "rawKey": "ad obe systems software ireland limited",
+    "externalRef": "9dd8e69505319c171c39",
+    "category": null
+  },
+  {
+    "date": "2026-03-18",
+    "year": 2026,
+    "month": 3,
+    "amount": 257.23,
+    "description": "Gamma Business",
+    "rawKey": "gamma business services",
+    "externalRef": "69e755b329b17ae8a2b9",
+    "category": null
+  },
+  {
+    "date": "2026-03-18",
+    "year": 2026,
+    "month": 3,
+    "amount": 9.94,
+    "description": "Bol.Co M",
+    "rawKey": "bol co m",
+    "externalRef": "37cfc35069143de84719",
+    "category": null
+  },
+  {
+    "date": "2026-03-18",
+    "year": 2026,
+    "month": 3,
+    "amount": 842,
+    "description": "Natec Sunergy .",
+    "rawKey": "natec sunergy",
+    "externalRef": "5452a98c0e6caea8beb5",
+    "category": null
+  },
+  {
+    "date": "2026-03-18",
+    "year": 2026,
+    "month": 3,
+    "amount": 4.52,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "4323d298f3645b9df68d",
+    "category": null
+  },
+  {
+    "date": "2026-03-18",
+    "year": 2026,
+    "month": 3,
+    "amount": 4.25,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "a5fbe977ab31f1ea9a9c",
+    "category": null
+  },
+  {
+    "date": "2026-03-18",
+    "year": 2026,
+    "month": 3,
+    "amount": 9.48,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "ca057beb5ed52836b9d4",
+    "category": null
+  },
+  {
+    "date": "2026-03-18",
+    "year": 2026,
+    "month": 3,
+    "amount": 3.58,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "3b6db2c7090f7de73c36",
+    "category": null
+  },
+  {
+    "date": "2026-03-19",
+    "year": 2026,
+    "month": 3,
+    "amount": 500,
+    "description": "Go Ogle Ireland Limited",
+    "rawKey": "go ogle ireland limited",
+    "externalRef": "e9687460ac2dfc864b0a",
+    "category": null
+  },
+  {
+    "date": "2026-03-22",
+    "year": 2026,
+    "month": 3,
+    "amount": 12,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "70caa3a5d7627b9e7189",
+    "category": null
+  },
+  {
+    "date": "2026-03-22",
+    "year": 2026,
+    "month": 3,
+    "amount": 2627.42,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "33aa03411096c0776389",
+    "category": null
+  },
+  {
+    "date": "2026-03-22",
+    "year": 2026,
+    "month": 3,
+    "amount": 68.47,
+    "description": "Vi King Netherlands Via Paypal .Europe.",
+    "rawKey": "vi king netherlands via paypal europe",
+    "externalRef": "1bca9c18787874566e93",
+    "category": null
+  },
+  {
+    "date": "2026-03-22",
+    "year": 2026,
+    "month": 3,
+    "amount": 178.27,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "f24fcc56550e45a4fe8b",
+    "category": null
+  },
+  {
+    "date": "2026-03-22",
+    "year": 2026,
+    "month": 3,
+    "amount": 2269.35,
+    "description": "Nectaro (Lodewijk) (ZZP)",
+    "rawKey": "ZZP:nectaro",
+    "externalRef": "4e64b65807fcfb91130b",
+    "category": "ZZP"
+  },
+  {
+    "date": "2026-03-22",
+    "year": 2026,
+    "month": 3,
+    "amount": 1815,
+    "description": "I. Mamaliga",
+    "rawKey": "i mamaliga",
+    "externalRef": "b1dc13af70be58bd23e2",
+    "category": null
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 806.65,
+    "description": "Int Card Services",
+    "rawKey": "int card services",
+    "externalRef": "d4e061bc23c0de92fef8",
+    "category": null
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "093c9715774b65f9dedc",
+    "category": null
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 11.45,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "108f63ffd08aa61e0bd9",
+    "category": null
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 896.4,
+    "description": "Diyar Wakkas",
+    "rawKey": "diyar wakkas",
+    "externalRef": "0131fee27eac0a284308",
+    "category": null
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 7775.48,
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "3695579d4d913fbb2ef9",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 20491.45,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "b89c5e202c141661ad6f",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 18442.82,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "930bf90b4d5a6dc28922",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 18442.82,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "4e810c525484aec511cc",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 18442.82,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "dc1fda462e5825b8b71a",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 537.24,
+    "description": "B.C. Holsink",
+    "rawKey": "b c holsink",
+    "externalRef": "ae0f223923a02e7855c2",
+    "category": null
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 93,
+    "description": "Ministerie Van Veiligheid En Justitie",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "1adba627483831d71f55",
+    "category": null
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 4991,
+    "description": "Zeiler Rechtsanwalte Gmbh",
+    "rawKey": "zeiler rechtsanwalte gmbh",
+    "externalRef": "55e0920c0e04416ff5b6",
+    "category": null
+  },
+  {
+    "date": "2026-03-23",
+    "year": 2026,
+    "month": 3,
+    "amount": 4043.81,
+    "description": "Chambers",
+    "rawKey": "chambers and partners",
+    "externalRef": "85536a2aa6bc66d7bb62",
+    "category": null
+  },
+  {
+    "date": "2026-03-24",
+    "year": 2026,
+    "month": 3,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "2beabf3564d350672e17",
+    "category": null
+  },
+  {
+    "date": "2026-03-24",
+    "year": 2026,
+    "month": 3,
+    "amount": 595.32,
+    "description": "Doxflow",
+    "rawKey": "doxflow legal",
+    "externalRef": "23100440fdf1513aed4d",
+    "category": null
+  },
+  {
+    "date": "2026-03-24",
+    "year": 2026,
+    "month": 3,
+    "amount": 227.29,
+    "description": "Vurich gerechtsdeurwaarder",
+    "rawKey": "vurich",
+    "externalRef": "82cee4d6bada2b1cbb3e",
+    "category": null
+  },
+  {
+    "date": "2026-03-24",
+    "year": 2026,
+    "month": 3,
+    "amount": 181.5,
+    "description": "Shinny .",
+    "rawKey": "shinny",
+    "externalRef": "8991db3ce9d9b3d52a97",
+    "category": null
+  },
+  {
+    "date": "2026-03-25",
+    "year": 2026,
+    "month": 3,
+    "amount": 12.95,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "1fcd2d1b854a0b385189",
+    "category": null
+  },
+  {
+    "date": "2026-03-25",
+    "year": 2026,
+    "month": 3,
+    "amount": 902.06,
+    "description": "Spontaanja schoonmaker",
+    "rawKey": "spontaan ja",
+    "externalRef": "ab506c7ec7fd36bba799",
+    "category": null
+  },
+  {
+    "date": "2026-03-25",
+    "year": 2026,
+    "month": 3,
+    "amount": 331.16,
+    "description": "Tentoo",
+    "rawKey": "tentoo",
+    "externalRef": "41aa5cf3a56441afd02b",
+    "category": null
+  },
+  {
+    "date": "2026-03-25",
+    "year": 2026,
+    "month": 3,
+    "amount": 1.09,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "cdc54ac382ff5c9a7d6d",
+    "category": null
+  },
+  {
+    "date": "2026-03-25",
+    "year": 2026,
+    "month": 3,
+    "amount": 77.97,
+    "description": "Smart Coffee Via Stichting Mollie Payments",
+    "rawKey": "smart coffee via stichting mollie payments",
+    "externalRef": "3636b322e96b60710a31",
+    "category": null
+  },
+  {
+    "date": "2026-03-25",
+    "year": 2026,
+    "month": 3,
+    "amount": 141.39,
+    "description": "ABN AMRO",
+    "rawKey": "abn amro bank uw maandtariferingsnota is beschikbaar on",
+    "externalRef": "c2f62ce397daada95b55",
+    "category": null
+  },
+  {
+    "date": "2026-03-26",
+    "year": 2026,
+    "month": 3,
+    "amount": 54,
+    "description": "Financieele Dagblad",
+    "rawKey": "het financieele dagblad",
+    "externalRef": "333430934cfc3545f881",
+    "category": null
+  },
+  {
+    "date": "2026-03-26",
+    "year": 2026,
+    "month": 3,
+    "amount": 225,
+    "description": "Delfts Congress Support",
+    "rawKey": "delft congress support",
+    "externalRef": "70584374fa6470bc0cfd",
+    "category": null
+  },
+  {
+    "date": "2026-03-26",
+    "year": 2026,
+    "month": 3,
+    "amount": 7.6,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "9551e5dab31ecab8db8e",
+    "category": null
+  },
+  {
+    "date": "2026-03-29",
+    "year": 2026,
+    "month": 3,
+    "amount": 24.19,
+    "description": "Ppro Payment Services S.A.",
+    "rawKey": "ppro payment services s a",
+    "externalRef": "0b0a6c1b5392fcba60c5",
+    "category": null
+  },
+  {
+    "date": "2026-03-29",
+    "year": 2026,
+    "month": 3,
+    "amount": 615.25,
+    "description": "KPN",
+    "rawKey": "kpn voor kpn een",
+    "externalRef": "a8ed9a17c858513cc607",
+    "category": null
+  },
+  {
+    "date": "2026-03-29",
+    "year": 2026,
+    "month": 3,
+    "amount": 37.1,
+    "description": "Kamer van Koophandel",
+    "rawKey": "kamer van koophandel",
+    "externalRef": "dd868b62918bdffea3c7",
+    "category": null
+  },
+  {
+    "date": "2026-03-29",
+    "year": 2026,
+    "month": 3,
+    "amount": 12.95,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "a451081ac59351865c1b",
+    "category": null
+  },
+  {
+    "date": "2026-03-29",
+    "year": 2026,
+    "month": 3,
+    "amount": 69.48,
+    "description": "Ns Rei Zigers .",
+    "rawKey": "ns rei zigers",
+    "externalRef": "687f339dd721c209364a",
+    "category": null
+  },
+  {
+    "date": "2026-03-30",
+    "year": 2026,
+    "month": 3,
+    "amount": 7.67,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "c9cd858b7757668b6298",
+    "category": null
+  },
+  {
+    "date": "2026-03-31",
+    "year": 2026,
+    "month": 4,
+    "amount": 208.5,
+    "description": "Greenstars .",
+    "rawKey": "greenstars",
+    "externalRef": "345ca37a4afea2a71989",
+    "category": null
+  },
+  {
+    "date": "2026-03-31",
+    "year": 2026,
+    "month": 4,
+    "amount": 7.27,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "36f33580bd3865d44476",
+    "category": null
+  },
+  {
+    "date": "2026-03-31",
+    "year": 2026,
+    "month": 4,
+    "amount": 657.57,
+    "description": "Merchandise (lustrum)",
+    "rawKey": "merchado",
+    "externalRef": "b134884ee008560c0d2f",
+    "category": null
+  },
+  {
+    "date": "2026-04-01",
+    "year": 2026,
+    "month": 4,
+    "amount": 38.48,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "1e7637da93448dbc4efc",
+    "category": null
+  },
+  {
+    "date": "2026-04-01",
+    "year": 2026,
+    "month": 4,
+    "amount": 4.4,
+    "description": "PostNL",
+    "rawKey": "konink lijke postnl",
+    "externalRef": "f1b0e6499e56e7debe3b",
+    "category": null
+  },
+  {
+    "date": "2026-04-02",
+    "year": 2026,
+    "month": 4,
+    "amount": 8.57,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "8c11d5782a8fddd97b5b",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 12.95,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "46ecd28d7c5e77115675",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 86.32,
+    "description": "Ceppi. S Deli . Via Stichting Mollie Payments",
+    "rawKey": "ceppi s deli via stichting mollie payments",
+    "externalRef": "ef24f9d7ff946d837a2f",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 52.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "1d28a4ea577edbf60d3a",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": -4265.12,
+    "description": "ASR-vergoeding (verzuimverzekering)",
+    "rawKey": "ASR:asr",
+    "externalRef": "5c20c323f1ac53f62cfc",
+    "category": "ASR"
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 30.25,
+    "description": "Informaxion",
+    "rawKey": "informaxion",
+    "externalRef": "6c99b3a2a077396e9518",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 55,
+    "description": "Jonge Balie Amsterdam",
+    "rawKey": "de jonge balie te amsterdam vevr",
+    "externalRef": "5bbe0e601e16ec9c9d56",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 55,
+    "description": "Jonge Balie Amsterdam",
+    "rawKey": "de jonge balie te amsterdam vevr",
+    "externalRef": "5bbe0e601e16ec9c9d56",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 55,
+    "description": "Jonge Balie Amsterdam",
+    "rawKey": "de jonge balie te amsterdam vevr",
+    "externalRef": "5bbe0e601e16ec9c9d56",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 892.38,
+    "description": "KWPS (doorbelast)",
+    "rawKey": "kwps",
+    "externalRef": "5fb1e4460e6a7a6b4611",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 27.5,
+    "description": "Jonge Balie Amsterdam",
+    "rawKey": "de jonge balie te amsterdam vevr",
+    "externalRef": "483bab05cc868c0f8b28",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 27.5,
+    "description": "Jonge Balie Amsterdam",
+    "rawKey": "de jonge balie te amsterdam vevr",
+    "externalRef": "483bab05cc868c0f8b28",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 449,
+    "description": "Is Ide",
+    "rawKey": "is ide",
+    "externalRef": "6d47550dff42dd1361a5",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 247.5,
+    "description": "Is Ide",
+    "rawKey": "is ide",
+    "externalRef": "6a564f44b2f61a34f910",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 600,
+    "description": "Is Ide",
+    "rawKey": "is ide",
+    "externalRef": "12772a444c3f9d26ed78",
+    "category": null
+  },
+  {
+    "date": "2026-04-06",
+    "year": 2026,
+    "month": 4,
+    "amount": 0.01,
+    "description": "Ad Obe Systems Software Ireland Limited",
+    "rawKey": "ad obe systems software ireland limited",
+    "externalRef": "2f11422bc68ac9330da6",
+    "category": null
+  },
+  {
+    "date": "2026-04-07",
+    "year": 2026,
+    "month": 4,
+    "amount": 12.99,
+    "description": "Spotify",
+    "rawKey": "spotifyab",
+    "externalRef": "c252a43bd43c12835ec2",
+    "category": null
+  },
+  {
+    "date": "2026-04-07",
+    "year": 2026,
+    "month": 4,
+    "amount": 37.88,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "a8affd0e4685caf5c391",
+    "category": null
+  },
+  {
+    "date": "2026-04-08",
+    "year": 2026,
+    "month": 4,
+    "amount": 407.07,
+    "description": "Go Ogle Ireland Limited",
+    "rawKey": "go ogle ireland limited",
+    "externalRef": "1eee9367a290d06f2ac9",
+    "category": null
+  },
+  {
+    "date": "2026-04-08",
+    "year": 2026,
+    "month": 4,
+    "amount": 31.68,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "6d98c975dd2b7ff5652a",
+    "category": null
+  },
+  {
+    "date": "2026-04-08",
+    "year": 2026,
+    "month": 4,
+    "amount": 3,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "88d0a380630641adfe23",
+    "category": null
+  },
+  {
+    "date": "2026-04-08",
+    "year": 2026,
+    "month": 4,
+    "amount": 181.85,
+    "description": "Vi King Netherlands Via Paypal .Europe.",
+    "rawKey": "vi king netherlands via paypal europe",
+    "externalRef": "8318db470c3080f9e576",
+    "category": null
+  },
+  {
+    "date": "2026-04-08",
+    "year": 2026,
+    "month": 4,
+    "amount": 31.95,
+    "description": "Cadeaus medewerkers/relaties",
+    "rawKey": "de ned erlandse boekenbon via stichting mollie payments",
+    "externalRef": "9b196fe4316c1458ea8c",
+    "category": null
+  },
+  {
+    "date": "2026-04-08",
+    "year": 2026,
+    "month": 4,
+    "amount": 23.35,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e287b2b9ca152db90f57",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 9077.42,
+    "description": "Nectaro (Lodewijk) (ZZP)",
+    "rawKey": "ZZP:nectaro",
+    "externalRef": "0f075ac0792d0dc2493b",
+    "category": "ZZP"
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 815,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "7f356233c1bb7d279f59",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 815,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "7f356233c1bb7d279f59",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 380,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "23fba23bc85e0483eaec",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 286.7,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "e86e5269419a3e9a1dea",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 7865,
+    "description": "Stichting IDFA",
+    "rawKey": "stichting idfa",
+    "externalRef": "37162e5c6a33c607ebb3",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 650,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "074da1a176703b48df43",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 50,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "903dc9d55355f91a9839",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 84.7,
+    "description": "Mediat Iongenootschap.Nl",
+    "rawKey": "mediat iongenootschap nl",
+    "externalRef": "4a5f645b5ab5b07b3e47",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 3645.49,
+    "description": "R.P. Wibbelink H",
+    "rawKey": "r p wibbelink h",
+    "externalRef": "b6a58eb2c87118d10cfa",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 2132.29,
+    "description": "R.P. Wibbelink H",
+    "rawKey": "r p wibbelink h",
+    "externalRef": "66bfaf90735043a57222",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 250,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "492263bfb8efbebd4b05",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 380,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "23fba23bc85e0483eaec",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 815,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "7f356233c1bb7d279f59",
+    "category": null
+  },
+  {
+    "date": "2026-04-09",
+    "year": 2026,
+    "month": 4,
+    "amount": 1402.58,
+    "description": "Basenet",
+    "rawKey": "basenet internet projects",
+    "externalRef": "b92f706f65145c2a833f",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 13.65,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "9e2c3ea0e9e12d359127",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 650,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "1abbcaee8b8b809b8906",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 380,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "5b8cb1652cc5c09ac743",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 380,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "5b8cb1652cc5c09ac743",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 250,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "87f848138a74cbed3374",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 13562.98,
+    "description": "Herengracht Investments (huur)",
+    "rawKey": "herengracht investments",
+    "externalRef": "3e250b6ad092f26741a8",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 2765.17,
+    "description": "Norm Finance",
+    "rawKey": "norm finance",
+    "externalRef": "ed03c7089e0f9df56f6e",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 2.49,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "71e834a313d0d89ce106",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 40.46,
+    "description": "Basenet",
+    "rawKey": "basenet internet projects",
+    "externalRef": "4839be7a21d2f3fec4d7",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 735,
+    "description": "Ministerie Van Veiligheid En Justitie",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "70cfe8f6862d06d91a68",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 227.64,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "598ae1a15d1bae3c6332",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 851,
+    "description": "Ministerie Van Veiligheid En Justitie",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "74b59ad79669c9a787d3",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 28.95,
+    "description": "Bol.Co M",
+    "rawKey": "bol co m",
+    "externalRef": "a0a616ea416db320fd91",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 192,
+    "description": "Vurich gerechtsdeurwaarder",
+    "rawKey": "vurich",
+    "externalRef": "072368e19122c6fdd686",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 121.32,
+    "description": "Ceppi. S Deli . Via Stichting Mollie Payments",
+    "rawKey": "ceppi s deli via stichting mollie payments",
+    "externalRef": "14ab559b67b1889a5b23",
+    "category": null
+  },
+  {
+    "date": "2026-04-12",
+    "year": 2026,
+    "month": 4,
+    "amount": 210.73,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "d8fd4c63bd03bfae227f",
+    "category": null
+  },
+  {
+    "date": "2026-04-13",
+    "year": 2026,
+    "month": 4,
+    "amount": 8022.31,
+    "description": "N.C.H. Harzing",
+    "rawKey": "n c h harzing",
+    "externalRef": "22cb793c6e0b1ffcf5cc",
+    "category": null
+  },
+  {
+    "date": "2026-04-13",
+    "year": 2026,
+    "month": 4,
+    "amount": 20.95,
+    "description": "Aalsmeer",
+    "rawKey": "aalsmeer",
+    "externalRef": "57501b3b45c1c318a82a",
+    "category": null
+  },
+  {
+    "date": "2026-04-13",
+    "year": 2026,
+    "month": 4,
+    "amount": 101.15,
+    "description": "Froot",
+    "rawKey": "froot",
+    "externalRef": "bab6e7671719dd38037c",
+    "category": null
+  },
+  {
+    "date": "2026-04-14",
+    "year": 2026,
+    "month": 4,
+    "amount": 6.38,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "b5384b063be3226d1c23",
+    "category": null
+  },
+  {
+    "date": "2026-04-15",
+    "year": 2026,
+    "month": 4,
+    "amount": 373,
+    "description": "Ministerie Van Veiligheid En Justitie",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "47256301c6d9c1eeddf6",
+    "category": null
+  },
+  {
+    "date": "2026-04-15",
+    "year": 2026,
+    "month": 4,
+    "amount": 6.28,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "19efb1bb58b511ed1daa",
+    "category": null
+  },
+  {
+    "date": "2026-04-15",
+    "year": 2026,
+    "month": 4,
+    "amount": 25.08,
+    "description": "Bol.Co M",
+    "rawKey": "bol co m",
+    "externalRef": "a62911fc08734ea30caa",
+    "category": null
+  },
+  {
+    "date": "2026-04-15",
+    "year": 2026,
+    "month": 4,
+    "amount": 565.1,
+    "description": "Veloretti .",
+    "rawKey": "veloretti",
+    "externalRef": "f9c49b134c26c221935e",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 257.23,
+    "description": "Gamma Business",
+    "rawKey": "gamma business services",
+    "externalRef": "2363583fd6ba70f834c9",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 1162,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "2287359d76f9c270e4c1",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 815,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "c6cb33c499ad2c54cbc8",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 169.4,
+    "description": "Pip Advocatuur .",
+    "rawKey": "pip advocatuur",
+    "externalRef": "374f795fe1526ec0e0c6",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 1162,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "2287359d76f9c270e4c1",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 1744,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "dd6f1c85119bc5b19318",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 1162,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "2287359d76f9c270e4c1",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 815,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "c6cb33c499ad2c54cbc8",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 581,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "69acc6ae3a76810806cd",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 121,
+    "description": "Pallas Advocaten",
+    "rawKey": "pallas advocaten",
+    "externalRef": "b80767fbd131afa062d3",
+    "category": null
+  },
+  {
+    "date": "2026-04-16",
+    "year": 2026,
+    "month": 4,
+    "amount": 270,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e2aeb4642a02e95fa880",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "100b61c43580d80f7f62",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 44.27,
+    "description": "Viking kantoorspullen",
+    "rawKey": "viking",
+    "externalRef": "51660de715a37e48596a",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 1912,
+    "description": "Natec Sunergy",
+    "rawKey": "natec sunergy",
+    "externalRef": "aaaa94434e3db7012173",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 260.48,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "c0e7b1f57a000b25072b",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 581,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "93c0ef67055eb9eb9336",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 250,
+    "description": "Amsterdamse Orde van Advocaten",
+    "rawKey": "amsterdamse orde van advocaten",
+    "externalRef": "0588e7bffc1db7bdf2db",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 2627.42,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "cd6ce41c7e7fd39dbe4d",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 1162,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "8e91233d8817a44d5f58",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 529.6,
+    "description": "Veloretti .",
+    "rawKey": "veloretti",
+    "externalRef": "4965339d0834b4bc454d",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 88.35,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "3c1010734717a2f01f1e",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 20491.45,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "982301dcb24c567882bd",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 18442.82,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "052da7b1b7b4577997e7",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 7775.48,
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "3e1a042dde633cf18b9b",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 18442.82,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "d513df73dce12fe4e537",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 18442.82,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "a811687296135804fa37",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 1100.58,
+    "description": "Diyar Wakkas",
+    "rawKey": "diyar wakkas",
+    "externalRef": "2f617977da9c90202361",
+    "category": null
+  },
+  {
+    "date": "2026-04-20",
+    "year": 2026,
+    "month": 4,
+    "amount": 784.08,
+    "description": "Stek Advocaten",
+    "rawKey": "stek advocaten",
+    "externalRef": "6d4895d31f4a122fd994",
+    "category": null
+  },
+  {
+    "date": "2026-04-21",
+    "year": 2026,
+    "month": 4,
+    "amount": 500,
+    "description": "Go Ogle Ireland Limited",
+    "rawKey": "go ogle ireland limited",
+    "externalRef": "870b6b83bba585f77e39",
+    "category": null
+  },
+  {
+    "date": "2026-04-21",
+    "year": 2026,
+    "month": 4,
+    "amount": 72.67,
+    "description": "Digihero",
+    "rawKey": "digihero",
+    "externalRef": "add097e33a1527d3be43",
+    "category": null
+  },
+  {
+    "date": "2026-04-21",
+    "year": 2026,
+    "month": 4,
+    "amount": 5.78,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "d582586dbf4dd0c6ca14",
+    "category": null
+  },
+  {
+    "date": "2026-04-21",
+    "year": 2026,
+    "month": 4,
+    "amount": 22,
+    "description": "PostNL",
+    "rawKey": "konink lijke postnl",
+    "externalRef": "8578e3284a9ec076c07b",
+    "category": null
+  },
+  {
+    "date": "2026-04-22",
+    "year": 2026,
+    "month": 4,
+    "amount": 753.31,
+    "description": "Int Card Services",
+    "rawKey": "int card services",
+    "externalRef": "0e5a3b6d558a3efa926d",
+    "category": null
+  },
+  {
+    "date": "2026-04-22",
+    "year": 2026,
+    "month": 4,
+    "amount": 114.32,
+    "description": "Maaike de Jong — declaratie",
+    "rawKey": "m de jong",
+    "externalRef": "0e2de31c3323dce34567",
+    "category": null
+  },
+  {
+    "date": "2026-04-22",
+    "year": 2026,
+    "month": 4,
+    "amount": 24285.64,
+    "description": "Herengracht Investments (huur)",
+    "rawKey": "herengracht investments",
+    "externalRef": "f0763cbeec34df873a83",
+    "category": null
+  },
+  {
+    "date": "2026-04-22",
+    "year": 2026,
+    "month": 4,
+    "amount": 581,
+    "description": "Nederlandse Orde van Advocaten",
+    "rawKey": "nederlandse orde van advocaten",
+    "externalRef": "59708cbcc5d10c8306ff",
+    "category": null
+  },
+  {
+    "date": "2026-04-22",
+    "year": 2026,
+    "month": 4,
+    "amount": 129.95,
+    "description": "Smart Coffee",
+    "rawKey": "smart coffee",
+    "externalRef": "92b80e5494666bc773a5",
+    "category": null
+  },
+  {
+    "date": "2026-04-23",
+    "year": 2026,
+    "month": 4,
+    "amount": 54,
+    "description": "Financieele Dagblad",
+    "rawKey": "het financieele dagblad",
+    "externalRef": "0a11a0698324c47d8c97",
+    "category": null
+  },
+  {
+    "date": "2026-04-23",
+    "year": 2026,
+    "month": 4,
+    "amount": 4.55,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "919e31c78dcdf2cd34a5",
+    "category": null
+  },
+  {
+    "date": "2026-04-27",
+    "year": 2026,
+    "month": 4,
+    "amount": 1804.37,
+    "description": "KPN",
+    "rawKey": "kpn voor kpn een",
+    "externalRef": "41b0d690ede360ac3d19",
+    "category": null
+  },
+  {
+    "date": "2026-04-27",
+    "year": 2026,
+    "month": 4,
+    "amount": 902.06,
+    "description": "Spontaanja schoonmaker",
+    "rawKey": "spontaan ja",
+    "externalRef": "1416de018f4e3cf5cb80",
+    "category": null
+  },
+  {
+    "date": "2026-04-27",
+    "year": 2026,
+    "month": 4,
+    "amount": 80,
+    "description": "Cadeaus medewerkers/relaties",
+    "rawKey": "marlee n kookt - cadeaubonnen via stichting mollie payments",
+    "externalRef": "de91053e12615caca545",
+    "category": null
+  },
+  {
+    "date": "2026-04-27",
+    "year": 2026,
+    "month": 4,
+    "amount": 4.55,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "8c364be6467cedf2f83c",
+    "category": null
+  },
+  {
+    "date": "2026-04-27",
+    "year": 2026,
+    "month": 4,
+    "amount": 2.69,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "fc694caac13c5b6826fe",
+    "category": null
+  },
+  {
+    "date": "2026-04-27",
+    "year": 2026,
+    "month": 4,
+    "amount": 100.43,
+    "description": "ABN AMRO",
+    "rawKey": "abn amro bank uw maandtariferingsnota is beschikbaar on",
+    "externalRef": "963dea136559dd233caa",
+    "category": null
+  },
+  {
+    "date": "2026-04-28",
+    "year": 2026,
+    "month": 4,
+    "amount": 24.19,
+    "description": "Ppro Payment Services S.A.",
+    "rawKey": "ppro payment services s a",
+    "externalRef": "738dbab3b5556150b6a3",
+    "category": null
+  },
+  {
+    "date": "2026-04-28",
+    "year": 2026,
+    "month": 4,
+    "amount": 50.05,
+    "description": "Kamer van Koophandel",
+    "rawKey": "kamer van koophandel",
+    "externalRef": "f5437aac80806146cc0a",
+    "category": null
+  },
+  {
+    "date": "2026-04-28",
+    "year": 2026,
+    "month": 4,
+    "amount": 9.38,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "f3f6e9df2f613f76df12",
+    "category": null
+  },
+  {
+    "date": "2026-04-28",
+    "year": 2026,
+    "month": 4,
+    "amount": 4.55,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "c9189a14145f090ad872",
+    "category": null
+  },
+  {
+    "date": "2026-04-28",
+    "year": 2026,
+    "month": 4,
+    "amount": 52.45,
+    "description": "123led .",
+    "rawKey": "123led",
+    "externalRef": "8265242d6647c7c3623d",
+    "category": null
+  },
+  {
+    "date": "2026-04-29",
+    "year": 2026,
+    "month": 4,
+    "amount": 124.71,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "0ab06b1f17a979ac3d49",
+    "category": null
+  },
+  {
+    "date": "2026-04-29",
+    "year": 2026,
+    "month": 4,
+    "amount": 9.09,
+    "description": "PostNL",
+    "rawKey": "postnl pakketten benelux",
+    "externalRef": "934a671e02097dfc3ce7",
+    "category": null
+  },
+  {
+    "date": "2026-04-29",
+    "year": 2026,
+    "month": 4,
+    "amount": 9.72,
+    "description": "PostNL",
+    "rawKey": "postnl pakketten benelux",
+    "externalRef": "6dee5582269a6983dce7",
+    "category": null
+  },
+  {
+    "date": "2026-04-29",
+    "year": 2026,
+    "month": 4,
+    "amount": 9.09,
+    "description": "PostNL",
+    "rawKey": "postnl pakketten benelux",
+    "externalRef": "934a671e02097dfc3ce7",
+    "category": null
+  },
+  {
+    "date": "2026-04-29",
+    "year": 2026,
+    "month": 4,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "5a6b47ae366bff9ec896",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 13.65,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "d14f95b237b69ff83087",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 367.83,
+    "description": "Gerechtsdeurwaarderskantoor Groot & Evers .",
+    "rawKey": "gerechtsdeurwaarderskantoor groot & evers",
+    "externalRef": "a5b296f6d4e0f16db224",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 75.62,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "5eab2ce30fcc8533781a",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 427.67,
+    "description": "Fietskoerier",
+    "rawKey": "fietskoerier nl",
+    "externalRef": "de2273985171e44f008a",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 287,
+    "description": "Arboduo",
+    "rawKey": "arboduo",
+    "externalRef": "1c097c8862eceed663d6",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 449,
+    "description": "Is Ide",
+    "rawKey": "is ide",
+    "externalRef": "b501ba4cde8b3957b316",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 190.93,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "7ff03cba4a07b6524840",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 731.45,
+    "description": "Norm Finance",
+    "rawKey": "norm finance",
+    "externalRef": "4b345e71d4d74a3aa00b",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 22.4,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "3397f3bad15872539b0b",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 138.5,
+    "description": "Digicert Ireland Limited",
+    "rawKey": "digicert ireland limited",
+    "externalRef": "2e2a460f89ed9070c962",
+    "category": null
+  },
+  {
+    "date": "2026-05-03",
+    "year": 2026,
+    "month": 5,
+    "amount": 93,
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van justitie en veiligheid",
+    "externalRef": "42ee86f334723346eea9",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 12.99,
+    "description": "Spotify",
+    "rawKey": "spotifyab",
+    "externalRef": "466c364c9d37f42f4d90",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "fd66e2058853a503bdd0",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 35,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht advocaten amsterdam",
+    "externalRef": "6839b78ba62e32430c47",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 35,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht advocaten",
+    "externalRef": "7f28293cd363c5ab6315",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 35,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht advocaten",
+    "externalRef": "7f28293cd363c5ab6315",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 35,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht advocaten amsterdam",
+    "externalRef": "6839b78ba62e32430c47",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 35,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht advocaten amsterdam",
+    "externalRef": "6839b78ba62e32430c47",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 1144.06,
+    "description": "HJ Advocaten & Mediators",
+    "rawKey": "hj advocaten mediators",
+    "externalRef": "48b7ae2bc7bfae49b021",
+    "category": null
+  },
+  {
+    "date": "2026-05-04",
+    "year": 2026,
+    "month": 5,
+    "amount": 620,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "1ebb1ca51fd4a6505490",
+    "category": null
+  },
+  {
+    "date": "2026-05-05",
+    "year": 2026,
+    "month": 5,
+    "amount": 357.48,
+    "description": "Go Ogle Ireland Limited",
+    "rawKey": "go ogle ireland limited",
+    "externalRef": "7ca054e9fa76c932cf80",
+    "category": null
+  },
+  {
+    "date": "2026-05-05",
+    "year": 2026,
+    "month": 5,
+    "amount": 4.55,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "4c42bb68507e376dc51b",
+    "category": null
+  },
+  {
+    "date": "2026-05-05",
+    "year": 2026,
+    "month": 5,
+    "amount": 3071.84,
+    "description": "Transa Via",
+    "rawKey": "transa via",
+    "externalRef": "03595bbec13bfe0a540f",
+    "category": null
+  },
+  {
+    "date": "2026-05-05",
+    "year": 2026,
+    "month": 5,
+    "amount": 4000,
+    "description": "Intern Ational Card Services .",
+    "rawKey": "intern ational card services",
+    "externalRef": "bc425d394a56c0ef15fb",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 72.67,
+    "description": "Digihero",
+    "rawKey": "digihero",
+    "externalRef": "a04c89f4e58829df0d91",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 13.65,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "7ee6703bddda34be02f3",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 15.13,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "a3d365d3562d2febabeb",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 220.03,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging voor arbeidsrecht",
+    "externalRef": "f3fdf3a14ae691fddb8f",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 1942.05,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "5fec3828915f73876750",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 55.01,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging voor arbeidsrecht",
+    "externalRef": "6fdb547ad2913380d129",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 384.78,
+    "description": "Stadhouders Advocaten",
+    "rawKey": "stadhouders advocaten",
+    "externalRef": "2cfa71b00dd4be1a06c1",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 35.25,
+    "description": "Thuis Aan De Amstel",
+    "rawKey": "thuis aan de amstel",
+    "externalRef": "ea5de24ab8098894a0f6",
+    "category": null
+  },
+  {
+    "date": "2026-05-06",
+    "year": 2026,
+    "month": 5,
+    "amount": 35,
+    "description": "Vereniging voor Arbeidsrecht",
+    "rawKey": "vereniging arbeidsrecht advocaten amsterdam",
+    "externalRef": "147db7c75907cdaa611a",
+    "category": null
+  },
+  {
+    "date": "2026-05-07",
+    "year": 2026,
+    "month": 5,
+    "amount": 55,
+    "description": "Jonge Balie Amsterdam",
+    "rawKey": "de jonge balie te amsterdam vevr",
+    "externalRef": "84c7b06624947d6aaaf5",
+    "category": null
+  },
+  {
+    "date": "2026-05-07",
+    "year": 2026,
+    "month": 5,
+    "amount": 1129.84,
+    "description": "KWPS (doorbelast)",
+    "rawKey": "kwps",
+    "externalRef": "88c6b9d6775bb8daf040",
+    "category": null
+  },
+  {
+    "date": "2026-05-10",
+    "year": 2026,
+    "month": 5,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "e7861355f95fbad038eb",
+    "category": null
+  },
+  {
+    "date": "2026-05-10",
+    "year": 2026,
+    "month": 5,
+    "amount": 160.93,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "ee7d0d29bb176ae9ef0b",
+    "category": null
+  },
+  {
+    "date": "2026-05-10",
+    "year": 2026,
+    "month": 5,
+    "amount": 221.53,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "fc1667900f18bffb7754",
+    "category": null
+  },
+  {
+    "date": "2026-05-10",
+    "year": 2026,
+    "month": 5,
+    "amount": 101.15,
+    "description": "Froot",
+    "rawKey": "froot",
+    "externalRef": "b038d0a3d6f52f27b27f",
+    "category": null
+  },
+  {
+    "date": "2026-05-10",
+    "year": 2026,
+    "month": 5,
+    "amount": 253.26,
+    "description": "Vurich gerechtsdeurwaarder",
+    "rawKey": "vurich",
+    "externalRef": "b10f278b44bf4af8c342",
+    "category": null
+  },
+  {
+    "date": "2026-05-10",
+    "year": 2026,
+    "month": 5,
+    "amount": 75.96,
+    "description": "Ns Rei Zigers .",
+    "rawKey": "ns rei zigers",
+    "externalRef": "0e22eee94949081a2cc5",
+    "category": null
+  },
+  {
+    "date": "2026-05-11",
+    "year": 2026,
+    "month": 5,
+    "amount": 752.02,
+    "description": "The Data Lawyers .",
+    "rawKey": "the data lawyers",
+    "externalRef": "0f0d1325313292b670fc",
+    "category": null
+  },
+  {
+    "date": "2026-05-11",
+    "year": 2026,
+    "month": 5,
+    "amount": 4.55,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "0b44de1bd327c65e71e7",
+    "category": null
+  },
+  {
+    "date": "2026-05-11",
+    "year": 2026,
+    "month": 5,
+    "amount": 275.33,
+    "description": "Fietskoerier",
+    "rawKey": "fietskoerier nl",
+    "externalRef": "889a944e99af8ff2feca",
+    "category": null
+  },
+  {
+    "date": "2026-05-17",
+    "year": 2026,
+    "month": 5,
+    "amount": 83.95,
+    "description": "123led .",
+    "rawKey": "123led",
+    "externalRef": "f0ea8ab97c4478d339e8",
+    "category": null
+  },
+  {
+    "date": "2026-05-17",
+    "year": 2026,
+    "month": 5,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "1e5b5f5f71acc50ccb1c",
+    "category": null
+  },
+  {
+    "date": "2026-05-17",
+    "year": 2026,
+    "month": 5,
+    "amount": 67.33,
+    "description": "Vi King Netherlands Via Paypal .Europe.",
+    "rawKey": "vi king netherlands via paypal europe",
+    "externalRef": "34a864aa94e10c3400fd",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 257.23,
+    "description": "Gamma Business",
+    "rawKey": "gamma business services",
+    "externalRef": "8e7d2dfaa16c0c145480",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 139,
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van justitie en veiligheid",
+    "externalRef": "24ea7e2575d07708ce2f",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 149.78,
+    "description": "Albert Heijn",
+    "rawKey": "albert heijn",
+    "externalRef": "a51b64c182db762affa0",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "5593f200db2d4d639364",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 2511.96,
+    "description": "Mw Ca Hage",
+    "rawKey": "mw ca hage",
+    "externalRef": "3b811351daddf0dd042b",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 3.1,
+    "description": "Kamer van Koophandel",
+    "rawKey": "kvk nl via rabo smart pay",
+    "externalRef": "7a3ea822902b6b485c5f",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 756.25,
+    "description": "Aho Leadership In Business",
+    "rawKey": "aho leadership in business",
+    "externalRef": "fa672bf5bd565fd0e2a1",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 2629.96,
+    "description": "Constant IT",
+    "rawKey": "constant it",
+    "externalRef": "b2df6152bba33c135cb0",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 15.1,
+    "description": "Dba Hospitality",
+    "rawKey": "dba hospitality",
+    "externalRef": "6ff2ada4b5f985f24940",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 1407.23,
+    "description": "Basenet",
+    "rawKey": "basenet internet projects",
+    "externalRef": "4a0d6782c152b9d6c93d",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 331.16,
+    "description": "Tentoo",
+    "rawKey": "tentoo",
+    "externalRef": "4f9cd44c3bcb52ee9f4e",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 1691.58,
+    "description": "TTWWOO",
+    "rawKey": "ttwwoo",
+    "externalRef": "decc9a0f37e1ffdda210",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 1639.55,
+    "description": "Instatera .",
+    "rawKey": "instatera",
+    "externalRef": "4b2741bacdd36b23c29f",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 1905.75,
+    "description": "Bingh Advocaten",
+    "rawKey": "bingh advocaten",
+    "externalRef": "c4170a886243763802f7",
+    "category": null
+  },
+  {
+    "date": "2026-05-18",
+    "year": 2026,
+    "month": 5,
+    "amount": 84.7,
+    "description": "Basenet",
+    "rawKey": "basenet internet projects",
+    "externalRef": "4539f8e737e4dfc81852",
+    "category": null
+  },
+  {
+    "date": "2026-05-19",
+    "year": 2026,
+    "month": 5,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "c50717d5e0868e84a100",
+    "category": null
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 5.37,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "d40309ea74f76096021d",
+    "category": null
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 76.32,
+    "description": "Ceppi. S Deli . Via Stichting Mollie Payments",
+    "rawKey": "ceppi s deli via stichting mollie payments",
+    "externalRef": "ce6fd842bf7b8a515ef8",
+    "category": null
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 1523.27,
+    "description": "Diyar Wakkas",
+    "rawKey": "diyar wakkas",
+    "externalRef": "ffbc1477bd8ce80c6fbf",
+    "category": null
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 9.1,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "4da7559d3fc6964d134e",
+    "category": null
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 10.38,
+    "description": "Amsterdam",
+    "rawKey": "amsterdam",
+    "externalRef": "685fcf349d59f323e201",
+    "category": null
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 20491.45,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "d1e3a4f3356ffc9c1060",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 18442.82,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "2d89265b7daa2eb899e0",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 7775.48,
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "e2d2cde3cd245887239b",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 18442.82,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "00bd1662b52c3b08da02",
+    "category": "MGMT"
+  },
+  {
+    "date": "2026-05-20",
+    "year": 2026,
+    "month": 5,
+    "amount": 18442.82,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "d6f1922dc3664dcb4c5d",
+    "category": "MGMT"
+  }
+]
