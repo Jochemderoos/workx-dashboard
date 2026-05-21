@@ -37,6 +37,7 @@ export default function KostenPage() {
   const [costsOther, setCostsOther] = useState<Cost[]>([]) // ander jaar t.b.v. vergelijking
   const [loading, setLoading] = useState(true)
   const [year, setYear] = useState<number>(2026)
+  const [activeView, setActiveView] = useState<'detail' | 'compare'>('detail')
   const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth() + 1)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editAmount, setEditAmount] = useState('')
@@ -299,6 +300,22 @@ export default function KostenPage() {
     }
   }, [year, costs, costsOther])
 
+  // Cumulatieve maand-arrays 2025 vs 2026 (ex BTW, tot lastMonth)
+  const cumulativeCompare = useMemo(() => {
+    if (!yearCompare) return null
+    const cum = (arr: number[]) => {
+      const out: number[] = []
+      let s = 0
+      for (const v of arr) { s += v; out.push(s) }
+      return out
+    }
+    return {
+      lastMonth: yearCompare.lastMonth,
+      cum2026: cum(yearCompare.m2026),
+      cum2025: cum(yearCompare.m2025),
+    }
+  }, [yearCompare])
+
   // Top terugkerende vendors — ontwikkeling 2025 → 2026 (ex BTW, tot lastMonth)
   const vendorTrend = useMemo(() => {
     if (!yearCompare) return null
@@ -346,58 +363,87 @@ export default function KostenPage() {
       <div className="absolute top-40 left-[5%] w-48 h-48 bg-green-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <div className="mb-8 relative flex items-start justify-between gap-3 flex-wrap">
+      <div className="mb-6 relative flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
             <Icons.euro size={20} className="text-workx-lime" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Kosten {year}</h1>
-            <p className="text-sm text-white/40">Per maand bijhouden, onderaan inzicht in terugkerende kosten</p>
+            <h1 className="text-2xl font-bold text-white">
+              {activeView === 'detail' ? `Kosten ${year}` : 'Vergelijking kosten'}
+            </h1>
+            <p className="text-sm text-white/40">
+              {activeView === 'detail'
+                ? 'Bedragen ex BTW. MGMT = management fee partners, geen dividend, geen loonkosten.'
+                : 'Appels-appels vergelijking 2025 vs 2026 tot laatste invoer 2026.'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Jaar-switch */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
-            {[2025, 2026].map(y => (
+          {activeView === 'detail' && (
+            <>
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
+                {[2025, 2026].map(y => (
+                  <button
+                    key={y}
+                    onClick={() => setYear(y)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      year === y ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
               <button
-                key={y}
-                onClick={() => setYear(y)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  year === y
-                    ? 'bg-workx-lime text-workx-dark'
-                    : 'text-gray-400 hover:text-white'
-                }`}
+                onClick={normalizeImported}
+                disabled={normalizing}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 text-gray-300 text-sm font-medium border border-white/10 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40"
+                title="Geïmporteerde bank-omschrijvingen omzetten naar korte vendor-namen"
               >
-                {y}
+                <Icons.sparkles size={14} />
+                {normalizing ? 'Bezig…' : 'Maak omschrijvingen netter'}
               </button>
-            ))}
-          </div>
-          <button
-            onClick={normalizeImported}
-            disabled={normalizing}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 text-gray-300 text-sm font-medium border border-white/10 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40"
-            title="Geïmporteerde bank-omschrijvingen omzetten naar korte vendor-namen"
-          >
-            <Icons.sparkles size={14} />
-            {normalizing ? 'Bezig…' : 'Maak omschrijvingen netter'}
-          </button>
-          <button
-            onClick={() => setShowImport(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
-            title="Bankafschrift in MT940-formaat uploaden (ABN AMRO → Mutaties → Downloaden)"
-          >
-            <Icons.upload size={14} />
-            Importeer MT940
-          </button>
+              <button
+                onClick={() => setShowImport(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
+                title="Bankafschrift in MT940-formaat uploaden"
+              >
+                <Icons.upload size={14} />
+                Importeer MT940
+              </button>
+            </>
+          )}
         </div>
+      </div>
+
+      {/* View-switcher: Detail vs Vergelijking */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mb-6 w-fit">
+        <button
+          onClick={() => setActiveView('detail')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+            activeView === 'detail' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Icons.euro size={14} />
+          Kosten per jaar
+        </button>
+        <button
+          onClick={() => setActiveView('compare')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+            activeView === 'compare' ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <Icons.trendingUp size={14} />
+          Vergelijking 2025 ↔ 2026
+        </button>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="w-6 h-6 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
         </div>
-      ) : (
+      ) : activeView === 'detail' ? (
         <>
           {/* Year-stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -429,6 +475,67 @@ export default function KostenPage() {
               <p className="text-2xl font-bold text-white">{costs.length}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">{vendorStats.length} vendors</p>
             </div>
+          </div>
+
+          {/* Charts section — BOVEN het maand-detail */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Maand-bar */}
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+              <h3 className="text-white font-semibold mb-1">Totaal per maand (ex BTW)</h3>
+              <p className="text-xs text-gray-500 mb-4">Cyaan = management fee, lime = overige kosten</p>
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => {
+                  const total = monthTotalExBtw(m)
+                  const mgmt = monthMgmtTotal(m)
+                  const rest = Math.max(0, total - mgmt)
+                  const mgmtPct = (mgmt / maxMonthTotal) * 100
+                  const restPct = (rest / maxMonthTotal) * 100
+                  return (
+                    <div key={m} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400 w-20 shrink-0">{MONTHS[m]}</span>
+                      <div className="flex-1 h-6 bg-white/5 rounded-lg overflow-hidden flex">
+                        <div className="h-full bg-gradient-to-r from-cyan-500/60 to-cyan-400" style={{ width: `${mgmtPct}%` }} title={mgmt > 0 ? `Management fee: ${formatEUR(mgmt)}` : undefined} />
+                        <div className="h-full bg-gradient-to-r from-workx-lime/60 to-workx-lime" style={{ width: `${restPct}%` }} title={rest > 0 ? `Overige kosten: ${formatEUR(rest)}` : undefined} />
+                      </div>
+                      <span className="text-xs font-medium text-white tabular-nums w-24 text-right">
+                        {total > 0 ? formatEUR(total) : '—'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Top vendors */}
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+              <h3 className="text-white font-semibold mb-1">Top terugkerende kosten</h3>
+              <p className="text-xs text-gray-500 mb-4">Vendors die in meerdere maanden voorkomen, op totaalbedrag ex BTW</p>
+              {recurringVendors.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">Nog geen terugkerend patroon — meer maanden invullen.</p>
+              ) : (
+                <div className="space-y-2">
+                  {recurringVendors.map(v => {
+                    const pct = (v.total / maxVendor) * 100
+                    return (
+                      <div key={v.key} className="flex items-center gap-3">
+                        <span className="text-xs text-white w-40 shrink-0 truncate" title={v.key}>{v.key}</span>
+                        <div className="flex-1 h-5 bg-white/5 rounded-md overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-cyan-500/40 to-cyan-400/80 rounded-md" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-gray-500 w-8 text-right">×{v.count}</span>
+                        <span className="text-xs font-medium text-white tabular-nums w-24 text-right">{formatEUR(v.total)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* === Hier begint de gedetailleerde maand-data === */}
+          <div className="mb-3 pt-2 border-t border-white/5">
+            <h2 className="text-base font-semibold text-white">Per maand</h2>
+            <p className="text-xs text-gray-500">Klik op een maand om de regels te bekijken en aan te passen.</p>
           </div>
 
           {/* Month tabs */}
@@ -565,217 +672,10 @@ export default function KostenPage() {
             )}
           </div>
 
-          {/* Charts section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Maand-bar */}
-            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
-              <h3 className="text-white font-semibold mb-1">Totaal per maand (ex BTW)</h3>
-              <p className="text-xs text-gray-500 mb-4">Cyaan = management fee, lime = overige kosten</p>
-              <div className="space-y-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => {
-                  const total = monthTotalExBtw(m)
-                  const mgmt = monthMgmtTotal(m)
-                  const rest = Math.max(0, total - mgmt)
-                  const mgmtPct = (mgmt / maxMonthTotal) * 100
-                  const restPct = (rest / maxMonthTotal) * 100
-                  return (
-                    <div key={m} className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400 w-20 shrink-0">{MONTHS[m]}</span>
-                      <div className="flex-1 h-6 bg-white/5 rounded-lg overflow-hidden flex">
-                        <div
-                          className="h-full bg-gradient-to-r from-cyan-500/60 to-cyan-400"
-                          style={{ width: `${mgmtPct}%` }}
-                          title={mgmt > 0 ? `Management fee: ${formatEUR(mgmt)}` : undefined}
-                        />
-                        <div
-                          className="h-full bg-gradient-to-r from-workx-lime/60 to-workx-lime"
-                          style={{ width: `${restPct}%` }}
-                          title={rest > 0 ? `Overige kosten: ${formatEUR(rest)}` : undefined}
-                        />
-                      </div>
-                      <span className="text-xs font-medium text-white tabular-nums w-24 text-right">
-                        {total > 0 ? formatEUR(total) : '—'}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Top vendors */}
-            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
-              <h3 className="text-white font-semibold mb-1">Top terugkerende kosten</h3>
-              <p className="text-xs text-gray-500 mb-4">Vendors die in meerdere maanden voorkomen, op totaalbedrag</p>
-              {recurringVendors.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">Nog geen terugkerend patroon — meer maanden invullen.</p>
-              ) : (
-                <div className="space-y-2">
-                  {recurringVendors.map(v => {
-                    const pct = (v.total / maxVendor) * 100
-                    return (
-                      <div key={v.key} className="flex items-center gap-3">
-                        <span className="text-xs text-white w-40 shrink-0 truncate" title={v.key}>{v.key}</span>
-                        <div className="flex-1 h-5 bg-white/5 rounded-md overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-cyan-500/40 to-cyan-400/80 rounded-md"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-gray-500 w-8 text-right">×{v.count}</span>
-                        <span className="text-xs font-medium text-white tabular-nums w-24 text-right">{formatEUR(v.total)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Appels-appels vergelijking 2025 vs 2026 */}
-          {yearCompare && (yearCompare.total2025 > 0 || yearCompare.total2026 > 0) && (
-            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-6">
-              <h3 className="text-white font-semibold mb-1">Vergelijking 2025 vs 2026 ({yearCompare.periodLabel})</h3>
-              <p className="text-xs text-gray-500 mb-4">
-                Bedragen ex BTW. Tot de laatste maand met data in 2026 — appels-appels.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-                {(() => {
-                  const diffTotal = yearCompare.total2026 - yearCompare.total2025
-                  const diffMgmt = yearCompare.mgmt2026 - yearCompare.mgmt2025
-                  const overig2026 = yearCompare.total2026 - yearCompare.mgmt2026
-                  const overig2025 = yearCompare.total2025 - yearCompare.mgmt2025
-                  const diffOverig = overig2026 - overig2025
-                  return (
-                    <>
-                      <div className="bg-workx-dark/40 rounded-xl p-4 border border-white/5">
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Totaal kosten</p>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-xs text-gray-400">2025</span>
-                          <span className="text-sm text-gray-200 tabular-nums">{formatEUR(yearCompare.total2025)}</span>
-                        </div>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-xs text-workx-lime">2026</span>
-                          <span className="text-base font-bold text-workx-lime tabular-nums">{formatEUR(yearCompare.total2026)}</span>
-                        </div>
-                        <p className={`text-xs font-medium tabular-nums mt-1 ${diffTotal > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          {diffTotal > 0 ? '+' : ''}{formatEUR(diffTotal)} ({yearCompare.total2025 > 0 ? `${((diffTotal / yearCompare.total2025) * 100).toFixed(1)}%` : '—'})
-                        </p>
-                      </div>
-                      <div className="bg-workx-dark/40 rounded-xl p-4 border border-white/5">
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Management fee</p>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-xs text-gray-400">2025</span>
-                          <span className="text-sm text-gray-200 tabular-nums">{formatEUR(yearCompare.mgmt2025)}</span>
-                        </div>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-xs text-cyan-400">2026</span>
-                          <span className="text-base font-bold text-cyan-400 tabular-nums">{formatEUR(yearCompare.mgmt2026)}</span>
-                        </div>
-                        <p className={`text-xs font-medium tabular-nums mt-1 ${diffMgmt > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          {diffMgmt > 0 ? '+' : ''}{formatEUR(diffMgmt)}
-                        </p>
-                      </div>
-                      <div className="bg-workx-dark/40 rounded-xl p-4 border border-white/5">
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Overige kosten</p>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-xs text-gray-400">2025</span>
-                          <span className="text-sm text-gray-200 tabular-nums">{formatEUR(overig2025)}</span>
-                        </div>
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-xs text-workx-lime">2026</span>
-                          <span className="text-base font-bold text-workx-lime tabular-nums">{formatEUR(overig2026)}</span>
-                        </div>
-                        <p className={`text-xs font-medium tabular-nums mt-1 ${diffOverig > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          {diffOverig > 0 ? '+' : ''}{formatEUR(diffOverig)} ({overig2025 > 0 ? `${((diffOverig / overig2025) * 100).toFixed(1)}%` : '—'})
-                        </p>
-                      </div>
-                    </>
-                  )
-                })()}
-              </div>
-
-              {/* Maand-grafiek 2025 vs 2026 */}
-              <h4 className="text-sm text-white/80 font-medium mb-2">Per maand</h4>
-              <div className="space-y-1.5">
-                {(() => {
-                  const maxV = Math.max(...yearCompare.m2025, ...yearCompare.m2026, 1)
-                  return Array.from({ length: yearCompare.lastMonth }, (_, i) => {
-                    const v25 = yearCompare.m2025[i] || 0
-                    const v26 = yearCompare.m2026[i] || 0
-                    return (
-                      <div key={i} className="flex items-center gap-3">
-                        <span className="text-[11px] text-gray-400 w-16 shrink-0">{MONTHS[i + 1]}</span>
-                        <div className="flex-1 grid grid-rows-2 gap-0.5">
-                          <div className="h-3 bg-white/5 rounded overflow-hidden flex items-center" title={`2025: ${formatEUR(v25)}`}>
-                            <div className="h-full bg-gray-500/60" style={{ width: `${(v25 / maxV) * 100}%` }} />
-                          </div>
-                          <div className="h-3 bg-white/5 rounded overflow-hidden flex items-center" title={`2026: ${formatEUR(v26)}`}>
-                            <div className="h-full bg-workx-lime" style={{ width: `${(v26 / maxV) * 100}%` }} />
-                          </div>
-                        </div>
-                        <span className="text-[10px] text-gray-500 tabular-nums w-20 text-right">{formatEUR(v25)}</span>
-                        <span className="text-[10px] text-workx-lime tabular-nums w-20 text-right">{formatEUR(v26)}</span>
-                      </div>
-                    )
-                  })
-                })()}
-                <div className="flex items-center gap-3 pt-2 mt-1 border-t border-white/5 text-[10px]">
-                  <span className="w-16 shrink-0" />
-                  <div className="flex-1 flex items-center gap-3">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-gray-500/60" /> 2025</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-workx-lime" /> 2026</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Top terugkerende kosten — ontwikkeling */}
-          {vendorTrend && vendorTrend.length > 0 && (
-            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-6">
-              <h3 className="text-white font-semibold mb-1">Ontwikkeling top terugkerende kosten</h3>
-              <p className="text-xs text-gray-500 mb-4">
-                Top 15 vendors (excl. management fee), ex BTW, {yearCompare ? yearCompare.periodLabel : 'jaar'}.
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-gray-500 border-b border-white/10">
-                      <th className="py-2 px-2 font-medium">Vendor</th>
-                      <th className="py-2 px-2 font-medium text-right">2025</th>
-                      <th className="py-2 px-2 font-medium text-right">2026</th>
-                      <th className="py-2 px-2 font-medium text-right">Δ</th>
-                      <th className="py-2 px-2 font-medium text-right">%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vendorTrend.map(v => {
-                      const diff = v.v2026 - v.v2025
-                      const pct = v.v2025 > 0 ? (diff / v.v2025) * 100 : null
-                      return (
-                        <tr key={v.key} className="border-b border-white/5 hover:bg-white/[0.02]">
-                          <td className="py-2 px-2 text-white truncate max-w-xs" title={v.key}>{v.key}</td>
-                          <td className="py-2 px-2 text-right text-gray-300 tabular-nums">{v.v2025 > 0 ? formatEUR(v.v2025) : '—'}</td>
-                          <td className="py-2 px-2 text-right text-workx-lime tabular-nums font-medium">{v.v2026 > 0 ? formatEUR(v.v2026) : '—'}</td>
-                          <td className={`py-2 px-2 text-right tabular-nums ${diff > 0 ? 'text-red-400' : diff < 0 ? 'text-green-400' : 'text-gray-500'}`}>
-                            {diff !== 0 ? (diff > 0 ? '+' : '') + formatEUR(diff) : '—'}
-                          </td>
-                          <td className={`py-2 px-2 text-right tabular-nums text-xs ${pct === null ? 'text-gray-500' : pct > 0 ? 'text-red-400' : pct < 0 ? 'text-green-400' : 'text-gray-500'}`}>
-                            {pct === null ? 'nieuw' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
           {/* Full vendor table */}
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-8">
             <h3 className="text-white font-semibold mb-1">Alle kosten samengevat</h3>
-            <p className="text-xs text-gray-500 mb-4">Gegroepeerd op vendor, gesorteerd op totaalbedrag</p>
+            <p className="text-xs text-gray-500 mb-4">Gegroepeerd op vendor, gesorteerd op totaalbedrag ex BTW</p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -799,6 +699,251 @@ export default function KostenPage() {
               </table>
             </div>
           </div>
+        </>
+      ) : (
+        /* ====================  VERGELIJKING-TAB  ==================== */
+        <>
+          {!yearCompare || (yearCompare.total2025 === 0 && yearCompare.total2026 === 0) ? (
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-10 text-center">
+              <Icons.trendingUp size={32} className="mx-auto text-gray-500 mb-3" />
+              <p className="text-sm text-gray-400">Nog te weinig data voor vergelijking — voeg eerst kosten toe in 2025 of 2026.</p>
+            </div>
+          ) : (
+            <>
+              {/* Top KPI's vergelijking */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                {(() => {
+                  const diffTotal = yearCompare.total2026 - yearCompare.total2025
+                  const diffMgmt = yearCompare.mgmt2026 - yearCompare.mgmt2025
+                  const overig2026 = yearCompare.total2026 - yearCompare.mgmt2026
+                  const overig2025 = yearCompare.total2025 - yearCompare.mgmt2025
+                  const diffOverig = overig2026 - overig2025
+                  const Pct = ({ v }: { v: number | null }) =>
+                    v === null ? null : <span className="text-[10px]">({v > 0 ? '+' : ''}{v.toFixed(1)}%)</span>
+                  return (
+                    <>
+                      <div className="bg-gradient-to-br from-workx-lime/10 to-workx-lime/[0.03] border border-workx-lime/20 rounded-2xl p-5">
+                        <p className="text-[10px] text-workx-lime/70 uppercase tracking-wider mb-2">Totaal kosten ({yearCompare.periodLabel})</p>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-xs text-gray-400">2025</span>
+                          <span className="text-base text-gray-300 tabular-nums">{formatEUR(yearCompare.total2025)}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-workx-lime">2026</span>
+                          <span className="text-2xl font-bold text-workx-lime tabular-nums">{formatEUR(yearCompare.total2026)}</span>
+                        </div>
+                        <p className={`text-sm font-medium tabular-nums mt-2 ${diffTotal > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {diffTotal > 0 ? '+' : ''}{formatEUR(diffTotal)} <Pct v={yearCompare.total2025 > 0 ? (diffTotal / yearCompare.total2025) * 100 : null} />
+                        </p>
+                      </div>
+                      <div className="bg-gradient-to-br from-cyan-500/10 to-cyan-500/[0.03] border border-cyan-500/20 rounded-2xl p-5">
+                        <p className="text-[10px] text-cyan-400/70 uppercase tracking-wider mb-2">Management fee</p>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-xs text-gray-400">2025</span>
+                          <span className="text-base text-gray-300 tabular-nums">{formatEUR(yearCompare.mgmt2025)}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-cyan-400">2026</span>
+                          <span className="text-2xl font-bold text-cyan-400 tabular-nums">{formatEUR(yearCompare.mgmt2026)}</span>
+                        </div>
+                        <p className={`text-sm font-medium tabular-nums mt-2 ${diffMgmt > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {diffMgmt > 0 ? '+' : ''}{formatEUR(diffMgmt)} <Pct v={yearCompare.mgmt2025 > 0 ? (diffMgmt / yearCompare.mgmt2025) * 100 : null} />
+                        </p>
+                      </div>
+                      <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/[0.03] border border-orange-500/20 rounded-2xl p-5">
+                        <p className="text-[10px] text-orange-400/70 uppercase tracking-wider mb-2">Overige kosten</p>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <span className="text-xs text-gray-400">2025</span>
+                          <span className="text-base text-gray-300 tabular-nums">{formatEUR(overig2025)}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-orange-300">2026</span>
+                          <span className="text-2xl font-bold text-orange-300 tabular-nums">{formatEUR(overig2026)}</span>
+                        </div>
+                        <p className={`text-sm font-medium tabular-nums mt-2 ${diffOverig > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {diffOverig > 0 ? '+' : ''}{formatEUR(diffOverig)} <Pct v={overig2025 > 0 ? (diffOverig / overig2025) * 100 : null} />
+                        </p>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+
+              {/* Cumulatieve lijngrafiek */}
+              {cumulativeCompare && (() => {
+                const { lastMonth, cum2025, cum2026 } = cumulativeCompare
+                const svgW = 800, svgH = 280, padL = 70, padR = 30, padT = 20, padB = 40
+                const plotW = svgW - padL - padR, plotH = svgH - padT - padB
+                const yMax = Math.max(...cum2025, ...cum2026, 1) * 1.1
+                const x = (i: number) => padL + (i / 11) * plotW
+                const y = (v: number) => padT + plotH - (v / yMax) * plotH
+                const smooth = (pts: { x: number; y: number }[]) => {
+                  if (pts.length < 2) return ''
+                  let d = `M ${pts[0].x},${pts[0].y}`
+                  for (let i = 1; i < pts.length; i++) {
+                    const p = pts[i - 1], c = pts[i]
+                    const cpx = (p.x + c.x) / 2
+                    d += ` C ${cpx},${p.y} ${cpx},${c.y} ${c.x},${c.y}`
+                  }
+                  return d
+                }
+                // 2025 doortrekken hele jaar; 2026 stopt bij lastMonth
+                const cum2025Full = (() => {
+                  const all2025 = year === 2025 ? costs : costsOther
+                  const arr = Array(12).fill(0)
+                  for (const c of all2025) {
+                    if (c.month >= 1 && c.month <= 12) arr[c.month - 1] += amountExVat(c)
+                  }
+                  const out: number[] = []; let s = 0
+                  for (const v of arr) { s += v; out.push(s) }
+                  return out
+                })()
+                const pts2026 = cum2026.slice(0, lastMonth).map((v, i) => ({ x: x(i), y: y(v) }))
+                const pts2025Solid = cum2025Full.slice(0, lastMonth).map((v, i) => ({ x: x(i), y: y(v) }))
+                const pts2025Dashed = cum2025Full.slice(lastMonth - 1).map((v, i) => ({ x: x(lastMonth - 1 + i), y: y(v) }))
+                const yMaxFull = Math.max(yMax, ...cum2025Full) * 1.1
+                const ytickStep = Math.ceil(yMaxFull / 5 / 100000) * 100000 || 50000
+                const yTicks: number[] = []
+                for (let v = 0; v <= yMaxFull; v += ytickStep) yTicks.push(v)
+                const yScaled = (v: number) => padT + plotH - (v / yMaxFull) * plotH
+                return (
+                  <div className="bg-workx-dark/40 border border-white/5 rounded-2xl p-6 mb-6">
+                    <div className="flex items-start justify-between mb-1 flex-wrap gap-3">
+                      <div>
+                        <h3 className="text-white font-semibold">Cumulatieve kosten 2025 vs 2026</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">Management fee + overige kosten, ex BTW. Verticale lijn = laatste invoer 2026.</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">Op {yearCompare.periodLabel}</p>
+                        <p className="text-sm tabular-nums text-gray-300">2025: <span className="font-bold text-white">{formatEUR(yearCompare.total2025)}</span></p>
+                        <p className="text-sm tabular-nums text-workx-lime font-bold">2026: {formatEUR(yearCompare.total2026)}</p>
+                      </div>
+                    </div>
+                    <div className="relative mt-4" style={{ height: svgH }}>
+                      <svg width="100%" height="100%" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="xMidYMid meet">
+                        {yTicks.map(v => (
+                          <g key={v}>
+                            <line x1={padL} y1={yScaled(v)} x2={padL + plotW} y2={yScaled(v)} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+                            <text x={padL - 8} y={yScaled(v) + 4} textAnchor="end" fill="rgba(255,255,255,0.4)" fontSize="11" fontFamily="system-ui">€{(v / 1000).toFixed(0)}k</text>
+                          </g>
+                        ))}
+                        {MONTHS.slice(1, 13).map((m, i) => (
+                          <text key={m} x={x(i)} y={padT + plotH + 18} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="system-ui">{m.slice(0, 3)}</text>
+                        ))}
+                        {/* Verticale marker */}
+                        <line x1={x(lastMonth - 1)} y1={padT} x2={x(lastMonth - 1)} y2={padT + plotH} stroke="rgba(249,255,133,0.3)" strokeWidth="1" strokeDasharray="4,4" />
+                        <text x={x(lastMonth - 1)} y={padT - 6} textAnchor="middle" fill="rgba(249,255,133,0.7)" fontSize="10" fontFamily="system-ui">laatste invoer</text>
+                        {/* 2025 solide + gestippeld doorgetrokken — gebruik yScaled */}
+                        <path d={smooth(pts2025Solid.map(p => ({ x: p.x, y: yScaled(cum2025Full[Math.round((p.x - padL) / plotW * 11)]) })))} fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={smooth(pts2025Dashed.map(p => ({ x: p.x, y: yScaled(cum2025Full[Math.round((p.x - padL) / plotW * 11)]) })))} fill="none" stroke="#9ca3af" strokeWidth="2" strokeOpacity="0.5" strokeDasharray="5,4" strokeLinecap="round" />
+                        {/* 2026 */}
+                        <path d={smooth(pts2026.map(p => ({ x: p.x, y: yScaled(cum2026[Math.round((p.x - padL) / plotW * 11)]) })))} fill="none" stroke="#f9ff85" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        {pts2026.length > 0 && (
+                          <g>
+                            <circle cx={pts2026[pts2026.length - 1].x} cy={yScaled(cum2026[lastMonth - 1])} r="5" fill="#f9ff85" opacity="0.3" />
+                            <circle cx={pts2026[pts2026.length - 1].x} cy={yScaled(cum2026[lastMonth - 1])} r="3" fill="#f9ff85" />
+                          </g>
+                        )}
+                        <circle cx={x(lastMonth - 1)} cy={yScaled(cum2025Full[lastMonth - 1])} r="3" fill="#9ca3af" />
+                        <circle cx={x(11)} cy={yScaled(cum2025Full[11])} r="3" fill="#9ca3af" opacity="0.6" />
+                      </svg>
+                    </div>
+                    <div className="flex items-center justify-between mt-2 text-xs flex-wrap gap-3">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-2 text-gray-400"><span className="w-4 h-0.5 bg-gray-400" /> 2025 cumulatief</span>
+                        <span className="flex items-center gap-2 text-gray-500"><span className="w-4 h-0.5 border-t-2 border-dashed border-gray-500" /> 2025 na vergelijkingspunt</span>
+                        <span className="flex items-center gap-2 text-workx-lime"><span className="w-4 h-0.5 bg-workx-lime" /> 2026 cumulatief</span>
+                      </div>
+                      <span className="text-gray-500 text-[11px]">2025 hele jaar: <span className="text-gray-300 tabular-nums">{formatEUR(cum2025Full[11])}</span></span>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Per maand vergelijking */}
+              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-6">
+                <h3 className="text-white font-semibold mb-1">Per maand 2025 vs 2026 ({yearCompare.periodLabel})</h3>
+                <p className="text-xs text-gray-500 mb-4">Bedragen ex BTW, incl. management fee.</p>
+                <div className="space-y-1.5">
+                  {(() => {
+                    const maxV = Math.max(...yearCompare.m2025, ...yearCompare.m2026, 1)
+                    return Array.from({ length: yearCompare.lastMonth }, (_, i) => {
+                      const v25 = yearCompare.m2025[i] || 0
+                      const v26 = yearCompare.m2026[i] || 0
+                      const mgmt25 = yearCompare.mgmtM2025[i] || 0
+                      const mgmt26 = yearCompare.mgmtM2026[i] || 0
+                      return (
+                        <div key={i} className="grid grid-cols-[5rem_1fr_6rem_6rem] items-center gap-3">
+                          <span className="text-xs text-gray-400">{MONTHS[i + 1]}</span>
+                          <div className="grid grid-rows-2 gap-0.5">
+                            <div className="h-3.5 bg-white/5 rounded overflow-hidden flex" title={`2025: ${formatEUR(v25)} (mgmt ${formatEUR(mgmt25)})`}>
+                              <div className="h-full bg-cyan-700/70" style={{ width: `${(mgmt25 / maxV) * 100}%` }} />
+                              <div className="h-full bg-gray-500/70" style={{ width: `${((v25 - mgmt25) / maxV) * 100}%` }} />
+                            </div>
+                            <div className="h-3.5 bg-white/5 rounded overflow-hidden flex" title={`2026: ${formatEUR(v26)} (mgmt ${formatEUR(mgmt26)})`}>
+                              <div className="h-full bg-cyan-400" style={{ width: `${(mgmt26 / maxV) * 100}%` }} />
+                              <div className="h-full bg-workx-lime" style={{ width: `${((v26 - mgmt26) / maxV) * 100}%` }} />
+                            </div>
+                          </div>
+                          <span className="text-[11px] text-gray-300 tabular-nums text-right">{formatEUR(v25)}</span>
+                          <span className="text-[11px] text-workx-lime font-medium tabular-nums text-right">{formatEUR(v26)}</span>
+                        </div>
+                      )
+                    })
+                  })()}
+                </div>
+                <div className="flex items-center gap-4 pt-3 mt-2 border-t border-white/5 text-[10px] text-gray-400">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-700/70" /> 2025 mgmt</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-gray-500/70" /> 2025 overig</span>
+                  <span className="text-gray-700">·</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-400" /> 2026 mgmt</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-workx-lime" /> 2026 overig</span>
+                </div>
+              </div>
+
+              {/* Top vendors trend tabel */}
+              {vendorTrend && vendorTrend.length > 0 && (
+                <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 mb-8">
+                  <h3 className="text-white font-semibold mb-1">Ontwikkeling top terugkerende kosten</h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Top 15 vendors (excl. management fee), ex BTW, {yearCompare.periodLabel}.
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-xs text-gray-500 border-b border-white/10">
+                          <th className="py-2 px-2 font-medium">Vendor</th>
+                          <th className="py-2 px-2 font-medium text-right">2025</th>
+                          <th className="py-2 px-2 font-medium text-right">2026</th>
+                          <th className="py-2 px-2 font-medium text-right">Δ</th>
+                          <th className="py-2 px-2 font-medium text-right">%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {vendorTrend.map(v => {
+                          const diff = v.v2026 - v.v2025
+                          const pct = v.v2025 > 0 ? (diff / v.v2025) * 100 : null
+                          return (
+                            <tr key={v.key} className="border-b border-white/5 hover:bg-white/[0.02]">
+                              <td className="py-2 px-2 text-white truncate max-w-xs" title={v.key}>{v.key}</td>
+                              <td className="py-2 px-2 text-right text-gray-300 tabular-nums">{v.v2025 > 0 ? formatEUR(v.v2025) : '—'}</td>
+                              <td className="py-2 px-2 text-right text-workx-lime tabular-nums font-medium">{v.v2026 > 0 ? formatEUR(v.v2026) : '—'}</td>
+                              <td className={`py-2 px-2 text-right tabular-nums ${diff > 0 ? 'text-red-400' : diff < 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                                {diff !== 0 ? (diff > 0 ? '+' : '') + formatEUR(diff) : '—'}
+                              </td>
+                              <td className={`py-2 px-2 text-right tabular-nums text-xs ${pct === null ? 'text-gray-500' : pct > 0 ? 'text-red-400' : pct < 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                                {pct === null ? 'nieuw' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}%`}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
 

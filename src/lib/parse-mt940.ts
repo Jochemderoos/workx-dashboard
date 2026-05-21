@@ -50,26 +50,28 @@ function classifyPartnerPayment(desc: string): PartnerClass {
 
 // Workx-medewerkers — directe salarisbetalingen via MT940 zijn dubbel-
 // telling met de werkgeverslasten (zit al op loonstrook). Match op
-// achternaam / initialen + achternaam zoals deze in MT940-omschrijving
-// verschijnt.
-const WORKX_TEAM_PATTERNS: RegExp[] = [
-  /\bm\.?j\.?h\.?\s+schipper\b/i,
-  /\bemma\s+van\s+der\s+vos\b/i,
-  /\balain\s+heunen\b/i,
-  /\bbarbara\s+rip\b/i,
-  /\bj\.?a\.?m\.?\s+schellekens\b/i,
-  /\b(ms|m\.?s\.?)\s+van\s+pesch\b/i,
-  /\berika\s+van\s+zadelhof\b/i,
-  /\bh\.?\s+blaauboer\b/i,
-  /\bkay\s+maes\b/i,
-  /\bheleen\s+pesser\b/i,
-  /\bjulia\s+groen\b/i,
-  /\bjuli(ã|e|ë)tte\s+niersman\b/i,
-  /\bvan\s+sint[-\s]?truien\b/i,
+// achternaam alleen, hoofdletter-ongevoelig — robuust tegen diakrieten
+// en encoding-varianten in de MT940-omschrijving.
+const WORKX_TEAM_LASTNAMES: RegExp[] = [
+  /\bschipper\b/i,
+  /\bvan\s+der\s+vos\b/i,
+  /\bheunen\b/i,
+  /\brip\b/i,
+  /\bschellekens\b/i,
+  /\bvan\s+pesch\b/i,
+  /\bvan\s+zadelhof\b/i,
+  /\bblaauboer\b/i,
+  /\bmaes\b/i,
+  /\bpesser\b/i,
+  /\bgroen\b/i,
+  /\bniersman\b/i,
+  /\bsint[-\s]?truien\b/i,        // 'Van Sint-Truien'
+  /\bsint[-\s]?truiden\b/i,        // 'Van Sint Truiden' (variant)
+  /\bloomans\b/i,                  // Lauren Loomans (vanaf sep 2025)
 ]
 
 function isWorkxTeam(desc: string): boolean {
-  return WORKX_TEAM_PATTERNS.some(re => re.test(desc))
+  return WORKX_TEAM_LASTNAMES.some(re => re.test(desc))
 }
 
 // Skip transacties die geen 'bedrijfskost' zijn:

@@ -493,30 +493,10 @@
     "date": "2025-01-20",
     "year": 2025,
     "month": 1,
-    "amount": 1012.62,
-    "description": "Lotte Van Sint Truiden",
-    "rawKey": "lotte van sint truiden",
-    "externalRef": "6d6b6c48cafc2d637c14",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
     "amount": 3244.51,
     "description": "Bente Portman",
     "rawKey": "bente portman",
     "externalRef": "c512c05d41af4a59355c",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 6835.25,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "f0d4dac020a69c6f186f",
     "category": null
   },
   {
@@ -803,16 +783,6 @@
     "date": "2025-01-27",
     "year": 2025,
     "month": 1,
-    "amount": 6.95,
-    "description": "Lotte Van Sint Truiden",
-    "rawKey": "lotte van sint truiden",
-    "externalRef": "9d9dd9c662b3dc978892",
-    "category": null
-  },
-  {
-    "date": "2025-01-27",
-    "year": 2025,
-    "month": 1,
     "amount": 7566.23,
     "description": "Uwv",
     "rawKey": "uwv",
@@ -957,16 +927,6 @@
     "description": "Delfts Congress Support",
     "rawKey": "delft congress support",
     "externalRef": "dbcb5432b714cd7df5f1",
-    "category": null
-  },
-  {
-    "date": "2025-02-03",
-    "year": 2025,
-    "month": 2,
-    "amount": 226.88,
-    "description": "Citius Advocaten",
-    "rawKey": "citius advocaten",
-    "externalRef": "38752261629db65f9461",
     "category": null
   },
   {
@@ -1563,30 +1523,10 @@
     "date": "2025-02-23",
     "year": 2025,
     "month": 2,
-    "amount": 1603.01,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "e66aa7c02e0f46c707bb",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
     "amount": 3244.51,
     "description": "Bente Portman",
     "rawKey": "bente portman",
     "externalRef": "3a788e1a686721b63092",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 1012.62,
-    "description": "Lotte Van Sint Truiden",
-    "rawKey": "lotte van sint truiden",
-    "externalRef": "50a843f29c27769b361d",
     "category": null
   },
   {
@@ -1628,26 +1568,6 @@
     "rawKey": "ASR:asr",
     "externalRef": "6336883845742a9d8570",
     "category": "ASR"
-  },
-  {
-    "date": "2025-02-25",
-    "year": 2025,
-    "month": 2,
-    "amount": 3000,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "476ba8180b15c388df51",
-    "category": null
-  },
-  {
-    "date": "2025-02-25",
-    "year": 2025,
-    "month": 2,
-    "amount": 4620.86,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "5ee18c2685ec4c4d6bca",
-    "category": null
   },
   {
     "date": "2025-02-25",
@@ -1823,16 +1743,6 @@
     "date": "2025-03-02",
     "year": 2025,
     "month": 3,
-    "amount": 109.27,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "abb41d5ec4b805aa8396",
-    "category": null
-  },
-  {
-    "date": "2025-03-02",
-    "year": 2025,
-    "month": 3,
     "amount": 91.8,
     "description": "Sdu Uitgevers .",
     "rawKey": "sdu uitgevers",
@@ -1957,16 +1867,6 @@
     "description": "PostNL",
     "rawKey": "koninklijke postnl",
     "externalRef": "111aa5a4e66645f44ec9",
-    "category": null
-  },
-  {
-    "date": "2025-03-03",
-    "year": 2025,
-    "month": 3,
-    "amount": 2122.8,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "521be47a4e9eb452171a",
     "category": null
   },
   {
@@ -2697,16 +2597,6 @@
     "description": "Albert Heijn",
     "rawKey": "albert heijn",
     "externalRef": "2851fe2f2045201ea121",
-    "category": null
-  },
-  {
-    "date": "2025-04-01",
-    "year": 2025,
-    "month": 4,
-    "amount": 171.5,
-    "description": "Digicert Ireland Limited",
-    "rawKey": "digicert ireland limited",
-    "externalRef": "c529d8cabd7c349fb457",
     "category": null
   },
   {
@@ -3567,16 +3457,6 @@
     "description": "TTWWOO",
     "rawKey": "ttwwoo",
     "externalRef": "74d733f4a40a67254ed8",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 1012.62,
-    "description": "Lotte Van Sint Truiden",
-    "rawKey": "lotte van sint truiden",
-    "externalRef": "134588f12c0b6202ec89",
     "category": null
   },
   {
@@ -4903,16 +4783,6 @@
     "date": "2025-06-03",
     "year": 2025,
     "month": 6,
-    "amount": 1506.36,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "ebd12eb44c4b32bdc057",
-    "category": null
-  },
-  {
-    "date": "2025-06-03",
-    "year": 2025,
-    "month": 6,
     "amount": 135,
     "description": "Ministerie van Justitie (doorbelast)",
     "rawKey": "ministerie van justitie en veiligheid betalingskenm :",
@@ -4957,16 +4827,6 @@
     "description": "Veloretti .",
     "rawKey": "veloretti",
     "externalRef": "c4cfcd7ced53afb2800c",
-    "category": null
-  },
-  {
-    "date": "2025-06-04",
-    "year": 2025,
-    "month": 6,
-    "amount": 1692.09,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "d2d841ca486a6a869f87",
     "category": null
   },
   {
@@ -5837,16 +5697,6 @@
     "description": "Bram Willems Photography",
     "rawKey": "bram willems",
     "externalRef": "6fdeaef12db3421162c0",
-    "category": null
-  },
-  {
-    "date": "2025-07-10",
-    "year": 2025,
-    "month": 7,
-    "amount": 803.5,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "e34f1ac95b6280b3ddbd",
     "category": null
   },
   {
@@ -6853,16 +6703,6 @@
     "date": "2025-08-13",
     "year": 2025,
     "month": 8,
-    "amount": 35,
-    "description": "Vereniging voor Arbeidsrecht",
-    "rawKey": "vereniging arbeidsrecht ad vocaten amsterdam",
-    "externalRef": "e4758adabe186abc32f9",
-    "category": null
-  },
-  {
-    "date": "2025-08-13",
-    "year": 2025,
-    "month": 8,
     "amount": 3155.08,
     "description": "HJ Advocaten & Mediators",
     "rawKey": "hj advocaten mediators",
@@ -7007,16 +6847,6 @@
     "description": "Ffanders Reclame",
     "rawKey": "ffanders reclame",
     "externalRef": "c7411a363190159d3bfd",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 191,
-    "description": "Digicert Ireland Limited",
-    "rawKey": "digicert ireland limited",
-    "externalRef": "e6dbf3c61643fd5b2204",
     "category": null
   },
   {
@@ -7373,16 +7203,6 @@
     "date": "2025-09-09",
     "year": 2025,
     "month": 9,
-    "amount": 781.95,
-    "description": "Lotte Van Sint Truiden",
-    "rawKey": "lotte van sint truiden",
-    "externalRef": "696089e5aba7bd075dfa",
-    "category": null
-  },
-  {
-    "date": "2025-09-09",
-    "year": 2025,
-    "month": 9,
     "amount": 267.4,
     "description": "M. De Jong",
     "rawKey": "m de jong",
@@ -7697,16 +7517,6 @@
     "description": "Delfts Congres Support Via Icepay",
     "rawKey": "delfts congres support via icepay",
     "externalRef": "447c3dfb318398e68f58",
-    "category": null
-  },
-  {
-    "date": "2025-09-10",
-    "year": 2025,
-    "month": 9,
-    "amount": 1707.65,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "14e705dc9b7c67cb42c1",
     "category": null
   },
   {
@@ -8047,16 +7857,6 @@
     "description": "Tentoo",
     "rawKey": "tentoo",
     "externalRef": "5844ffc7e1b4e9a60197",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 957.54,
-    "description": "Lauren Loomans",
-    "rawKey": "lauren loomans",
-    "externalRef": "6e47692217456483cf4a",
     "category": null
   },
   {
@@ -8833,16 +8633,6 @@
     "date": "2025-10-20",
     "year": 2025,
     "month": 10,
-    "amount": 957.54,
-    "description": "Lauren Loomans",
-    "rawKey": "lauren loomans",
-    "externalRef": "48fc440955c8c539c1b9",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
     "amount": 5198.46,
     "description": "Management fee — Isma",
     "rawKey": "MGMT:isma",
@@ -9177,26 +8967,6 @@
     "description": "Amsterdam",
     "rawKey": "amsterdam",
     "externalRef": "3d487fdcdca70edb147c",
-    "category": null
-  },
-  {
-    "date": "2025-10-30",
-    "year": 2025,
-    "month": 10,
-    "amount": 528.11,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "186eb1dacd403d68dd3a",
-    "category": null
-  },
-  {
-    "date": "2025-10-30",
-    "year": 2025,
-    "month": 10,
-    "amount": 0.06,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "627c4a96e25e65539f07",
     "category": null
   },
   {
@@ -9863,16 +9633,6 @@
     "date": "2025-11-23",
     "year": 2025,
     "month": 11,
-    "amount": 957.54,
-    "description": "Lauren Loomans",
-    "rawKey": "lauren loomans",
-    "externalRef": "36e080bd171eb5519eb6",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
     "amount": 14132.8,
     "description": "Management fee — Jader",
     "rawKey": "MGMT:jader",
@@ -9947,16 +9707,6 @@
     "description": "Newgarden Spain S.L. Via S Tripe Technology Europe Ltd",
     "rawKey": "newgarden spain s l via s tripe technology europe ltd",
     "externalRef": "eb5fc1f714bd33f15744",
-    "category": null
-  },
-  {
-    "date": "2025-11-24",
-    "year": 2025,
-    "month": 11,
-    "amount": 72.5,
-    "description": "Lotte Van Sint Truiden",
-    "rawKey": "lotte van sint truiden",
-    "externalRef": "58fb7e30035668da0327",
     "category": null
   },
   {
@@ -10833,16 +10583,6 @@
     "date": "2025-12-21",
     "year": 2025,
     "month": 12,
-    "amount": 1181.86,
-    "description": "Lauren Loomans",
-    "rawKey": "lauren loomans",
-    "externalRef": "96fbf1508c9d6a66ca5d",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
     "amount": 15899.4,
     "description": "Management fee — Cavalieri",
     "rawKey": "MGMT:cavalieri",
@@ -10888,16 +10628,6 @@
     "rawKey": "MGMT:isma",
     "externalRef": "d07b5b5c5952ad62a264",
     "category": "MGMT"
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 240.29,
-    "description": "JuliãTte Niersman",
-    "rawKey": "juliãtte niersman",
-    "externalRef": "94cbc94222cd5c23e5f1",
-    "category": null
   },
   {
     "date": "2025-12-21",
