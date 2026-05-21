@@ -4,7 +4,7 @@
     "year": 2025,
     "month": 1,
     "amount": 21703.45,
-    "description": "Asr",
+    "description": "ASR Verzuimverzekering",
     "rawKey": "asr",
     "externalRef": "c5dffdd11b0edb15b37e",
     "category": null
@@ -94,7 +94,7 @@
     "year": 2025,
     "month": 1,
     "amount": 169.4,
-    "description": "Pip Advocatuur .",
+    "description": "Pip Advocatuur",
     "rawKey": "pip advocatuur",
     "externalRef": "1dbd357639e1b720bf1e",
     "category": null
@@ -114,9 +114,9 @@
     "year": 2025,
     "month": 1,
     "amount": 12,
-    "description": "//788 **Sw0701003392425 Kosten Transferprov Eur 12,00 Eref.",
-    "rawKey": "//788 **sw0701003392425 kosten transferprov eur 12 00 eref",
-    "externalRef": "4ec1fd48fcf69c38daa6",
+    "description": "//788 **Sw0701003392425 Kosten Transferprov Eur 12,00",
+    "rawKey": "//788 **sw0701003392425 kosten transferprov eur 12 00",
+    "externalRef": "8cabb6da2e041811e41a",
     "category": null
   },
   {
@@ -144,7 +144,7 @@
     "year": 2025,
     "month": 1,
     "amount": 40.85,
-    "description": "Bloomon Nederland .",
+    "description": "Bloomon Nederland",
     "rawKey": "bloomon nederland",
     "externalRef": "f76e82e0485af0eb409f",
     "category": null
@@ -264,7 +264,7 @@
     "year": 2025,
     "month": 1,
     "amount": 58.73,
-    "description": "Jones Brothers Coffee Comp Any . Via Stichting Mollie Pa Yments",
+    "description": "Jones Brothers Coffee",
     "rawKey": "jones brothers coffee comp any via stichting mollie pa yments",
     "externalRef": "33593cc7055ae9c9f21e",
     "category": null
@@ -274,7 +274,7 @@
     "year": 2025,
     "month": 1,
     "amount": 7.8,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "bbba7988b646af783386",
     "category": null
@@ -304,7 +304,7 @@
     "year": 2025,
     "month": 1,
     "amount": 425.4,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "446b2e5c647f05ce9307",
     "category": null
@@ -493,16 +493,6 @@
     "date": "2025-01-20",
     "year": 2025,
     "month": 1,
-    "amount": 3244.51,
-    "description": "Bente Portman",
-    "rawKey": "bente portman",
-    "externalRef": "c512c05d41af4a59355c",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
     "amount": 15899.4,
     "description": "Management fee — Jader",
     "rawKey": "MGMT:jader",
@@ -684,7 +674,7 @@
     "year": 2025,
     "month": 1,
     "amount": 6891.02,
-    "description": "Sdu",
+    "description": "Sdu Uitgevers",
     "rawKey": "sdu",
     "externalRef": "7423fc156038637db44d",
     "category": null
@@ -705,8 +695,8 @@
     "month": 1,
     "amount": 142.89,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "d2b76f3290068f43c14e",
+    "rawKey": "viking netherlands",
+    "externalRef": "196ec7c5dcad087322cd",
     "category": null
   },
   {
@@ -794,7 +784,7 @@
     "year": 2025,
     "month": 1,
     "amount": 2122.46,
-    "description": "Vanloman .",
+    "description": "Van Loman (doorbelast)",
     "rawKey": "vanloman",
     "externalRef": "f7c1e1d0dcfc9c641a3e",
     "category": null
@@ -834,9 +824,9 @@
     "year": 2025,
     "month": 1,
     "amount": 32.4,
-    "description": "Het Koekemannetje . Via Stichting Mollie Payments",
-    "rawKey": "het koekemannetje via stichting mollie payments",
-    "externalRef": "bcf222c4b2035dd1b645",
+    "description": "Het Koekemannetje",
+    "rawKey": "het koekemannetje",
+    "externalRef": "3f438ec9f855af67526a",
     "category": null
   },
   {
@@ -1024,7 +1014,7 @@
     "year": 2025,
     "month": 2,
     "amount": 24.45,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "7d5299edad6201b30e4b",
     "category": null
@@ -1044,7 +1034,7 @@
     "year": 2025,
     "month": 2,
     "amount": 394.94,
-    "description": "Totaal Veilig .",
+    "description": "Totaal Veilig",
     "rawKey": "totaal veilig",
     "externalRef": "146ef663a94cf0ab20d4",
     "category": null
@@ -1085,8 +1075,8 @@
     "month": 2,
     "amount": 22.31,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "c0520315831935d52163",
+    "rawKey": "viking netherlands",
+    "externalRef": "6158d9736b8a1b24a1fd",
     "category": null
   },
   {
@@ -1114,9 +1104,9 @@
     "year": 2025,
     "month": 2,
     "amount": 12,
-    "description": "Kosten Sw0602003593651 Transferprov Eur 12,00 Eref. 33699650",
-    "rawKey": "kosten sw0602003593651 transferprov eur 12 00 eref",
-    "externalRef": "f171352f160308a853f2",
+    "description": "Kosten Sw0602003593651 Transferprov Eur 12,00",
+    "rawKey": "kosten sw0602003593651 transferprov eur 12 00",
+    "externalRef": "b422df342c99bb99c467",
     "category": null
   },
   {
@@ -1164,7 +1154,7 @@
     "year": 2025,
     "month": 2,
     "amount": 73.43,
-    "description": "Jones Brothers Coffee Comp Any . Via Stichting Mollie Pa Yments",
+    "description": "Jones Brothers Coffee",
     "rawKey": "jones brothers coffee comp any via stichting mollie pa yments",
     "externalRef": "f4065fcad0f026b4b13f",
     "category": null
@@ -1520,16 +1510,6 @@
     "category": null
   },
   {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 3244.51,
-    "description": "Bente Portman",
-    "rawKey": "bente portman",
-    "externalRef": "3a788e1a686721b63092",
-    "category": null
-  },
-  {
     "date": "2025-02-24",
     "year": 2025,
     "month": 2,
@@ -1744,7 +1724,7 @@
     "year": 2025,
     "month": 3,
     "amount": 91.8,
-    "description": "Sdu Uitgevers .",
+    "description": "Sdu Uitgevers",
     "rawKey": "sdu uitgevers",
     "externalRef": "723d3585c525f3e5fe1d",
     "category": null
@@ -1814,7 +1794,7 @@
     "year": 2025,
     "month": 3,
     "amount": 25.3,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "3763df834d3d8c1ccb45",
     "category": null
@@ -1824,7 +1804,7 @@
     "year": 2025,
     "month": 3,
     "amount": 28.68,
-    "description": "Velo Postal .",
+    "description": "Velo Postal",
     "rawKey": "velo postal",
     "externalRef": "1a633a167b857c2c7d99",
     "category": null
@@ -1844,7 +1824,7 @@
     "year": 2025,
     "month": 3,
     "amount": 598.95,
-    "description": "Nysingh Advocaten - Notari Ssen .",
+    "description": "Nysingh Advocaten - Notari Ssen",
     "rawKey": "nysingh advocaten - notari ssen",
     "externalRef": "5f92edc6f70cbf85d698",
     "category": null
@@ -1854,7 +1834,7 @@
     "year": 2025,
     "month": 3,
     "amount": 2165.38,
-    "description": "Vondelpark 3 .",
+    "description": "Vondelpark 3",
     "rawKey": "vondelpark 3",
     "externalRef": "0fe3f0122e5a24479ef6",
     "category": null
@@ -1924,9 +1904,9 @@
     "year": 2025,
     "month": 3,
     "amount": 12,
-    "description": "Kosten Sw0503003773092 Transferprov Eur 12,00 Eref. 32702150",
-    "rawKey": "kosten sw0503003773092 transferprov eur 12 00 eref",
-    "externalRef": "2ec456fe22b12b028644",
+    "description": "Kosten Sw0503003773092 Transferprov Eur 12,00",
+    "rawKey": "kosten sw0503003773092 transferprov eur 12 00",
+    "externalRef": "f32fb09585d70703d7bd",
     "category": null
   },
   {
@@ -1984,7 +1964,7 @@
     "year": 2025,
     "month": 3,
     "amount": 21.4,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "ec0f37ddf2961e3a438b",
     "category": null
@@ -2004,7 +1984,7 @@
     "year": 2025,
     "month": 3,
     "amount": 1004.3,
-    "description": "Vanloman",
+    "description": "Van Loman (doorbelast)",
     "rawKey": "vanloman",
     "externalRef": "a7da93b4611ec4346064",
     "category": null
@@ -2043,20 +2023,10 @@
     "date": "2025-03-10",
     "year": 2025,
     "month": 3,
-    "amount": 1796.85,
-    "description": "Groeinu",
-    "rawKey": "groeinu",
-    "externalRef": "d5197acbf428c964cbfb",
-    "category": null
-  },
-  {
-    "date": "2025-03-10",
-    "year": 2025,
-    "month": 3,
     "amount": 827,
-    "description": "Ministerie Van Veiligheid En Justitie Betalingskenm.: 6000859104449637",
-    "rawKey": "ministerie van veiligheid en justitie betalingskenm :",
-    "externalRef": "3648b258ae854f3a4743",
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "93de6a1cf6630f8e6478",
     "category": null
   },
   {
@@ -2084,9 +2054,9 @@
     "year": 2025,
     "month": 3,
     "amount": 827,
-    "description": "Ministerie Van Veiligheid En Justitie Betalingskenm.: 1000859104450782",
-    "rawKey": "ministerie van veiligheid en justitie betalingskenm :",
-    "externalRef": "690c0b887834dfaa93b1",
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "cd5c35b726f83fc778f2",
     "category": null
   },
   {
@@ -2104,7 +2074,7 @@
     "year": 2025,
     "month": 3,
     "amount": 898.73,
-    "description": "Vanloman",
+    "description": "Van Loman (doorbelast)",
     "rawKey": "vanloman",
     "externalRef": "9d5ecc1a7dc5d2fb9423",
     "category": null
@@ -2174,7 +2144,7 @@
     "year": 2025,
     "month": 3,
     "amount": 38,
-    "description": "Apple Store Via Worldpay B .V.",
+    "description": "Apple Store Via Worldpay B .V",
     "rawKey": "apple store via worldpay b v",
     "externalRef": "c245c071957589c1e30a",
     "category": null
@@ -2264,7 +2234,7 @@
     "year": 2025,
     "month": 3,
     "amount": 87.43,
-    "description": "Jones Brothers Coffee Comp Any . Via Stichting Mollie Pa Yments",
+    "description": "Jones Brothers Coffee",
     "rawKey": "jones brothers coffee comp any via stichting mollie pa yments",
     "externalRef": "aa52c082dd20b3b92bc8",
     "category": null
@@ -2425,8 +2395,8 @@
     "month": 3,
     "amount": 101.46,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "50c48a3b2d1a7c0d1067",
+    "rawKey": "viking netherlands",
+    "externalRef": "e562d6d164f9a9ea094c",
     "category": null
   },
   {
@@ -2524,7 +2494,7 @@
     "year": 2025,
     "month": 4,
     "amount": 99.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "a75fd2a833bf327768f6",
     "category": null
@@ -2694,7 +2664,7 @@
     "year": 2025,
     "month": 4,
     "amount": 102.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "1b53f2e06dd8566b7cf0",
     "category": null
@@ -2844,7 +2814,7 @@
     "year": 2025,
     "month": 4,
     "amount": 169.4,
-    "description": "Pip Advocatuur .",
+    "description": "Pip Advocatuur",
     "rawKey": "pip advocatuur",
     "externalRef": "3999254da1d91fadb280",
     "category": null
@@ -2854,7 +2824,7 @@
     "year": 2025,
     "month": 4,
     "amount": 33.55,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "d4c38646f0d145952a6f",
     "category": null
@@ -2864,7 +2834,7 @@
     "year": 2025,
     "month": 4,
     "amount": 169.4,
-    "description": "Pip Advocatuur .",
+    "description": "Pip Advocatuur",
     "rawKey": "pip advocatuur",
     "externalRef": "3999254da1d91fadb280",
     "category": null
@@ -2884,7 +2854,7 @@
     "year": 2025,
     "month": 4,
     "amount": 77.86,
-    "description": "Velo Postal .",
+    "description": "Velo Postal",
     "rawKey": "velo postal",
     "externalRef": "a4b158c2d766835eb350",
     "category": null
@@ -3114,7 +3084,7 @@
     "year": 2025,
     "month": 4,
     "amount": 7250,
-    "description": "Delfts Congres Support Via Icepay",
+    "description": "Delfts Congress Support",
     "rawKey": "delfts congres support via icepay",
     "externalRef": "77d944557ed30efbef44",
     "category": null
@@ -3194,7 +3164,7 @@
     "year": 2025,
     "month": 4,
     "amount": 96.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "5a2ff6d114b958b00206",
     "category": null
@@ -3444,7 +3414,7 @@
     "year": 2025,
     "month": 4,
     "amount": 149.88,
-    "description": "Jones Brothers Coffee Comp Any . Via Stichting Mollie Pa Yments",
+    "description": "Jones Brothers Coffee",
     "rawKey": "jones brothers coffee comp any via stichting mollie pa yments",
     "externalRef": "dd5f3c743a9b0e045b28",
     "category": null
@@ -3524,7 +3494,7 @@
     "year": 2025,
     "month": 4,
     "amount": 239.5,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "901c9cc959c48ce91f0b",
     "category": null
@@ -3534,7 +3504,7 @@
     "year": 2025,
     "month": 4,
     "amount": 592.9,
-    "description": "Ovidius Pharma & Care B.",
+    "description": "Ovidius Pharma & Care B",
     "rawKey": "ovidius pharma & care b",
     "externalRef": "d43f614a990ecffff7d5",
     "category": null
@@ -3654,7 +3624,7 @@
     "year": 2025,
     "month": 4,
     "amount": 121,
-    "description": "Youmanfischer .",
+    "description": "Youmanfischer",
     "rawKey": "youmanfischer",
     "externalRef": "d4298071c0140f5600a4",
     "category": null
@@ -3697,16 +3667,6 @@
     "description": "Zaandam",
     "rawKey": "zaandam",
     "externalRef": "f939f57d0779aa1ef4c0",
-    "category": null
-  },
-  {
-    "date": "2025-04-28",
-    "year": 2025,
-    "month": 4,
-    "amount": 4862.7,
-    "description": "Bente Portman",
-    "rawKey": "bente portman",
-    "externalRef": "ad7ed7dd9f32020907b5",
     "category": null
   },
   {
@@ -3834,7 +3794,7 @@
     "year": 2025,
     "month": 5,
     "amount": 96.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "38f00d49dfdbff3c4e24",
     "category": null
@@ -3904,7 +3864,7 @@
     "year": 2025,
     "month": 5,
     "amount": 30.5,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "3f3b36fb503952a76721",
     "category": null
@@ -3924,7 +3884,7 @@
     "year": 2025,
     "month": 5,
     "amount": 266.2,
-    "description": "Vanloman",
+    "description": "Van Loman (doorbelast)",
     "rawKey": "vanloman",
     "externalRef": "9beb3e7cfb018ce85706",
     "category": null
@@ -3974,7 +3934,7 @@
     "year": 2025,
     "month": 5,
     "amount": 120.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "9617d63a68828f416aa9",
     "category": null
@@ -4035,8 +3995,8 @@
     "month": 5,
     "amount": 154.19,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "2efd337596ecddd74146",
+    "rawKey": "viking netherlands",
+    "externalRef": "cdb95b97325ca6d71d9d",
     "category": null
   },
   {
@@ -4094,7 +4054,7 @@
     "year": 2025,
     "month": 5,
     "amount": 32.85,
-    "description": "Bloomon Nederland .",
+    "description": "Bloomon Nederland",
     "rawKey": "bloomon nederland",
     "externalRef": "dda71cbc45ea9d1e356e",
     "category": null
@@ -4204,7 +4164,7 @@
     "year": 2025,
     "month": 5,
     "amount": 278.34,
-    "description": "Dra Debt Recovery Agency B .V.",
+    "description": "Dra Debt Recovery Agency B .V",
     "rawKey": "dra debt recovery agency b v",
     "externalRef": "116eedc7f2c716baa33b",
     "category": null
@@ -4374,7 +4334,7 @@
     "year": 2025,
     "month": 5,
     "amount": 3025,
-    "description": "Novitec .",
+    "description": "Novitec",
     "rawKey": "novitec",
     "externalRef": "54384449c74d01a2c17d",
     "category": null
@@ -4404,7 +4364,7 @@
     "year": 2025,
     "month": 5,
     "amount": 121.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "f84fee7feda719a93d1c",
     "category": null
@@ -4604,7 +4564,7 @@
     "year": 2025,
     "month": 5,
     "amount": 19,
-    "description": "Apple Store Via Worldpay B .V.",
+    "description": "Apple Store Via Worldpay B .V",
     "rawKey": "apple store via worldpay b v",
     "externalRef": "d0b944919214ac0d75e0",
     "category": null
@@ -4614,9 +4574,9 @@
     "year": 2025,
     "month": 5,
     "amount": 732,
-    "description": "Ministerie Van Veiligheid En Justitie Betalingskenm.: 1000859104513465",
-    "rawKey": "ministerie van veiligheid en justitie betalingskenm :",
-    "externalRef": "2c8be82b467ccca79805",
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "0c680ec0b06d6f2e7e88",
     "category": null
   },
   {
@@ -4704,7 +4664,7 @@
     "year": 2025,
     "month": 6,
     "amount": 129.36,
-    "description": "Dba Hospitality .",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "ed5e00efa8f2f6890255",
     "category": null
@@ -4714,7 +4674,7 @@
     "year": 2025,
     "month": 6,
     "amount": 8.17,
-    "description": "Velo Postal .",
+    "description": "Velo Postal",
     "rawKey": "velo postal",
     "externalRef": "f81b352308ef66d821b4",
     "category": null
@@ -4764,9 +4724,9 @@
     "year": 2025,
     "month": 6,
     "amount": 83.7,
-    "description": "Jones Brothers Coffee Comp Any . Via Stripe Technology E Urope Ltd",
-    "rawKey": "jones brothers coffee comp any via stripe technology e urope ltd",
-    "externalRef": "d308cd9225c583bf0106",
+    "description": "Jones Brothers Coffee",
+    "rawKey": "jones brothers coffee comp any",
+    "externalRef": "709a374dbeafb8c1f30c",
     "category": null
   },
   {
@@ -4785,8 +4745,8 @@
     "month": 6,
     "amount": 135,
     "description": "Ministerie van Justitie (doorbelast)",
-    "rawKey": "ministerie van justitie en veiligheid betalingskenm :",
-    "externalRef": "7e459c87f7d93e4bf35e",
+    "rawKey": "ministerie van justitie en veiligheid",
+    "externalRef": "3f186f241b0b59f9e717",
     "category": null
   },
   {
@@ -4824,7 +4784,7 @@
     "year": 2025,
     "month": 6,
     "amount": 565.1,
-    "description": "Veloretti .",
+    "description": "Veloretti",
     "rawKey": "veloretti",
     "externalRef": "c4cfcd7ced53afb2800c",
     "category": null
@@ -4914,7 +4874,7 @@
     "year": 2025,
     "month": 6,
     "amount": 429.55,
-    "description": "Legalplanet .",
+    "description": "Legal Planet",
     "rawKey": "legalplanet",
     "externalRef": "053d964f2524c2986879",
     "category": null
@@ -4955,8 +4915,8 @@
     "month": 6,
     "amount": 84.48,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "39345c265050027e29a1",
+    "rawKey": "viking netherlands",
+    "externalRef": "c440cfb202eaf4944df0",
     "category": null
   },
   {
@@ -5024,7 +4984,7 @@
     "year": 2025,
     "month": 6,
     "amount": 104.91,
-    "description": "Velo Postal .",
+    "description": "Velo Postal",
     "rawKey": "velo postal",
     "externalRef": "90283b7ac548c883354a",
     "category": null
@@ -5154,7 +5114,7 @@
     "year": 2025,
     "month": 6,
     "amount": 35,
-    "description": "Verenging Arbeidsrecht Adv Ocaten Amsterdam E.O.",
+    "description": "Vereniging voor Arbeidsrecht",
     "rawKey": "verenging arbeidsrecht adv ocaten amsterdam e o",
     "externalRef": "09ba91fa5e9ca31c7e15",
     "category": null
@@ -5164,7 +5124,7 @@
     "year": 2025,
     "month": 6,
     "amount": 35,
-    "description": "Verenging Arbeidsrecht Adv Ocaten Amsterdam E.O.",
+    "description": "Vereniging voor Arbeidsrecht",
     "rawKey": "verenging arbeidsrecht adv ocaten amsterdam e o",
     "externalRef": "09ba91fa5e9ca31c7e15",
     "category": null
@@ -5604,7 +5564,7 @@
     "year": 2025,
     "month": 7,
     "amount": 96.74,
-    "description": "Velo Postal .",
+    "description": "Velo Postal",
     "rawKey": "velo postal",
     "externalRef": "a3c56a5a4da0d3132bfd",
     "category": null
@@ -5624,7 +5584,7 @@
     "year": 2025,
     "month": 7,
     "amount": 1815,
-    "description": "The Data Lawyers .",
+    "description": "The Data Lawyers",
     "rawKey": "the data lawyers",
     "externalRef": "3d948f2c6c7c224c3e4b",
     "category": null
@@ -5634,7 +5594,7 @@
     "year": 2025,
     "month": 7,
     "amount": 18.1,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "d99bcca5b9906fa0268e",
     "category": null
@@ -5824,7 +5784,7 @@
     "year": 2025,
     "month": 7,
     "amount": 199.59,
-    "description": "Velo Postal .",
+    "description": "Velo Postal",
     "rawKey": "velo postal",
     "externalRef": "b84a08cc842861a02fd7",
     "category": null
@@ -5834,7 +5794,7 @@
     "year": 2025,
     "month": 7,
     "amount": 3.9,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "1f5022588e04bba5df42",
     "category": null
@@ -5865,8 +5825,8 @@
     "month": 7,
     "amount": 137.83,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "1919e7f1affb998c303b",
+    "rawKey": "viking netherlands",
+    "externalRef": "4c319b68f0f10b6c8390",
     "category": null
   },
   {
@@ -5934,7 +5894,7 @@
     "year": 2025,
     "month": 7,
     "amount": 50,
-    "description": "Apple Store Via Worldpay B .V.",
+    "description": "Apple Store Via Worldpay B .V",
     "rawKey": "apple store via worldpay b v",
     "externalRef": "de52241c4f6cd61c9b0a",
     "category": null
@@ -6074,7 +6034,7 @@
     "year": 2025,
     "month": 7,
     "amount": 1260,
-    "description": "Wrist-Klevenberg Ship Supp Ly Nl .",
+    "description": "Wrist-Klevenberg Ship Supp Ly Nl",
     "rawKey": "wrist-klevenberg ship supp ly nl",
     "externalRef": "c3df741f92d6c20460ab",
     "category": null
@@ -6204,7 +6164,7 @@
     "year": 2025,
     "month": 7,
     "amount": 169.4,
-    "description": "Pip Advocatuur .",
+    "description": "Pip Advocatuur",
     "rawKey": "pip advocatuur",
     "externalRef": "076fff589b8227f392e1",
     "category": null
@@ -6214,7 +6174,7 @@
     "year": 2025,
     "month": 7,
     "amount": 169.4,
-    "description": "Pip Advocatuur .",
+    "description": "Pip Advocatuur",
     "rawKey": "pip advocatuur",
     "externalRef": "076fff589b8227f392e1",
     "category": null
@@ -6264,7 +6224,7 @@
     "year": 2025,
     "month": 7,
     "amount": 121,
-    "description": "Youmanfischer .",
+    "description": "Youmanfischer",
     "rawKey": "youmanfischer",
     "externalRef": "3a8af0d93c16a653e6f3",
     "category": null
@@ -6274,7 +6234,7 @@
     "year": 2025,
     "month": 7,
     "amount": 10.75,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "9d0b23649a8e671d31bb",
     "category": null
@@ -6354,9 +6314,9 @@
     "year": 2025,
     "month": 8,
     "amount": 83.7,
-    "description": "Jones Brothers Coffee Comp Any . Via Stripe Technology E Urope Ltd",
-    "rawKey": "jones brothers coffee comp any via stripe technology e urope ltd",
-    "externalRef": "37c9abe1bde828a757fe",
+    "description": "Jones Brothers Coffee",
+    "rawKey": "jones brothers coffee comp any",
+    "externalRef": "e11540991c1bc1f649b1",
     "category": null
   },
   {
@@ -6404,7 +6364,7 @@
     "year": 2025,
     "month": 8,
     "amount": 60.7,
-    "description": "Bloomon Nederland .",
+    "description": "Bloomon Nederland",
     "rawKey": "bloomon nederland",
     "externalRef": "ddcc33a40373cede303a",
     "category": null
@@ -6514,9 +6474,9 @@
     "year": 2025,
     "month": 8,
     "amount": 257,
-    "description": "Ministerie Van Veiligheid En Justitie Betalingskenm.: 6000859104581240",
-    "rawKey": "ministerie van veiligheid en justitie betalingskenm :",
-    "externalRef": "babcc43c9626559612df",
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "ae847227cb11a7a8763b",
     "category": null
   },
   {
@@ -6594,9 +6554,9 @@
     "year": 2025,
     "month": 8,
     "amount": 210,
-    "description": "Veloretti Via Stichting Mollie Payments",
-    "rawKey": "veloretti via stichting mollie payments",
-    "externalRef": "2b211075a1cb71278aa6",
+    "description": "Veloretti",
+    "rawKey": "veloretti",
+    "externalRef": "15f09f41ff6c2b579648",
     "category": null
   },
   {
@@ -6664,7 +6624,7 @@
     "year": 2025,
     "month": 8,
     "amount": 3.9,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "427a2f71c5351703180e",
     "category": null
@@ -6684,7 +6644,7 @@
     "year": 2025,
     "month": 8,
     "amount": 78.65,
-    "description": "Academie Voor De Rechtspra Ktijk .",
+    "description": "Academie voor de Rechtspraak",
     "rawKey": "academie voor de rechtspra ktijk",
     "externalRef": "2237eb2d3b5e894a482f",
     "category": null
@@ -6714,7 +6674,7 @@
     "year": 2025,
     "month": 8,
     "amount": 78.65,
-    "description": "Academie Voor De Rechtspra Ktijk .",
+    "description": "Academie voor de Rechtspraak",
     "rawKey": "academie voor de rechtspra ktijk",
     "externalRef": "2237eb2d3b5e894a482f",
     "category": null
@@ -6834,9 +6794,9 @@
     "year": 2025,
     "month": 8,
     "amount": 2723,
-    "description": "Griffie Ldcr Betalingskenm.: 3000859104587649",
-    "rawKey": "griffie ldcr betalingskenm :",
-    "externalRef": "b406b044181b28803dd2",
+    "description": "Griffie Ldcr",
+    "rawKey": "griffie ldcr",
+    "externalRef": "a1144e7126aa2fa12cbb",
     "category": null
   },
   {
@@ -6904,9 +6864,9 @@
     "year": 2025,
     "month": 8,
     "amount": 750.95,
-    "description": "Stichting The Greater Good Via Stichting Mollie Payments",
-    "rawKey": "stichting the greater good via stichting mollie payments",
-    "externalRef": "c3c9bc7543766071f9d9",
+    "description": "Stichting The Greater Good",
+    "rawKey": "stichting the greater good",
+    "externalRef": "496c5bc3cb2c37d71383",
     "category": null
   },
   {
@@ -6914,7 +6874,7 @@
     "year": 2025,
     "month": 8,
     "amount": 741.13,
-    "description": "Anp Holding .",
+    "description": "Anp Holding",
     "rawKey": "anp holding",
     "externalRef": "86a8895f6ea2288e5db7",
     "category": null
@@ -7014,7 +6974,7 @@
     "year": 2025,
     "month": 8,
     "amount": 222.5,
-    "description": "Otterlo",
+    "description": "Otterlo Events",
     "rawKey": "otterlo",
     "externalRef": "b9f0b908ec77b5135c41",
     "category": null
@@ -7044,7 +7004,7 @@
     "year": 2025,
     "month": 8,
     "amount": 360.5,
-    "description": "Otterlo",
+    "description": "Otterlo Events",
     "rawKey": "otterlo",
     "externalRef": "8d15c271495d46f8f48d",
     "category": null
@@ -7224,7 +7184,7 @@
     "year": 2025,
     "month": 9,
     "amount": 117.01,
-    "description": "Velo Postal .",
+    "description": "Velo Postal",
     "rawKey": "velo postal",
     "externalRef": "b278f348715a35e76380",
     "category": null
@@ -7264,7 +7224,7 @@
     "year": 2025,
     "month": 9,
     "amount": 98.65,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "047c0b4a73d655c9972e",
     "category": null
@@ -7284,7 +7244,7 @@
     "year": 2025,
     "month": 9,
     "amount": 741.13,
-    "description": "Anp Holding .",
+    "description": "Anp Holding",
     "rawKey": "anp holding",
     "externalRef": "14868abd60418712a9ed",
     "category": null
@@ -7324,7 +7284,7 @@
     "year": 2025,
     "month": 9,
     "amount": 596.23,
-    "description": "Otterlo Events .",
+    "description": "Otterlo Events",
     "rawKey": "otterlo events",
     "externalRef": "bbc7360c74cb23f19a56",
     "category": null
@@ -7464,7 +7424,7 @@
     "year": 2025,
     "month": 9,
     "amount": 20.51,
-    "description": "Velo Postal .",
+    "description": "Velo Postal",
     "rawKey": "velo postal",
     "externalRef": "cd938eb81afa198c2ce0",
     "category": null
@@ -7514,7 +7474,7 @@
     "year": 2025,
     "month": 9,
     "amount": 225,
-    "description": "Delfts Congres Support Via Icepay",
+    "description": "Delfts Congress Support",
     "rawKey": "delfts congres support via icepay",
     "externalRef": "447c3dfb318398e68f58",
     "category": null
@@ -7624,9 +7584,9 @@
     "year": 2025,
     "month": 9,
     "amount": 83.7,
-    "description": "Jones Brothers Coffee Comp Any . Via Stripe Technology E Urope Ltd",
-    "rawKey": "jones brothers coffee comp any via stripe technology e urope ltd",
-    "externalRef": "4f60967a508f1c7173e2",
+    "description": "Jones Brothers Coffee",
+    "rawKey": "jones brothers coffee comp any",
+    "externalRef": "7346e8baaec9d45f4df8",
     "category": null
   },
   {
@@ -7635,8 +7595,8 @@
     "month": 9,
     "amount": 48.24,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "d234473b56a3e933e16e",
+    "rawKey": "viking netherlands",
+    "externalRef": "2592656247297b31a56f",
     "category": null
   },
   {
@@ -7654,7 +7614,7 @@
     "year": 2025,
     "month": 9,
     "amount": 1514.78,
-    "description": "Xinox Software .",
+    "description": "Xinox Software",
     "rawKey": "xinox software",
     "externalRef": "e952a1b8053a657ed45d",
     "category": null
@@ -7734,7 +7694,7 @@
     "year": 2025,
     "month": 9,
     "amount": 9.75,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "13f14ac3c50abca3d200",
     "category": null
@@ -7744,7 +7704,7 @@
     "year": 2025,
     "month": 9,
     "amount": 96.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "761225ff4e6832f2e513",
     "category": null
@@ -7984,9 +7944,9 @@
     "year": 2025,
     "month": 9,
     "amount": 83.7,
-    "description": "Jones Brothers Coffee Comp Any . Via Stripe Technology E Urope Ltd",
-    "rawKey": "jones brothers coffee comp any via stripe technology e urope ltd",
-    "externalRef": "e691dddf0f2f77b188c0",
+    "description": "Jones Brothers Coffee",
+    "rawKey": "jones brothers coffee comp any",
+    "externalRef": "995276d2fae6029e7007",
     "category": null
   },
   {
@@ -8074,7 +8034,7 @@
     "year": 2025,
     "month": 10,
     "amount": 1043.61,
-    "description": "Gerechtsdeurwaarderskantoo R Groot & Evers .",
+    "description": "Gerechtsdeurwaarderskantoo R Groot & Evers",
     "rawKey": "gerechtsdeurwaarderskantoo r groot & evers",
     "externalRef": "8702ca20041d8046ce30",
     "category": null
@@ -8194,7 +8154,7 @@
     "year": 2025,
     "month": 10,
     "amount": 23.45,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "36512499ef1bec2a2412",
     "category": null
@@ -8234,7 +8194,7 @@
     "year": 2025,
     "month": 10,
     "amount": 103.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "41f25f6eaa35ccb5b2e1",
     "category": null
@@ -8284,9 +8244,9 @@
     "year": 2025,
     "month": 10,
     "amount": 827,
-    "description": "Ministerie Van Veiligheid En Justitie Betalingskenm.: 0000859104625891",
-    "rawKey": "ministerie van veiligheid en justitie betalingskenm :",
-    "externalRef": "ac491d9126590362d8c4",
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "de043562b3b8e22283b1",
     "category": null
   },
   {
@@ -8334,7 +8294,7 @@
     "year": 2025,
     "month": 10,
     "amount": 356.95,
-    "description": "Boshuizen Adviesgroep .",
+    "description": "Boshuizen Adviesgroep",
     "rawKey": "boshuizen adviesgroep",
     "externalRef": "1da7f4c88ea5b3d4eb6c",
     "category": null
@@ -8484,7 +8444,7 @@
     "year": 2025,
     "month": 10,
     "amount": 1415.7,
-    "description": "Foresco Nl .",
+    "description": "Foresco Nl",
     "rawKey": "foresco nl",
     "externalRef": "4b597e6ebc69daed8535",
     "category": null
@@ -8594,7 +8554,7 @@
     "year": 2025,
     "month": 10,
     "amount": 1566.95,
-    "description": "Sdu",
+    "description": "Sdu Uitgevers",
     "rawKey": "sdu",
     "externalRef": "bd700ae57802f31de959",
     "category": null
@@ -8804,7 +8764,7 @@
     "year": 2025,
     "month": 10,
     "amount": 907.5,
-    "description": "Being Spaces .",
+    "description": "Being Spaces",
     "rawKey": "being spaces",
     "externalRef": "9044e41004891ca0dc20",
     "category": null
@@ -8824,7 +8784,7 @@
     "year": 2025,
     "month": 10,
     "amount": 148.48,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "bc2f2e72f7c85918492b",
     "category": null
@@ -8844,7 +8804,7 @@
     "year": 2025,
     "month": 10,
     "amount": 35,
-    "description": "Verenging Arbeidsrecht Adv Ocaten Amsterdam Eo",
+    "description": "Vereniging voor Arbeidsrecht",
     "rawKey": "verenging arbeidsrecht adv ocaten amsterdam eo",
     "externalRef": "9f2ee24ffc53ad9fd753",
     "category": null
@@ -8864,9 +8824,9 @@
     "year": 2025,
     "month": 10,
     "amount": 69.75,
-    "description": "Jones Brothers Coffee Comp Any . Via Stripe Technology E Urope Ltd",
-    "rawKey": "jones brothers coffee comp any via stripe technology e urope ltd",
-    "externalRef": "6e6d5010581b15aeb2f1",
+    "description": "Jones Brothers Coffee",
+    "rawKey": "jones brothers coffee comp any",
+    "externalRef": "a1b6f54f165605365c35",
     "category": null
   },
   {
@@ -8885,8 +8845,8 @@
     "month": 10,
     "amount": 231.53,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "91ceaf89a1dfda81ebc6",
+    "rawKey": "viking netherlands",
+    "externalRef": "7b258daf48e9f40ffbdc",
     "category": null
   },
   {
@@ -9005,8 +8965,8 @@
     "month": 10,
     "amount": 1461,
     "description": "Ministerie van Justitie (doorbelast)",
-    "rawKey": "ministerie van justitie en veiligheid betalingskenm :",
-    "externalRef": "5e42f9699f1cbcaa72c8",
+    "rawKey": "ministerie van justitie en veiligheid",
+    "externalRef": "2ef62fcd916b7ef7af2f",
     "category": null
   },
   {
@@ -9024,7 +8984,7 @@
     "year": 2025,
     "month": 11,
     "amount": 78.65,
-    "description": "Academie Voor De Rechtspra Ktijk .",
+    "description": "Academie voor de Rechtspraak",
     "rawKey": "academie voor de rechtspra ktijk",
     "externalRef": "3aeb563605871db220b3",
     "category": null
@@ -9054,7 +9014,7 @@
     "year": 2025,
     "month": 11,
     "amount": 8.7,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "76778a3ed29cfb7991d7",
     "category": null
@@ -9344,7 +9304,7 @@
     "year": 2025,
     "month": 11,
     "amount": 5807.99,
-    "description": "Fgn Lansingerland .",
+    "description": "FGN Lansingerland",
     "rawKey": "fgn lansingerland",
     "externalRef": "5496da5c88b515a4fe08",
     "category": null
@@ -9354,7 +9314,7 @@
     "year": 2025,
     "month": 11,
     "amount": 210.54,
-    "description": "Fgn Lansingerland .",
+    "description": "FGN Lansingerland",
     "rawKey": "fgn lansingerland",
     "externalRef": "da540d20aa74780354ff",
     "category": null
@@ -9364,7 +9324,7 @@
     "year": 2025,
     "month": 11,
     "amount": 5203.01,
-    "description": "Fgn",
+    "description": "FGN Lansingerland",
     "rawKey": "fgn",
     "externalRef": "b317ad0d504338ff867b",
     "category": null
@@ -9385,8 +9345,8 @@
     "month": 11,
     "amount": 135,
     "description": "Ministerie van Justitie (doorbelast)",
-    "rawKey": "ministerie van justitie en veiligheid betalingskenm :",
-    "externalRef": "25dafd0c6bbb9e169748",
+    "rawKey": "ministerie van justitie en veiligheid",
+    "externalRef": "b6b232c6c38f087a4984",
     "category": null
   },
   {
@@ -9395,8 +9355,8 @@
     "month": 11,
     "amount": 55.53,
     "description": "Viking kantoorspullen",
-    "rawKey": "viking netherlands via paypal europe",
-    "externalRef": "e225a84375b590701c14",
+    "rawKey": "viking netherlands",
+    "externalRef": "148646d3de6358fe4477",
     "category": null
   },
   {
@@ -9494,7 +9454,7 @@
     "year": 2025,
     "month": 11,
     "amount": 1524.6,
-    "description": "Dura Vermeer Divisie Infra .",
+    "description": "Dura Vermeer Divisie Infra",
     "rawKey": "dura vermeer divisie infra",
     "externalRef": "017930365e7a3d686217",
     "category": null
@@ -9784,7 +9744,7 @@
     "year": 2025,
     "month": 12,
     "amount": 355.48,
-    "description": "Gerechtsdeurwaarderskantoo R Groot & Evers .",
+    "description": "Gerechtsdeurwaarderskantoo R Groot & Evers",
     "rawKey": "gerechtsdeurwaarderskantoo r groot & evers",
     "externalRef": "a22abcae45cf633f4547",
     "category": null
@@ -9855,8 +9815,8 @@
     "month": 12,
     "amount": 41.8,
     "description": "Bocca Coffee",
-    "rawKey": "bocca coffee via stripe technology europe ltd",
-    "externalRef": "ca115fc621b6b6da924d",
+    "rawKey": "bocca coffee",
+    "externalRef": "35ff7fd79e8ccb652f1c",
     "category": null
   },
   {
@@ -9874,7 +9834,7 @@
     "year": 2025,
     "month": 12,
     "amount": 90.32,
-    "description": "Ceppi.S Deli . Via Stic Hting Mollie Payments",
+    "description": "Ceppi's Deli",
     "rawKey": "ceppi s deli via stic hting mollie payments",
     "externalRef": "720601ee27fe318fd398",
     "category": null
@@ -9894,9 +9854,9 @@
     "year": 2025,
     "month": 12,
     "amount": 12,
-    "description": "Kosten Sw0312003637616 Transferprov Eur 12,00 Eref. 34039953",
-    "rawKey": "kosten sw0312003637616 transferprov eur 12 00 eref",
-    "externalRef": "50f7731d90608b83b6b6",
+    "description": "Kosten Sw0312003637616 Transferprov Eur 12,00",
+    "rawKey": "kosten sw0312003637616 transferprov eur 12 00",
+    "externalRef": "609a1d42ec9cc7f192be",
     "category": null
   },
   {
@@ -9914,9 +9874,9 @@
     "year": 2025,
     "month": 12,
     "amount": 400,
-    "description": "Restaurant Aan De Poel . Via Stichting Mollie Payments",
-    "rawKey": "restaurant aan de poel via stichting mollie payments",
-    "externalRef": "e08816daeabe32f93bcb",
+    "description": "Restaurant Aan De Poel",
+    "rawKey": "restaurant aan de poel",
+    "externalRef": "f031fffcb0ea6db42c53",
     "category": null
   },
   {
@@ -9994,7 +9954,7 @@
     "year": 2025,
     "month": 12,
     "amount": 3859.9,
-    "description": "Unitas Reizen .",
+    "description": "Unitas Reizen",
     "rawKey": "unitas reizen",
     "externalRef": "15b0657877dca53ef442",
     "category": null
@@ -10304,9 +10264,9 @@
     "year": 2025,
     "month": 12,
     "amount": 90,
-    "description": "Ministerie Van Veiligheid En Justitie Betalingskenm.: 0000859104691442",
-    "rawKey": "ministerie van veiligheid en justitie betalingskenm :",
-    "externalRef": "a5e9a4e24c40a65a2313",
+    "description": "Ministerie van Justitie (doorbelast)",
+    "rawKey": "ministerie van veiligheid en justitie",
+    "externalRef": "8af318a53b2e7a59a8f2",
     "category": null
   },
   {
@@ -10344,7 +10304,7 @@
     "year": 2025,
     "month": 12,
     "amount": 78.65,
-    "description": "Academie Voor De Rechtspra Ktijk .",
+    "description": "Academie voor de Rechtspraak",
     "rawKey": "academie voor de rechtspra ktijk",
     "externalRef": "124be0ac7f02b815c419",
     "category": null
@@ -10474,7 +10434,7 @@
     "year": 2025,
     "month": 12,
     "amount": 78.65,
-    "description": "Academie Voor De Rechtspra Ktijk .",
+    "description": "Academie voor de Rechtspraak",
     "rawKey": "academie voor de rechtspra ktijk",
     "externalRef": "147d93cf140635f55133",
     "category": null
@@ -10504,7 +10464,7 @@
     "year": 2025,
     "month": 12,
     "amount": 10.35,
-    "description": "Dba Hospitality",
+    "description": "DBA Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "07cb04b8917a362eef1c",
     "category": null
@@ -10674,7 +10634,7 @@
     "year": 2025,
     "month": 12,
     "amount": 2420,
-    "description": "Vanloman .",
+    "description": "Van Loman (doorbelast)",
     "rawKey": "vanloman",
     "externalRef": "4ad00d208cd9f3e1779b",
     "category": null
@@ -10694,7 +10654,7 @@
     "year": 2025,
     "month": 12,
     "amount": 72.6,
-    "description": "Hvg Law .",
+    "description": "Hvg Law",
     "rawKey": "hvg law",
     "externalRef": "16b68df2bbf159f3d637",
     "category": null

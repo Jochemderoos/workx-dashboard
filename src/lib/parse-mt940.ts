@@ -73,6 +73,7 @@ const WORKX_TEAM_LASTNAMES: RegExp[] = [
   /\bsint[-\s]?truien\b/i,        // 'Van Sint-Truien'
   /\bsint[-\s]?truiden\b/i,        // 'Van Sint Truiden' (variant)
   /\bloomans\b/i,                  // Lauren Loomans (vanaf sep 2025)
+  /\bportman\b/i,                  // Bente Portman
 ]
 
 function isWorkxTeam(desc: string): boolean {

@@ -36,6 +36,7 @@ const SKIP_LIKE_PATTERNS: string[] = [
   'sint truien',
   'sint truiden',
   'loomans',
+  'portman',
 ]
 
 const DIVIDEND_KEYWORDS = ['dividend', 'interim dividend']
