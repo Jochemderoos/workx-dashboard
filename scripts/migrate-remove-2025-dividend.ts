@@ -1,35 +1,27 @@
-// Idempotent: verwijder ten onrechte als 'kost' geseede 2025-records die
-// dividenduitkeringen naar partner-holdings zijn. Voor 2025 zijn dat de
-// betalingen aan Les Dents Du Midi / Meneer Nilsson / Cavalieri / Jader —
-// geen factuur, geen BTW, geen bedrijfskost (winstdeling).
+// Idempotent: verwijder verouderde MT940-records zodat de seed schoon kan
+// herstarten met de nieuwe parser-regels (partner-classifier, BTW, dividend
+// skip, pensioen skip). Verwijdert alleen records met externalRef (= uit
+// MT940 gekomen), nooit handmatig ingevoerde posten.
 //
-// Verwijdert MonthlyCost-records waarbij:
-//   year = 2025
-//   AND (category = 'MGMT' OR description bevat een holding-naam)
+// Pensioen-records uit MT940 worden ook verwijderd (dubbeltelling met
+// loonstrook).
 
 import { PrismaClient } from '@prisma/client'
 
 async function main() {
   if (!process.env.DATABASE_URL) {
-    console.log('[migrate-remove-2025-dividend] geen DATABASE_URL — overslaan')
+    console.log('[migrate-cleanup-mt940] geen DATABASE_URL — overslaan')
     return
   }
   const prisma = new PrismaClient()
   try {
-    const dividend = await prisma.monthlyCost.deleteMany({
-      where: {
-        year: 2025,
-        OR: [
-          { category: 'MGMT' },
-          { description: { contains: 'les dents du midi', mode: 'insensitive' } },
-          { description: { contains: 'meneer nilsson', mode: 'insensitive' } },
-          { description: { contains: 'cavalieri', mode: 'insensitive' } },
-          { description: { contains: 'jader', mode: 'insensitive' } },
-        ],
-      },
+    // Alle 2025 records die uit MT940 zijn gekomen verwijderen.
+    // Het seed-script voegt ze opnieuw toe met de juiste classificatie.
+    const mt940_2025 = await prisma.monthlyCost.deleteMany({
+      where: { year: 2025, externalRef: { not: null } },
     })
-    // Bright/pensioen records uit MT940-imports: dubbeltelling met werkgeverslasten
-    // (zit al op de loonstrook). Alleen records met externalRef = uit MT940.
+
+    // Pensioen-records uit MT940 voor alle jaren (dubbeltelling loonstrook)
     const pensioen = await prisma.monthlyCost.deleteMany({
       where: {
         externalRef: { not: null },
@@ -39,9 +31,10 @@ async function main() {
         ],
       },
     })
-    console.log(`[migrate-remove-2025-dividend] ${dividend.count} dividend verwijderd uit 2025, ${pensioen.count} pensioen-records uit MT940 verwijderd`)
+
+    console.log(`[migrate-cleanup-mt940] ${mt940_2025.count} MT940-records 2025 leeggemaakt, ${pensioen.count} pensioen-records verwijderd`)
   } catch (err) {
-    console.error('[migrate-remove-2025-dividend] mislukt (build gaat door):', err)
+    console.error('[migrate-cleanup-mt940] mislukt (build gaat door):', err)
   } finally {
     await prisma.$disconnect().catch(() => {})
   }

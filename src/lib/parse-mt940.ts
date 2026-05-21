@@ -13,32 +13,53 @@ export interface MT940Transaction {
   category?: 'UWV' | 'ASR' | 'ZZP' | 'MGMT' // UWV/ASR = retours, ZZP = externe advocaten, MGMT = management fee partners (incl BTW)
 }
 
+// De vijf partner-holdings van Workx. Naar dezelfde holding gaan zowel
+// management fee (kost, incl 21% BTW) als dividend (geen kost) — het
+// onderscheid zit in de MT940-omschrijving.
+const PARTNER_HOLDINGS: { regex: RegExp; partner: string }[] = [
+  { regex: /\bles\s+dents\s+du\s+midi\b/i, partner: 'Les Dents Du Midi' },
+  { regex: /\bmeneer\s+nil+s+on\b/i, partner: 'Meneer Nilsson' }, // tolereer NILSSON/NILLSON varianten
+  { regex: /\bcavalieri\b/i, partner: 'Cavalieri' },
+  { regex: /\bjader\b/i, partner: 'Jader' },
+  { regex: /\bisma\s+b\.?v\.?\b/i, partner: 'Isma' }, // 'isma' zonder b.v. matcht te veel
+]
+
+function detectPartner(desc: string): string | null {
+  for (const p of PARTNER_HOLDINGS) {
+    if (p.regex.test(desc)) return p.partner
+  }
+  return null
+}
+
+// Per partner-betaling de omschrijving classificeren.
+//   - 'MGMT'    = management fee (kost, 21% BTW)
+//   - 'SKIP'    = dividend / retour (geen kost)
+//   - 'REGULAR' = gewone kost (bv. doorbetaalde onkostendeclaratie)
+type PartnerClass = 'MGMT' | 'SKIP' | 'REGULAR'
+function classifyPartnerPayment(desc: string): PartnerClass {
+  const lower = desc.toLowerCase()
+  if (/\bdividend\b/.test(lower)) return 'SKIP'
+  if (/\bretour\b/.test(lower)) return 'SKIP'
+  if (/\b\d{4}[-/\s]?deel\b/.test(lower)) return 'SKIP' // "2024-DEEL 2"
+  if (/\bdeclaratie/.test(lower)) return 'REGULAR'      // onkostendeclaratie
+  if (/\bmanag[ae]ment\s*fee\b/.test(lower)) return 'MGMT'
+  if (/\bcorrectie\b/.test(lower)) return 'MGMT'         // management fee correctie
+  // Onbekend bij partner — skip om dubbeltelling/dividend te voorkomen
+  return 'SKIP'
+}
+
 // Skip transacties die geen 'bedrijfskost' zijn:
-//   - Belastingdienst (loonheffing zit in werkgeverslasten-invoer)
+//   - Belastingdienst (loonheffing zit in werkgeverslasten-invoer; VPB apart)
 //   - Interne overboekingen tussen Workx-rekeningen
-//   - Dividenduitkeringen naar partner-holdings (Les Dents Du Midi /
-//     Meneer Nilsson / Cavalieri / Jader). Geen factuur, geen BTW,
-//     geen kost — winstdeling.
+//   - Bright Pensioen / pensioen — zit al op de loonstrook
+// Partner-holdings worden hier NIET geskipt; zie classifyPartnerPayment.
 function shouldSkipDebet(desc: string): boolean {
   const lower = desc.toLowerCase()
   if (/\bbelastingdienst\b/.test(lower)) return true
   if (/\bworkx\s+advocaten\b/.test(lower)) return true
-  // Dividend partner-holdings (geen kost, geen BTW)
-  if (/\bles\s+dents\s+du\s+midi\b/.test(lower)) return true
-  if (/\bmeneer\s+nilsson\b/.test(lower)) return true
-  if (/\bcavalieri\b/.test(lower)) return true
-  if (/\bjader\b/.test(lower)) return true
-  // Bright Pensioen / pensioenpremie zit al in de werkgeverslasten via
-  // de loonstrook — los importeren = dubbeltelling
   if (/\bbright\s*pensioen\b/.test(lower)) return true
   if (/\bpensioen\b/.test(lower)) return true
   return false
-}
-
-// Management fee detectie — vendor-namen die management fee factureren
-// (incl BTW). Voor nu nog leeg; gebruiker moet aangeven welke vendors.
-function managementFeeLabel(_desc: string): string | null {
-  return null
 }
 
 // Detecteer in de omschrijving:
@@ -76,16 +97,28 @@ export function parseMT940(content: string): MT940Transaction[] {
       const detected = detectCategory(currentTx.desc)
 
       if (currentTx.isDebet) {
-        // Skip belastingdienst (loonheffing) en interne Workx-overboekingen
+        // Skip belastingdienst (loonheffing), interne Workx-overboekingen, pensioen
         if (shouldSkipDebet(currentTx.desc)) { currentTx = null; inDesc = false; return }
-        // Management fee → eigen category MGMT zodat we 'waarvan…' kunnen tonen
-        const mgmtLabel = managementFeeLabel(currentTx.desc)
-        // Debet: MGMT > ZZP > regulier
-        const category: 'MGMT' | 'ZZP' | undefined =
-          mgmtLabel ? 'MGMT' :
-          (detected === 'ZZP') ? detected : undefined
-        const labelSuffix = category === 'ZZP' ? ' (ZZP)' : ''
-        const finalDesc = mgmtLabel ?? (vendorName + labelSuffix)
+
+        // Partner-holdings: classificeer op basis van omschrijving
+        const partner = detectPartner(currentTx.desc)
+        let category: 'MGMT' | 'ZZP' | undefined
+        let finalDesc = vendorName
+        if (partner) {
+          const cls = classifyPartnerPayment(currentTx.desc)
+          if (cls === 'SKIP') { currentTx = null; inDesc = false; return }
+          if (cls === 'MGMT') {
+            category = 'MGMT'
+            finalDesc = `Management fee — ${partner}`
+          } else {
+            // REGULAR (bv. onkostendeclaratie) — gewone kost met partnernaam
+            finalDesc = `${partner} — declaratie`
+          }
+        } else if (detected === 'ZZP') {
+          category = 'ZZP'
+          finalDesc = vendorName + ' (ZZP)'
+        }
+
         const finalRawKey = category ? `${category}:${rawKey}` : rawKey
         transactions.push({
           date: currentTx.date,

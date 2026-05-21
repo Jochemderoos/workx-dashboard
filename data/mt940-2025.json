@@ -633,21 +633,51 @@
     "date": "2025-01-20",
     "year": 2025,
     "month": 1,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "8858edce4cc1fb75fb03",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "3f076eab578bc23afce3",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-01-20",
+    "year": 2025,
+    "month": 1,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "085e728ad83c9c5664e9",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-01-20",
+    "year": 2025,
+    "month": 1,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "f010705d559fe024db77",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-01-20",
+    "year": 2025,
+    "month": 1,
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "a8d6feaa03283021d103",
+    "category": "MGMT"
   },
   {
     "date": "2025-01-20",
     "year": 2025,
     "month": 1,
     "amount": 4620.86,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "2f98d74c6151629b4e21",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "8a90b2368490648d59ed",
+    "category": "MGMT"
   },
   {
     "date": "2025-01-20",
@@ -1850,6 +1880,46 @@
     "category": null
   },
   {
+    "date": "2025-02-25",
+    "year": 2025,
+    "month": 2,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "0fbd32d66b62f3f0d352",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-02-25",
+    "year": 2025,
+    "month": 2,
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "14a48a3de164aa3524f4",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-02-25",
+    "year": 2025,
+    "month": 2,
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "4ac887b9cb2e11e90de4",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-02-25",
+    "year": 2025,
+    "month": 2,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "3c1be8b30f0cdc9deb20",
+    "category": "MGMT"
+  },
+  {
     "date": "2025-02-26",
     "year": 2025,
     "month": 2,
@@ -1963,21 +2033,11 @@
     "date": "2025-03-02",
     "year": 2025,
     "month": 3,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "a8ebf90551b98b383e60",
-    "category": null
-  },
-  {
-    "date": "2025-03-02",
-    "year": 2025,
-    "month": 3,
     "amount": 4620.86,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "60ed0db1e184b5bd1912",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "ea31663ee2fd1649b76e",
+    "category": "MGMT"
   },
   {
     "date": "2025-03-02",
@@ -2753,21 +2813,51 @@
     "date": "2025-03-23",
     "year": 2025,
     "month": 3,
-    "amount": 4620.86,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "6113a822932bcde0d3f1",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "2e7430aa039798cd5221",
+    "category": "MGMT"
   },
   {
     "date": "2025-03-23",
     "year": 2025,
     "month": 3,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "4f8512133d93ddc51619",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "6c8b15d6b6fa38aa8c54",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-03-23",
+    "year": 2025,
+    "month": 3,
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "10d1872dfa36b49bf245",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-03-23",
+    "year": 2025,
+    "month": 3,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "350039346b1f33093228",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-03-23",
+    "year": 2025,
+    "month": 3,
+    "amount": 4620.86,
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "20ef1b9ea276f064523d",
+    "category": "MGMT"
   },
   {
     "date": "2025-03-24",
@@ -4003,21 +4093,51 @@
     "date": "2025-04-21",
     "year": 2025,
     "month": 4,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "10be74a1f77677cb2ca0",
-    "category": null
+    "amount": 4620.86,
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "117389323f5d582e8d6d",
+    "category": "MGMT"
   },
   {
     "date": "2025-04-21",
     "year": 2025,
     "month": 4,
-    "amount": 4620.86,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "adaa9c1667eeb43000eb",
-    "category": null
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "7cf862705b27bbf11364",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-04-21",
+    "year": 2025,
+    "month": 4,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "493cac39ed8aad12b145",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-04-21",
+    "year": 2025,
+    "month": 4,
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "04420196479c31f6192c",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-04-21",
+    "year": 2025,
+    "month": 4,
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "eb300884d1b2d7e1a05b",
+    "category": "MGMT"
   },
   {
     "date": "2025-04-21",
@@ -4903,21 +5023,51 @@
     "date": "2025-05-19",
     "year": 2025,
     "month": 5,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "05227f46bb1593674ab0",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "f70edb88a7677c7c7ff7",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-05-19",
+    "year": 2025,
+    "month": 5,
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "e3a83bb3b8b6501f8be6",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-05-19",
+    "year": 2025,
+    "month": 5,
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "3bbc2684b165699eecfb",
+    "category": "MGMT"
   },
   {
     "date": "2025-05-19",
     "year": 2025,
     "month": 5,
     "amount": 4620.86,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "a5dfac4a2f8b01a465fb",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "c52cedd80a2c468941d9",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-05-19",
+    "year": 2025,
+    "month": 5,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "52e4714e5dd1c353f8ba",
+    "category": "MGMT"
   },
   {
     "date": "2025-05-19",
@@ -6053,21 +6203,51 @@
     "date": "2025-06-25",
     "year": 2025,
     "month": 6,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "dceeef0fdf90252feaf8",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "1ca77bfe39dea6276ccf",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-06-25",
+    "year": 2025,
+    "month": 6,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "4940e4560d587d31c4cf",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-06-25",
+    "year": 2025,
+    "month": 6,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "df82e127c61bb0bd19ed",
+    "category": "MGMT"
   },
   {
     "date": "2025-06-25",
     "year": 2025,
     "month": 6,
     "amount": 4620.86,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "b5d4d6de13850ea2758e",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "e4eb0a7c1001e800ada6",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-06-25",
+    "year": 2025,
+    "month": 6,
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "d347515357ac5756b692",
+    "category": "MGMT"
   },
   {
     "date": "2025-06-26",
@@ -6903,21 +7083,51 @@
     "date": "2025-07-22",
     "year": 2025,
     "month": 7,
-    "amount": 4620.86,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "0bdfffea6672402a785d",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "45e1185dd4537f00a733",
+    "category": "MGMT"
   },
   {
     "date": "2025-07-22",
     "year": 2025,
     "month": 7,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "6bdc9dcf19192c3655b7",
-    "category": null
+    "amount": 4620.86,
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "cd7d1202e8080bde67e3",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-07-22",
+    "year": 2025,
+    "month": 7,
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "2d2adad607bc111e0f94",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-07-22",
+    "year": 2025,
+    "month": 7,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "c6e0f63846ac0eb98743",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-07-22",
+    "year": 2025,
+    "month": 7,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "b168b6ab5a45c843c9a1",
+    "category": "MGMT"
   },
   {
     "date": "2025-07-22",
@@ -7853,11 +8063,21 @@
     "date": "2025-08-20",
     "year": 2025,
     "month": 8,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "b733ba89a122b61cd6aa",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "e572da631136f2c64c2e",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-08-20",
+    "year": 2025,
+    "month": 8,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "28cb3ea9edaaa4df1f61",
+    "category": "MGMT"
   },
   {
     "date": "2025-08-20",
@@ -7883,6 +8103,26 @@
     "date": "2025-08-20",
     "year": 2025,
     "month": 8,
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "4b7480645f5df6307b14",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-08-20",
+    "year": 2025,
+    "month": 8,
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "f989e2727552bf35d288",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-08-20",
+    "year": 2025,
+    "month": 8,
     "amount": 3794,
     "description": "Alain Heunen",
     "rawKey": "alain heunen",
@@ -7894,10 +8134,10 @@
     "year": 2025,
     "month": 8,
     "amount": 4620.86,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "34bb591639e75be77d79",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "583f7e49793b91866720",
+    "category": "MGMT"
   },
   {
     "date": "2025-08-20",
@@ -8254,7 +8494,7 @@
     "year": 2025,
     "month": 9,
     "amount": 1707.65,
-    "description": "Isma .",
+    "description": "Isma — declaratie",
     "rawKey": "isma",
     "externalRef": "9c94253dde34ffe3c993",
     "category": null
@@ -9073,21 +9313,51 @@
     "date": "2025-09-23",
     "year": 2025,
     "month": 9,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "a82903f073d08c911cf9",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "eb8cbae0205862adf363",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-09-23",
+    "year": 2025,
+    "month": 9,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "2f46de503740897b3ec7",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-09-23",
+    "year": 2025,
+    "month": 9,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "071cf498cba265ca5319",
+    "category": "MGMT"
   },
   {
     "date": "2025-09-23",
     "year": 2025,
     "month": 9,
     "amount": 5198.46,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "605bbba8bedbcb0ae5a8",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "8cb1d43d7e30ec50e559",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-09-23",
+    "year": 2025,
+    "month": 9,
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "19869588973dee91dade",
+    "category": "MGMT"
   },
   {
     "date": "2025-09-23",
@@ -10004,10 +10274,50 @@
     "year": 2025,
     "month": 10,
     "amount": 5198.46,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "cfb8978b93742abf207a",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "497398809b166c6deb2c",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-10-20",
+    "year": 2025,
+    "month": 10,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "9a7921f7599e7cbee6d6",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-10-20",
+    "year": 2025,
+    "month": 10,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "1a118df6edb30f830518",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-10-20",
+    "year": 2025,
+    "month": 10,
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "bfc1705bdcdbd1b6fc24",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-10-20",
+    "year": 2025,
+    "month": 10,
+    "amount": 17666,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "4eb814333fe2e2d27ae6",
+    "category": "MGMT"
   },
   {
     "date": "2025-10-21",
@@ -11143,21 +11453,51 @@
     "date": "2025-11-23",
     "year": 2025,
     "month": 11,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "6245712533bcd7636411",
-    "category": null
+    "amount": 14132.8,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "cf35c15bcfd391aea323",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-11-23",
+    "year": 2025,
+    "month": 11,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "91293e701fd2b829df57",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-11-23",
+    "year": 2025,
+    "month": 11,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "b1860b87a6d058f76ba0",
+    "category": "MGMT"
   },
   {
     "date": "2025-11-23",
     "year": 2025,
     "month": 11,
     "amount": 5198.46,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "8b92240e2803df1373a2",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "171e4e64dd9b51a4e4ec",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-11-23",
+    "year": 2025,
+    "month": 11,
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "1dc8a5e02f1ddcc52d55",
+    "category": "MGMT"
   },
   {
     "date": "2025-11-24",
@@ -12283,21 +12623,51 @@
     "date": "2025-12-21",
     "year": 2025,
     "month": 12,
-    "amount": 3000,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "565af4bd7b09e79a6436",
-    "category": null
+    "amount": 15899.4,
+    "description": "Management fee — Cavalieri",
+    "rawKey": "MGMT:cavalieri",
+    "externalRef": "d6903b8af4fc15d26e52",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-12-21",
+    "year": 2025,
+    "month": 12,
+    "amount": 17666,
+    "description": "Management fee — Les Dents Du Midi",
+    "rawKey": "MGMT:les dents du midi",
+    "externalRef": "6e8b9c0e65882fcfb21b",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-12-21",
+    "year": 2025,
+    "month": 12,
+    "amount": 15899.4,
+    "description": "Management fee — Jader",
+    "rawKey": "MGMT:jader",
+    "externalRef": "fa30f7d8c0773b4eeb8a",
+    "category": "MGMT"
+  },
+  {
+    "date": "2025-12-21",
+    "year": 2025,
+    "month": 12,
+    "amount": 15899.4,
+    "description": "Management fee — Meneer Nilsson",
+    "rawKey": "MGMT:meneer nilsson",
+    "externalRef": "4c11f618f5d7d746045b",
+    "category": "MGMT"
   },
   {
     "date": "2025-12-21",
     "year": 2025,
     "month": 12,
     "amount": 5198.46,
-    "description": "Isma .",
-    "rawKey": "isma",
-    "externalRef": "a38cb82f74f52c1444b9",
-    "category": null
+    "description": "Management fee — Isma",
+    "rawKey": "MGMT:isma",
+    "externalRef": "d07b5b5c5952ad62a264",
+    "category": "MGMT"
   },
   {
     "date": "2025-12-21",
