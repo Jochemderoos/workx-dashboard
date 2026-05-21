@@ -28,6 +28,9 @@ function detectPartner(desc: string): string | null {
   for (const p of PARTNER_HOLDINGS) {
     if (p.regex.test(desc)) return p.partner
   }
+  // M. De Jong = Maaike (partner, eigenaar Meneer Nilsson BV) — directe
+  // onkostendeclaraties aan haarzelf. Niet management fee, maar wel kost.
+  if (/\bm\.?\s+de\s+jong\b/i.test(desc)) return 'Maaike de Jong'
   return null
 }
 
@@ -36,8 +39,10 @@ function detectPartner(desc: string): string | null {
 //   - 'SKIP'    = dividend / retour (geen kost)
 //   - 'REGULAR' = gewone kost (bv. doorbetaalde onkostendeclaratie)
 type PartnerClass = 'MGMT' | 'SKIP' | 'REGULAR'
-function classifyPartnerPayment(desc: string): PartnerClass {
+function classifyPartnerPayment(desc: string, partner: string): PartnerClass {
   const lower = desc.toLowerCase()
+  // Maaike de Jong = altijd onkostendeclaratie (direct aan persoon, niet holding)
+  if (partner === 'Maaike de Jong') return 'REGULAR'
   if (/\bdividend\b/.test(lower)) return 'SKIP'
   if (/\bretour\b/.test(lower)) return 'SKIP'
   if (/\b\d{4}[-/\s]?deel\b/.test(lower)) return 'SKIP' // "2024-DEEL 2"
@@ -133,7 +138,7 @@ export function parseMT940(content: string): MT940Transaction[] {
         let category: 'MGMT' | 'ZZP' | undefined
         let finalDesc = vendorName
         if (partner) {
-          const cls = classifyPartnerPayment(currentTx.desc)
+          const cls = classifyPartnerPayment(currentTx.desc, partner)
           if (cls === 'SKIP') { currentTx = null; inDesc = false; return }
           if (cls === 'MGMT') {
             category = 'MGMT'
