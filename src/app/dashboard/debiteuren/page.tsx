@@ -45,10 +45,11 @@ function periodLabel(year: number, period: number) {
   return `${MONTHS[period] || '?'} ${year}`
 }
 
-function daysSincePeriod(year: number, period: number) {
-  // Vergelijking met einde van die boekperiode (laatste dag van die maand)
+// Dagen te laat = dagen sinds einde boekperiode minus 30 dagen
+// betalingstermijn. Negatief = factuur nog binnen termijn.
+function daysOverdue(year: number, period: number) {
   const periodEnd = new Date(year, period, 0)
-  const diff = (Date.now() - periodEnd.getTime()) / 86400000
+  const diff = (Date.now() - periodEnd.getTime()) / 86400000 - 30
   return Math.floor(diff)
 }
 
@@ -294,21 +295,23 @@ export default function DebiteurenPage() {
             const mine = invoices.filter(i => i.primaryUserId === currentUserId)
             if (mine.length === 0) return null
             // Sorteer oudste eerst
-            const sorted = [...mine].sort((a, b) => daysSincePeriod(b.bookYear, b.bookPeriod) - daysSincePeriod(a.bookYear, a.bookPeriod))
+            const sorted = [...mine].sort((a, b) => daysOverdue(b.bookYear, b.bookPeriod) - daysOverdue(a.bookYear, a.bookPeriod))
             // Leeftijds-buckets
             const buckets = [
-              { key: '0-30', label: '< 30 dgn', max: 30, color: 'text-gray-300', bg: 'bg-white/5 border-white/10' },
-              { key: '30-60', label: '30–60 dgn', max: 60, color: 'text-yellow-300', bg: 'bg-yellow-500/5 border-yellow-500/20' },
-              { key: '60-90', label: '60–90 dgn', max: 90, color: 'text-orange-300', bg: 'bg-orange-500/5 border-orange-500/20' },
-              { key: '90-180', label: '90–180 dgn', max: 180, color: 'text-red-300', bg: 'bg-red-500/5 border-red-500/20' },
-              { key: '180+', label: '180+ dgn', max: Infinity, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30' },
+              { key: 'binnen', label: 'Binnen termijn', max: 0, color: 'text-green-300', bg: 'bg-green-500/5 border-green-500/20' },
+              { key: '0-30', label: '< 30 dgn te laat', max: 30, color: 'text-gray-300', bg: 'bg-white/5 border-white/10' },
+              { key: '30-60', label: '30–60 dgn te laat', max: 60, color: 'text-yellow-300', bg: 'bg-yellow-500/5 border-yellow-500/20' },
+              { key: '60-90', label: '60–90 dgn te laat', max: 90, color: 'text-orange-300', bg: 'bg-orange-500/5 border-orange-500/20' },
+              { key: '90-180', label: '90–180 dgn te laat', max: 180, color: 'text-red-300', bg: 'bg-red-500/5 border-red-500/20' },
+              { key: '180+', label: '180+ dgn te laat', max: Infinity, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30' },
             ] as const
             const bucketOf = (age: number) => {
-              for (const b of buckets) if (age < b.max) return b
+              if (age < 0) return buckets[0]
+              for (const b of buckets.slice(1)) if (age < b.max) return b
               return buckets[buckets.length - 1]
             }
             const totals = buckets.map(b => {
-              const items = sorted.filter(i => bucketOf(daysSincePeriod(i.bookYear, i.bookPeriod)).key === b.key)
+              const items = sorted.filter(i => bucketOf(daysOverdue(i.bookYear, i.bookPeriod)).key === b.key)
               return { ...b, count: items.length, sum: items.reduce((s, i) => s + i.totalIncl, 0) }
             })
             const totalMine = mine.reduce((s, i) => s + i.totalIncl, 0)
@@ -345,16 +348,16 @@ export default function DebiteurenPage() {
                 {/* Lijst — oudste eerst */}
                 <div className="space-y-1.5">
                   {sorted.map(inv => {
-                    const age = daysSincePeriod(inv.bookYear, inv.bookPeriod)
+                    const age = daysOverdue(inv.bookYear, inv.bookPeriod)
                     const b = bucketOf(age)
                     const reminderDue = isReminderDue(inv.reminderSentAt)
-                    const barPct = Math.min(100, Math.round((age / 200) * 100))
+                    const barPct = age > 0 ? Math.min(100, Math.round((age / 200) * 100)) : 0
                     return (
                       <div key={inv.id} className={`relative rounded-xl border ${b.bg} hover:bg-white/[0.04] transition-colors overflow-hidden ${!reminderDue ? 'opacity-50' : ''}`}>
                         <div className={`absolute inset-y-0 left-0 ${b.color.replace('text-', 'bg-').replace('-300', '-500/10').replace('-400', '-500/15')}`} style={{ width: `${barPct}%` }} />
                         <div className="relative flex items-center gap-3 px-3 py-2">
-                          <span className={`text-[10px] font-medium tabular-nums w-16 shrink-0 ${b.color}`}>
-                            {age} dgn
+                          <span className={`text-[10px] font-medium tabular-nums w-20 shrink-0 ${b.color}`}>
+                            {age < 0 ? 'binnen termijn' : age === 0 ? 'vandaag' : `${age} dgn te laat`}
                           </span>
                           <div className="flex-1 min-w-0">
                             <p className={`text-sm truncate ${!reminderDue ? 'text-gray-400 line-through' : 'text-white'}`}>
@@ -475,7 +478,7 @@ export default function DebiteurenPage() {
           {/* Invoice list */}
           <div className="space-y-2">
             {filtered.map(inv => {
-              const age = daysSincePeriod(inv.bookYear, inv.bookPeriod)
+              const age = daysOverdue(inv.bookYear, inv.bookPeriod)
               const reminderDue = isReminderDue(inv.reminderSentAt)
               return (
                 <div key={inv.id} className={`bg-white/[0.03] border rounded-2xl overflow-hidden transition-opacity ${
@@ -489,8 +492,8 @@ export default function DebiteurenPage() {
                         <span className="text-[10px] text-gray-600">·</span>
                         <span className="text-[10px] text-gray-500">{periodLabel(inv.bookYear, inv.bookPeriod)}</span>
                         <span className="text-[10px] text-gray-600">·</span>
-                        <span className={`text-[10px] ${age > 180 ? 'text-red-400' : age > 90 ? 'text-orange-400' : 'text-gray-500'}`}>
-                          {age} dagen open
+                        <span className={`text-[10px] ${age > 180 ? 'text-red-400' : age > 90 ? 'text-orange-400' : age > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                          {age < 0 ? 'binnen termijn' : age === 0 ? 'vandaag verlopen' : `${age} dgn te laat`}
                         </span>
                         {reminderDue ? (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-medium">
