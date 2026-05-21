@@ -19,7 +19,7 @@ const VENDOR_ALIASES: Array<[RegExp, string]> = [
   [/basenet/, 'Basenet'],
   [/herengracht investments/, 'Herengracht Investments (huur)'],
   [/norm finance/, 'Norm Finance'],
-  [/international card services|^icscards/, 'International Card Services'],
+  [/international card services|^icscards|^ics\b/, 'International Card Services'],
   [/digihero/, 'Digihero'],
   [/financ.+dagblad/, 'Financieele Dagblad'],
   [/kamer van koophandel|\bkvk\b/, 'Kamer van Koophandel'],
@@ -28,14 +28,19 @@ const VENDOR_ALIASES: Array<[RegExp, string]> = [
   [/\bkwps\b/, 'KWPS (doorbelast)'],
   [/chambers/, 'Chambers'],
   [/bright pensioen/, 'Bright Pensioen'],
-  [/delfts? congress|delft congress/, 'Delfts Congress Support'],
-  [/vereniging (voor )?arbeidsrecht/, 'Vereniging voor Arbeidsrecht'],
+  // "Delfts congress support", "Delfts Congres" — zelfde vendor
+  [/delfts? congres/, 'Delfts Congress Support'],
+  // Tolereer typo "Verenging" + bredere match (Vereniging voor Arbeidsrecht Advocaten Amsterdam)
+  [/veren(?:i|g|ig)ing\s+(?:voor\s+)?arbeidsrecht/, 'Vereniging voor Arbeidsrecht'],
+  // Vereniging Jonge Balie = aparte vereniging
+  [/vereniging\s+jonge\s+balie|jonge balie/, 'Jonge Balie Amsterdam'],
   [/nederlandse orde|contributie nederlandse orde/, 'Nederlandse Orde van Advocaten'],
   [/amsterdamse orde/, 'Amsterdamse Orde van Advocaten'],
   [/spontaanja|spontaan ja/, 'Spontaanja schoonmaker'],
-  [/smartcoffee/, 'Smartcoffee (Boonchance)'],
+  [/smartcoffee|smart coffee/, 'Smartcoffee (Boonchance)'],
   [/bocca coffee|bocca koffie/, 'Bocca Coffee'],
   [/dba .*bary|\bde bary\b/, 'De Bary koffie'],
+  [/dba hospitality/, 'DBA Hospitality'],
   [/gamma business/, 'Gamma Business'],
   [/\bfroot\b/, 'Froot'],
   [/tentoo/, 'Tentoo'],
@@ -46,7 +51,8 @@ const VENDOR_ALIASES: Array<[RegExp, string]> = [
   [/rituals/, 'Rituals'],
   [/topgeschenken/, 'Topgeschenken'],
   [/brownie box/, 'Brownie box (relatiegeschenken)'],
-  [/asr verzuim/, 'ASR Verzuimverzekering'],
+  // ASR — alle premiebetalingen op één hoop (verzuimverzekering)
+  [/asr verzuim|verzuimverzekering|asr\s+schadeverzekering|\basr\s+nederland\b|\basr\b/, 'ASR Verzuimverzekering'],
   [/fietskoerier/, 'Fietskoerier'],
   [/zerozero|zero zero|broodjes zero/, 'Zerozero broodjes'],
   [/krua thai/, 'Krua Thai (partnerdiner)'],
@@ -57,14 +63,15 @@ const VENDOR_ALIASES: Array<[RegExp, string]> = [
   [/hotel arena/, 'Hotel Arena (borrel)'],
   [/merchado|merchlab|merchandise/, 'Merchandise (lustrum)'],
   [/legal\s?mike/, 'Legal Mike'],
+  [/legal\s?planet/, 'Legal Planet'],
   [/doxflow/, 'Doxflow'],
   [/vurich/, 'Vurich gerechtsdeurwaarder'],
   [/ttwwoo/, 'TTWWOO'],
   [/milieuservice/, 'Milieuservice'],
-  [/jonge balie/, 'Jonge Balie Amsterdam'],
   [/ndsm/, 'NDSM Apotheek'],
   [/bram willems/, 'Bram Willems Photography'],
-  [/van loman/, 'Van Loman (doorbelast)'],
+  // Van Loman — varianten met/zonder spatie, met/zonder trailing punt
+  [/\bvan\s?loman\b/, 'Van Loman (doorbelast)'],
   [/van benthem/, 'Van Benthem & Keulen'],
   [/hj advocaten/, 'HJ Advocaten & Mediators'],
   [/stichting spuistraat/, 'Stichting Spuistraat 10'],
@@ -83,16 +90,29 @@ const VENDOR_ALIASES: Array<[RegExp, string]> = [
   [/avocare/, 'Avocare'],
   [/pallas/, 'Pallas Advocaten'],
   [/youman fisher/, 'Youman Fisher'],
-  [/academie voor de rechtspraak/, 'Academie voor de Rechtspraak'],
+  [/academie voor de rechtspr/, 'Academie voor de Rechtspraak'],
   [/amstelveld/, 'Amstelveld (borrel)'],
   [/dutch arbitration/, 'Dutch Arbitration Association'],
-  [/ministerie van justitie/, 'Ministerie van Justitie (doorbelast)'],
+  // Ministerie van Justitie / Veiligheid en Justitie = zelfde vendor
+  [/ministerie\s+van\s+(veiligheid\s+en\s+)?justitie/, 'Ministerie van Justitie (doorbelast)'],
   [/kosten buitenlandse/, 'Buitenlandse overboeking-kosten'],
   [/five city spa/, 'Five City Spa'],
   [/fiets workx/, 'Fiets Workx (medewerker)'],
   [/declaratieformulier|^declaratie\b/, 'Declaratieformulier medewerker'],
   [/cadeau|boekenbon|nijntje/, 'Cadeaus medewerkers/relaties'],
   [/abonnement|\babo\s/, 'Diverse abonnementen'],
+  // Doublures opgemerkt uit MT940-import
+  [/^sdu\b|sdu uitgevers/, 'Sdu Uitgevers'],
+  [/jones brothers/, 'Jones Brothers Coffee'],
+  [/ceppi[.\s']*s?\s+deli|\bceppi/, 'Ceppi\'s Deli'],
+  [/veloretti/, 'Veloretti'],
+  [/otterlo\s*events|\botterlo\b/, 'Otterlo Events'],
+  [/the data lawyers/, 'The Data Lawyers'],
+  [/natec sunergy/, 'Natec Sunergy'],
+  [/fgn\s+lansingerland|\bfgn\b/, 'FGN Lansingerland'],
+  [/het helderhuys/, 'Het Helderhuys'],
+  [/het koekemannetje/, 'Het Koekemannetje'],
+  [/alpina westland/, 'Alpina Westland'],
 ]
 
 function titleCase(s: string): string {
@@ -112,12 +132,33 @@ function aliasMatch(text: string): string | null {
   return null
 }
 
+// Strip betaaldienst- en boekhoud-suffixes die niets met de vendor te
+// maken hebben maar in de MT940-omschrijving worden meegestuurd.
+const SUFFIX_NOISE = [
+  /\bvia\s+stic?hting\s+mollie\s+payments?\b.*$/i,
+  /\bvia\s+mollie\b.*$/i,
+  /\bvia\s+stripe(?:\s+technology(?:\s+europe(?:\s+ltd)?)?)?\b.*$/i,
+  /\bvia\s+adyen\b.*$/i,
+  /\bvia\s+paypal\b.*$/i,
+  /\bbetalingskenm\.?:?\s*\S+\b/i,
+  /\bmandaatkenm\.?:?\s*\S+\b/i,
+  /\bkenmerk\s*:?.*$/i,
+  /\bomschrijving\s*:?.*$/i,
+  /\bmachtiging\s*:?.*$/i,
+  /\bincassant\s*:?.*$/i,
+  /\beref\s*:?.*$/i,
+  /\bmarf\s*:?.*$/i,
+]
+
 function cleanName(raw: string): string {
+  let s = raw
+  for (const re of SUFFIX_NOISE) s = s.replace(re, '')
   return titleCase(
-    raw
+    s
       .replace(/\s*,?\s*PAS\d+\s*$/i, '')
       .replace(/\s*,\s*[A-Z]{2,4}\s*$/, '')   // ,AMS  ,NLD
       .replace(/\b(B\.?V\.?|N\.?V\.?|BVBA)\b/gi, '')
+      .replace(/[.\s]+$/, '')                  // trailing punten / spaties
       .replace(/\s+/g, ' ')
       .trim()
   ) || '(geen omschrijving)'
@@ -128,8 +169,9 @@ function cleanName(raw: string): string {
 // als de gebruiker een omschrijving handmatig aanpast slaan we deze key
 // op naast de nieuwe naam.
 function toRawKey(counterparty: string): string {
-  return counterparty
-    .toLowerCase()
+  let s = counterparty.toLowerCase()
+  for (const re of SUFFIX_NOISE) s = s.replace(re, '')
+  return s
     .replace(/\s*,?\s*pas\d+\s*$/i, '')
     .replace(/\s*,\s*[a-z]{2,4}\s*$/i, '')   // ", ams" / ", nld"
     .replace(/\s+\d+\s*$/, '')                 // trailing winkelnummer
@@ -154,19 +196,27 @@ function extractCounterparty(raw: string): string | null {
   return null
 }
 
-// Voor groeperen in overzicht (vervangt de oude groupKey in page.tsx).
+// Voor groeperen in overzicht. Probeert eerst alias-match op de ruwe
+// description, dan op de schoongemaakte naam (zonder Mollie/Stripe-noise),
+// en valt anders terug op de eerste 2 woorden van de schoonmaakte naam.
 export function groupKey(desc: string): string {
-  const m = aliasMatch(desc)
-  if (m) return m
-  return desc
-    .replace(/\(.*?\)/g, '')
-    .replace(/[.,]/g, '')
+  const direct = aliasMatch(desc)
+  if (direct) return direct
+  // Strip suffix-noise + rechtsvorm + trailing punten, dan opnieuw alias proberen
+  let cleaned = desc
+  for (const re of SUFFIX_NOISE) cleaned = cleaned.replace(re, '')
+  cleaned = cleaned
+    .replace(/\b(b\.?\s?v\.?|n\.?\s?v\.?|bvba)\b/gi, '')
+    .replace(/[.,]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+  const onCleaned = aliasMatch(cleaned)
+  if (onCleaned) return onCleaned
+  return cleaned
     .split(' ')
     .slice(0, 2)
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ')
+    .join(' ') || desc
 }
 
 export interface NormalizedVendor {
