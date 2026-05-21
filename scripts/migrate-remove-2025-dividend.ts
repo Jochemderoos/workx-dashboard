@@ -21,18 +21,19 @@ async function main() {
       where: { year: 2025, externalRef: { not: null } },
     })
 
-    // Pensioen-records uit MT940 voor alle jaren (dubbeltelling loonstrook)
+    // Pensioen-records: dubbeltelling met loonstrook. Verwijder ze voor
+    // ALLE jaren, ongeacht of ze handmatig of via MT940 zijn ingeladen.
     const pensioen = await prisma.monthlyCost.deleteMany({
       where: {
-        externalRef: { not: null },
         OR: [
           { category: 'WGL' },
           { description: { contains: 'bright pensioen', mode: 'insensitive' } },
+          { description: { contains: 'pensioen', mode: 'insensitive' } },
         ],
       },
     })
 
-    console.log(`[migrate-cleanup-mt940] ${mt940_2025.count} MT940-records 2025 leeggemaakt, ${pensioen.count} pensioen-records verwijderd`)
+    console.log(`[migrate-cleanup-mt940] ${mt940_2025.count} MT940-records 2025 leeggemaakt, ${pensioen.count} pensioen-records verwijderd (alle jaren)`)
   } catch (err) {
     console.error('[migrate-cleanup-mt940] mislukt (build gaat door):', err)
   } finally {
