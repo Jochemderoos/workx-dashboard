@@ -243,7 +243,7 @@ export default function DebiteurenPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 text-workx-lime text-sm font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
             >
               <Icons.upload size={14} />
-              Importeer BaseNet PDF
+              Importeer BaseNet rapporten
             </button>
             {showImport && (
               <>
@@ -251,7 +251,7 @@ export default function DebiteurenPage() {
                 <div className="absolute right-0 top-full mt-2 w-[min(420px,calc(100vw-2rem))] z-40 bg-workx-dark border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
                   <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
                     <div>
-                      <h2 className="text-sm font-semibold text-white">BaseNet PDF importeren</h2>
+                      <h2 className="text-sm font-semibold text-white">BaseNet rapporten importeren</h2>
                       <p className="text-[11px] text-gray-400 mt-0.5">Overzicht Openstaande debiteuren</p>
                     </div>
                     <button onClick={() => { if (!importing) setShowImport(false) }} className="p-1 rounded text-gray-500 hover:text-white">
@@ -332,7 +332,7 @@ export default function DebiteurenPage() {
               onClick={() => setShowImport(true)}
               className="mt-4 px-4 py-2 rounded-xl bg-workx-lime text-workx-dark text-sm font-medium hover:bg-workx-lime/90"
             >
-              Upload BaseNet PDF
+              Upload BaseNet rapporten
             </button>
           )}
         </div>
