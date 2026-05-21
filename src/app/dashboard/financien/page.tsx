@@ -1228,6 +1228,176 @@ export default function FinancienPage() {
             )
           })()}
 
+          {/* Cumulatieve totale kosten 2025 vs 2026 */}
+          {(() => {
+            const cur = getDataForYear(years[2])
+            const prev = getDataForYear(years[1])
+            let lastMonth = 0
+            for (let m = 0; m < 12; m++) {
+              if (cur.omzet[m] !== 0 || cur.werkgeverslasten[m] !== 0) lastMonth = m + 1
+            }
+            if (lastMonth === 0) return null
+
+            const wglCurArr = wglPerMonth[years[2]] || Array(12).fill(0)
+            const wglPrevArr = wglPerMonth[years[1]] || Array(12).fill(0)
+            const uwvCurArr = uwvPerMonth[years[2]] || Array(12).fill(0)
+            const uwvPrevArr = uwvPerMonth[years[1]] || Array(12).fill(0)
+            const asrCurArr = asrPerMonth[years[2]] || Array(12).fill(0)
+            const asrPrevArr = asrPerMonth[years[1]] || Array(12).fill(0)
+            const mgmtCurArr = mgmtPerMonth[years[2]] || Array(12).fill(0)
+            const mgmtPrevArr = mgmtPerMonth[years[1]] || Array(12).fill(0)
+            const overigCurArr = overigKostenPerYear[years[2]] || Array(12).fill(0)
+            const overigPrevArr = overigKostenPerYear[years[1]] || Array(12).fill(0)
+
+            // Maandkosten = werkgeverslasten + WGL − UWV − ASR + mgmt + overig
+            const monthCostsCur = Array.from({ length: 12 }, (_, i) =>
+              (cur.werkgeverslasten[i] || 0) + (wglCurArr[i] || 0)
+              - (uwvCurArr[i] || 0) - (asrCurArr[i] || 0)
+              + (mgmtCurArr[i] || 0) + (overigCurArr[i] || 0)
+            )
+            const monthCostsPrev = Array.from({ length: 12 }, (_, i) =>
+              (prev.werkgeverslasten[i] || 0) + (wglPrevArr[i] || 0)
+              - (uwvPrevArr[i] || 0) - (asrPrevArr[i] || 0)
+              + (mgmtPrevArr[i] || 0) + (overigPrevArr[i] || 0)
+            )
+
+            // Cumulatief
+            const cumCur: number[] = []
+            const cumPrev: number[] = []
+            let aCur = 0, aPrev = 0
+            for (let i = 0; i < 12; i++) {
+              aCur += monthCostsCur[i]; cumCur.push(aCur)
+              aPrev += monthCostsPrev[i]; cumPrev.push(aPrev)
+            }
+
+            const sumCur = cumCur[lastMonth - 1]
+            const sumPrev = cumPrev[lastMonth - 1]
+            const sumPrevYear = cumPrev[11]
+            const periodLabel = lastMonth === 12 ? 'heel jaar' : `t/m P${lastMonth}`
+
+            // SVG layout
+            const svgW = 800
+            const svgH = 320
+            const padL = 70, padR = 40, padT = 20, padB = 50
+            const plotW = svgW - padL - padR
+            const plotH = svgH - padT - padB
+            const yMax = Math.max(...cumCur.slice(0, lastMonth), ...cumPrev) * 1.1
+            const yMin = 0
+            const x = (i: number) => padL + (i / 11) * plotW
+            const y = (v: number) => padT + plotH - ((v - yMin) / (yMax - yMin)) * plotH
+
+            const smoothPath = (pts: { x: number; y: number }[]) => {
+              if (pts.length < 2) return ''
+              let d = `M ${pts[0].x},${pts[0].y}`
+              for (let i = 1; i < pts.length; i++) {
+                const p = pts[i - 1], c = pts[i]
+                const cpx = (p.x + c.x) / 2
+                d += ` C ${cpx},${p.y} ${cpx},${c.y} ${c.x},${c.y}`
+              }
+              return d
+            }
+
+            const ptsCur = cumCur.slice(0, lastMonth).map((v, i) => ({ x: x(i), y: y(v) }))
+            const ptsPrevSolid = cumPrev.slice(0, lastMonth).map((v, i) => ({ x: x(i), y: y(v) }))
+            const ptsPrevDashed = cumPrev.slice(lastMonth - 1).map((v, i) => ({ x: x(lastMonth - 1 + i), y: y(v) }))
+
+            // Y-ticks
+            const tickStep = Math.ceil((yMax - yMin) / 5 / 100000) * 100000 || 100000
+            const yTicks: number[] = []
+            for (let v = 0; v <= yMax; v += tickStep) yTicks.push(v)
+
+            return (
+              <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
+                <div className="flex items-start justify-between mb-1 gap-4 flex-wrap">
+                  <div>
+                    <h3 className="text-white font-medium">Cumulatieve kosten {years[1]} vs {years[2]}</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Werkgeverslasten + Management fee + Overige kosten, ex BTW, cumulatief. Verticale lijn = laatste invoer {years[2]} ({periodLabel}).
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Op {periodLabel}</p>
+                    <p className="text-sm tabular-nums text-gray-300">{years[1]}: <span className="font-bold text-white">{formatCurrency(sumPrev)}</span></p>
+                    <p className="text-sm tabular-nums text-workx-lime font-bold">{years[2]}: {formatCurrency(sumCur)}</p>
+                    <p className={`text-xs tabular-nums mt-0.5 ${(sumCur - sumPrev) > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      Δ {(sumCur - sumPrev) > 0 ? '+' : ''}{formatCurrency(sumCur - sumPrev)}
+                      {sumPrev > 0 ? ` (${(((sumCur - sumPrev) / sumPrev) * 100).toFixed(1)}%)` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative mt-4" style={{ height: svgH }}>
+                  <svg width="100%" height="100%" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="xMidYMid meet">
+                    {/* Grid + Y labels */}
+                    {yTicks.map(v => (
+                      <g key={v}>
+                        <line x1={padL} y1={y(v)} x2={padL + plotW} y2={y(v)} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+                        <text x={padL - 8} y={y(v) + 4} textAnchor="end" fill="rgba(255,255,255,0.4)" fontSize="11" fontFamily="system-ui">
+                          €{(v / 1000).toFixed(0)}k
+                        </text>
+                      </g>
+                    ))}
+
+                    {/* X-axis labels (maanden) */}
+                    {periods.map((p, i) => (
+                      <text key={p} x={x(i)} y={padT + plotH + 18} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="system-ui">
+                        {p}
+                      </text>
+                    ))}
+
+                    {/* Verticale marker op lastMonth */}
+                    <line
+                      x1={x(lastMonth - 1)} y1={padT}
+                      x2={x(lastMonth - 1)} y2={padT + plotH}
+                      stroke="rgba(249, 255, 133, 0.3)" strokeWidth="1" strokeDasharray="4,4"
+                    />
+                    <text x={x(lastMonth - 1)} y={padT - 6} textAnchor="middle" fill="rgba(249,255,133,0.7)" fontSize="10" fontFamily="system-ui">
+                      laatste invoer {years[2]}
+                    </text>
+
+                    {/* 2025 doorgetrokken hele jaar — solide tot lastMonth, gestippeld erna */}
+                    <path d={smoothPath(ptsPrevSolid)} fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={smoothPath(ptsPrevDashed)} fill="none" stroke="#9ca3af" strokeWidth="2" strokeOpacity="0.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5,4" />
+
+                    {/* 2026 — alleen tot lastMonth */}
+                    <path d={smoothPath(ptsCur)} fill="none" stroke="#f9ff85" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                    {/* Eindpunten */}
+                    {ptsCur.length > 0 && (
+                      <g>
+                        <circle cx={ptsCur[ptsCur.length - 1].x} cy={ptsCur[ptsCur.length - 1].y} r="5" fill="#f9ff85" opacity="0.3" />
+                        <circle cx={ptsCur[ptsCur.length - 1].x} cy={ptsCur[ptsCur.length - 1].y} r="3" fill="#f9ff85" />
+                      </g>
+                    )}
+                    {ptsPrevSolid.length > 0 && (
+                      <circle cx={ptsPrevSolid[ptsPrevSolid.length - 1].x} cy={ptsPrevSolid[ptsPrevSolid.length - 1].y} r="3" fill="#9ca3af" />
+                    )}
+
+                    {/* 2025 eindpunt (heel jaar) */}
+                    <circle cx={x(11)} cy={y(sumPrevYear)} r="3" fill="#9ca3af" opacity="0.6" />
+                  </svg>
+                </div>
+
+                <div className="flex items-center justify-between mt-2 text-xs flex-wrap gap-3">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-2 text-gray-400">
+                      <span className="w-4 h-0.5 bg-gray-400" /> {years[1]} cumulatief
+                    </span>
+                    <span className="flex items-center gap-2 text-gray-500">
+                      <span className="w-4 h-0.5 border-t-2 border-dashed border-gray-500" /> {years[1]} na vergelijkingspunt
+                    </span>
+                    <span className="flex items-center gap-2 text-workx-lime">
+                      <span className="w-4 h-0.5 bg-workx-lime" /> {years[2]} cumulatief
+                    </span>
+                  </div>
+                  <span className="text-gray-500 text-[11px]">
+                    {years[1]} hele jaar: <span className="text-gray-300 tabular-nums">{formatCurrency(sumPrevYear)}</span>
+                  </span>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Area Chart - Omzet vs Kosten */}
           {(() => {
             const chartHeight = 280
