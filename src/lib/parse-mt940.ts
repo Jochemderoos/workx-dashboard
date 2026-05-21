@@ -48,10 +48,35 @@ function classifyPartnerPayment(desc: string): PartnerClass {
   return 'SKIP'
 }
 
+// Workx-medewerkers — directe salarisbetalingen via MT940 zijn dubbel-
+// telling met de werkgeverslasten (zit al op loonstrook). Match op
+// achternaam / initialen + achternaam zoals deze in MT940-omschrijving
+// verschijnt.
+const WORKX_TEAM_PATTERNS: RegExp[] = [
+  /\bm\.?j\.?h\.?\s+schipper\b/i,
+  /\bemma\s+van\s+der\s+vos\b/i,
+  /\balain\s+heunen\b/i,
+  /\bbarbara\s+rip\b/i,
+  /\bj\.?a\.?m\.?\s+schellekens\b/i,
+  /\b(ms|m\.?s\.?)\s+van\s+pesch\b/i,
+  /\berika\s+van\s+zadelhof\b/i,
+  /\bh\.?\s+blaauboer\b/i,
+  /\bkay\s+maes\b/i,
+  /\bheleen\s+pesser\b/i,
+  /\bjulia\s+groen\b/i,
+  /\bjuli(ã|e|ë)tte\s+niersman\b/i,
+  /\bvan\s+sint[-\s]?truien\b/i,
+]
+
+function isWorkxTeam(desc: string): boolean {
+  return WORKX_TEAM_PATTERNS.some(re => re.test(desc))
+}
+
 // Skip transacties die geen 'bedrijfskost' zijn:
 //   - Belastingdienst (loonheffing zit in werkgeverslasten-invoer; VPB apart)
 //   - Interne overboekingen tussen Workx-rekeningen
 //   - Bright Pensioen / pensioen — zit al op de loonstrook
+//   - Workx-medewerkers (salaris via MT940 = dubbeltelling)
 // Partner-holdings worden hier NIET geskipt; zie classifyPartnerPayment.
 function shouldSkipDebet(desc: string): boolean {
   const lower = desc.toLowerCase()
@@ -59,6 +84,7 @@ function shouldSkipDebet(desc: string): boolean {
   if (/\bworkx\s+advocaten\b/.test(lower)) return true
   if (/\bbright\s*pensioen\b/.test(lower)) return true
   if (/\bpensioen\b/.test(lower)) return true
+  if (isWorkxTeam(desc)) return true
   return false
 }
 

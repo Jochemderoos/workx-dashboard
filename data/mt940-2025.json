@@ -73,16 +73,6 @@
     "date": "2025-01-06",
     "year": 2025,
     "month": 1,
-    "amount": 13.8,
-    "description": "Van Sint-Truien",
-    "rawKey": "van sint-truien",
-    "externalRef": "dcc30f6042ac11f6ccc5",
-    "category": null
-  },
-  {
-    "date": "2025-01-06",
-    "year": 2025,
-    "month": 1,
     "amount": 136.34,
     "description": "Albert Heijn",
     "rawKey": "albert heijn",
@@ -513,110 +503,10 @@
     "date": "2025-01-20",
     "year": 2025,
     "month": 1,
-    "amount": 4206.39,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "c79a3fa078c9b4cc454a",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 2523.37,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "3715ba24198034b52271",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
     "amount": 3244.51,
     "description": "Bente Portman",
     "rawKey": "bente portman",
     "externalRef": "c512c05d41af4a59355c",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 3244.51,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "8ad3b33c07ab5287af9e",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 3040.31,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "76e2b8d981fa30c37516",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 4053.74,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "e91fe0553d59dd7058a2",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 4489.99,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "18e1fbf9930f7324c667",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 3117.91,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "e7f93699bb00b13c6731",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 7850.87,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "eef666986d259f73e6f0",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 3812.28,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "091155882f1b6356da78",
-    "category": null
-  },
-  {
-    "date": "2025-01-20",
-    "year": 2025,
-    "month": 1,
-    "amount": 2648.55,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "36c6b1e8a0def0043ff4",
     "category": null
   },
   {
@@ -817,26 +707,6 @@
     "description": "Sdu",
     "rawKey": "sdu",
     "externalRef": "7423fc156038637db44d",
-    "category": null
-  },
-  {
-    "date": "2025-01-26",
-    "year": 2025,
-    "month": 1,
-    "amount": 151.25,
-    "description": "Academie Voor De Rechtspra Ktijk .",
-    "rawKey": "academie voor de rechtspra ktijk",
-    "externalRef": "89de2c7be70e2da36173",
-    "category": null
-  },
-  {
-    "date": "2025-01-26",
-    "year": 2025,
-    "month": 1,
-    "amount": 119.79,
-    "description": "Legalplanet .",
-    "rawKey": "legalplanet",
-    "externalRef": "cd9382a2305da4878d43",
     "category": null
   },
   {
@@ -1693,16 +1563,6 @@
     "date": "2025-02-23",
     "year": 2025,
     "month": 2,
-    "amount": 2086.91,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "81d621198e6f229ffe38",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
     "amount": 1603.01,
     "description": "JuliãTte Niersman",
     "rawKey": "juliãtte niersman",
@@ -1713,100 +1573,10 @@
     "date": "2025-02-23",
     "year": 2025,
     "month": 2,
-    "amount": 3409.26,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "fdb760fa26634e4845f7",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 4383.07,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "3c712ac0fffc8cbc5966",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 3573.37,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "baeea07b00eb801eefda",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 4489.99,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "5c2582492d8c1d53cfec",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 4053.74,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "74a036bfc3c543534ab0",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 3040.31,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "4c095cc4062215ff1289",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 3244.51,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "1338661a8f0ee62a9802",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
     "amount": 3244.51,
     "description": "Bente Portman",
     "rawKey": "bente portman",
     "externalRef": "3a788e1a686721b63092",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 3390.74,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "6c0cb854f02da38ce292",
-    "category": null
-  },
-  {
-    "date": "2025-02-23",
-    "year": 2025,
-    "month": 2,
-    "amount": 4206.39,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "6ff120ec96f37932f065",
     "category": null
   },
   {
@@ -2043,16 +1813,6 @@
     "date": "2025-03-02",
     "year": 2025,
     "month": 3,
-    "amount": 69.95,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "f1b931c2ee3d57624a9d",
-    "category": null
-  },
-  {
-    "date": "2025-03-02",
-    "year": 2025,
-    "month": 3,
     "amount": 500.97,
     "description": "Jochem De Roos",
     "rawKey": "jochem de roos",
@@ -2250,16 +2010,6 @@
     "category": null
   },
   {
-    "date": "2025-03-04",
-    "year": 2025,
-    "month": 3,
-    "amount": 13.2,
-    "description": "Van Sint-Truien",
-    "rawKey": "van sint-truien",
-    "externalRef": "9732aafc339a967b9b98",
-    "category": null
-  },
-  {
     "date": "2025-03-05",
     "year": 2025,
     "month": 3,
@@ -2277,16 +2027,6 @@
     "description": "Kosten Sw0503003773092 Transferprov Eur 12,00 Eref. 32702150",
     "rawKey": "kosten sw0503003773092 transferprov eur 12 00 eref",
     "externalRef": "2ec456fe22b12b028644",
-    "category": null
-  },
-  {
-    "date": "2025-03-06",
-    "year": 2025,
-    "month": 3,
-    "amount": 118.02,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "67e8f2f138a8da219751",
     "category": null
   },
   {
@@ -2703,116 +2443,6 @@
     "date": "2025-03-23",
     "year": 2025,
     "month": 3,
-    "amount": 2086.91,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "cd0b8f66e8f8cf499037",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 4239.38,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "98c691b80865f7d3560b",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 3907.53,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "4d6d584d4b6cc0bede9a",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 4019.51,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "e22d7b19cf40d4086e50",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 4595.9,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "d516f5d8f17151218b05",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 4356.88,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "3f6b7f673ee806aab53e",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 3150.81,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "e314d3ca3871ca6d5736",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 3604.84,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "22f42972ddf3918e5a5f",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 3048.67,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "f2e8cc80d607f7f99171",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 4414.76,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "a0f11771189368f0c6a8",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
-    "amount": 1238.87,
-    "description": "Van Sint-Truien",
-    "rawKey": "van sint-truien",
-    "externalRef": "e4df742f6215c00a0d48",
-    "category": null
-  },
-  {
-    "date": "2025-03-23",
-    "year": 2025,
-    "month": 3,
     "amount": 15899.4,
     "description": "Management fee — Cavalieri",
     "rawKey": "MGMT:cavalieri",
@@ -3140,16 +2770,6 @@
     "category": null
   },
   {
-    "date": "2025-04-02",
-    "year": 2025,
-    "month": 4,
-    "amount": 29.44,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "463a9754889726a4d83a",
-    "category": null
-  },
-  {
     "date": "2025-04-06",
     "year": 2025,
     "month": 4,
@@ -3387,16 +3007,6 @@
     "description": "Albert Heijn",
     "rawKey": "albert heijn",
     "externalRef": "83243b361cfacaec1cfc",
-    "category": null
-  },
-  {
-    "date": "2025-04-07",
-    "year": 2025,
-    "month": 4,
-    "amount": 96.32,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "5a18dedee38873d6a352",
     "category": null
   },
   {
@@ -3833,16 +3443,6 @@
     "date": "2025-04-16",
     "year": 2025,
     "month": 4,
-    "amount": 20.7,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "1014e25a63fc37758372",
-    "category": null
-  },
-  {
-    "date": "2025-04-16",
-    "year": 2025,
-    "month": 4,
     "amount": 113.05,
     "description": "PostNL",
     "rawKey": "koninklijke postnl",
@@ -3983,110 +3583,10 @@
     "date": "2025-04-21",
     "year": 2025,
     "month": 4,
-    "amount": 4848.34,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "fc6d3445d457c37cf32c",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 3331.07,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "011b7149a39988e47489",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 4186.64,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "6cb6a6d0b61e6158c838",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 4152.96,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "b6a0bf94964c3041e2c7",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 5258.34,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "4ff7dabd7a2ab337c112",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 9976.29,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "ffca32a5e00a180fe391",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 4689.96,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "2be34feff35ae798b395",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 5610.08,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "16ef2737b5f9dd54ea6f",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 6645,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "3b80880e646444f75e58",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
     "amount": 1080.79,
     "description": "Nika Schatorjã",
     "rawKey": "nika schatorjã",
     "externalRef": "01fe803d869194704d30",
-    "category": null
-  },
-  {
-    "date": "2025-04-21",
-    "year": 2025,
-    "month": 4,
-    "amount": 6724.17,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "4f33a11755b3da0ba2d4",
     "category": null
   },
   {
@@ -4603,16 +4103,6 @@
     "date": "2025-05-11",
     "year": 2025,
     "month": 5,
-    "amount": 4.25,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "cbaa2d9918d5fdb6451c",
-    "category": null
-  },
-  {
-    "date": "2025-05-11",
-    "year": 2025,
-    "month": 5,
     "amount": 50,
     "description": "Ia Nir",
     "rawKey": "ia nir",
@@ -4893,116 +4383,6 @@
     "date": "2025-05-19",
     "year": 2025,
     "month": 5,
-    "amount": 5046.58,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "e1d9a04064c705120a0c",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 6497.02,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "06dd75ad272dd84ab1dc",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 12198.49,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "1caa928cc461337c6c06",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 6301.55,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "6bd132c03a099c1bdbe3",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 5779.36,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "f91fc2b23f06ed2ff128",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 7295.8,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "29ca1f9ec515a03f792b",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 5329.05,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "964aef4cff1c9e83c994",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 5661.44,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "a982a383f04622c874b6",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 6716.28,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "bea818d546368df89355",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 6545.07,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "a279d52c2d904f2e14e4",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
-    "amount": 2267.38,
-    "description": "Van Sint-Truien",
-    "rawKey": "van sint-truien",
-    "externalRef": "266dbf4e5766ce455f69",
-    "category": null
-  },
-  {
-    "date": "2025-05-19",
-    "year": 2025,
-    "month": 5,
     "amount": 229.11,
     "description": "De Meern",
     "rawKey": "de meern",
@@ -5233,16 +4613,6 @@
     "date": "2025-05-26",
     "year": 2025,
     "month": 5,
-    "amount": 85,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "27ec8ffa5e5d839f1211",
-    "category": null
-  },
-  {
-    "date": "2025-05-26",
-    "year": 2025,
-    "month": 5,
     "amount": 2043.83,
     "description": "Constant IT",
     "rawKey": "constant it",
@@ -5367,16 +4737,6 @@
     "description": "Ministerie Van Veiligheid En Justitie Betalingskenm.: 1000859104513465",
     "rawKey": "ministerie van veiligheid en justitie betalingskenm :",
     "externalRef": "2c8be82b467ccca79805",
-    "category": null
-  },
-  {
-    "date": "2025-05-27",
-    "year": 2025,
-    "month": 5,
-    "amount": 91.82,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "5b440da2124f4b85bab7",
     "category": null
   },
   {
@@ -5730,16 +5090,6 @@
     "category": null
   },
   {
-    "date": "2025-06-10",
-    "year": 2025,
-    "month": 6,
-    "amount": 20,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "067fbffbfcf2fc8f3e6f",
-    "category": null
-  },
-  {
     "date": "2025-06-11",
     "year": 2025,
     "month": 6,
@@ -6050,116 +5400,6 @@
     "category": null
   },
   {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 7832.7,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "9e0f7d33c68ee48ad908",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 7460.6,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "90b19038108d415c7b3c",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 8162.54,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "668156da75766351d2fc",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 7772.43,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "01cb1b91c82000a598b3",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 8068.96,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "2527deb3862da083fa58",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 13027.66,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "ef1e7cc1227e34d87906",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 4779.99,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "574726a107e2a404a63a",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 7852.99,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "b3a9db1884f2c5fac0d7",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 3095.61,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "6a1e6a25b7f57807f30d",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 6521.93,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "9c13103fcc939e269a4a",
-    "category": null
-  },
-  {
-    "date": "2025-06-24",
-    "year": 2025,
-    "month": 6,
-    "amount": 4406.9,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "ad74836542ef5fe0ed36",
-    "category": null
-  },
-  {
     "date": "2025-06-25",
     "year": 2025,
     "month": 6,
@@ -6257,16 +5497,6 @@
     "description": "Financieele Dagblad",
     "rawKey": "het financieele dagblad",
     "externalRef": "60fb8c56ad2a28d7f329",
-    "category": null
-  },
-  {
-    "date": "2025-06-26",
-    "year": 2025,
-    "month": 6,
-    "amount": 1619.17,
-    "description": "Van Sint-Truien",
-    "rawKey": "van sint-truien",
-    "externalRef": "f66df91fcc75bf9ff238",
     "category": null
   },
   {
@@ -6613,30 +5843,10 @@
     "date": "2025-07-10",
     "year": 2025,
     "month": 7,
-    "amount": 40.1,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "5e61107427855f8d3b48",
-    "category": null
-  },
-  {
-    "date": "2025-07-10",
-    "year": 2025,
-    "month": 7,
     "amount": 803.5,
     "description": "JuliãTte Niersman",
     "rawKey": "juliãtte niersman",
     "externalRef": "e34f1ac95b6280b3ddbd",
-    "category": null
-  },
-  {
-    "date": "2025-07-10",
-    "year": 2025,
-    "month": 7,
-    "amount": 96.32,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "a2cf31219052b8517a46",
     "category": null
   },
   {
@@ -6773,50 +5983,10 @@
     "date": "2025-07-15",
     "year": 2025,
     "month": 7,
-    "amount": 121,
-    "description": "Youmanfischer",
-    "rawKey": "youmanfischer",
-    "externalRef": "331badf8bb1dd631c9fe",
-    "category": null
-  },
-  {
-    "date": "2025-07-15",
-    "year": 2025,
-    "month": 7,
     "amount": 3.9,
     "description": "Dba Hospitality",
     "rawKey": "dba hospitality",
     "externalRef": "1f5022588e04bba5df42",
-    "category": null
-  },
-  {
-    "date": "2025-07-15",
-    "year": 2025,
-    "month": 7,
-    "amount": 34.85,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "e76a5dc9c5b2eaa5eb1a",
-    "category": null
-  },
-  {
-    "date": "2025-07-15",
-    "year": 2025,
-    "month": 7,
-    "amount": 256.96,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "d9bd85bae6383ac7b647",
-    "category": null
-  },
-  {
-    "date": "2025-07-15",
-    "year": 2025,
-    "month": 7,
-    "amount": 51.25,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "c4165263c9c6f29d3a45",
     "category": null
   },
   {
@@ -6957,126 +6127,6 @@
     "description": "Amsterdam",
     "rawKey": "amsterdam",
     "externalRef": "695fac3684d2f4abc286",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 3607.82,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "d6165da5c48d545e20bb",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 3200.4,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "abc299bc5ffc797e9e36",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 3095.61,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "f2057444c164d7cf0fe8",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 4755.08,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "4830825f8e6512651bce",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 4487.57,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "7e1baa804e180485d89a",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 2476.1,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "d1af5e6d45bbcac73dd8",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 3834.1,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "8515da7aa464fafb7c51",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 5418.35,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "da1b8fba596add516957",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 4580.99,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "d7975d911b8483c8074b",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 7.36,
-    "description": "Van Sint-Truien",
-    "rawKey": "van sint-truien",
-    "externalRef": "4473090146d8647a9768",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 4430.14,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "310c645fe0c07b68b58e",
-    "category": null
-  },
-  {
-    "date": "2025-07-22",
-    "year": 2025,
-    "month": 7,
-    "amount": 4674.57,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "8bdf9ff3c66585349ddb",
     "category": null
   },
   {
@@ -7257,16 +6307,6 @@
     "description": "Amsterdam",
     "rawKey": "amsterdam",
     "externalRef": "4eee9793e4345654bd94",
-    "category": null
-  },
-  {
-    "date": "2025-07-30",
-    "year": 2025,
-    "month": 7,
-    "amount": 4.25,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "afcb653049a13ba2f53c",
     "category": null
   },
   {
@@ -7983,86 +7023,6 @@
     "date": "2025-08-20",
     "year": 2025,
     "month": 8,
-    "amount": 3834.1,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "26a2d77cdd78eeedb781",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 3607.82,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "e908e3953ef35cfc370f",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 4580.99,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "b1ab5f591f7223e21865",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 2885.62,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "41515e6a3490a715d9dd",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 3095.61,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "7a723e7d826ec80c7169",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 4487.57,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "8ea7db04479210c1399c",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 4580.99,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "15c8f679cf76468c4a83",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 3200.4,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "bc8fa4568be174a38c61",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
     "amount": 15899.4,
     "description": "Management fee — Meneer Nilsson",
     "rawKey": "MGMT:meneer nilsson",
@@ -8083,26 +7043,6 @@
     "date": "2025-08-20",
     "year": 2025,
     "month": 8,
-    "amount": 3671.88,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "51c3778ffe694c071f85",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 4674.57,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "c6ee29a57d1739e31843",
-    "category": null
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
     "amount": 15899.4,
     "description": "Management fee — Jader",
     "rawKey": "MGMT:jader",
@@ -8118,16 +7058,6 @@
     "rawKey": "MGMT:cavalieri",
     "externalRef": "f989e2727552bf35d288",
     "category": "MGMT"
-  },
-  {
-    "date": "2025-08-20",
-    "year": 2025,
-    "month": 8,
-    "amount": 3794,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "16564350e47927b076c8",
-    "category": null
   },
   {
     "date": "2025-08-20",
@@ -8463,60 +7393,10 @@
     "date": "2025-09-09",
     "year": 2025,
     "month": 9,
-    "amount": 9.53,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "f5f09d350c4b2dfd3ccd",
-    "category": null
-  },
-  {
-    "date": "2025-09-09",
-    "year": 2025,
-    "month": 9,
-    "amount": 1175.94,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "4e02c46253de035e5ef2",
-    "category": null
-  },
-  {
-    "date": "2025-09-09",
-    "year": 2025,
-    "month": 9,
-    "amount": 257.6,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "6e750b8b421acaaa753c",
-    "category": null
-  },
-  {
-    "date": "2025-09-09",
-    "year": 2025,
-    "month": 9,
     "amount": 1707.65,
     "description": "Isma — declaratie",
     "rawKey": "isma",
     "externalRef": "9c94253dde34ffe3c993",
-    "category": null
-  },
-  {
-    "date": "2025-09-09",
-    "year": 2025,
-    "month": 9,
-    "amount": 50,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "202bce1a2306cb804362",
-    "category": null
-  },
-  {
-    "date": "2025-09-09",
-    "year": 2025,
-    "month": 9,
-    "amount": 88.68,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "083f3db9f018471de2e8",
     "category": null
   },
   {
@@ -8850,16 +7730,6 @@
     "category": null
   },
   {
-    "date": "2025-09-11",
-    "year": 2025,
-    "month": 9,
-    "amount": 371.39,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "04822fbe918a26603654",
-    "category": null
-  },
-  {
     "date": "2025-09-14",
     "year": 2025,
     "month": 9,
@@ -9153,16 +8023,6 @@
     "date": "2025-09-23",
     "year": 2025,
     "month": 9,
-    "amount": 1378.63,
-    "description": "Van Sint-Truien",
-    "rawKey": "van sint-truien",
-    "externalRef": "3f196a7089f89957a27e",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
     "amount": 851.24,
     "description": "Spontaanja schoonmaker",
     "rawKey": "spontaan ja",
@@ -9193,120 +8053,10 @@
     "date": "2025-09-23",
     "year": 2025,
     "month": 9,
-    "amount": 4580.99,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "6c21b290f3f687f02da0",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 4331.84,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "67affaf25b69680c338d",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 4487.57,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "efcec42693666cabd965",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 4342.17,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "5f27a6dc4bafdb38cdcd",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 3834.1,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "f42eadaf288f50184c8a",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 2889.7,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "859999a2c79d7c9ef200",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 4580.99,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "b2dc2716da7b2b9469e5",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 3791.39,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "038f33127e29210e4d31",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 3872.38,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "c6cf3b247824bc30a6fd",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
     "amount": 957.54,
     "description": "Lauren Loomans",
     "rawKey": "lauren loomans",
     "externalRef": "6e47692217456483cf4a",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 3607.82,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "97ab8d19479d0d125e27",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 3200.4,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "789e686c1fdf919f0f55",
     "category": null
   },
   {
@@ -9360,26 +8110,6 @@
     "category": "MGMT"
   },
   {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 43.2,
-    "description": "Van Sint-Truien",
-    "rawKey": "van sint-truien",
-    "externalRef": "0a7582e7b72d978ab684",
-    "category": null
-  },
-  {
-    "date": "2025-09-23",
-    "year": 2025,
-    "month": 9,
-    "amount": 37.32,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "936bb8208060327b48bf",
-    "category": null
-  },
-  {
     "date": "2025-09-24",
     "year": 2025,
     "month": 9,
@@ -9427,16 +8157,6 @@
     "description": "Amsterdam",
     "rawKey": "amsterdam",
     "externalRef": "b1e65611096d039cc376",
-    "category": null
-  },
-  {
-    "date": "2025-09-28",
-    "year": 2025,
-    "month": 9,
-    "amount": 7.24,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "eb7644b0d456dcb42785",
     "category": null
   },
   {
@@ -9647,16 +8367,6 @@
     "description": "Amsterdam",
     "rawKey": "amsterdam",
     "externalRef": "ccd2e1db883e5afe24f0",
-    "category": null
-  },
-  {
-    "date": "2025-10-05",
-    "year": 2025,
-    "month": 10,
-    "amount": 38.1,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "0aa1836006c9a0271eec",
     "category": null
   },
   {
@@ -9893,16 +8603,6 @@
     "date": "2025-10-12",
     "year": 2025,
     "month": 10,
-    "amount": 98.5,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "2cd29d5b2acd1305bf1c",
-    "category": null
-  },
-  {
-    "date": "2025-10-12",
-    "year": 2025,
-    "month": 10,
     "amount": 595.32,
     "description": "Doxflow",
     "rawKey": "doxflow legal",
@@ -9987,16 +8687,6 @@
     "description": "Foresco Nl .",
     "rawKey": "foresco nl",
     "externalRef": "4b597e6ebc69daed8535",
-    "category": null
-  },
-  {
-    "date": "2025-10-14",
-    "year": 2025,
-    "month": 10,
-    "amount": 4.25,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "102e7b0988c216a22d55",
     "category": null
   },
   {
@@ -10143,130 +8833,10 @@
     "date": "2025-10-20",
     "year": 2025,
     "month": 10,
-    "amount": 4580.99,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "315638d13829399fe034",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 3872.38,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "1435f156c9d538767b4c",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 3095.61,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "0451b48c19183b576665",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 4487.57,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "045350113ba9dc8fe16b",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 4410.91,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "3f427447be7bf015bd82",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 3014.07,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "ce0b72bdab2c6691bc65",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 4580.99,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "ac139b615e2c853ccc08",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 4153.97,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "356920c69582b5065046",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 3456.54,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "798b40911020692d6c9d",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 4106,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "79fa06431c3b1a26d50f",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 3200.4,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "fa2757f73fdecd83ffa4",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
     "amount": 957.54,
     "description": "Lauren Loomans",
     "rawKey": "lauren loomans",
     "externalRef": "48fc440955c8c539c1b9",
-    "category": null
-  },
-  {
-    "date": "2025-10-20",
-    "year": 2025,
-    "month": 10,
-    "amount": 1374.15,
-    "description": "Ebm Van Sint Truien",
-    "rawKey": "ebm van sint truien",
-    "externalRef": "f763cb666b5daf8c060a",
     "category": null
   },
   {
@@ -10663,16 +9233,6 @@
     "date": "2025-10-30",
     "year": 2025,
     "month": 10,
-    "amount": 332,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "e6076f50221bdc05e76b",
-    "category": null
-  },
-  {
-    "date": "2025-10-30",
-    "year": 2025,
-    "month": 10,
     "amount": 1461,
     "description": "Ministerie van Justitie (doorbelast)",
     "rawKey": "ministerie van justitie en veiligheid betalingskenm :",
@@ -10757,16 +9317,6 @@
     "description": "Zaandam",
     "rawKey": "zaandam",
     "externalRef": "dd78b540bd9a7d05ceea",
-    "category": null
-  },
-  {
-    "date": "2025-11-03",
-    "year": 2025,
-    "month": 11,
-    "amount": 8.95,
-    "description": "Ebm Van Sint Truien",
-    "rawKey": "ebm van sint truien",
-    "externalRef": "fafefb6b9a23ae036bdd",
     "category": null
   },
   {
@@ -10877,16 +9427,6 @@
     "description": "Digihero",
     "rawKey": "digihero",
     "externalRef": "302355358b22b43eb190",
-    "category": null
-  },
-  {
-    "date": "2025-11-06",
-    "year": 2025,
-    "month": 11,
-    "amount": 115.38,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "6443c65a35867ca0e828",
     "category": null
   },
   {
@@ -11313,130 +9853,10 @@
     "date": "2025-11-23",
     "year": 2025,
     "month": 11,
-    "amount": 105,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "771ec1f4ee07eab02215",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 1512.07,
-    "description": "Ebm Van Sint Truien",
-    "rawKey": "ebm van sint truien",
-    "externalRef": "9688b4fcc55e0abdafc6",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
     "amount": 881.5,
     "description": "Mediahuis Nrc",
     "rawKey": "mediahuis nrc",
     "externalRef": "daa1746fc62f9c453ceb",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 4580.99,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "40361079ab5863420ad3",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 3200.4,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "394bae55f94128d05ee5",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 3604.59,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "addaecad6958970c4c24",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 8323.87,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "7ab72048247ac670945e",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 4233.59,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "147042026b2c7a319f87",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 9440.5,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "646eacc70bb42d56a3ce",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 5479.68,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "008ae9402435324d3322",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 3872.38,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "88e5156ef3342ca347c9",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 3095.61,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "257a3c7b812d9c2fbcc4",
-    "category": null
-  },
-  {
-    "date": "2025-11-23",
-    "year": 2025,
-    "month": 11,
-    "amount": 2879.46,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "82334e6e820c7a419d70",
     "category": null
   },
   {
@@ -11513,16 +9933,6 @@
     "date": "2025-11-24",
     "year": 2025,
     "month": 11,
-    "amount": 109,
-    "description": "Ebm Van Sint Truien",
-    "rawKey": "ebm van sint truien",
-    "externalRef": "7c421eeda7fc70c5d59c",
-    "category": null
-  },
-  {
-    "date": "2025-11-24",
-    "year": 2025,
-    "month": 11,
     "amount": 851.24,
     "description": "Spontaanja schoonmaker",
     "rawKey": "spontaan ja",
@@ -11547,16 +9957,6 @@
     "description": "Lotte Van Sint Truiden",
     "rawKey": "lotte van sint truiden",
     "externalRef": "58fb7e30035668da0327",
-    "category": null
-  },
-  {
-    "date": "2025-11-24",
-    "year": 2025,
-    "month": 11,
-    "amount": 4451.18,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "fbe36118bb597f924f7d",
     "category": null
   },
   {
@@ -11647,26 +10047,6 @@
     "description": "Iside",
     "rawKey": "iside",
     "externalRef": "6302df44fe7a99ccc417",
-    "category": null
-  },
-  {
-    "date": "2025-11-30",
-    "year": 2025,
-    "month": 12,
-    "amount": 49.65,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "61ca3efcd6f2f0b9fd13",
-    "category": null
-  },
-  {
-    "date": "2025-11-30",
-    "year": 2025,
-    "month": 12,
-    "amount": 33.85,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "b3952e8723b32f4030cb",
     "category": null
   },
   {
@@ -11857,16 +10237,6 @@
     "description": "TTWWOO",
     "rawKey": "ttwwoo",
     "externalRef": "357fda11da1c5de6aa1b",
-    "category": null
-  },
-  {
-    "date": "2025-12-04",
-    "year": 2025,
-    "month": 12,
-    "amount": 363,
-    "description": "Citius Advocaten",
-    "rawKey": "citius advocaten",
-    "externalRef": "b87772fd16d9604adf6b",
     "category": null
   },
   {
@@ -12193,26 +10563,6 @@
     "date": "2025-12-14",
     "year": 2025,
     "month": 12,
-    "amount": 100,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "37fd850c2f9b9a4738f4",
-    "category": null
-  },
-  {
-    "date": "2025-12-14",
-    "year": 2025,
-    "month": 12,
-    "amount": 101.39,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "f49970759861e190a7af",
-    "category": null
-  },
-  {
-    "date": "2025-12-14",
-    "year": 2025,
-    "month": 12,
     "amount": 174.7,
     "description": "Bingh Advocaten",
     "rawKey": "bingh advocaten",
@@ -12453,16 +10803,6 @@
     "date": "2025-12-21",
     "year": 2025,
     "month": 12,
-    "amount": 432.86,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "0c5acc106f2d7b6109e4",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
     "amount": 25.19,
     "description": "Amsterdam",
     "rawKey": "amsterdam",
@@ -12493,130 +10833,10 @@
     "date": "2025-12-21",
     "year": 2025,
     "month": 12,
-    "amount": 4838.9,
-    "description": "Barbara Rip",
-    "rawKey": "barbara rip",
-    "externalRef": "497ef8e35bf8e2834cac",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 5813.94,
-    "description": "J.A.M. Schellekens",
-    "rawKey": "j a m schellekens",
-    "externalRef": "a8a528cb47a7e95661ea",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 4403.3,
-    "description": "Ms Van Pesch",
-    "rawKey": "ms van pesch",
-    "externalRef": "bbb0940a97f53c6fedee",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 4739.14,
-    "description": "Erika Van Zadelhof",
-    "rawKey": "erika van zadelhof",
-    "externalRef": "3e53f1dec225ad2440f2",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
     "amount": 1181.86,
     "description": "Lauren Loomans",
     "rawKey": "lauren loomans",
     "externalRef": "96fbf1508c9d6a66ca5d",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 4580.99,
-    "description": "Julia Groen",
-    "rawKey": "julia groen",
-    "externalRef": "55497f69ee9695bb1891",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 3966.27,
-    "description": "Heleen Pesser",
-    "rawKey": "heleen pesser",
-    "externalRef": "235d699d549b08909bf5",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 1374.15,
-    "description": "Ebm Van Sint Truien",
-    "rawKey": "ebm van sint truien",
-    "externalRef": "a3c97d74fccdfba0699c",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 3200.4,
-    "description": "Kay Maes",
-    "rawKey": "kay maes",
-    "externalRef": "94ef04c1d2a0ca1f85f9",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 4580.99,
-    "description": "Emma Van Der Vos",
-    "rawKey": "emma van der vos",
-    "externalRef": "7492b414af655bb71430",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 2765.33,
-    "description": "H. Blaauboer",
-    "rawKey": "h blaauboer",
-    "externalRef": "87ee2f73574993c2bece",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 4493.4,
-    "description": "M.J.H. Schipper",
-    "rawKey": "m j h schipper",
-    "externalRef": "c03c6bf6178ca6291324",
-    "category": null
-  },
-  {
-    "date": "2025-12-21",
-    "year": 2025,
-    "month": 12,
-    "amount": 6194.31,
-    "description": "Alain Heunen",
-    "rawKey": "alain heunen",
-    "externalRef": "4df0c8d7291112f1400e",
     "category": null
   },
   {
@@ -12857,16 +11077,6 @@
     "description": "Amsterdam",
     "rawKey": "amsterdam",
     "externalRef": "86b59a45f79b9cd53328",
-    "category": null
-  },
-  {
-    "date": "2025-12-30",
-    "year": 2025,
-    "month": 12,
-    "amount": 4.25,
-    "description": "Ebm Van Sint Truien",
-    "rawKey": "ebm van sint truien",
-    "externalRef": "ef3f481fd20aa3877a47",
     "category": null
   },
   {

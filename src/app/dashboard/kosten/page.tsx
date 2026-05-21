@@ -63,8 +63,12 @@ export default function KostenPage() {
         fetch(`/api/monthly-costs?year=${year}`),
         fetch(`/api/monthly-costs?year=${otherYear}`),
       ])
-      if (r1.ok) setCosts(await r1.json())
-      if (r2.ok) setCostsOther(await r2.json())
+      // UWV/ASR zijn werkgeversvergoedingen (negatieve bedragen die bij
+      // werkgeverslasten worden afgetrokken in Financien). Niet tonen als
+      // kost om dubbeltelling te voorkomen.
+      const filterRows = (rows: Cost[]) => rows.filter(c => c.category !== 'UWV' && c.category !== 'ASR')
+      if (r1.ok) setCosts(filterRows(await r1.json()))
+      if (r2.ok) setCostsOther(filterRows(await r2.json()))
     } catch {
       toast.error('Kon kosten niet laden')
     } finally {
