@@ -138,7 +138,7 @@ export default function FinancienPage() {
   const [isEditingSalarishuis, setIsEditingSalarishuis] = useState(false)
   const [editingVacation, setEditingVacation] = useState<string | null>(null)
   const [sickDaysTotals, setSickDaysTotals] = useState<SickDaysTotals[]>([])
-  // Dagelijkse kosten 2026 uit Kosten-pagina (alleen reguliere, exclusief UWV/ASR)
+  // Overige kosten 2026 uit Kosten-pagina (alleen reguliere, exclusief UWV/ASR)
   const [monthlyCosts2026, setMonthlyCosts2026] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
   // UWV (zwangerschapsverlof) en ASR (verzuim) per jaar/maand — bijschrijvingen
   // tellen mee als negatieve correctie op werkgeverslasten.
@@ -952,13 +952,15 @@ export default function FinancienPage() {
       {/* Overzicht Tab */}
       {activeTab === 'overzicht' && (
         <div className="space-y-6">
-          {/* KPI Cards — focus op huidig jaar tot en met laatst ingevulde
-              maand. 2025 wordt voor dezelfde periode (P1-PX) erbij gehouden
-              zodat de vergelijking eerlijk is. Voor Totale Kosten en Saldo
-              tonen we twee diff-regels: incl. dagelijkse kosten (volledig
-              beeld) en excl. (gelijke basis want 2025 mist die post). */}
+          {/* KPI Cards — alle cijfers over dezelfde periode (t/m laatst
+              ingevulde maand in {currentYear}). 2025 wordt voor exact
+              dezelfde periode erbij gehaald (appels-appels). UWV/ASR
+              terugbetalingen worden van werkgeverslasten afgetrokken
+              voor beide jaren — daar hebben we van beide jaren data.
+              Overige kosten staan los (alleen 2026), dus daar tonen we
+              twee diff-regels: incl. (volledig beeld) en excl. (puur
+              werkgeverslasten-vergelijking met UWV/ASR meegenomen). */}
           {(() => {
-            // Bepaal laatste maand met data in 2026
             const cur = getDataForYear(years[2])
             let lastMonth = 0
             for (let m = 0; m < 12; m++) {
@@ -969,21 +971,32 @@ export default function FinancienPage() {
             const periodLabel = lastMonth === 12 ? 'heel jaar' : `P1–P${lastMonth}`
 
             const prev = getDataForYear(years[1])
+            const uwvCurArr = uwvPerMonth[years[2]] || Array(12).fill(0)
+            const asrCurArr = asrPerMonth[years[2]] || Array(12).fill(0)
+            const uwvPrevArr = uwvPerMonth[years[1]] || Array(12).fill(0)
+            const asrPrevArr = asrPerMonth[years[1]] || Array(12).fill(0)
 
             // 2026 t/m lastMonth
             const omzetCur = sumTo(cur.omzet, lastMonth)
-            const kostenExcl = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(cur.kostenExtern, lastMonth)
-            const dagKostenCur = sumTo(monthlyCosts2026, lastMonth)
-            const kostenIncl = kostenExcl + dagKostenCur
-            const saldoExcl = omzetCur - kostenExcl
-            const saldoIncl = omzetCur - kostenIncl
+            const wkzBruto = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(cur.kostenExtern, lastMonth)
+            const uwvCur = sumTo(uwvCurArr, lastMonth)
+            const asrCur = sumTo(asrCurArr, lastMonth)
+            const wkzNet = wkzBruto - uwvCur - asrCur  // appels-appels basis
+            const overigeKosten = sumTo(monthlyCosts2026, lastMonth)
+            const totaleKosten = wkzNet + overigeKosten
+            const saldoTotaal = omzetCur - totaleKosten
+            const saldoExcl = omzetCur - wkzNet
             const urenCur = sumTo(cur.uren, lastMonth)
 
-            // 2025 t/m dezelfde lastMonth — fair vergelijking
+            // 2025 t/m dezelfde lastMonth — incl. UWV/ASR (appels-appels)
             const omzetPrev = sumTo(prev.omzet, lastMonth)
-            const kostenPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(prev.kostenExtern, lastMonth)
-            const saldoPrev = omzetPrev - kostenPrev
+            const wkzBrutoPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(prev.kostenExtern, lastMonth)
+            const uwvPrev = sumTo(uwvPrevArr, lastMonth)
+            const asrPrev = sumTo(asrPrevArr, lastMonth)
+            const wkzNetPrev = wkzBrutoPrev - uwvPrev - asrPrev
+            const saldoPrev = omzetPrev - wkzNetPrev
             const urenPrev = sumTo(prev.uren, lastMonth)
+            const hasUwvAsr = (uwvCur + asrCur + uwvPrev + asrPrev) > 0
 
             type Diff = { amount: number; label: string; positive: boolean; isNumber?: boolean }
             const kpis: Array<{ label: string; value: string; diffs: Diff[] }> = [
@@ -996,18 +1009,18 @@ export default function FinancienPage() {
               },
               {
                 label: `Totale Kosten ${years[2]} (${periodLabel})`,
-                value: formatCurrency(kostenIncl),
+                value: formatCurrency(totaleKosten),
                 diffs: [
-                  { amount: kostenIncl - kostenPrev, label: `incl. dagelijkse kosten vs ${years[1]}`, positive: false },
-                  { amount: kostenExcl - kostenPrev, label: `excl., gelijke basis vs ${years[1]}`, positive: false },
+                  { amount: totaleKosten - wkzNetPrev, label: `incl. overige kosten vs ${years[1]}`, positive: false },
+                  { amount: wkzNet - wkzNetPrev, label: hasUwvAsr ? `werkgeverslasten netto (incl. UWV/ASR) vs ${years[1]}` : `werkgeverslasten vs ${years[1]}`, positive: false },
                 ],
               },
               {
                 label: `Saldo ${years[2]} (${periodLabel})`,
-                value: formatCurrency(saldoIncl),
+                value: formatCurrency(saldoTotaal),
                 diffs: [
-                  { amount: saldoIncl - saldoPrev, label: `incl. dagelijkse kosten vs ${years[1]}`, positive: true },
-                  { amount: saldoExcl - saldoPrev, label: `excl., gelijke basis vs ${years[1]}`, positive: true },
+                  { amount: saldoTotaal - saldoPrev, label: `incl. overige kosten vs ${years[1]}`, positive: true },
+                  { amount: saldoExcl - saldoPrev, label: hasUwvAsr ? `excl. overige (incl. UWV/ASR) vs ${years[1]}` : `excl. overige kosten vs ${years[1]}`, positive: true },
                 ],
               },
               {
@@ -1056,10 +1069,10 @@ export default function FinancienPage() {
             const currentYrData = getDataForYear(years[2])
             const currentOmzet = currentYrData.omzet
             const currentKosten = currentYrData.werkgeverslasten.map((v, i) => v + (currentYrData.kostenExtern[i] || 0))
-            // Kosten incl. dagelijkse kosten uit Kosten-pagina (alleen 2026)
+            // Kosten incl. overige kosten uit Kosten-pagina (alleen 2026)
             const currentKostenIncl = currentKosten.map((v, i) => v + (monthlyCosts2026[i] || 0))
 
-            // Find last month with actual data for current year (non-zero omzet of kosten of dagelijkse kosten)
+            // Find last month with actual data for current year (non-zero omzet of kosten of overige kosten)
             let lastDataMonth = -1
             for (let i = 11; i >= 0; i--) {
               if (currentOmzet[i] !== 0 || currentKosten[i] !== 0 || (monthlyCosts2026[i] || 0) !== 0) {
@@ -1187,7 +1200,7 @@ export default function FinancienPage() {
                         <path d={areaPath(currentKostenPts)} fill="url(#kostenGradient)" />
                         <path d={smoothPath(currentKostenPts)} fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
-                        {/* Kosten incl. dagelijkse kosten — alleen lijn, geen area-fill */}
+                        {/* Kosten incl. overige kosten — alleen lijn, geen area-fill */}
                         {hasKostenIncl && (
                           <>
                             <path d={smoothPath(currentKostenInclPts)} fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1236,7 +1249,7 @@ export default function FinancienPage() {
                     <span className="text-xs text-white/70">Kosten {years[2]}</span>
                   </div>
                   {hasKostenIncl && (
-                    <div className="flex items-center gap-2" title="Werkgeverslasten + Kosten Extern + dagelijkse kosten uit Kosten-pagina">
+                    <div className="flex items-center gap-2" title="Werkgeverslasten + Kosten Extern + overige kosten uit Kosten-pagina">
                       <div className="w-4 h-0.5 bg-red-500" />
                       <span className="text-xs text-red-300/80">Kosten incl. dagelijks {years[2]}</span>
                     </div>
@@ -1424,7 +1437,7 @@ export default function FinancienPage() {
                     return (
                       <tr key={`wl-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
                         {yearIdx === 0 && (
-                          <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top" title="Inclusief Kosten Extern (zoals Lodewijk). Zie Saldo incl. dagelijkse kosten onderaan voor 2026 details.">
+                          <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top" title="Inclusief Kosten Extern (zoals Lodewijk). Zie Saldo incl. overige kosten onderaan voor 2026 details.">
                             Werkgeverslasten
                           </td>
                         )}
@@ -1585,7 +1598,7 @@ export default function FinancienPage() {
             )
           })()}
 
-          {/* Saldo incl. dagelijkse kosten + UWV/ASR (alleen 2026) */}
+          {/* Saldo incl. overige kosten + UWV/ASR (alleen 2026) */}
           {(() => {
             const cur = getDataForYear(currentYear)
             const totalCosts2026 = monthlyCosts2026.reduce((s, v) => s + v, 0)
@@ -1600,9 +1613,9 @@ export default function FinancienPage() {
               <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
                 <div className="flex items-start justify-between mb-1 gap-4 flex-wrap">
                   <div>
-                    <h3 className="text-white font-medium">Saldo incl. dagelijkse kosten en UWV/ASR (alleen {currentYear})</h3>
+                    <h3 className="text-white font-medium">Saldo incl. overige kosten en UWV/ASR (alleen {currentYear})</h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      Werkgeverslasten + Kosten Extern + dagelijkse kosten uit <a href="/dashboard/kosten" className="text-workx-lime hover:underline">Kosten-pagina</a>, minus UWV (zwangerschapsverlof) en ASR (verzuim) terugbetalingen. Vorige jaren ontbreekt de dagelijkse-kosten-data, dus de jaarvergelijking hierboven blijft zonder die post.
+                      Werkgeverslasten + Kosten Extern + overige kosten uit <a href="/dashboard/kosten" className="text-workx-lime hover:underline">Kosten-pagina</a>, minus UWV (zwangerschapsverlof) en ASR (verzuim) terugbetalingen. Vorige jaren ontbreekt de overige-kosten-data, dus de jaarvergelijking hierboven blijft zonder die post.
                     </p>
                   </div>
                   <div className="text-right">
@@ -1614,7 +1627,7 @@ export default function FinancienPage() {
                 </div>
                 {totalCosts2026 === 0 && totalUwv === 0 && totalAsr === 0 && (
                   <div className="mt-3 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs text-gray-400">
-                    Nog geen dagelijkse kosten of UWV/ASR ingeladen voor {currentYear}. Voeg ze toe via <a href="/dashboard/kosten" className="text-workx-lime hover:underline">/dashboard/kosten</a>.
+                    Nog geen overige kosten of UWV/ASR ingeladen voor {currentYear}. Voeg ze toe via <a href="/dashboard/kosten" className="text-workx-lime hover:underline">/dashboard/kosten</a>.
                   </div>
                 )}
 
@@ -1624,7 +1637,7 @@ export default function FinancienPage() {
                       <tr className="text-left text-xs text-gray-500 border-b border-white/10">
                         <th className="py-2 px-3 font-medium">Maand</th>
                         <th className="py-2 px-3 font-medium text-right">Werkgeverslasten + Extern</th>
-                        <th className="py-2 px-3 font-medium text-right">Dagelijkse kosten</th>
+                        <th className="py-2 px-3 font-medium text-right">Overige kosten</th>
                         <th className="py-2 px-3 font-medium text-right">UWV/ASR retour</th>
                         <th className="py-2 px-3 font-medium text-right">Netto kosten</th>
                         <th className="py-2 px-3 font-medium text-right">Omzet</th>
@@ -1698,7 +1711,7 @@ export default function FinancienPage() {
                       <h4 className="text-sm font-medium text-white mb-1">Vergelijking met {years[1]} — UWV/ASR appels-appels</h4>
                       <p className="text-[11px] text-gray-500 mb-3">
                         Voor UWV en ASR hebben we beide jaren data, dus over {periodLabel} kunnen we netjes vergelijken.
-                        Dagelijkse kosten staat los want die hebben we alleen voor {currentYear}.
+                        Overige kosten staat los want die hebben we alleen voor {currentYear}.
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5">
@@ -1729,7 +1742,7 @@ export default function FinancienPage() {
                             {netCur - netPrev > 0 ? '+' : ''}{formatCurrency(netCur - netPrev)} vs {years[1]}
                           </p>
                           {dagCurSum > 0 && (
-                            <p className="text-[10px] text-gray-500 mt-1">excl. {formatCurrency(dagCurSum)} dagelijkse kosten {currentYear}</p>
+                            <p className="text-[10px] text-gray-500 mt-1">excl. {formatCurrency(dagCurSum)} overige kosten {currentYear}</p>
                           )}
                         </div>
                       </div>
@@ -1765,7 +1778,7 @@ export default function FinancienPage() {
                             </div>
                             <div className="h-2.5 bg-white/5 rounded overflow-hidden flex">
                               <div className="h-full bg-gray-400/60" style={{ width: `${wkzPct}%` }} title="Werkgeverslasten + Extern" />
-                              <div className="h-full bg-orange-500/70" style={{ width: `${dagPct}%` }} title="Dagelijkse kosten" />
+                              <div className="h-full bg-orange-500/70" style={{ width: `${dagPct}%` }} title="Overige kosten" />
                             </div>
                           </div>
                         </div>
@@ -1775,7 +1788,7 @@ export default function FinancienPage() {
                   <div className="flex items-center gap-4 text-[10px] text-gray-500 mt-3 pt-3 border-t border-white/5">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-workx-lime/70" /> Omzet</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-gray-400/60" /> Werkgeverslasten + Extern</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-orange-500/70" /> Dagelijkse kosten</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-orange-500/70" /> Overige kosten</span>
                   </div>
                 </div>
               </div>
