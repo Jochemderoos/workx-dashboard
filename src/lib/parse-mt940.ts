@@ -10,30 +10,34 @@ export interface MT940Transaction {
   description: string // genormaliseerde vendornaam (zelfde stijl als handmatige posten)
   rawKey: string      // stabiele counterparty-fingerprint (voor leer-aliassen)
   externalRef: string // hash voor duplicaat-detectie
-  category?: 'UWV' | 'ASR' | 'ZZP' | 'WGL' | 'MGMT' // UWV/ASR = retours, ZZP = externe advocaten, WGL = pensioenpremie, MGMT = management fee partners
+  category?: 'UWV' | 'ASR' | 'ZZP' | 'MGMT' // UWV/ASR = retours, ZZP = externe advocaten, MGMT = management fee partners (incl BTW)
 }
 
-// Skip transacties die geen 'bedrijfskost' zijn maar al elders in de
-// administratie zitten:
-//   - Belastingdienst (loonheffing zit in werkgeverslasten-invoer; VPB
-//     is apart)
+// Skip transacties die geen 'bedrijfskost' zijn:
+//   - Belastingdienst (loonheffing zit in werkgeverslasten-invoer)
 //   - Interne overboekingen tussen Workx-rekeningen
-// Management fee naar partner-holdings (Les Dents Du Midi / Meneer Nilsson /
-// Cavalieri / Jader) NIET skippen — dat is een echte kostenpost.
+//   - Dividenduitkeringen naar partner-holdings (Les Dents Du Midi /
+//     Meneer Nilsson / Cavalieri / Jader). Geen factuur, geen BTW,
+//     geen kost — winstdeling.
 function shouldSkipDebet(desc: string): boolean {
   const lower = desc.toLowerCase()
   if (/\bbelastingdienst\b/.test(lower)) return true
   if (/\bworkx\s+advocaten\b/.test(lower)) return true
+  // Dividend partner-holdings (geen kost, geen BTW)
+  if (/\bles\s+dents\s+du\s+midi\b/.test(lower)) return true
+  if (/\bmeneer\s+nilsson\b/.test(lower)) return true
+  if (/\bcavalieri\b/.test(lower)) return true
+  if (/\bjader\b/.test(lower)) return true
+  // Bright Pensioen / pensioenpremie zit al in de werkgeverslasten via
+  // de loonstrook — los importeren = dubbeltelling
+  if (/\bbright\s*pensioen\b/.test(lower)) return true
+  if (/\bpensioen\b/.test(lower)) return true
   return false
 }
 
-// Specifieke management-fee holdings → krijgen een nette omschrijving.
-function managementFeeLabel(desc: string): string | null {
-  const lower = desc.toLowerCase()
-  if (/\bles\s+dents\s+du\s+midi\b/.test(lower)) return 'Management fee — Les Dents Du Midi'
-  if (/\bmeneer\s+nilsson\b/.test(lower)) return 'Management fee — Meneer Nilsson'
-  if (/\bcavalieri\b/.test(lower)) return 'Management fee — Cavalieri'
-  if (/\bjader\b/.test(lower)) return 'Management fee — Jader'
+// Management fee detectie — vendor-namen die management fee factureren
+// (incl BTW). Voor nu nog leeg; gebruiker moet aangeven welke vendors.
+function managementFeeLabel(_desc: string): string | null {
   return null
 }
 
@@ -41,14 +45,13 @@ function managementFeeLabel(desc: string): string | null {
 //   UWV (zwangerschapsverlof, bijschrijving) → negatieve correctie op WGL
 //   ASR (verzuimverzekering, bijschrijving)  → idem
 //   ZZP (externe advocaten, debet, alleen Nectaro/Lodewijk)
-//   WGL (werkgeverslasten-aanvulling: pensioenpremie) → optellen bij WGL
-// Tentoo is alleen payrolling-administratie → gewone overige kost (geen tag).
-function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | 'WGL' | null {
+// Bright Pensioen wordt geskipt (zit al in werkgeverslasten via loonstrook).
+// Tentoo is payrolling-administratie → gewone overige kost (21% BTW).
+function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | null {
   const lower = desc.toLowerCase()
   if (/\buwv\b/.test(lower) || /\bwazo\b/.test(lower)) return 'UWV'
   if (/\basr\b/.test(lower) || /verzuimverzekering/.test(lower)) return 'ASR'
   if (/\bnectaro\b/.test(lower) || /\blodewijk\b/.test(lower)) return 'ZZP'
-  if (/\bbright\s*pensioen\b/.test(lower) || /\bpensioen\b/.test(lower)) return 'WGL'
   return null
 }
 
@@ -77,11 +80,11 @@ export function parseMT940(content: string): MT940Transaction[] {
         if (shouldSkipDebet(currentTx.desc)) { currentTx = null; inDesc = false; return }
         // Management fee → eigen category MGMT zodat we 'waarvan…' kunnen tonen
         const mgmtLabel = managementFeeLabel(currentTx.desc)
-        // Debet: MGMT > ZZP > WGL > regulier
-        const category: 'MGMT' | 'ZZP' | 'WGL' | undefined =
+        // Debet: MGMT > ZZP > regulier
+        const category: 'MGMT' | 'ZZP' | undefined =
           mgmtLabel ? 'MGMT' :
-          (detected === 'ZZP' || detected === 'WGL') ? detected : undefined
-        const labelSuffix = category === 'ZZP' ? ' (ZZP)' : category === 'WGL' ? ' (pensioen)' : ''
+          (detected === 'ZZP') ? detected : undefined
+        const labelSuffix = category === 'ZZP' ? ' (ZZP)' : ''
         const finalDesc = mgmtLabel ?? (vendorName + labelSuffix)
         const finalRawKey = category ? `${category}:${rawKey}` : rawKey
         transactions.push({

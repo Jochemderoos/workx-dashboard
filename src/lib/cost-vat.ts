@@ -2,36 +2,11 @@
 // gebruiken (omzet wordt ook ex-btw ingevoerd). MT940 levert bruto
 // bedragen.
 //
-// Aanpak: standaard 21% BTW. 0% voor categorieën waar geen BTW op zit:
-//   - UWV/ASR (vergoedingen — niet BTW-plichtig)
-//   - WGL (pensioenpremie — vrijgesteld)
-//   - Huur (vrijgesteld tenzij opt-in, en in dit pand geen opt-in)
-//   - Verzekeringen (vrijgesteld)
-//   - Banken / financiële dienstverlening (vrijgesteld)
-//   - Belastingdienst (al uitgefilterd, maar dubbelcheck)
-//   - Salaris / personeel via Tentoo (loonadministratie 0%)
-//   - Lidmaatschap orde / overheidsorganen (vrijgesteld)
-
-const ZERO_VAT_PATTERNS: RegExp[] = [
-  /herengracht\s+investments/i,    // huur
-  /\bhuur\b/i,
-  /\basr\b/i,                      // verzekering
-  /verzuimverzekering/i,
-  /aegon/i,
-  /nationale[-\s]?nederlanden/i,
-  /\babn\s*amro\b/i,                // bank-servicekosten
-  /\brabobank\b/i,
-  /\bing\b\s+bank/i,
-  /\bbright\s*pensioen\b/i,
-  /\bpensioen\b/i,
-  /belastingdienst/i,
-  /\bnova\b/i,                     // Nederlandse Orde van Advocaten
-  /amsterdamse\s+orde\s+van\s+advocaten/i,
-  /nederlandse\s+orde\s+van\s+advocaten/i,
-  /\borde\s+van\s+advocaten\b/i,
-  /\btentoo\b/i,                   // payroll-administratie
-  /\bicsdirect\b|international\s+card\s+services/i, // ICS is doorbelaste creditcard-betalingen — meestal al ex-btw door derden
-]
+// Tarieven:
+//   21% — standaard (default)
+//    9% — voeding, horeca, lunch, koffie, boeken
+//    0% — vrijgesteld (huur, verzekeringen, banken, belasting, Orde,
+//         UWV/ASR retours, salarisbetalingen)
 
 export interface VatableCost {
   amount: number
@@ -39,12 +14,51 @@ export interface VatableCost {
   category?: string | null
 }
 
+// 0% BTW — vrijgestelde categorieën
+const ZERO_VAT_PATTERNS: RegExp[] = [
+  /herengracht\s+investments/i,    // huur (vrijgesteld, geen opt-in)
+  /\bhuur\b/i,
+  /\basr\b/i,                      // verzekering vrijgesteld
+  /verzuimverzekering/i,
+  /\baegon\b/i,
+  /nationale[-\s]?nederlanden/i,
+  /\babn\s*amro\b/i,               // bank-servicekosten vrijgesteld
+  /\brabobank\b/i,
+  /\bing\b\s+bank/i,
+  /belastingdienst/i,              // dubbelcheck — al uitgefilterd
+  /amsterdamse\s+orde\s+van\s+advocaten/i,
+  /nederlandse\s+orde\s+van\s+advocaten/i,
+  /\borde\s+van\s+advocaten\b/i,
+]
+
+// 9% BTW — voeding, horeca, boeken, kappers
+const LOW_VAT_PATTERNS: RegExp[] = [
+  /albert\s*heijn/i,
+  /\bah\b/i,
+  /vlaams\s+broodhuys/i,
+  /bocca\s+coffee/i,
+  /\bbocca\b/i,
+  /zerozero/i,
+  /zero\s*zero/i,
+  /\bde\s+bary\b/i,
+  /broodjes/i,
+  /\bmerchado\b/i,                  // wijn/flessen
+  /\bsmartcoffee\b|boonchance/i,
+  /\bbol\.com\b/i,                  // boeken/cadeaus — vaak 9%
+  /\biside\b/i,                     // schoonheid/welzijn
+  /\bhema\b/i,                      // gedeeltelijk 9%
+  /froot/i,
+]
+
 // Bepaalt het BTW-percentage dat van toepassing is.
 export function vatRateFor(cost: VatableCost): number {
-  if (cost.category === 'UWV' || cost.category === 'ASR' || cost.category === 'WGL') return 0
+  if (cost.category === 'UWV' || cost.category === 'ASR') return 0
   const desc = cost.description || ''
   for (const pat of ZERO_VAT_PATTERNS) {
     if (pat.test(desc)) return 0
+  }
+  for (const pat of LOW_VAT_PATTERNS) {
+    if (pat.test(desc)) return 0.09
   }
   return 0.21
 }
