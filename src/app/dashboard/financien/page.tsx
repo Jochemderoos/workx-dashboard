@@ -144,6 +144,10 @@ export default function FinancienPage() {
   // tellen mee als negatieve correctie op werkgeverslasten.
   const [uwvPerMonth, setUwvPerMonth] = useState<Record<number, number[]>>({})
   const [asrPerMonth, setAsrPerMonth] = useState<Record<number, number[]>>({})
+  // ZZP per jaar/maand — externe advocaten (Lodewijk, Tentoo). Onderdeel
+  // van Overige Kosten, maar apart bijgehouden voor inzicht in totale
+  // advocatenkosten (loon + ZZP).
+  const [zzpPerMonth, setZzpPerMonth] = useState<Record<number, number[]>>({})
 
   // Check if user is PARTNER or ADMIN
   const isManager = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
@@ -194,6 +198,7 @@ export default function FinancienPage() {
           const reg2026 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
           const uwv: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
           const asr: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
+          const zzp: Record<number, number[]> = { 2025: Array(12).fill(0), 2026: Array(12).fill(0) }
           for (const it of [...d2026, ...d2025] as { year: number; month: number; amount: number; category?: string | null }[]) {
             if (it.month < 1 || it.month > 12) continue
             if (it.category === 'UWV') {
@@ -202,13 +207,19 @@ export default function FinancienPage() {
             } else if (it.category === 'ASR') {
               if (!asr[it.year]) asr[it.year] = Array(12).fill(0)
               asr[it.year][it.month - 1] += Math.abs(it.amount)
-            } else if (it.year === 2026) {
-              reg2026[it.month - 1] += it.amount
+            } else {
+              // Reguliere kost (incl. ZZP) — telt mee bij Overige Kosten 2026
+              if (it.year === 2026) reg2026[it.month - 1] += it.amount
+              if (it.category === 'ZZP') {
+                if (!zzp[it.year]) zzp[it.year] = Array(12).fill(0)
+                zzp[it.year][it.month - 1] += it.amount
+              }
             }
           }
           setMonthlyCosts2026(reg2026)
           setUwvPerMonth(uwv)
           setAsrPerMonth(asr)
+          setZzpPerMonth(zzp)
         }
 
         // Load sick days for managers
@@ -276,10 +287,12 @@ export default function FinancienPage() {
       const yearData = getDataForYear(year)
       totals.werkgeverslasten[year] = yearData.werkgeverslasten.reduce((a, b) => a + b, 0)
       totals.kostenExtern[year] = yearData.kostenExtern.reduce((a, b) => a + b, 0)
-      totals.totaleKosten[year] = totals.werkgeverslasten[year] + totals.kostenExtern[year]
+      // Werkgeverslasten = alleen bruto loon eigen mensen. Externe advocaten
+      // (Lodewijk/Tentoo) zitten in MonthlyCost als category=ZZP.
+      totals.totaleKosten[year] = totals.werkgeverslasten[year]
       totals.omzet[year] = yearData.omzet.reduce((a, b) => a + b, 0)
       totals.uren[year] = yearData.uren.reduce((a, b) => a + b, 0)
-      saldo[year] = periods.map((_, i) => yearData.omzet[i] - yearData.werkgeverslasten[i] - (yearData.kostenExtern[i] || 0))
+      saldo[year] = periods.map((_, i) => yearData.omzet[i] - yearData.werkgeverslasten[i])
       saldoTotals[year] = totals.omzet[year] - totals.totaleKosten[year]
     })
 
@@ -714,16 +727,6 @@ export default function FinancienPage() {
     doc.setTextColor(50, 50, 50)
     y += 8
 
-    // Kosten Extern
-    doc.text('Kosten Extern', col1, y)
-    doc.text(formatCurrency(calculations.totals.kostenExtern[years[0]]), col2, y, { align: 'right' })
-    doc.text(formatCurrency(calculations.totals.kostenExtern[years[1]]), col3, y, { align: 'right' })
-    const keDiff = calculations.totals.kostenExtern[years[1]] - calculations.totals.kostenExtern[years[0]]
-    doc.setTextColor(keDiff < 0 ? 0 : 200, keDiff < 0 ? 150 : 50, 50)
-    doc.text(formatCurrency(keDiff), col4, y, { align: 'right' })
-    doc.setTextColor(50, 50, 50)
-    y += 8
-
     // Omzet
     doc.text('Omzet', col1, y)
     doc.text(formatCurrency(calculations.totals.omzet[years[0]]), col2, y, { align: 'right' })
@@ -813,9 +816,9 @@ export default function FinancienPage() {
 
     // Row 1: Omzet and Werkgeverslasten
     drawBarChart('Omzet', [getDataForYear(years[0]).omzet, getDataForYear(years[1]).omzet], y, chartWidth, chartHeight, leftX)
-    const afterRow1 = drawBarChart('Totale Kosten', [
-      getDataForYear(years[0]).werkgeverslasten.map((v, i) => v + (getDataForYear(years[0]).kostenExtern[i] || 0)),
-      getDataForYear(years[1]).werkgeverslasten.map((v, i) => v + (getDataForYear(years[1]).kostenExtern[i] || 0))
+    const afterRow1 = drawBarChart('Werkgeverslasten', [
+      getDataForYear(years[0]).werkgeverslasten,
+      getDataForYear(years[1]).werkgeverslasten,
     ], y, chartWidth, chartHeight, rightX)
     y = afterRow1 + 5
 
@@ -975,13 +978,17 @@ export default function FinancienPage() {
             const asrCurArr = asrPerMonth[years[2]] || Array(12).fill(0)
             const uwvPrevArr = uwvPerMonth[years[1]] || Array(12).fill(0)
             const asrPrevArr = asrPerMonth[years[1]] || Array(12).fill(0)
+            const zzpCurArr = zzpPerMonth[years[2]] || Array(12).fill(0)
+            const zzpPrevArr = zzpPerMonth[years[1]] || Array(12).fill(0)
 
-            // 2026 t/m lastMonth
+            // 2026 t/m lastMonth — Werkgeverslasten = alleen bruto loon eigen mensen − UWV − ASR
             const omzetCur = sumTo(cur.omzet, lastMonth)
-            const wkzBruto = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(cur.kostenExtern, lastMonth)
+            const wkzBruto = sumTo(cur.werkgeverslasten, lastMonth)
             const uwvCur = sumTo(uwvCurArr, lastMonth)
             const asrCur = sumTo(asrCurArr, lastMonth)
-            const wkzNet = wkzBruto - uwvCur - asrCur  // appels-appels basis
+            const wkzNet = wkzBruto - uwvCur - asrCur
+            const zzpCur = sumTo(zzpCurArr, lastMonth)
+            const advocatenKosten = wkzNet + zzpCur  // info-cijfer: totale advocatenkosten
             const overigeKosten = sumTo(monthlyCosts2026, lastMonth)
             const totaleKosten = wkzNet + overigeKosten
             const saldoTotaal = omzetCur - totaleKosten
@@ -990,13 +997,16 @@ export default function FinancienPage() {
 
             // 2025 t/m dezelfde lastMonth — incl. UWV/ASR (appels-appels)
             const omzetPrev = sumTo(prev.omzet, lastMonth)
-            const wkzBrutoPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(prev.kostenExtern, lastMonth)
+            const wkzBrutoPrev = sumTo(prev.werkgeverslasten, lastMonth)
             const uwvPrev = sumTo(uwvPrevArr, lastMonth)
             const asrPrev = sumTo(asrPrevArr, lastMonth)
             const wkzNetPrev = wkzBrutoPrev - uwvPrev - asrPrev
+            const zzpPrev = sumTo(zzpPrevArr, lastMonth)
+            const advocatenKostenPrev = wkzNetPrev + zzpPrev
             const saldoPrev = omzetPrev - wkzNetPrev
             const urenPrev = sumTo(prev.uren, lastMonth)
             const hasUwvAsr = (uwvCur + asrCur + uwvPrev + asrPrev) > 0
+            const hasZzp = (zzpCur + zzpPrev) > 0
 
             type Diff = { amount: number; label: string; positive: boolean; isNumber?: boolean }
             const kpis: Array<{ label: string; value: string; diffs: Diff[] }> = [
@@ -1013,6 +1023,7 @@ export default function FinancienPage() {
                 diffs: [
                   { amount: totaleKosten - wkzNetPrev, label: `Totale Kosten vs ${years[1]}`, positive: false },
                   { amount: wkzNet - wkzNetPrev, label: `Werkgeverslasten vs ${years[1]} (appels-appels)`, positive: false },
+                  ...(hasZzp ? [{ amount: advocatenKosten - advocatenKostenPrev, label: `Advocaten (loon + ZZP) vs ${years[1]}`, positive: false }] : []),
                 ],
               },
               {
@@ -1068,7 +1079,7 @@ export default function FinancienPage() {
             // Current year data
             const currentYrData = getDataForYear(years[2])
             const currentOmzet = currentYrData.omzet
-            const currentKosten = currentYrData.werkgeverslasten.map((v, i) => v + (currentYrData.kostenExtern[i] || 0))
+            const currentKosten = currentYrData.werkgeverslasten.slice()
             // Kosten incl. overige kosten uit Kosten-pagina (alleen 2026)
             const currentKostenIncl = currentKosten.map((v, i) => v + (monthlyCosts2026[i] || 0))
 
@@ -1087,9 +1098,9 @@ export default function FinancienPage() {
             const prevYear1Data = getDataForYear(years[0])
             const prevYear2Data = getDataForYear(years[1])
             const prev1Omzet = prevYear1Data.omzet
-            const prev1Kosten = prevYear1Data.werkgeverslasten.map((v, i) => v + (prevYear1Data.kostenExtern[i] || 0))
+            const prev1Kosten = prevYear1Data.werkgeverslasten.slice()
             const prev2Omzet = prevYear2Data.omzet
-            const prev2Kosten = prevYear2Data.werkgeverslasten.map((v, i) => v + (prevYear2Data.kostenExtern[i] || 0))
+            const prev2Kosten = prevYear2Data.werkgeverslasten.slice()
 
             // Find global min/max for Y scale
             const allVals = [
@@ -1294,7 +1305,7 @@ export default function FinancienPage() {
               const result: number[] = []
               let sum = 0
               for (let m = 0; m < months; m++) {
-                sum += d.omzet[m] - d.werkgeverslasten[m] - (d.kostenExtern[m] || 0)
+                sum += d.omzet[m] - d.werkgeverslasten[m]
                 result.push(sum)
               }
               return result
@@ -1430,25 +1441,24 @@ export default function FinancienPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Werkgeverslasten (incl. Kosten Extern zoals Lodewijk) - all 3 years */}
+                  {/* Werkgeverslasten — alleen bruto loon eigen mensen (externen zitten in Kosten) */}
                   {years.map((year, yearIdx) => {
                     const yearData = getDataForYear(year)
-                    const combined = yearData.werkgeverslasten.map((v, i) => v + (yearData.kostenExtern[i] || 0))
                     return (
                       <tr key={`wl-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
                         {yearIdx === 0 && (
-                          <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top" title="Inclusief Kosten Extern (zoals Lodewijk). Zie Saldo incl. overige kosten onderaan voor 2026 details.">
+                          <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top" title="Bruto loonkosten van eigen medewerkers. Externe advocaten (Lodewijk) en overige kosten zie je onderaan in de detail-sectie.">
                             Werkgeverslasten
                           </td>
                         )}
                         <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
-                        {combined.map((v, i) => (
+                        {yearData.werkgeverslasten.map((v, i) => (
                           <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
                             {formatCurrency(v)}
                           </td>
                         ))}
                         <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
-                          {formatCurrency(calculations.totals.totaleKosten[year])}
+                          {formatCurrency(calculations.totals.werkgeverslasten[year])}
                         </td>
                       </tr>
                     )
@@ -1606,9 +1616,13 @@ export default function FinancienPage() {
             const asr = asrPerMonth[currentYear] || Array(12).fill(0)
             const totalUwv = uwv.reduce((s, v) => s + v, 0)
             const totalAsr = asr.reduce((s, v) => s + v, 0)
-            const baseCosts = cur.werkgeverslasten.reduce((s, v) => s + v, 0) + cur.kostenExtern.reduce((s, v) => s + v, 0)
+            const baseCosts = cur.werkgeverslasten.reduce((s, v) => s + v, 0)
             const omzetTotal = cur.omzet.reduce((s, v) => s + v, 0)
             const totalNetKosten = baseCosts + totalCosts2026 - totalUwv - totalAsr
+            // ZZP voor info-rij "Totaal advocatenkosten (loon + ZZP)"
+            const zzpYear = zzpPerMonth[currentYear] || Array(12).fill(0)
+            const totalZzp = zzpYear.reduce((s, v) => s + v, 0)
+            const totalAdvocaten = (baseCosts - totalUwv - totalAsr) + totalZzp
             return (
               <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
                 <div className="flex items-start justify-between mb-1 gap-4 flex-wrap">
@@ -1636,10 +1650,10 @@ export default function FinancienPage() {
                     <thead>
                       <tr className="text-left text-xs text-gray-500 border-b border-white/10">
                         <th className="py-2 px-3 font-medium">Maand</th>
-                        <th className="py-2 px-3 font-medium text-right" title="Bruto loonkosten + Kosten Extern (Lodewijk)">Bruto loon + Extern</th>
+                        <th className="py-2 px-3 font-medium text-right" title="Bruto loonkosten van eigen medewerkers">Bruto loon</th>
                         <th className="py-2 px-3 font-medium text-right" title="UWV (zwangerschapsverlof) + ASR (verzuim) terugbetalingen">UWV/ASR retour</th>
-                        <th className="py-2 px-3 font-medium text-right" title="Werkgeverslasten netto = bruto + extern − UWV − ASR">Werkgeverslasten</th>
-                        <th className="py-2 px-3 font-medium text-right" title="Kostenposten uit de Kosten-pagina">Overige Kosten</th>
+                        <th className="py-2 px-3 font-medium text-right" title="Werkgeverslasten = bruto loon − UWV − ASR">Werkgeverslasten</th>
+                        <th className="py-2 px-3 font-medium text-right" title="Kostenposten uit de Kosten-pagina (incl. externe advocaten ZZP)">Overige Kosten</th>
                         <th className="py-2 px-3 font-medium text-right" title="Werkgeverslasten + Overige Kosten">Totale Kosten</th>
                         <th className="py-2 px-3 font-medium text-right">Omzet</th>
                         <th className="py-2 px-3 font-medium text-right">Saldo</th>
@@ -1647,7 +1661,7 @@ export default function FinancienPage() {
                     </thead>
                     <tbody>
                       {periods.map((p, i) => {
-                        const bruto = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0)
+                        const bruto = cur.werkgeverslasten[i] || 0
                         const dag = monthlyCosts2026[i] || 0
                         const retour = (uwv[i] || 0) + (asr[i] || 0)
                         const wkzNet = bruto - retour
@@ -1673,8 +1687,20 @@ export default function FinancienPage() {
                         <td className="py-2 px-3 text-right tabular-nums text-gray-400 font-bold">{formatCurrency(baseCosts)}</td>
                         <td className="py-2 px-3 text-right tabular-nums text-green-400 font-bold">{(totalUwv + totalAsr) > 0 ? `−${formatCurrency(totalUwv + totalAsr)}` : '—'}</td>
                         <td className="py-2 px-3 text-right tabular-nums text-gray-200 font-bold">{formatCurrency(baseCosts - totalUwv - totalAsr)}</td>
-                        <td className="py-2 px-3 text-right tabular-nums text-orange-300 font-bold">{formatCurrency(totalCosts2026)}</td>
-                        <td className="py-2 px-3 text-right tabular-nums text-white font-bold">{formatCurrency(totalNetKosten)}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-orange-300 font-bold">
+                          {formatCurrency(totalCosts2026)}
+                          {totalZzp > 0 && (
+                            <span className="block text-[10px] font-normal text-cyan-400/70 mt-0.5">waarvan ZZP {formatCurrency(totalZzp)}</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-right tabular-nums text-white font-bold">
+                          {formatCurrency(totalNetKosten)}
+                          {totalZzp > 0 && (
+                            <span className="block text-[10px] font-normal text-cyan-400/70 mt-0.5" title="Werkgeverslasten + ZZP — totale advocatenkosten">
+                              advocaten: {formatCurrency(totalAdvocaten)}
+                            </span>
+                          )}
+                        </td>
                         <td className="py-2 px-3 text-right tabular-nums text-gray-300 font-bold">{formatCurrency(omzetTotal)}</td>
                         <td className={`py-2 px-3 text-right tabular-nums font-bold ${(omzetTotal - totalNetKosten) >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>
                           {formatCurrency(omzetTotal - totalNetKosten)}
@@ -1758,13 +1784,13 @@ export default function FinancienPage() {
                   <p className="text-xs font-medium text-white/70 mb-2">Per maand: Omzet vs. Totale Kosten</p>
                   {(() => {
                     const monthMaxes = periods.map((_, i) => {
-                      const wkzNetVal = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
+                      const wkzNetVal = (cur.werkgeverslasten[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
                       return Math.max(cur.omzet[i] || 0, wkzNetVal + (monthlyCosts2026[i] || 0))
                     })
                     const overallMax = Math.max(...monthMaxes, 1)
                     return periods.map((p, i) => {
                       const om = cur.omzet[i] || 0
-                      const wkzNet = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
+                      const wkzNet = (cur.werkgeverslasten[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
                       const dag = monthlyCosts2026[i] || 0
                       const tot = wkzNet + dag
                       const omPct = (Math.max(om, 0) / overallMax) * 100

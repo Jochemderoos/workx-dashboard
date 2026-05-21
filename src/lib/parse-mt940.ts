@@ -10,16 +10,18 @@ export interface MT940Transaction {
   description: string // genormaliseerde vendornaam (zelfde stijl als handmatige posten)
   rawKey: string      // stabiele counterparty-fingerprint (voor leer-aliassen)
   externalRef: string // hash voor duplicaat-detectie
-  category?: 'UWV' | 'ASR' // bijschrijvingen die we als terugbetaling meenemen
+  category?: 'UWV' | 'ASR' | 'ZZP' // UWV/ASR = retours, ZZP = externe advocaten
 }
 
-// Detecteer UWV (zwangerschapsverlof) of ASR (verzuimverzekering) in omschrijving
-function detectCategory(desc: string): 'UWV' | 'ASR' | null {
+// Detecteer UWV (zwangerschapsverlof, bijschrijving), ASR
+// (verzuimverzekering, bijschrijving) of ZZP (externe advocaten, debet)
+// in de omschrijving.
+function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | null {
   const lower = desc.toLowerCase()
-  // UWV bijschrijvingen: WAZO/Wet arbeid en zorg / zwangerschapsuitkering / uwv
   if (/\buwv\b/.test(lower) || /\bwazo\b/.test(lower)) return 'UWV'
-  // ASR verzuimverzekering: 'asr' of variaties
   if (/\basr\b/.test(lower) || /verzuimverzekering/.test(lower)) return 'ASR'
+  // Externe advocaten / ZZP: Nectaro = Lodewijk, Tentoo = payrolling
+  if (/\bnectaro\b/.test(lower) || /\blodewijk\b/.test(lower) || /\btentoo\b/.test(lower)) return 'ZZP'
   return null
 }
 
@@ -40,36 +42,36 @@ export function parseMT940(content: string): MT940Transaction[] {
     if (!currentTx) return
     if (currentTx.amount > 0) {
       const dateIso = currentTx.date.toISOString().slice(0, 10)
+      const { vendorName, rawKey } = normalizeVendor(currentTx.desc)
+      const detected = detectCategory(currentTx.desc)
+
       if (currentTx.isDebet) {
-        // Reguliere kost (debet)
-        const { vendorName, rawKey } = normalizeVendor(currentTx.desc)
+        // Debet: reguliere kost; eventueel als ZZP gemarkeerd
+        const category = detected === 'ZZP' ? 'ZZP' : undefined
         transactions.push({
           date: currentTx.date,
           amount: currentTx.amount,
-          description: vendorName,
-          rawKey,
-          externalRef: hashTransaction(dateIso, currentTx.amount, rawKey),
+          description: category === 'ZZP' ? `${vendorName} (ZZP)` : vendorName,
+          rawKey: category ? `${category}:${rawKey}` : rawKey,
+          externalRef: hashTransaction(dateIso, currentTx.amount, category ? `${category}:${rawKey}` : rawKey),
+          category,
         })
-      } else {
-        // Bijschrijving (credit): alleen UWV/ASR meenemen als negatieve correctie
-        const category = detectCategory(currentTx.desc)
-        if (category) {
-          const { rawKey } = normalizeVendor(currentTx.desc)
-          const label = category === 'UWV'
-            ? 'UWV-uitkering (zwangerschapsverlof)'
-            : 'ASR-vergoeding (verzuimverzekering)'
-          // Bedrag negatief opslaan zodat het kosten verlaagt
-          const negAmount = -currentTx.amount
-          transactions.push({
-            date: currentTx.date,
-            amount: negAmount,
-            description: label,
-            rawKey: `${category}:${rawKey}`,
-            externalRef: hashTransaction(dateIso, negAmount, `${category}:${rawKey}`),
-            category,
-          })
-        }
+      } else if (detected === 'UWV' || detected === 'ASR') {
+        // Credit: UWV/ASR-terugbetaling — negatief opslaan
+        const label = detected === 'UWV'
+          ? 'UWV-uitkering (zwangerschapsverlof)'
+          : 'ASR-vergoeding (verzuimverzekering)'
+        const negAmount = -currentTx.amount
+        transactions.push({
+          date: currentTx.date,
+          amount: negAmount,
+          description: label,
+          rawKey: `${detected}:${rawKey}`,
+          externalRef: hashTransaction(dateIso, negAmount, `${detected}:${rawKey}`),
+          category: detected,
+        })
       }
+      // Andere credit-regels (overige inkomsten) negeren we
     }
     currentTx = null
     inDesc = false
