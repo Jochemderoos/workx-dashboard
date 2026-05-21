@@ -1011,16 +1011,16 @@ export default function FinancienPage() {
                 label: `Totale Kosten ${years[2]} (${periodLabel})`,
                 value: formatCurrency(totaleKosten),
                 diffs: [
-                  { amount: totaleKosten - wkzNetPrev, label: `incl. overige kosten vs ${years[1]}`, positive: false },
-                  { amount: wkzNet - wkzNetPrev, label: hasUwvAsr ? `werkgeverslasten netto (incl. UWV/ASR) vs ${years[1]}` : `werkgeverslasten vs ${years[1]}`, positive: false },
+                  { amount: totaleKosten - wkzNetPrev, label: `Totale Kosten vs ${years[1]}`, positive: false },
+                  { amount: wkzNet - wkzNetPrev, label: `Werkgeverslasten vs ${years[1]} (appels-appels)`, positive: false },
                 ],
               },
               {
                 label: `Saldo ${years[2]} (${periodLabel})`,
                 value: formatCurrency(saldoTotaal),
                 diffs: [
-                  { amount: saldoTotaal - saldoPrev, label: `incl. overige kosten vs ${years[1]}`, positive: true },
-                  { amount: saldoExcl - saldoPrev, label: hasUwvAsr ? `excl. overige (incl. UWV/ASR) vs ${years[1]}` : `excl. overige kosten vs ${years[1]}`, positive: true },
+                  { amount: saldoTotaal - saldoPrev, label: `na Totale Kosten vs ${years[1]}`, positive: true },
+                  { amount: saldoExcl - saldoPrev, label: `na Werkgeverslasten vs ${years[1]} (appels-appels)`, positive: true },
                 ],
               },
               {
@@ -1636,30 +1636,33 @@ export default function FinancienPage() {
                     <thead>
                       <tr className="text-left text-xs text-gray-500 border-b border-white/10">
                         <th className="py-2 px-3 font-medium">Maand</th>
-                        <th className="py-2 px-3 font-medium text-right">Werkgeverslasten + Extern</th>
-                        <th className="py-2 px-3 font-medium text-right">Overige kosten</th>
-                        <th className="py-2 px-3 font-medium text-right">UWV/ASR retour</th>
-                        <th className="py-2 px-3 font-medium text-right">Netto kosten</th>
+                        <th className="py-2 px-3 font-medium text-right" title="Bruto loonkosten + Kosten Extern (Lodewijk)">Bruto loon + Extern</th>
+                        <th className="py-2 px-3 font-medium text-right" title="UWV (zwangerschapsverlof) + ASR (verzuim) terugbetalingen">UWV/ASR retour</th>
+                        <th className="py-2 px-3 font-medium text-right" title="Werkgeverslasten netto = bruto + extern − UWV − ASR">Werkgeverslasten</th>
+                        <th className="py-2 px-3 font-medium text-right" title="Kostenposten uit de Kosten-pagina">Overige Kosten</th>
+                        <th className="py-2 px-3 font-medium text-right" title="Werkgeverslasten + Overige Kosten">Totale Kosten</th>
                         <th className="py-2 px-3 font-medium text-right">Omzet</th>
                         <th className="py-2 px-3 font-medium text-right">Saldo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {periods.map((p, i) => {
-                        const wkz = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0)
+                        const bruto = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0)
                         const dag = monthlyCosts2026[i] || 0
                         const retour = (uwv[i] || 0) + (asr[i] || 0)
-                        const tot = wkz + dag - retour
+                        const wkzNet = bruto - retour
+                        const totaal = wkzNet + dag
                         const om = cur.omzet[i] || 0
-                        const sld = om - tot
-                        if (wkz === 0 && dag === 0 && retour === 0 && om === 0) return null
+                        const sld = om - totaal
+                        if (bruto === 0 && dag === 0 && retour === 0 && om === 0) return null
                         return (
                           <tr key={p} className="border-b border-white/5 hover:bg-white/[0.02]">
                             <td className="py-2 px-3 text-white">{p}</td>
-                            <td className="py-2 px-3 text-right tabular-nums text-gray-300">{formatCurrency(wkz)}</td>
-                            <td className="py-2 px-3 text-right tabular-nums text-orange-300">{formatCurrency(dag)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-gray-400">{formatCurrency(bruto)}</td>
                             <td className="py-2 px-3 text-right tabular-nums text-green-400">{retour > 0 ? `−${formatCurrency(retour)}` : '—'}</td>
-                            <td className="py-2 px-3 text-right tabular-nums text-white font-medium">{formatCurrency(tot)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-gray-200 font-medium">{formatCurrency(wkzNet)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-orange-300">{formatCurrency(dag)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-white font-medium">{formatCurrency(totaal)}</td>
                             <td className="py-2 px-3 text-right tabular-nums text-gray-300">{formatCurrency(om)}</td>
                             <td className={`py-2 px-3 text-right tabular-nums font-medium ${sld >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>{formatCurrency(sld)}</td>
                           </tr>
@@ -1667,9 +1670,10 @@ export default function FinancienPage() {
                       })}
                       <tr className="border-t-2 border-white/10 bg-white/[0.02]">
                         <td className="py-2 px-3 text-white font-bold">Totaal</td>
-                        <td className="py-2 px-3 text-right tabular-nums text-gray-300 font-bold">{formatCurrency(baseCosts)}</td>
-                        <td className="py-2 px-3 text-right tabular-nums text-orange-300 font-bold">{formatCurrency(totalCosts2026)}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-gray-400 font-bold">{formatCurrency(baseCosts)}</td>
                         <td className="py-2 px-3 text-right tabular-nums text-green-400 font-bold">{(totalUwv + totalAsr) > 0 ? `−${formatCurrency(totalUwv + totalAsr)}` : '—'}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-gray-200 font-bold">{formatCurrency(baseCosts - totalUwv - totalAsr)}</td>
+                        <td className="py-2 px-3 text-right tabular-nums text-orange-300 font-bold">{formatCurrency(totalCosts2026)}</td>
                         <td className="py-2 px-3 text-right tabular-nums text-white font-bold">{formatCurrency(totalNetKosten)}</td>
                         <td className="py-2 px-3 text-right tabular-nums text-gray-300 font-bold">{formatCurrency(omzetTotal)}</td>
                         <td className={`py-2 px-3 text-right tabular-nums font-bold ${(omzetTotal - totalNetKosten) >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>
@@ -1715,7 +1719,7 @@ export default function FinancienPage() {
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5">
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Werkgeverslasten + Extern {periodLabel}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Bruto loon + Extern {periodLabel}</p>
                           <p className="text-lg font-bold text-white tabular-nums">{formatCurrency(wkzCur)}</p>
                           <p className={`text-[11px] tabular-nums ${(wkzCur - wkzPrev) > 0 ? 'text-red-400' : 'text-green-400'}`}>
                             {wkzCur - wkzPrev > 0 ? '+' : ''}{formatCurrency(wkzCur - wkzPrev)} vs {years[1]}
@@ -1736,7 +1740,7 @@ export default function FinancienPage() {
                           </p>
                         </div>
                         <div className="bg-workx-lime/10 rounded-xl p-3 border border-workx-lime/30">
-                          <p className="text-[10px] text-workx-lime/70 uppercase tracking-wider">Netto werkgeverslasten {periodLabel}</p>
+                          <p className="text-[10px] text-workx-lime/70 uppercase tracking-wider">Werkgeverslasten {periodLabel}</p>
                           <p className="text-lg font-bold text-workx-lime tabular-nums">{formatCurrency(netCur)}</p>
                           <p className={`text-[11px] tabular-nums ${(netCur - netPrev) > 0 ? 'text-red-400' : 'text-green-400'}`}>
                             {netCur - netPrev > 0 ? '+' : ''}{formatCurrency(netCur - netPrev)} vs {years[1]}
@@ -1751,17 +1755,20 @@ export default function FinancienPage() {
                 })()}
 
                 <div className="mt-6 space-y-2">
-                  <p className="text-xs font-medium text-white/70 mb-2">Per maand: omzet vs. totale kosten</p>
+                  <p className="text-xs font-medium text-white/70 mb-2">Per maand: Omzet vs. Totale Kosten</p>
                   {(() => {
-                    const monthMaxes = periods.map((_, i) => Math.max(cur.omzet[i] || 0, (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0) + (monthlyCosts2026[i] || 0)))
+                    const monthMaxes = periods.map((_, i) => {
+                      const wkzNetVal = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
+                      return Math.max(cur.omzet[i] || 0, wkzNetVal + (monthlyCosts2026[i] || 0))
+                    })
                     const overallMax = Math.max(...monthMaxes, 1)
                     return periods.map((p, i) => {
                       const om = cur.omzet[i] || 0
-                      const wkz = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0)
+                      const wkzNet = (cur.werkgeverslasten[i] || 0) + (cur.kostenExtern[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
                       const dag = monthlyCosts2026[i] || 0
-                      const tot = wkz + dag
+                      const tot = wkzNet + dag
                       const omPct = (Math.max(om, 0) / overallMax) * 100
-                      const wkzPct = (wkz / overallMax) * 100
+                      const wkzPct = (Math.max(wkzNet, 0) / overallMax) * 100
                       const dagPct = (dag / overallMax) * 100
                       if (om === 0 && tot === 0) return null
                       return (
@@ -1769,7 +1776,7 @@ export default function FinancienPage() {
                           <div className="flex items-baseline justify-between mb-0.5">
                             <span className="text-white/60 w-10 shrink-0">{p}</span>
                             <span className="text-[10px] text-gray-500 tabular-nums">
-                              omzet {formatCurrency(om)} · kosten {formatCurrency(tot)}
+                              omzet {formatCurrency(om)} · totale kosten {formatCurrency(tot)}
                             </span>
                           </div>
                           <div className="space-y-0.5">
@@ -1777,7 +1784,7 @@ export default function FinancienPage() {
                               <div className="h-full bg-workx-lime/70 rounded" style={{ width: `${omPct}%` }} />
                             </div>
                             <div className="h-2.5 bg-white/5 rounded overflow-hidden flex">
-                              <div className="h-full bg-gray-400/60" style={{ width: `${wkzPct}%` }} title="Werkgeverslasten + Extern" />
+                              <div className="h-full bg-gray-400/60" style={{ width: `${wkzPct}%` }} title="Werkgeverslasten (na UWV/ASR)" />
                               <div className="h-full bg-orange-500/70" style={{ width: `${dagPct}%` }} title="Overige kosten" />
                             </div>
                           </div>
@@ -1787,7 +1794,7 @@ export default function FinancienPage() {
                   })()}
                   <div className="flex items-center gap-4 text-[10px] text-gray-500 mt-3 pt-3 border-t border-white/5">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-workx-lime/70" /> Omzet</span>
-                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-gray-400/60" /> Werkgeverslasten + Extern</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-gray-400/60" /> Werkgeverslasten</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-orange-500/70" /> Overige kosten</span>
                   </div>
                 </div>
