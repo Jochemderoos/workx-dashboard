@@ -1244,31 +1244,31 @@ export default function FinancienPage() {
                     <div className="w-4 h-3 rounded-sm bg-green-500/60" />
                     <span className="text-xs text-white/70">Omzet {years[2]}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" title="Alleen werkgeverslasten + kosten extern, zónder dagelijkse kosten uit Kosten-pagina">
                     <div className="w-4 h-3 rounded-sm bg-orange-500/60" />
-                    <span className="text-xs text-white/70">Kosten {years[2]}</span>
+                    <span className="text-xs text-white/70">Werkgeverslasten {years[2]}</span>
                   </div>
                   {hasKostenIncl && (
-                    <div className="flex items-center gap-2" title="Werkgeverslasten + Kosten Extern + overige kosten uit Kosten-pagina">
+                    <div className="flex items-center gap-2" title="Werkgeverslasten + Kosten Extern + dagelijkse kosten uit Kosten-pagina">
                       <div className="w-4 h-0.5 bg-red-500" />
-                      <span className="text-xs text-red-300/80">Kosten incl. dagelijks {years[2]}</span>
+                      <span className="text-xs text-red-300/80">Kosten {years[2]} (totaal)</span>
                     </div>
                   )}
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-0.5 bg-green-500/40" style={{ borderTop: '2px dashed rgba(34,197,94,0.4)' }} />
                     <span className="text-xs text-white/40">Omzet {years[1]}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" title="Alleen werkgeverslasten + kosten extern">
                     <div className="w-4 h-0.5 bg-orange-500/40" style={{ borderTop: '2px dashed rgba(249,115,22,0.4)' }} />
-                    <span className="text-xs text-white/40">Kosten {years[1]}</span>
+                    <span className="text-xs text-white/40">Werkgeverslasten {years[1]}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-0.5 bg-green-500/25" style={{ borderTop: '2px dashed rgba(34,197,94,0.25)' }} />
                     <span className="text-xs text-white/30">Omzet {years[0]}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" title="Alleen werkgeverslasten + kosten extern">
                     <div className="w-4 h-0.5 bg-orange-500/25" style={{ borderTop: '2px dashed rgba(249,115,22,0.25)' }} />
-                    <span className="text-xs text-white/30">Kosten {years[0]}</span>
+                    <span className="text-xs text-white/30">Werkgeverslasten {years[0]}</span>
                   </div>
                 </div>
               </div>
