@@ -1635,46 +1635,53 @@ export default function FinancienPage() {
             )
           })()}
 
-          {/* Area Chart - Omzet vs Kosten */}
+          {/* Area Chart - Omzet vs Totale Kosten (volledig: wkz+pensioen-UWV-ASR+mgmt+overig) */}
           {(() => {
             const chartHeight = 280
-            const chartPadding = { top: 20, right: 20, bottom: 40, left: 70 }
-            const plotWidth = 100 - chartPadding.left * 100 / 800 - chartPadding.right * 100 / 800
             const svgWidth = 800
             const svgHeight = chartHeight
 
-            // Current year data
+            // Helper: totale kosten per maand voor een jaar (volledige formule)
+            const totaleKostenArr = (year: number) => {
+              const d = getDataForYear(year)
+              const wgl = wglPerMonth[year] || Array(12).fill(0)
+              const uwv = uwvPerMonth[year] || Array(12).fill(0)
+              const asr = asrPerMonth[year] || Array(12).fill(0)
+              const mgmt = mgmtPerMonth[year] || Array(12).fill(0)
+              const overig = overigKostenPerYear[year] || Array(12).fill(0)
+              return Array.from({ length: 12 }, (_, i) =>
+                (d.werkgeverslasten[i] || 0) + (wgl[i] || 0)
+                - (uwv[i] || 0) - (asr[i] || 0)
+                + (mgmt[i] || 0) + (overig[i] || 0)
+              )
+            }
+
             const currentYrData = getDataForYear(years[2])
             const currentOmzet = currentYrData.omzet
-            const currentKosten = currentYrData.werkgeverslasten.slice()
-            // Kosten incl. overige kosten uit Kosten-pagina (alleen 2026)
-            const currentKostenIncl = currentKosten.map((v, i) => v + (monthlyCosts2026[i] || 0))
+            const currentKosten = totaleKostenArr(years[2])
 
-            // Find last month with actual data for current year (non-zero omzet of kosten of overige kosten)
+            // Last month with data
             let lastDataMonth = -1
             for (let i = 11; i >= 0; i--) {
-              if (currentOmzet[i] !== 0 || currentKosten[i] !== 0 || (monthlyCosts2026[i] || 0) !== 0) {
+              if (currentOmzet[i] !== 0 || currentKosten[i] !== 0) {
                 lastDataMonth = i
                 break
               }
             }
-            // If no data, show nothing
             const monthsToShow = lastDataMonth + 1
 
-            // Previous year data (full 12 months) — 2025
+            // 2025 — full 12 months
             const prevYear2Data = getDataForYear(years[1])
             const prev2Omzet = prevYear2Data.omzet
-            const prev2Kosten = prevYear2Data.werkgeverslasten.slice()
+            const prev2Kosten = totaleKostenArr(years[1])
 
-            // Find global min/max for Y scale
             const allVals = [
               ...prev2Omzet, ...prev2Kosten,
               ...currentOmzet.slice(0, monthsToShow),
               ...currentKosten.slice(0, monthsToShow),
-              ...currentKostenIncl.slice(0, monthsToShow)
             ].filter(v => v !== 0)
             const yMin = Math.min(0, ...allVals) * 1.1
-            const yMax = Math.max(...allVals) * 1.15
+            const yMax = Math.max(...allVals, 1) * 1.15
 
             const plotLeft = 70
             const plotRight = svgWidth - 20
@@ -1710,8 +1717,6 @@ export default function FinancienPage() {
 
             const currentOmzetPts = currentOmzet.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
             const currentKostenPts = currentKosten.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
-            const currentKostenInclPts = currentKostenIncl.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
-            const hasKostenIncl = monthlyCosts2026.slice(0, monthsToShow).some(v => v !== 0)
 
             const prev2OmzetPts = prev2Omzet.map((v, i) => ({ x: getX(i), y: getY(v) }))
             const prev2KostenPts = prev2Kosten.map((v, i) => ({ x: getX(i), y: getY(v) }))
@@ -1725,7 +1730,10 @@ export default function FinancienPage() {
 
             return (
               <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-                <h3 className="text-white font-medium mb-4">Omzet vs Kosten per periode</h3>
+                <h3 className="text-white font-medium">Omzet vs Totale Kosten per periode</h3>
+                <p className="text-xs text-gray-500 mt-1 mb-4">
+                  Volledige kostenformule (werkgeverslasten + pensioen − UWV/ASR + mgmt fee + overige). 2025 dashed, 2026 gevulde area.
+                </p>
                 <div className="relative" style={{ height: chartHeight }}>
                   <svg width="100%" height="100%" viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="xMidYMid meet">
                     <defs>
@@ -1766,19 +1774,6 @@ export default function FinancienPage() {
                         <path d={areaPath(currentKostenPts)} fill="url(#kostenGradient)" />
                         <path d={smoothPath(currentKostenPts)} fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
-                        {/* Kosten incl. overige kosten — alleen lijn, geen area-fill */}
-                        {hasKostenIncl && (
-                          <>
-                            <path d={smoothPath(currentKostenInclPts)} fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                            {currentKostenInclPts.map((pt, i) => (
-                              <g key={`ki-${i}`}>
-                                <circle cx={pt.x} cy={pt.y} r="5" fill="#ef4444" opacity="0.2" />
-                                <circle cx={pt.x} cy={pt.y} r="3" fill="#ef4444" />
-                              </g>
-                            ))}
-                          </>
-                        )}
-
                         {/* Data points for current year */}
                         {currentOmzetPts.map((pt, i) => (
                           <g key={`o-${i}`}>
@@ -1810,23 +1805,17 @@ export default function FinancienPage() {
                     <div className="w-4 h-3 rounded-sm bg-green-500/60" />
                     <span className="text-xs text-white/70">Omzet {years[2]}</span>
                   </div>
-                  <div className="flex items-center gap-2" title="Alleen werkgeverslasten + kosten extern, zónder dagelijkse kosten uit Kosten-pagina">
+                  <div className="flex items-center gap-2">
                     <div className="w-4 h-3 rounded-sm bg-orange-500/60" />
-                    <span className="text-xs text-white/70">Werkgeverslasten {years[2]}</span>
+                    <span className="text-xs text-white/70">Totale Kosten {years[2]}</span>
                   </div>
-                  {hasKostenIncl && (
-                    <div className="flex items-center gap-2" title="Werkgeverslasten + Kosten Extern + dagelijkse kosten uit Kosten-pagina">
-                      <div className="w-4 h-0.5 bg-red-500" />
-                      <span className="text-xs text-red-300/80">Kosten {years[2]} (totaal)</span>
-                    </div>
-                  )}
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-0.5 bg-green-500/40" style={{ borderTop: '2px dashed rgba(34,197,94,0.4)' }} />
                     <span className="text-xs text-white/40">Omzet {years[1]}</span>
                   </div>
-                  <div className="flex items-center gap-2" title="Alleen werkgeverslasten + kosten extern">
+                  <div className="flex items-center gap-2">
                     <div className="w-4 h-0.5 bg-orange-500/40" style={{ borderTop: '2px dashed rgba(249,115,22,0.4)' }} />
-                    <span className="text-xs text-white/40">Werkgeverslasten {years[1]}</span>
+                    <span className="text-xs text-white/40">Totale Kosten {years[1]}</span>
                   </div>
                 </div>
               </div>
@@ -2064,21 +2053,32 @@ export default function FinancienPage() {
                     )
                   })}
 
-                  {/* Saldo — 2025 en 2026 */}
+                  {/* Bedrijfsresultaat — omzet minus volledige kosten (matcht jaarrekening) */}
                   {years.slice(1).map((year, yearIdx) => {
                     const isCurrent = yearIdx === 1
+                    const d = getDataForYear(year)
+                    const wgl = wglPerMonth[year] || Array(12).fill(0)
+                    const uwv = uwvPerMonth[year] || Array(12).fill(0)
+                    const asr = asrPerMonth[year] || Array(12).fill(0)
+                    const mgmt = mgmtPerMonth[year] || Array(12).fill(0)
+                    const overig = overigKostenPerYear[year] || Array(12).fill(0)
+                    const monthlyBedrijfsresultaat = periods.map((_, i) =>
+                      (d.omzet[i] || 0)
+                      - ((d.werkgeverslasten[i] || 0) + (wgl[i] || 0) - (uwv[i] || 0) - (asr[i] || 0) + (mgmt[i] || 0) + (overig[i] || 0))
+                    )
+                    const totaalBedrijfsresultaat = monthlyBedrijfsresultaat.reduce((s, v) => s + v, 0)
                     return (
-                      <tr key={`saldo-${year}`} className={isCurrent ? 'bg-workx-lime/20' : 'bg-cyan-500/10'}>
-                        <td className={`py-3 px-4 font-medium ${isCurrent ? 'text-workx-lime' : 'text-cyan-400'}`}>
-                          Saldo {year}
+                      <tr key={`bedrijfsresultaat-${year}`} className={isCurrent ? 'bg-workx-lime/20' : 'bg-cyan-500/10'}>
+                        <td className={`py-3 px-4 font-medium ${isCurrent ? 'text-workx-lime' : 'text-cyan-400'}`} title="Omzet minus volledige kosten (werkgeverslasten + pensioen − UWV/ASR + mgmt fee + overige kosten). Matcht jaarrekening.">
+                          Bedrijfsresultaat {year}
                         </td>
                         <td></td>
-                        {calculations.saldo[year].map((v, i) => (
+                        {monthlyBedrijfsresultaat.map((v, i) => (
                           <td key={i} className={`text-right py-3 px-4 font-medium ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {formatCurrency(v)}
                           </td>
                         ))}
-                        <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[year] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <td className={`text-right py-3 px-4 font-bold ${totaalBedrijfsresultaat >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {formatCurrency(calculations.saldoTotals[year])}
                         </td>
                       </tr>
@@ -2100,19 +2100,24 @@ export default function FinancienPage() {
             if (lastMonth === 0) lastMonth = 12
             const periodLabel = lastMonth === 12 ? 'Heel jaar' : `P1–P${lastMonth}`
 
-            // Bereken totalen tot en met lastMonth voor 2025 en 2026
+            // Bereken totalen tot en met lastMonth voor 2025 en 2026 — volledige kostenformule
             const compYears = years.slice(1) // [2025, 2026]
             const sumTo = (arr: number[], months: number) => arr.slice(0, months).reduce((s, v) => s + v, 0)
+            const totaleKostenFor = (y: number) => {
+              const d = getDataForYear(y)
+              const wgl = wglPerMonth[y] || Array(12).fill(0)
+              const uwv = uwvPerMonth[y] || Array(12).fill(0)
+              const asr = asrPerMonth[y] || Array(12).fill(0)
+              const mgmt = mgmtPerMonth[y] || Array(12).fill(0)
+              const overig = overigKostenPerYear[y] || Array(12).fill(0)
+              return sumTo(d.werkgeverslasten, lastMonth) + sumTo(wgl, lastMonth)
+                - sumTo(uwv, lastMonth) - sumTo(asr, lastMonth)
+                + sumTo(mgmt, lastMonth) + sumTo(overig, lastMonth)
+            }
             const metrics = [
               { label: 'Omzet', values: compYears.map(y => sumTo(getDataForYear(y).omzet, lastMonth)), isCurrency: true, positiveIsGood: true },
-              { label: 'Totale Kosten', values: compYears.map(y => {
-                const d = getDataForYear(y)
-                return sumTo(d.werkgeverslasten, lastMonth) + sumTo(d.kostenExtern, lastMonth)
-              }), isCurrency: true, positiveIsGood: false },
-              { label: 'Saldo', values: compYears.map(y => {
-                const d = getDataForYear(y)
-                return sumTo(d.omzet, lastMonth) - sumTo(d.werkgeverslasten, lastMonth) - sumTo(d.kostenExtern, lastMonth)
-              }), isCurrency: true, positiveIsGood: true },
+              { label: 'Totale Kosten', values: compYears.map(totaleKostenFor), isCurrency: true, positiveIsGood: false },
+              { label: 'Bedrijfsresultaat', values: compYears.map(y => sumTo(getDataForYear(y).omzet, lastMonth) - totaleKostenFor(y)), isCurrency: true, positiveIsGood: true },
               { label: 'Uren', values: compYears.map(y => sumTo(getDataForYear(y).uren, lastMonth)), isCurrency: false, positiveIsGood: true },
             ]
 
@@ -2201,9 +2206,9 @@ export default function FinancienPage() {
               <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
                 <div className="flex items-start justify-between mb-1 gap-4 flex-wrap">
                   <div>
-                    <h3 className="text-white font-medium">Saldo incl. overige kosten en UWV/ASR (alleen {currentYear})</h3>
+                    <h3 className="text-white font-medium">{currentYear} per maand — volledig kostenoverzicht</h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      Werkgeverslasten + Kosten Extern + overige kosten uit <a href="/dashboard/kosten" className="text-workx-lime hover:underline">Kosten-pagina</a>, minus UWV (zwangerschapsverlof) en ASR (verzuim) terugbetalingen. Vorige jaren ontbreekt de overige-kosten-data, dus de jaarvergelijking hierboven blijft zonder die post.
+                      Per maand: werkgeverslasten (bruto + pensioen − UWV/ASR), mgmt fee, overige kosten en saldo. Voor {currentYear - 1} vergelijking, zie de jaarrekening en cumulatieve grafieken hierboven.
                     </p>
                   </div>
                   <div className="text-right">
@@ -2357,18 +2362,21 @@ export default function FinancienPage() {
                 <div className="mt-6 space-y-2">
                   <p className="text-xs font-medium text-white/70 mb-2">Per maand: Omzet vs. Totale Kosten</p>
                   {(() => {
+                    const mgmtYear = mgmtPerMonth[currentYear] || Array(12).fill(0)
                     const monthMaxes = periods.map((_, i) => {
                       const wkzNetVal = (cur.werkgeverslasten[i] || 0) + (wglYear[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
-                      return Math.max(cur.omzet[i] || 0, wkzNetVal + (monthlyCosts2026[i] || 0))
+                      return Math.max(cur.omzet[i] || 0, wkzNetVal + (mgmtYear[i] || 0) + (monthlyCosts2026[i] || 0))
                     })
                     const overallMax = Math.max(...monthMaxes, 1)
                     return periods.map((p, i) => {
                       const om = cur.omzet[i] || 0
                       const wkzNet = (cur.werkgeverslasten[i] || 0) + (wglYear[i] || 0) - (uwv[i] || 0) - (asr[i] || 0)
+                      const mgmtVal = mgmtYear[i] || 0
                       const dag = monthlyCosts2026[i] || 0
-                      const tot = wkzNet + dag
+                      const tot = wkzNet + mgmtVal + dag
                       const omPct = (Math.max(om, 0) / overallMax) * 100
                       const wkzPct = (Math.max(wkzNet, 0) / overallMax) * 100
+                      const mgmtPct = (mgmtVal / overallMax) * 100
                       const dagPct = (dag / overallMax) * 100
                       if (om === 0 && tot === 0) return null
                       return (
@@ -2385,6 +2393,7 @@ export default function FinancienPage() {
                             </div>
                             <div className="h-2.5 bg-white/5 rounded overflow-hidden flex">
                               <div className="h-full bg-gray-400/60" style={{ width: `${wkzPct}%` }} title="Werkgeverslasten (na UWV/ASR)" />
+                              <div className="h-full bg-cyan-500/70" style={{ width: `${mgmtPct}%` }} title="Management fee" />
                               <div className="h-full bg-orange-500/70" style={{ width: `${dagPct}%` }} title="Overige kosten" />
                             </div>
                           </div>
@@ -2395,6 +2404,7 @@ export default function FinancienPage() {
                   <div className="flex items-center gap-4 text-[10px] text-gray-500 mt-3 pt-3 border-t border-white/5">
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-workx-lime/70" /> Omzet</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-gray-400/60" /> Werkgeverslasten</span>
+                    <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-cyan-500/70" /> Mgmt fee</span>
                     <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded bg-orange-500/70" /> Overige kosten</span>
                   </div>
                 </div>
