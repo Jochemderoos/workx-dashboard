@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import InzichtenTab from '@/components/financien/InzichtenTab'
+import JaarTab from '@/components/financien/JaarTab'
 import jsPDF from 'jspdf'
 import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
@@ -114,7 +115,7 @@ interface EmployeeData {
   parentalLeaves: ParentalLeave[]
 }
 
-type TabType = 'overzicht' | 'budgetten' | 'salarishuis' | 'inzichten'
+type TabType = 'overzicht' | 'budgetten' | 'salarishuis' | 'inzichten' | `jaar-${number}`
 
 export default function FinancienPage() {
   const { data: session } = useSession()
@@ -734,9 +735,12 @@ export default function FinancienPage() {
     doc.rect(15, y, pageWidth - 30, 10, 'F')
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
+    // PDF vergelijkt 2025 (years[1]) vs 2026 (years[2])
+    const pdfPrevYear = years[1]
+    const pdfCurYear = years[2]
     doc.text('Categorie', col1, y + 7)
-    doc.text(String(years[0]), col2, y + 7, { align: 'right' })
-    doc.text(String(years[1]), col3, y + 7, { align: 'right' })
+    doc.text(String(pdfPrevYear), col2, y + 7, { align: 'right' })
+    doc.text(String(pdfCurYear), col3, y + 7, { align: 'right' })
     doc.text('Verschil', col4, y + 7, { align: 'right' })
     y += 15
 
@@ -745,9 +749,9 @@ export default function FinancienPage() {
 
     // Werkgeverslasten
     doc.text('Werkgeverslasten', col1, y)
-    doc.text(formatCurrency(calculations.totals.werkgeverslasten[years[0]]), col2, y, { align: 'right' })
-    doc.text(formatCurrency(calculations.totals.werkgeverslasten[years[1]]), col3, y, { align: 'right' })
-    const wlDiff = calculations.totals.werkgeverslasten[years[1]] - calculations.totals.werkgeverslasten[years[0]]
+    doc.text(formatCurrency(calculations.totals.werkgeverslasten[pdfPrevYear]), col2, y, { align: 'right' })
+    doc.text(formatCurrency(calculations.totals.werkgeverslasten[pdfCurYear]), col3, y, { align: 'right' })
+    const wlDiff = calculations.totals.werkgeverslasten[pdfCurYear] - calculations.totals.werkgeverslasten[pdfPrevYear]
     doc.setTextColor(wlDiff < 0 ? 0 : 200, wlDiff < 0 ? 150 : 50, 50)
     doc.text(formatCurrency(wlDiff), col4, y, { align: 'right' })
     doc.setTextColor(50, 50, 50)
@@ -755,9 +759,9 @@ export default function FinancienPage() {
 
     // Omzet
     doc.text('Omzet', col1, y)
-    doc.text(formatCurrency(calculations.totals.omzet[years[0]]), col2, y, { align: 'right' })
-    doc.text(formatCurrency(calculations.totals.omzet[years[1]]), col3, y, { align: 'right' })
-    const omzetDiff = calculations.totals.omzet[years[1]] - calculations.totals.omzet[years[0]]
+    doc.text(formatCurrency(calculations.totals.omzet[pdfPrevYear]), col2, y, { align: 'right' })
+    doc.text(formatCurrency(calculations.totals.omzet[pdfCurYear]), col3, y, { align: 'right' })
+    const omzetDiff = calculations.totals.omzet[pdfCurYear] - calculations.totals.omzet[pdfPrevYear]
     doc.setTextColor(omzetDiff > 0 ? 0 : 200, omzetDiff > 0 ? 150 : 50, 50)
     doc.text(formatCurrency(omzetDiff), col4, y, { align: 'right' })
     doc.setTextColor(50, 50, 50)
@@ -765,9 +769,9 @@ export default function FinancienPage() {
 
     // Uren
     doc.text('Uren', col1, y)
-    doc.text(formatNumber(calculations.totals.uren[years[0]]), col2, y, { align: 'right' })
-    doc.text(formatNumber(calculations.totals.uren[years[1]]), col3, y, { align: 'right' })
-    const urenDiff = calculations.totals.uren[years[1]] - calculations.totals.uren[years[0]]
+    doc.text(formatNumber(calculations.totals.uren[pdfPrevYear]), col2, y, { align: 'right' })
+    doc.text(formatNumber(calculations.totals.uren[pdfCurYear]), col3, y, { align: 'right' })
+    const urenDiff = calculations.totals.uren[pdfCurYear] - calculations.totals.uren[pdfPrevYear]
     doc.setTextColor(urenDiff > 0 ? 0 : 200, urenDiff > 0 ? 150 : 50, 50)
     doc.text(formatNumber(urenDiff), col4, y, { align: 'right' })
     doc.setTextColor(50, 50, 50)
@@ -779,9 +783,9 @@ export default function FinancienPage() {
     doc.rect(15, y - 5, pageWidth - 30, 12, 'F')
     doc.setTextColor(30, 30, 30)
     doc.text('Saldo', col1, y + 3)
-    doc.text(formatCurrency(calculations.saldoTotals[years[0]]), col2, y + 3, { align: 'right' })
-    doc.text(formatCurrency(calculations.saldoTotals[years[1]]), col3, y + 3, { align: 'right' })
-    const saldoDiff = calculations.saldoTotals[years[1]] - calculations.saldoTotals[years[0]]
+    doc.text(formatCurrency(calculations.saldoTotals[pdfPrevYear]), col2, y + 3, { align: 'right' })
+    doc.text(formatCurrency(calculations.saldoTotals[pdfCurYear]), col3, y + 3, { align: 'right' })
+    const saldoDiff = calculations.saldoTotals[pdfCurYear] - calculations.saldoTotals[pdfPrevYear]
     doc.text(formatCurrency(saldoDiff), col4, y + 3, { align: 'right' })
     y += 25
 
@@ -825,11 +829,11 @@ export default function FinancienPage() {
       doc.setFillColor(249, 115, 22)
       doc.rect(startX, legendY, 4, 4, 'F')
       doc.setTextColor(100, 100, 100)
-      doc.text(String(years[0]), startX + 6, legendY + 3)
+      doc.text(String(pdfPrevYear), startX + 6, legendY + 3)
 
       doc.setFillColor(6, 182, 212)
       doc.rect(startX + 25, legendY, 4, 4, 'F')
-      doc.text(String(years[1]), startX + 31, legendY + 3)
+      doc.text(String(pdfCurYear), startX + 31, legendY + 3)
 
       return legendY + 10
     }
@@ -841,16 +845,16 @@ export default function FinancienPage() {
     const rightX = 110
 
     // Row 1: Omzet and Werkgeverslasten
-    drawBarChart('Omzet', [getDataForYear(years[0]).omzet, getDataForYear(years[1]).omzet], y, chartWidth, chartHeight, leftX)
+    drawBarChart('Omzet', [getDataForYear(pdfPrevYear).omzet, getDataForYear(pdfCurYear).omzet], y, chartWidth, chartHeight, leftX)
     const afterRow1 = drawBarChart('Werkgeverslasten', [
-      getDataForYear(years[0]).werkgeverslasten,
-      getDataForYear(years[1]).werkgeverslasten,
+      getDataForYear(pdfPrevYear).werkgeverslasten,
+      getDataForYear(pdfCurYear).werkgeverslasten,
     ], y, chartWidth, chartHeight, rightX)
     y = afterRow1 + 5
 
     // Row 2: Saldo and Uren
-    drawBarChart('Saldo', [calculations.saldo[years[0]], calculations.saldo[years[1]]], y, chartWidth, chartHeight, leftX)
-    const afterRow2 = drawBarChart('Uren', [getDataForYear(years[0]).uren, getDataForYear(years[1]).uren], y, chartWidth, chartHeight, rightX)
+    drawBarChart('Saldo', [calculations.saldo[pdfPrevYear], calculations.saldo[pdfCurYear]], y, chartWidth, chartHeight, leftX)
+    const afterRow2 = drawBarChart('Uren', [getDataForYear(pdfPrevYear).uren, getDataForYear(pdfCurYear).uren], y, chartWidth, chartHeight, rightX)
     y = afterRow2 + 10
 
     // Budgets section
@@ -958,6 +962,8 @@ export default function FinancienPage() {
         <div className="flex gap-2">
           {[
             { id: 'overzicht' as TabType, label: 'Overzicht', icon: Icons.chart },
+            { id: `jaar-${years[1]}` as TabType, label: String(years[1]), icon: Icons.calendar },
+            { id: `jaar-${years[2]}` as TabType, label: String(years[2]), icon: Icons.calendar },
             { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
             { id: 'salarishuis' as TabType, label: 'Salarishuis', icon: Icons.euro },
             ...(isManager ? [{ id: 'inzichten' as TabType, label: 'Inzichten', icon: Icons.activity }] : []),
@@ -981,14 +987,10 @@ export default function FinancienPage() {
       {/* Overzicht Tab */}
       {activeTab === 'overzicht' && (
         <div className="space-y-6">
-          {/* KPI Cards — alle cijfers over dezelfde periode (t/m laatst
-              ingevulde maand in {currentYear}). 2025 wordt voor exact
-              dezelfde periode erbij gehaald (appels-appels). UWV/ASR
-              terugbetalingen worden van werkgeverslasten afgetrokken
-              voor beide jaren — daar hebben we van beide jaren data.
-              Overige kosten staan los (alleen 2026), dus daar tonen we
-              twee diff-regels: incl. (volledig beeld) en excl. (puur
-              werkgeverslasten-vergelijking met UWV/ASR meegenomen). */}
+          {/* KPI Cards — 2025 vs 2026 appels-appels: beide jaren
+              werkgeverslasten = bruto loon + pensioen − UWV − ASR,
+              ex BTW. T/m laatste maand met invoer in {currentYear}.
+              2024 valt buiten de vergelijking (andere kostenbasis). */}
           {(() => {
             const cur = getDataForYear(years[2])
             let lastMonth = 0
@@ -1004,8 +1006,6 @@ export default function FinancienPage() {
             const asrCurArr = asrPerMonth[years[2]] || Array(12).fill(0)
             const uwvPrevArr = uwvPerMonth[years[1]] || Array(12).fill(0)
             const asrPrevArr = asrPerMonth[years[1]] || Array(12).fill(0)
-            const zzpCurArr = zzpPerMonth[years[2]] || Array(12).fill(0)
-            const zzpPrevArr = zzpPerMonth[years[1]] || Array(12).fill(0)
             const wglCurArr = wglPerMonth[years[2]] || Array(12).fill(0)
             const wglPrevArr = wglPerMonth[years[1]] || Array(12).fill(0)
             const mgmtCurArr = mgmtPerMonth[years[2]] || Array(12).fill(0)
@@ -1015,35 +1015,21 @@ export default function FinancienPage() {
 
             // 2026 t/m lastMonth — Werkgeverslasten = bruto loon + pensioen − UWV − ASR
             const omzetCur = sumTo(cur.omzet, lastMonth)
-            const wkzBruto = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(wglCurArr, lastMonth)
-            const uwvCur = sumTo(uwvCurArr, lastMonth)
-            const asrCur = sumTo(asrCurArr, lastMonth)
-            const wkzNet = wkzBruto - uwvCur - asrCur
-            const zzpCur = sumTo(zzpCurArr, lastMonth)
-            const advocatenKosten = wkzNet + zzpCur  // info-cijfer: totale advocatenkosten
+            const wkzNet = sumTo(cur.werkgeverslasten, lastMonth) + sumTo(wglCurArr, lastMonth) - sumTo(uwvCurArr, lastMonth) - sumTo(asrCurArr, lastMonth)
             const mgmtCur = sumTo(mgmtCurArr, lastMonth)
             const overigeKosten = sumTo(overigCurArr, lastMonth)
             const totaleKosten = wkzNet + overigeKosten + mgmtCur
             const saldoTotaal = omzetCur - totaleKosten
-            const saldoExcl = omzetCur - wkzNet
             const urenCur = sumTo(cur.uren, lastMonth)
 
-            // 2025 t/m dezelfde lastMonth — incl. pensioen + UWV/ASR (appels-appels)
+            // 2025 t/m dezelfde lastMonth — zelfde berekening (appels-appels)
             const omzetPrev = sumTo(prev.omzet, lastMonth)
-            const wkzBrutoPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(wglPrevArr, lastMonth)
-            const uwvPrev = sumTo(uwvPrevArr, lastMonth)
-            const asrPrev = sumTo(asrPrevArr, lastMonth)
-            const wkzNetPrev = wkzBrutoPrev - uwvPrev - asrPrev
-            const zzpPrev = sumTo(zzpPrevArr, lastMonth)
-            const advocatenKostenPrev = wkzNetPrev + zzpPrev
+            const wkzNetPrev = sumTo(prev.werkgeverslasten, lastMonth) + sumTo(wglPrevArr, lastMonth) - sumTo(uwvPrevArr, lastMonth) - sumTo(asrPrevArr, lastMonth)
             const mgmtPrev = sumTo(mgmtPrevArr, lastMonth)
             const overigPrev = sumTo(overigPrevArr, lastMonth)
             const totaleKostenPrev = wkzNetPrev + overigPrev + mgmtPrev
             const saldoPrev = omzetPrev - totaleKostenPrev
             const urenPrev = sumTo(prev.uren, lastMonth)
-            const hasUwvAsr = (uwvCur + asrCur + uwvPrev + asrPrev) > 0
-            const hasZzp = (zzpCur + zzpPrev) > 0
-            const hasMgmt = (mgmtCur + mgmtPrev) > 0
 
             type Diff = { amount: number; label: string; positive: boolean; isNumber?: boolean }
             const kpis: Array<{ label: string; value: string; diffs: Diff[] }> = [
@@ -1051,32 +1037,28 @@ export default function FinancienPage() {
                 label: `Omzet ${years[2]} (${periodLabel})`,
                 value: formatCurrency(omzetCur),
                 diffs: [
-                  { amount: omzetCur - omzetPrev, label: `vs ${years[1]} ${periodLabel}`, positive: true },
+                  { amount: omzetCur - omzetPrev, label: `vs ${years[1]}`, positive: true },
                 ],
               },
               {
                 label: `Totale Kosten ${years[2]} (${periodLabel})`,
                 value: formatCurrency(totaleKosten),
                 diffs: [
-                  { amount: totaleKosten - totaleKostenPrev, label: `Totale Kosten vs ${years[1]} (appels-appels)`, positive: false },
-                  { amount: wkzNet - wkzNetPrev, label: `Werkgeverslasten vs ${years[1]}`, positive: false },
-                  ...(hasMgmt ? [{ amount: mgmtCur - mgmtPrev, label: `waarvan Management fee vs ${years[1]}`, positive: false }] : []),
-                  ...(hasZzp ? [{ amount: advocatenKosten - advocatenKostenPrev, label: `Advocaten (loon + ZZP) vs ${years[1]}`, positive: false }] : []),
+                  { amount: totaleKosten - totaleKostenPrev, label: `vs ${years[1]}`, positive: false },
                 ],
               },
               {
                 label: `Saldo ${years[2]} (${periodLabel})`,
                 value: formatCurrency(saldoTotaal),
                 diffs: [
-                  { amount: saldoTotaal - saldoPrev, label: `na Totale Kosten vs ${years[1]} (appels-appels)`, positive: true },
-                  { amount: saldoExcl - (omzetPrev - wkzNetPrev), label: `na Werkgeverslasten vs ${years[1]}`, positive: true },
+                  { amount: saldoTotaal - saldoPrev, label: `vs ${years[1]}`, positive: true },
                 ],
               },
               {
                 label: `Uren ${years[2]} (${periodLabel})`,
                 value: formatNumber(urenCur),
                 diffs: [
-                  { amount: urenCur - urenPrev, label: `vs ${years[1]} ${periodLabel}`, positive: true, isNumber: true },
+                  { amount: urenCur - urenPrev, label: `vs ${years[1]}`, positive: true, isNumber: true },
                 ],
               },
             ]
@@ -1424,17 +1406,13 @@ export default function FinancienPage() {
             // If no data, show nothing
             const monthsToShow = lastDataMonth + 1
 
-            // Previous years data (full 12 months)
-            const prevYear1Data = getDataForYear(years[0])
+            // Previous year data (full 12 months) — 2025
             const prevYear2Data = getDataForYear(years[1])
-            const prev1Omzet = prevYear1Data.omzet
-            const prev1Kosten = prevYear1Data.werkgeverslasten.slice()
             const prev2Omzet = prevYear2Data.omzet
             const prev2Kosten = prevYear2Data.werkgeverslasten.slice()
 
             // Find global min/max for Y scale
             const allVals = [
-              ...prev1Omzet, ...prev1Kosten,
               ...prev2Omzet, ...prev2Kosten,
               ...currentOmzet.slice(0, monthsToShow),
               ...currentKosten.slice(0, monthsToShow),
@@ -1480,8 +1458,6 @@ export default function FinancienPage() {
             const currentKostenInclPts = currentKostenIncl.slice(0, monthsToShow).map((v, i) => ({ x: getX(i), y: getY(v) }))
             const hasKostenIncl = monthlyCosts2026.slice(0, monthsToShow).some(v => v !== 0)
 
-            const prev1OmzetPts = prev1Omzet.map((v, i) => ({ x: getX(i), y: getY(v) }))
-            const prev1KostenPts = prev1Kosten.map((v, i) => ({ x: getX(i), y: getY(v) }))
             const prev2OmzetPts = prev2Omzet.map((v, i) => ({ x: getX(i), y: getY(v) }))
             const prev2KostenPts = prev2Kosten.map((v, i) => ({ x: getX(i), y: getY(v) }))
 
@@ -1523,14 +1499,8 @@ export default function FinancienPage() {
                       <line x1={plotLeft} y1={getY(0)} x2={plotRight} y2={getY(0)} stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="4,4" />
                     )}
 
-                    {/* Previous year lines (thin, subtle) */}
-                    {/* Year 0 - omzet */}
-                    <path d={smoothPath(prev1OmzetPts)} fill="none" stroke="#22c55e" strokeWidth="1.2" strokeOpacity="0.25" strokeDasharray="4,3" />
-                    {/* Year 0 - kosten */}
-                    <path d={smoothPath(prev1KostenPts)} fill="none" stroke="#f97316" strokeWidth="1.2" strokeOpacity="0.25" strokeDasharray="4,3" />
-                    {/* Year 1 - omzet */}
+                    {/* Vorige jaar (2025) lijnen — dashed */}
                     <path d={smoothPath(prev2OmzetPts)} fill="none" stroke="#22c55e" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="6,3" />
-                    {/* Year 1 - kosten */}
                     <path d={smoothPath(prev2KostenPts)} fill="none" stroke="#f97316" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="6,3" />
 
                     {/* Current year filled areas */}
@@ -1603,14 +1573,6 @@ export default function FinancienPage() {
                     <div className="w-4 h-0.5 bg-orange-500/40" style={{ borderTop: '2px dashed rgba(249,115,22,0.4)' }} />
                     <span className="text-xs text-white/40">Werkgeverslasten {years[1]}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-green-500/25" style={{ borderTop: '2px dashed rgba(34,197,94,0.25)' }} />
-                    <span className="text-xs text-white/30">Omzet {years[0]}</span>
-                  </div>
-                  <div className="flex items-center gap-2" title="Alleen werkgeverslasten + kosten extern">
-                    <div className="w-4 h-0.5 bg-orange-500/25" style={{ borderTop: '2px dashed rgba(249,115,22,0.25)' }} />
-                    <span className="text-xs text-white/30">Werkgeverslasten {years[0]}</span>
-                  </div>
                 </div>
               </div>
             )
@@ -1641,11 +1603,10 @@ export default function FinancienPage() {
               return result
             }
 
-            const cum0 = cumSaldo(years[0], 12)
             const cum1 = cumSaldo(years[1], 12)
             const cum2 = cumSaldo(years[2], lastMonth)
 
-            const allVals = [...cum0, ...cum1, ...cum2]
+            const allVals = [...cum1, ...cum2]
             const yMin = Math.min(0, ...allVals) * 1.1
             const yMax = Math.max(...allVals) * 1.15
             const range = yMax - yMin || 1
@@ -1670,7 +1631,6 @@ export default function FinancienPage() {
               return `${line} L ${points[points.length - 1].x},${pB} L ${points[0].x},${pB} Z`
             }
 
-            const pts0 = cum0.map((v, i) => ({ x: getX(i), y: getY(v) }))
             const pts1 = cum1.map((v, i) => ({ x: getX(i), y: getY(v) }))
             const pts2 = cum2.map((v, i) => ({ x: getX(i), y: getY(v) }))
 
@@ -1704,8 +1664,7 @@ export default function FinancienPage() {
                     {/* Zero line */}
                     {yMin < 0 && <line x1={pL} y1={getY(0)} x2={pR} y2={getY(0)} stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="4,4" />}
 
-                    {/* Previous years (thin dashed) */}
-                    <path d={smoothPath(pts0)} fill="none" stroke="rgba(249,115,22,0.35)" strokeWidth="1.5" strokeDasharray="4,3" />
+                    {/* Vorig jaar (2025, thin dashed) */}
                     <path d={smoothPath(pts1)} fill="none" stroke="rgba(6,182,212,0.5)" strokeWidth="1.5" strokeDasharray="6,3" />
 
                     {/* Current year (filled) */}
@@ -1744,10 +1703,6 @@ export default function FinancienPage() {
                     <div className="w-4 h-0.5" style={{ borderTop: '2px dashed rgba(6,182,212,0.5)' }} />
                     <span className="text-xs text-white/40">{years[1]}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5" style={{ borderTop: '2px dashed rgba(249,115,22,0.35)' }} />
-                    <span className="text-xs text-white/30">{years[0]}</span>
-                  </div>
                 </div>
               </div>
             )
@@ -1772,77 +1727,87 @@ export default function FinancienPage() {
                 </thead>
                 <tbody>
                   {/* Werkgeverslasten — alleen bruto loon eigen mensen (externen zitten in Kosten) */}
-                  {years.map((year, yearIdx) => {
+                  {years.slice(1).map((year, yearIdx) => {
                     const yearData = getDataForYear(year)
+                    const isCurrent = yearIdx === 1
                     return (
-                      <tr key={`wl-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
+                      <tr key={`wl-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${isCurrent ? 'bg-workx-lime/5' : ''}`}>
                         {yearIdx === 0 && (
-                          <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top" title="Bruto loonkosten van eigen medewerkers. Externe advocaten (Lodewijk) en overige kosten zie je onderaan in de detail-sectie.">
+                          <td rowSpan={2} className="py-3 px-4 text-white font-medium align-top" title="Bruto loonkosten van eigen medewerkers. Externe advocaten (Lodewijk) en overige kosten zie je onderaan in de detail-sectie.">
                             Werkgeverslasten
                           </td>
                         )}
-                        <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
+                        <td className={`py-3 px-4 text-sm ${isCurrent ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
                         {yearData.werkgeverslasten.map((v, i) => (
-                          <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
+                          <td key={i} className={`text-right py-3 px-4 text-sm ${isCurrent ? 'text-workx-lime/80' : 'text-gray-200'}`}>
                             {formatCurrency(v)}
                           </td>
                         ))}
-                        <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
+                        <td className={`text-right py-3 px-4 font-medium ${isCurrent ? 'text-workx-lime' : 'text-white'}`}>
                           {formatCurrency(calculations.totals.werkgeverslasten[year])}
                         </td>
                       </tr>
                     )
                   })}
 
-                  {/* Omzet - all 3 years */}
-                  {years.map((year, yearIdx) => (
-                    <tr key={`omzet-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
-                      {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Omzet</td>}
-                      <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
-                      {getDataForYear(year).omzet.map((v, i) => (
-                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
-                          {formatCurrency(v)}
+                  {/* Omzet — 2025 en 2026 */}
+                  {years.slice(1).map((year, yearIdx) => {
+                    const isCurrent = yearIdx === 1
+                    return (
+                      <tr key={`omzet-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${isCurrent ? 'bg-workx-lime/5' : ''}`}>
+                        {yearIdx === 0 && <td rowSpan={2} className="py-3 px-4 text-white font-medium align-top">Omzet</td>}
+                        <td className={`py-3 px-4 text-sm ${isCurrent ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
+                        {getDataForYear(year).omzet.map((v, i) => (
+                          <td key={i} className={`text-right py-3 px-4 text-sm ${isCurrent ? 'text-workx-lime/80' : 'text-gray-200'}`}>
+                            {formatCurrency(v)}
+                          </td>
+                        ))}
+                        <td className={`text-right py-3 px-4 font-medium ${isCurrent ? 'text-workx-lime' : 'text-white'}`}>
+                          {formatCurrency(calculations.totals.omzet[year])}
                         </td>
-                      ))}
-                      <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
-                        {formatCurrency(calculations.totals.omzet[year])}
-                      </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    )
+                  })}
 
-                  {/* Uren - all 3 years */}
-                  {years.map((year, yearIdx) => (
-                    <tr key={`uren-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${yearIdx === 2 ? 'bg-workx-lime/5' : ''}`}>
-                      {yearIdx === 0 && <td rowSpan={3} className="py-3 px-4 text-white font-medium align-top">Uren</td>}
-                      <td className={`py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
-                      {getDataForYear(year).uren.map((v, i) => (
-                        <td key={i} className={`text-right py-3 px-4 text-sm ${yearIdx === 2 ? 'text-workx-lime/80' : 'text-gray-200'}`}>
-                          {formatNumber(v)}
+                  {/* Uren — 2025 en 2026 */}
+                  {years.slice(1).map((year, yearIdx) => {
+                    const isCurrent = yearIdx === 1
+                    return (
+                      <tr key={`uren-${year}`} className={`border-b border-white/5 hover:bg-white/5 ${isCurrent ? 'bg-workx-lime/5' : ''}`}>
+                        {yearIdx === 0 && <td rowSpan={2} className="py-3 px-4 text-white font-medium align-top">Uren</td>}
+                        <td className={`py-3 px-4 text-sm ${isCurrent ? 'text-workx-lime' : 'text-white/60'}`}>{year}</td>
+                        {getDataForYear(year).uren.map((v, i) => (
+                          <td key={i} className={`text-right py-3 px-4 text-sm ${isCurrent ? 'text-workx-lime/80' : 'text-gray-200'}`}>
+                            {formatNumber(v)}
+                          </td>
+                        ))}
+                        <td className={`text-right py-3 px-4 font-medium ${isCurrent ? 'text-workx-lime' : 'text-white'}`}>
+                          {formatNumber(calculations.totals.uren[year])}
                         </td>
-                      ))}
-                      <td className={`text-right py-3 px-4 font-medium ${yearIdx === 2 ? 'text-workx-lime' : 'text-white'}`}>
-                        {formatNumber(calculations.totals.uren[year])}
-                      </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    )
+                  })}
 
-                  {/* Saldo - all 3 years */}
-                  {years.map((year, yearIdx) => (
-                    <tr key={`saldo-${year}`} className={`${yearIdx === 0 ? 'bg-orange-500/10' : yearIdx === 1 ? 'bg-cyan-500/10' : 'bg-workx-lime/20'}`}>
-                      <td className={`py-3 px-4 font-medium ${yearIdx === 0 ? 'text-orange-400' : yearIdx === 1 ? 'text-cyan-400' : 'text-workx-lime'}`}>
-                        Saldo {year}
-                      </td>
-                      <td></td>
-                      {calculations.saldo[year].map((v, i) => (
-                        <td key={i} className={`text-right py-3 px-4 font-medium ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {formatCurrency(v)}
+                  {/* Saldo — 2025 en 2026 */}
+                  {years.slice(1).map((year, yearIdx) => {
+                    const isCurrent = yearIdx === 1
+                    return (
+                      <tr key={`saldo-${year}`} className={isCurrent ? 'bg-workx-lime/20' : 'bg-cyan-500/10'}>
+                        <td className={`py-3 px-4 font-medium ${isCurrent ? 'text-workx-lime' : 'text-cyan-400'}`}>
+                          Saldo {year}
                         </td>
-                      ))}
-                      <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[year] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {formatCurrency(calculations.saldoTotals[year])}
-                      </td>
-                    </tr>
-                  ))}
+                        <td></td>
+                        {calculations.saldo[year].map((v, i) => (
+                          <td key={i} className={`text-right py-3 px-4 font-medium ${v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {formatCurrency(v)}
+                          </td>
+                        ))}
+                        <td className={`text-right py-3 px-4 font-bold ${calculations.saldoTotals[year] >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {formatCurrency(calculations.saldoTotals[year])}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1859,19 +1824,20 @@ export default function FinancienPage() {
             if (lastMonth === 0) lastMonth = 12
             const periodLabel = lastMonth === 12 ? 'Heel jaar' : `P1–P${lastMonth}`
 
-            // Bereken totalen tot en met lastMonth voor elk jaar
+            // Bereken totalen tot en met lastMonth voor 2025 en 2026
+            const compYears = years.slice(1) // [2025, 2026]
             const sumTo = (arr: number[], months: number) => arr.slice(0, months).reduce((s, v) => s + v, 0)
             const metrics = [
-              { label: 'Omzet', values: years.map(y => sumTo(getDataForYear(y).omzet, lastMonth)), isCurrency: true, positiveIsGood: true },
-              { label: 'Totale Kosten', values: years.map(y => {
+              { label: 'Omzet', values: compYears.map(y => sumTo(getDataForYear(y).omzet, lastMonth)), isCurrency: true, positiveIsGood: true },
+              { label: 'Totale Kosten', values: compYears.map(y => {
                 const d = getDataForYear(y)
                 return sumTo(d.werkgeverslasten, lastMonth) + sumTo(d.kostenExtern, lastMonth)
               }), isCurrency: true, positiveIsGood: false },
-              { label: 'Saldo', values: years.map(y => {
+              { label: 'Saldo', values: compYears.map(y => {
                 const d = getDataForYear(y)
                 return sumTo(d.omzet, lastMonth) - sumTo(d.werkgeverslasten, lastMonth) - sumTo(d.kostenExtern, lastMonth)
               }), isCurrency: true, positiveIsGood: true },
-              { label: 'Uren', values: years.map(y => sumTo(getDataForYear(y).uren, lastMonth)), isCurrency: false, positiveIsGood: true },
+              { label: 'Uren', values: compYears.map(y => sumTo(getDataForYear(y).uren, lastMonth)), isCurrency: false, positiveIsGood: true },
             ]
 
             return (
@@ -1883,15 +1849,15 @@ export default function FinancienPage() {
               <div className="space-y-8">
                 {metrics.map((metric) => {
                   const maxVal = Math.max(...metric.values.map(Math.abs)) || 1
-                  const barColors = ['rgba(249,115,22,0.3)', 'rgba(6,182,212,0.4)', 'rgba(249,255,133,0.5)']
-                  const borderColors = ['rgba(249,115,22,0.5)', 'rgba(6,182,212,0.6)', 'rgba(249,255,133,0.8)']
-                  const textColors = ['text-orange-400/60', 'text-cyan-400/80', 'text-workx-lime']
+                  const barColors = ['rgba(6,182,212,0.4)', 'rgba(249,255,133,0.5)']
+                  const borderColors = ['rgba(6,182,212,0.6)', 'rgba(249,255,133,0.8)']
+                  const textColors = ['text-cyan-400/80', 'text-workx-lime']
 
                   return (
                     <div key={metric.label}>
                       <p className="text-white/80 text-sm font-medium mb-3">{metric.label}</p>
                       <div className="space-y-2">
-                        {years.map((year, i) => {
+                        {compYears.map((year, i) => {
                           const pctChange = i > 0 && metric.values[i - 1] !== 0
                             ? ((metric.values[i] - metric.values[i - 1]) / Math.abs(metric.values[i - 1])) * 100
                             : null
@@ -1910,7 +1876,7 @@ export default function FinancienPage() {
                                     width: `${barPct}%`,
                                     background: barColors[i],
                                     borderRight: `2px solid ${borderColors[i]}`,
-                                    boxShadow: i === 2 ? `0 0 12px ${borderColors[i]}` : 'none'
+                                    boxShadow: i === 1 ? `0 0 12px ${borderColors[i]}` : 'none'
                                   }}
                                 />
                                 <span className={`absolute inset-y-0 left-3 flex items-center text-xs font-medium ${textColors[i]}`}>
@@ -2633,6 +2599,23 @@ export default function FinancienPage() {
 
         </div>
       )}
+
+      {/* Jaartabs — per-jaar volledig overzicht zonder vergelijking */}
+      {(activeTab === `jaar-${years[1]}` || activeTab === `jaar-${years[2]}`) && (() => {
+        const tabYear = activeTab === `jaar-${years[1]}` ? years[1] : years[2]
+        return (
+          <JaarTab
+            year={tabYear}
+            yearData={getDataForYear(tabYear)}
+            wglPerMonth={wglPerMonth[tabYear] || Array(12).fill(0)}
+            uwvPerMonth={uwvPerMonth[tabYear] || Array(12).fill(0)}
+            asrPerMonth={asrPerMonth[tabYear] || Array(12).fill(0)}
+            zzpPerMonth={zzpPerMonth[tabYear] || Array(12).fill(0)}
+            mgmtPerMonth={mgmtPerMonth[tabYear] || Array(12).fill(0)}
+            overigKostenPerMonth={overigKostenPerYear[tabYear] || Array(12).fill(0)}
+          />
+        )
+      })()}
 
       {/* Inzichten Tab - alleen voor PARTNER/ADMIN */}
       {activeTab === 'inzichten' && isManager && <InzichtenTab />}
