@@ -1236,6 +1236,113 @@ export default function FinancienPage() {
             )
           })()}
 
+          {/* Omzet 2025 vs 2026 — per maand, appels-appels t/m laatste invoer 2026 */}
+          {(() => {
+            const cur = getDataForYear(years[2])
+            const prev = getDataForYear(years[1])
+            let lastMonth = 0
+            for (let m = 0; m < 12; m++) {
+              if (cur.omzet[m] !== 0 || cur.werkgeverslasten[m] !== 0) lastMonth = m + 1
+            }
+            if (lastMonth === 0) return null
+            const periodLabel = lastMonth === 12 ? 'heel jaar' : `t/m P${lastMonth}`
+            const sumTo = (arr: number[], n: number) => arr.slice(0, n).reduce((s, v) => s + (v || 0), 0)
+
+            const omzet25Tot = sumTo(prev.omzet, lastMonth)
+            const omzet26Tot = sumTo(cur.omzet, lastMonth)
+            const omzet25Gem = omzet25Tot / lastMonth
+            const omzet26Gem = omzet26Tot / lastMonth
+            const diffTot = omzet26Tot - omzet25Tot
+            const pctTot = omzet25Tot !== 0 ? (diffTot / Math.abs(omzet25Tot)) * 100 : 0
+
+            return (
+              <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
+                <div className="flex items-start justify-between mb-1 gap-4 flex-wrap">
+                  <div>
+                    <h3 className="text-white font-medium">Omzet — {years[1]} vs {years[2]} ({periodLabel})</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Omzet per maand voor beide jaren. Gemiddelde per maand laat trend zien.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Δ Omzet</p>
+                    <p className={`text-lg font-bold tabular-nums ${diffTot >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {diffTot >= 0 ? '+' : ''}{formatCurrency(diffTot)}
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                      {omzet25Tot !== 0 ? `${pctTot >= 0 ? '+' : ''}${pctTot.toFixed(1)}% vs ${years[1]}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                  <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Totaal {years[1]}</p>
+                    <p className="text-base font-bold text-gray-100 tabular-nums">{formatCurrency(omzet25Tot)}</p>
+                  </div>
+                  <div className="bg-workx-lime/10 rounded-xl p-3 border border-workx-lime/30">
+                    <p className="text-[10px] text-workx-lime/70 uppercase tracking-wider">Totaal {years[2]}</p>
+                    <p className="text-base font-bold text-workx-lime tabular-nums">{formatCurrency(omzet26Tot)}</p>
+                  </div>
+                  <div className="bg-white/[0.03] rounded-xl p-3 border border-white/5">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Gem./maand {years[1]}</p>
+                    <p className="text-base font-bold text-gray-100 tabular-nums">{formatCurrency(omzet25Gem)}</p>
+                  </div>
+                  <div className="bg-workx-lime/10 rounded-xl p-3 border border-workx-lime/30">
+                    <p className="text-[10px] text-workx-lime/70 uppercase tracking-wider">Gem./maand {years[2]}</p>
+                    <p className="text-base font-bold text-workx-lime tabular-nums">{formatCurrency(omzet26Gem)}</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto mt-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-500 border-b border-white/10">
+                        <th className="py-2 px-3 font-medium">Maand</th>
+                        <th className="py-2 px-3 font-medium text-right">{years[1]}</th>
+                        <th className="py-2 px-3 font-medium text-right">{years[2]}</th>
+                        <th className="py-2 px-3 font-medium text-right">Δ</th>
+                        <th className="py-2 px-3 font-medium text-right">%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {periods.slice(0, lastMonth).map((p, i) => {
+                        const v25 = prev.omzet[i] || 0
+                        const v26 = cur.omzet[i] || 0
+                        const diff = v26 - v25
+                        const pct = v25 !== 0 ? (diff / Math.abs(v25)) * 100 : null
+                        return (
+                          <tr key={p} className="border-b border-white/5 hover:bg-white/[0.02]">
+                            <td className="py-2 px-3 text-white">{p}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-gray-300">{formatCurrency(v25)}</td>
+                            <td className="py-2 px-3 text-right tabular-nums text-workx-lime">{formatCurrency(v26)}</td>
+                            <td className={`py-2 px-3 text-right tabular-nums text-xs ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                              {diff === 0 ? '—' : (diff > 0 ? '+' : '') + formatCurrency(diff)}
+                            </td>
+                            <td className={`py-2 px-3 text-right tabular-nums text-xs ${pct === null ? 'text-gray-500' : pct > 0 ? 'text-green-400' : pct < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                              {pct === null ? '—' : `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      <tr className="border-t-2 border-white/10 bg-white/[0.02]">
+                        <td className="py-3 px-3 text-white font-bold">Totaal</td>
+                        <td className="py-3 px-3 text-right tabular-nums text-gray-100 font-bold">{formatCurrency(omzet25Tot)}</td>
+                        <td className="py-3 px-3 text-right tabular-nums text-workx-lime font-bold">{formatCurrency(omzet26Tot)}</td>
+                        <td className={`py-3 px-3 text-right tabular-nums font-bold ${diffTot > 0 ? 'text-green-400' : diffTot < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                          {diffTot === 0 ? '—' : (diffTot > 0 ? '+' : '') + formatCurrency(diffTot)}
+                        </td>
+                        <td className={`py-3 px-3 text-right tabular-nums font-bold ${pctTot > 0 ? 'text-green-400' : pctTot < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                          {omzet25Tot !== 0 ? `${pctTot > 0 ? '+' : ''}${pctTot.toFixed(1)}%` : '—'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* Totale kosten 2025 vs 2026 — appels-appels tot laatste invoer 2026 */}
           {(() => {
             const cur = getDataForYear(years[2])
@@ -1739,20 +1846,29 @@ export default function FinancienPage() {
             }
             if (lastMonth === 0) return null
 
-            // Cumulatief saldo per jaar
-            const cumSaldo = (year: number, months: number) => {
+            // Cumulatief bedrijfsresultaat per jaar — omzet minus ALLE kosten
+            // (werkgeverslasten + pensioen − UWV − ASR + mgmt fee + overige kosten).
+            // Zelfde formule als de jaarrekening, dus eindwaardes matchen daarmee.
+            const cumBedrijfsresultaat = (year: number, months: number) => {
               const d = getDataForYear(year)
+              const wgl = wglPerMonth[year] || Array(12).fill(0)
+              const uwv = uwvPerMonth[year] || Array(12).fill(0)
+              const asr = asrPerMonth[year] || Array(12).fill(0)
+              const mgmt = mgmtPerMonth[year] || Array(12).fill(0)
+              const overig = overigKostenPerYear[year] || Array(12).fill(0)
               const result: number[] = []
               let sum = 0
               for (let m = 0; m < months; m++) {
-                sum += d.omzet[m] - d.werkgeverslasten[m]
+                const wkzNet = (d.werkgeverslasten[m] || 0) + (wgl[m] || 0) - (uwv[m] || 0) - (asr[m] || 0)
+                const totaal = wkzNet + (mgmt[m] || 0) + (overig[m] || 0)
+                sum += (d.omzet[m] || 0) - totaal
                 result.push(sum)
               }
               return result
             }
 
-            const cum1 = cumSaldo(years[1], 12)
-            const cum2 = cumSaldo(years[2], lastMonth)
+            const cum1 = cumBedrijfsresultaat(years[1], 12)
+            const cum2 = cumBedrijfsresultaat(years[2], lastMonth)
 
             const allVals = [...cum1, ...cum2]
             const yMin = Math.min(0, ...allVals) * 1.1
@@ -1789,7 +1905,19 @@ export default function FinancienPage() {
 
             return (
               <div className="bg-workx-dark/40 rounded-2xl p-6 border border-white/5">
-                <h3 className="text-white font-medium mb-4">Cumulatief saldo</h3>
+                <div className="flex items-start justify-between mb-4 gap-4 flex-wrap">
+                  <div>
+                    <h3 className="text-white font-medium">Cumulatief bedrijfsresultaat</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Opbouw van bedrijfsresultaat per maand. Omzet minus alle kosten (werkgeverslasten incl. pensioen, − UWV/ASR, + mgmt fee, + overige kosten). Eindwaarde matcht met jaarrekening.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Op laatste invoer</p>
+                    <p className="text-sm tabular-nums text-gray-300">{years[1]}: <span className="font-bold text-white">{formatCurrency(cum1[lastMonth - 1])}</span></p>
+                    <p className={`text-sm tabular-nums font-bold ${cum2[cum2.length - 1] >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>{years[2]}: {formatCurrency(cum2[cum2.length - 1])}</p>
+                  </div>
+                </div>
                 <div className="relative" style={{ height: svgH }}>
                   <svg width="100%" height="100%" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="xMidYMid meet">
                     <defs>
