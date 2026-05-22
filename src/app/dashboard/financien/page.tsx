@@ -1088,6 +1088,154 @@ export default function FinancienPage() {
             )
           })()}
 
+          {/* Jaarrekening 2025 vs 2026 — appels-appels t/m laatste invoer 2026 */}
+          {(() => {
+            const cur = getDataForYear(years[2])
+            const prev = getDataForYear(years[1])
+            let lastMonth = 0
+            for (let m = 0; m < 12; m++) {
+              if (cur.omzet[m] !== 0 || cur.werkgeverslasten[m] !== 0) lastMonth = m + 1
+            }
+            if (lastMonth === 0) return null
+            const periodLabel = lastMonth === 12 ? 'heel jaar' : `t/m P${lastMonth}`
+            const sumTo = (arr: number[], n: number) => arr.slice(0, n).reduce((s, v) => s + (v || 0), 0)
+
+            const computeVPBSlice = (winst: number) => {
+              if (winst <= 0) return 0
+              if (winst <= 200000) return winst * 0.19
+              return 200000 * 0.19 + (winst - 200000) * 0.258
+            }
+
+            const computeYear = (year: number, data: { omzet: number[]; werkgeverslasten: number[] }) => {
+              const wglArr = wglPerMonth[year] || Array(12).fill(0)
+              const uwvArr = uwvPerMonth[year] || Array(12).fill(0)
+              const asrArr = asrPerMonth[year] || Array(12).fill(0)
+              const zzpArr = zzpPerMonth[year] || Array(12).fill(0)
+              const mgmtArr = mgmtPerMonth[year] || Array(12).fill(0)
+              const overigArr = overigKostenPerYear[year] || Array(12).fill(0)
+              const omzet = sumTo(data.omzet, lastMonth)
+              const bruto = sumTo(data.werkgeverslasten, lastMonth) + sumTo(wglArr, lastMonth)
+              const uwv = sumTo(uwvArr, lastMonth)
+              const asr = sumTo(asrArr, lastMonth)
+              const wkzNet = bruto - uwv - asr
+              const mgmt = sumTo(mgmtArr, lastMonth)
+              const overig = sumTo(overigArr, lastMonth)
+              const zzp = sumTo(zzpArr, lastMonth)
+              const overigExclZzp = overig - zzp
+              const totaleKosten = wkzNet + mgmt + overig
+              const bedrijfsresultaat = omzet - totaleKosten
+              const vpb = computeVPBSlice(bedrijfsresultaat)
+              const netto = bedrijfsresultaat - vpb
+              return { omzet, bruto, uwv, asr, wkzNet, mgmt, overig, zzp, overigExclZzp, totaleKosten, bedrijfsresultaat, vpb, netto }
+            }
+
+            const t25 = computeYear(years[1], prev)
+            const t26 = computeYear(years[2], cur)
+
+            // Row helper — positiveIsGood: true voor omzet/saldo (groei = goed), false voor kosten (daling = goed)
+            const Row = ({ label, p, c, indent, bold, subtotal, positiveIsGood = false, accent }: {
+              label: string; p: number; c: number; indent?: boolean; bold?: boolean; subtotal?: boolean; positiveIsGood?: boolean; accent?: string
+            }) => {
+              const diff = c - p
+              const pct = p !== 0 ? (diff / Math.abs(p)) * 100 : null
+              const isGood = positiveIsGood ? diff > 0 : diff < 0
+              const diffColor = diff === 0 ? 'text-gray-500' : isGood ? 'text-green-400' : 'text-red-400'
+              return (
+                <tr className={subtotal ? 'border-t border-white/10' : 'border-b border-white/5'}>
+                  <td className={`py-2 px-3 ${indent ? 'pl-8 text-gray-300' : 'text-white'} ${bold || subtotal ? 'font-semibold' : ''}`}>{label}</td>
+                  <td className={`py-2 px-3 text-right tabular-nums text-gray-300 ${bold || subtotal ? 'font-semibold text-white/90' : ''}`}>{formatCurrency(p)}</td>
+                  <td className={`py-2 px-3 text-right tabular-nums ${accent || 'text-white'} ${bold || subtotal ? 'font-semibold' : ''}`}>{formatCurrency(c)}</td>
+                  <td className={`py-2 px-3 text-right tabular-nums text-xs ${diffColor} ${bold || subtotal ? 'font-semibold text-sm' : ''}`}>
+                    {diff === 0 ? '—' : (diff > 0 ? '+' : '') + formatCurrency(diff)}
+                  </td>
+                  <td className={`py-2 px-3 text-right tabular-nums text-xs ${diffColor} ${bold || subtotal ? 'font-semibold' : ''}`}>
+                    {pct === null ? '—' : `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`}
+                  </td>
+                </tr>
+              )
+            }
+
+            return (
+              <div className="bg-workx-dark/40 rounded-2xl border border-workx-lime/20 overflow-hidden ring-1 ring-workx-lime/10">
+                <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between flex-wrap gap-2 bg-gradient-to-r from-workx-lime/5 to-transparent">
+                  <div>
+                    <h3 className="text-white font-medium">Concept Jaarrekening — {years[1]} vs {years[2]} ({periodLabel})</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Resultatenrekening over dezelfde periode voor beide jaren. VPB 19% tot €200.000, 25,8% daarboven.
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-workx-lime/80 bg-workx-lime/10 px-3 py-1 rounded-full uppercase tracking-wider">appels-appels</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-500 border-b border-white/10 bg-white/[0.02]">
+                        <th className="py-2.5 px-3 font-medium">Regel</th>
+                        <th className="py-2.5 px-3 font-medium text-right">{years[1]} ({periodLabel})</th>
+                        <th className="py-2.5 px-3 font-medium text-right">{years[2]} ({periodLabel})</th>
+                        <th className="py-2.5 px-3 font-medium text-right">Δ</th>
+                        <th className="py-2.5 px-3 font-medium text-right">%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <Row label="Omzet" p={t25.omzet} c={t26.omzet} bold positiveIsGood accent="text-white" />
+
+                      <tr><td colSpan={5} className="pt-3 pb-1 px-3 text-[11px] uppercase tracking-wider text-gray-500 font-medium">Werkgeverslasten</td></tr>
+                      <Row label="Bruto loon + pensioen" p={t25.bruto} c={t26.bruto} indent />
+                      {(t25.uwv > 0 || t26.uwv > 0) && <Row label="− UWV (zwangerschapsverlof)" p={-t25.uwv} c={-t26.uwv} indent positiveIsGood />}
+                      {(t25.asr > 0 || t26.asr > 0) && <Row label="− ASR (verzuim)" p={-t25.asr} c={-t26.asr} indent positiveIsGood />}
+                      <Row label="Subtotaal werkgeverslasten" p={t25.wkzNet} c={t26.wkzNet} subtotal accent="text-gray-200" />
+
+                      {(t25.mgmt > 0 || t26.mgmt > 0) && (
+                        <>
+                          <tr><td colSpan={5} className="pt-3 pb-1 px-3 text-[11px] uppercase tracking-wider text-gray-500 font-medium">Management fee partners</td></tr>
+                          <Row label="Uitkeringen partner-holdings" p={t25.mgmt} c={t26.mgmt} indent accent="text-cyan-300" />
+                        </>
+                      )}
+
+                      <tr><td colSpan={5} className="pt-3 pb-1 px-3 text-[11px] uppercase tracking-wider text-gray-500 font-medium">Overige bedrijfskosten</td></tr>
+                      {(t25.zzp > 0 || t26.zzp > 0) && <Row label="ZZP advocaten" p={t25.zzp} c={t26.zzp} indent accent="text-purple-300" />}
+                      <Row label={(t25.zzp > 0 || t26.zzp > 0) ? 'Andere bedrijfskosten' : 'Bedrijfskosten'} p={t25.overigExclZzp} c={t26.overigExclZzp} indent accent="text-orange-300" />
+                      <Row label="Subtotaal overige kosten" p={t25.overig} c={t26.overig} subtotal accent="text-orange-300" />
+
+                      <Row label="Totale Kosten" p={t25.totaleKosten} c={t26.totaleKosten} subtotal accent="text-orange-300" bold />
+
+                      <tr className="bg-workx-lime/5">
+                        <td className="py-3 px-3 text-white font-semibold">Bedrijfsresultaat</td>
+                        <td className={`py-3 px-3 text-right tabular-nums font-bold ${t25.bedrijfsresultaat >= 0 ? 'text-gray-100' : 'text-red-400'}`}>{formatCurrency(t25.bedrijfsresultaat)}</td>
+                        <td className={`py-3 px-3 text-right tabular-nums font-bold text-base ${t26.bedrijfsresultaat >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>{formatCurrency(t26.bedrijfsresultaat)}</td>
+                        <td className={`py-3 px-3 text-right tabular-nums font-semibold text-sm ${(t26.bedrijfsresultaat - t25.bedrijfsresultaat) > 0 ? 'text-green-400' : (t26.bedrijfsresultaat - t25.bedrijfsresultaat) < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                          {(t26.bedrijfsresultaat - t25.bedrijfsresultaat) > 0 ? '+' : ''}{formatCurrency(t26.bedrijfsresultaat - t25.bedrijfsresultaat)}
+                        </td>
+                        <td className={`py-3 px-3 text-right tabular-nums font-semibold text-xs ${t25.bedrijfsresultaat !== 0 ? ((t26.bedrijfsresultaat - t25.bedrijfsresultaat) / Math.abs(t25.bedrijfsresultaat)) > 0 ? 'text-green-400' : 'text-red-400' : 'text-gray-500'}`}>
+                          {t25.bedrijfsresultaat !== 0 ? `${((t26.bedrijfsresultaat - t25.bedrijfsresultaat) / Math.abs(t25.bedrijfsresultaat)) > 0 ? '+' : ''}${(((t26.bedrijfsresultaat - t25.bedrijfsresultaat) / Math.abs(t25.bedrijfsresultaat)) * 100).toFixed(1)}%` : '—'}
+                        </td>
+                      </tr>
+
+                      <tr><td colSpan={5} className="pt-3 pb-1 px-3 text-[11px] uppercase tracking-wider text-gray-500 font-medium">Vennootschapsbelasting</td></tr>
+                      <Row label="VPB (19% tot €200k, 25,8% daarboven)" p={-t25.vpb} c={-t26.vpb} indent accent="text-red-300" positiveIsGood />
+
+                      <tr className="bg-workx-lime/10 border-t-2 border-workx-lime/30">
+                        <td className="py-4 px-3 text-white font-bold">Nettoresultaat</td>
+                        <td className={`py-4 px-3 text-right tabular-nums font-bold text-base ${t25.netto >= 0 ? 'text-gray-100' : 'text-red-400'}`}>{formatCurrency(t25.netto)}</td>
+                        <td className={`py-4 px-3 text-right tabular-nums font-bold text-lg ${t26.netto >= 0 ? 'text-workx-lime' : 'text-red-400'}`}>{formatCurrency(t26.netto)}</td>
+                        <td className={`py-4 px-3 text-right tabular-nums font-bold ${(t26.netto - t25.netto) > 0 ? 'text-green-400' : (t26.netto - t25.netto) < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                          {(t26.netto - t25.netto) > 0 ? '+' : ''}{formatCurrency(t26.netto - t25.netto)}
+                        </td>
+                        <td className={`py-4 px-3 text-right tabular-nums font-bold text-xs ${t25.netto !== 0 ? ((t26.netto - t25.netto) / Math.abs(t25.netto)) > 0 ? 'text-green-400' : 'text-red-400' : 'text-gray-500'}`}>
+                          {t25.netto !== 0 ? `${((t26.netto - t25.netto) / Math.abs(t25.netto)) > 0 ? '+' : ''}${(((t26.netto - t25.netto) / Math.abs(t25.netto)) * 100).toFixed(1)}%` : '—'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[11px] text-gray-500 px-6 py-3 italic border-t border-white/5">
+                  Concept obv resultatenrekening. VPB-tarieven worden hier op de partiële winst toegepast — voor beide jaren identiek, dus direct vergelijkbaar. Werkelijke jaaraangifte kan afwijken door fiscale correcties.
+                </p>
+              </div>
+            )
+          })()}
+
           {/* Totale kosten 2025 vs 2026 — appels-appels tot laatste invoer 2026 */}
           {(() => {
             const cur = getDataForYear(years[2])
