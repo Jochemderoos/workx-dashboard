@@ -81,7 +81,7 @@ function Flag({ country }: { country: string }) {
   if (!code) return <span className="text-lg leading-none">📍</span>
   return (
     <img
-      src={`https://flagcdn.com/w40/${code}.svg`}
+      src={`https://flagcdn.com/${code}.svg`}
       alt={country}
       className="w-6 h-auto rounded-sm ring-1 ring-white/10 shadow-sm"
       loading="lazy"
