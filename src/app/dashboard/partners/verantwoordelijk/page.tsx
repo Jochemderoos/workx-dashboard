@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -178,6 +178,26 @@ export default function VerantwoordelijkPage() {
     }
   }
 
+  // Per persoon: alle taken verzamelen, gegroepeerd per hoofdstuk.
+  // Alleen partners + Hanna (mensen met PARTNER/ADMIN-rol, plus assignments).
+  const perPerson = useMemo(() => {
+    const map = new Map<string, { user: TeamMember; byChapter: Map<string, string[]>; total: number }>()
+    team.forEach(m => map.set(m.id, { user: m, byChapter: new Map(), total: 0 }))
+    chapters.forEach(ch => {
+      ch.tasks.forEach(t => {
+        t.assignments.forEach(a => {
+          const entry = map.get(a.userId)
+          if (!entry) return
+          if (!entry.byChapter.has(ch.name)) entry.byChapter.set(ch.name, [])
+          entry.byChapter.get(ch.name)!.push(t.task)
+          entry.total += 1
+        })
+      })
+    })
+    // Sorteer: meeste taken eerst, daarna alfabetisch
+    return Array.from(map.values()).sort((a, b) => b.total - a.total || a.user.name.localeCompare(b.user.name))
+  }, [chapters, team])
+
   if (!session) return null
   if (!hasAccess) {
     return (
@@ -214,7 +234,75 @@ export default function VerantwoordelijkPage() {
           <div className="w-6 h-6 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
+          {/* Per-persoon overzicht — dynamisch obv assignments */}
+          <div>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-lg font-semibold text-white">Overzicht per persoon</h2>
+              <span className="text-xs text-gray-500">
+                {perPerson.filter(p => p.total > 0).length} van {perPerson.length} teamleden hebben taken
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {perPerson.map(({ user, byChapter, total }) => {
+                const photo = getPhotoUrl(user.name)
+                const empty = total === 0
+                return (
+                  <div
+                    key={user.id}
+                    className={`rounded-2xl border p-4 ${
+                      empty
+                        ? 'bg-white/[0.02] border-dashed border-white/10'
+                        : 'bg-white/[0.03] border-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      {photo ? (
+                        <img src={photo} alt={user.name} className="w-10 h-10 rounded-xl object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">
+                          {user.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+                        <p className="text-[11px] text-gray-500">
+                          {user.role === 'PARTNER' ? 'Partner' : user.role === 'ADMIN' ? 'Admin' : user.role}
+                          {' · '}
+                          {empty ? 'nog geen taken' : `${total} ${total === 1 ? 'taak' : 'taken'}`}
+                        </p>
+                      </div>
+                    </div>
+                    {empty ? (
+                      <p className="text-xs text-gray-500 italic">Nog niets toegewezen.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {Array.from(byChapter.entries()).map(([chapterName, tasks]) => (
+                          <div key={chapterName}>
+                            <p className="text-[10px] uppercase tracking-wider text-workx-lime/70 font-medium mb-1">
+                              {chapterName}
+                            </p>
+                            <ul className="space-y-0.5">
+                              {tasks.map((task, i) => (
+                                <li key={i} className="text-xs text-white/80 leading-snug pl-2 border-l border-white/10">
+                                  {task}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Totale overzicht — alle hoofdstukken en taken */}
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-3">Alle verdelingen per hoofdstuk</h2>
+            <div className="space-y-6">
           {chapters.map(chapter => (
             <div key={chapter.id} className="bg-white/[0.03] border border-white/10 rounded-2xl">
               {/* Chapter header */}
@@ -449,6 +537,8 @@ export default function VerantwoordelijkPage() {
                 Nieuw hoofdstuk toevoegen
               </button>
             )}
+          </div>
+            </div>
           </div>
         </div>
       )}
