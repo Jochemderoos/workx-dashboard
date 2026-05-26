@@ -824,6 +824,14 @@ export const BEVRIENDE_KANTOREN: Document = {
             </tbody>
           </table>
         </div>
+
+        <div class="mt-8 p-5 rounded-2xl bg-workx-lime/10 border border-workx-lime/30">
+          <p class="text-sm text-white mb-2"><strong>📝 Lijst is verhuisd naar een editable pagina</strong></p>
+          <p class="text-xs text-white/70 mb-3">De volledige lijst (incl. internationale kantoren) staat nu op een eigen pagina waar je kantoren direct kunt toevoegen, bewerken en verwijderen.</p>
+          <a href="/dashboard/bevriende-kantoren" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime text-workx-dark text-sm font-medium hover:bg-workx-lime/90 transition-colors">
+            Open editable lijst →
+          </a>
+        </div>
       `,
     },
   ],
