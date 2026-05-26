@@ -38,54 +38,55 @@ const emptyNew = (category = ''): NewRow => ({
   contactDaar: '', contactWorkx: '', bijzonderheden: '',
 })
 
-// Land → vlag emoji (NL + EN spelling). Onbekende landen krijgen 📍.
-const COUNTRY_FLAGS: Record<string, string> = {
-  // België
-  'belgië': '🇧🇪', 'belgie': '🇧🇪', 'belgium': '🇧🇪',
-  // Duitsland
-  'duitsland': '🇩🇪', 'germany': '🇩🇪', 'deutschland': '🇩🇪',
-  // Frankrijk
-  'frankrijk': '🇫🇷', 'france': '🇫🇷',
-  // Italië
-  'italië': '🇮🇹', 'italie': '🇮🇹', 'italy': '🇮🇹', 'italia': '🇮🇹',
-  // Spanje
-  'spanje': '🇪🇸', 'spain': '🇪🇸', 'españa': '🇪🇸', 'espana': '🇪🇸',
-  // Portugal
-  'portugal': '🇵🇹',
-  // Polen
-  'polen': '🇵🇱', 'poland': '🇵🇱', 'polska': '🇵🇱',
-  // Finland
-  'finland': '🇫🇮', 'suomi': '🇫🇮',
-  // Saudi-Arabië
-  'saudi-arabië': '🇸🇦', 'saudi-arabie': '🇸🇦', 'saudi arabië': '🇸🇦', 'saudi arabia': '🇸🇦', 'saoedi-arabië': '🇸🇦', 'saoedi-arabie': '🇸🇦',
-  // Servië
-  'servië': '🇷🇸', 'servie': '🇷🇸', 'serbia': '🇷🇸',
-  // Zweden
-  'zweden': '🇸🇪', 'sweden': '🇸🇪', 'sverige': '🇸🇪',
-  // Zwitserland
-  'zwitserland': '🇨🇭', 'switzerland': '🇨🇭', 'suisse': '🇨🇭', 'schweiz': '🇨🇭',
-  // Veelvoorkomende uitbreidingen
-  'verenigd koninkrijk': '🇬🇧', 'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'engeland': '🇬🇧', 'england': '🇬🇧',
-  'ierland': '🇮🇪', 'ireland': '🇮🇪',
-  'denemarken': '🇩🇰', 'denmark': '🇩🇰',
-  'noorwegen': '🇳🇴', 'norway': '🇳🇴',
-  'oostenrijk': '🇦🇹', 'austria': '🇦🇹',
-  'luxemburg': '🇱🇺', 'luxembourg': '🇱🇺',
-  'tsjechië': '🇨🇿', 'tsjechie': '🇨🇿', 'czech republic': '🇨🇿', 'czechia': '🇨🇿',
-  'verenigde staten': '🇺🇸', 'amerika': '🇺🇸', 'usa': '🇺🇸', 'united states': '🇺🇸', 'us': '🇺🇸',
-  'canada': '🇨🇦',
-  'australië': '🇦🇺', 'australie': '🇦🇺', 'australia': '🇦🇺',
-  'japan': '🇯🇵',
-  'china': '🇨🇳',
-  'brazilië': '🇧🇷', 'brazilie': '🇧🇷', 'brazil': '🇧🇷',
-  'griekenland': '🇬🇷', 'greece': '🇬🇷',
-  'turkije': '🇹🇷', 'turkey': '🇹🇷', 'türkiye': '🇹🇷',
-  'nederland': '🇳🇱', 'netherlands': '🇳🇱', 'holland': '🇳🇱',
+// Land → ISO-3166 alpha-2 code (NL + EN spelling). Onbekende landen krijgen geen vlag.
+const COUNTRY_CODES: Record<string, string> = {
+  'belgië': 'be', 'belgie': 'be', 'belgium': 'be',
+  'duitsland': 'de', 'germany': 'de', 'deutschland': 'de',
+  'frankrijk': 'fr', 'france': 'fr',
+  'italië': 'it', 'italie': 'it', 'italy': 'it', 'italia': 'it',
+  'spanje': 'es', 'spain': 'es', 'españa': 'es', 'espana': 'es',
+  'portugal': 'pt',
+  'polen': 'pl', 'poland': 'pl', 'polska': 'pl',
+  'finland': 'fi', 'suomi': 'fi',
+  'saudi-arabië': 'sa', 'saudi-arabie': 'sa', 'saudi arabië': 'sa', 'saudi arabia': 'sa', 'saoedi-arabië': 'sa', 'saoedi-arabie': 'sa',
+  'servië': 'rs', 'servie': 'rs', 'serbia': 'rs',
+  'zweden': 'se', 'sweden': 'se', 'sverige': 'se',
+  'zwitserland': 'ch', 'switzerland': 'ch', 'suisse': 'ch', 'schweiz': 'ch',
+  'verenigd koninkrijk': 'gb', 'uk': 'gb', 'united kingdom': 'gb', 'engeland': 'gb', 'england': 'gb',
+  'ierland': 'ie', 'ireland': 'ie',
+  'denemarken': 'dk', 'denmark': 'dk',
+  'noorwegen': 'no', 'norway': 'no',
+  'oostenrijk': 'at', 'austria': 'at',
+  'luxemburg': 'lu', 'luxembourg': 'lu',
+  'tsjechië': 'cz', 'tsjechie': 'cz', 'czech republic': 'cz', 'czechia': 'cz',
+  'verenigde staten': 'us', 'amerika': 'us', 'usa': 'us', 'united states': 'us', 'us': 'us',
+  'canada': 'ca',
+  'australië': 'au', 'australie': 'au', 'australia': 'au',
+  'japan': 'jp',
+  'china': 'cn',
+  'brazilië': 'br', 'brazilie': 'br', 'brazil': 'br',
+  'griekenland': 'gr', 'greece': 'gr',
+  'turkije': 'tr', 'turkey': 'tr', 'türkiye': 'tr',
+  'nederland': 'nl', 'netherlands': 'nl', 'holland': 'nl',
 }
 
-function getFlagFor(country: string): string {
+function getCountryCode(country: string): string | null {
   const key = country.toLowerCase().trim()
-  return COUNTRY_FLAGS[key] || '📍'
+  return COUNTRY_CODES[key] || null
+}
+
+// Vlag-component: gebruikt flagcdn.com SVG (werkt op alle OS'en, ook Windows).
+function Flag({ country }: { country: string }) {
+  const code = getCountryCode(country)
+  if (!code) return <span className="text-lg leading-none">📍</span>
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${code}.svg`}
+      alt={country}
+      className="w-6 h-auto rounded-sm ring-1 ring-white/10 shadow-sm"
+      loading="lazy"
+    />
+  )
 }
 
 export default function BevriendeKantorenPage() {
@@ -307,7 +308,9 @@ export default function BevriendeKantorenPage() {
             <section key={category} className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
               <header className="px-5 py-3 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-workx-lime/5 to-transparent">
                 <h2 className="text-base font-semibold text-white flex items-center gap-2">
-                  <span className="text-lg leading-none">{activeTab === 'national' ? '⚖️' : getFlagFor(category)}</span>
+                  {activeTab === 'national'
+                    ? <span className="text-lg leading-none">⚖️</span>
+                    : <Flag country={category} />}
                   {category}
                 </h2>
                 <div className="flex items-center gap-2">
