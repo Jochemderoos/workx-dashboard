@@ -38,6 +38,56 @@ const emptyNew = (category = ''): NewRow => ({
   contactDaar: '', contactWorkx: '', bijzonderheden: '',
 })
 
+// Land → vlag emoji (NL + EN spelling). Onbekende landen krijgen 📍.
+const COUNTRY_FLAGS: Record<string, string> = {
+  // België
+  'belgië': '🇧🇪', 'belgie': '🇧🇪', 'belgium': '🇧🇪',
+  // Duitsland
+  'duitsland': '🇩🇪', 'germany': '🇩🇪', 'deutschland': '🇩🇪',
+  // Frankrijk
+  'frankrijk': '🇫🇷', 'france': '🇫🇷',
+  // Italië
+  'italië': '🇮🇹', 'italie': '🇮🇹', 'italy': '🇮🇹', 'italia': '🇮🇹',
+  // Spanje
+  'spanje': '🇪🇸', 'spain': '🇪🇸', 'españa': '🇪🇸', 'espana': '🇪🇸',
+  // Portugal
+  'portugal': '🇵🇹',
+  // Polen
+  'polen': '🇵🇱', 'poland': '🇵🇱', 'polska': '🇵🇱',
+  // Finland
+  'finland': '🇫🇮', 'suomi': '🇫🇮',
+  // Saudi-Arabië
+  'saudi-arabië': '🇸🇦', 'saudi-arabie': '🇸🇦', 'saudi arabië': '🇸🇦', 'saudi arabia': '🇸🇦', 'saoedi-arabië': '🇸🇦', 'saoedi-arabie': '🇸🇦',
+  // Servië
+  'servië': '🇷🇸', 'servie': '🇷🇸', 'serbia': '🇷🇸',
+  // Zweden
+  'zweden': '🇸🇪', 'sweden': '🇸🇪', 'sverige': '🇸🇪',
+  // Zwitserland
+  'zwitserland': '🇨🇭', 'switzerland': '🇨🇭', 'suisse': '🇨🇭', 'schweiz': '🇨🇭',
+  // Veelvoorkomende uitbreidingen
+  'verenigd koninkrijk': '🇬🇧', 'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'engeland': '🇬🇧', 'england': '🇬🇧',
+  'ierland': '🇮🇪', 'ireland': '🇮🇪',
+  'denemarken': '🇩🇰', 'denmark': '🇩🇰',
+  'noorwegen': '🇳🇴', 'norway': '🇳🇴',
+  'oostenrijk': '🇦🇹', 'austria': '🇦🇹',
+  'luxemburg': '🇱🇺', 'luxembourg': '🇱🇺',
+  'tsjechië': '🇨🇿', 'tsjechie': '🇨🇿', 'czech republic': '🇨🇿', 'czechia': '🇨🇿',
+  'verenigde staten': '🇺🇸', 'amerika': '🇺🇸', 'usa': '🇺🇸', 'united states': '🇺🇸', 'us': '🇺🇸',
+  'canada': '🇨🇦',
+  'australië': '🇦🇺', 'australie': '🇦🇺', 'australia': '🇦🇺',
+  'japan': '🇯🇵',
+  'china': '🇨🇳',
+  'brazilië': '🇧🇷', 'brazilie': '🇧🇷', 'brazil': '🇧🇷',
+  'griekenland': '🇬🇷', 'greece': '🇬🇷',
+  'turkije': '🇹🇷', 'turkey': '🇹🇷', 'türkiye': '🇹🇷',
+  'nederland': '🇳🇱', 'netherlands': '🇳🇱', 'holland': '🇳🇱',
+}
+
+function getFlagFor(country: string): string {
+  const key = country.toLowerCase().trim()
+  return COUNTRY_FLAGS[key] || '📍'
+}
+
 export default function BevriendeKantorenPage() {
   const [kantoren, setKantoren] = useState<Kantoor[]>([])
   const [loading, setLoading] = useState(true)
@@ -257,7 +307,8 @@ export default function BevriendeKantorenPage() {
             <section key={category} className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
               <header className="px-5 py-3 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-workx-lime/5 to-transparent">
                 <h2 className="text-base font-semibold text-white flex items-center gap-2">
-                  {activeTab === 'national' ? '⚖️' : '📍'} {category}
+                  <span className="text-lg leading-none">{activeTab === 'national' ? '⚖️' : getFlagFor(category)}</span>
+                  {category}
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">{items.length} {items.length === 1 ? 'kantoor' : 'kantoren'}</span>

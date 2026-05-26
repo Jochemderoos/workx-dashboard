@@ -102,7 +102,6 @@ const documentIcons: Record<string, typeof Icons.home> = {
   'the-way-it-workx': Icons.books,
   'kantoorhandboek': Icons.fileText,
   'klachtenregeling': Icons.shield,
-  'bevriende-kantoren': Icons.users,
   'knowhow-officemanagement': Icons.briefcase,
 }
 
