@@ -347,6 +347,77 @@ export default function DebiteurenPage() {
         )}
       </div>
 
+      {/* Debiteurenproces - strakke timeline */}
+      <div className="mb-6 relative bg-gradient-to-br from-workx-lime/5 via-workx-dark/40 to-workx-dark/40 border border-workx-lime/20 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-workx-lime/20 flex items-center justify-center">
+            <Icons.activity size={16} className="text-workx-lime" />
+          </div>
+          <h2 className="text-base font-semibold text-white">Het debiteurenproces</h2>
+          <span className="ml-2 text-xs text-gray-500">Wie doet wat, wanneer</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-2 relative">
+          {/* Connector lijn op desktop */}
+          <div className="hidden md:block absolute top-9 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-workx-lime/30 via-workx-lime/40 to-workx-lime/30 pointer-events-none" />
+
+          {/* Stap 1 */}
+          <div className="relative bg-white/[0.03] border border-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-workx-lime text-workx-dark text-sm font-bold mb-3 relative z-10 mx-auto md:mx-0">
+              0
+            </div>
+            <p className="text-[10px] uppercase tracking-wider text-workx-lime/80 font-medium mb-1 text-center md:text-left">Dag 0</p>
+            <p className="text-sm font-semibold text-white mb-1 text-center md:text-left">Termijn verloopt</p>
+            <p className="text-xs text-white/60 leading-relaxed text-center md:text-left">
+              De betalingstermijn op de factuur is verstreken. Vanaf nu loopt de teller.
+            </p>
+          </div>
+
+          {/* Stap 2 */}
+          <div className="relative bg-white/[0.03] border border-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-cyan-500/30 border border-cyan-400/50 text-cyan-300 text-sm font-bold mb-3 relative z-10 mx-auto md:mx-0">
+              +5
+            </div>
+            <p className="text-[10px] uppercase tracking-wider text-cyan-300/80 font-medium mb-1 text-center md:text-left">+5 dagen</p>
+            <p className="text-sm font-semibold text-white mb-1 text-center md:text-left">Admin: 1ᵉ reminder</p>
+            <p className="text-xs text-white/60 leading-relaxed text-center md:text-left">
+              Admin stuurt eerste reminder met de <span className="text-cyan-300 font-medium">advocaat in CC</span>.
+            </p>
+          </div>
+
+          {/* Stap 3 */}
+          <div className="relative bg-white/[0.03] border border-orange-400/30 rounded-xl p-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-orange-500/30 border border-orange-400/50 text-orange-300 text-sm font-bold mb-3 relative z-10 mx-auto md:mx-0">
+              +15
+            </div>
+            <p className="text-[10px] uppercase tracking-wider text-orange-300/80 font-medium mb-1 text-center md:text-left">+15 dagen</p>
+            <p className="text-sm font-semibold text-white mb-1 text-center md:text-left">Advocaat: afstemmen</p>
+            <p className="text-xs text-white/60 leading-relaxed text-center md:text-left">
+              Staat factuur nog op <span className="text-red-300 font-medium">NIET VOLDAAN</span>? Advocaat checkt stand met admin. <span className="text-workx-lime font-medium">Uitgangspunt: advocaat neemt over.</span>
+            </p>
+          </div>
+
+          {/* Stap 4 */}
+          <div className="relative bg-workx-lime/10 border border-workx-lime/40 rounded-xl p-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-workx-lime text-workx-dark text-sm font-bold mb-3 relative z-10 mx-auto md:mx-0">
+              <Icons.user size={16} />
+            </div>
+            <p className="text-[10px] uppercase tracking-wider text-workx-lime font-medium mb-1 text-center md:text-left">Vanaf dan</p>
+            <p className="text-sm font-semibold text-white mb-1 text-center md:text-left">Advocaat aan zet</p>
+            <p className="text-xs text-white/60 leading-relaxed text-center md:text-left">
+              Bal ligt nu bij de advocaat. Verantwoordelijk voor verdere reminders en escalatie.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-[11px] text-gray-500 italic flex items-start gap-2">
+          <Icons.info size={12} className="mt-0.5 flex-shrink-0" />
+          <span>
+            Pas als de advocaat afstemt en aangeeft dat admin het nog even oppakt blijft het bij admin — anders is uitgangspunt dat advocaat het overneemt.
+          </span>
+        </p>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="w-6 h-6 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
