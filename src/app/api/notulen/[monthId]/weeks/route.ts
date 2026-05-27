@@ -6,7 +6,6 @@ import { prisma } from '@/lib/prisma'
 const STANDARD_TOPICS = [
   { title: 'Uren afgelopen week', sortOrder: 0, isStandard: true },
   { title: 'Werkverdeling partners', sortOrder: 1, isStandard: true },
-  { title: 'Werk voor Lodewijk ivm 16u afspraak', sortOrder: 2, isStandard: true },
 ]
 
 const DEFAULT_PARTNERS = ['Bas', 'Maaike', 'Jochem', 'Juliette']
