@@ -37,7 +37,9 @@ interface Invoice {
 }
 
 const MONTHS = ['', 'jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
-const REMINDER_WINDOW_DAYS = 14
+// Vanaf hoeveel dagen na de vervaltermijn de advocaat aan zet is.
+// Daarvoor (dag 0-14) ligt het bij de admin (zie proces-timeline bovenaan).
+const ACTION_THRESHOLD_DAYS = 15
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
@@ -68,6 +70,16 @@ function isReminderDue(reminderSentAt: string | null): boolean {
   // steeds open staat. Een lokale klik op 'Aangeschreven' verbergt de
   // call-to-action dus tot dan.
   return !reminderSentAt
+}
+
+// Factuur is "actief" (oranje, vraagt om actie van advocaat) zodra:
+//  - factuur 15+ dagen te laat is, EN
+//  - er nog niet is aangeschreven sinds de laatste upload.
+// In de eerste 14 dagen ligt het bij de admin → factuur staat grijs.
+// Na klik op 'Aangeschreven' → ook grijs. Bij nieuwe upload reset de
+// server reminderSentAt → factuur staat weer "aan".
+function needsAction(invoice: { dueDate: string | null; bookYear: number; bookPeriod: number; reminderSentAt: string | null }): boolean {
+  return daysOverdue(invoice) >= ACTION_THRESHOLD_DAYS && !invoice.reminderSentAt
 }
 
 export default function DebiteurenPage() {
@@ -158,7 +170,7 @@ export default function DebiteurenPage() {
 
   const totals = useMemo(() => {
     const total = filtered.reduce((s, i) => s + i.totalIncl, 0)
-    const dueReminder = filtered.filter(i => isReminderDue(i.reminderSentAt)).length
+    const dueReminder = filtered.filter(needsAction).length
     return { total, count: filtered.length, dueReminder }
   }, [filtered])
 
@@ -460,7 +472,7 @@ export default function DebiteurenPage() {
               return { ...b, count: items.length, sum: items.reduce((s, i) => s + i.totalIncl, 0) }
             })
             const totalMine = mine.reduce((s, i) => s + i.totalIncl, 0)
-            const dueMine = mine.filter(i => isReminderDue(i.reminderSentAt)).length
+            const dueMine = mine.filter(needsAction).length
 
             return (
               <div className="mb-6 bg-gradient-to-br from-workx-lime/10 via-workx-lime/5 to-transparent border border-workx-lime/20 rounded-2xl p-5">
@@ -495,17 +507,18 @@ export default function DebiteurenPage() {
                   {sorted.map(inv => {
                     const age = daysOverdue(inv)
                     const b = bucketOf(age)
-                    const reminderDue = isReminderDue(inv.reminderSentAt)
+                    const isActive = needsAction(inv)
+                    const inAdminWindow = age < ACTION_THRESHOLD_DAYS && !inv.reminderSentAt
                     const barPct = age > 0 ? Math.min(100, Math.round((age / 200) * 100)) : 0
                     return (
-                      <div key={inv.id} className={`relative rounded-xl border ${b.bg} hover:bg-white/[0.04] transition-colors overflow-hidden ${!reminderDue ? 'opacity-50' : ''}`}>
+                      <div key={inv.id} className={`relative rounded-xl border ${b.bg} hover:bg-white/[0.04] transition-colors overflow-hidden ${!isActive ? 'opacity-50' : ''}`}>
                         <div className={`absolute inset-y-0 left-0 ${b.color.replace('text-', 'bg-').replace('-300', '-500/10').replace('-400', '-500/15')}`} style={{ width: `${barPct}%` }} />
                         <div className="relative flex items-center gap-3 px-3 py-2">
                           <span className={`text-[10px] font-medium tabular-nums w-20 shrink-0 ${b.color}`}>
                             {age < 0 ? 'binnen termijn' : age === 0 ? 'vandaag' : `${age} dgn te laat`}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm truncate ${!reminderDue ? 'text-gray-400 line-through' : 'text-white'}`}>
+                            <p className={`text-sm truncate ${!isActive ? 'text-gray-400' : 'text-white'}`}>
                               {inv.projectName || inv.clientName || `#${inv.invoiceNumber}`}
                             </p>
                             <p className="text-[10px] text-gray-500 truncate">
@@ -515,10 +528,15 @@ export default function DebiteurenPage() {
                                   · aangeschreven {new Date(inv.reminderSentAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                                 </span>
                               )}
+                              {inAdminWindow && (
+                                <span className="ml-2 text-cyan-400/70" title="Eerste 14 dagen — admin handelt af">
+                                  · bij admin
+                                </span>
+                              )}
                             </p>
                           </div>
-                          <span className={`text-sm font-medium tabular-nums shrink-0 ${!reminderDue ? 'text-gray-500' : 'text-workx-lime'}`}>{formatEUR(inv.totalIncl)}</span>
-                          {reminderDue ? (
+                          <span className={`text-sm font-medium tabular-nums shrink-0 ${!isActive ? 'text-gray-500' : 'text-workx-lime'}`}>{formatEUR(inv.totalIncl)}</span>
+                          {isActive ? (
                             <button
                               onClick={() => markReminded(inv.id)}
                               className="px-2.5 py-1 rounded-lg bg-orange-500/20 text-orange-300 text-[11px] font-medium hover:bg-orange-500/30 transition-colors shrink-0"
@@ -526,7 +544,7 @@ export default function DebiteurenPage() {
                             >
                               Aanschrijven
                             </button>
-                          ) : (
+                          ) : inv.reminderSentAt ? (
                             <button
                               onClick={() => resetReminder(inv.id)}
                               className="px-2.5 py-1 rounded-lg bg-white/5 text-gray-400 text-[11px] font-medium hover:bg-orange-500/15 hover:text-orange-300 transition-colors shrink-0"
@@ -534,6 +552,13 @@ export default function DebiteurenPage() {
                             >
                               ✓ Aangeschreven
                             </button>
+                          ) : (
+                            <span
+                              className="px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400/70 text-[11px] font-medium shrink-0"
+                              title={`Eerste 14 dagen na vervaltermijn — admin handelt af. Wordt actief vanaf dag ${ACTION_THRESHOLD_DAYS}.`}
+                            >
+                              Bij admin
+                            </span>
                           )}
                           {isManager && (
                             <button
@@ -624,10 +649,11 @@ export default function DebiteurenPage() {
           <div className="space-y-2">
             {filtered.map(inv => {
               const age = daysOverdue(inv)
-              const reminderDue = isReminderDue(inv.reminderSentAt)
+              const isActive = needsAction(inv)
+              const inAdminWindow = age < ACTION_THRESHOLD_DAYS && !inv.reminderSentAt
               return (
                 <div key={inv.id} className={`bg-white/[0.03] border rounded-2xl overflow-hidden transition-opacity ${
-                  reminderDue ? 'border-orange-500/30' : 'border-white/10 opacity-60'
+                  isActive ? 'border-orange-500/30' : 'border-white/10 opacity-60'
                 }`}>
                   {/* Hoofdrij */}
                   <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -640,15 +666,22 @@ export default function DebiteurenPage() {
                         <span className={`text-[10px] ${age > 180 ? 'text-red-400' : age > 90 ? 'text-orange-400' : age > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
                           {age < 0 ? 'binnen termijn' : age === 0 ? 'vandaag verlopen' : `${age} dgn te laat`}
                         </span>
-                        {reminderDue ? (
+                        {isActive ? (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-medium">
                             AANSCHRIJVEN
                           </span>
-                        ) : (
+                        ) : inv.reminderSentAt ? (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/15 text-gray-400 font-medium">
-                            ✓ AANGESCHREVEN {new Date(inv.reminderSentAt!).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                            ✓ AANGESCHREVEN {new Date(inv.reminderSentAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
                           </span>
-                        )}
+                        ) : inAdminWindow ? (
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300/80 font-medium"
+                            title={`Eerste 14 dagen — admin stuurt 1ᵉ reminder. Wordt actief vanaf dag ${ACTION_THRESHOLD_DAYS}.`}
+                          >
+                            BIJ ADMIN
+                          </span>
+                        ) : null}
                       </div>
                       <p className="text-sm text-white font-medium truncate mt-0.5">
                         {inv.projectName || inv.invoiceNumber} {inv.projectCode && <span className="text-[10px] text-gray-500">· {inv.projectCode}</span>}
@@ -728,7 +761,7 @@ export default function DebiteurenPage() {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      {reminderDue ? (
+                      {isActive ? (
                         <button
                           onClick={() => markReminded(inv.id)}
                           className="px-3 py-1.5 rounded-lg bg-orange-500/15 text-orange-300 text-xs font-medium hover:bg-orange-500/25 transition-colors"
@@ -736,7 +769,7 @@ export default function DebiteurenPage() {
                         >
                           Aanschrijven
                         </button>
-                      ) : (
+                      ) : inv.reminderSentAt ? (
                         <button
                           onClick={() => resetReminder(inv.id)}
                           className="px-2 py-1 rounded-lg text-[10px] text-gray-500 hover:text-orange-400 transition-colors"
@@ -744,7 +777,7 @@ export default function DebiteurenPage() {
                         >
                           Reset
                         </button>
-                      )}
+                      ) : null}
                       {isManager && (
                         <button
                           onClick={async () => { if (confirm('Factuur op betaald zetten? Wordt uit het overzicht verwijderd.')) await removeInvoice(inv.id) }}
