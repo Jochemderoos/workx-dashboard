@@ -2,9 +2,6 @@
 
 import { useState } from 'react'
 import { Icons } from '@/components/ui/Icons'
-import jsPDF from 'jspdf'
-import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
-import toast from 'react-hot-toast'
 
 interface Ronde {
   nummer: 1 | 2 | 3
@@ -168,19 +165,6 @@ const RONDES: Ronde[] = [
 export default function SollicitatiebeleidSection() {
   const [open, setOpen] = useState(false)
   const [expandedRonde, setExpandedRonde] = useState<number | null>(null)
-  const [downloading, setDownloading] = useState(false)
-
-  const downloadPDF = async () => {
-    setDownloading(true)
-    try {
-      await generateBeleidPDF()
-    } catch (e) {
-      console.error(e)
-      toast.error('Kon PDF niet maken')
-    } finally {
-      setDownloading(false)
-    }
-  }
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-workx-lime/20 bg-gradient-to-br from-workx-lime/[0.08] via-workx-dark/40 to-workx-dark/40">
@@ -204,36 +188,19 @@ export default function SollicitatiebeleidSection() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={downloadPDF}
-              disabled={downloading}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime text-workx-dark font-semibold text-sm hover:bg-workx-lime/90 transition-all shadow-lg shadow-workx-lime/20 disabled:opacity-50"
-            >
-              {downloading ? (
-                <div className="w-4 h-4 border-2 border-workx-dark/30 border-t-workx-dark rounded-full animate-spin" />
-              ) : (
-                <Icons.download size={16} />
-              )}
-              <span>{downloading ? 'PDF maken...' : 'Download PDF'}</span>
-            </button>
-            <button
-              onClick={() => setOpen(o => !o)}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 hover:text-white text-sm transition-all"
-              title={open ? 'Inklappen' : 'Uitklappen'}
-            >
-              <Icons.chevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-              <span className="hidden sm:inline">{open ? 'Inklappen' : 'Uitklappen'}</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setOpen(o => !o)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 hover:text-white text-sm transition-all border border-white/10"
+            title={open ? 'Inklappen' : 'Uitklappen'}
+          >
+            <Icons.chevronDown size={16} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+            <span>{open ? 'Inklappen' : 'Toon details'}</span>
+          </button>
         </div>
 
         {/* Timeline overview — altijd zichtbaar */}
         <div className="mt-8">
-          <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            {/* Connecting lines op desktop */}
-            <div className="hidden sm:block absolute top-7 left-[16.66%] right-[16.66%] h-px bg-gradient-to-r from-cyan-500/30 via-workx-lime/40 to-purple-500/30 pointer-events-none" />
-
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {RONDES.map((r, idx) => (
               <button
                 key={r.nummer}
@@ -417,257 +384,4 @@ export default function SollicitatiebeleidSection() {
       </div>
     </section>
   )
-}
-
-// ─── PDF Generation ──────────────────────────────────────────────────────────
-
-async function generateBeleidPDF() {
-  const logoDataUrl = await loadWorkxLogo()
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  const pageW = doc.internal.pageSize.getWidth()
-  const pageH = doc.internal.pageSize.getHeight()
-  const margin = 18
-  const contentW = pageW - margin * 2
-
-  // ─ Cover/Header
-  drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
-
-  doc.setTextColor(45, 45, 45)
-  doc.setFontSize(20)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Sollicitatiebeleid', pageW / 2, 60, { align: 'center' })
-
-  doc.setFontSize(13)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(120, 120, 120)
-  doc.text('Selectieprocedure in drie gespreksrondes', pageW / 2, 68, { align: 'center' })
-
-  // Yellow accent line
-  doc.setFillColor(249, 255, 133)
-  doc.rect(pageW / 2 - 20, 72, 40, 1.5, 'F')
-
-  doc.setFontSize(9)
-  doc.setTextColor(140, 140, 140)
-  const dateStr = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
-  doc.text(`Workx Advocaten · ${dateStr}`, pageW / 2, 80, { align: 'center' })
-
-  // ─ Inleiding
-  let y = 95
-  y = addSectionTitle(doc, '1. Inleiding en doelstelling', margin, y)
-  y = addParagraph(
-    doc,
-    'Dit beleidsdocument beschrijft de gestructureerde sollicitatieprocedure van Workx. Het doel is om op een zorgvuldige, consistente en respectvolle wijze te beoordelen of een kandidaat aansluit bij de professionele standaarden, de werkcultuur en de inhoudelijke eisen van het kantoor. De procedure bestaat uit drie gespreksrondes, elk met een eigen doel, samenstelling en inhoud. Workx hanteert dit document als leidraad bij elke sollicitatie, zodat alle kandidaten op gelijke wijze worden beoordeeld en ervaringen intern geborgd zijn.',
-    margin,
-    y,
-    contentW
-  )
-
-  // ─ Overzicht tabel
-  y += 4
-  y = addSectionTitle(doc, '2. Overzicht van de procedure', margin, y)
-  y = addOverzichtTable(doc, margin, y, contentW)
-
-  // ─ Per ronde — telkens nieuwe pagina
-  for (const r of RONDES) {
-    doc.addPage()
-    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
-
-    y = 60
-    y = addSectionTitle(doc, `${r.nummer + 2}. Gesprek ${r.nummer} – ${r.titel}`, margin, y)
-
-    // Karakter + duur badge
-    doc.setFontSize(9)
-    doc.setTextColor(120, 120, 120)
-    let badgeText = `Karakter: ${r.karakter}`
-    if (r.duur) badgeText += `  ·  Duur: ${r.duur}`
-    doc.text(badgeText, margin, y)
-    y += 6
-
-    // Doel
-    y = addSubTitle(doc, 'Doel', margin, y)
-    y = addParagraph(doc, r.doel, margin, y, contentW)
-    y += 2
-
-    // Betrokkenen
-    y = addSubTitle(doc, 'Betrokkenen', margin, y)
-    for (const b of r.betrokkenen) {
-      y = addBullet(doc, b, margin, y, contentW)
-    }
-    y += 2
-
-    // Inhoud
-    y = addSubTitle(doc, 'Inhoud', margin, y)
-    for (let i = 0; i < r.inhoud.length; i++) {
-      const item = r.inhoud[i]
-      if (y > pageH - 40) { doc.addPage(); drawWorkxLogo(doc, 0, 0, 55, logoDataUrl); y = 60 }
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(45, 45, 45)
-      doc.text(`${String.fromCharCode(65 + i)}. ${item.label}`, margin, y)
-      y += 5
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      for (const p of item.punten) {
-        y = addBullet(doc, p, margin, y, contentW)
-      }
-      y += 2
-    }
-
-    // Voorbeeldvragen
-    if (r.voorbeeldvragen.length > 0) {
-      if (y > pageH - 50) { doc.addPage(); drawWorkxLogo(doc, 0, 0, 55, logoDataUrl); y = 60 }
-      y = addSubTitle(doc, 'Voorbeeldvragen', margin, y)
-      for (let i = 0; i < r.voorbeeldvragen.length; i++) {
-        if (y > pageH - 30) { doc.addPage(); drawWorkxLogo(doc, 0, 0, 55, logoDataUrl); y = 60 }
-        doc.setFont('helvetica', 'italic')
-        doc.setFontSize(10)
-        doc.setTextColor(80, 80, 80)
-        const lines = doc.splitTextToSize(`${i + 1}.  "${r.voorbeeldvragen[i]}"`, contentW - 4)
-        doc.text(lines, margin + 2, y)
-        y += lines.length * 5 + 2
-        doc.setFont('helvetica', 'normal')
-      }
-    }
-  }
-
-  // ─ Besluitvorming pagina
-  doc.addPage()
-  drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
-  y = 60
-  y = addSectionTitle(doc, '6. Besluitvorming en afronding', margin, y)
-  y = addParagraph(
-    doc,
-    'Na het derde gesprek vindt een intern overleg plaats tussen de partners. De volgende punten worden besproken:',
-    margin,
-    y,
-    contentW
-  )
-  y += 2
-  y = addBullet(doc, 'Inhoudelijke geschiktheid (op basis van gesprek 2)', margin, y, contentW)
-  y = addBullet(doc, 'Persoonlijke fit en motivatie (op basis van gesprekken 1 en 3)', margin, y, contentW)
-  y = addBullet(doc, 'Eventuele openstaande vragen of aandachtspunten', margin, y, contentW)
-  y += 3
-  y = addParagraph(
-    doc,
-    'Workx informeert de kandidaat kort na de laatste twee gesprekken over de uitkomst. Bij een positief besluit wordt een aanbod gedaan.',
-    margin,
-    y,
-    contentW
-  )
-  y += 2
-  doc.setFillColor(249, 255, 133, 0.15)
-  doc.setDrawColor(180, 180, 0)
-  doc.setLineWidth(0.3)
-  doc.roundedRect(margin, y, contentW, 22, 2, 2, 'S')
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(45, 45, 45)
-  doc.text('Uitgangspunt', margin + 4, y + 6)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9.5)
-  doc.setTextColor(60, 60, 60)
-  const slot = doc.splitTextToSize(
-    'Jaarcontract dat bij wederzijdse positieve ervaring tijdig wordt omgezet in contract voor onbepaalde tijd. In uitzonderingsgevallen kan besloten worden direct een contract voor onbepaalde tijd aan te bieden.',
-    contentW - 8
-  )
-  doc.text(slot, margin + 4, y + 12)
-
-  // ─ Footer op elke pagina
-  const totalPages = doc.getNumberOfPages()
-  for (let p = 1; p <= totalPages; p++) {
-    doc.setPage(p)
-    doc.setFillColor(45, 45, 45)
-    doc.rect(0, pageH - 14, pageW, 14, 'F')
-    doc.setFontSize(7)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(220, 220, 220)
-    doc.text(
-      'Workx Advocaten  ·  Herengracht 448, 1017 CA Amsterdam  ·  +31 (0)20 308 03 20  ·  info@workxadvocaten.nl',
-      pageW / 2,
-      pageH - 7,
-      { align: 'center' }
-    )
-    doc.text(`${p} / ${totalPages}`, pageW - margin, pageH - 7, { align: 'right' })
-  }
-
-  // Open in new tab
-  const blob = doc.output('blob')
-  const url = URL.createObjectURL(blob)
-  window.open(url, '_blank')
-}
-
-// ─ PDF helpers
-function addSectionTitle(doc: jsPDF, text: string, x: number, y: number): number {
-  doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(45, 45, 45)
-  doc.text(text, x, y)
-  // Yellow underline
-  doc.setFillColor(249, 255, 133)
-  doc.rect(x, y + 1.5, 25, 1, 'F')
-  return y + 9
-}
-
-function addSubTitle(doc: jsPDF, text: string, x: number, y: number): number {
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(80, 80, 80)
-  doc.text(text.toUpperCase(), x, y)
-  doc.setFont('helvetica', 'normal')
-  return y + 5
-}
-
-function addParagraph(doc: jsPDF, text: string, x: number, y: number, w: number): number {
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(60, 60, 60)
-  const lines = doc.splitTextToSize(text, w)
-  doc.text(lines, x, y)
-  return y + lines.length * 4.8 + 3
-}
-
-function addBullet(doc: jsPDF, text: string, x: number, y: number, w: number): number {
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(60, 60, 60)
-  doc.setFillColor(180, 180, 0)
-  doc.circle(x + 2, y - 1.2, 0.8, 'F')
-  const lines = doc.splitTextToSize(text, w - 6)
-  doc.text(lines, x + 5, y)
-  return y + lines.length * 4.8 + 1.5
-}
-
-function addOverzichtTable(doc: jsPDF, x: number, y: number, w: number): number {
-  const colW = [18, 60, 70, w - 18 - 60 - 70]
-  // Header
-  doc.setFillColor(245, 245, 245)
-  doc.rect(x, y, w, 8, 'F')
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(60, 60, 60)
-  doc.text('Ronde', x + 2, y + 5.5)
-  doc.text('Gesprek', x + colW[0] + 2, y + 5.5)
-  doc.text('Betrokkenen', x + colW[0] + colW[1] + 2, y + 5.5)
-  doc.text('Karakter', x + colW[0] + colW[1] + colW[2] + 2, y + 5.5)
-  y += 8
-
-  const rows = [
-    ['1', 'Kennismakingsgesprek', 'Maaike of Bas + 1 partner', 'Formeel / informatief'],
-    ['2', 'Inhoudelijk selectiegesprek', 'Maaike of Bas + 1 partner', 'Formeel / toetsend'],
-    ['3', 'Informeel gesprek met team', 'Twee medewerkers', 'Informeel / wederzijds'],
-  ]
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.setTextColor(60, 60, 60)
-  for (const r of rows) {
-    doc.text(r[0], x + 2, y + 5.5)
-    doc.text(r[1], x + colW[0] + 2, y + 5.5)
-    doc.text(r[2], x + colW[0] + colW[1] + 2, y + 5.5)
-    doc.text(r[3], x + colW[0] + colW[1] + colW[2] + 2, y + 5.5)
-    doc.setDrawColor(230, 230, 230)
-    doc.setLineWidth(0.2)
-    doc.line(x, y + 8, x + w, y + 8)
-    y += 8
-  }
-  return y + 4
 }
