@@ -459,11 +459,12 @@ export async function GET() {
       console.warn('TeamAnnouncement query skipped:', (e as Error)?.message)
     }
 
-    // 9a. Upload-reminder voor Hanna/Lotte/Jochem — elke 14 dagen nieuwe
-    // BaseNet-PDF uploaden. Key bevat de laatste upload-datum zodat:
+    // 9a. Upload-reminders voor Hanna/Lotte/Jochem — periodieke nieuwe
+    // uploads voor debiteuren (14 dgn), kosten (14 dgn) en uren (1 dg).
+    // Key bevat de laatste upload-datum zodat:
     //  - na nieuwe upload de notificatie automatisch verdwijnt
-    //  - dismissals niet eeuwig blijven hangen (volgende 14-dagen-window
-    //    krijgt een verse key)
+    //  - dismissals niet eeuwig blijven hangen (volgende window krijgt
+    //    een verse key)
     try {
       const currentUser = await prisma.user.findUnique({
         where: { id: userId },
@@ -475,36 +476,91 @@ export async function GET() {
         'Jochem de Roos',
       ])
       if (currentUser?.name && UPLOAD_REMINDER_NAMES.has(currentUser.name)) {
-        const lastImport = await prisma.openInvoice.aggregate({
+        const DAY_MS = 24 * 60 * 60 * 1000
+
+        const pushUploadReminder = (cfg: {
+          lastAt: Date | null
+          windowDays: number
+          keyPrefix: string
+          title: string
+          urgentTitle?: string
+          baseMessage: string
+          href: string
+        }) => {
+          const overdue = !cfg.lastAt || (now.getTime() - cfg.lastAt.getTime()) >= cfg.windowDays * DAY_MS
+          if (!overdue) return
+          const anchor = cfg.lastAt ? cfg.lastAt.toISOString().slice(0, 10) : 'never'
+          const key = `${cfg.keyPrefix}-${anchor}`
+          if (dismissedKeys.has(key)) return
+          const daysSince = cfg.lastAt
+            ? Math.floor((now.getTime() - cfg.lastAt.getTime()) / DAY_MS)
+            : null
+          const daysLabel = daysSince === null ? 'nooit eerder' : `${daysSince} dgn geleden`
+          const useUrgent = daysSince !== null && daysSince >= cfg.windowDays * 2
+          notifications.push({
+            id: key,
+            type: 'debiteuren',
+            title: useUrgent && cfg.urgentTitle ? cfg.urgentTitle : cfg.title,
+            message: `Laatste upload: ${daysLabel}. ${cfg.baseMessage}`,
+            createdAt: now,
+            read: false,
+            href: cfg.href,
+            priority: 'high',
+          })
+        }
+
+        // Debiteuren — elke 14 dagen
+        const lastInvoiceImport = await prisma.openInvoice.aggregate({
           _max: { importedAt: true },
         })
-        const lastImportedAt = lastImport._max.importedAt
-        const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000
-        const daysSince = lastImportedAt
-          ? (now.getTime() - lastImportedAt.getTime()) / (24 * 60 * 60 * 1000)
-          : Infinity
-        const overdue = !lastImportedAt || (now.getTime() - lastImportedAt.getTime()) >= fourteenDaysMs
+        pushUploadReminder({
+          lastAt: lastInvoiceImport._max.importedAt,
+          windowDays: 14,
+          keyPrefix: 'upload-reminder-debiteuren',
+          title: '⏰ Tijd voor nieuwe debiteuren-upload',
+          urgentTitle: '🚨 Debiteuren-upload al langer dan 4 weken te laat',
+          baseMessage: 'Upload de BaseNet-PDF zodat het team kan blijven aanschrijven.',
+          href: '/dashboard/debiteuren',
+        })
 
-        if (overdue) {
-          const anchor = lastImportedAt ? lastImportedAt.toISOString().slice(0, 10) : 'never'
-          const key = `upload-reminder-${anchor}`
-          if (!dismissedKeys.has(key)) {
-            const daysLabel = lastImportedAt ? `${Math.floor(daysSince)} dgn` : 'nooit eerder'
-            notifications.push({
-              id: key,
-              type: 'debiteuren',
-              title: '⏰ Tijd voor nieuwe debiteuren-upload',
-              message: `Laatste upload: ${daysLabel} geleden. Upload de BaseNet-PDF zodat het hele team kan blijven aanschrijven.`,
-              createdAt: now,
-              read: false,
-              href: '/dashboard/debiteuren',
-              priority: 'high',
-            })
-          }
+        // Kosten (MT940) — elke 14 dagen
+        try {
+          const lastCostUpload = await prisma.monthlyCost.aggregate({
+            _max: { createdAt: true },
+          })
+          pushUploadReminder({
+            lastAt: lastCostUpload._max.createdAt,
+            windowDays: 14,
+            keyPrefix: 'upload-reminder-kosten',
+            title: '⏰ Tijd voor nieuwe kosten-upload',
+            urgentTitle: '🚨 Kosten-upload al langer dan 4 weken te laat',
+            baseMessage: 'Upload het MT940-bankafschrift zodat de kosten compleet blijven.',
+            href: '/dashboard/kosten',
+          })
+        } catch {
+          // tabel kan nog niet bestaan op eerste deploy
+        }
+
+        // Uren — elke dag
+        try {
+          const lastHoursUpload = await prisma.monthlyHours.aggregate({
+            _max: { updatedAt: true },
+          })
+          pushUploadReminder({
+            lastAt: lastHoursUpload._max.updatedAt,
+            windowDays: 1,
+            keyPrefix: 'upload-reminder-uren',
+            title: '⏰ Uren bijwerken',
+            urgentTitle: '🚨 Uren al meerdere dagen niet ge-update',
+            baseMessage: 'Werk de maandelijkse uren bij zodat workload en bezetting up-to-date blijven.',
+            href: '/dashboard/financien',
+          })
+        } catch {
+          // tabel kan nog niet bestaan op eerste deploy
         }
       }
     } catch {
-      // silent: tabel kan nog niet bestaan bij allereerste deploy
+      // silent: user-lookup of openInvoice-tabel kan nog niet bestaan
     }
 
     // 9. Openstaande debiteuren — herinnering om aan te schrijven
