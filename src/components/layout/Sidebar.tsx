@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo } from 'react'
+import React, { memo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -72,7 +72,9 @@ function WorkxLogoBox() {
   )
 }
 
-const mainMenuItems = [
+// "Team" — algemene pagina's voor iedereen, inclusief Team/Wachtwoorden/Docs
+// en tools die regelmatig gebruikt worden (Bonus, Transitie).
+const teamMenuItems = [
   { href: '/dashboard', icon: Icons.home, label: 'Dashboard', iconAnim: 'icon-home-hover' },
   { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', iconAnim: 'icon-party-hover', badge: '15 jaar!' },
   { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', iconAnim: 'icon-mappin-hover' },
@@ -80,18 +82,21 @@ const mainMenuItems = [
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover', hideForExternal: true },
   { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', iconAnim: 'icon-graduation-hover' },
   { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', iconAnim: 'icon-briefcase-hover' },
-  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', iconAnim: 'icon-briefcase-hover' },
-  { href: '/dashboard/eigen-taken', icon: Icons.check, label: 'Eigen taken', iconAnim: 'icon-check-hover' },
-  { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', iconAnim: 'icon-file-hover' },
-  { href: '/dashboard/werkstudent', icon: Icons.clipboard, label: 'Werkstudent', iconAnim: 'icon-file-hover' },
   { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', iconAnim: 'icon-file-hover' },
+  { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', iconAnim: 'icon-file-hover' },
   { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', iconAnim: 'icon-target-hover', hideForExternal: true },
   { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover', hideForExternal: true },
   { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', iconAnim: 'icon-file-hover', hideForExternal: true },
   { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', iconAnim: 'icon-briefcase-hover', hideForExternal: true },
+  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', iconAnim: 'icon-briefcase-hover' },
+  { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover' },
+  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', iconAnim: 'icon-lock-hover', hideForExternal: true },
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover', hideForExternal: true },
+  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover', hideForExternal: true },
+  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover' },
 ]
 
-// Partners sectie - alleen zichtbaar voor PARTNER en ADMIN
+// "Partner" — alleen voor PARTNER en ADMIN
 const partnersMenuItems = [
   { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/partners/verantwoordelijk', icon: Icons.users, label: 'Verantwoordelijk', iconAnim: 'icon-users-hover' },
@@ -102,31 +107,31 @@ const partnersMenuItems = [
   { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', iconAnim: 'icon-euro-hover' },
 ]
 
-const toolsMenuItems = [
-  { href: '/dashboard/ai', icon: Icons.sparkles, label: 'AI Assistent', iconAnim: 'icon-zap-hover', isAI: true },
-  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover', hideForExternal: true },
-  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover' },
+// "Extra" — uitklapbaar, default dicht. Pagina's die nu weinig gebruikt
+// worden maar misschien later weer relevant zijn.
+const extraMenuItems = [
+  { href: '/dashboard/werkstudent', icon: Icons.clipboard, label: 'Werkstudent', iconAnim: 'icon-file-hover' },
+  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', iconAnim: 'icon-file-hover', hideForExternal: true },
   { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', iconAnim: 'icon-layers-hover' },
   { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', iconAnim: 'icon-file-hover', hideForExternal: true },
-  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', iconAnim: 'icon-file-hover', hideForExternal: true },
 ]
 
+// "Beheer" — onderaan
 const manageMenuItems = [
-  { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover' },
-  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', iconAnim: 'icon-lock-hover', hideForExternal: true },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover', hideForExternal: true },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover' },
+  { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', iconAnim: 'icon-settings-hover' },
 ]
 
 // All menu hrefs for accurate active-state detection
-const allMenuHrefs = [...mainMenuItems, ...partnersMenuItems, ...toolsMenuItems, ...manageMenuItems].map(i => i.href)
+const allMenuHrefs = [...teamMenuItems, ...partnersMenuItems, ...extraMenuItems, ...manageMenuItems].map(i => i.href)
 
 function SidebarComponent({ user }: SidebarProps) {
   const pathname = usePathname()
+  const [extraOpen, setExtraOpen] = useState(false)
 
   const isExternal = user.role === 'EXTERNAL'
 
-  const NavLink = ({ href, icon: Icon, label, iconAnim, badge, isAI }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string; isAI?: boolean }) => {
+  const NavLink = ({ href, icon: Icon, label, iconAnim, badge }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string }) => {
     // Exact match, or prefix match only when no more-specific menu item matches
     const isActive = pathname === href || (
       href !== '/dashboard' &&
@@ -134,9 +139,6 @@ function SidebarComponent({ user }: SidebarProps) {
       !allMenuHrefs.some(h => h !== href && h.startsWith(href + '/') && pathname.startsWith(h))
     )
     const isLustrum = href === '/dashboard/lustrum'
-
-    // AI Assistent verborgen (slaapstand)
-    if (isAI) return null
 
     return (
       <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link group/lustrum' : ''}`}>
@@ -168,37 +170,47 @@ function SidebarComponent({ user }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 space-y-6">
-        {/* Main */}
+        {/* Team — algemene pagina's */}
         <div>
-          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Menu</p>
+          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Team</p>
           <div className="space-y-1">
-            {mainMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
+            {teamMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
             {/* Werk Lodewijk voor EXTERNAL */}
             {isExternal && <NavLink href="/dashboard/partners/werk-lodewijk" icon={Icons.briefcase} label="Werk Lodewijk" iconAnim="icon-briefcase-hover" />}
           </div>
         </div>
 
-        {/* Partners - alleen voor PARTNER en ADMIN */}
+        {/* Partner — alleen voor PARTNER en ADMIN */}
         <div style={(user.role === 'PARTNER' || user.role === 'ADMIN') ? {} : { display: 'none' }}>
-          <p className="px-4 mb-2 text-[10px] font-medium text-workx-lime/40 uppercase tracking-widest" style={{ color: 'rgba(180, 185, 50, 0.5)' }}>Partners</p>
+          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'rgba(180, 185, 50, 0.5)' }}>Partner</p>
           <div className="space-y-1">
             {partnersMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
 
-        {/* Tools */}
+        {/* Extra — uitklapbaar, default dicht */}
         <div>
-          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Tools</p>
-          <div className="space-y-1">
-            {toolsMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
-          </div>
+          <button
+            type="button"
+            onClick={() => setExtraOpen(v => !v)}
+            className="w-full flex items-center justify-between px-4 mb-2 text-[10px] font-medium uppercase tracking-widest hover:text-workx-lime transition-colors"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            <span>Extra</span>
+            <Icons.chevronDown size={12} className={`transition-transform ${extraOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {extraOpen && (
+            <div className="space-y-1">
+              {extraMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
+            </div>
+          )}
         </div>
 
-        {/* Management */}
+        {/* Beheer — Feedback + Instellingen */}
         <div>
           <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Beheer</p>
           <div className="space-y-1">
-            {manageMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
+            {manageMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
       </nav>
@@ -207,16 +219,6 @@ function SidebarComponent({ user }: SidebarProps) {
       <div className="p-4 space-y-3 flex-shrink-0">
         <ThemeToggle />
         <div className="divider-lime" />
-
-        <Link
-          href="/dashboard/settings"
-          className={`nav-link icon-settings-hover ${pathname === '/dashboard/settings' ? 'active' : ''}`}
-        >
-          <span className="icon-animated">
-            <Icons.settings size={18} />
-          </span>
-          <span>Instellingen</span>
-        </Link>
 
         {/* Premium user card */}
         <div className="relative overflow-hidden rounded-xl p-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>

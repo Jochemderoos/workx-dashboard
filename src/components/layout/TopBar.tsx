@@ -48,54 +48,63 @@ const navigationItems = [
   { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', keywords: ['dagvaarding', 'producties', 'printen', 'rechtbank', 'document'], roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', keywords: ['collega', 'medewerkers', 'mensen'] },
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', keywords: ['handboek', 'regels', 'hr', 'documenten', 'beleid', 'the way it workx'], roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/ai', icon: Icons.sparkles, label: 'AI Assistent', keywords: ['ai', 'claude', 'chat', 'vraag', 'juridisch', 'assistent'] },
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', keywords: ['idee', 'bug', 'suggestie', 'melding'] },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', keywords: ['profiel', 'wachtwoord', 'account'] },
 ]
 
-// Volgorde gespiegeld aan desktop-sidebar (src/components/layout/Sidebar.tsx)
-// zodat mobiel + desktop dezelfde menu's tonen.
-const mobileMenuItems = [
-  // Menu (iedereen)
-  { href: '/dashboard', icon: Icons.home, label: 'Dashboard' },
-  { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', badge: '15 jaar!' },
-  { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje' },
-  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda' },
-  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen' },
-  { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat' },
-  { href: '/dashboard/eigen-taken', icon: Icons.check, label: 'Eigen taken' },
-  { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht' },
-  { href: '/dashboard/werkstudent', icon: Icons.clipboard, label: 'Werkstudent' },
-  { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg' },
-  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+// Mobile menu — secties gespiegeld aan desktop-sidebar.
+// "section" wordt gebruikt om visueel te groeperen (zelfde 4 secties:
+// Team, Partner, Extra, Beheer).
+type MobileMenuItem = {
+  href: string
+  icon: any
+  label: string
+  section: 'team' | 'partner' | 'extra' | 'beheer'
+  roles?: string[]
+  badge?: string
+}
 
-  // Partners (PARTNER/ADMIN)
-  { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk (Partners)', roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/partners/verantwoordelijk', icon: Icons.users, label: 'Verantwoordelijk', roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Notulen', roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['PARTNER', 'ADMIN', 'EXTERNAL'] },
-  { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', roles: ['PARTNER', 'ADMIN'] },
+const mobileMenuItems: MobileMenuItem[] = [
+  // Team
+  { href: '/dashboard', icon: Icons.home, label: 'Dashboard', section: 'team' },
+  { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', badge: '15 jaar!', section: 'team' },
+  { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', section: 'team' },
+  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', section: 'team' },
+  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
+  { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', section: 'team' },
+  { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', section: 'team' },
+  { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', section: 'team' },
+  { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', section: 'team' },
+  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
+  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
+  { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
+  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
+  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', section: 'team' },
+  { href: '/dashboard/team', icon: Icons.users, label: 'Team', section: 'team' },
+  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
+  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
+  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', section: 'team' },
 
-  // Tools
-  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding' },
-  { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling' },
-  { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
+  // Partner
+  { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+  { href: '/dashboard/partners/verantwoordelijk', icon: Icons.users, label: 'Verantwoordelijk', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+  { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Partner agenda/notulen', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+  { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+  { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['EXTERNAL'], section: 'partner' },
+  { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+  { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+  { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+
+  // Extra (uitklapbaar)
+  { href: '/dashboard/werkstudent', icon: Icons.clipboard, label: 'Werkstudent', section: 'extra' },
+  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'extra' },
+  { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', section: 'extra' },
+  { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'extra' },
 
   // Beheer
-  { href: '/dashboard/team', icon: Icons.users, label: 'Team' },
-  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },
-  { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback' },
-  { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen' },
+  { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', section: 'beheer' },
+  { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', section: 'beheer' },
 ]
 
 interface SearchResult {
@@ -111,6 +120,7 @@ function TopBarComponent({ user }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [mobileExtraOpen, setMobileExtraOpen] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
   const [greeting, setGreeting] = useState('')
@@ -507,42 +517,89 @@ function TopBarComponent({ user }: TopBarProps) {
                 </div>
               </div>
 
-              {/* Navigation items */}
+              {/* Navigation items — secties zoals desktop-sidebar */}
               <nav className="p-2 max-h-[60vh] overflow-y-auto">
-                {mobileMenuItems
-                .filter((item) => !item.roles || item.roles.includes(user.role))
-                .map((item) => {
-                  const Icon = item.icon
+                {(() => {
                   const allMobileHrefs = mobileMenuItems.map(i => i.href)
-                  const isActive = pathname === item.href || (
-                    item.href !== '/dashboard' &&
-                    pathname.startsWith(item.href + '/') &&
-                    !allMobileHrefs.some(h => h !== item.href && h.startsWith(item.href + '/') && pathname.startsWith(h))
+                  const visibleItems = mobileMenuItems.filter((item) => !item.roles || item.roles.includes(user.role))
+                  const teamItems = visibleItems.filter(i => i.section === 'team')
+                  const partnerItems = visibleItems.filter(i => i.section === 'partner')
+                  const extraItems = visibleItems.filter(i => i.section === 'extra')
+                  const beheerItems = visibleItems.filter(i => i.section === 'beheer')
+
+                  const renderItem = (item: MobileMenuItem) => {
+                    const Icon = item.icon
+                    const isActive = pathname === item.href || (
+                      item.href !== '/dashboard' &&
+                      pathname.startsWith(item.href + '/') &&
+                      !allMobileHrefs.some(h => h !== item.href && h.startsWith(item.href + '/') && pathname.startsWith(h))
+                    )
+                    const badge = item.badge
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setShowMobileMenu(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                          isActive ? 'bg-workx-lime text-workx-dark font-medium' : ''
+                        }`}
+                        style={isActive ? {} : { color: 'var(--color-text-secondary)' }}
+                      >
+                        <Icon size={20} />
+                        <span className="flex-1">{item.label}</span>
+                        {badge && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white">
+                            {badge}
+                          </span>
+                        )}
+                        {!badge && isActive && <div className="ml-auto w-2 h-2 rounded-full bg-current opacity-60" />}
+                      </Link>
+                    )
+                  }
+
+                  const SectionHeader = ({ label }: { label: string }) => (
+                    <p className="px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>
+                      {label}
+                    </p>
                   )
-                  const badge = 'badge' in item ? item.badge : null
+
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setShowMobileMenu(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                        isActive
-                          ? 'bg-workx-lime text-workx-dark font-medium'
-                          : ''
-                      }`}
-                      style={isActive ? {} : { color: 'var(--color-text-secondary)' }}
-                    >
-                      <Icon size={20} />
-                      <span className="flex-1">{item.label}</span>
-                      {badge && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white">
-                          {badge}
-                        </span>
+                    <>
+                      {teamItems.length > 0 && (
+                        <>
+                          <SectionHeader label="Team" />
+                          {teamItems.map(renderItem)}
+                        </>
                       )}
-                      {!badge && isActive && <div className="ml-auto w-2 h-2 rounded-full bg-current opacity-60" />}
-                    </Link>
+                      {partnerItems.length > 0 && (
+                        <>
+                          <SectionHeader label="Partner" />
+                          {partnerItems.map(renderItem)}
+                        </>
+                      )}
+                      {extraItems.length > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setMobileExtraOpen(v => !v)}
+                            className="w-full flex items-center justify-between px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-widest hover:text-workx-lime transition-colors"
+                            style={{ color: 'var(--color-text-muted)' }}
+                          >
+                            <span>Extra</span>
+                            <Icons.chevronDown size={12} className={`transition-transform ${mobileExtraOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          {mobileExtraOpen && extraItems.map(renderItem)}
+                        </>
+                      )}
+                      {beheerItems.length > 0 && (
+                        <>
+                          <SectionHeader label="Beheer" />
+                          {beheerItems.map(renderItem)}
+                        </>
+                      )}
+                    </>
                   )
-                })}
+                })()}
               </nav>
 
               {/* Logout button */}
