@@ -163,7 +163,7 @@ const RONDES: Ronde[] = [
 ]
 
 export default function SollicitatiebeleidSection() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   const [expandedRonde, setExpandedRonde] = useState<number | null>(null)
 
   return (
