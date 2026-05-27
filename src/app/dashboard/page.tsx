@@ -23,6 +23,7 @@ import { buildExpensePDF } from '@/lib/expense-pdf'
 import WorkxLogo from '@/components/ui/WorkxLogo'
 import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget'
 import OpenInvoicesWidget from '@/components/dashboard/OpenInvoicesWidget'
+import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
 function WorkxLogoSmall() {
   return <WorkxLogo height={56} />
 }
@@ -1607,6 +1608,9 @@ export default function DashboardHome() {
 
       {/* Eigen taken — vandaag */}
       <TodayTasksWidget />
+
+      {/* Upload-reminder — alleen voor Hanna/Lotte/Jochem, elke 2 weken */}
+      <UploadReminderWidget />
 
       {/* Openstaande debiteuren — alleen reminders die nu nodig zijn */}
       <OpenInvoicesWidget />
