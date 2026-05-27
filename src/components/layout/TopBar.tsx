@@ -60,7 +60,7 @@ type MobileMenuItem = {
   icon: any
   label: string
   section: 'team' | 'partner' | 'extra' | 'beheer'
-  subGroup?: 'algemeen' | 'werk' | 'reference'
+  subGroup?: 'algemeen' | 'werk' | 'tools' | 'docs'
   roles?: string[]
   badge?: string
 }
@@ -78,16 +78,17 @@ const mobileMenuItems: MobileMenuItem[] = [
   { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', section: 'team', subGroup: 'werk' },
   { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', section: 'team', subGroup: 'werk' },
   { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
-  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
   { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
   { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
-  // Team — reference & tools
-  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', section: 'team', subGroup: 'reference' },
-  { href: '/dashboard/team', icon: Icons.users, label: 'Team', section: 'team', subGroup: 'reference' },
-  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'reference' },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'reference' },
-  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'reference' },
-  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', section: 'team', subGroup: 'reference' },
+  // Team — tools
+  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'tools' },
+  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', section: 'team', subGroup: 'tools' },
+  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'tools' },
+  // Team — docs
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'docs' },
+  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'docs' },
+  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', section: 'team', subGroup: 'docs' },
+  { href: '/dashboard/team', icon: Icons.users, label: 'Team', section: 'team', subGroup: 'docs' },
 
   // Partner
   { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
@@ -566,21 +567,26 @@ function TopBarComponent({ user }: TopBarProps) {
                     </p>
                   )
 
-                  const SubGroupDivider = () => (
-                    <div className="mx-4 my-2 border-t" style={{ borderColor: 'var(--color-border-subtle)', opacity: 0.5 }} />
+                  const SubGroupLabel = ({ label }: { label: string }) => (
+                    <p className="px-4 pt-3 pb-1 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
+                      {label}
+                    </p>
                   )
 
                   const renderTeamWithSubGroups = () => {
                     const algemeen = teamItems.filter(i => i.subGroup === 'algemeen')
                     const werk = teamItems.filter(i => i.subGroup === 'werk')
-                    const reference = teamItems.filter(i => i.subGroup === 'reference')
+                    const tools = teamItems.filter(i => i.subGroup === 'tools')
+                    const docs = teamItems.filter(i => i.subGroup === 'docs')
                     return (
                       <>
                         {algemeen.map(renderItem)}
-                        {algemeen.length > 0 && werk.length > 0 && <SubGroupDivider />}
+                        {werk.length > 0 && <SubGroupLabel label="Werk" />}
                         {werk.map(renderItem)}
-                        {werk.length > 0 && reference.length > 0 && <SubGroupDivider />}
-                        {reference.map(renderItem)}
+                        {tools.length > 0 && <SubGroupLabel label="Tools" />}
+                        {tools.map(renderItem)}
+                        {docs.length > 0 && <SubGroupLabel label="Docs" />}
+                        {docs.map(renderItem)}
                       </>
                     )
                   }
