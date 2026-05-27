@@ -250,10 +250,22 @@ export default function NotulenPage() {
         body: JSON.stringify({ meetingDate: newWeekDate.toISOString(), dateLabel: formattedLabel }),
       })
       if (!res.ok) throw new Error()
-      toast.success('Week toegevoegd')
+      const created = await res.json()
+      const movedToMonthId: string | null = created?._meta?.movedToMonthId || null
+
       setNewWeekDate(null)
       setIsAddingWeek(false)
-      handleDataChange()
+
+      if (movedToMonthId) {
+        // Week is in een andere kalendermaand gevallen → ververs maanden-lijst
+        // en spring direct naar de juiste maand.
+        await fetchMonths()
+        setSelectedMonthId(movedToMonthId)
+        toast.success('Week toegevoegd in de juiste maand', { duration: 4000 })
+      } else {
+        toast.success('Week toegevoegd')
+        handleDataChange()
+      }
     } catch {
       toast.error('Kon week niet toevoegen')
     }

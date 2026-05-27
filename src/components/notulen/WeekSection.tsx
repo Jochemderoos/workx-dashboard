@@ -215,6 +215,20 @@ export default function WeekSection({
                   onAddAction={handleAddAction}
                   onUpdateAction={handleUpdateAction}
                   onDeleteAction={handleDeleteAction}
+                  onMoveToNext={async () => {
+                    try {
+                      const res = await fetch(`${basePath}/topics/${topic.id}/move-next`, { method: 'POST' })
+                      const data = await res.json()
+                      if (!res.ok) {
+                        toast.error(data?.error || 'Kon agendapunt niet doorzetten')
+                        return
+                      }
+                      toast.success(`Op agenda van ${data.targetWeek.dateLabel}`)
+                      onDataChange()
+                    } catch {
+                      toast.error('Kon agendapunt niet doorzetten')
+                    }
+                  }}
                 />
               ))}
             </div>

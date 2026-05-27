@@ -10,6 +10,9 @@ const STANDARD_TOPICS = [
 
 const DEFAULT_PARTNERS = ['Bas', 'Maaike', 'Jochem', 'Juliette']
 
+const MONTH_NAMES = ['', 'Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
+  'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December']
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { monthId: string } }
@@ -33,28 +36,60 @@ export async function POST(
       )
     }
 
-    // Verify month exists
-    const month = await prisma.meetingMonth.findUnique({
+    // Verify selected month exists (mag niet Lustrum-tab zijn — die heeft eigen logica)
+    const requestedMonth = await prisma.meetingMonth.findUnique({
       where: { id: monthId },
     })
+    if (!requestedMonth) {
+      return NextResponse.json({ error: 'Maand niet gevonden' }, { status: 404 })
+    }
 
-    if (!month) {
-      return NextResponse.json(
-        { error: 'Maand niet gevonden' },
-        { status: 404 }
-      )
+    // Bepaal de werkelijke maand obv meetingDate (lokale datum).
+    // Als de gekozen meeting in een andere kalendermaand valt dan de
+    // aangevraagde MeetingMonth, leg 'm in de juiste (en maak die aan
+    // als die er nog niet is). Dit voorkomt dat een 1 juni-meeting
+    // onder 'Mei 2026' terechtkomt.
+    const date = new Date(meetingDate)
+    const targetYear = date.getFullYear()
+    const targetMonth = date.getMonth() + 1 // 1-12
+
+    let effectiveMonthId = monthId
+    let createdNewMonth = false
+    if (
+      !requestedMonth.isLustrum &&
+      (requestedMonth.year !== targetYear || requestedMonth.month !== targetMonth)
+    ) {
+      // Zoek bestaand of maak nieuw aan (idempotent dankzij unique index)
+      const correctMonth = await prisma.meetingMonth.upsert({
+        where: {
+          year_month_isLustrum: {
+            year: targetYear,
+            month: targetMonth,
+            isLustrum: false,
+          },
+        },
+        update: {},
+        create: {
+          year: targetYear,
+          month: targetMonth,
+          label: `${MONTH_NAMES[targetMonth]} ${targetYear}`,
+          isLustrum: false,
+        },
+      })
+      effectiveMonthId = correctMonth.id
+      createdNewMonth = correctMonth.createdAt.getTime() > Date.now() - 5000
     }
 
     const week = await prisma.meetingWeek.create({
       data: {
-        monthId,
-        meetingDate: new Date(meetingDate),
+        monthId: effectiveMonthId,
+        meetingDate: date,
         dateLabel,
         topics: {
           create: STANDARD_TOPICS,
         },
-        // NOTE: distributions (werkverdelingsgesprekken) are NOT auto-created.
-        // They should only be added when explicitly saved by the user.
+        // NOTE: distributions (werkverdelingsgesprekken) worden NIET automatisch
+        // gemaakt — die voegt de user expliciet toe.
       },
       include: {
         topics: {
@@ -65,7 +100,13 @@ export async function POST(
       },
     })
 
-    return NextResponse.json(week, { status: 201 })
+    return NextResponse.json({
+      ...week,
+      _meta: {
+        movedToMonthId: effectiveMonthId !== monthId ? effectiveMonthId : null,
+        createdNewMonth,
+      },
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating meeting week:', error)
     return NextResponse.json(

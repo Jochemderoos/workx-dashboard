@@ -24,11 +24,12 @@ interface TopicRowProps {
   onAddAction: (topicId: string, description: string, responsibleName: string) => void
   onUpdateAction: (actionId: string, data: { description?: string; responsibleName?: string; isCompleted?: boolean }) => void
   onDeleteAction: (actionId: string) => void
+  onMoveToNext?: () => void
 }
 
 export default function TopicRow({
   id, title, remarks, isStandard, actions, teamMembers,
-  onUpdate, onDelete, onAddAction, onUpdateAction, onDeleteAction
+  onUpdate, onDelete, onAddAction, onUpdateAction, onDeleteAction, onMoveToNext
 }: TopicRowProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [isEditingRemarks, setIsEditingRemarks] = useState(false)
@@ -148,7 +149,7 @@ export default function TopicRow({
             )}
           </div>
 
-          {/* Actions: add action + delete topic */}
+          {/* Actions: add action + naar volgende agenda + delete topic */}
           <div className="flex items-start gap-1 flex-shrink-0">
             <button
               onClick={() => setIsAddingAction(!isAddingAction)}
@@ -157,6 +158,17 @@ export default function TopicRow({
             >
               <Icons.target size={14} />
             </button>
+            {onMoveToNext && (
+              <button
+                onClick={() => {
+                  if (confirm(`'${title}' op de agenda van de eerstvolgende vergadering zetten?`)) onMoveToNext()
+                }}
+                className="p-1 text-gray-500 hover:text-workx-lime sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                title="Naar agenda volgende vergadering"
+              >
+                <Icons.arrowRight size={14} />
+              </button>
+            )}
             {!isStandard && (
               <button
                 onClick={() => onDelete(id)}
