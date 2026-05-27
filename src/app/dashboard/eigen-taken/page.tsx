@@ -14,6 +14,11 @@ interface Task {
   dueDate: string | null
   sortOrder: number
   createdAt: string
+  source?: 'personal' | 'meeting'
+  meetingActionId?: string
+  meetingWeekId?: string
+  meetingMonthId?: string
+  meetingDateLabel?: string
 }
 
 type BucketKey = 'overdue' | 'today' | 'tomorrow' | 'upcoming' | 'undated'
@@ -140,10 +145,23 @@ export default function EigenTakenPage() {
   const completeTask = async (id: string) => {
     if (completingRef.current.has(id)) return
     completingRef.current.add(id)
+    const task = tasks.find(t => t.id === id)
     // Optimistic verwijder uit lijst
     setTasks(prev => prev.filter(t => t.id !== id))
     try {
-      await fetch(`/api/personal-tasks/${id}`, { method: 'DELETE' })
+      if (task?.source === 'meeting' && task.meetingMonthId && task.meetingWeekId && task.meetingActionId) {
+        // Notulen-actiepunt afvinken via notulen-API (isCompleted=true)
+        await fetch(
+          `/api/notulen/${task.meetingMonthId}/weeks/${task.meetingWeekId}/actions/${task.meetingActionId}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isCompleted: true }),
+          }
+        )
+      } else {
+        await fetch(`/api/personal-tasks/${id}`, { method: 'DELETE' })
+      }
     } catch {
       toast.error('Kon taak niet afvinken')
       fetchTasks()
@@ -153,6 +171,11 @@ export default function EigenTakenPage() {
   }
 
   const deleteTask = async (id: string) => {
+    const task = tasks.find(t => t.id === id)
+    if (task?.source === 'meeting') {
+      toast('Notulen-taken verwijder je in het partneroverleg zelf', { icon: 'ℹ️' })
+      return
+    }
     if (!confirm('Deze taak verwijderen?')) return
     completeTask(id)
   }
@@ -428,7 +451,7 @@ export default function EigenTakenPage() {
                     return (
                       <div
                         key={task.id}
-                        draggable={!isExpanded}
+                        draggable={!isExpanded && task.source !== 'meeting'}
                         onDragStart={(e) => {
                           e.dataTransfer.effectAllowed = 'move'
                           e.dataTransfer.setData('text/plain', task.id)
@@ -462,15 +485,29 @@ export default function EigenTakenPage() {
 
                           {/* Titel + expand */}
                           <div className="flex-1 min-w-0">
-                            <button
-                              onClick={() => setExpandedId(isExpanded ? null : task.id)}
-                              className="text-left text-sm text-white hover:text-workx-lime transition-colors block w-full truncate"
-                              title="Klik om uit te klappen"
-                            >
-                              {task.title}
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => task.source === 'meeting' ? undefined : setExpandedId(isExpanded ? null : task.id)}
+                                className={`text-left text-sm text-white transition-colors truncate flex-1 ${task.source === 'meeting' ? 'cursor-default' : 'hover:text-workx-lime cursor-pointer'}`}
+                                title={task.source === 'meeting' ? 'Notulen-actiepunt — wordt afgevinkt in partneroverleg of hier' : 'Klik om uit te klappen'}
+                              >
+                                {task.title}
+                              </button>
+                              {task.source === 'meeting' && (
+                                <a
+                                  href={`/dashboard/partners/notulen?month=${task.meetingMonthId}&week=${task.meetingWeekId}`}
+                                  className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-orange-500/15 text-orange-300 hover:bg-orange-500/25 transition-colors flex-shrink-0 font-medium"
+                                  title={`Uit partneroverleg ${task.meetingDateLabel}`}
+                                >
+                                  notulen
+                                </a>
+                              )}
+                            </div>
                             {!isExpanded && task.description && (
                               <p className="text-xs text-gray-500 mt-0.5 truncate">{task.description}</p>
+                            )}
+                            {task.source === 'meeting' && task.meetingDateLabel && (
+                              <p className="text-[10px] text-gray-500 mt-0.5">{task.meetingDateLabel}</p>
                             )}
                           </div>
 
@@ -486,23 +523,25 @@ export default function EigenTakenPage() {
                             </span>
                           )}
 
-                          {/* Hover actions */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => setExpandedId(isExpanded ? null : task.id)}
-                              className="p-1 rounded text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
-                              title={isExpanded ? 'Inklappen' : 'Uitklappen'}
-                            >
-                              {isExpanded ? <Icons.chevronDown size={14} /> : <Icons.edit size={12} />}
-                            </button>
-                            <button
-                              onClick={() => deleteTask(task.id)}
-                              className="p-1 rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                              title="Verwijderen"
-                            >
-                              <Icons.trash size={12} />
-                            </button>
-                          </div>
+                          {/* Hover actions — alleen voor eigen taken */}
+                          {task.source !== 'meeting' && (
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => setExpandedId(isExpanded ? null : task.id)}
+                                className="p-1 rounded text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+                                title={isExpanded ? 'Inklappen' : 'Uitklappen'}
+                              >
+                                {isExpanded ? <Icons.chevronDown size={14} /> : <Icons.edit size={12} />}
+                              </button>
+                              <button
+                                onClick={() => deleteTask(task.id)}
+                                className="p-1 rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                title="Verwijderen"
+                              >
+                                <Icons.trash size={12} />
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Expanded edit panel */}

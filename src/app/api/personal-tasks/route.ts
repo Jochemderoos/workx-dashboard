@@ -3,16 +3,75 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// GET - alleen eigen taken
+// GET - eigen taken + openstaande notulen-actiepunten waar de huidige
+// gebruiker als verantwoordelijke is toebedeeld. Notulen-taken hebben
+// source='meeting' en kunnen alleen worden afgevinkt (niet bewerkt of
+// verwijderd) — dat gebeurt automatisch in de notulen-pagina.
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   try {
-    const tasks = await prisma.personalTask.findMany({
-      where: { userId: session.user.id },
+    const userId = session.user.id
+    const userName = (session.user as { name?: string }).name || ''
+    const firstName = userName.split(' ')[0].trim().toLowerCase()
+
+    const personalTasks = await prisma.personalTask.findMany({
+      where: { userId },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     })
-    return NextResponse.json(tasks)
+
+    // Notulen actiepunten waar de current user verantwoordelijke is.
+    // responsibleName is een string, mogelijk komma-gescheiden ('Bas, Jochem').
+    // Match op first name case-insensitive.
+    let meetingTasks: Array<{
+      id: string
+      title: string
+      description: string | null
+      dueDate: string | null
+      sortOrder: number
+      createdAt: string
+      source: 'meeting'
+      meetingActionId: string
+      meetingWeekId: string
+      meetingMonthId: string
+      meetingDateLabel: string
+    }> = []
+    if (firstName) {
+      try {
+        const actions = await prisma.meetingAction.findMany({
+          where: { isCompleted: false },
+          include: {
+            week: {
+              select: { id: true, dateLabel: true, monthId: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+        meetingTasks = actions
+          .filter(a => {
+            const names = a.responsibleName.split(',').map(s => s.trim().toLowerCase())
+            return names.some(n => n === firstName || n.startsWith(firstName + ' ') || n.split(' ')[0] === firstName)
+          })
+          .map(a => ({
+            id: `meeting-${a.id}`,
+            title: a.description,
+            description: null,
+            dueDate: null,
+            sortOrder: 0,
+            createdAt: a.createdAt.toISOString(),
+            source: 'meeting' as const,
+            meetingActionId: a.id,
+            meetingWeekId: a.weekId,
+            meetingMonthId: a.week.monthId,
+            meetingDateLabel: a.week.dateLabel,
+          }))
+      } catch (e) {
+        // Tabel mogelijk nog niet aanwezig — silently overslaan
+        console.warn('MeetingAction-query overgeslagen:', (e as Error)?.message)
+      }
+    }
+
+    return NextResponse.json([...meetingTasks, ...personalTasks])
   } catch (error) {
     console.error('Error fetching personal tasks:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

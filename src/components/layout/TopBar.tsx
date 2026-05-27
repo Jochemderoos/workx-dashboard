@@ -81,6 +81,7 @@ const mobileMenuItems: MobileMenuItem[] = [
   { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
   { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
   // Team — tools
+  { href: '/dashboard/eigen-taken', icon: Icons.check, label: 'Eigen taken', section: 'team', subGroup: 'tools' },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'tools' },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', section: 'team', subGroup: 'tools' },
   { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'tools' },
