@@ -22,6 +22,75 @@ interface Credential {
 
 const CATEGORIES = ['AI & Tools', 'Abonnementen', 'Portalen', 'Administratie', 'ICT', 'Overig']
 
+// Belangrijke services & contacten — uit het kantoorhandboek (Workx Docs).
+// Geen wachtwoorden; voor logins zie Hanna of de credentials hieronder.
+interface ImportantService {
+  name: string
+  icon: string
+  url?: string
+  email?: string
+  phone?: string
+  note?: string
+}
+
+const IMPORTANT_SERVICES: ImportantService[] = [
+  {
+    name: 'BaseNet',
+    icon: '📂',
+    phone: '020 685 5031',
+    email: 'servicedesk@basenet.nl',
+    note: 'Dossier- en zakenbeheer',
+  },
+  {
+    name: 'Doxflow',
+    icon: '🖨️',
+    url: 'http://10.4.42.80/login',
+    phone: '020 331 7171',
+    email: 'david@doxflow.nl / lennon@doxflow.nl',
+    note: 'Voorbereiden processtukken',
+  },
+  {
+    name: 'Constant IT',
+    icon: '💻',
+    phone: '020 760 8700',
+    email: 'support@constant.it',
+    note: 'IT-support',
+  },
+  {
+    name: 'De Bary',
+    icon: '🏦',
+    phone: '020 240 3000',
+    email: 'info@debary.nl',
+    note: 'Bank',
+  },
+  {
+    name: 'Fietskoerier',
+    icon: '🚲',
+    phone: '020 612 6700',
+    email: 'spoed@fietskoerier.nl',
+    note: 'Spoedbezorging',
+  },
+  {
+    name: 'Canon (PCI-Groep)',
+    icon: '🖨️',
+    phone: '088 543 08 08',
+    note: 'Printer-onderhoud',
+  },
+  {
+    name: 'Graphic Design (Joeri)',
+    icon: '🎨',
+    email: 'joeri@ttwwoo.nl',
+    note: 'Vormgeving',
+  },
+  {
+    name: 'Workx Advocaten (kantoor)',
+    icon: '🏛️',
+    phone: '020 308 0320',
+    url: 'https://www.workxadvocaten.nl',
+    note: 'Eigen kantoor',
+  },
+]
+
 export default function WachtwoordenPage() {
   const { data: session } = useSession()
   const { data: credentials, mutate } = useSWR<Credential[]>('/api/credentials', fetcher)
@@ -96,6 +165,65 @@ export default function WachtwoordenPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-4 py-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-workx-lime/40 transition-all"
         />
+      </div>
+
+      {/* Belangrijke services & contacten */}
+      <div>
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Belangrijke services</h2>
+          <a href="/dashboard/hr-docs" className="text-[11px] text-workx-lime/70 hover:text-workx-lime">
+            uit kantoorhandboek →
+          </a>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {IMPORTANT_SERVICES.map((s) => (
+            <div key={s.name} className="bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/[0.07] transition-colors">
+              <div className="flex items-start gap-3 mb-2">
+                <span className="text-xl leading-none flex-shrink-0">{s.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-white truncate">{s.name}</h3>
+                  {s.note && <p className="text-[11px] text-gray-500 mt-0.5">{s.note}</p>}
+                </div>
+              </div>
+              <div className="space-y-1 text-xs">
+                {s.url && (
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-workx-lime hover:underline truncate"
+                    title={s.url}
+                  >
+                    <Icons.link size={11} className="flex-shrink-0" />
+                    <span className="truncate">{s.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+                  </a>
+                )}
+                {s.email && (
+                  <a
+                    href={`mailto:${s.email.split(' / ')[0]}`}
+                    className="flex items-center gap-2 text-gray-300 hover:text-workx-lime truncate"
+                    title={s.email}
+                  >
+                    <Icons.mail size={11} className="flex-shrink-0" />
+                    <span className="truncate">{s.email}</span>
+                  </a>
+                )}
+                {s.phone && (
+                  <a
+                    href={`tel:${s.phone.replace(/\s+/g, '')}`}
+                    className="flex items-center gap-2 text-gray-300 hover:text-workx-lime tabular-nums"
+                  >
+                    <Icons.phone size={11} className="flex-shrink-0" />
+                    <span>{s.phone}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-gray-500 mt-3 italic">
+          Voor inloggegevens (Trifact, Exact, KPN, etc.): zie credentials hieronder of vraag Hanna.
+        </p>
       </div>
 
       {/* Credentials grouped by category */}
