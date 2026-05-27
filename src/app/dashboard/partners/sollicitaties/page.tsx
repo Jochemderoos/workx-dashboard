@@ -9,6 +9,7 @@ import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { getPhotoUrl, ALL_TEAM_MEMBERS } from '@/lib/team-photos'
 import { uploadToBlob } from '@/lib/blob-upload'
+import SollicitatiebeleidSection from '@/components/sollicitaties/SollicitatiebeleidSection'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -299,6 +300,9 @@ export default function SollicitatiesPage() {
           Nieuwe sollicitant
         </button>
       </div>
+
+      {/* Sollicitatiebeleid — bovenaan, met visuele timeline en PDF-download */}
+      <SollicitatiebeleidSection />
 
       {/* Overview dashboard */}
       {applicants.length > 0 && (() => {
