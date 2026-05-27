@@ -459,6 +459,54 @@ export async function GET() {
       console.warn('TeamAnnouncement query skipped:', (e as Error)?.message)
     }
 
+    // 9a. Upload-reminder voor Hanna/Lotte/Jochem — elke 14 dagen nieuwe
+    // BaseNet-PDF uploaden. Key bevat de laatste upload-datum zodat:
+    //  - na nieuwe upload de notificatie automatisch verdwijnt
+    //  - dismissals niet eeuwig blijven hangen (volgende 14-dagen-window
+    //    krijgt een verse key)
+    try {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      })
+      const UPLOAD_REMINDER_NAMES = new Set([
+        'Hanna Blaauboer',
+        'Lotte van Sint Truiden',
+        'Jochem de Roos',
+      ])
+      if (currentUser?.name && UPLOAD_REMINDER_NAMES.has(currentUser.name)) {
+        const lastImport = await prisma.openInvoice.aggregate({
+          _max: { importedAt: true },
+        })
+        const lastImportedAt = lastImport._max.importedAt
+        const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000
+        const daysSince = lastImportedAt
+          ? (now.getTime() - lastImportedAt.getTime()) / (24 * 60 * 60 * 1000)
+          : Infinity
+        const overdue = !lastImportedAt || (now.getTime() - lastImportedAt.getTime()) >= fourteenDaysMs
+
+        if (overdue) {
+          const anchor = lastImportedAt ? lastImportedAt.toISOString().slice(0, 10) : 'never'
+          const key = `upload-reminder-${anchor}`
+          if (!dismissedKeys.has(key)) {
+            const daysLabel = lastImportedAt ? `${Math.floor(daysSince)} dgn` : 'nooit eerder'
+            notifications.push({
+              id: key,
+              type: 'debiteuren',
+              title: '⏰ Tijd voor nieuwe debiteuren-upload',
+              message: `Laatste upload: ${daysLabel} geleden. Upload de BaseNet-PDF zodat het hele team kan blijven aanschrijven.`,
+              createdAt: now,
+              read: false,
+              href: '/dashboard/debiteuren',
+              priority: 'high',
+            })
+          }
+        }
+      }
+    } catch {
+      // silent: tabel kan nog niet bestaan bij allereerste deploy
+    }
+
     // 9. Openstaande debiteuren — herinnering om aan te schrijven
     // Verschijnt zolang er facturen open staan waar 14+ dagen niets mee is
     // gedaan (of nog nooit aangeschreven). Sluit zichzelf af zodra alle
