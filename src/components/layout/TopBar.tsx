@@ -585,7 +585,7 @@ function TopBarComponent({ user }: TopBarProps) {
                         {werk.map(renderItem)}
                         {tools.length > 0 && <SubGroupLabel label="Tools" />}
                         {tools.map(renderItem)}
-                        {docs.length > 0 && <SubGroupLabel label="Docs" />}
+                        {docs.length > 0 && <SubGroupLabel label="Info" />}
                         {docs.map(renderItem)}
                       </>
                     )

@@ -210,7 +210,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
           {teamMenu_Docs.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).length > 0 && (
             <>
-              <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>Docs</p>
+              <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>Info</p>
               <div className="space-y-1">
                 {teamMenu_Docs.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
               </div>
