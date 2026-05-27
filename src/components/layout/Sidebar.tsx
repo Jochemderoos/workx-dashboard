@@ -72,15 +72,18 @@ function WorkxLogoBox() {
   )
 }
 
-// "Team" — algemene pagina's voor iedereen, inclusief Team/Wachtwoorden/Docs
-// en tools die regelmatig gebruikt worden (Bonus, Transitie).
-const teamMenuItems = [
+// "Team" — algemene pagina's voor iedereen, in 3 visuele sub-groepjes
+// (gescheiden door spacing/lijntje, geen extra clicks).
+const teamMenu_Algemeen = [
   { href: '/dashboard', icon: Icons.home, label: 'Dashboard', iconAnim: 'icon-home-hover' },
   { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', iconAnim: 'icon-party-hover', badge: '15 jaar!' },
   { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', iconAnim: 'icon-mappin-hover' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', iconAnim: 'icon-calendar-hover' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover', hideForExternal: true },
   { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', iconAnim: 'icon-graduation-hover' },
+]
+
+const teamMenu_Werk = [
   { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', iconAnim: 'icon-file-hover' },
   { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', iconAnim: 'icon-file-hover' },
@@ -88,6 +91,9 @@ const teamMenuItems = [
   { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover', hideForExternal: true },
   { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', iconAnim: 'icon-file-hover', hideForExternal: true },
   { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', iconAnim: 'icon-briefcase-hover', hideForExternal: true },
+]
+
+const teamMenu_Reference = [
   { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', iconAnim: 'icon-briefcase-hover' },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover' },
   { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', iconAnim: 'icon-lock-hover', hideForExternal: true },
@@ -95,6 +101,8 @@ const teamMenuItems = [
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover', hideForExternal: true },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover' },
 ]
+
+const teamMenuItems = [...teamMenu_Algemeen, ...teamMenu_Werk, ...teamMenu_Reference]
 
 // "Partner" — alleen voor PARTNER en ADMIN
 const partnersMenuItems = [
@@ -170,13 +178,21 @@ function SidebarComponent({ user }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 space-y-6">
-        {/* Team — algemene pagina's */}
+        {/* Team — algemene pagina's, in 3 visuele sub-groepjes */}
         <div>
           <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Team</p>
           <div className="space-y-1">
-            {teamMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
+            {teamMenu_Algemeen.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
+          </div>
+          <div className="mx-4 my-3 border-t" style={{ borderColor: 'var(--color-border-subtle)', opacity: 0.5 }} />
+          <div className="space-y-1">
+            {teamMenu_Werk.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
             {/* Werk Lodewijk voor EXTERNAL */}
             {isExternal && <NavLink href="/dashboard/partners/werk-lodewijk" icon={Icons.briefcase} label="Werk Lodewijk" iconAnim="icon-briefcase-hover" />}
+          </div>
+          <div className="mx-4 my-3 border-t" style={{ borderColor: 'var(--color-border-subtle)', opacity: 0.5 }} />
+          <div className="space-y-1">
+            {teamMenu_Reference.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
           </div>
         </div>
 

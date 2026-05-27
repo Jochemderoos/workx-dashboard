@@ -60,31 +60,34 @@ type MobileMenuItem = {
   icon: any
   label: string
   section: 'team' | 'partner' | 'extra' | 'beheer'
+  subGroup?: 'algemeen' | 'werk' | 'reference'
   roles?: string[]
   badge?: string
 }
 
 const mobileMenuItems: MobileMenuItem[] = [
-  // Team
-  { href: '/dashboard', icon: Icons.home, label: 'Dashboard', section: 'team' },
-  { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', badge: '15 jaar!', section: 'team' },
-  { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', section: 'team' },
-  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', section: 'team' },
-  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
-  { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', section: 'team' },
-  { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', section: 'team' },
-  { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', section: 'team' },
-  { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', section: 'team' },
-  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
-  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
-  { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
-  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
-  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', section: 'team' },
-  { href: '/dashboard/team', icon: Icons.users, label: 'Team', section: 'team' },
-  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
-  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team' },
-  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', section: 'team' },
+  // Team — algemeen
+  { href: '/dashboard', icon: Icons.home, label: 'Dashboard', section: 'team', subGroup: 'algemeen' },
+  { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', badge: '15 jaar!', section: 'team', subGroup: 'algemeen' },
+  { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', section: 'team', subGroup: 'algemeen' },
+  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', section: 'team', subGroup: 'algemeen' },
+  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'algemeen' },
+  { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', section: 'team', subGroup: 'algemeen' },
+  // Team — werk
+  { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', section: 'team', subGroup: 'werk' },
+  { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', section: 'team', subGroup: 'werk' },
+  { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', section: 'team', subGroup: 'werk' },
+  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
+  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
+  { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
+  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
+  // Team — reference & tools
+  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', section: 'team', subGroup: 'reference' },
+  { href: '/dashboard/team', icon: Icons.users, label: 'Team', section: 'team', subGroup: 'reference' },
+  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'reference' },
+  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'reference' },
+  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'reference' },
+  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', section: 'team', subGroup: 'reference' },
 
   // Partner
   { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
@@ -563,12 +566,31 @@ function TopBarComponent({ user }: TopBarProps) {
                     </p>
                   )
 
+                  const SubGroupDivider = () => (
+                    <div className="mx-4 my-2 border-t" style={{ borderColor: 'var(--color-border-subtle)', opacity: 0.5 }} />
+                  )
+
+                  const renderTeamWithSubGroups = () => {
+                    const algemeen = teamItems.filter(i => i.subGroup === 'algemeen')
+                    const werk = teamItems.filter(i => i.subGroup === 'werk')
+                    const reference = teamItems.filter(i => i.subGroup === 'reference')
+                    return (
+                      <>
+                        {algemeen.map(renderItem)}
+                        {algemeen.length > 0 && werk.length > 0 && <SubGroupDivider />}
+                        {werk.map(renderItem)}
+                        {werk.length > 0 && reference.length > 0 && <SubGroupDivider />}
+                        {reference.map(renderItem)}
+                      </>
+                    )
+                  }
+
                   return (
                     <>
                       {teamItems.length > 0 && (
                         <>
                           <SectionHeader label="Team" />
-                          {teamItems.map(renderItem)}
+                          {renderTeamWithSubGroups()}
                         </>
                       )}
                       {partnerItems.length > 0 && (
