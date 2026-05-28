@@ -10,7 +10,7 @@ import { AnnouncementModal, type AnnouncementInitial } from '@/components/Announ
 
 interface Notification {
   id: string
-  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system' | 'lustrum' | 'overdracht' | 'announcement'
+  type: 'zaak' | 'vacation' | 'feedback' | 'calendar' | 'werkverdeling' | 'system' | 'lustrum' | 'overdracht' | 'announcement' | 'tip'
   title: string
   message: string
   createdAt: Date
@@ -179,6 +179,8 @@ export function NotificationCenter({ userId, userRole }: NotificationCenterProps
         return <span className="inline-block text-base">{notification.icon || '📢'}</span>
       case 'lustrum':
         return <span className="inline-block animate-bounce text-base">🎉</span>
+      case 'tip':
+        return <span className="inline-block text-base">💡</span>
       default:
         return <Icons.bell size={16} className="text-gray-400" />
     }

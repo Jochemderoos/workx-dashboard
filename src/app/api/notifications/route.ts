@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getAnnouncementIcon } from '@/lib/announcement-icon'
+import { getTipOfTheDay, tipKeyForDay } from '@/lib/wist-je-dat-tips'
 
 // GET - Fetch notifications for current user
 export async function GET() {
@@ -630,6 +631,28 @@ export async function GET() {
       }
     } catch {
       // silent: tabel kan nog niet bestaan bij allereerste deploy
+    }
+
+    // 10. Wist je dat? — dagelijkse tip over een dashboard-pagina.
+    // Partners krijgen ook partner-pagina's in de pool.
+    try {
+      const tipKey = tipKeyForDay(now)
+      if (!dismissedKeys.has(tipKey)) {
+        const isPartner = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
+        const tip = getTipOfTheDay(isPartner, now)
+        notifications.push({
+          id: tipKey,
+          type: 'tip',
+          title: tip.title,
+          message: tip.message,
+          createdAt: now,
+          read: false,
+          href: tip.href,
+          priority: 'low',
+        })
+      }
+    } catch {
+      // silent — tip is informatief, mag never fail
     }
 
     // Sort by createdAt (newest first)
