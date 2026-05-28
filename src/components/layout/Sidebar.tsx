@@ -8,6 +8,16 @@ import { signOut } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import {
+  teamMenu_Algemeen as menuTeamAlgemeen,
+  teamMenu_Werk as menuTeamWerk,
+  teamMenu_Tools as menuTeamTools,
+  teamMenu_Docs as menuTeamDocs,
+  partnersMenuItems as menuPartners,
+  extraMenuItems as menuExtra,
+  manageMenuItems as menuBeheer,
+  allMenuHrefs as menuAllHrefs,
+} from '@/lib/menu-data'
 
 interface SidebarProps {
   user: {
@@ -72,71 +82,16 @@ function WorkxLogoBox() {
   )
 }
 
-// "Team" — algemene pagina's, in 4 visuele sub-groepjes met kleine
-// sub-labels (Algemeen / Werk / Tools / Docs).
-const teamMenu_Algemeen = [
-  { href: '/dashboard', icon: Icons.home, label: 'Dashboard', iconAnim: 'icon-home-hover' },
-  { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', iconAnim: 'icon-party-hover', badge: '15 jaar!' },
-  { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', iconAnim: 'icon-mappin-hover' },
-  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', iconAnim: 'icon-calendar-hover' },
-  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover', hideForExternal: true },
-  { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', iconAnim: 'icon-graduation-hover' },
-]
-
-const teamMenu_Werk = [
-  { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', iconAnim: 'icon-briefcase-hover' },
-  { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', iconAnim: 'icon-file-hover' },
-  { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', iconAnim: 'icon-file-hover' },
-  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', iconAnim: 'icon-target-hover', hideForExternal: true },
-  { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', iconAnim: 'icon-file-hover', hideForExternal: true },
-  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', iconAnim: 'icon-briefcase-hover', hideForExternal: true },
-]
-
-const teamMenu_Tools = [
-  { href: '/dashboard/eigen-taken', icon: Icons.check, label: 'Eigen taken', iconAnim: 'icon-check-hover' },
-  { href: '/dashboard/onboarding', icon: Icons.userPlus, label: 'Onboarding', iconAnim: 'icon-user-hover', hideForExternal: true },
-  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover', hideForExternal: true },
-  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover' },
-  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover', hideForExternal: true },
-]
-
-const teamMenu_Docs = [
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover', hideForExternal: true },
-  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', iconAnim: 'icon-lock-hover', hideForExternal: true },
-  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', iconAnim: 'icon-briefcase-hover' },
-  { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover' },
-]
-
-const teamMenuItems = [...teamMenu_Algemeen, ...teamMenu_Werk, ...teamMenu_Tools, ...teamMenu_Docs]
-
-// "Partner" — alleen voor PARTNER en ADMIN
-const partnersMenuItems = [
-  { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk', iconAnim: 'icon-briefcase-hover' },
-  { href: '/dashboard/partners/verantwoordelijk', icon: Icons.users, label: 'Verantwoordelijk', iconAnim: 'icon-users-hover' },
-  { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Partner agenda/notulen', iconAnim: 'icon-file-hover' },
-  { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', iconAnim: 'icon-chat-hover' },
-  { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', iconAnim: 'icon-user-hover' },
-  { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover' },
-  { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', iconAnim: 'icon-euro-hover' },
-]
-
-// "Extra" — uitklapbaar, default dicht. Pagina's die nu weinig gebruikt
-// worden maar misschien later weer relevant zijn.
-const extraMenuItems = [
-  { href: '/dashboard/werkstudent', icon: Icons.clipboard, label: 'Werkstudent', iconAnim: 'icon-file-hover' },
-  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', iconAnim: 'icon-file-hover', hideForExternal: true },
-  { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', iconAnim: 'icon-layers-hover' },
-  { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', iconAnim: 'icon-file-hover', hideForExternal: true },
-]
-
-// "Beheer" — onderaan
-const manageMenuItems = [
-  { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover' },
-  { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', iconAnim: 'icon-settings-hover' },
-]
-
-// All menu hrefs for accurate active-state detection
-const allMenuHrefs = [...teamMenuItems, ...partnersMenuItems, ...extraMenuItems, ...manageMenuItems].map(i => i.href)
+// Menu-data zit nu in src/lib/menu-data.ts (single source of truth voor
+// zowel sidebar als overzicht-pagina). Aliassen hieronder voor leesbaarheid.
+const teamMenu_Algemeen = menuTeamAlgemeen
+const teamMenu_Werk = menuTeamWerk
+const teamMenu_Tools = menuTeamTools
+const teamMenu_Docs = menuTeamDocs
+const partnersMenuItems = menuPartners
+const extraMenuItems = menuExtra
+const manageMenuItems = menuBeheer
+const allMenuHrefs = menuAllHrefs
 
 function SidebarComponent({ user }: SidebarProps) {
   const pathname = usePathname()

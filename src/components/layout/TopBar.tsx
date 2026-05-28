@@ -68,6 +68,7 @@ type MobileMenuItem = {
 const mobileMenuItems: MobileMenuItem[] = [
   // Team — algemeen
   { href: '/dashboard', icon: Icons.home, label: 'Dashboard', section: 'team', subGroup: 'algemeen' },
+  { href: '/dashboard/overzicht', icon: Icons.layers, label: 'Overzicht', section: 'team', subGroup: 'algemeen' },
   { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', badge: '15 jaar!', section: 'team', subGroup: 'algemeen' },
   { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', section: 'team', subGroup: 'algemeen' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', section: 'team', subGroup: 'algemeen' },
