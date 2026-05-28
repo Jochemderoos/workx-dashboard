@@ -4,12 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 async function requirePartnerOrAdmin() {
+  // Onboarding is open voor iedereen ingelogd — team-tool, geen partner-restrictie.
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { error: NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 }) }
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } })
-  if (!user || !['PARTNER', 'ADMIN'].includes(user.role)) {
-    return { error: NextResponse.json({ error: 'Geen toegang' }, { status: 403 }) }
-  }
   return { session }
 }
 

@@ -55,7 +55,7 @@ export const teamMenu_Werk: MenuItem[] = [
 export const teamMenu_Tools: MenuItem[] = [
   { href: '/dashboard/eigen-taken', icon: Icons.check, label: 'Eigen taken', iconAnim: 'icon-check-hover',
     description: 'Persoonlijke takenlijst incl. actiepunten uit het partneroverleg.' },
-  { href: '/dashboard/onboarding', icon: Icons.userPlus, label: 'Onboarding', iconAnim: 'icon-user-hover', hideForExternal: true, partnerOnly: true,
+  { href: '/dashboard/onboarding', icon: Icons.userPlus, label: 'Onboarding', iconAnim: 'icon-user-hover',
     description: 'Onboarding-checklist voor nieuwe medewerkers. Items afvinken + notities.' },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover', hideForExternal: true,
     description: 'Bonusregeling-overzicht: eigen omzet en uitkering per kwartaal.' },

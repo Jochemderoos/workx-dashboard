@@ -53,8 +53,6 @@ function catMeta(category: string) {
 
 export default function OnboardingPage() {
   const { data: session } = useSession()
-  const role = (session?.user as { role?: string })?.role
-  const hasAccess = role === 'PARTNER' || role === 'ADMIN'
 
   const [employees, setEmployees] = useState<Employee[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
@@ -267,16 +265,6 @@ export default function OnboardingPage() {
   }
 
   if (!session) return null
-  if (!hasAccess) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <Icons.lock size={32} className="mx-auto mb-3" style={{ color: 'var(--color-text-tertiary)' }} />
-          <p style={{ color: 'var(--color-text-secondary)' }}>Alleen toegankelijk voor partner/admin</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6 animate-fade-in">

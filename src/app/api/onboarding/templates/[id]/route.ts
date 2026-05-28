@@ -6,10 +6,6 @@ import { prisma } from '@/lib/prisma'
 async function requirePartnerOrAdmin() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { error: NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 }) }
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } })
-  if (!user || !['PARTNER', 'ADMIN'].includes(user.role)) {
-    return { error: NextResponse.json({ error: 'Geen toegang' }, { status: 403 }) }
-  }
   return { session }
 }
 

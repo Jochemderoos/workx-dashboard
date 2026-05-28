@@ -224,6 +224,22 @@ export default function StappenplanView() {
           )}
         </div>
 
+        {/* Disclaimer: indicatief karakter */}
+        <div className="mt-6 rounded-2xl border-2 p-4 flex items-start gap-3" style={{
+          background: 'rgba(249, 255, 133, 0.12)',
+          borderColor: 'rgba(180, 185, 50, 0.5)',
+        }}>
+          <span className="text-2xl shrink-0">⚠️</span>
+          <div className="flex-1">
+            <p className="text-sm font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+              Indicatief stappenplan
+            </p>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              Dit is een <strong>indicatief</strong> groeipad. De omzet-drempels worden nog herzien en kunnen worden gewijzigd. Het stappenplan is geen arbeidsvoorwaarde — het is ter discretie van Workx om nader invulling te geven en te bepalen of aan de vereisten is voldaan.
+            </p>
+          </div>
+        </div>
+
         {/* Trapsgewijze visuele groei-indicator */}
         <div className="mt-8 mb-2 flex items-end gap-2 h-10">
           {content.steps.map((s, i) => {
