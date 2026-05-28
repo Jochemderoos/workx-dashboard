@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import FeestdagenOverzicht from '@/components/vakanties/FeestdagenOverzicht'
 import DatePicker from '@/components/ui/DatePicker'
 import * as Popover from '@radix-ui/react-popover'
 import VacationPeriodForm, { VacationPeriodFormData } from '@/components/vacation/VacationPeriodForm'
@@ -1155,6 +1156,9 @@ export default function VakantiesPage() {
           )}
         </div>
       </div>
+
+      {/* FEESTDAGEN OVERZICHT - altijd zichtbaar, beide modi */}
+      <FeestdagenOverzicht />
 
       {/* VAKANTIEAANVRAAG STATUS WIDGET - prominent notification for recently decided requests (employees only) */}
       {!isAdmin && (() => {

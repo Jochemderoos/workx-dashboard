@@ -24,6 +24,7 @@ import WorkxLogo from '@/components/ui/WorkxLogo'
 import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget'
 import OpenInvoicesWidget from '@/components/dashboard/OpenInvoicesWidget'
 import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
+import JarReminderWidget from '@/components/dashboard/JarReminderWidget'
 function WorkxLogoSmall() {
   return <WorkxLogo height={56} />
 }
@@ -1608,6 +1609,9 @@ export default function DashboardHome() {
 
       {/* Eigen taken — vandaag */}
       <TodayTasksWidget />
+
+      {/* JAR-reminder — toont alleen als gebruiker een JAR-beurt binnen 30 dagen heeft */}
+      <JarReminderWidget />
 
       {/* Upload-reminder — alleen voor Hanna/Lotte/Jochem, elke 2 weken */}
       <UploadReminderWidget />
