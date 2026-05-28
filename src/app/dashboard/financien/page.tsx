@@ -50,15 +50,6 @@ interface BudgetItem {
   spent: number
 }
 
-interface SalaryScale {
-  id: string
-  experienceYear: number
-  label: string
-  salary: number
-  hourlyRateBase: number
-  hourlyRateMin: number | null
-  hourlyRateMax: number | null
-}
 
 interface VacationBalance {
   opbouwLopendJaar: number
@@ -115,7 +106,7 @@ interface EmployeeData {
   parentalLeaves: ParentalLeave[]
 }
 
-type TabType = 'overzicht' | 'budgetten' | 'salarishuis' | 'inzichten' | `jaar-${number}`
+type TabType = 'overzicht' | 'budgetten' | 'inzichten' | `jaar-${number}`
 
 export default function FinancienPage() {
   const { data: session } = useSession()
@@ -133,11 +124,8 @@ export default function FinancienPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [salaryScales, setSalaryScales] = useState<SalaryScale[]>([])
   const [employees, setEmployees] = useState<EmployeeData[]>([])
   const [editingEmployee, setEditingEmployee] = useState<string | null>(null)
-  const [editingSalaryScale, setEditingSalaryScale] = useState<string | null>(null)
-  const [isEditingSalarishuis, setIsEditingSalarishuis] = useState(false)
   const [editingVacation, setEditingVacation] = useState<string | null>(null)
   const [sickDaysTotals, setSickDaysTotals] = useState<SickDaysTotals[]>([])
   // Overige kosten 2026 uit Kosten-pagina (alleen reguliere, exclusief UWV/ASR)
@@ -183,13 +171,6 @@ export default function FinancienPage() {
         if (budgetRes.ok) {
           const budgetData = await budgetRes.json()
           setBudgets(budgetData)
-        }
-
-        // Load salary scales
-        const scaleRes = await fetch('/api/financien/salary-scales')
-        if (scaleRes.ok) {
-          const scaleData = await scaleRes.json()
-          setSalaryScales(scaleData)
         }
 
         // Load employee compensation (voor iedereen - API filtert op basis van rol)
@@ -965,7 +946,6 @@ export default function FinancienPage() {
             { id: `jaar-${years[1]}` as TabType, label: String(years[1]), icon: Icons.calendar },
             { id: `jaar-${years[2]}` as TabType, label: String(years[2]), icon: Icons.calendar },
             { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
-            { id: 'salarishuis' as TabType, label: 'Salarishuis', icon: Icons.euro },
             ...(isManager ? [{ id: 'inzichten' as TabType, label: 'Inzichten', icon: Icons.activity }] : []),
           ].map(tab => (
             <button
@@ -2663,226 +2643,6 @@ export default function FinancienPage() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Salarishuis Tab - Visible to everyone */}
-      {activeTab === 'salarishuis' && (
-        <div className="space-y-6">
-          {/* Header with buttons for managers */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <p className="text-white/60 text-sm">
-                <span className="hidden sm:inline">Het salarishuis van Workx Advocaten - Tarieven per ervaringsjaar</span>
-                <span className="sm:hidden">Salarishuis - Tarieven per jaar</span>
-              </p>
-              <p className="text-gray-400 text-xs mt-1">
-                <span className="hidden sm:inline">Alle medewerkers gaan per 1 maart elk jaar automatisch een stap omhoog</span>
-                <span className="sm:hidden">Per 1 maart automatisch een stap omhoog</span>
-              </p>
-            </div>
-            {isManager && (
-              <div className="flex gap-2">
-                {salaryScales.length === 0 ? (
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/financien/salary-scales/seed', { method: 'POST' })
-                        if (res.ok) {
-                          const scaleRes = await fetch('/api/financien/salary-scales')
-                          if (scaleRes.ok) {
-                            setSalaryScales(await scaleRes.json())
-                          }
-                        }
-                      } catch (error) {
-                        console.error('Error seeding salary scales:', error)
-                      }
-                    }}
-                    className="px-4 py-2 bg-workx-lime text-workx-dark rounded-xl font-medium hover:bg-workx-lime/90 transition-colors text-sm"
-                  >
-                    Salarisschaal Laden
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (isEditingSalarishuis) {
-                        // Als we klaar klikken, sluit ook alle open edit velden
-                        setEditingSalaryScale(null)
-                      }
-                      setIsEditingSalarishuis(!isEditingSalarishuis)
-                    }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors text-sm ${
-                      isEditingSalarishuis
-                        ? 'bg-workx-lime text-workx-dark'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    <Icons.edit size={16} />
-                    {isEditingSalarishuis ? 'Klaar' : 'Bewerken'}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Salary Scale Table */}
-          {salaryScales.length > 0 ? (
-            <div className="bg-workx-dark/40 rounded-2xl border border-white/5 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-white/10 bg-workx-dark/60">
-                      <th className="text-left py-4 px-6 text-workx-lime font-medium">Ervaringsjaar</th>
-                      <th className="text-right py-4 px-6 text-workx-lime font-medium">Bruto Salaris</th>
-                      <th className="text-right py-4 px-6 text-workx-lime font-medium">Uurtarief</th>
-                      <th className="text-right py-4 px-6 text-workx-lime font-medium">Range</th>
-                      {isEditingSalarishuis && <th className="w-10"></th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salaryScales.map((scale, idx) => {
-                      const isEditing = editingSalaryScale === scale.id
-
-                      return (
-                        <tr
-                          key={scale.id}
-                          className={`border-b border-white/5 hover:bg-white/5 transition-colors ${idx % 2 === 0 ? 'bg-white/[0.02]' : ''} ${isEditing ? 'bg-workx-lime/5' : ''}`}
-                        >
-                          <td className="py-4 px-6">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center">
-                                <span className="text-workx-lime font-bold text-sm">{scale.experienceYear}</span>
-                              </div>
-                              <span className="text-white font-medium">{scale.label}</span>
-                            </div>
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                id={`salary-${scale.id}`}
-                                defaultValue={scale.salary}
-                                className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-24 text-right focus:border-workx-lime/50 focus:outline-none"
-                              />
-                            ) : (
-                              <>
-                                <span className="text-white font-semibold text-lg">{formatCurrency(scale.salary)}</span>
-                                <span className="text-gray-400 text-sm ml-1">/maand</span>
-                              </>
-                            )}
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                id={`hourlyRate-${scale.id}`}
-                                defaultValue={scale.hourlyRateBase}
-                                className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-20 text-right focus:border-workx-lime/50 focus:outline-none"
-                              />
-                            ) : (
-                              <span className="text-workx-lime font-semibold text-lg">€{scale.hourlyRateBase}</span>
-                            )}
-                          </td>
-                          <td className="py-4 px-6 text-right">
-                            {isEditing ? (
-                              <div className="flex items-center justify-end gap-1">
-                                <input
-                                  type="number"
-                                  id={`rateMin-${scale.id}`}
-                                  defaultValue={scale.hourlyRateMin || ''}
-                                  placeholder="min"
-                                  className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-16 text-right focus:border-workx-lime/50 focus:outline-none"
-                                />
-                                <span className="text-gray-400">-</span>
-                                <input
-                                  type="number"
-                                  id={`rateMax-${scale.id}`}
-                                  defaultValue={scale.hourlyRateMax || ''}
-                                  placeholder="max"
-                                  className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-16 text-right focus:border-workx-lime/50 focus:outline-none"
-                                />
-                              </div>
-                            ) : (
-                              scale.hourlyRateMin && scale.hourlyRateMax ? (
-                                <span className="text-white/60">
-                                  €{scale.hourlyRateMin} - €{scale.hourlyRateMax}
-                                </span>
-                              ) : (
-                                <span className="text-white/30">-</span>
-                              )
-                            )}
-                          </td>
-                          {isEditingSalarishuis && (
-                            <td className="py-4 px-2">
-                              {isEditing ? (
-                                <div className="flex gap-1">
-                                  <button
-                                    onClick={async () => {
-                                      const salaryInput = document.getElementById(`salary-${scale.id}`) as HTMLInputElement
-                                      const hourlyRateInput = document.getElementById(`hourlyRate-${scale.id}`) as HTMLInputElement
-                                      const rateMinInput = document.getElementById(`rateMin-${scale.id}`) as HTMLInputElement
-                                      const rateMaxInput = document.getElementById(`rateMax-${scale.id}`) as HTMLInputElement
-
-                                      try {
-                                        await fetch('/api/financien/salary-scales', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({
-                                            ...scale,
-                                            salary: parseFloat(salaryInput.value) || scale.salary,
-                                            hourlyRateBase: parseFloat(hourlyRateInput.value) || scale.hourlyRateBase,
-                                            hourlyRateMin: parseFloat(rateMinInput.value) || null,
-                                            hourlyRateMax: parseFloat(rateMaxInput.value) || null
-                                          })
-                                        })
-                                        const scaleRes = await fetch('/api/financien/salary-scales')
-                                        if (scaleRes.ok) setSalaryScales(await scaleRes.json())
-                                        setEditingSalaryScale(null)
-                                      } catch (error) {
-                                        console.error('Error updating scale:', error)
-                                      }
-                                    }}
-                                    className="p-2 rounded-lg bg-workx-lime text-workx-dark hover:bg-workx-lime/80 transition-colors"
-                                    title="Opslaan"
-                                  >
-                                    <Icons.check size={14} />
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingSalaryScale(null)}
-                                    className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                                    title="Annuleren"
-                                  >
-                                    <Icons.x size={14} />
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => setEditingSalaryScale(scale.id)}
-                                  className="p-2 rounded-lg text-gray-400 hover:text-workx-lime hover:bg-white/10 transition-colors"
-                                  title="Bewerken"
-                                >
-                                  <Icons.edit size={14} />
-                                </button>
-                              )}
-                            </td>
-                          )}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-workx-dark/40 rounded-2xl p-12 border border-white/5 text-center">
-              <Icons.euro size={48} className="text-white/20 mx-auto mb-4" />
-              <p className="text-white/60">Nog geen salarisschaal geladen</p>
-              {isManager && (
-                <p className="text-gray-400 text-sm mt-2">Klik op "Salarisschaal Laden" om te beginnen</p>
-              )}
-            </div>
-          )}
-
         </div>
       )}
 

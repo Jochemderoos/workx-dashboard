@@ -11,6 +11,8 @@ import DoxflowGuide from '@/components/policy/DoxflowGuide'
 import WwftGuide from '@/components/policy/WwftGuide'
 import KantoororganisatieGuide from '@/components/policy/KantoororganisatieGuide'
 import VeiligWerkenGuide from '@/components/policy/VeiligWerkenGuide'
+import SalarishuisView from '@/components/policy/SalarishuisView'
+import WachtwoordenView from '@/components/policy/WachtwoordenView'
 import { DOCUMENTS as BASE_DOCUMENTS, Chapter, Document } from './documents'
 import { KNOWHOW_OFFICEMANAGEMENT } from './knowhow-document'
 import ExpenseDeclarationForm from '@/components/expenses/ExpenseDeclarationForm'
@@ -749,6 +751,10 @@ export default function HRDocsPage() {
                 <KantoororganisatieGuide />
               ) : chapter.content.trim() === '<!--component:veilig-werken-->' ? (
                 <VeiligWerkenGuide />
+              ) : chapter.content.trim() === '<!--component:salarishuis-->' ? (
+                <SalarishuisView />
+              ) : chapter.content.trim() === '<!--component:wachtwoorden-->' ? (
+                <WachtwoordenView />
               ) : (
                 <div
                   className="prose prose-invert prose-sm max-w-none

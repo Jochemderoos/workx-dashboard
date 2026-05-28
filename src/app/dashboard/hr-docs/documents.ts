@@ -522,10 +522,46 @@ export const STAPPENPLAN_PARTNER: Document = {
   ],
 }
 
-// All documents array
+// Salarishuis — tabel met salarisschalen per ervaringsjaar. Bewerkbaar door partner/admin.
+export const SALARISHUIS: Document = {
+  id: 'salarishuis',
+  title: 'Salarishuis',
+  description: 'Indicatieve salarisschalen per ervaringsjaar',
+  icon: '💶',
+  lastUpdated: '2026',
+  chapters: [
+    {
+      id: 'salarishuis-content',
+      title: 'Salarishuis',
+      icon: '💶',
+      content: '<!--component:salarishuis-->',
+    },
+  ],
+}
+
+// Wachtwoorden — gedeelde inloggegevens + belangrijke services.
+export const WACHTWOORDEN: Document = {
+  id: 'wachtwoorden',
+  title: 'Wachtwoorden',
+  description: 'Gedeelde inloggegevens en belangrijke services',
+  icon: '🔐',
+  lastUpdated: '2026',
+  chapters: [
+    {
+      id: 'wachtwoorden-content',
+      title: 'Wachtwoorden',
+      icon: '🔐',
+      content: '<!--component:wachtwoorden-->',
+    },
+  ],
+}
+
+// All documents array — volgorde: standaard docs eerst, dan reference/tabellen onderaan
 export const DOCUMENTS: Document[] = [
   THE_WAY_IT_WORKX,
   KANTOORHANDBOEK,
   KLACHTENREGELING,
+  WACHTWOORDEN,
+  SALARISHUIS,
   STAPPENPLAN_PARTNER,
 ]
