@@ -20,6 +20,7 @@ export const TEAM_PHOTOS: Record<string, string> = {
   'Erika van Zadelhof': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/01/Erika-2025.jpg',
   'Barbara Rip': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/10/Barbara.jpg',
   'Heleen Pesser': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/10/Heleen.jpg',
+  'Alexander Collot d\'Escury': '/team/alexander.jpg',
 
   // Externe advocaten
   'Lodewijk van Thiel': 'https://lodewijkvanthiel.nl/wp-content/uploads/2019/03/Lodewijk-Foto_v2.jpg',
@@ -70,6 +71,7 @@ export const ADVOCATEN = [
   'Heleen Pesser',
   'Barbara Rip',
   'Julia Groen',
+  'Alexander Collot d\'Escury',
   'Lodewijk van Thiel',
 ]
 
