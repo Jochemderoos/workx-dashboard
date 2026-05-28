@@ -142,8 +142,42 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      // JAR-sessies als virtuele events (uit JarSession-tabel; geen
+      // CalendarEvent-rijen nodig). 60 min duur (16:00–17:00).
+      const jarFilter = startDate && endDate ? {
+        date: { gte: new Date(startDate), lte: new Date(endDate) },
+      } : upcoming === 'true' ? { date: { gte: new Date() } } : {}
+      const jarEvents: any[] = []
+      try {
+        const jarSessions = await prisma.jarSession.findMany({
+          where: jarFilter,
+          orderBy: { date: 'asc' },
+        })
+        for (const j of jarSessions) {
+          const start = new Date(j.date)
+          const end = new Date(j.date)
+          end.setUTCHours(end.getUTCHours() + 1)
+          jarEvents.push({
+            id: `jar-${j.id}`,
+            title: `⚖️ JAR — ${j.name}`,
+            description: `Jurisprudentie Arbeidsrecht bespreking door ${j.name}`,
+            startTime: start,
+            endTime: end,
+            isAllDay: false,
+            location: 'Bibliotheek',
+            color: '#a8b900', // Workx lime
+            category: 'JAR',
+            createdBy: null,
+            isJar: true,
+            jarSessionId: j.id,
+          })
+        }
+      } catch {
+        // tabel kan nog niet bestaan
+      }
+
       // Merge and sort by start time
-      const allEvents = [...events, ...vacationEvents, ...periodEvents, ...holidayEvents].sort((a, b) =>
+      const allEvents = [...events, ...vacationEvents, ...periodEvents, ...holidayEvents, ...jarEvents].sort((a, b) =>
         new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
       )
 
