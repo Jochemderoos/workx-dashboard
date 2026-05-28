@@ -45,7 +45,7 @@ export const THE_WAY_IT_WORKX: Document = {
 
         <h3>1.2 Werkdag</h3>
         <p class="text-white/70 mb-4">Als referentiekader gelden kantoortijden van 9.00 tot 17.30 uur, maar je mag zelf weten hoe laat je de werkdag wilt starten en beëindigen. We verwachten alleen wel dat je ergens voor 10.00 uur start en er rekening wordt gehouden met bereikbaarheid voor klanten. Dus als je in de ochtend een keer wilt sporten dan houden wij je zeker niet tegen. Dan werk je in de avond gewoon wat langer door. En andersom kan natuurlijk ook. Als je een ochtendmens bent dan kun je ook vroeger starten en eerder naar huis.</p>
-        <p class="text-white/70">We vinden het prettig te weten waar je bent tijdens werktijd. Als je bijvoorbeeld later op kantoor bent of naar de dokter moet; laat even een berichtje achter in de Workx appgroep of Slack, of bij één van de partners in een situatie dat je de reden niet met iedereen wilt delen.</p>
+        <p class="text-white/70">We vinden het prettig te weten waar je bent tijdens werktijd. Als je bijvoorbeeld later op kantoor bent of naar de dokter moet; laat even een berichtje achter in Slack, of bij één van de partners in een situatie dat je de reden niet met iedereen wilt delen.</p>
       `,
     },
     {
@@ -145,13 +145,22 @@ export const THE_WAY_IT_WORKX: Document = {
       icon: '🏖️',
       content: `
         <h3>7.1 Vakantieplannen</h3>
-        <p class="text-white/70 mb-4">"Geef me werk dat bij me past en ik hoef nooit meer te werken", aldus de filosoof Confucius. Toch kunnen we ons voorstellen dat je af en toe op vakantie wilt gaan. Stem je vakantieplannen tijdig af met Jochem. We willen voorkomen dat iedereen tegelijk op vakantie gaat.</p>
+        <p class="text-white/70 mb-4">"Geef me werk dat bij me past en ik hoef nooit meer te werken", aldus de filosoof Confucius. Toch kunnen we ons voorstellen dat je af en toe op vakantie wilt gaan. Vraag je vakantie altijd aan via de pagina <strong>Vakanties &amp; Verlof</strong> in het dashboard. We willen voorkomen dat iedereen tegelijk op vakantie gaat.</p>
+        <p class="text-white/70 mb-4">In het overzicht zijn de <span class="text-red-400 font-medium">schoolvakanties Noord-Holland in rood</span> gemarkeerd — dat zijn periodes waarin extra veel collega's vrij willen. Probeer in die <strong>rode periodes</strong> goed onderling af te stemmen voordat je je aanvraag indient, zodat er altijd voldoende bezetting overblijft.</p>
         <p class="text-white/70 mb-6">Een losse vrije dag kun je wat ons betreft ook op het laatste moment aanvragen. We vertrouwen er volledig op dat je zelf het beste de inschatting kunt maken dat het geen problemen met werk of collega's oplevert. Voor een bezoek aan de tandarts of dokter hoef je geen vrije dag op te nemen.</p>
 
         <h3>7.2 Bijkopen</h3>
         <p class="text-white/70 mb-6">Als je toe bent aan meer vakantie dan kun je per kalenderjaar maximaal <strong>5 vakantiedagen</strong> (op basis van fulltime) bijkopen. Dit wordt dan verrekend met je salaris.</p>
 
-        <h3>7.3 Feestdagen</h3>
+        <h3>7.3 Ouderschapsverlof</h3>
+        <p class="text-white/70 mb-4">Als je een kind krijgt of hebt onder de 8 jaar, heb je recht op ouderschapsverlof. Workx volgt de wettelijke regeling:</p>
+        <ul class="list-disc list-inside text-white/70 mb-4 space-y-1">
+          <li><strong>9 weken betaald</strong> verlof, gedurende het eerste levensjaar — 70% van je salaris via het UWV.</li>
+          <li><strong>17 weken onbetaald</strong> verlof, op te nemen tot het kind 8 jaar is.</li>
+        </ul>
+        <p class="text-white/70 mb-6">Je kunt je ouderschapsverlof aanvragen en bijhouden via de pagina <strong>Vakanties &amp; Verlof</strong> in het dashboard. Stem de planning tijdig af met de partners zodat we de waarneming goed kunnen regelen.</p>
+
+        <h3>7.4 Feestdagen</h3>
         <p class="text-white/70 mb-4">Hoe graag je ook naar kantoor komt, we zijn helaas gesloten op de volgende dagen:</p>
         <ul class="list-disc list-inside text-white/70 mb-6 space-y-1">
           <li>Nieuwjaarsdag</li>
@@ -164,10 +173,10 @@ export const THE_WAY_IT_WORKX: Document = {
         </ul>
         <p class="text-white/70 mb-6">Als je parttime werkt en er een onevenredig aantal feestdagen op jouw vaste parttime dag valt, dan compenseren wij je voor het verschil ten opzichte van een collega die fulltime werkt.</p>
 
-        <h3>7.4 Verhuizen</h3>
+        <h3>7.5 Verhuizen</h3>
         <p class="text-white/70 mb-6">Als je gaat verhuizen krijg je een vrije dag van Workx (eens per 3 jaar).</p>
 
-        <h3>7.5 Trouwen</h3>
+        <h3>7.6 Trouwen</h3>
         <p class="text-white/70">Als je gaat trouwen, krijg je ook een vrije dag van Workx.</p>
       `,
     },
@@ -208,7 +217,7 @@ export const THE_WAY_IT_WORKX: Document = {
 
         <h3>9.2 Bonusregeling eigen omzet</h3>
         <p class="text-white/70 mb-4">Voor de bonusregeling over de eigen omzet verwijzen we naar de afspraken in je arbeidsovereenkomst.</p>
-        <p class="text-white/70 mb-6">Voor de uitvoering van de regeling is het van belang om gebruik te maken van het standaard Excel-bestand, waarin je de eigen klanten en bijbehorende omzet kunt opnemen. Stuur dit overzicht na ieder kwartaal aan Jochem.</p>
+        <p class="text-white/70 mb-6">Je kunt je eigen bonus aanmaken en bijhouden via de <strong>Bonus-tool in het dashboard</strong>. Indienen doe je daar één keer per kwartaal — die gaat naar <strong>Hanna</strong> voor controle en uitbetaling.</p>
         <p class="text-white/70 mb-6"><em>In de bijlage "Toelichting bonusregeling" kun je verdere uitleg van de regeling en voorbeelden vinden.</em></p>
 
         <h3>9.3 Discretionaire bonus</h3>

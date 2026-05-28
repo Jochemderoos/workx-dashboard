@@ -1347,6 +1347,17 @@ model EditablePolicy {
   updatedBy String?  // userId van laatste editor (optioneel)
 }
 
+// Coaching-budget per medewerker (€1.500 ex btw per 3-jarige periode volgens The Way it Workx 5.1).
+// Medewerker registreert zelf cumulatief wat is besteed. Eén rij per user.
+model CoachingBudget {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  periodStart   DateTime // start van de huidige 3-jaars periode
+  usedAmount    Float    @default(0) // cumulatief besteed bedrag ex btw, in euro's
+  notes         String?  @db.Text // optionele notities (waar besteed aan)
+  updatedAt     DateTime @updatedAt
+}
+
 // Bevriende kantoren — nationaal (per rechtsgebied) en internationaal (per land)
 model BevriendKantoor {
   id             String   @id @default(cuid())

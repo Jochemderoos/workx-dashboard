@@ -57,6 +57,8 @@ export const teamMenu_Tools: MenuItem[] = [
     description: 'Persoonlijke takenlijst incl. actiepunten uit het partneroverleg.' },
   { href: '/dashboard/onboarding', icon: Icons.userPlus, label: 'Onboarding', iconAnim: 'icon-user-hover',
     description: 'Onboarding-checklist voor nieuwe medewerkers. Items afvinken + notities.' },
+  { href: '/dashboard/arbeidsvoorwaarden', icon: Icons.briefcase, label: 'Arbeidsvoorwaarden', iconAnim: 'icon-briefcase-hover', hideForExternal: true,
+    description: 'Persoonlijke regelingen — coaching-budget tracker (€1.500 ex btw / 3 jaar).' },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', iconAnim: 'icon-euro-hover', hideForExternal: true,
     description: 'Bonusregeling-overzicht: eigen omzet en uitkering per kwartaal.' },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover',
