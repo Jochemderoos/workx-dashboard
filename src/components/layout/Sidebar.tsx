@@ -97,6 +97,7 @@ function SidebarComponent({ user }: SidebarProps) {
   const pathname = usePathname()
   const [extraOpen, setExtraOpen] = useState(false)
   const [filter, setFilter] = useState('')
+  const [openChildren, setOpenChildren] = useState<Set<string>>(new Set())
 
   const isExternal = user.role === 'EXTERNAL'
   const isPartnerOrAdmin = user.role === 'PARTNER' || user.role === 'ADMIN'
@@ -107,7 +108,8 @@ function SidebarComponent({ user }: SidebarProps) {
   const matches = (label: string) => !filterQ || label.toLowerCase().includes(filterQ)
   const filterItems = <T extends { label: string }>(items: T[]) => filterQ ? items.filter(i => matches(i.label)) : items
 
-  const NavLink = ({ href, icon: Icon, label, iconAnim, badge }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string }) => {
+  const NavLink = (props: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string; children?: typeof menuTeamAlgemeen }) => {
+    const { href, icon: Icon, label, iconAnim, badge, children } = props
     // Exact match, or prefix match only when no more-specific menu item matches
     const isActive = pathname === href || (
       href !== '/dashboard' &&
@@ -115,6 +117,63 @@ function SidebarComponent({ user }: SidebarProps) {
       !allMenuHrefs.some(h => h !== href && h.startsWith(href + '/') && pathname.startsWith(h))
     )
     const isLustrum = href === '/dashboard/lustrum'
+    const hasChildren = !!children && children.length > 0
+    const isExpanded = openChildren.has(href) || (filterQ.length > 0 && hasChildren)
+
+    if (hasChildren) {
+      return (
+        <>
+          <div className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''}`} style={{ paddingRight: '0.5rem' }}>
+            <Link href={href} className="flex items-center gap-3 flex-1 min-w-0">
+              <span className="icon-animated">
+                <Icon size={18} />
+              </span>
+              <span className="flex-1 truncate">{label}</span>
+              {badge && (
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white flex-shrink-0">
+                  {badge}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setOpenChildren(prev => {
+                  const next = new Set(prev)
+                  if (next.has(href)) next.delete(href)
+                  else next.add(href)
+                  return next
+                })
+              }}
+              className="p-1 rounded hover:bg-white/10 transition-colors shrink-0"
+              title={isExpanded ? 'Inklappen' : 'Uitklappen'}
+            >
+              <Icons.chevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+          {isExpanded && (
+            <div className="ml-7 mt-1 mb-1 space-y-0.5 border-l pl-3" style={{ borderColor: 'var(--color-border-subtle)' }}>
+              {children.map((child) => {
+                const ChildIcon = child.icon
+                const childActive = pathname + (typeof window !== 'undefined' ? window.location.search : '') === child.href
+                return (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${childActive ? 'text-workx-lime bg-workx-lime/10' : 'hover:bg-white/5'}`}
+                    style={{ color: childActive ? undefined : 'var(--color-text-secondary)' }}
+                  >
+                    <ChildIcon size={12} className="shrink-0 opacity-70" />
+                    <span className="truncate">{child.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )
+    }
 
     return (
       <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link group/lustrum' : ''}`}>

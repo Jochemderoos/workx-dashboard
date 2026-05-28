@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import * as Popover from '@radix-ui/react-popover'
@@ -160,7 +161,19 @@ const chapterIcons: Record<string, typeof Icons.home> = {
 
 export default function HRDocsPage() {
   const { data: session } = useSession()
-  const [activeDoc, setActiveDoc] = useState<string>(DOCUMENTS[0].id)
+  const searchParams = useSearchParams()
+  const docFromUrl = searchParams.get('doc')
+  const [activeDoc, setActiveDoc] = useState<string>(() => {
+    if (docFromUrl && DOCUMENTS.some(d => d.id === docFromUrl)) return docFromUrl
+    return DOCUMENTS[0].id
+  })
+
+  // Update activeDoc als URL-param wijzigt (deep-link uit sidebar)
+  useEffect(() => {
+    if (docFromUrl && DOCUMENTS.some(d => d.id === docFromUrl) && docFromUrl !== activeDoc) {
+      setActiveDoc(docFromUrl)
+    }
+  }, [docFromUrl]) // eslint-disable-line react-hooks/exhaustive-deps
   const [activeChapter, setActiveChapter] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showMobileToc, setShowMobileToc] = useState(false)

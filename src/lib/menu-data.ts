@@ -15,6 +15,7 @@ export interface MenuItem {
   hideForExternal?: boolean
   partnerOnly?: boolean // alleen PARTNER/ADMIN — verbergt voor EMPLOYEE in overzicht & sidebar
   description?: string // Toegelicht voor het overzicht
+  children?: MenuItem[] // sub-items voor uitklap in sidebar
 }
 
 // ─── TEAM — algemene pagina's voor iedereen ─────────────────────────────────
@@ -66,7 +67,14 @@ export const teamMenu_Tools: MenuItem[] = [
 
 export const teamMenu_Docs: MenuItem[] = [
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover', hideForExternal: true,
-    description: 'The Way it Workx (personeelshandboek), Kantoorhandboek, Klachtenregeling, Stappenplan partner.' },
+    description: 'The Way it Workx (personeelshandboek), Kantoorhandboek, Klachtenregeling, Stappenplan partner.',
+    children: [
+      { href: '/dashboard/hr-docs?doc=the-way-it-workx', icon: Icons.smile, label: 'The Way it Workx', description: 'Personeelshandboek: welkom, start, werkplek, team, ontwikkelen, veilig werken, vakantie, beloning.' },
+      { href: '/dashboard/hr-docs?doc=kantoorhandboek', icon: Icons.shield, label: 'Kantoorhandboek', description: 'Vakbekwaamheid, kantoororganisatie, Wwft, Stichting Derdengelden.' },
+      { href: '/dashboard/hr-docs?doc=klachtenregeling', icon: Icons.fileText, label: 'Klachtenregeling', description: 'Procedure bij klachten van cliënten.' },
+      { href: '/dashboard/hr-docs?doc=stappenplan-partner', icon: Icons.target, label: 'Stappenplan partner', description: 'Counsel → Director → Partner groeipad.' },
+      { href: '/dashboard/hr-docs?doc=knowhow-officemanagement', icon: Icons.briefcase, label: 'Know how — Office Management', description: 'Telefoonnummers, inloggegevens, BaseNet tips, Doxflow.' },
+    ] },
   { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', iconAnim: 'icon-lock-hover', hideForExternal: true,
     description: 'Gedeelde inloggegevens + Belangrijke services (Doxflow, BaseNet, Constant IT, etc.).' },
   { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', iconAnim: 'icon-briefcase-hover',
