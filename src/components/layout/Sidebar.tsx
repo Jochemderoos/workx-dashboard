@@ -141,8 +141,12 @@ const allMenuHrefs = [...teamMenuItems, ...partnersMenuItems, ...extraMenuItems,
 function SidebarComponent({ user }: SidebarProps) {
   const pathname = usePathname()
   const [extraOpen, setExtraOpen] = useState(false)
+  const [filter, setFilter] = useState('')
 
   const isExternal = user.role === 'EXTERNAL'
+  const filterQ = filter.trim().toLowerCase()
+  const matches = (label: string) => !filterQ || label.toLowerCase().includes(filterQ)
+  const filterItems = <T extends { label: string }>(items: T[]) => filterQ ? items.filter(i => matches(i.label)) : items
 
   const NavLink = ({ href, icon: Icon, label, iconAnim, badge }: { href: string; icon: typeof Icons.home; label: string; iconAnim?: string; badge?: string }) => {
     // Exact match, or prefix match only when no more-specific menu item matches
@@ -172,7 +176,7 @@ function SidebarComponent({ user }: SidebarProps) {
   return (
     <aside className="w-72 h-full max-h-screen border-r flex flex-col relative z-20 overflow-y-auto" style={{ borderColor: 'var(--color-border-subtle)', background: 'var(--color-bg-sidebar)' }}>
       {/* Logo - Authentic Workx branding */}
-      <div className="p-6 pb-8 flex-shrink-0">
+      <div className="p-6 pb-4 flex-shrink-0">
         <Link href="/dashboard" className="block group">
           <div className="relative">
             <WorkxLogoBox />
@@ -181,78 +185,158 @@ function SidebarComponent({ user }: SidebarProps) {
         </Link>
       </div>
 
+      {/* Sidebar filter — typ om menu items te filteren */}
+      <div className="px-4 mb-4 flex-shrink-0">
+        <div className="relative">
+          <Icons.search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-text-tertiary)' }} />
+          <input
+            type="text"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter menu…"
+            className="w-full rounded-xl pl-9 pr-8 py-2 text-sm focus:outline-none transition-colors"
+            style={{
+              background: 'var(--color-bg-glass)',
+              border: '1px solid var(--color-border-subtle)',
+              color: 'var(--color-text-primary)',
+            }}
+          />
+          {filter && (
+            <button
+              onClick={() => setFilter('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors"
+              style={{ color: 'var(--color-text-tertiary)' }}
+              title="Wissen"
+            >
+              <Icons.x size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Navigation */}
       <nav className="flex-1 px-4 space-y-6">
         {/* Team — algemene pagina's, in 4 visuele sub-groepjes met sub-labels */}
-        <div>
-          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Team</p>
-          <div className="space-y-1">
-            {teamMenu_Algemeen.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
-            {/* Werk Lodewijk voor EXTERNAL */}
-            {isExternal && <NavLink href="/dashboard/partners/werk-lodewijk" icon={Icons.briefcase} label="Werk Lodewijk" iconAnim="icon-briefcase-hover" />}
-          </div>
-
-          {teamMenu_Werk.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).length > 0 && (
-            <>
-              <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>Werk</p>
-              <div className="space-y-1">
-                {teamMenu_Werk.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
-              </div>
-            </>
-          )}
-
-          {teamMenu_Tools.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).length > 0 && (
-            <>
-              <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>Tools</p>
-              <div className="space-y-1">
-                {teamMenu_Tools.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
-              </div>
-            </>
-          )}
-
-          {teamMenu_Docs.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).length > 0 && (
-            <>
-              <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>Info</p>
-              <div className="space-y-1">
-                {teamMenu_Docs.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
-              </div>
-            </>
-          )}
-        </div>
+        {(() => {
+          const algemeen = filterItems(teamMenu_Algemeen.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
+          const werk = filterItems(teamMenu_Werk.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
+          const tools = filterItems(teamMenu_Tools.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
+          const docs = filterItems(teamMenu_Docs.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
+          const showLodewijk = isExternal && (!filterQ || matches('Werk Lodewijk'))
+          const hasAny = algemeen.length || werk.length || tools.length || docs.length || showLodewijk
+          if (!hasAny) return null
+          return (
+            <div>
+              <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Team</p>
+              {algemeen.length > 0 && (
+                <div className="space-y-1">
+                  {algemeen.map((item) => <NavLink key={item.href} {...item} />)}
+                </div>
+              )}
+              {showLodewijk && (
+                <div className="space-y-1 mt-1">
+                  <NavLink href="/dashboard/partners/werk-lodewijk" icon={Icons.briefcase} label="Werk Lodewijk" iconAnim="icon-briefcase-hover" />
+                </div>
+              )}
+              {werk.length > 0 && (
+                <>
+                  <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>Werk</p>
+                  <div className="space-y-1">
+                    {werk.map((item) => <NavLink key={item.href} {...item} />)}
+                  </div>
+                </>
+              )}
+              {tools.length > 0 && (
+                <>
+                  <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>Tools</p>
+                  <div className="space-y-1">
+                    {tools.map((item) => <NavLink key={item.href} {...item} />)}
+                  </div>
+                </>
+              )}
+              {docs.length > 0 && (
+                <>
+                  <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>Info</p>
+                  <div className="space-y-1">
+                    {docs.map((item) => <NavLink key={item.href} {...item} />)}
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Partner — alleen voor PARTNER en ADMIN */}
-        <div style={(user.role === 'PARTNER' || user.role === 'ADMIN') ? {} : { display: 'none' }}>
-          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'rgba(180, 185, 50, 0.5)' }}>Partner</p>
-          <div className="space-y-1">
-            {partnersMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
-          </div>
-        </div>
-
-        {/* Extra — uitklapbaar, default dicht */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setExtraOpen(v => !v)}
-            className="w-full flex items-center justify-between px-4 mb-2 text-[10px] font-medium uppercase tracking-widest hover:text-workx-lime transition-colors"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            <span>Extra</span>
-            <Icons.chevronDown size={12} className={`transition-transform ${extraOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {extraOpen && (
-            <div className="space-y-1">
-              {extraMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)).map((item) => <NavLink key={item.href} {...item} />)}
+        {(user.role === 'PARTNER' || user.role === 'ADMIN') && (() => {
+          const partner = filterItems(partnersMenuItems)
+          if (partner.length === 0) return null
+          return (
+            <div>
+              <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'rgba(180, 185, 50, 0.5)' }}>Partner</p>
+              <div className="space-y-1">
+                {partner.map((item) => <NavLink key={item.href} {...item} />)}
+              </div>
             </div>
-          )}
-        </div>
+          )
+        })()}
+
+        {/* Extra — uitklapbaar, default dicht; bij filter automatisch open + alle hits zichtbaar */}
+        {(() => {
+          const extra = filterItems(extraMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
+          if (extra.length === 0) return null
+          const isOpen = extraOpen || !!filterQ
+          return (
+            <div>
+              <button
+                type="button"
+                onClick={() => setExtraOpen(v => !v)}
+                disabled={!!filterQ}
+                className="w-full flex items-center justify-between px-4 mb-2 text-[10px] font-medium uppercase tracking-widest hover:text-workx-lime transition-colors disabled:hover:text-current"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                <span>Extra</span>
+                <Icons.chevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isOpen && (
+                <div className="space-y-1">
+                  {extra.map((item) => <NavLink key={item.href} {...item} />)}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Beheer — Feedback + Instellingen */}
-        <div>
-          <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Beheer</p>
-          <div className="space-y-1">
-            {manageMenuItems.map((item) => <NavLink key={item.href} {...item} />)}
-          </div>
-        </div>
+        {(() => {
+          const beheer = filterItems(manageMenuItems)
+          if (beheer.length === 0) return null
+          return (
+            <div>
+              <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Beheer</p>
+              <div className="space-y-1">
+                {beheer.map((item) => <NavLink key={item.href} {...item} />)}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Empty state bij actieve filter zonder resultaten */}
+        {filterQ && (() => {
+          const totalMatches =
+            filterItems(teamMenu_Algemeen).length +
+            filterItems(teamMenu_Werk).length +
+            filterItems(teamMenu_Tools).length +
+            filterItems(teamMenu_Docs).length +
+            filterItems(partnersMenuItems).length +
+            filterItems(extraMenuItems).length +
+            filterItems(manageMenuItems).length
+          if (totalMatches > 0) return null
+          return (
+            <div className="px-4 py-8 text-center text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+              Geen pagina's gevonden voor "{filter}"
+            </div>
+          )
+        })()}
       </nav>
 
       {/* Bottom section */}
