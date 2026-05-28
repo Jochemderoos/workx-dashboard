@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import InzichtenTab from '@/components/financien/InzichtenTab'
 import JaarTab from '@/components/financien/JaarTab'
+import StappenplanView from '@/components/policy/StappenplanView'
 import jsPDF from 'jspdf'
 import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
@@ -115,7 +116,7 @@ interface EmployeeData {
   parentalLeaves: ParentalLeave[]
 }
 
-type TabType = 'overzicht' | 'budgetten' | 'salarishuis' | 'inzichten' | `jaar-${number}`
+type TabType = 'overzicht' | 'budgetten' | 'salarishuis' | 'inzichten' | 'stappenplan' | `jaar-${number}`
 
 export default function FinancienPage() {
   const { data: session } = useSession()
@@ -966,6 +967,7 @@ export default function FinancienPage() {
             { id: `jaar-${years[2]}` as TabType, label: String(years[2]), icon: Icons.calendar },
             { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
             { id: 'salarishuis' as TabType, label: 'Salarishuis', icon: Icons.euro },
+            ...(isManager ? [{ id: 'stappenplan' as TabType, label: 'Stappenplan', icon: Icons.target }] : []),
             ...(isManager ? [{ id: 'inzichten' as TabType, label: 'Inzichten', icon: Icons.activity }] : []),
           ].map(tab => (
             <button
@@ -2902,6 +2904,9 @@ export default function FinancienPage() {
           />
         )
       })()}
+
+      {/* Stappenplan Tab - alleen voor PARTNER/ADMIN */}
+      {activeTab === 'stappenplan' && isManager && <StappenplanView />}
 
       {/* Inzichten Tab - alleen voor PARTNER/ADMIN */}
       {activeTab === 'inzichten' && isManager && <InzichtenTab />}

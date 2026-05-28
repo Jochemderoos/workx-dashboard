@@ -584,9 +584,28 @@ export const KLACHTENREGELING: Document = {
 }
 
 
+// Stappenplan partner — rendert dynamisch via StappenplanView component.
+// De chapter-content bevat een marker die de hr-docs page herkent.
+export const STAPPENPLAN_PARTNER: Document = {
+  id: 'stappenplan-partner',
+  title: 'Stappenplan Counsel naar Partner',
+  description: 'Drie-staps groeipad: Counsel → Director → Partner',
+  icon: '🚀',
+  lastUpdated: '2026',
+  chapters: [
+    {
+      id: 'stappenplan-content',
+      title: 'Stappenplan',
+      icon: '🚀',
+      content: '<!--component:stappenplan-->',
+    },
+  ],
+}
+
 // All documents array
 export const DOCUMENTS: Document[] = [
   THE_WAY_IT_WORKX,
   KANTOORHANDBOEK,
   KLACHTENREGELING,
+  STAPPENPLAN_PARTNER,
 ]

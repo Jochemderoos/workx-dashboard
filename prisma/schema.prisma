@@ -1265,6 +1265,16 @@ model PartnerTaskAssignment {
   @@index([userId])
 }
 
+// Editable beleidsdocumenten — JSON-content per key. Gebruikt voor
+// stappenplan partner, sollicitatiebeleid, etc. Eén rij per document.
+model EditablePolicy {
+  id        String   @id @default(cuid())
+  key       String   @unique // 'stappenplan-partner', 'sollicitatiebeleid'
+  content   String   @db.Text // JSON-encoded structured content
+  updatedAt DateTime @updatedAt
+  updatedBy String?  // userId van laatste editor (optioneel)
+}
+
 // Bevriende kantoren — nationaal (per rechtsgebied) en internationaal (per land)
 model BevriendKantoor {
   id             String   @id @default(cuid())

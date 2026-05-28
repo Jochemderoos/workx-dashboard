@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
+import StappenplanView from '@/components/policy/StappenplanView'
 import { DOCUMENTS as BASE_DOCUMENTS, Chapter, Document } from './documents'
 import { KNOWHOW_OFFICEMANAGEMENT } from './knowhow-document'
 import ExpenseDeclarationForm from '@/components/expenses/ExpenseDeclarationForm'
@@ -102,6 +103,7 @@ const documentIcons: Record<string, typeof Icons.home> = {
   'the-way-it-workx': Icons.books,
   'kantoorhandboek': Icons.fileText,
   'klachtenregeling': Icons.shield,
+  'stappenplan-partner': Icons.target,
   'knowhow-officemanagement': Icons.briefcase,
 }
 
@@ -719,23 +721,27 @@ export default function HRDocsPage() {
                 )}
               </div>
 
-              {/* Chapter Content */}
-              <div
-                className="prose prose-invert prose-sm max-w-none
-                  prose-headings:text-white prose-headings:font-semibold
-                  prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-3
-                  prose-h4:text-base prose-h4:mt-4 prose-h4:mb-2
-                  prose-p:text-white/70 prose-p:leading-relaxed
-                  prose-li:text-white/70 prose-li:marker:text-workx-lime
-                  prose-strong:text-white prose-strong:font-semibold
-                  prose-a:text-workx-lime prose-a:no-underline hover:prose-a:underline
-                  prose-ul:my-4 prose-ol:my-4
-                  prose-blockquote:border-l-workx-lime prose-blockquote:bg-white/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
-                "
-                dangerouslySetInnerHTML={{
-                  __html: highlightContent(chapter.content)
-                }}
-              />
+              {/* Chapter Content — speciale marker rendert React-component */}
+              {chapter.content.trim() === '<!--component:stappenplan-->' ? (
+                <StappenplanView />
+              ) : (
+                <div
+                  className="prose prose-invert prose-sm max-w-none
+                    prose-headings:text-white prose-headings:font-semibold
+                    prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-3
+                    prose-h4:text-base prose-h4:mt-4 prose-h4:mb-2
+                    prose-p:text-white/70 prose-p:leading-relaxed
+                    prose-li:text-white/70 prose-li:marker:text-workx-lime
+                    prose-strong:text-white prose-strong:font-semibold
+                    prose-a:text-workx-lime prose-a:no-underline hover:prose-a:underline
+                    prose-ul:my-4 prose-ol:my-4
+                    prose-blockquote:border-l-workx-lime prose-blockquote:bg-white/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
+                  "
+                  dangerouslySetInnerHTML={{
+                    __html: highlightContent(chapter.content)
+                  }}
+                />
+              )}
             </section>
           ))}
 
