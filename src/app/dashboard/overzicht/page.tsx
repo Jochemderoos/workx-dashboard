@@ -19,6 +19,7 @@ export default function OverzichtPage() {
 
   const filterItem = (item: MenuItem) => {
     if (isExternal && item.hideForExternal) return false
+    if (item.partnerOnly && !isPartnerOrAdmin) return false
     if (!searchQ) return true
     return (
       item.label.toLowerCase().includes(searchQ) ||

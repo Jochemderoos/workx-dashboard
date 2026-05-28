@@ -99,6 +99,10 @@ function SidebarComponent({ user }: SidebarProps) {
   const [filter, setFilter] = useState('')
 
   const isExternal = user.role === 'EXTERNAL'
+  const isPartnerOrAdmin = user.role === 'PARTNER' || user.role === 'ADMIN'
+  // Toon item: niet hideForExternal voor EXTERNAL, niet partnerOnly voor non-partners
+  const visibleForUser = (i: { hideForExternal?: boolean; partnerOnly?: boolean }) =>
+    !(isExternal && i.hideForExternal) && !(i.partnerOnly && !isPartnerOrAdmin)
   const filterQ = filter.trim().toLowerCase()
   const matches = (label: string) => !filterQ || label.toLowerCase().includes(filterQ)
   const filterItems = <T extends { label: string }>(items: T[]) => filterQ ? items.filter(i => matches(i.label)) : items
@@ -173,10 +177,10 @@ function SidebarComponent({ user }: SidebarProps) {
       <nav className="flex-1 px-4 space-y-6">
         {/* Team — algemene pagina's, in 4 visuele sub-groepjes met sub-labels */}
         {(() => {
-          const algemeen = filterItems(teamMenu_Algemeen.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
-          const werk = filterItems(teamMenu_Werk.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
-          const tools = filterItems(teamMenu_Tools.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
-          const docs = filterItems(teamMenu_Docs.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
+          const algemeen = filterItems(teamMenu_Algemeen.filter(i => visibleForUser(i)))
+          const werk = filterItems(teamMenu_Werk.filter(i => visibleForUser(i)))
+          const tools = filterItems(teamMenu_Tools.filter(i => visibleForUser(i)))
+          const docs = filterItems(teamMenu_Docs.filter(i => visibleForUser(i)))
           const showLodewijk = isExternal && (!filterQ || matches('Werk Lodewijk'))
           const hasAny = algemeen.length || werk.length || tools.length || docs.length || showLodewijk
           if (!hasAny) return null
@@ -237,7 +241,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
         {/* Extra — uitklapbaar, default dicht; bij filter automatisch open + alle hits zichtbaar */}
         {(() => {
-          const extra = filterItems(extraMenuItems.filter(i => !isExternal || !('hideForExternal' in i && i.hideForExternal)))
+          const extra = filterItems(extraMenuItems.filter(i => visibleForUser(i)))
           if (extra.length === 0) return null
           const isOpen = extraOpen || !!filterQ
           return (
