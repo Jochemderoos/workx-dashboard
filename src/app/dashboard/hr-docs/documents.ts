@@ -443,9 +443,7 @@ export const KANTOORHANDBOEK: Document = {
       id: 'wwft',
       title: 'Wwft',
       icon: '⚖️',
-      content: `
-        <p class="text-white/70">De Wwft is niet van toepassing op de advocaten van Workx advocaten aangezien zij werkzaamheden verrichten voor cliënten betreffende de bepaling van diens rechtspositie, diens vertegenwoordiging en verdediging in rechte, het geven van advies voor, tijdens en na een rechtsgeding of het geven van advies over het instellen of vermijden van een rechtsgeding (artikel 1, lid 2).</p>
-      `,
+      content: '<!--component:wwft-->',
     },
     {
       id: 'derdengelden',
