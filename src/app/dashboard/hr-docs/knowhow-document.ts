@@ -314,38 +314,7 @@ export const KNOWHOW_OFFICEMANAGEMENT: Document = {
       id: 'doxflow',
       title: 'Doxflow',
       icon: '📁',
-      content: `
-        <p class="text-white/70 mb-4">Doxflow wordt gebruikt voor het voorbereiden van processtukken. Inloggen via: <span class="text-workx-lime font-mono">http://10.4.42.80/login</span></p>
-
-        <h3>Nieuwe zaak aanmaken</h3>
-        <ol class="list-decimal list-inside text-white/70 mb-6 space-y-2">
-          <li>Klik op "+ nieuwe zaak aanmaken"</li>
-          <li>Typ de dossiernaam in</li>
-          <li>Selecteer je naam bij "Procesadvocaat"</li>
-          <li>Selecteer "Arbeidsrecht" bij groep</li>
-          <li>Klik op "Opslaan"</li>
-        </ol>
-
-        <h3>Bestanden toevoegen</h3>
-        <ul class="list-disc list-inside text-white/70 mb-4 space-y-1">
-          <li>Klik op "+ Bestanden Toevoegen"</li>
-          <li>Kies vanuit BaseNet of je computer</li>
-          <li>Sleep documenten om volgorde te wijzigen</li>
-          <li>Rechtermuisknop op pagina om te verwijderen/omdraaien</li>
-        </ul>
-
-        <h3>Tabbladen toevoegen</h3>
-        <p class="text-white/70 mb-4">Klik bovenin op "Tabbladen" om alle tabbladen in één keer toe te voegen. De titel van producties kan je aanpassen in de balk boven elke productie.</p>
-
-        <h3>Processtuk benoemen</h3>
-        <p class="text-white/70 mb-4">Upload het verzoekschrift/verweerschrift → Klik op drie puntjes → "Benoem als processtuk". Het document komt automatisch bovenaan met de letter P.</p>
-
-        <h3>Scannen/Downloaden</h3>
-        <p class="text-white/70">Opslaan → Als PDF. Het hele stuk wordt in één keer gedownload.</p>
-
-        <h3 class="mt-4">Printen</h3>
-        <p class="text-white/70">Klik op "Afdrukken" → Check dat het naar Canon iR-ADV C477 gaat → Afdrukken. De printer weet zelf welke lades te gebruiken!</p>
-      `,
+      content: '<!--component:doxflow-->',
     },
     {
       id: 'processtuk-indienen',

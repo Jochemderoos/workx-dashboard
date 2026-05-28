@@ -563,6 +563,45 @@ export async function GET() {
       // silent: user-lookup of openInvoice-tabel kan nog niet bestaan
     }
 
+    // 9b. JAR-rooster reminder: huidige user heeft binnen 14 dagen
+    // zijn/haar JAR-beurt. Match op voornaam.
+    try {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      })
+      const firstName = (currentUser?.name || '').split(' ')[0].toLowerCase()
+      if (firstName) {
+        const in14Days = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+        const upcoming = await prisma.jarSession.findMany({
+          where: {
+            date: { gte: now, lte: in14Days },
+          },
+          orderBy: { date: 'asc' },
+        })
+        for (const sess of upcoming) {
+          const sessFirstName = sess.name.split(' ')[0].toLowerCase()
+          if (sessFirstName !== firstName) continue
+          const daysAway = Math.ceil((sess.date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+          const key = `jar-${sess.id}`
+          if (dismissedKeys.has(key)) continue
+          const dateLabel = sess.date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+          notifications.push({
+            id: key,
+            type: 'overdracht',
+            title: daysAway <= 7 ? '⚖️ Jouw JAR-beurt komt eraan' : '📅 JAR-beurt over 2 weken',
+            message: `Op ${dateLabel} bespreek je de JAR (Jurisprudentie Arbeidsrecht). Nog ${daysAway} ${daysAway === 1 ? 'dag' : 'dagen'}.`,
+            createdAt: now,
+            read: false,
+            href: '/dashboard/opleidingen',
+            priority: daysAway <= 7 ? 'high' : 'normal',
+          })
+        }
+      }
+    } catch {
+      // silent — tabel kan nog niet bestaan
+    }
+
     // 9. Openstaande debiteuren — herinnering om aan te schrijven
     // Verschijnt zolang er facturen open staan waar 14+ dagen niets mee is
     // gedaan (of nog nooit aangeschreven). Sluit zichzelf af zodra alle

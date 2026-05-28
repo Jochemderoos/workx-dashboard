@@ -1265,6 +1265,21 @@ model PartnerTaskAssignment {
   @@index([userId])
 }
 
+// JAR rooster — wie bespreekt op welke datum de jurisprudentie arbeidsrecht.
+// Eens in de drie weken, donderdag 16.00–17.15.
+model JarSession {
+  id        String   @id @default(cuid())
+  date      DateTime // datum van de JAR-bespreking
+  name      String   // naam van degene die voorbereidt
+  year      Int      // jaar — voor snelle filtering
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([year, date])
+  @@unique([year, date])
+}
+
 // ==================== ONBOARDING CHECKLIST ====================
 
 // Template-items — de standaard checklist die nieuwe medewerkers krijgen.

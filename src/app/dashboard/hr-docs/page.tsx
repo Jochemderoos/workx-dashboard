@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import StappenplanView from '@/components/policy/StappenplanView'
+import DoxflowGuide from '@/components/policy/DoxflowGuide'
 import { DOCUMENTS as BASE_DOCUMENTS, Chapter, Document } from './documents'
 import { KNOWHOW_OFFICEMANAGEMENT } from './knowhow-document'
 import ExpenseDeclarationForm from '@/components/expenses/ExpenseDeclarationForm'
@@ -721,9 +722,11 @@ export default function HRDocsPage() {
                 )}
               </div>
 
-              {/* Chapter Content — speciale marker rendert React-component */}
+              {/* Chapter Content — speciale markers renderen React-componenten */}
               {chapter.content.trim() === '<!--component:stappenplan-->' ? (
                 <StappenplanView />
+              ) : chapter.content.trim() === '<!--component:doxflow-->' ? (
+                <DoxflowGuide />
               ) : (
                 <div
                   className="prose prose-invert prose-sm max-w-none
