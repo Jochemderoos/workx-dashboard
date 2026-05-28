@@ -31,7 +31,11 @@ export const THE_WAY_IT_WORKX: Document = {
       content: `
         <p class="text-white/70 mb-6">Vanaf vandaag ben je onderdeel van Team Workx, welkom!</p>
         <p class="text-white/70 mb-4">Workx is een energiek en bevlogen advocatenkantoor. Wij zijn gespecialiseerd in het mooiste vakgebied; arbeidsrecht. Onze klanten zijn voornamelijk werkgevers, maar wij vertegenwoordigen en adviseren ook ondernemingsraden, (statutair) bestuurders en werknemers. Wij zijn een modern kantoor, waar we graag op een informele en betrokken manier met elkaar samenwerken.</p>
-        <p class="text-white/70">Advocaten houden van regels. Maar regels kunnen in de praktijk ook tot bureaucratie en inflexibiliteit leiden. Dat willen wij niet. Dit document is daarom vooral bedoeld als hulpmiddel. Lees het rustig door en laat het ons vooral weten als je vragen hebt.</p>
+        <p class="text-white/70 mb-4">Advocaten houden van regels. Maar regels kunnen in de praktijk ook tot bureaucratie en inflexibiliteit leiden. Dat willen wij niet. Dit document is daarom vooral bedoeld als hulpmiddel. Lees het rustig door en laat het ons vooral weten als je vragen hebt.</p>
+        <div class="bg-workx-lime/10 border border-workx-lime/20 rounded-lg p-4 mt-6">
+          <p class="text-white/80 font-medium mb-2">Het Workx Dashboard</p>
+          <p class="text-white/70 text-sm">Bijna alles wat je dagelijks nodig hebt, regel je in het Workx Dashboard waar je dit handboek nu in leest: agenda, vakanties &amp; verlof, werkplek reserveren (Appjeplekje), opleidingen &amp; PO-punten, bonus, declaraties, wachtwoorden, het team-overzicht en meer. Gebruik het overzicht (in de sidebar) om snel te zien waar je iets terugvindt.</p>
+        </div>
       `,
     },
     {
@@ -102,12 +106,13 @@ export const THE_WAY_IT_WORKX: Document = {
         <h3>4.2 Overleg</h3>
         <p class="text-white/70 mb-4">Iedere dinsdagochtend hebben we een teammeeting. Voor de teammeeting wordt een voorzitter aangewezen, die twee keer het werkoverleg zal leiden en zal vragen of een collega notuleert. De notulen bestaan uit een actielijst.</p>
         <p class="text-white/70 mb-4">De agenda ziet er op hoofdlijnen als volgt uit:</p>
-        <ol class="list-decimal list-inside text-white/70 mb-6 space-y-1">
+        <ol class="list-decimal list-inside text-white/70 mb-4 space-y-1">
           <li>Actielijst vorige keer</li>
           <li>Terugkoppeling partneroverleg maandag</li>
           <li>Mededelingen Hanna</li>
           <li>Nieuw ingebrachte onderwerpen</li>
         </ol>
+        <p class="text-white/70 mb-6">De agenda, notulen en open actiepunten staan in het dashboard onder <strong>Werkoverleg</strong>. Daar kun je ook nieuwe agendapunten inbrengen en taken aan jezelf of een collega koppelen.</p>
 
         <h3>4.3 Mentor</h3>
         <p class="text-white/70">Als medewerker van Workx heb je een mentor. Een mentor is één van de partners bij wie je terecht kunt en die een vinger aan de pols houdt. Voel je ook vrij om na verloop van tijd een andere mentor te kiezen. Het is de bedoeling om regelmatig af te spreken met de mentor, bijvoorbeeld door eens per maand een kop koffie te drinken of een rondje te lopen. Voel je vrij om alles tegen je mentor te zeggen, ook de dingen die je minder leuk vindt. Workx vindt een open sfeer, waar iedereen zich op zijn gemak voelt, ontzettend belangrijk!</p>
@@ -119,14 +124,15 @@ export const THE_WAY_IT_WORKX: Document = {
       icon: '📚',
       content: `
         <h3>5.1 Coach</h3>
-        <p class="text-white/70 mb-6">Iedereen krijgt de mogelijkheid zich verder te ontwikkelen door gebruik te maken van een eigen externe coach. Hiervoor wordt in ieder geval per periode van drie jaar een budget van <strong>€ 1.500 ex btw</strong> beschikbaar gesteld. Voor coaching tijdens werktijd kun je in totaal 2 vrije dagen krijgen gedurende de periode van drie jaar, om te stimuleren dat je hier ook daadwerkelijk gebruik van maakt.</p>
+        <p class="text-white/70 mb-4">Iedereen krijgt de mogelijkheid zich verder te ontwikkelen door gebruik te maken van een eigen externe coach. Hiervoor wordt in ieder geval per periode van drie jaar een budget van <strong>€ 1.500 ex btw</strong> beschikbaar gesteld. Voor coaching tijdens werktijd kun je in totaal 2 vrije dagen krijgen gedurende de periode van drie jaar, om te stimuleren dat je hier ook daadwerkelijk gebruik van maakt.</p>
+        <p class="text-white/70 mb-6">Houd zelf bij hoeveel van het budget je hebt besteed via de pagina <strong>Arbeidsvoorwaarden</strong> in het dashboard. Geef de facturen door aan Hanna voor verrekening.</p>
 
         <h3>5.2 Plan</h3>
-        <p class="text-white/70 mb-6">Voor iedere medewerker zal een persoonlijk ontwikkelplan worden opgesteld. We vinden het belangrijk dat iedereen op verschillende manieren kan groeien. Workx hanteert het adagium; stilstaan is achteruitgang. Het ontwikkelplan is onder andere bedoeld als ondersteuning op het gebied van inhoudelijke kennis, ervaring en ondernemerschap.</p>
+        <p class="text-white/70 mb-6">Voor iedere medewerker zal een persoonlijk ontwikkelplan worden opgesteld. We vinden het belangrijk dat iedereen op verschillende manieren kan groeien. Workx hanteert het adagium; stilstaan is achteruitgang. Het ontwikkelplan is onder andere bedoeld als ondersteuning op het gebied van inhoudelijke kennis, ervaring en ondernemerschap. Je eigen ontwikkelplan staat in het dashboard onder <strong>Ontwikkelplannen</strong> — daar werk je het samen met je mentor of partner bij.</p>
 
         <h3>5.3 Opleiding</h3>
-        <p class="text-white/70 mb-4">We zorgen ervoor dat je meerdere cursussen per jaar kunt volgen op kantoor. Hiervoor worden externe sprekers uitgenodigd. Probeer daar zoveel mogelijk bij aanwezig te zijn. Je kunt ook zeker een voorstel indienen voor een onderwerp of docent. Naast de interne cursussen bestaat de mogelijkheid om externe opleidingen te volgen om de benodigde PO-punten te behalen.</p>
-        <p class="text-white/70 mb-4">Eén keer in de drie weken bespreken we op kantoor de Jurisprudentie Arbeidsrecht (JAR), doorgaans op donderdag van 16.00 - 17.15 uur. We bereiden dit om de beurt voor. Probeer hier ook zo veel mogelijk bij aanwezig te zijn.</p>
+        <p class="text-white/70 mb-4">We zorgen ervoor dat je meerdere cursussen per jaar kunt volgen op kantoor. Hiervoor worden externe sprekers uitgenodigd. Probeer daar zoveel mogelijk bij aanwezig te zijn. Je kunt ook zeker een voorstel indienen voor een onderwerp of docent. Naast de interne cursussen bestaat de mogelijkheid om externe opleidingen te volgen om de benodigde PO-punten te behalen. Je behaalde PO-punten houd je bij in het dashboard onder <strong>Opleidingen</strong>.</p>
+        <p class="text-white/70 mb-4">Eén keer in de drie weken bespreken we op kantoor de Jurisprudentie Arbeidsrecht (JAR), doorgaans op donderdag van 16.00 - 17.15 uur. We bereiden dit om de beurt voor — het volledige rooster, inclusief de mogelijkheid om met een collega te ruilen, staat in het dashboard onder <strong>Opleidingen → JAR-rooster</strong>. Twee weken voor jouw beurt krijg je automatisch een reminder. Probeer hier zo veel mogelijk bij aanwezig te zijn.</p>
         <p class="text-white/70 mb-6">Voor de beroepsopleiding krijgt een advocaat-stagiair één studiedag voor een tentamen van Workx.</p>
 
         <h3>5.4 Intervisie</h3>
@@ -203,8 +209,8 @@ export const THE_WAY_IT_WORKX: Document = {
           <li>Zorg ervoor dat de belangrijkste e-mails/documenten goed te vinden zijn</li>
         </ul>
 
-        <h4 class="text-white font-semibold mt-4 mb-2">5. Overdrachtsdocument</h4>
-        <p class="text-white/70">Gebruik ons standaard overdrachtsdocument (zie bijlage) en vul dit document zo compleet mogelijk in. Neem daarna de tijd om het document nader toe te lichten aan de waarnemer.</p>
+        <h4 class="text-white font-semibold mt-4 mb-2">4. Overdrachtsdocument</h4>
+        <p class="text-white/70">Gebruik ons standaard overdrachtsdocument in het dashboard onder <strong>Overdracht</strong> en vul dit zo compleet mogelijk in. Neem daarna de tijd om het document nader toe te lichten aan de waarnemer.</p>
       `,
     },
     {
@@ -226,16 +232,16 @@ export const THE_WAY_IT_WORKX: Document = {
         <h3>9.4 Ziekte</h3>
         <p class="text-white/70 mb-6">Tijdens ziekte betalen we de eerste 12 maanden <strong>100%</strong> van je vaste basissalaris. Daarna is het percentage 70% conform de wettelijke regeling.</p>
 
-        <h3>9.6 Winstdeling</h3>
+        <h3>9.5 Winstdeling</h3>
         <p class="text-white/70 mb-4">We geloven in het belang van onze gezamenlijke inspanningen voor Workx. Daarom willen we je (de advocaten en office manager) graag laten delen in de winst van Workx. Deze jaarlijkse winstdeling bedraagt een bruto uitkering ter waarde van maximaal het dividend op <strong>1% van de aandelen</strong> in Workx, op basis van winst na belastingen.</p>
 
-        <h3>9.7 Detacheringstoeslag</h3>
+        <h3>9.6 Detacheringstoeslag</h3>
         <p class="text-white/70 mb-6">Als je wordt gedetacheerd, kun je niet of minder aan een eigen praktijk bouwen. We willen dat compenseren en een detachering financieel aantrekkelijk maken. Deze toeslag is <strong>EUR 1.000 bruto per maand</strong> bij een fulltime detachering.</p>
 
-        <h3>9.8 Jubileum</h3>
+        <h3>9.7 Jubileum</h3>
         <p class="text-white/70 mb-6">Als je 5 jaar bij ons werkt, ontvang je een jubileumbonus van <strong>EUR 5.000 bruto</strong>. Bij 10 jaar ga je ook zeker een passende bonus krijgen.</p>
 
-        <h3>9.9 Last but not least</h3>
+        <h3>9.8 Last but not least</h3>
         <p class="text-white/70">Je krijgt van ons de legendarische <strong>Workx fiets</strong>!</p>
       `,
     },
@@ -258,13 +264,34 @@ export const THE_WAY_IT_WORKX: Document = {
         </ul>
 
         <h3>10.3 Tijd schrijven</h3>
-        <p class="text-white/70 mb-4">Zorg ervoor dat je je tijd goed schrijft. Zie dit als een belangrijk onderdeel van je werk, niet als een vervelende bijzaak. Om Workx goed te laten draaien, moet alle tijd worden geschreven.</p>
+        <p class="text-white/70 mb-4">Zorg ervoor dat je je tijd goed schrijft. Zie dit als een belangrijk onderdeel van je werk, niet als een vervelende bijzaak. Om Workx goed te laten draaien, moet alle tijd worden geschreven. Uren schrijven we in <strong>Basenet</strong>; dat is de officiële boekhouding waarop facturen en de financiële cijfers gebaseerd zijn.</p>
         <p class="text-white/70 mb-4">Schrijf minimaal de tijd die je bezig bent geweest. Nooit jezelf afboeken omdat je vond dat je er te lang over hebt gedaan.</p>
         <p class="text-white/70 mb-6">Tijdseenheden schrijven we in principe vanaf <strong>0,2 uur</strong>.</p>
 
-        <h3>10.5 Factureren</h3>
-        <p class="text-white/70 mb-4">Zorg er voor dat al je tijd goed is gefactureerd en dat er geen tijd in het systeem achterblijft. Zorg er ook voor dat je zelf actief achter je debiteuren aanzit.</p>
+        <h3>10.4 Factureren</h3>
+        <p class="text-white/70 mb-4">Zorg er voor dat al je tijd goed is gefactureerd en dat er geen tijd in het systeem achterblijft. Zorg er ook voor dat je zelf actief achter je debiteuren aanzit — het overzicht openstaande facturen vind je in het dashboard onder <strong>Debiteuren</strong>.</p>
         <p class="text-white/70">Overleg met een van de partners over de factuur voordat deze uitgaat. Dit geldt voor iedereen.</p>
+      `,
+    },
+    {
+      id: 'declaraties',
+      title: 'Declaraties',
+      icon: '🧾',
+      content: `
+        <h3>11.1 Onkosten declareren</h3>
+        <p class="text-white/70 mb-4">Maak je onkosten voor het werk (een treinreis, een attentie voor een klant, een lunch met een netwerkrelatie, etc.), dan kun je die declareren via het dashboard onder <strong>Declaraties</strong>. Hanna verwerkt de declaraties en betaalt ze uit op het bij ons bekende rekeningnummer.</p>
+        <p class="text-white/70 mb-6">Voeg per onkostenpost een <strong>bonnetje of factuur</strong> als bijlage toe — zonder onderbouwing kunnen we niet uitbetalen.</p>
+
+        <h3>11.2 Soorten declaraties</h3>
+        <ul class="list-disc list-inside text-white/70 mb-6 space-y-1">
+          <li><strong>Overige onkosten</strong>: bonnen, attenties, taxi, parkeren, etc. Vul bedrag + omschrijving + bijlage in.</li>
+          <li><strong>Reiskosten auto</strong>: voer het aantal kilometers in, het bedrag wordt automatisch berekend op basis van het kilometertarief.</li>
+          <li><strong>Doorbelasten aan klant</strong>: als de onkost rechtstreeks aan een dossier kan worden doorbelast, vul je de zaak/klant in. Wordt mee op de factuur gezet.</li>
+        </ul>
+
+        <h3>11.3 Status en uitbetaling</h3>
+        <p class="text-white/70 mb-4">Na indienen krijgt je declaratie de status <strong>ingediend</strong>. Hanna controleert en zet hem op <strong>betaald</strong> na overboeking. Je kunt de status terugzien op je eigen declaraties-pagina.</p>
+        <p class="text-white/70 mb-6">Wacht niet te lang met indienen: doe het bij voorkeur binnen <strong>één maand</strong> nadat je de kosten hebt gemaakt, zodat we niets vergeten en de administratie netjes per maand kan worden afgesloten.</p>
       `,
     },
     {
