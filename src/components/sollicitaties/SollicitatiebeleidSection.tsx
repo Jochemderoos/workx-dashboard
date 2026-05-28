@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Icons } from '@/components/ui/Icons'
 
 interface Ronde {
@@ -162,9 +162,52 @@ const RONDES: Ronde[] = [
   },
 ]
 
+// Visuele defaults per ronde (emoji/accent/bg/ring) — geïndexeerd op nummer
+const VISUAL_DEFAULTS: Record<number, { emoji: string; accent: string; bg: string; ring: string }> = {
+  1: { emoji: '🤝', accent: 'text-cyan-300', bg: 'from-cyan-500/15 to-cyan-500/[0.02]', ring: 'border-cyan-500/30' },
+  2: { emoji: '⚖️', accent: 'text-workx-lime', bg: 'from-workx-lime/15 to-workx-lime/[0.02]', ring: 'border-workx-lime/30' },
+  3: { emoji: '👥', accent: 'text-purple-300', bg: 'from-purple-500/15 to-purple-500/[0.02]', ring: 'border-purple-500/30' },
+}
+
 export default function SollicitatiebeleidSection() {
   const [open, setOpen] = useState(true)
   const [expandedRonde, setExpandedRonde] = useState<number | null>(null)
+  const [rondes, setRondes] = useState<Ronde[]>(RONDES)
+
+  // Laad content uit DB; fallback naar hardcoded defaults bij fout/leeg.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/policy/sollicitatiebeleid')
+      .then(r => r.ok ? r.json() : null)
+      .then((data) => {
+        if (cancelled) return
+        const dbRondes = data?.content?.rondes
+        if (Array.isArray(dbRondes) && dbRondes.length > 0) {
+          // Merge DB content met visuele defaults per nummer
+          const merged: Ronde[] = dbRondes.map((r: Partial<Ronde> & { nummer: 1 | 2 | 3 }) => {
+            const v = VISUAL_DEFAULTS[r.nummer] || VISUAL_DEFAULTS[1]
+            return {
+              nummer: r.nummer,
+              titel: r.titel || '',
+              korteTitel: r.korteTitel || '',
+              karakter: r.karakter || '',
+              duur: r.duur || undefined,
+              betrokkenen: r.betrokkenen || [],
+              doel: r.doel || '',
+              inhoud: r.inhoud || [],
+              voorbeeldvragen: r.voorbeeldvragen || [],
+              emoji: v.emoji,
+              accent: v.accent,
+              bg: v.bg,
+              ring: v.ring,
+            }
+          })
+          setRondes(merged)
+        }
+      })
+      .catch(() => { /* fallback naar defaults */ })
+    return () => { cancelled = true }
+  }, [])
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-workx-lime/20 bg-gradient-to-br from-workx-lime/[0.08] via-workx-dark/40 to-workx-dark/40">
@@ -201,7 +244,7 @@ export default function SollicitatiebeleidSection() {
         {/* Timeline overview — altijd zichtbaar */}
         <div className="mt-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            {RONDES.map((r, idx) => (
+            {rondes.map((r, idx) => (
               <button
                 key={r.nummer}
                 onClick={() => {
@@ -259,7 +302,7 @@ export default function SollicitatiebeleidSection() {
             </div>
 
             {/* Per ronde — full detail */}
-            {RONDES.map((r) => {
+            {rondes.map((r) => {
               const isExpanded = expandedRonde === r.nummer
               return (
                 <div
