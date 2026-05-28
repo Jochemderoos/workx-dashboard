@@ -137,43 +137,7 @@ export const THE_WAY_IT_WORKX: Document = {
       id: 'veilig-werken',
       title: 'Veilig Werken',
       icon: '🛡️',
-      content: `
-        <h3>6.1 Arbeidsbelasting</h3>
-        <p class="text-white/70 mb-4">In ons werk als advocaat kan het voorkomen dat je druk ervaart. Het is belangrijk om tijdig te laten weten als de druk te veel oploopt. Bespreek in dat geval met één van de partners, de preventiemedewerker of de vertrouwenspersoon de situatie zodat we een oplossing kunnen vinden. Onthoud ook: het is geen teken van zwakte om hulp te vragen.</p>
-        <p class="text-white/70 mb-6">Daarnaast hebben we iedere week gesprekken over de werkverdeling en kun je via Slack aangeven hoe druk je bent.</p>
-
-        <h3>6.2 Preventiemedewerker</h3>
-        <p class="text-white/70 mb-6">De preventiemedewerker van Workx is onze officemanager (<strong>Hanna</strong>). De taken van de preventiemedewerker bestaan uit het onderhouden van contact met externe diensten, zoals met de arbodienst (op dit moment ArboDuo) of de Arbeidsinspectie. De preventiemedewerker zorgt onder andere voor het implementeren van het arbeidsomstandighedenbeleid, het opvolgen van de RI&E en BHV coördinatie.</p>
-
-        <h3>6.3 Verzuimprotocol</h3>
-        <p class="text-white/70 mb-4">Bij ziekte: bel één van de partners of meld je via de app of Slack. Bij de ziekmelding benoem je het volgende:</p>
-        <ol class="list-decimal list-inside text-white/70 mb-4 space-y-1">
-          <li>dat je wegens ziekte niet in staat bent om te werken</li>
-          <li>wat de verwachte duur van het verzuim zal zijn</li>
-          <li>wat Workx kan doen om te helpen</li>
-          <li>op welk adres en telefoonnummer je te bereiken bent</li>
-          <li>welke werkzaamheden nog wel uitgevoerd kunnen worden</li>
-        </ol>
-        <p class="text-white/70 mb-6">Blijf bereikbaar voor contact met Workx en de arbodienst. We zijn er voor elkaar en vinden het belangrijk dat je deel blijft uitmaken van Workx. Daarom houden we graag vaak contact met je.</p>
-
-        <h3>6.6 Vertrouwenspersoon</h3>
-        <p class="text-white/70 mb-4">Mocht je iets kwijt willen aan onze interne vertrouwenspersoon, dan kan je altijd bij <strong>Marlieke</strong> terecht.</p>
-        <p class="text-white/70 mb-2">Voor de externe vertrouwenspersoon kunnen jullie terecht bij:</p>
-        <ul class="list-disc list-inside text-white/70 mb-6 space-y-1">
-          <li>Marcel Boshuizen of Sjakkelien Marlet</li>
-          <li>Tel: 085 065 92 70</li>
-          <li>Email: mboshuizen@uwvertrouwenspersoon.nl / smarlet@uwvertrouwenspersoon.nl</li>
-        </ul>
-
-        <h3>6.8 Eén van allen, allen voor één</h3>
-        <p class="text-white/70 mb-6">Het spreekt voor zich maar we willen het toch benoemen. Pesten, ongewenst gedrag en agressie (oftewel: grensoverschrijdend gedrag) is op geen enkele manier toegestaan. Meldingen hiervan kunnen altijd gedaan worden bij de preventiemedewerker, één van de partners, interne of externe vertrouwenspersoon.</p>
-
-        <h3>6.10 Bedrijfshulpverlening (BHV)</h3>
-        <p class="text-white/70 mb-6">De BHV'ers van ons kantoor zijn <strong>Marnix</strong>, <strong>Justine</strong> en <strong>Hanna</strong>. Zij hebben een BHV cursus gedaan en hun certificaat behaald.</p>
-
-        <h3>6.14 Fit Workx</h3>
-        <p class="text-white/70">Sporten is gezond! Twee tot drie keer in de week een uur sporten/bewegen (kan ook wandelen zijn) is optimaal. De Workx wandelingen na de lunch zijn hier perfect voor.</p>
-      `,
+      content: '<!--component:veilig-werken-->',
     },
     {
       id: 'vrije-dagen',
