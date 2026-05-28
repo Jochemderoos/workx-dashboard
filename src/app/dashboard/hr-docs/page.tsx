@@ -8,6 +8,7 @@ import { Icons } from '@/components/ui/Icons'
 import StappenplanView from '@/components/policy/StappenplanView'
 import DoxflowGuide from '@/components/policy/DoxflowGuide'
 import WwftGuide from '@/components/policy/WwftGuide'
+import KantoororganisatieGuide from '@/components/policy/KantoororganisatieGuide'
 import { DOCUMENTS as BASE_DOCUMENTS, Chapter, Document } from './documents'
 import { KNOWHOW_OFFICEMANAGEMENT } from './knowhow-document'
 import ExpenseDeclarationForm from '@/components/expenses/ExpenseDeclarationForm'
@@ -730,6 +731,8 @@ export default function HRDocsPage() {
                 <DoxflowGuide />
               ) : chapter.content.trim() === '<!--component:wwft-->' ? (
                 <WwftGuide />
+              ) : chapter.content.trim() === '<!--component:kantoororganisatie-->' ? (
+                <KantoororganisatieGuide />
               ) : (
                 <div
                   className="prose prose-invert prose-sm max-w-none

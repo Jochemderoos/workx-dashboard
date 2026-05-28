@@ -287,14 +287,7 @@ export const THE_WAY_IT_WORKX: Document = {
         <h3>10.3 Tijd schrijven</h3>
         <p class="text-white/70 mb-4">Zorg ervoor dat je je tijd goed schrijft. Zie dit als een belangrijk onderdeel van je werk, niet als een vervelende bijzaak. Om Workx goed te laten draaien, moet alle tijd worden geschreven.</p>
         <p class="text-white/70 mb-4">Schrijf minimaal de tijd die je bezig bent geweest. Nooit jezelf afboeken omdat je vond dat je er te lang over hebt gedaan.</p>
-        <p class="text-white/70 mb-4">Tijdseenheden schrijven we in principe vanaf <strong>0,2 uur</strong>.</p>
-        <p class="text-white/70 mb-4">Richtlijnen voor de kleurcode in Slack (de 'Slackstatus'):</p>
-        <ul class="list-disc list-inside text-white/70 mb-6 space-y-1">
-          <li><span class="text-yellow-400">Geel:</span> minder dan 4 uur declarabel per dag</li>
-          <li><span class="text-orange-400">Oranje:</span> 4 - 5 uur declarabel per dag</li>
-          <li><span class="text-red-400">Rood:</span> meer dan 5 uur declarabel per dag</li>
-          <li><span class="text-red-500">Stoplicht:</span> alleen ruimte voor korte, afgebakende opdrachten</li>
-        </ul>
+        <p class="text-white/70 mb-6">Tijdseenheden schrijven we in principe vanaf <strong>0,2 uur</strong>.</p>
 
         <h3>10.5 Factureren</h3>
         <p class="text-white/70 mb-4">Zorg er voor dat al je tijd goed is gefactureerd en dat er geen tijd in het systeem achterblijft. Zorg er ook voor dat je zelf actief achter je debiteuren aanzit.</p>
@@ -402,42 +395,7 @@ export const KANTOORHANDBOEK: Document = {
       id: 'kantoororganisatie',
       title: 'Kantoororganisatie',
       icon: '🏢',
-      content: `
-        <p class="text-white/70 italic mb-6">"De advocaat neemt alleen zaken aan die hij gezien zijn kantoororganisatie adequaat kan behandelen".</p>
-
-        <p class="text-white/70 mb-4">De advocaat moet schriftelijk kunnen aantonen dat hij zijn dienstverlening en kantoororganisatie goed op orde heeft. Voor de kantoororganisatie gelden de volgende minimumnormen:</p>
-
-        <div class="space-y-4 mb-6">
-          <div class="bg-white/5 rounded-lg p-4">
-            <p class="text-white font-semibold mb-2">a. Administratie</p>
-            <p class="text-white/70">De administratie gegevens over een zaak moeten alle relevante informatie bevatten en snel zijn terug te vinden. Alle gegevens moeten overzichtelijk en op een afsluitbare plaats worden bewaard en gearchiveerd.</p>
-          </div>
-
-          <div class="bg-white/5 rounded-lg p-4">
-            <p class="text-white font-semibold mb-2">b. Bereikbaarheid</p>
-            <p class="text-white/70">De advocaat moet goed bereikbaar zijn voor zijn cliënt. Hij moet ervoor zorgen dat hij tijdig de zaken behandelt en geen termijnen overschrijdt. Bij afwezigheid draagt de advocaat zorg voor goede vervanging.</p>
-          </div>
-
-          <div class="bg-white/5 rounded-lg p-4">
-            <p class="text-white font-semibold mb-2">c. Eerste contact</p>
-            <p class="text-white/70">Bij het eerste contact maakt de advocaat een inschatting van de haalbaarheid van de "zaak" van de cliënt. Ook bespreekt hij direct de financiële consequenties en houdt hij zijn cliënt daarna gevraagd en ongevraagd op de hoogte.</p>
-          </div>
-
-          <div class="bg-white/5 rounded-lg p-4">
-            <p class="text-white font-semibold mb-2">d. Vertrouwelijkheid</p>
-            <p class="text-white/70">De vertrouwelijkheid van alle gegevens moet goed zijn gewaarborgd.</p>
-          </div>
-
-          <div class="bg-white/5 rounded-lg p-4">
-            <p class="text-white font-semibold mb-2">e. Klachtenregeling</p>
-            <p class="text-white/70">De advocaat moet zorg dragen voor een klachtenregeling en het oordeel van de cliënt betrekken bij verbetering van de dienstverlening.</p>
-          </div>
-        </div>
-
-        <h3>Persoonlijk contact</h3>
-        <p class="text-white/70 mb-4">Voor Workx advocaten is een goede bereikbaarheid van cliënten essentieel. De voordelen van een klein kantoor zijn in dit opzicht evident. Workx advocaten staat voor persoonlijk contact. Geen telefoniste, noch secretaresses, maar direct contact met de advocaat.</p>
-        <p class="text-white/70">Iedere klant ontvangt naast een vast telefoonnummer, ook het mobiele telefoonnummer van de advocaat, waardoor optimale bereikbaarheid kan worden gegarandeerd.</p>
-      `,
+      content: '<!--component:kantoororganisatie-->',
     },
     {
       id: 'wwft',
