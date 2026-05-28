@@ -1265,6 +1265,63 @@ model PartnerTaskAssignment {
   @@index([userId])
 }
 
+// ==================== ONBOARDING CHECKLIST ====================
+
+// Template-items — de standaard checklist die nieuwe medewerkers krijgen.
+// Wijzigingen hier gelden alleen voor toekomstige nieuwe medewerkers.
+model OnboardingTemplate {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  category    String   // 'Hardware', 'Accounts', 'Wegwijs', 'HR', 'Werkplek', 'Eerste maand'
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, sortOrder])
+}
+
+// Nieuwe medewerker waarvoor we de checklist bijhouden.
+model OnboardingEmployee {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  startDate   DateTime?
+  role        String?  // 'Advocaat-stagiaire', 'Officemanager', etc.
+  isArchived  Boolean  @default(false) // true als onboarding volledig afgerond
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       OnboardingItem[]
+
+  @@index([isArchived, createdAt])
+}
+
+// Concreet item voor een medewerker (copy uit template, kan handmatig
+// afwijken). Bij aanmaak van een nieuwe medewerker worden alle actieve
+// templates gekopieerd naar items.
+model OnboardingItem {
+  id           String   @id @default(cuid())
+  employeeId   String
+  templateId   String?  // null = handmatig toegevoegd zonder template
+  title        String
+  description  String?  @db.Text
+  category     String
+  sortOrder    Int      @default(0)
+  isCompleted  Boolean  @default(false)
+  completedAt  DateTime?
+  completedBy  String?  // userId van wie het afvinkte
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employee     OnboardingEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, sortOrder])
+  @@index([employeeId, isCompleted])
+}
+
 // Editable beleidsdocumenten — JSON-content per key. Gebruikt voor
 // stappenplan partner, sollicitatiebeleid, etc. Eén rij per document.
 model EditablePolicy {
