@@ -37,6 +37,22 @@ interface Invoice {
 }
 
 const MONTHS = ['', 'jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+
+// Corporate kantoren waarvoor we openstaande facturen samenvouwen — anders
+// wordt de lijst onleesbaar (Stek heeft typisch 5+ facturen tegelijk open).
+const CORPORATE_FIRMS: Array<{ key: string; label: string; match: RegExp }> = [
+  { key: 'stek', label: 'Stek Advocaten', match: /\bstek\b/i },
+  { key: 'debrij', label: 'DeBrij', match: /de\s*brij/i },
+  { key: 'vancampenliem', label: 'VanCampen Liem', match: /van\s*campen/i },
+  { key: 'jblaw', label: 'JB Law', match: /\bjb\s*law\b/i },
+]
+
+function firmKeyFor(inv: { clientName: string | null; projectName: string | null }): string | null {
+  const haystack = `${inv.clientName || ''} ${inv.projectName || ''}`
+  for (const f of CORPORATE_FIRMS) if (f.match.test(haystack)) return f.key
+  return null
+}
+
 // Vanaf hoeveel dagen na de vervaltermijn de advocaat aan zet is.
 // Daarvoor (dag 0-14) ligt het bij de admin (zie proces-timeline bovenaan).
 const ACTION_THRESHOLD_DAYS = 15
@@ -167,6 +183,31 @@ export default function DebiteurenPage() {
     if (filter === 'unassigned') return overdueInvoices.filter(i => !i.primaryUserId)
     return overdueInvoices.filter(i => i.primaryUserId === filter)
   }, [overdueInvoices, filter, currentUserId])
+
+  // Splits `filtered` in firm-groepen (≥2 facturen per kantoor) + losse facturen.
+  // De volgorde van de groepen volgt CORPORATE_FIRMS en komt boven de losse lijst.
+  const grouped = useMemo(() => {
+    const byKey = new Map<string, Invoice[]>()
+    const loose: Invoice[] = []
+    for (const inv of filtered) {
+      const key = firmKeyFor(inv)
+      if (!key) { loose.push(inv); continue }
+      const arr = byKey.get(key) || []
+      arr.push(inv)
+      byKey.set(key, arr)
+    }
+    const firmGroups: Array<{ key: string; label: string; invoices: Invoice[] }> = []
+    for (const firm of CORPORATE_FIRMS) {
+      const list = byKey.get(firm.key) || []
+      if (list.length >= 2) {
+        firmGroups.push({ key: firm.key, label: firm.label, invoices: list })
+      } else {
+        // <2 → toon individueel als losse factuur
+        loose.push(...list)
+      }
+    }
+    return { firmGroups, loose }
+  }, [filtered])
 
   const totals = useMemo(() => {
     const total = filtered.reduce((s, i) => s + i.totalIncl, 0)
@@ -647,7 +688,8 @@ export default function DebiteurenPage() {
 
           {/* Invoice list */}
           <div className="space-y-2">
-            {filtered.map(inv => {
+            {(() => {
+              const renderInvoiceCard = (inv: Invoice) => {
               const age = daysOverdue(inv)
               const isActive = needsAction(inv)
               const inAdminWindow = age < ACTION_THRESHOLD_DAYS && !inv.reminderSentAt
@@ -830,7 +872,64 @@ export default function DebiteurenPage() {
                   )}
                 </div>
               )
-            })}
+              }
+
+              return (
+                <>
+                  {/* Gegroepeerde corporate kantoren — samengevouwen totdat je klikt */}
+                  {grouped.firmGroups.map(group => {
+                    const ages = group.invoices.map(daysOverdue)
+                    const minAge = Math.min(...ages)
+                    const maxAge = Math.max(...ages)
+                    const totalAmount = group.invoices.reduce((s, i) => s + i.totalIncl, 0)
+                    const actionCount = group.invoices.filter(needsAction).length
+                    const ageLabel = minAge === maxAge ? `${minAge} dgn te laat` : `${minAge}–${maxAge} dgn te laat`
+                    const ageColor = maxAge > 180 ? 'text-red-400' : maxAge > 90 ? 'text-orange-400' : 'text-yellow-400'
+                    return (
+                      <details
+                        key={`group-${group.key}`}
+                        className={`bg-white/[0.03] border rounded-2xl overflow-hidden group ${
+                          actionCount > 0 ? 'border-orange-500/30' : 'border-white/10'
+                        }`}
+                      >
+                        <summary className="p-4 cursor-pointer hover:bg-white/[0.02] transition-colors select-none flex items-center gap-3 list-none">
+                          <span className="group-open:rotate-90 transition-transform inline-block text-gray-500">›</span>
+                          <div className="w-9 h-9 rounded-xl bg-workx-lime/10 text-workx-lime flex items-center justify-center font-bold text-sm shrink-0">
+                            {group.label.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold text-white">{group.label}</span>
+                              <span className="text-[11px] text-gray-500">
+                                {group.invoices.length} facturen
+                              </span>
+                              <span className="text-[10px] text-gray-600">·</span>
+                              <span className={`text-[11px] ${ageColor}`}>{ageLabel}</span>
+                              {actionCount > 0 && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-medium">
+                                  {actionCount} AANSCHRIJVEN
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-gray-500 mt-0.5">Klik om individuele facturen te zien</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-base font-bold text-workx-lime tabular-nums">{formatEUR(totalAmount)}</p>
+                            <p className="text-[10px] text-gray-500">totaal openstaand</p>
+                          </div>
+                        </summary>
+                        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-white/5">
+                          {group.invoices.map(renderInvoiceCard)}
+                        </div>
+                      </details>
+                    )
+                  })}
+
+                  {/* Losse facturen — alles wat niet onder een corporate kantoor valt */}
+                  {grouped.loose.map(renderInvoiceCard)}
+                </>
+              )
+            })()}
             {filtered.length === 0 && (
               <div className="text-center py-12 text-sm text-gray-500">Geen facturen in dit filter.</div>
             )}
