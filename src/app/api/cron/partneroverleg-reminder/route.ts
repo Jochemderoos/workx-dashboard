@@ -1,18 +1,16 @@
 // Cron: vrijdag-reminder voor partneroverleg op maandag 10:00.
-// - Slack DM per PARTNER (en ADMIN Hanna)
-// - Push naar dezelfde groep
-// - Dashboard-popup verschijnt automatisch in belletje vanwege de notification (zie /api/notifications)
+// - Slack: post in #mt-groot (private channel met partners + Hanna)
+// - Push: naar PARTNER + ADMIN
 //
-// Schedule: vrijdag 14:00 (Vercel cron in vercel.json)
-// Vercel cron syntax: '0 13 * * 5' (UTC = 14:00 NL in zomertijd, 15:00 in wintertijd).
-// We accepteren een uur drift in de winter — verbetert nooit erg.
+// Schedule: vrijdag 10:00 NL (08:00 UTC zomertijd).
 
 import { NextRequest, NextResponse } from 'next/server'
-import { sendDirectMessage } from '@/lib/slack'
+import { sendChannelMessage } from '@/lib/slack'
 import { sendPushNotificationToUsers } from '@/lib/push-notifications'
 import { prisma } from '@/lib/prisma'
 
 const DASHBOARD_BASE = process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app'
+const SLACK_CHANNEL = 'mt-groot' // private channel met partners + Hanna
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,20 +21,12 @@ export async function GET(req: NextRequest) {
     }
 
     const now = new Date()
-    // Alleen op vrijdag versturen — vangnet voor handmatige triggers
     if (now.getDay() !== 5) {
       return NextResponse.json({ skipped: 'niet vrijdag' })
     }
 
     const notulenUrl = `${DASHBOARD_BASE}/dashboard/partners/notulen`
 
-    // Partners + ADMIN
-    const recipients = await prisma.user.findMany({
-      where: { isActive: true, role: { in: ['PARTNER', 'ADMIN'] } },
-      select: { id: true, email: true, name: true },
-    })
-
-    // Slack DM per partner
     const slackBlocks = [
       {
         type: 'section',
@@ -58,16 +48,13 @@ export async function GET(req: NextRequest) {
       },
     ]
     const fallback = `Partneroverleg maandag 10:00 — agendapunten? ${notulenUrl}`
+    const slackOk = await sendChannelMessage(SLACK_CHANNEL, fallback, slackBlocks)
 
-    let slackOk = 0
-    let slackFail = 0
-    for (const r of recipients) {
-      const ok = await sendDirectMessage(r.email, fallback, slackBlocks)
-      if (ok) slackOk++
-      else slackFail++
-    }
-
-    // Push notifications
+    // Push naar PARTNER + ADMIN
+    const recipients = await prisma.user.findMany({
+      where: { isActive: true, role: { in: ['PARTNER', 'ADMIN'] } },
+      select: { id: true },
+    })
     const pushResult = await sendPushNotificationToUsers(
       recipients.map(r => r.id),
       {
@@ -81,8 +68,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      recipients: recipients.length,
-      slack: { sent: slackOk, failed: slackFail },
+      slack: slackOk,
+      pushRecipients: recipients.length,
       push: pushResult,
     })
   } catch (error) {
