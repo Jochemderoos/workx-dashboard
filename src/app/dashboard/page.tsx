@@ -25,6 +25,7 @@ import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget'
 import OpenInvoicesWidget from '@/components/dashboard/OpenInvoicesWidget'
 import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
 import JarReminderWidget from '@/components/dashboard/JarReminderWidget'
+import DagstartWidget from '@/components/dashboard/DagstartWidget'
 function WorkxLogoSmall() {
   return <WorkxLogo height={56} />
 }
@@ -1606,6 +1607,9 @@ export default function DashboardHome() {
           </div>
         </div>
       </div>
+
+      {/* Dagstart — drie blokken: Wist je dat?, vandaag op kantoor, jarigen */}
+      <DagstartWidget />
 
       {/* Eigen taken — vandaag */}
       <TodayTasksWidget />

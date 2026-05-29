@@ -6,6 +6,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { useSession } from 'next-auth/react'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { usePushNotifications } from '@/lib/hooks/usePushNotifications'
 
 interface User {
   id: string
@@ -560,7 +561,10 @@ export default function SettingsPage() {
       )}
 
       {activeTab === 'notifications' && (
-        <div className="card p-6 space-y-6">
+        <div className="space-y-6">
+          <PushNotificationSection />
+
+          <div className="card p-6 space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-white/5">
             <Icons.bell className="text-gray-400" size={18} />
             <h2 className="font-medium text-white">Notificatie voorkeuren</h2>
@@ -597,6 +601,7 @@ export default function SettingsPage() {
               <Icons.check size={16} />
               Voorkeuren opslaan
             </button>
+          </div>
           </div>
         </div>
       )}
@@ -898,6 +903,77 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Push-notificaties (browser): vraagt permission + slaat subscription op zodat
+// de server pushes kan sturen ook als het dashboard dicht is.
+function PushNotificationSection() {
+  const { isSupported, isSubscribed, permission, isLoading, subscribe, unsubscribe } = usePushNotifications()
+  const [busy, setBusy] = useState(false)
+
+  const handleToggle = async () => {
+    setBusy(true)
+    try {
+      if (isSubscribed) {
+        const ok = await unsubscribe()
+        if (ok) toast.success('Push-notificaties uitgezet')
+        else toast.error('Kon niet uitschakelen')
+      } else {
+        const ok = await subscribe()
+        if (ok) toast.success('Push-notificaties aan — eerste test komt binnenkort')
+        else if (permission === 'denied') toast.error('Browser blokkeert notificaties — open de site-instellingen en sta toe')
+        else toast.error('Kon niet inschakelen')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="card p-6 space-y-4">
+      <div className="flex items-center gap-3 pb-4 border-b border-white/5">
+        <span className="text-xl">🔔</span>
+        <div>
+          <h2 className="font-medium text-white">Browser push-notificaties</h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Ontvang meldingen ook als het dashboard niet open staat — op desktop én telefoon.
+          </p>
+        </div>
+      </div>
+
+      {!isSupported ? (
+        <div className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/20 text-sm text-yellow-300">
+          Deze browser ondersteunt geen push-notificaties.
+          {' '}Op iPhone werkt het alleen als je het dashboard eerst als app toevoegt aan je beginscherm (Safari → deel-knop → &quot;Op beginscherm zetten&quot;).
+        </div>
+      ) : (
+        <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
+          <div>
+            <h4 className="text-sm font-medium text-white">
+              {isSubscribed ? 'Notificaties zijn aan' : 'Notificaties zijn uit'}
+            </h4>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {permission === 'denied'
+                ? 'Geblokkeerd door je browser — sta toe via de site-instellingen.'
+                : isSubscribed
+                  ? 'Je krijgt popups voor nieuwe zaken, debiteuren, JAR-beurten en overleg-herinneringen.'
+                  : 'Klik aan om push-notificaties in te schakelen.'}
+            </p>
+          </div>
+          <button
+            onClick={handleToggle}
+            disabled={isLoading || busy || permission === 'denied'}
+            className="relative disabled:opacity-50"
+            aria-label="Toggle push notifications"
+          >
+            <input type="checkbox" checked={isSubscribed} readOnly className="peer sr-only" />
+            <div className="w-11 h-6 bg-white/10 peer-checked:bg-workx-lime rounded-full transition-colors" />
+            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5 peer-checked:bg-workx-dark" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
