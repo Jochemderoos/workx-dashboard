@@ -14,9 +14,9 @@ import { sendDirectMessage } from '@/lib/slack'
 const DASHBOARD_BASE = process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app'
 
 interface DigestItem {
-  emoji: string
   text: string
-  href: string
+  href?: string // optioneel — celebratoire items (verjaardag/jubileum) hebben geen link
+  linkLabel?: string // tekst voor de inline-link, default "Open →"
 }
 
 function startOfDay(d: Date): Date {
@@ -116,9 +116,9 @@ export async function GET(req: NextRequest) {
           if (s.name.split(' ')[0].toLowerCase() !== first) continue
           const daysAway = Math.ceil((s.date.getTime() - today.getTime()) / 86400000)
           items.push({
-            emoji: '⚖️',
             text: `Jouw JAR-beurt is over ${daysAway} ${daysAway === 1 ? 'dag' : 'dagen'} (${fmtShort(s.date)}).`,
             href: '/dashboard/opleidingen',
+            linkLabel: 'JAR-rooster',
           })
         }
       } catch {}
@@ -137,9 +137,9 @@ export async function GET(req: NextRequest) {
         if (overdue.length > 0) {
           const total = overdue.reduce((s, i) => s + i.totalIncl, 0)
           items.push({
-            emoji: '💰',
-            text: `${overdue.length} debiteur${overdue.length === 1 ? '' : 'en'} aanschrijven — ${fmtEUR(total)} totaal.`,
+            text: `*${overdue.length} debiteur${overdue.length === 1 ? '' : 'en'}* te aanschrijven — *${fmtEUR(total)}* totaal openstaand.`,
             href: '/dashboard/debiteuren',
+            linkLabel: 'Debiteuren',
           })
         }
       } catch {}
@@ -158,9 +158,9 @@ export async function GET(req: NextRequest) {
           const daysAway = Math.ceil((new Date(n.deadline).getTime() - today.getTime()) / 86400000)
           const topic = n.topic ? `: "${n.topic}"` : ''
           items.push({
-            emoji: '📰',
-            text: `Nieuwsbrief-artikel${topic} — deadline ${fmtShort(new Date(n.deadline))} (${daysAway} ${daysAway === 1 ? 'dag' : 'dagen'}).`,
+            text: `Nieuwsbrief-artikel${topic} — deadline *${fmtShort(new Date(n.deadline))}* (over ${daysAway} ${daysAway === 1 ? 'dag' : 'dagen'}).`,
             href: '/dashboard/werk',
+            linkLabel: 'Wie doet Wat',
           })
         }
       } catch {}
@@ -174,9 +174,9 @@ export async function GET(req: NextRequest) {
         })
         for (const v of pending) {
           items.push({
-            emoji: '🏖️',
-            text: `Jouw vakantieaanvraag (${fmtShort(v.startDate)} – ${fmtShort(v.endDate)}) wacht nog op goedkeuring.`,
+            text: `Vakantieaanvraag *${fmtShort(v.startDate)} – ${fmtShort(v.endDate)}* wacht nog op goedkeuring.`,
             href: '/dashboard/vakanties',
+            linkLabel: 'Vakanties',
           })
         }
       } catch {}
@@ -193,15 +193,15 @@ export async function GET(req: NextRequest) {
           if (tasks.length === 1) {
             const t = tasks[0]
             items.push({
-              emoji: '✅',
-              text: `Taak deze week: "${t.title}"${t.dueDate ? ` (${fmtShort(t.dueDate)})` : ''}.`,
+              text: `Taak deze week: *${t.title}*${t.dueDate ? ` (${fmtShort(t.dueDate)})` : ''}.`,
               href: '/dashboard/eigen-taken',
+              linkLabel: 'Eigen taken',
             })
           } else {
             items.push({
-              emoji: '✅',
-              text: `${tasks.length} eigen taken met deadline deze week.`,
+              text: `*${tasks.length}* eigen taken met deadline deze week.`,
               href: '/dashboard/eigen-taken',
+              linkLabel: 'Eigen taken',
             })
           }
         }
@@ -217,9 +217,9 @@ export async function GET(req: NextRequest) {
           const remaining = Math.max(0, 1500 - cb.usedAmount)
           if (daysToEnd <= 30 && daysToEnd >= 0 && remaining > 0) {
             items.push({
-              emoji: '🎓',
-              text: `Coaching-budget loopt over ${daysToEnd} ${daysToEnd === 1 ? 'dag' : 'dagen'} af — nog ${fmtEUR(remaining)} te besteden.`,
+              text: `Coaching-budget loopt over ${daysToEnd} ${daysToEnd === 1 ? 'dag' : 'dagen'} af — nog *${fmtEUR(remaining)}* te besteden.`,
               href: '/dashboard/arbeidsvoorwaarden',
+              linkLabel: 'Arbeidsvoorwaarden',
             })
           }
         }
@@ -232,14 +232,14 @@ export async function GET(req: NextRequest) {
         })
         if (drafts > 0) {
           items.push({
-            emoji: '💎',
-            text: `${drafts} bonus${drafts === 1 ? '' : 'sen'} in concept — vergeet niet in te dienen bij Hanna.`,
+            text: `*${drafts}* bonus${drafts === 1 ? '' : 'sen'} in concept — vergeet niet in te dienen bij Hanna.`,
             href: '/dashboard/bonus',
+            linkLabel: 'Bonus',
           })
         }
       } catch {}
 
-      // 8. Jouw verjaardag deze week
+      // 8. Jouw verjaardag deze week — celebratory, geen link
       if (u.birthDate) {
         for (let i = 0; i < 7; i++) {
           const d = new Date(today)
@@ -247,16 +247,14 @@ export async function GET(req: NextRequest) {
           if (todayMMDD(d) === u.birthDate) {
             const label = i === 0 ? 'vandaag' : i === 1 ? 'morgen' : `op ${fmtDate(d)}`
             items.push({
-              emoji: '🎂',
               text: `Jij bent ${label} jarig — gefeliciteerd alvast namens het hele team!`,
-              href: '/dashboard/team',
             })
             break
           }
         }
       }
 
-      // 9. Jubileum 5 / 10 / 15 jaar in dienst deze week
+      // 9. Jubileum 5 / 10 / 15 jaar in dienst deze week — celebratory, geen link
       if (u.startDate) {
         const sd = new Date(u.startDate)
         for (let i = 0; i < 7; i++) {
@@ -267,9 +265,7 @@ export async function GET(req: NextRequest) {
             if ([5, 10, 15, 20, 25].includes(yearsInService)) {
               const label = i === 0 ? 'vandaag' : i === 1 ? 'morgen' : `op ${fmtDate(check)}`
               items.push({
-                emoji: '🏆',
-                text: `Je bent ${label} ${yearsInService} jaar in dienst bij Workx — gefeliciteerd!`,
-                href: '/dashboard/team',
+                text: `Je bent ${label} *${yearsInService} jaar* in dienst bij Workx — gefeliciteerd!`,
               })
             }
             break
@@ -277,7 +273,7 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // 10. Jarige collega's deze week (exclusief jezelf)
+      // 10. Jarige collega's deze week (exclusief jezelf) — celebratory, geen link
       const collegaJarigen = allBirthdaysThisWeek.filter(b => b.name !== u.name)
       if (collegaJarigen.length > 0) {
         for (let i = 0; i < 7; i++) {
@@ -288,9 +284,7 @@ export async function GET(req: NextRequest) {
           for (const j of heuteJarig) {
             const label = i === 0 ? 'vandaag' : i === 1 ? 'morgen' : fmtDate(d)
             items.push({
-              emoji: '🎉',
-              text: `*${j.name}* is ${label} jarig — even een kaartje?`,
-              href: '/dashboard/team',
+              text: `*${j.name}* is ${label} jarig.`,
             })
           }
         }
@@ -304,37 +298,31 @@ export async function GET(req: NextRequest) {
 
       // Bouw Slack blocks
       const firstName = u.name.split(' ')[0]
-      const itemLines = items.map(i => `${i.emoji} ${i.text} <${DASHBOARD_BASE}${i.href}|→>`).join('\n')
+      const itemLines = items.map(i =>
+        i.href
+          ? `•  ${i.text}  <${DASHBOARD_BASE}${i.href}|${i.linkLabel || 'Openen'}>`
+          : `•  ${i.text}`
+      ).join('\n')
 
       const blocks: any[] = [
         {
           type: 'section',
-          text: { type: 'mrkdwn', text: `Goedemorgen ${firstName}! Dit speelt deze week voor jou:` },
+          text: { type: 'mrkdwn', text: `Goedemorgen ${firstName}, dit speelt deze week voor jou:` },
         },
         {
           type: 'section',
           text: { type: 'mrkdwn', text: itemLines },
         },
+        { type: 'divider' },
         {
           type: 'context',
           elements: [
-            { type: 'mrkdwn', text: `_Wekelijkse digest via Workx Dashboard — alleen als er iets te melden valt._` },
-          ],
-        },
-        {
-          type: 'actions',
-          elements: [
-            {
-              type: 'button',
-              text: { type: 'plain_text', text: 'Open dashboard', emoji: true },
-              url: `${DASHBOARD_BASE}/dashboard`,
-              style: 'primary',
-            },
+            { type: 'mrkdwn', text: `Wekelijkse digest · alleen verstuurd als er iets is.` },
           ],
         },
       ]
 
-      const fallback = `Goedemorgen ${firstName}! ${items.length} ${items.length === 1 ? 'item' : 'items'} deze week — open ${DASHBOARD_BASE}/dashboard`
+      const fallback = `Goedemorgen ${firstName}, ${items.length} ${items.length === 1 ? 'item' : 'items'} deze week — ${DASHBOARD_BASE}/dashboard`
 
       try {
         const ok = await sendDirectMessage(u.email, fallback, blocks)

@@ -32,14 +32,10 @@ export async function GET(req: NextRequest) {
     // Slack #algemeen
     const slackBlocks = [
       {
-        type: 'header',
-        text: { type: 'plain_text', text: '📣 Werkoverleg morgen (dinsdag)', emoji: true },
-      },
-      {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: 'Hey team! Heb je nog onderwerpen voor het werkoverleg morgen? Zet ze nu in het dashboard.',
+          text: `*Werkoverleg morgen (dinsdag)*\nHeb je nog onderwerpen voor het werkoverleg? Zet ze nu in het dashboard.`,
         },
       },
       {
@@ -47,14 +43,14 @@ export async function GET(req: NextRequest) {
         elements: [
           {
             type: 'button',
-            text: { type: 'plain_text', text: '✏️ Open werkoverleg', emoji: true },
+            text: { type: 'plain_text', text: 'Open werkoverleg', emoji: false },
             url: werkoverlegUrl,
             style: 'primary',
           },
         ],
       },
     ]
-    const fallback = `📣 Werkoverleg morgen — nog agendapunten? ${werkoverlegUrl}`
+    const fallback = `Werkoverleg morgen — nog agendapunten? ${werkoverlegUrl}`
     const slackOk = await sendChannelMessage(SLACK_CHANNEL, fallback, slackBlocks)
 
     // Push naar alle active users (incl. partners — die zitten ook in werkoverleg)
@@ -66,7 +62,7 @@ export async function GET(req: NextRequest) {
     const pushResult = await sendPushNotificationToUsers(
       users.map(u => u.id),
       {
-        title: '📣 Agendapunten werkoverleg?',
+        title: 'Agendapunten werkoverleg?',
         body: 'Morgen werkoverleg. Heb je nog punten in te brengen?',
         url: '/dashboard/werkoverleg',
         tag: `werkoverleg-${now.toISOString().slice(0, 10)}`,

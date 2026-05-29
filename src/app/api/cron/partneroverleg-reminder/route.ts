@@ -39,14 +39,10 @@ export async function GET(req: NextRequest) {
     // Slack DM per partner
     const slackBlocks = [
       {
-        type: 'header',
-        text: { type: 'plain_text', text: '🎯 Partneroverleg maandag 10:00', emoji: true },
-      },
-      {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: 'Heb je nog agendapunten voor het partneroverleg van maandag? Zet ze nu in het dashboard zodat ze klaar staan.',
+          text: `*Partneroverleg maandag 10:00*\nHeb je nog agendapunten voor het overleg? Zet ze nu in het dashboard zodat ze klaar staan.`,
         },
       },
       {
@@ -54,14 +50,14 @@ export async function GET(req: NextRequest) {
         elements: [
           {
             type: 'button',
-            text: { type: 'plain_text', text: '✏️ Open partner agenda', emoji: true },
+            text: { type: 'plain_text', text: 'Open partner agenda', emoji: false },
             url: notulenUrl,
             style: 'primary',
           },
         ],
       },
     ]
-    const fallback = `🎯 Partneroverleg maandag 10:00 — agendapunten? ${notulenUrl}`
+    const fallback = `Partneroverleg maandag 10:00 — agendapunten? ${notulenUrl}`
 
     let slackOk = 0
     let slackFail = 0
@@ -75,7 +71,7 @@ export async function GET(req: NextRequest) {
     const pushResult = await sendPushNotificationToUsers(
       recipients.map(r => r.id),
       {
-        title: '🎯 Agendapunten partneroverleg?',
+        title: 'Agendapunten partneroverleg?',
         body: 'Maandag 10:00 partneroverleg. Heb je nog punten? Klik om toe te voegen.',
         url: '/dashboard/partners/notulen',
         tag: `partneroverleg-${now.toISOString().slice(0, 10)}`,

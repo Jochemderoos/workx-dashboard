@@ -91,12 +91,15 @@ export async function sendDirectMessage(
     }
 
     // Send message with Workx branding
+    // unfurl_links/media: false -> geen rommelige preview-kaartjes onder elke link
     await slack.chat.postMessage({
       channel: conversation.channel.id,
       text: message,
       blocks: blocks,
       username: WORKX_BOT_NAME,
       icon_url: WORKX_ICON_URL,
+      unfurl_links: false,
+      unfurl_media: false,
     })
 
     return true
@@ -135,6 +138,8 @@ export async function sendChannelMessage(
       blocks: blocks,
       username: WORKX_BOT_NAME,
       icon_url: WORKX_ICON_URL,
+      unfurl_links: false,
+      unfurl_media: false,
     })
 
     return true
@@ -487,6 +492,8 @@ export async function postToChannel(
       text: message,
       username: senderName || 'Workx Dashboard',
       icon_url: senderIconUrl || 'https://workx-dashboard.vercel.app/workx-logo.png',
+      unfurl_links: false,
+      unfurl_media: false,
     })
     return true
   } catch (error) {
