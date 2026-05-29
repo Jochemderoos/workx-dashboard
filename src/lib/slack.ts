@@ -6,7 +6,7 @@ const slack = new WebClient(process.env.SLACK_BOT_TOKEN)
 
 // Workx branding for Slack bot messages
 const WORKX_BOT_NAME = 'Workx Dashboard'
-const WORKX_ICON_URL = 'https://workx-dashboard.vercel.app/workx-dashboard-icon.svg'
+const WORKX_ICON_URL = 'https://workx-dashboard.vercel.app/workx-logo.png'
 
 export interface SlackUser {
   id: string
@@ -486,7 +486,7 @@ export async function postToChannel(
       channel: channelId,
       text: message,
       username: senderName || 'Workx Dashboard',
-      icon_url: senderIconUrl || 'https://workx-dashboard.vercel.app/logo-icon.png',
+      icon_url: senderIconUrl || 'https://workx-dashboard.vercel.app/workx-logo.png',
     })
     return true
   } catch (error) {
