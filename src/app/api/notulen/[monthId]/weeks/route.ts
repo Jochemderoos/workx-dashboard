@@ -44,14 +44,27 @@ export async function POST(
       return NextResponse.json({ error: 'Maand niet gevonden' }, { status: 404 })
     }
 
-    // Bepaal de werkelijke maand obv meetingDate (lokale datum).
-    // Als de gekozen meeting in een andere kalendermaand valt dan de
-    // aangevraagde MeetingMonth, leg 'm in de juiste (en maak die aan
-    // als die er nog niet is). Dit voorkomt dat een 1 juni-meeting
-    // onder 'Mei 2026' terechtkomt.
-    const date = new Date(meetingDate)
-    const targetYear = date.getFullYear()
-    const targetMonth = date.getMonth() + 1 // 1-12
+    // Bepaal de werkelijke maand obv meetingDate.
+    // BELANGRIJK: `new Date("2026-06-01")` wordt door JS als UTC-middernacht
+    // geparsed; in NL-tijdzone is dat 31 mei 22:00 -> getMonth() = 4 (Mei).
+    // Daardoor faalde de auto-correct eerder. We extraheren YYYY-MM-DD
+    // handmatig uit de string en slaan op als 12:00 UTC zodat de datum
+    // overal in dezelfde dag valt.
+    let targetYear: number
+    let targetMonth: number // 1-12
+    let targetDay: number
+    const ymd = String(meetingDate).match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (ymd) {
+      targetYear = parseInt(ymd[1], 10)
+      targetMonth = parseInt(ymd[2], 10)
+      targetDay = parseInt(ymd[3], 10)
+    } else {
+      const d = new Date(meetingDate)
+      targetYear = d.getFullYear()
+      targetMonth = d.getMonth() + 1
+      targetDay = d.getDate()
+    }
+    const date = new Date(Date.UTC(targetYear, targetMonth - 1, targetDay, 12, 0, 0))
 
     let effectiveMonthId = monthId
     let createdNewMonth = false
