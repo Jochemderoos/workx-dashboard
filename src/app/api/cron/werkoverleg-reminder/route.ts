@@ -11,7 +11,7 @@ import { sendPushNotificationToUsers } from '@/lib/push-notifications'
 import { prisma } from '@/lib/prisma'
 
 const DASHBOARD_BASE = process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app'
-const SLACK_CHANNEL = 'algemeen'
+const SLACK_CHANNEL = 'workx-algemeen'
 
 export async function GET(req: NextRequest) {
   try {
