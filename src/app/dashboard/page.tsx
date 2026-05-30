@@ -380,7 +380,7 @@ const AppjeplekjeWidget = memo(function AppjeplekjeWidget({
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
             <img
-              src="/workx-pand.png"
+              src="/workx-pand.webp"
               alt="Kantoor"
               className="h-7 w-auto opacity-60"
             />
@@ -426,7 +426,7 @@ const AppjeplekjeWidget = memo(function AppjeplekjeWidget({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
               <img
-                src="/workx-pand.png"
+                src="/workx-pand.webp"
                 alt="Kantoor"
                 className="h-7 w-auto opacity-80"
               />
@@ -1600,8 +1600,8 @@ export default function DashboardHome() {
               </p>
               {/* Workx Pand with bicycle hover animation */}
               <div className="workx-pand-container h-20 mt-3 ml-auto">
-                <Image src="/workx-pand.png" alt="Workx Pand" width={160} height={80} className="h-full w-auto opacity-50 hover:opacity-70 transition-opacity" />
-                <Image src="/fiets.png" alt="Fiets" width={40} height={40} className="fiets" />
+                <Image src="/workx-pand.webp" alt="Workx Pand" width={160} height={80} className="h-full w-auto opacity-50 hover:opacity-70 transition-opacity" />
+                <Image src="/fiets.webp" alt="Fiets" width={40} height={40} className="fiets" />
               </div>
             </div>
           </div>

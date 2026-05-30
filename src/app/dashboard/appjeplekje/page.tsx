@@ -361,7 +361,7 @@ export default function AppjeplekjePage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-white flex items-center gap-2 sm:gap-3">
             <img
-              src="/workx-pand.png"
+              src="/workx-pand.webp"
               alt="Kantoor"
               className="h-8 sm:h-10 w-auto opacity-80"
             />
@@ -783,7 +783,7 @@ export default function AppjeplekjePage() {
               <div className="text-center py-8">
                 <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3">
                   <img
-                    src="/workx-pand.png"
+                    src="/workx-pand.webp"
                     alt="Kantoor"
                     className="h-10 w-auto opacity-60"
                   />

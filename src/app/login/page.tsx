@@ -67,7 +67,7 @@ export default function LoginPage() {
 
       {/* Workx Pand illustratie */}
       <div className="fixed bottom-0 right-10 pointer-events-none opacity-30 z-0">
-        <Image src="/workx-pand.png" alt="Workx Pand" width={500} height={400} className="h-[400px] object-contain" />
+        <Image src="/workx-pand.webp" alt="Workx Pand" width={500} height={400} className="h-[400px] object-contain" />
       </div>
 
       <div className="w-full max-w-sm relative z-10 fade-in">

@@ -437,7 +437,7 @@ function TopBarComponent({ user }: TopBarProps) {
             title="Naar Dashboard"
           >
             <Image
-              src="/workx-pand.png"
+              src="/workx-pand.webp"
               alt="Home"
               width={20}
               height={20}
