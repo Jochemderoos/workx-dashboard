@@ -27,6 +27,10 @@
       "schedule": "0 6 * * 2-5"
     },
     {
+      "path": "/api/cron/seed-meetings-next-year",
+      "schedule": "0 7 1 12 *"
+    },
+    {
       "path": "/api/cron/werkoverleg-reminder",
       "schedule": "0 7 * * 1"
     },
