@@ -6,10 +6,13 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import TextReveal from '@/components/ui/TextReveal'
 import ExpandableText from '@/components/ui/ExpandableText'
-import { ADVOCATEN, getPhotoUrl } from '@/lib/team-photos'
+import { ADVOCATEN, PARTNERS, getPhotoUrl } from '@/lib/team-photos'
 
 // Medewerkers die werkverdelingsgesprekken krijgen
 const GESPREK_MEDEWERKERS = ADVOCATEN
+
+// Partner-opties die in de partner-dropdown verschijnen voor ad-hoc toewijzing
+const PARTNER_OPTIONS = PARTNERS
 
 interface Distribution {
   id?: string
@@ -213,10 +216,14 @@ export default function WerkverdelingsgesprekkenPage() {
     const saved = savedData[key]
     if (!local && !saved) return false
     if (!local || !saved) return true
-    return local.capacity !== saved.capacity || local.notes !== saved.notes
+    return (
+      local.capacity !== saved.capacity ||
+      local.notes !== saved.notes ||
+      local.partnerName !== saved.partnerName
+    )
   }, [localData, savedData])
 
-  const handleChange = useCallback((weekId: string, employeeName: string, field: 'capacity' | 'notes', value: string) => {
+  const handleChange = useCallback((weekId: string, employeeName: string, field: 'capacity' | 'notes' | 'partnerName', value: string) => {
     const employeeId = getEmployeeId(employeeName)
     const key = `${weekId}-${employeeId}`
     const activeWeek = weeks.find(w => w.id === weekId)
@@ -375,9 +382,19 @@ export default function WerkverdelingsgesprekkenPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-medium text-sm truncate">{name}</p>
-                      {data.partnerName && (
-                        <p className="text-xs text-gray-500 truncate">Partner: {data.partnerName}</p>
-                      )}
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] text-gray-600 uppercase tracking-wider">Partner</span>
+                        <select
+                          value={data.partnerName && data.partnerName !== '-' ? data.partnerName : ''}
+                          onChange={(e) => handleChange(activeWeek.id, name, 'partnerName', e.target.value || '-')}
+                          className="text-xs bg-transparent border border-white/10 rounded-md px-1.5 py-0.5 text-gray-300 hover:border-workx-lime/30 focus:border-workx-lime/40 focus:outline-none cursor-pointer"
+                        >
+                          <option value="" className="bg-workx-dark">— niet toegewezen —</option>
+                          {PARTNER_OPTIONS.map(p => (
+                            <option key={p} value={p} className="bg-workx-dark">{p.split(' ')[0]}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
 

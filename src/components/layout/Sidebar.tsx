@@ -237,11 +237,13 @@ function SidebarComponent({ user }: SidebarProps) {
         {/* Team — algemene pagina's, in 4 visuele sub-groepjes met sub-labels */}
         {(() => {
           const algemeen = filterItems(teamMenu_Algemeen.filter(i => visibleForUser(i)))
+          const isPartnerRole = user.role === 'PARTNER' || user.role === 'ADMIN'
+          const partner = isPartnerRole ? filterItems(partnersMenuItems) : []
           const werk = filterItems(teamMenu_Werk.filter(i => visibleForUser(i)))
           const tools = filterItems(teamMenu_Tools.filter(i => visibleForUser(i)))
           const docs = filterItems(teamMenu_Docs.filter(i => visibleForUser(i)))
           const showLodewijk = isExternal && (!filterQ || matches('Werk Lodewijk'))
-          const hasAny = algemeen.length || werk.length || tools.length || docs.length || showLodewijk
+          const hasAny = algemeen.length || partner.length || werk.length || tools.length || docs.length || showLodewijk
           if (!hasAny) return null
           return (
             <div>
@@ -255,6 +257,14 @@ function SidebarComponent({ user }: SidebarProps) {
                 <div className="space-y-1 mt-1">
                   <NavLink href="/dashboard/partners/werk-lodewijk" icon={Icons.briefcase} label="Werk Lodewijk" iconAnim="icon-briefcase-hover" />
                 </div>
+              )}
+              {partner.length > 0 && (
+                <>
+                  <p className="px-4 mt-4 mb-1.5 text-[9px] font-medium uppercase tracking-wider" style={{ color: 'rgba(180, 185, 50, 0.6)' }}>Partner</p>
+                  <div className="space-y-1">
+                    {partner.map((item) => <NavLink key={item.href} {...item} />)}
+                  </div>
+                </>
               )}
               {werk.length > 0 && (
                 <>
@@ -280,20 +290,6 @@ function SidebarComponent({ user }: SidebarProps) {
                   </div>
                 </>
               )}
-            </div>
-          )
-        })()}
-
-        {/* Partner — alleen voor PARTNER en ADMIN */}
-        {(user.role === 'PARTNER' || user.role === 'ADMIN') && (() => {
-          const partner = filterItems(partnersMenuItems)
-          if (partner.length === 0) return null
-          return (
-            <div>
-              <p className="px-4 mb-2 text-[10px] font-medium uppercase tracking-widest" style={{ color: 'rgba(180, 185, 50, 0.5)' }}>Partner</p>
-              <div className="space-y-1">
-                {partner.map((item) => <NavLink key={item.href} {...item} />)}
-              </div>
             </div>
           )
         })()}
