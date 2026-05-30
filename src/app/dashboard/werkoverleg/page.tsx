@@ -157,7 +157,7 @@ function PersonDropdown({ anchorRef, members, selected, onSelect, onClose }: Per
             }`}
           >
             {photo ? (
-              <img src={photo} alt={name} className="w-6 h-6 rounded-lg object-cover" />
+              <img loading="lazy" src={photo} alt={name} className="w-6 h-6 rounded-lg object-cover" />
             ) : (
               <div className="w-6 h-6 rounded-lg bg-workx-lime/10 flex items-center justify-center text-[10px] font-bold text-workx-lime">
                 {name.charAt(0)}
@@ -817,7 +817,7 @@ export default function WerkoverlegPage() {
                         className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime text-xs font-medium cursor-pointer hover:bg-workx-lime/20 transition-colors"
                       >
                         {getPhotoUrl(action.responsibleName) ? (
-                          <img src={getPhotoUrl(action.responsibleName)!} alt={action.responsibleName} className="w-4 h-4 rounded-md object-cover" />
+                          <img loading="lazy" src={getPhotoUrl(action.responsibleName)!} alt={action.responsibleName} className="w-4 h-4 rounded-md object-cover" />
                         ) : null}
                         {action.responsibleName}
                         <Icons.chevronDown size={10} />
@@ -885,7 +885,7 @@ export default function WerkoverlegPage() {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer hover:bg-workx-lime/20 transition-colors bg-workx-lime/10 text-workx-lime"
               >
                 {getPhotoUrl(newActionResponsible) ? (
-                  <img src={getPhotoUrl(newActionResponsible)!} alt={newActionResponsible} className="w-4 h-4 rounded-md object-cover" />
+                  <img loading="lazy" src={getPhotoUrl(newActionResponsible)!} alt={newActionResponsible} className="w-4 h-4 rounded-md object-cover" />
                 ) : null}
                 {newActionResponsible}
                 <Icons.chevronDown size={10} />

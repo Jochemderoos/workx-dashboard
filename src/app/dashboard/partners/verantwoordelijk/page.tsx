@@ -258,7 +258,7 @@ export default function VerantwoordelijkPage() {
                   >
                     <div className="flex items-center gap-3 mb-3">
                       {photo ? (
-                        <img src={photo} alt={user.name} className="w-10 h-10 rounded-xl object-cover" />
+                        <img loading="lazy" src={photo} alt={user.name} className="w-10 h-10 rounded-xl object-cover" />
                       ) : (
                         <div className="w-10 h-10 rounded-xl bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">
                           {user.name.charAt(0)}
@@ -439,7 +439,7 @@ export default function VerantwoordelijkPage() {
                                     {selected && <Icons.check size={9} className="text-workx-dark" />}
                                   </div>
                                   {getPhotoUrl(m.name) ? (
-                                    <img src={getPhotoUrl(m.name)!} alt={m.name} className="w-5 h-5 rounded-md object-cover" />
+                                    <img loading="lazy" src={getPhotoUrl(m.name)!} alt={m.name} className="w-5 h-5 rounded-md object-cover" />
                                   ) : (
                                     <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-bold">
                                       {m.name.charAt(0)}

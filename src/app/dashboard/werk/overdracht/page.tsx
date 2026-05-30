@@ -123,7 +123,7 @@ function WaarnemerDropdown({ anchorRef, selectedNames, onToggle, onClose }: Waar
               {isSelected && <Icons.check size={10} className="text-workx-lime" />}
             </div>
             {photo && (
-              <img src={photo} alt={name} className="w-5 h-5 rounded-md object-cover" />
+              <img loading="lazy" src={photo} alt={name} className="w-5 h-5 rounded-md object-cover" />
             )}
             <span>{name}</span>
           </button>
@@ -209,7 +209,7 @@ function PersonDropdown({ anchorRef, selected, onSelect, onClose, teamMembers }:
             }`}
           >
             {photo && (
-              <img src={photo} alt={member.name} className="w-6 h-6 rounded-md object-cover" />
+              <img loading="lazy" src={photo} alt={member.name} className="w-6 h-6 rounded-md object-cover" />
             )}
             {!photo && (
               <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center text-xs font-bold text-white/60">
@@ -286,7 +286,7 @@ function NewDocumentModal({
               {selectedName ? (
                 <div className="flex items-center gap-2">
                   {getPhotoUrl(selectedName) && (
-                    <img src={getPhotoUrl(selectedName)!} alt={selectedName} className="w-5 h-5 rounded-md object-cover" />
+                    <img loading="lazy" src={getPhotoUrl(selectedName)!} alt={selectedName} className="w-5 h-5 rounded-md object-cover" />
                   )}
                   <span>{selectedName}</span>
                 </div>
@@ -381,7 +381,7 @@ function WaarnemerBadges({
         return (
           <div key={name} className="flex items-center gap-1 pl-1 pr-1.5 py-0.5 rounded-lg bg-workx-lime/10 border border-workx-lime/20">
             {photo ? (
-              <img src={photo} alt={name} className="w-4 h-4 rounded object-cover" />
+              <img loading="lazy" src={photo} alt={name} className="w-4 h-4 rounded object-cover" />
             ) : (
               <div className="w-4 h-4 rounded bg-workx-lime/20 flex items-center justify-center text-workx-lime text-[8px] font-bold">
                 {name.charAt(0)}
@@ -1014,7 +1014,7 @@ export default function OverdrachtPage() {
                 {/* Top: van wie + periode */}
                 <div className="px-4 py-2.5 border-b border-white/5 bg-white/[0.01] flex items-center gap-2.5">
                   {getPhotoUrl(result.fromUser) && (
-                    <img src={getPhotoUrl(result.fromUser)!} alt={result.fromUser} className="w-6 h-6 rounded-lg object-cover" />
+                    <img loading="lazy" src={getPhotoUrl(result.fromUser)!} alt={result.fromUser} className="w-6 h-6 rounded-lg object-cover" />
                   )}
                   <span className="text-xs text-gray-500">
                     Overdracht van <span className="text-white font-medium">{result.fromUser}</span>
@@ -1046,7 +1046,7 @@ export default function OverdrachtPage() {
                           return (
                             <div key={name} className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
                               {photo ? (
-                                <img src={photo} alt={name} className="w-5 h-5 rounded-md object-cover" />
+                                <img loading="lazy" src={photo} alt={name} className="w-5 h-5 rounded-md object-cover" />
                               ) : (
                                 <div className="w-5 h-5 rounded-md bg-purple-500/20 flex items-center justify-center text-purple-300 text-[9px] font-bold">
                                   {name.charAt(0)}
@@ -1093,7 +1093,7 @@ export default function OverdrachtPage() {
                 }`}
               >
                 {getPhotoUrl(h.user.name) && (
-                  <img src={getPhotoUrl(h.user.name)!} alt={h.user.name} className="w-5 h-5 rounded-md object-cover" />
+                  <img loading="lazy" src={getPhotoUrl(h.user.name)!} alt={h.user.name} className="w-5 h-5 rounded-md object-cover" />
                 )}
                 <span>{h.user.name.split(' ')[0]}</span>
                 <span className="text-[10px] text-gray-600">
@@ -1132,7 +1132,7 @@ export default function OverdrachtPage() {
                   }`}
                 >
                   {getPhotoUrl(h.user.name) && (
-                    <img src={getPhotoUrl(h.user.name)!} alt={h.user.name} className="w-4 h-4 rounded object-cover opacity-60" />
+                    <img loading="lazy" src={getPhotoUrl(h.user.name)!} alt={h.user.name} className="w-4 h-4 rounded object-cover opacity-60" />
                   )}
                   <span>{h.user.name.split(' ')[0]}</span>
                   <span className="text-[10px] text-gray-600">
@@ -1267,7 +1267,7 @@ export default function OverdrachtPage() {
                               <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-purple-500/15 border border-purple-500/30">
                                   {getPhotoUrl(w.waarnemer) ? (
-                                    <img src={getPhotoUrl(w.waarnemer)!} alt={w.waarnemer} className="w-6 h-6 rounded-full object-cover ring-1 ring-purple-500/30" />
+                                    <img loading="lazy" src={getPhotoUrl(w.waarnemer)!} alt={w.waarnemer} className="w-6 h-6 rounded-full object-cover ring-1 ring-purple-500/30" />
                                   ) : (
                                     <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-300">
                                       {w.waarnemer.charAt(0)}
@@ -1294,7 +1294,7 @@ export default function OverdrachtPage() {
                                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs bg-white/5 border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-all"
                                     >
                                       {photo ? (
-                                        <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
+                                        <img loading="lazy" src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
                                       ) : (
                                         <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[9px] font-bold text-purple-300">
                                           {name.charAt(0)}
@@ -1331,7 +1331,7 @@ export default function OverdrachtPage() {
                         {w.waarnemer ? (
                           <div className="flex items-center gap-2">
                             {getPhotoUrl(w.waarnemer) ? (
-                              <img src={getPhotoUrl(w.waarnemer)!} alt={w.waarnemer} className="w-6 h-6 rounded-full object-cover ring-1 ring-purple-500/30" />
+                              <img loading="lazy" src={getPhotoUrl(w.waarnemer)!} alt={w.waarnemer} className="w-6 h-6 rounded-full object-cover ring-1 ring-purple-500/30" />
                             ) : (
                               <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-300">
                                 {w.waarnemer.charAt(0)}

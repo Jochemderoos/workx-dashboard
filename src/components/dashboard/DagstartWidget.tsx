@@ -170,7 +170,7 @@ export default function DagstartWidget() {
                   return (
                     <div key={b.name} className="flex items-center gap-2">
                       {photo ? (
-                        <img src={photo} alt={b.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-white/10" />
+                        <img loading="lazy" src={photo} alt={b.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-white/10" />
                       ) : (
                         <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-[11px] font-bold ring-1 ring-white/10">
                           {b.name.charAt(0)}

@@ -388,7 +388,7 @@ export default function SollicitatiesPage() {
                           {interviewers.slice(0, 3).map(name => {
                             const photo = getPhotoUrl(name)
                             return photo ? (
-                              <img key={name} src={photo} alt={name} className="w-5 h-5 rounded-full object-cover ring-1 ring-workx-dark" title={name} />
+                              <img loading="lazy" key={name} src={photo} alt={name} className="w-5 h-5 rounded-full object-cover ring-1 ring-workx-dark" title={name} />
                             ) : (
                               <div key={name} className="w-5 h-5 rounded-full bg-white/10 ring-1 ring-workx-dark flex items-center justify-center text-[8px] text-white/50" title={name}>
                                 {name.charAt(0)}
@@ -1181,7 +1181,7 @@ function InterviewerPicker({ selected, onToggle }: { selected: string[]; onToggl
             }`}
           >
             {photo ? (
-              <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
+              <img loading="lazy" src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
             ) : (
               <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold">
                 {name.charAt(0)}
@@ -1443,7 +1443,7 @@ function GesprekkenTab({ applicant, onRefresh }: { applicant: Applicant; onRefre
                             return (
                               <div key={name} className="flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full bg-white/5" title={name}>
                                 {photo ? (
-                                  <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover ring-1 ring-workx-lime/20" />
+                                  <img loading="lazy" src={photo} alt={name} className="w-5 h-5 rounded-full object-cover ring-1 ring-workx-lime/20" />
                                 ) : (
                                   <div className="w-5 h-5 rounded-full bg-workx-lime/10 flex items-center justify-center text-workx-lime text-[10px] font-bold">
                                     {name.charAt(0)}

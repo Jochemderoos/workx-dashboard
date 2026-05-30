@@ -399,7 +399,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                       {editSelectedMember ? (
                         <>
                           {getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl) ? (
-                            <img src={getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl)!} alt="" className="w-7 h-7 rounded-full object-cover" />
+                            <img loading="lazy" src={getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl)!} alt="" className="w-7 h-7 rounded-full object-cover" />
                           ) : (
                             <div className="w-7 h-7 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{editSelectedMember.name.charAt(0)}</div>
                           )}
@@ -419,7 +419,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition-colors"
                           >
                             {getPhotoUrl(m.name, m.avatarUrl) ? (
-                              <img src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-7 h-7 rounded-full object-cover" />
+                              <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-7 h-7 rounded-full object-cover" />
                             ) : (
                               <div className="w-7 h-7 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{m.name.charAt(0)}</div>
                             )}
@@ -543,7 +543,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                           {/* Assignee photo */}
                           <div className="flex-shrink-0 mt-0.5">
                             {getPhotoUrl(a.assignee.name, a.assignee.avatarUrl) ? (
-                              <img src={getPhotoUrl(a.assignee.name, a.assignee.avatarUrl)!} alt="" className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10" />
+                              <img loading="lazy" src={getPhotoUrl(a.assignee.name, a.assignee.avatarUrl)!} alt="" className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10" />
                             ) : (
                               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center text-sm font-bold text-workx-lime ring-2 ring-white/10">
                                 {a.assignee.name.charAt(0)}
@@ -676,7 +676,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                       {nlSelectedMember ? (
                         <>
                           {getPhotoUrl(nlSelectedMember.name, nlSelectedMember.avatarUrl) ? (
-                            <img src={getPhotoUrl(nlSelectedMember.name, nlSelectedMember.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-workx-lime/30" />
+                            <img loading="lazy" src={getPhotoUrl(nlSelectedMember.name, nlSelectedMember.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-workx-lime/30" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">{nlSelectedMember.name.charAt(0)}</div>
                           )}
@@ -701,7 +701,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
                           >
                             {getPhotoUrl(m.name, m.avatarUrl) ? (
-                              <img src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover" />
+                              <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover" />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">{m.name.charAt(0)}</div>
                             )}
@@ -775,7 +775,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                 {selectedMember ? (
                   <>
                     {getPhotoUrl(selectedMember.name, selectedMember.avatarUrl) ? (
-                      <img src={getPhotoUrl(selectedMember.name, selectedMember.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-workx-lime/30" />
+                      <img loading="lazy" src={getPhotoUrl(selectedMember.name, selectedMember.avatarUrl)!} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-workx-lime/30" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">{selectedMember.name.charAt(0)}</div>
                     )}
@@ -803,7 +803,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
                       >
                         {photoUrl ? (
-                          <img src={photoUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
+                          <img loading="lazy" src={photoUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
                         ) : (
                           <div className="w-9 h-9 rounded-full bg-workx-lime/20 flex items-center justify-center text-sm font-bold text-workx-lime">{m.name.charAt(0)}</div>
                         )}

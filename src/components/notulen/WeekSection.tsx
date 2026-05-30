@@ -310,7 +310,7 @@ export default function WeekSection({
                         {names.map((name) => {
                           const photo = getPhotoUrl(name)
                           return photo ? (
-                            <img key={name} src={photo} alt={name} className="w-6 h-6 rounded-lg object-cover ring-1 ring-white/10" title={name} />
+                            <img loading="lazy" key={name} src={photo} alt={name} className="w-6 h-6 rounded-lg object-cover ring-1 ring-white/10" title={name} />
                           ) : (
                             <span key={name} className="text-[11px] px-2 py-0.5 rounded-lg bg-orange-500/10 text-orange-400 font-medium">{name}</span>
                           )

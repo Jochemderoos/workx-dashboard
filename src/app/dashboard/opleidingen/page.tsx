@@ -611,7 +611,7 @@ export default function OpleidingenPage() {
         </style>
       </head><body>
         <div class="header">
-          <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
+          <div class="logo"><img loading="lazy" src="/workx-logo.png" alt="Workx Advocaten" /></div>
           <h1>Presentielijst: ${s.title}</h1>
           <div class="session-details">
             <p><strong>Spreker:</strong> ${s.speaker}</p>
@@ -671,7 +671,7 @@ export default function OpleidingenPage() {
         </style>
       </head><body>
         <div class="header">
-          <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
+          <div class="logo"><img loading="lazy" src="/workx-logo.png" alt="Workx Advocaten" /></div>
           <h1>Individueel Opleidingsoverzicht ${selectedYear}</h1>
           <p class="person">${person.name}</p>
         </div>
@@ -755,7 +755,7 @@ export default function OpleidingenPage() {
       </head>
       <body>
         <div class="header">
-          <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
+          <div class="logo"><img loading="lazy" src="/workx-logo.png" alt="Workx Advocaten" /></div>
           <h1>PO-punten Overzicht ${selectedYear}</h1>
           <p style="color: #555; margin-top: 5px; font-size: 16px; font-weight: 500;">${userName}</p>
         </div>
@@ -868,7 +868,7 @@ export default function OpleidingenPage() {
       </head>
       <body>
         <div class="certificate">
-          <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
+          <div class="logo"><img loading="lazy" src="/workx-logo.png" alt="Workx Advocaten" /></div>
           <div class="divider"></div>
 
           <h1>Certificaat Permanente Opleiding</h1>
@@ -903,7 +903,7 @@ export default function OpleidingenPage() {
           ${cert.certificateUrl ? `
           <div class="original-cert">
             <p style="color: #888; margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Origineel certificaat</p>
-            ${cert.certificateUrl.startsWith('data:application/pdf') ? `<iframe src="${cert.certificateUrl}" style="width:100%;height:600px;border:none;border-radius:8px;" />` : `<img src="${cert.certificateUrl}" alt="Origineel certificaat" />`}
+            ${cert.certificateUrl.startsWith('data:application/pdf') ? `<iframe src="${cert.certificateUrl}" style="width:100%;height:600px;border:none;border-radius:8px;" />` : `<img loading="lazy" src="${cert.certificateUrl}" alt="Origineel certificaat" />`}
           </div>
           ` : ''}
 
@@ -967,7 +967,7 @@ export default function OpleidingenPage() {
       <div class="certificate ${index > 0 ? 'page-break' : ''}">
         <div class="certificate-inner">
           <div class="header">
-            <div class="logo"><img src="/workx-logo.png" alt="Workx Advocaten" /></div>
+            <div class="logo"><img loading="lazy" src="/workx-logo.png" alt="Workx Advocaten" /></div>
           </div>
           <div class="divider-line"></div>
           <div class="badge">CERTIFICAAT</div>
@@ -991,7 +991,7 @@ export default function OpleidingenPage() {
           ${cert.certificateUrl ? `
           <div class="original">
             <p style="color: #888; margin-bottom: 15px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Origineel certificaat</p>
-            ${cert.certificateUrl.startsWith('data:application/pdf') ? `<iframe src="${cert.certificateUrl}" style="width:100%;height:600px;border:none;border-radius:8px;" />` : `<img src="${cert.certificateUrl}" alt="Origineel certificaat" />`}
+            ${cert.certificateUrl.startsWith('data:application/pdf') ? `<iframe src="${cert.certificateUrl}" style="width:100%;height:600px;border:none;border-radius:8px;" />` : `<img loading="lazy" src="${cert.certificateUrl}" alt="Origineel certificaat" />`}
           </div>
           ` : ''}
           <div class="cert-footer">
@@ -1651,7 +1651,7 @@ export default function OpleidingenPage() {
                                   if (cert.certificateUrl!.startsWith('data:application/pdf')) {
                                     w.document.write(`<iframe src="${cert.certificateUrl}" style="width:100%;height:100%;border:none;position:absolute;top:0;left:0;" /></iframe>`)
                                   } else {
-                                    w.document.write(`<html><head><title>${cert.trainingName}</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100dvh;background:#111;}</style></head><body><img src="${cert.certificateUrl}" style="max-width:100%;max-height:100dvh;" /></body></html>`)
+                                    w.document.write(`<html><head><title>${cert.trainingName}</title><style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100dvh;background:#111;}</style></head><body><img loading="lazy" src="${cert.certificateUrl}" style="max-width:100%;max-height:100dvh;" /></body></html>`)
                                   }
                                   w.document.title = cert.trainingName
                                 }
@@ -2064,7 +2064,7 @@ export default function OpleidingenPage() {
                                   {isSelected && <Icons.check size={10} className="text-workx-lime" />}
                                 </div>
                                 {photo ? (
-                                  <img src={photo} alt={member.name} className="w-5 h-5 rounded-md object-cover" />
+                                  <img loading="lazy" src={photo} alt={member.name} className="w-5 h-5 rounded-md object-cover" />
                                 ) : (
                                   <div className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-[10px] text-workx-lime font-medium">
                                     {member.name.charAt(0)}

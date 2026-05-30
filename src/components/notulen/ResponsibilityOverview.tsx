@@ -61,7 +61,7 @@ export default function ResponsibilityOverview({ actions, onToggleComplete }: Re
             <div key={name} className="card p-4">
               <div className="flex items-center gap-3 mb-3 pb-3 border-b border-white/5">
                 {photo ? (
-                  <img src={photo} alt={name} className="w-8 h-8 rounded-lg object-cover ring-1 ring-white/10" />
+                  <img loading="lazy" src={photo} alt={name} className="w-8 h-8 rounded-lg object-cover ring-1 ring-white/10" />
                 ) : (
                   <div className="w-8 h-8 rounded-lg bg-workx-lime/10 flex items-center justify-center text-workx-lime text-sm font-bold">
                     {name.charAt(0)}

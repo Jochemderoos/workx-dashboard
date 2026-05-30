@@ -9,7 +9,13 @@ const ConsoleEasterEgg = dynamic(() => import('@/components/ui/ConsoleEasterEgg'
 const PWARegister = dynamic(() => import('@/components/PWARegister'), { ssr: false })
 const StaleVersionGuard = dynamic(() => import('@/components/StaleVersionGuard'), { ssr: false })
 
-const inter = Inter({ subsets: ['latin'] })
+// Alleen de weights die we daadwerkelijk gebruiken (was: alle 9 weights = ~700KB).
+// display: 'swap' voorkomt FOUT — system-font tot Inter is geladen.
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+})
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -53,6 +59,9 @@ export default function RootLayout({
   return (
     <html lang="nl" suppressHydrationWarning>
       <head>
+        {/* Preconnect: team-foto's komen van workxadvocaten.nl — spaart een DNS+TLS rondje */}
+        <link rel="preconnect" href="https://www.workxadvocaten.nl" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://www.workxadvocaten.nl" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className={`${inter.className} antialiased`}>

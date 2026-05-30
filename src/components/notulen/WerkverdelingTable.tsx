@@ -113,7 +113,7 @@ function EmployeeDropdown({ anchorRef, employees, selectedNames, onToggle, onClo
               {isSelected && <Icons.check size={10} className="text-workx-lime" />}
             </div>
             {photo && (
-              <img src={photo} alt={emp.name} className="w-5 h-5 rounded-md object-cover" />
+              <img loading="lazy" src={photo} alt={emp.name} className="w-5 h-5 rounded-md object-cover" />
             )}
             <span>{emp.name}</span>
           </button>
@@ -293,7 +293,7 @@ export default function WerkverdelingTable({ distributions, employees, onUpdate 
                 {/* Partner */}
                 <div className="flex items-center gap-2">
                   {partnerPhoto ? (
-                    <img src={partnerPhoto} alt={dist.partnerName} className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10" />
+                    <img loading="lazy" src={partnerPhoto} alt={dist.partnerName} className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10" />
                   ) : (
                     <div className="w-7 h-7 rounded-lg bg-workx-lime/10 flex items-center justify-center text-workx-lime text-xs font-bold">
                       {dist.partnerName.charAt(0)}
@@ -312,7 +312,7 @@ export default function WerkverdelingTable({ distributions, employees, onUpdate 
                         className="flex items-center gap-1.5 pl-1 pr-1.5 py-0.5 rounded-lg bg-workx-lime/10 border border-workx-lime/20"
                       >
                         {photo ? (
-                          <img src={photo} alt={name} className="w-5 h-5 rounded-md object-cover" />
+                          <img loading="lazy" src={photo} alt={name} className="w-5 h-5 rounded-md object-cover" />
                         ) : (
                           <div className="w-5 h-5 rounded-md bg-workx-lime/20 flex items-center justify-center text-workx-lime text-[10px] font-bold">
                             {name.charAt(0)}

@@ -676,7 +676,7 @@ export default function DebiteurenPage() {
                 title={`${a.count} factu(u)r(en), ${formatEUR(a.total)}`}
               >
                 {getPhotoUrl(a.name) ? (
-                  <img src={getPhotoUrl(a.name)!} alt={a.name} className="w-4 h-4 rounded object-cover" />
+                  <img loading="lazy" src={getPhotoUrl(a.name)!} alt={a.name} className="w-4 h-4 rounded object-cover" />
                 ) : (
                   <div className="w-4 h-4 rounded bg-white/10 flex items-center justify-center text-[8px] font-bold">{a.name.charAt(0)}</div>
                 )}
@@ -746,7 +746,7 @@ export default function DebiteurenPage() {
                         {inv.primaryUser ? (
                           <>
                             {getPhotoUrl(inv.primaryUser.name) ? (
-                              <img src={getPhotoUrl(inv.primaryUser.name)!} alt={inv.primaryUser.name} className="w-5 h-5 rounded object-cover" />
+                              <img loading="lazy" src={getPhotoUrl(inv.primaryUser.name)!} alt={inv.primaryUser.name} className="w-5 h-5 rounded object-cover" />
                             ) : (
                               <div className="w-5 h-5 rounded bg-workx-lime/20 flex items-center justify-center text-[10px] font-bold">{inv.primaryUser.name.charAt(0)}</div>
                             )}
@@ -785,7 +785,7 @@ export default function DebiteurenPage() {
                                 }`}
                               >
                                 {getPhotoUrl(m.name) ? (
-                                  <img src={getPhotoUrl(m.name)!} alt={m.name} className="w-5 h-5 rounded object-cover" />
+                                  <img loading="lazy" src={getPhotoUrl(m.name)!} alt={m.name} className="w-5 h-5 rounded object-cover" />
                                 ) : (
                                   <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[10px] font-bold">{m.name.charAt(0)}</div>
                                 )}
@@ -849,7 +849,7 @@ export default function DebiteurenPage() {
                                   <td className="py-1.5">
                                     <div className="flex items-center gap-1.5">
                                       {l.user && getPhotoUrl(l.user.name) ? (
-                                        <img src={getPhotoUrl(l.user.name)!} alt={l.user.name} className="w-4 h-4 rounded object-cover" />
+                                        <img loading="lazy" src={getPhotoUrl(l.user.name)!} alt={l.user.name} className="w-4 h-4 rounded object-cover" />
                                       ) : (
                                         <div className="w-4 h-4 rounded bg-white/10" />
                                       )}

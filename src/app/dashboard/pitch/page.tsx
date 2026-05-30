@@ -846,7 +846,7 @@ export default function PitchPage() {
                 {clientLogo ? (
                   <>
                     <div className="relative w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden">
-                      <img src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      <img loading="lazy" src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
                     </div>
                     <span className="text-sm text-gray-400 truncate max-w-[100px]">{clientLogo.name}</span>
                     <button
@@ -1140,7 +1140,7 @@ export default function PitchPage() {
                                 height: `${(30 * logoSize / 100 / 148) * 100}%`,
                               }}
                             >
-                              <img src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain opacity-80" />
+                              <img loading="lazy" src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain opacity-80" />
                             </div>
                           )}
                         </div>
@@ -1159,7 +1159,7 @@ export default function PitchPage() {
                   <div className="pt-2 border-t border-white/10 space-y-2">
                     <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
                       <div className="w-10 h-10 rounded bg-white flex items-center justify-center overflow-hidden">
-                        <img src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                        <img loading="lazy" src={clientLogo.dataUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-orange-400 font-medium">Klant logo op cover</p>

@@ -231,7 +231,7 @@ export default function TopicRow({
                   {names.map((name) => {
                     const photo = getPhotoUrl(name)
                     return photo ? (
-                      <img key={name} src={photo} alt={name} className="w-5 h-5 rounded-md object-cover ring-1 ring-white/10" title={name} />
+                      <img loading="lazy" key={name} src={photo} alt={name} className="w-5 h-5 rounded-md object-cover ring-1 ring-white/10" title={name} />
                     ) : (
                       <span key={name} className="text-[10px] px-1.5 py-0.5 rounded-md bg-orange-500/10 text-orange-400 font-medium">{name}</span>
                     )
@@ -279,7 +279,7 @@ export default function TopicRow({
                           const photo = getPhotoUrl(name)
                           return (
                             <span key={name} className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-orange-500/10 text-orange-400 text-xs font-medium">
-                              {photo && <img src={photo} alt="" className="w-4 h-4 rounded-sm object-cover" />}
+                              {photo && <img loading="lazy" src={photo} alt="" className="w-4 h-4 rounded-sm object-cover" />}
                               {name}
                               <button
                                 onClick={(e) => { e.stopPropagation(); toggleResponsible(name) }}
@@ -316,7 +316,7 @@ export default function TopicRow({
                                 {isSelected && <Icons.check size={10} className="text-orange-400" />}
                               </div>
                               {photo ? (
-                                <img src={photo} alt="" className="w-5 h-5 rounded-md object-cover" />
+                                <img loading="lazy" src={photo} alt="" className="w-5 h-5 rounded-md object-cover" />
                               ) : (
                                 <div className="w-5 h-5 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/50">{name.charAt(0)}</div>
                               )}

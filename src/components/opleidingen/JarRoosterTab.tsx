@@ -300,7 +300,7 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
                       title="Klik om te wijzigen"
                     >
                       {photo ? (
-                        <img src={photo} alt={s.name} className="w-9 h-9 rounded-xl object-cover ring-1 ring-workx-lime/30" />
+                        <img loading="lazy" src={photo} alt={s.name} className="w-9 h-9 rounded-xl object-cover ring-1 ring-workx-lime/30" />
                       ) : (
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold" style={{
                           background: 'rgba(249, 255, 133, 0.25)',

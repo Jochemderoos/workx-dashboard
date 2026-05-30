@@ -628,7 +628,7 @@ export default function TeamPage() {
               <div className="relative flex-shrink-0">
                 <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden ring-2 ${isSupportStaff ? 'ring-cyan-400/30 shadow-cyan-400/20' : 'ring-workx-lime/30 shadow-workx-lime/20'} shadow-lg`}>
                   {photoUrl ? (
-                    <img src={photoUrl} alt={employee.name} className="w-full h-full object-cover" />
+                    <img loading="lazy" src={photoUrl} alt={employee.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className={`w-full h-full bg-gradient-to-br ${isSupportStaff ? 'from-cyan-400 to-cyan-400/60' : 'from-workx-lime to-workx-lime/60'} flex items-center justify-center`}>
                       <span className="text-workx-dark text-xl sm:text-2xl font-bold">{employee.name.charAt(0)}</span>
@@ -978,7 +978,7 @@ export default function TeamPage() {
                       <div className="flex items-center gap-4 min-w-0 flex-1">
                         <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/10">
                           {getPhotoUrl(employee.name) ? (
-                            <img src={getPhotoUrl(employee.name)!} alt={employee.name} className="w-full h-full object-cover" />
+                            <img loading="lazy" src={getPhotoUrl(employee.name)!} alt={employee.name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-workx-lime to-workx-lime/60 flex items-center justify-center">
                               <span className="text-workx-dark font-bold">{employee.name.charAt(0)}</span>
@@ -1131,7 +1131,7 @@ export default function TeamPage() {
                     <div className="flex items-center gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
                       <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-purple-500/20">
                         {getPhotoUrl(employee.name) ? (
-                          <img src={getPhotoUrl(employee.name)!} alt={employee.name} className="w-full h-full object-cover" />
+                          <img loading="lazy" src={getPhotoUrl(employee.name)!} alt={employee.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-purple-400 to-purple-400/60 flex items-center justify-center">
                             <span className="text-workx-dark font-bold">{employee.name.charAt(0)}</span>

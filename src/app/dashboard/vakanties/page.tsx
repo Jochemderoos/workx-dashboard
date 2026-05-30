@@ -2362,7 +2362,7 @@ export default function VakantiesPage() {
                       style={{ backgroundColor: color + '20' }}
                     >
                       {photo ? (
-                        <img src={photo} alt={v.user.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10" />
+                        <img loading="lazy" src={photo} alt={v.user.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10" />
                       ) : (
                         <div className="w-7 h-7 rounded-lg flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: color + '30', color }}>
                           {v.user.name.charAt(0)}
@@ -2399,7 +2399,7 @@ export default function VakantiesPage() {
                       style={{ backgroundColor: color + '20' }}
                     >
                       {photo ? (
-                        <img src={photo} alt={v.user.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10" />
+                        <img loading="lazy" src={photo} alt={v.user.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10" />
                       ) : (
                         <div className="w-7 h-7 rounded-lg flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: color + '30', color }}>
                           {v.user.name.charAt(0)}
