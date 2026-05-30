@@ -1,4 +1,5 @@
-import { jsPDF } from 'jspdf'
+// jsPDF wordt dynamic geïmporteerd binnen buildExpensePDF — scheelt ~200KB in initial bundle
+import type { jsPDF } from 'jspdf'
 import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
 import { PDFDocument, rgb } from 'pdf-lib'
 
@@ -49,7 +50,8 @@ export interface PDFAttachmentDownload {
 export async function buildExpensePDF(data: ExpensePDFData): Promise<{ doc: jsPDF; fileName: string; pdfAttachments?: PDFAttachmentDownload[] } | null> {
   const logoDataUrl = await loadWorkxLogo()
 
-  const doc = new jsPDF()
+  const { jsPDF: JsPDFCls } = await import('jspdf')
+  const doc = new JsPDFCls()
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const isHolding = !!data.holdingName

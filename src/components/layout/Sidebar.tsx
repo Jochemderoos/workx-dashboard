@@ -124,7 +124,7 @@ function SidebarComponent({ user }: SidebarProps) {
       return (
         <>
           <div className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''}`} style={{ paddingRight: '0.5rem' }}>
-            <Link href={href} className="flex items-center gap-3 flex-1 min-w-0">
+            <Link href={href} prefetch={false} className="flex items-center gap-3 flex-1 min-w-0">
               <span className="icon-animated">
                 <Icon size={18} />
               </span>
@@ -161,6 +161,7 @@ function SidebarComponent({ user }: SidebarProps) {
                   <Link
                     key={child.href}
                     href={child.href}
+                    prefetch={false}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${childActive ? 'text-workx-lime bg-workx-lime/10' : 'hover:bg-white/5'}`}
                     style={{ color: childActive ? undefined : 'var(--color-text-secondary)' }}
                   >
@@ -176,7 +177,7 @@ function SidebarComponent({ user }: SidebarProps) {
     }
 
     return (
-      <Link href={href} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link group/lustrum' : ''}`}>
+      <Link href={href} prefetch={false} className={`nav-link ${isActive ? 'active' : ''} ${iconAnim || ''} ${isLustrum ? 'lustrum-link group/lustrum' : ''}`}>
         <span className="icon-animated">
           <Icon size={18} />
         </span>

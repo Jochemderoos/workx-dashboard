@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { jsPDF } from 'jspdf'
+// jsPDF wordt dynamic geïmporteerd in de PDF-handler — scheelt ~200KB in initial bundle
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
@@ -103,6 +103,7 @@ export default function AfspiegelingPage() {
     // Pre-load the logo image
     const logoDataUrl = await loadWorkxLogo()
 
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
 
     // Draw official Workx logo (flush top-left)

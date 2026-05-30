@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import InzichtenTab from '@/components/financien/InzichtenTab'
 import JaarTab from '@/components/financien/JaarTab'
-import jsPDF from 'jspdf'
+// jsPDF wordt dynamic geïmporteerd in de PDF-handler — scheelt ~200KB in initial bundle
 import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
 import { amountExVat } from '@/lib/cost-vat'
@@ -666,6 +666,7 @@ export default function FinancienPage() {
     // Pre-load the logo image
     const logoDataUrl = await loadWorkxLogo()
 
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 

@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf'
+import type { jsPDF } from 'jspdf' // type-only — geen runtime impact op bundle
 
 // Workx Brand Colors
 const COLORS = {

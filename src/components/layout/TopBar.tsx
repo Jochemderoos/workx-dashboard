@@ -546,6 +546,7 @@ function TopBarComponent({ user }: TopBarProps) {
                       <Link
                         key={item.href}
                         href={item.href}
+                        prefetch={false}
                         onClick={() => setShowMobileMenu(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                           isActive ? 'bg-workx-lime text-workx-dark font-medium' : ''

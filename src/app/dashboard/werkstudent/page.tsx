@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
-import { jsPDF } from 'jspdf'
+// jsPDF wordt dynamic geïmporteerd in de PDF-handler — scheelt ~200KB in initial bundle
 import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
 import DatePicker from '@/components/ui/DatePicker'
 
@@ -318,6 +318,7 @@ export default function WerkstudentPage() {
     if (!stageverklaring) return
     const sv = stageverklaring
     const logoDataUrl = await loadWorkxLogo()
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
     const pw = doc.internal.pageSize.getWidth()
     const ph = doc.internal.pageSize.getHeight()
