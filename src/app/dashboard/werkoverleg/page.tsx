@@ -223,8 +223,17 @@ export default function WerkoverlegPage() {
       if (res.ok) {
         const data = await res.json()
         setAllDays(data)
+        // Auto-select: eerstvolgende toekomstige dinsdag (incl. vandaag).
+        // Als geen toekomstige: meest recente (= data[0] want API geeft desc).
         if (!selectedDayId && data.length > 0) {
-          setSelectedDayId(data[0].id)
+          const todayStart = new Date()
+          todayStart.setHours(0, 0, 0, 0)
+          const upcoming = [...data]
+            .filter((d: WerkoverlegDay) => new Date(d.meetingDate).getTime() >= todayStart.getTime())
+            .sort((a: WerkoverlegDay, b: WerkoverlegDay) =>
+              new Date(a.meetingDate).getTime() - new Date(b.meetingDate).getTime()
+            )[0]
+          setSelectedDayId(upcoming?.id || data[0].id)
         }
       }
     } catch {

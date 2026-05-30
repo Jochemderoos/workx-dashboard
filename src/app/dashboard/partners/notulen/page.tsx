@@ -124,9 +124,17 @@ export default function NotulenPage() {
       if (res.ok) {
         const data = await res.json()
         setMonths(data)
-        // Auto-select most recent month if nothing selected
+        // Auto-select: huidige kalendermaand als die bestaat, anders
+        // eerstvolgende toekomstige maand, anders meest recente.
         if (!selectedMonthId && data.length > 0) {
-          setSelectedMonthId(data[0].id)
+          const now = new Date()
+          const curY = now.getFullYear()
+          const curM = now.getMonth() + 1
+          const sameMonth = data.find((m: Month) => m.year === curY && m.month === curM)
+          const upcoming = data
+            .filter((m: Month) => (m.year > curY) || (m.year === curY && m.month >= curM))
+            .sort((a: Month, b: Month) => (a.year - b.year) || (a.month - b.month))[0]
+          setSelectedMonthId(sameMonth?.id || upcoming?.id || data[0].id)
         }
       }
     } catch {
@@ -373,12 +381,20 @@ export default function NotulenPage() {
 
   // Determine which week is "current" (closest to today)
   const today = new Date()
-  const currentWeekId = selectedMonth?.weeks?.reduce((closest, week) => {
-    const weekDate = new Date(week.meetingDate)
-    const diff = Math.abs(weekDate.getTime() - today.getTime())
-    const closestDiff = closest ? Math.abs(new Date(closest.meetingDate).getTime() - today.getTime()) : Infinity
-    return diff < closestDiff ? week : closest
-  }, null as Week | null)?.id
+  today.setHours(0, 0, 0, 0)
+  // Bepaal de "actieve" week: eerstvolgende toekomstige vergadering (incl. vandaag).
+  // Als geen toekomstige bestaat in deze maand: meest recente uit het verleden.
+  const currentWeekId = (() => {
+    const weeks = selectedMonth?.weeks || []
+    if (weeks.length === 0) return undefined
+    const upcoming = weeks
+      .filter(w => new Date(w.meetingDate).getTime() >= today.getTime())
+      .sort((a, b) => new Date(a.meetingDate).getTime() - new Date(b.meetingDate).getTime())[0]
+    if (upcoming) return upcoming.id
+    const past = [...weeks]
+      .sort((a, b) => new Date(b.meetingDate).getTime() - new Date(a.meetingDate).getTime())[0]
+    return past?.id
+  })()
 
   return (
     <div className="space-y-8 fade-in relative">
