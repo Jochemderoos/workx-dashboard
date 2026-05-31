@@ -585,6 +585,12 @@ function TopBarComponent({ user }: TopBarProps) {
                     return (
                       <>
                         {algemeen.map(renderItem)}
+                        {partnerItems.length > 0 && (
+                          <>
+                            <SubGroupLabel label="Partner" />
+                            {partnerItems.map(renderItem)}
+                          </>
+                        )}
                         {werk.length > 0 && <SubGroupLabel label="Werk" />}
                         {werk.map(renderItem)}
                         {tools.length > 0 && <SubGroupLabel label="Tools" />}
@@ -601,12 +607,6 @@ function TopBarComponent({ user }: TopBarProps) {
                         <>
                           <SectionHeader label="Team" />
                           {renderTeamWithSubGroups()}
-                        </>
-                      )}
-                      {partnerItems.length > 0 && (
-                        <>
-                          <SectionHeader label="Partner" />
-                          {partnerItems.map(renderItem)}
                         </>
                       )}
                       {extraItems.length > 0 && (

@@ -49,6 +49,7 @@ interface Month {
   month: number
   label: string
   isLustrum: boolean
+  nextMeetingDate?: string | null
   _count?: { weeks: number }
   weeks?: Week[]
 }
@@ -124,17 +125,15 @@ export default function NotulenPage() {
       if (res.ok) {
         const data = await res.json()
         setMonths(data)
-        // Auto-select: huidige kalendermaand als die bestaat, anders
-        // eerstvolgende toekomstige maand, anders meest recente.
+        // Auto-select: maand met de eerstvolgende vergadering (vandaag of later).
+        // Fallback: meest recente maand (data[0] want API geeft year/month desc).
         if (!selectedMonthId && data.length > 0) {
-          const now = new Date()
-          const curY = now.getFullYear()
-          const curM = now.getMonth() + 1
-          const sameMonth = data.find((m: Month) => m.year === curY && m.month === curM)
-          const upcoming = data
-            .filter((m: Month) => (m.year > curY) || (m.year === curY && m.month >= curM))
-            .sort((a: Month, b: Month) => (a.year - b.year) || (a.month - b.month))[0]
-          setSelectedMonthId(sameMonth?.id || upcoming?.id || data[0].id)
+          const withUpcoming = data
+            .filter((m: Month) => m.nextMeetingDate)
+            .sort((a: Month, b: Month) =>
+              new Date(a.nextMeetingDate!).getTime() - new Date(b.nextMeetingDate!).getTime()
+            )[0]
+          setSelectedMonthId(withUpcoming?.id || data[0].id)
         }
       }
     } catch {

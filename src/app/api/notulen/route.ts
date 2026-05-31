@@ -34,6 +34,9 @@ export async function GET() {
       })
     }
 
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+
     const months = await prisma.meetingMonth.findMany({
       orderBy: [
         { year: 'desc' },
@@ -43,10 +46,21 @@ export async function GET() {
         _count: {
           select: { weeks: true },
         },
+        weeks: {
+          where: { meetingDate: { gte: todayStart } },
+          orderBy: { meetingDate: 'asc' },
+          take: 1,
+          select: { meetingDate: true },
+        },
       },
     })
 
-    return NextResponse.json(months)
+    const withNext = months.map(({ weeks, ...m }) => ({
+      ...m,
+      nextMeetingDate: weeks[0]?.meetingDate ?? null,
+    }))
+
+    return NextResponse.json(withNext)
   } catch (error) {
     console.error('Error fetching meeting months:', error)
     return NextResponse.json(
