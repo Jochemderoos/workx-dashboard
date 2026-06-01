@@ -107,9 +107,7 @@ export const partnersMenuItems: MenuItem[] = [
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', iconAnim: 'icon-user-hover',
     description: 'Sollicitanten beheren, CVs uploaden, gesprekken plannen + sollicitatiebeleid.' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover',
-    description: 'Omzet/kosten/saldo overzicht, jaarrekening.' },
-  { href: '/dashboard/financien/omzet-classificatie', icon: Icons.pieChart, label: 'Omzet werknemer/werkgever', iconAnim: 'icon-piechart-hover',
-    description: 'Omzet 2025 uitgesplitst naar werknemer- en werkgeverszaken.' },
+    description: 'Omzet/kosten/saldo overzicht, jaarrekening + werknemer/werkgever uitsplitsing.' },
   { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', iconAnim: 'icon-euro-hover',
     description: 'MT940-import, categorieën, vendor-aliases voor financiële administratie.' },
 ]

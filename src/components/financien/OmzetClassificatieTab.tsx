@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
-import TextReveal from '@/components/ui/TextReveal'
 
 type ClientType = 'WERKNEMER' | 'WERKGEVER'
 
@@ -34,27 +33,14 @@ const fmtEur = (n: number) => new Intl.NumberFormat('nl-NL', {
   style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
 }).format(n)
 
-export default function OmzetClassificatiePage() {
-  const [year, setYear] = useState(2025)
+export default function OmzetClassificatieTab() {
+  const currentYear = new Date().getFullYear()
+  const [year, setYear] = useState(currentYear)
   const [data, setData] = useState<ApiResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [hasAccess, setHasAccess] = useState(false)
   const [filter, setFilter] = useState('')
   const [showOnly, setShowOnly] = useState<'all' | 'werknemer' | 'werkgever'>('all')
   const [busyKey, setBusyKey] = useState<string | null>(null)
-
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const res = await fetch('/api/user/profile')
-        if (res.ok) {
-          const u = await res.json()
-          if (['PARTNER', 'ADMIN'].includes(u.role)) setHasAccess(true)
-        }
-      } catch { /* ignore */ }
-    }
-    check()
-  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -69,7 +55,7 @@ export default function OmzetClassificatiePage() {
     }
   }, [year])
 
-  useEffect(() => { if (hasAccess) load() }, [hasAccess, load])
+  useEffect(() => { load() }, [load])
 
   const setType = async (c: ClassifiedClient, newType: ClientType) => {
     setBusyKey(c.clientKey)
@@ -116,73 +102,57 @@ export default function OmzetClassificatiePage() {
     })
   }, [data, filter, showOnly])
 
-  if (!hasAccess) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="card p-8 text-center">
-          <Icons.lock className="text-red-400 mx-auto mb-3" size={28} />
-          <h2 className="text-xl font-semibold text-white mb-1">Geen toegang</h2>
-          <p className="text-sm text-gray-400">Alleen voor partners en admin.</p>
-        </div>
-      </div>
-    )
-  }
-
   if (loading || !data) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="min-h-[40vh] flex items-center justify-center">
         <span className="w-5 h-5 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
       </div>
     )
   }
 
   const pctWerknemer = data.totals.total > 0 ? (data.totals.werknemer / data.totals.total) * 100 : 0
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 3 + i)
 
   return (
-    <div className="space-y-6 fade-in p-4 sm:p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-emerald-500/10 flex items-center justify-center">
-            <Icons.pieChart className="text-blue-400" size={20} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-white"><TextReveal>Omzet — werknemer vs werkgever</TextReveal></h1>
-            <p className="text-sm text-gray-400">
-              Op basis van het deel vóór de '/' in de dossiernaam. Klopt iets niet? Wijzig per klant.
-            </p>
-          </div>
+    <div className="space-y-5">
+      {/* Year selector + intro */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-1">Omzet — werknemer vs werkgever</h2>
+          <p className="text-xs text-gray-400 max-w-2xl">
+            Op basis van het deel vóór de '/' in de dossiernaam. Bevat een bedrijfsindicator (B.V., N.V., Holding, etc.) → werkgever, anders → werknemer. Klopt iets niet? Klik op het juiste type.
+          </p>
         </div>
         <select
           value={year}
           onChange={(e) => setYear(parseInt(e.target.value))}
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
         >
-          {[2023, 2024, 2025, 2026].map(y => (
+          {yearOptions.map(y => (
             <option key={y} value={y} className="bg-workx-dark">{y}</option>
           ))}
         </select>
       </div>
 
       {/* Totals */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div className="card p-4 col-span-2 sm:col-span-2 border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="rounded-xl p-4 border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
           <p className="text-[10px] uppercase tracking-widest font-bold text-blue-300 mb-1">Werknemerszaken</p>
           <p className="text-2xl font-bold text-white">{fmtEur(data.totals.werknemer)}</p>
           <p className="text-xs text-gray-500 mt-1">{data.totals.werknemerCount} facturen · {pctWerknemer.toFixed(1)}%</p>
         </div>
-        <div className="card p-4 col-span-2 sm:col-span-2 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
+        <div className="rounded-xl p-4 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
           <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-300 mb-1">Werkgeverszaken</p>
           <p className="text-2xl font-bold text-white">{fmtEur(data.totals.werkgever)}</p>
           <p className="text-xs text-gray-500 mt-1">{data.totals.werkgeverCount} facturen · {(100 - pctWerknemer).toFixed(1)}%</p>
         </div>
       </div>
-      <div className="card p-3 flex items-center gap-4 text-xs">
+      <div className="rounded-xl p-3 flex items-center gap-4 text-xs bg-white/[0.02] border border-white/5 flex-wrap">
         <span className="text-gray-400">Totaal {year}:</span>
         <strong className="text-white text-base">{fmtEur(data.totals.total)}</strong>
         <span className="text-gray-500">over {data.totals.invoices} facturen / {data.totals.uniqueClients} klanten</span>
         {data.totals.total > 0 && (
-          <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden ml-2 flex max-w-md">
+          <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden ml-2 flex min-w-[120px] max-w-md">
             <div className="h-full bg-blue-400/70" style={{ width: `${pctWerknemer}%` }} />
             <div className="h-full bg-emerald-400/70 flex-1" />
           </div>
@@ -221,7 +191,7 @@ export default function OmzetClassificatiePage() {
       </div>
 
       {/* Table */}
-      <div className="card overflow-hidden">
+      <div className="rounded-xl border border-white/10 overflow-hidden bg-white/[0.02]">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -237,22 +207,15 @@ export default function OmzetClassificatiePage() {
                 const isWerknemer = c.type === 'WERKNEMER'
                 const busy = busyKey === c.clientKey
                 return (
-                  <tr
-                    key={c.clientKey}
-                    className={idx % 2 === 0 ? 'bg-white/[0.02]' : ''}
-                  >
+                  <tr key={c.clientKey} className={idx % 2 === 0 ? 'bg-white/[0.02]' : ''}>
                     <td className="py-2.5 px-4 text-white">
                       {c.displayName}
                       {c.isManual && (
                         <span className="ml-2 text-[9px] uppercase tracking-wider text-amber-300/80">handmatig</span>
                       )}
                     </td>
-                    <td className="py-2.5 px-4 text-right text-white tabular-nums font-medium">
-                      {fmtEur(c.totalExcl)}
-                    </td>
-                    <td className="py-2.5 px-4 text-right text-gray-400 tabular-nums">
-                      {c.invoiceCount}
-                    </td>
+                    <td className="py-2.5 px-4 text-right text-white tabular-nums font-medium">{fmtEur(c.totalExcl)}</td>
+                    <td className="py-2.5 px-4 text-right text-gray-400 tabular-nums">{c.invoiceCount}</td>
                     <td className="py-2.5 px-4">
                       <div className="flex items-center justify-center gap-1">
                         <button
@@ -302,16 +265,6 @@ export default function OmzetClassificatiePage() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="card p-4 bg-gradient-to-br from-blue-500/5 to-transparent border border-blue-500/10 text-xs text-gray-400">
-        <p className="text-white font-medium mb-1">Hoe werkt het?</p>
-        <p>
-          Het systeem kijkt naar het deel vóór de '/' in de dossiernaam (uit BaseNet-import).
-          Bevat dat een bedrijfsindicator (<em>B.V., N.V., Holding, Group, Stichting,</em> etc.) →
-          werkgeverszaak. Anders → werknemerszaak. Klopt iets niet? Klik op het juiste type bij
-          die klant. Met ↺ keer je terug naar de automatische classificatie.
-        </p>
       </div>
     </div>
   )

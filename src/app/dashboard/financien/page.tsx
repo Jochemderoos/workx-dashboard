@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import InzichtenTab from '@/components/financien/InzichtenTab'
 import JaarTab from '@/components/financien/JaarTab'
+import OmzetClassificatieTab from '@/components/financien/OmzetClassificatieTab'
 // jsPDF wordt dynamic geïmporteerd in de PDF-handler — scheelt ~200KB in initial bundle
 import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
@@ -106,7 +107,7 @@ interface EmployeeData {
   parentalLeaves: ParentalLeave[]
 }
 
-type TabType = 'overzicht' | 'budgetten' | 'inzichten' | `jaar-${number}`
+type TabType = 'overzicht' | 'budgetten' | 'inzichten' | 'omzet-classificatie' | `jaar-${number}`
 
 export default function FinancienPage() {
   const { data: session } = useSession()
@@ -947,6 +948,7 @@ export default function FinancienPage() {
             { id: `jaar-${years[1]}` as TabType, label: String(years[1]), icon: Icons.calendar },
             { id: `jaar-${years[2]}` as TabType, label: String(years[2]), icon: Icons.calendar },
             { id: 'budgetten' as TabType, label: 'Budgetten', icon: Icons.pieChart },
+            { id: 'omzet-classificatie' as TabType, label: 'Werknemer / werkgever', icon: Icons.users },
             ...(isManager ? [{ id: 'inzichten' as TabType, label: 'Inzichten', icon: Icons.activity }] : []),
           ].map(tab => (
             <button
@@ -2666,6 +2668,8 @@ export default function FinancienPage() {
 
       {/* Inzichten Tab - alleen voor PARTNER/ADMIN */}
       {activeTab === 'inzichten' && isManager && <InzichtenTab />}
+
+      {activeTab === 'omzet-classificatie' && <OmzetClassificatieTab />}
 
     </div>
   )
