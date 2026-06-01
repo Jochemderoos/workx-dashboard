@@ -113,7 +113,15 @@ export default function WerkverdelingsgesprekkenPage() {
         setWeeks(data.weeks)
         setEmployees(data.employees)
         if (data.weeks.length > 0) {
-          setActiveWeekId(data.weeks[0].id)
+          // API levert chronologisch op (oud → nieuw); pak de eerstvolgende
+          // toekomstige vergadering (incl. vandaag) als actieve tab, of de
+          // meest recente als geen toekomstige bestaat.
+          const todayStart = new Date()
+          todayStart.setHours(0, 0, 0, 0)
+          const upcoming = (data.weeks as Week[]).find(
+            (w) => new Date(w.meetingDate).getTime() >= todayStart.getTime()
+          )
+          setActiveWeekId(upcoming?.id || data.weeks[data.weeks.length - 1].id)
         }
 
         // Build local state from existing conversations

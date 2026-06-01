@@ -13,15 +13,29 @@ export async function GET() {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
-    // Haal de 3 meest recente weken op
-    const weeks = await prisma.meetingWeek.findMany({
-      orderBy: { meetingDate: 'desc' },
-      take: 3,
-      include: {
-        distributions: true,
-        conversations: true,
-      },
+    // Selectie: eerstvolgende toekomstige vergadering (incl. vandaag)
+    // + de 2 voorgaande weken voor context. Chronologisch terug naar
+    // de client zodat de meest recente tab rechts staat.
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+
+    const upcoming = await prisma.meetingWeek.findFirst({
+      where: { meetingDate: { gte: todayStart } },
+      orderBy: { meetingDate: 'asc' },
+      include: { distributions: true, conversations: true },
     })
+
+    const cutoff = upcoming?.meetingDate ?? new Date()
+    const previousWeeks = await prisma.meetingWeek.findMany({
+      where: { meetingDate: { lt: cutoff } },
+      orderBy: { meetingDate: 'desc' },
+      take: upcoming ? 2 : 3,
+      include: { distributions: true, conversations: true },
+    })
+
+    const weeks = upcoming
+      ? [...previousWeeks.reverse(), upcoming]
+      : previousWeeks.reverse()
 
     // Haal alle actieve medewerkers op
     const employees = await prisma.user.findMany({
