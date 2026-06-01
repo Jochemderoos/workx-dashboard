@@ -3,7 +3,7 @@
 // - Push naar alle active users
 // - Dashboard-popup via /api/notifications
 //
-// Schedule: maandag 09:00 (Vercel cron in vercel.json)
+// Schedule: maandag 14:00 NL zomertijd (= 12:00 UTC, Vercel cron in vercel.json)
 
 import { NextRequest, NextResponse } from 'next/server'
 import { sendChannelMessage } from '@/lib/slack'
