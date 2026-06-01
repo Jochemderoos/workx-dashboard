@@ -28,7 +28,7 @@ export const TEAM_PHOTOS: Record<string, string> = {
   // Kantoor
   'Hanna Blaauboer': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Hanna.jpg',
   'Lotte van Sint Truiden': '/team/lotte.jpg',
-  'Bente': '/team/bente.jpg',
+  'Bente Karels': '/team/bente.jpg',
   'Diyar Wakkas': '/team/diyar.png',
 }
 
@@ -90,7 +90,7 @@ export const ALL_TEAM_MEMBERS = [
   // Kantoor
   'Hanna Blaauboer',
   'Lotte van Sint Truiden',
-  'Bente',
+  'Bente Karels',
   'Diyar Wakkas',
 ]
 
@@ -98,7 +98,7 @@ export const ALL_TEAM_MEMBERS = [
 // Volgorde = volgorde in UI.
 export const OFFICE_TEAM: { name: string; role: string }[] = [
   { name: 'Hanna Blaauboer', role: 'Head of Office' },
-  { name: 'Lotte van Sint Truiden', role: 'Office Manager' },
-  { name: 'Bente', role: 'Office Manager' },
+  { name: 'Lotte van Sint Truiden', role: 'Office Assistant' },
+  { name: 'Bente Karels', role: 'Office Assistant' },
   { name: 'Diyar Wakkas', role: 'Werkstudent' },
 ]
