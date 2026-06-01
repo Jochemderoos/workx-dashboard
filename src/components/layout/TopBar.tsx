@@ -102,7 +102,6 @@ const mobileMenuItems: MobileMenuItem[] = [
   { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Partner agenda/notulen', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/partners/performance', icon: Icons.target, label: 'Performance Management', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-  { href: '/dashboard/partners/coaching-budgetten', icon: Icons.target, label: 'Coaching-budgetten', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['EXTERNAL'], section: 'partner' },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
@@ -116,6 +115,7 @@ const mobileMenuItems: MobileMenuItem[] = [
 
   // Beheer
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', section: 'beheer' },
+  { href: '/dashboard/partners/coaching-budgetten', icon: Icons.target, label: 'Coaching-budgetten beheer', roles: ['ADMIN'], section: 'beheer' },
   { href: '/dashboard/slack-debug', icon: Icons.settings, label: 'Slack diagnose', roles: ['PARTNER', 'ADMIN'], section: 'beheer' },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', section: 'beheer' },
 ]

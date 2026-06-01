@@ -14,6 +14,7 @@ export interface MenuItem {
   badge?: string
   hideForExternal?: boolean
   partnerOnly?: boolean // alleen PARTNER/ADMIN — verbergt voor EMPLOYEE in overzicht & sidebar
+  adminOnly?: boolean // alleen ADMIN — verbergt voor iedereen behalve ADMIN
   description?: string // Toegelicht voor het overzicht
   children?: MenuItem[] // sub-items voor uitklap in sidebar
 }
@@ -103,8 +104,6 @@ export const partnersMenuItems: MenuItem[] = [
     description: 'Wekelijkse 1-op-1 gesprekken partner ↔ medewerker.' },
   { href: '/dashboard/partners/performance', icon: Icons.target, label: 'Performance Management', iconAnim: 'icon-target-hover',
     description: 'Per medewerker observaties noteren — basis voor beoordelingsgesprekken.' },
-  { href: '/dashboard/partners/coaching-budgetten', icon: Icons.target, label: 'Coaching-budgetten', iconAnim: 'icon-target-hover',
-    description: 'Overzicht & beheer van coaching-budgetten per medewerker (Hanna / partners).' },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', iconAnim: 'icon-user-hover',
     description: 'Sollicitanten beheren, CVs uploaden, gesprekken plannen + sollicitatiebeleid.' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover',
@@ -131,6 +130,8 @@ export const extraMenuItems: MenuItem[] = [
 export const manageMenuItems: MenuItem[] = [
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover',
     description: 'Stuur feedback, ideeën of bug-meldingen.' },
+  { href: '/dashboard/partners/coaching-budgetten', icon: Icons.target, label: 'Coaching-budgetten beheer', iconAnim: 'icon-target-hover', adminOnly: true,
+    description: 'Hanna: vul per medewerker bestede coaching-facturen in.' },
   { href: '/dashboard/slack-debug', icon: Icons.settings, label: 'Slack diagnose', iconAnim: 'icon-settings-hover', partnerOnly: true,
     description: 'Check Slack-token, channel-lidmaatschap en handmatig cron-jobs triggeren.' },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', iconAnim: 'icon-settings-hover',

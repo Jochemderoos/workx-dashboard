@@ -61,7 +61,7 @@ export default function CoachingBudgettenBeheerPage() {
         const res = await fetch('/api/user/profile')
         if (res.ok) {
           const u = await res.json()
-          if (['PARTNER', 'ADMIN'].includes(u.role)) setHasAccess(true)
+          if (u.role === 'ADMIN') setHasAccess(true)
         }
       } catch {
         // ignore

@@ -17,7 +17,7 @@ function periodEnd(start: Date): Date {
 }
 
 function hasAccess(role?: string | null): boolean {
-  return role === 'PARTNER' || role === 'ADMIN'
+  return role === 'ADMIN'
 }
 
 export async function GET() {

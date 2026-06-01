@@ -101,9 +101,13 @@ function SidebarComponent({ user }: SidebarProps) {
 
   const isExternal = user.role === 'EXTERNAL'
   const isPartnerOrAdmin = user.role === 'PARTNER' || user.role === 'ADMIN'
-  // Toon item: niet hideForExternal voor EXTERNAL, niet partnerOnly voor non-partners
-  const visibleForUser = (i: { hideForExternal?: boolean; partnerOnly?: boolean }) =>
-    !(isExternal && i.hideForExternal) && !(i.partnerOnly && !isPartnerOrAdmin)
+  const isAdmin = user.role === 'ADMIN'
+  // Toon item: niet hideForExternal voor EXTERNAL, niet partnerOnly voor non-partners,
+  // niet adminOnly voor non-admin
+  const visibleForUser = (i: { hideForExternal?: boolean; partnerOnly?: boolean; adminOnly?: boolean }) =>
+    !(isExternal && i.hideForExternal)
+    && !(i.partnerOnly && !isPartnerOrAdmin)
+    && !(i.adminOnly && !isAdmin)
   const filterQ = filter.trim().toLowerCase()
   const matches = (label: string) => !filterQ || label.toLowerCase().includes(filterQ)
   const filterItems = <T extends { label: string }>(items: T[]) => filterQ ? items.filter(i => matches(i.label)) : items
@@ -323,7 +327,7 @@ function SidebarComponent({ user }: SidebarProps) {
 
         {/* Beheer — Feedback + Instellingen */}
         {(() => {
-          const beheer = filterItems(manageMenuItems)
+          const beheer = filterItems(manageMenuItems.filter(i => visibleForUser(i)))
           if (beheer.length === 0) return null
           return (
             <div>
