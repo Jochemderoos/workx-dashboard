@@ -19,6 +19,8 @@ interface StatusResponse {
   nextauthUrl: string | null
   auth: { ok: boolean; team?: string; bot?: string; error?: string } | null
   channels: ChannelInfo[]
+  envCheck?: Record<string, { set: boolean; length: number }>
+  deploymentInfo?: { vercelEnv: string | null; vercelUrl: string | null; vercelGitCommitSha: string | null }
 }
 
 interface TestResult {
@@ -188,6 +190,45 @@ export default function SlackDebugPage() {
           detail={cronOk ? 'Geconfigureerd (handmatig triggeren werkt)' : 'Ontbreekt — handmatig triggeren faalt'}
         />
       </div>
+
+      {/* Deployment + env-vars debug */}
+      {status.envCheck && (
+        <div className="card p-5">
+          <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <Icons.info size={14} className="text-blue-400" />
+            Runtime omgeving
+          </h2>
+          {status.deploymentInfo && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 text-xs">
+              <div className="rounded-lg bg-white/5 p-2">
+                <p className="text-gray-500 uppercase tracking-wider text-[10px]">Vercel ENV</p>
+                <p className="text-white font-mono">{status.deploymentInfo.vercelEnv || '—'}</p>
+              </div>
+              <div className="rounded-lg bg-white/5 p-2">
+                <p className="text-gray-500 uppercase tracking-wider text-[10px]">URL</p>
+                <p className="text-white font-mono text-[10px] truncate">{status.deploymentInfo.vercelUrl || '—'}</p>
+              </div>
+              <div className="rounded-lg bg-white/5 p-2">
+                <p className="text-gray-500 uppercase tracking-wider text-[10px]">Commit</p>
+                <p className="text-white font-mono">{status.deploymentInfo.vercelGitCommitSha || '—'}</p>
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {Object.entries(status.envCheck).map(([key, info]) => (
+              <div
+                key={key}
+                className={`px-2 py-1.5 rounded-lg text-[10px] font-mono flex items-center justify-between ${
+                  info.set ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/10 text-red-300'
+                }`}
+              >
+                <span className="truncate">{key}</span>
+                <span className="ml-2 shrink-0">{info.set ? `✓ ${info.length}` : '✗'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Channels */}
       <div className="card p-5">
