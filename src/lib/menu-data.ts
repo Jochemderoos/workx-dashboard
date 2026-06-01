@@ -131,6 +131,8 @@ export const extraMenuItems: MenuItem[] = [
 export const manageMenuItems: MenuItem[] = [
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', iconAnim: 'icon-chat-hover',
     description: 'Stuur feedback, ideeën of bug-meldingen.' },
+  { href: '/dashboard/slack-debug', icon: Icons.settings, label: 'Slack diagnose', iconAnim: 'icon-settings-hover', partnerOnly: true,
+    description: 'Check Slack-token, channel-lidmaatschap en handmatig cron-jobs triggeren.' },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', iconAnim: 'icon-settings-hover',
     description: 'Persoonlijke instellingen en accountbeheer.' },
 ]

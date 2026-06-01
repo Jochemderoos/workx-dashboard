@@ -116,6 +116,7 @@ const mobileMenuItems: MobileMenuItem[] = [
 
   // Beheer
   { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', section: 'beheer' },
+  { href: '/dashboard/slack-debug', icon: Icons.settings, label: 'Slack diagnose', roles: ['PARTNER', 'ADMIN'], section: 'beheer' },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', section: 'beheer' },
 ]
 
