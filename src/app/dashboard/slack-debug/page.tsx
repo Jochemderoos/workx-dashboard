@@ -240,7 +240,7 @@ export default function SlackDebugPage() {
           />
           <button
             onClick={runTest}
-            disabled={testing || !testChannel.trim() || !tokenOk}
+            disabled={testing || !testChannel.trim()}
             className="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 disabled:opacity-40"
             style={{ background: 'rgb(249, 255, 133)', color: 'rgb(45, 45, 45)' }}
           >
@@ -307,7 +307,7 @@ export default function SlackDebugPage() {
                   </div>
                   <button
                     onClick={() => triggerCron(c.path)}
-                    disabled={busy || !cronOk}
+                    disabled={busy}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 flex items-center gap-1.5"
                     style={{ background: 'rgba(249, 255, 133, 0.15)', color: 'rgb(249, 255, 133)', border: '1px solid rgba(249, 255, 133, 0.3)' }}
                   >
