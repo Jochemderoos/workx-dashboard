@@ -11,6 +11,7 @@ export default function OverzichtPage() {
   const role = (session?.user as { role?: string })?.role
   const isExternal = role === 'EXTERNAL'
   const isPartnerOrAdmin = role === 'PARTNER' || role === 'ADMIN'
+  const isAdmin = role === 'ADMIN'
 
   const [search, setSearch] = useState('')
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['team']))
@@ -20,6 +21,7 @@ export default function OverzichtPage() {
   const filterItem = (item: MenuItem) => {
     if (isExternal && item.hideForExternal) return false
     if (item.partnerOnly && !isPartnerOrAdmin) return false
+    if (item.adminOnly && !isAdmin) return false
     if (!searchQ) return true
     return (
       item.label.toLowerCase().includes(searchQ) ||

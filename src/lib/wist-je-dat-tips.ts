@@ -61,6 +61,18 @@ export const GENERAL_TIPS: DashboardTip[] = [
     message: 'De agenda, notulen en actiepunten van het dinsdagoverleg staan hier — je kunt zelf agendapunten inbrengen.',
   },
   {
+    page: 'Mijn werkweek',
+    href: '/dashboard/mijn-werkweek',
+    title: '💡 Wist je dat? — Mijn werkweek',
+    message: 'Vul wekelijks (vanaf do 15:00 tot ma 10:00) in wat je liggen hebt en hoe je beschikbaarheid is. Partners gebruiken het bij het werkverdelingsgesprek.',
+  },
+  {
+    page: 'Office',
+    href: '/dashboard/office',
+    title: '💡 Wist je dat? — Office',
+    message: 'Zie wie van de back office wanneer op kantoor of remote werkt + hoe de kantoortelefoon wordt opgevangen. Twee weken vooruit zichtbaar.',
+  },
+  {
     page: 'Overdracht',
     href: '/dashboard/werk/overdracht',
     title: '💡 Wist je dat? — Overdracht',
@@ -118,7 +130,7 @@ export const GENERAL_TIPS: DashboardTip[] = [
     page: 'Workx Docs',
     href: '/dashboard/hr-docs',
     title: '💡 Wist je dat? — Workx Docs',
-    message: 'The Way it Workx, Kantoorhandboek, Klachtenregeling, Wachtwoorden, Salarishuis en Stappenplan partner staan hier allemaal.',
+    message: 'The Way it Workx, Kantoorhandboek, Klachtenregeling, Wachtwoorden, Salarishuis, Tarieven en Stappenplan partner staan hier allemaal.',
   },
   {
     page: 'Bevriende kantoren',
@@ -142,7 +154,13 @@ export const GENERAL_TIPS: DashboardTip[] = [
     page: 'Salarishuis',
     href: '/dashboard/hr-docs?doc=salarishuis',
     title: '💡 Wist je dat? — Salarishuis',
-    message: 'De indicatieve salarisschalen per ervaringsjaar staan onder Workx Docs.',
+    message: 'Het bruto maandsalaris per ervaringsjaar (indicatief). Voor de bijbehorende uurtarieven én afwijkende klant-tarieven, zie Workx Docs → Tarieven.',
+  },
+  {
+    page: 'Tarieven',
+    href: '/dashboard/hr-docs?doc=tarieven',
+    title: '💡 Wist je dat? — Tarieven',
+    message: 'Standaard uurtarieven per ervaringsjaar én afwijkende klant-tarieven (Lineage, Accenture, Achmea, etc.) op één plek.',
   },
   {
     page: 'Notulen partner',
@@ -182,7 +200,13 @@ export const PARTNER_TIPS: DashboardTip[] = [
     page: 'Werkverdelingsgesprekken',
     href: '/dashboard/partners/werkverdelingsgesprekken',
     title: '💡 Wist je dat? — Werkverdelingsgesprekken',
-    message: 'Houd de wekelijkse 1-op-1 gesprekken met medewerkers bij — inclusief notities en gespreksonderwerpen.',
+    message: 'Houd de wekelijkse 1-op-1 gesprekken met medewerkers bij — medewerker-input (Mijn werkweek) staat automatisch in beeld.',
+  },
+  {
+    page: 'Performance Management',
+    href: '/dashboard/partners/performance',
+    title: '💡 Wist je dat? — Performance Management',
+    message: 'Noteer per medewerker observaties (positief of kritisch) met één klik. Vormt de onderbouwing voor beoordelingsgesprekken.',
   },
   {
     page: 'Sollicitaties',
