@@ -10,7 +10,8 @@ import { sendChannelMessage } from '@/lib/slack'
 import { sendPushNotificationToUsers } from '@/lib/push-notifications'
 import { prisma } from '@/lib/prisma'
 
-const DASHBOARD_BASE = process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app'
+// Trailing slash trimmen om '//' te voorkomen bij URL-concatenatie.
+const DASHBOARD_BASE = (process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app').replace(/\/$/, '')
 const SLACK_CHANNEL = 'workx-algemeen'
 
 export async function GET(req: NextRequest) {
@@ -28,6 +29,17 @@ export async function GET(req: NextRequest) {
     }
 
     const werkoverlegUrl = `${DASHBOARD_BASE}/dashboard/werkoverleg`
+
+    // Dry-run: skip Slack/push, return alleen wat we zouden sturen.
+    const url = new URL(req.url)
+    if (url.searchParams.get('dry') === 'true') {
+      return NextResponse.json({
+        ok: true,
+        dryRun: true,
+        werkoverlegUrl,
+        dashboardBase: DASHBOARD_BASE,
+      })
+    }
 
     // Slack #algemeen
     const slackBlocks = [
@@ -85,6 +97,8 @@ export async function GET(req: NextRequest) {
       slack: slackOk,
       push: pushResult,
       pushError,
+      werkoverlegUrl,
+      dashboardBase: DASHBOARD_BASE,
     })
   } catch (error) {
     console.error('Error in werkoverleg-reminder cron:', error)
