@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Partneroverleg maandag 10:00*\nHeb je nog agendapunten voor het overleg? Zet ze nu in <${notulenUrl}|de partner agenda> zodat ze klaar staan.`,
+          text: `*Partneroverleg maandag 10:00*\nHeb je nog agendapunten voor het overleg? Zet ze nu in de partner agenda zodat ze klaar staan.\n${notulenUrl}`,
         },
       },
     ]

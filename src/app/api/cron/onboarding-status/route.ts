@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
       },
       {
         type: 'section',
-        text: { type: 'mrkdwn', text: lines.join('\n') + `\n\n→ <${DASHBOARD_BASE}/dashboard/onboarding|Open onboarding>` },
+        text: { type: 'mrkdwn', text: lines.join('\n') + `\n\n${DASHBOARD_BASE}/dashboard/onboarding` },
       },
     ]
     const fallback = `Onboarding-status — ${employees.length} actieve nieuwe medewerkers.`

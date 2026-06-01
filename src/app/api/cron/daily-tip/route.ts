@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Wist je dat? — ${subject}*\n${tip.message}\n→ <${fullUrl}|Open ${tip.page}>`,
+          text: `*Wist je dat? — ${subject}*\n${tip.message}\n${fullUrl}`,
         },
       },
     ]

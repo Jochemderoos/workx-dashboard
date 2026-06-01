@@ -188,7 +188,7 @@ export async function notifyNewZaakAssignment(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `⏰ Reageer binnen *${expiresText}*\n→ <${zaakUrl}|Bekijk in Dashboard>`,
+        text: `⏰ Reageer binnen *${expiresText}*\n${zaakUrl}`,
       },
     },
   ]
@@ -292,7 +292,7 @@ export async function notifyZaakReminder(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `🚨 *Laatste kans!* Reageer binnen *${expiresText}*, anders gaat de zaak naar de volgende collega.\n→ <${zaakUrl}|Nu reageren>`,
+        text: `🚨 *Laatste kans!* Reageer binnen *${expiresText}*, anders gaat de zaak naar de volgende collega.\n${zaakUrl}`,
       },
     },
   ]
