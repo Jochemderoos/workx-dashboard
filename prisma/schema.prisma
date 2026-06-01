@@ -153,6 +153,10 @@ model User {
   // Shared credentials
   addedCredentials      SharedCredential[] @relation("CredentialAdder")
 
+  // Performance management
+  performanceNotesAbout    PerformanceNote[] @relation("PerformanceNotesAbout")
+  performanceNotesAuthored PerformanceNote[] @relation("PerformanceNotesAuthored")
+
   @@index([isActive])
   @@index([role])
 }
@@ -2137,4 +2141,24 @@ model SharedCredential {
   addedBy     User     @relation("CredentialAdder", fields: [addedById], references: [id])
 
   @@index([category])
+}
+
+// Performance Management — partners + Hanna noteren feedback per medewerker.
+// Hanna kan haar eigen pagina niet zien; partners wel.
+model PerformanceNote {
+  id          String   @id @default(cuid())
+  userId      String   // medewerker waar het over gaat
+  user        User     @relation("PerformanceNotesAbout", fields: [userId], references: [id], onDelete: Cascade)
+  authorId    String   // partner of admin die de notitie schreef
+  author      User     @relation("PerformanceNotesAuthored", fields: [authorId], references: [id])
+  noteDate    DateTime // datum waar de feedback over gaat (default = aanmaakdatum, handmatig aanpasbaar)
+  sentiment   String   // 'POSITIVE' of 'NEGATIVE'
+  content     String   @db.Text
+  discussed   Boolean  @default(false)
+  discussedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, noteDate])
+  @@index([authorId])
 }

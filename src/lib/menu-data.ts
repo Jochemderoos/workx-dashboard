@@ -97,6 +97,8 @@ export const partnersMenuItems: MenuItem[] = [
     description: 'Partner-overleg notulen per maand met agendapunten en actiepunten.' },
   { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', iconAnim: 'icon-chat-hover',
     description: 'Wekelijkse 1-op-1 gesprekken partner ↔ medewerker.' },
+  { href: '/dashboard/partners/performance', icon: Icons.target, label: 'Performance Management', iconAnim: 'icon-target-hover',
+    description: 'Per medewerker observaties noteren — basis voor beoordelingsgesprekken.' },
   { href: '/dashboard/partners/coaching-budgetten', icon: Icons.target, label: 'Coaching-budgetten', iconAnim: 'icon-target-hover',
     description: 'Overzicht & beheer van coaching-budgetten per medewerker (Hanna / partners).' },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', iconAnim: 'icon-user-hover',
