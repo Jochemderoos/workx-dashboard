@@ -28,26 +28,44 @@ interface PhoneDay {
   note: string | null
 }
 
-const DAYS_NL = ['Ma', 'Di', 'Wo', 'Do', 'Vr']
+const DAYS_NL = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag']
+const DAYS_NL_SHORT = ['Ma', 'Di', 'Wo', 'Do', 'Vr']
 const MONTHS_NL_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
 
+// Subtiel kleurgebruik — geen iconen of emoji's.
 const STATUS_CONFIG: Record<Status, {
   label: string
   short: string
-  emoji: string
+  bar: string         // verticaal bandje links in cel
   bg: string
   text: string
-  ring: string
 }> = {
-  OFFICE: { label: 'Op kantoor', short: 'Kantoor', emoji: '🏢', bg: 'bg-emerald-500/15', text: 'text-emerald-300', ring: 'ring-emerald-500/40' },
-  REMOTE: { label: 'Remote', short: 'Remote', emoji: '🏠', bg: 'bg-blue-500/15', text: 'text-blue-300', ring: 'ring-blue-500/40' },
-  ABSENT: { label: 'Afwezig', short: 'Vrij', emoji: '🌴', bg: 'bg-gray-500/15', text: 'text-gray-400', ring: 'ring-gray-500/40' },
+  OFFICE: {
+    label: 'Op kantoor',
+    short: 'Kantoor',
+    bar: 'bg-emerald-400',
+    bg: 'bg-emerald-500/[0.08]',
+    text: 'text-emerald-300',
+  },
+  REMOTE: {
+    label: 'Remote',
+    short: 'Remote',
+    bar: 'bg-sky-400',
+    bg: 'bg-sky-500/[0.08]',
+    text: 'text-sky-300',
+  },
+  ABSENT: {
+    label: 'Afwezig',
+    short: 'Vrij',
+    bar: 'bg-zinc-500',
+    bg: 'bg-zinc-500/[0.08]',
+    text: 'text-zinc-400',
+  },
 }
 
-// Get Monday of current week (in local time), midnight
 function getCurrentMonday(): Date {
   const now = new Date()
-  const day = now.getDay() // 0=zo, 1=ma, ... 6=za
+  const day = now.getDay()
   const diff = day === 0 ? -6 : 1 - day
   const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff)
   return monday
@@ -60,19 +78,10 @@ function addDays(d: Date, n: number): Date {
 }
 
 function isoDateOnly(d: Date): string {
-  // YYYY-MM-DD in local time
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-function formatDateBadge(d: Date): { day: number; month: string; weekday: string } {
-  return {
-    day: d.getDate(),
-    month: MONTHS_NL_SHORT[d.getMonth()],
-    weekday: DAYS_NL[(d.getDay() + 6) % 7],
-  }
 }
 
 function isWeekend(d: Date): boolean {
@@ -95,27 +104,23 @@ export default function OfficePage() {
   const [entries, setEntries] = useState<AttendanceEntry[]>([])
   const [phoneDays, setPhoneDays] = useState<PhoneDay[]>([])
   const [loading, setLoading] = useState(true)
-  const [weekOffset, setWeekOffset] = useState(0) // 0 = deze + volgende week
+  const [weekOffset, setWeekOffset] = useState(0)
   const [editMode, setEditMode] = useState(false)
-  const [phoneEditFor, setPhoneEditFor] = useState<string | null>(null) // date-string
+  const [phoneEditFor, setPhoneEditFor] = useState<string | null>(null)
 
-  // Load profile
   useEffect(() => {
     const load = async () => {
       try {
         const res = await fetch('/api/user/profile')
         if (res.ok) setUser(await res.json())
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
     load()
   }, [])
 
-  // Compute current 2-week range (workdays only displayed but range covers full weeks)
   const range = useMemo(() => {
     const start = addDays(getCurrentMonday(), weekOffset * 7)
-    const end = addDays(start, 13) // 2 weken (Ma..Zo van week 2)
+    const end = addDays(start, 13)
     return { start, end }
   }, [weekOffset])
 
@@ -128,7 +133,6 @@ export default function OfficePage() {
     return days
   }, [range])
 
-  // Fetch data
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -146,7 +150,6 @@ export default function OfficePage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Lookup
   const lookup = useMemo(() => {
     const map = new Map<string, AttendanceEntry>()
     for (const e of entries) {
@@ -166,7 +169,6 @@ export default function OfficePage() {
 
   const canEdit = canEditOffice(user ? { user: { name: user.name, role: user.role } } : null)
 
-  // Who's on office on a given date
   const onOfficeNames = useCallback((d: Date): string[] => {
     const dateKey = isoDateOnly(d)
     return OFFICE_PEOPLE
@@ -174,13 +176,12 @@ export default function OfficePage() {
       .map(p => p.name.split(' ')[0])
   }, [lookup])
 
-  // Cycle status: OFFICE → REMOTE → ABSENT → (delete)
   const cycleStatus = async (personKey: string, date: Date, current: Status | null) => {
     const dateStr = isoDateOnly(date)
     const next: Record<Status, Status> = { OFFICE: 'REMOTE', REMOTE: 'ABSENT', ABSENT: 'OFFICE' }
     let newStatus: Status | null
     if (!current) newStatus = 'OFFICE'
-    else if (current === 'ABSENT') newStatus = null // remove
+    else if (current === 'ABSENT') newStatus = null
     else newStatus = next[current]
 
     try {
@@ -206,6 +207,7 @@ export default function OfficePage() {
       }
     } catch {
       toast.error('Kon niet opslaan')
+      fetchData()
     }
   }
 
@@ -238,98 +240,92 @@ export default function OfficePage() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Week split: workdays[0..4] is week 1, workdays[5..9] is week 2
   const week1 = workdays.slice(0, 5)
   const week2 = workdays.slice(5, 10)
-
-  // Today's overview
   const todayOnOffice = onOfficeNames(today)
 
   return (
-    <div className="space-y-6 fade-in p-4 sm:p-6 max-w-7xl mx-auto relative">
-      {/* Decorative */}
-      <div className="absolute top-0 right-[10%] w-96 h-96 bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-32 left-[5%] w-64 h-64 bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
-
+    <div className="space-y-8 fade-in p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/10 flex items-center justify-center">
-            <Icons.building className="text-emerald-400" size={20} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-white"><TextReveal>Office</TextReveal></h1>
-            <p className="text-sm text-gray-400">
-              Wie van de back office is wanneer op kantoor of remote — en hoe de kantoortelefoon wordt opgevangen.
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-white/5">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.2em] font-medium text-gray-500 mb-1">Office</p>
+          <h1 className="text-3xl font-semibold text-white tracking-tight">
+            <TextReveal>Aanwezigheid back office</TextReveal>
+          </h1>
+          <p className="text-sm text-gray-400 mt-2 max-w-2xl">
+            Wie van Hanna, Lotte, Bente en Diyar is wanneer op kantoor of remote, met de bijbehorende kantoortelefoon-regeling.
+          </p>
         </div>
-
         {canEdit && (
           <button
             onClick={() => setEditMode(v => !v)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               editMode
-                ? 'bg-workx-lime text-workx-dark shadow-lg shadow-workx-lime/20'
+                ? 'bg-workx-lime text-workx-dark'
                 : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
             }`}
           >
-            <Icons.edit size={14} />
-            {editMode ? 'Klaar met bewerken' : 'Bewerken'}
+            {editMode ? 'Klaar' : 'Bewerken'}
           </button>
         )}
       </div>
 
-      {/* Today highlight */}
-      <div className="card p-5 relative overflow-hidden border-workx-lime/20">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-workx-lime/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
-          <div>
-            <p className="text-[10px] uppercase tracking-widest font-bold mb-1" style={{ color: 'rgb(140, 150, 30)' }}>Vandaag</p>
-            <p className="text-lg font-semibold text-white">
-              {today.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </p>
-          </div>
-          <div className="flex-1 flex flex-wrap items-center gap-2">
-            {OFFICE_PEOPLE.map(p => {
-              const entry = lookup.get(`${p.key}|${isoDateOnly(today)}`)
-              const status = entry?.status as Status | undefined
-              const cfg = status ? STATUS_CONFIG[status] : null
-              const photo = getPhotoUrl(p.name)
-              return (
-                <div
-                  key={p.key}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-full text-xs ${cfg ? cfg.bg + ' ' + cfg.text : 'bg-white/5 text-gray-500'}`}
-                  title={p.name + (status ? ' — ' + STATUS_CONFIG[status].label : ' — geen status')}
-                >
-                  <div className={`relative w-6 h-6 rounded-full overflow-hidden bg-white/10 ring-1 ${cfg?.ring || 'ring-white/10'}`}>
-                    {photo ? (
-                      <Image src={photo} alt={p.name} fill className="object-cover" sizes="24px" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] font-bold">{p.name.charAt(0)}</div>
-                    )}
-                  </div>
-                  <span className="font-medium">{p.name.split(' ')[0]}</span>
-                  {cfg && <span>{cfg.emoji}</span>}
+      {/* Vandaag-paneel */}
+      <section>
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-xs uppercase tracking-[0.2em] font-medium text-gray-500">Vandaag</h2>
+          <p className="text-sm text-gray-400 capitalize">
+            {today.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] divide-y divide-white/5">
+          {OFFICE_PEOPLE.map(p => {
+            const entry = lookup.get(`${p.key}|${isoDateOnly(today)}`)
+            const status = entry?.status as Status | undefined
+            const cfg = status ? STATUS_CONFIG[status] : null
+            const photo = getPhotoUrl(p.name)
+            return (
+              <div key={p.key} className="flex items-center gap-4 px-5 py-3">
+                <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
+                  {photo ? (
+                    <Image src={photo} alt={p.name} fill className="object-cover" sizes="40px" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-sm font-medium text-gray-300">
+                      {p.name.charAt(0)}
+                    </div>
+                  )}
                 </div>
-              )
-            })}
-          </div>
-          <PhoneBadge
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white">{p.name}</p>
+                  <p className="text-[11px] text-gray-500">{p.role}</p>
+                </div>
+                {cfg ? (
+                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium ${cfg.bg} ${cfg.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.bar}`} />
+                    {cfg.label}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-600">—</span>
+                )}
+              </div>
+            )
+          })}
+          {/* Telefoon-regeling van vandaag */}
+          <PhoneRow
             date={today}
             phone={phoneLookup.get(isoDateOnly(today))}
             onOffice={todayOnOffice}
-            big
           />
         </div>
-      </div>
+      </section>
 
-      {/* Week navigation */}
+      {/* Week-navigatie */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekOffset(o => o - 2)}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10"
+            className="p-2 rounded-md bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
             aria-label="Vorige 2 weken"
           >
             <Icons.chevronLeft size={16} />
@@ -337,33 +333,33 @@ export default function OfficePage() {
           {weekOffset !== 0 && (
             <button
               onClick={() => setWeekOffset(0)}
-              className="px-3 py-2 rounded-lg bg-workx-lime/10 text-workx-lime text-sm font-medium hover:bg-workx-lime/20 transition-all"
+              className="px-3 py-1.5 rounded-md bg-workx-lime/10 text-workx-lime text-xs font-medium hover:bg-workx-lime/20 transition-colors"
             >
               Naar deze week
             </button>
           )}
           <button
             onClick={() => setWeekOffset(o => o + 2)}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/10"
+            className="p-2 rounded-md bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
             aria-label="Volgende 2 weken"
           >
             <Icons.chevronRight size={16} />
           </button>
         </div>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-400 tabular-nums">
           {range.start.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} — {addDays(range.start, 11).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
         </p>
       </div>
 
       {/* Matrix */}
       {loading ? (
-        <div className="card p-12 flex items-center justify-center">
-          <span className="w-6 h-6 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-16 flex items-center justify-center">
+          <span className="w-5 h-5 border-2 border-workx-lime/30 border-t-workx-lime rounded-full animate-spin" />
         </div>
       ) : (
-        <>
+        <div className="space-y-6">
           <WeekMatrix
-            label={weekOffset === 0 ? 'Deze week' : `Week 1`}
+            label={weekOffset === 0 ? 'Deze week' : 'Week 1'}
             days={week1}
             today={today}
             lookup={lookup}
@@ -374,7 +370,7 @@ export default function OfficePage() {
             onOfficeNames={onOfficeNames}
           />
           <WeekMatrix
-            label={weekOffset === 0 ? 'Volgende week' : `Week 2`}
+            label={weekOffset === 0 ? 'Volgende week' : 'Week 2'}
             days={week2}
             today={today}
             lookup={lookup}
@@ -384,29 +380,29 @@ export default function OfficePage() {
             onPhoneEdit={(d) => setPhoneEditFor(isoDateOnly(d))}
             onOfficeNames={onOfficeNames}
           />
-        </>
+        </div>
       )}
 
-      {/* Legend + edit hint */}
-      <div className="card p-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
-        <span className="text-gray-500 uppercase tracking-wider font-semibold">Legenda</span>
+      {/* Legenda */}
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] px-5 py-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+        <span className="text-gray-500 uppercase tracking-widest font-medium">Legenda</span>
         {(['OFFICE', 'REMOTE', 'ABSENT'] as Status[]).map(s => {
           const cfg = STATUS_CONFIG[s]
           return (
             <span key={s} className={`flex items-center gap-1.5 ${cfg.text}`}>
-              <span>{cfg.emoji}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${cfg.bar}`} />
               {cfg.label}
             </span>
           )
         })}
         {canEdit && (
           <span className="text-gray-500 ml-auto">
-            {editMode ? 'Klik op een cel om door OFFICE → REMOTE → AFWEZIG → leeg te cyclen.' : 'Zet "Bewerken" aan om aan te passen.'}
+            {editMode ? 'Klik op een cel om door de statussen te wisselen.' : 'Zet "Bewerken" aan om aan te passen.'}
           </span>
         )}
       </div>
 
-      {/* Phone-edit popover (modal) */}
+      {/* Phone-edit modal */}
       {phoneEditFor && canEdit && (
         <PhoneEditModal
           date={new Date(phoneEditFor)}
@@ -419,80 +415,50 @@ export default function OfficePage() {
           }}
         />
       )}
-
-      {/* Info card */}
-      <div className="card p-5 bg-gradient-to-br from-blue-500/5 to-transparent border border-blue-500/10 relative">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Icons.info className="text-blue-400" size={16} />
-          </div>
-          <div className="text-sm text-gray-400">
-            <p className="text-white font-medium mb-1">Hoe werkt het?</p>
-            <p className="mb-2">
-              Hanna (Head of Office) houdt het schema bij — Lotte en Bente kunnen ook bewerken.
-              De kantoortelefoon-regeling staat standaard op <strong>automatisch</strong>: wie op kantoor is, neemt op.
-              Als niemand op kantoor is wordt het rood gemarkeerd en kun je instellen waar de telefoon naartoe gaat.
-            </p>
-            <p>
-              <strong>Tip</strong>: combineer dit met de <a href="/dashboard/appjeplekje" className="text-workx-lime underline">Appjeplekje</a>-pagina om ook werkplekken te reserveren.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
 
-// ───────── Phone badge ─────────────────────────────────────
+// ───────── Phone row in vandaag-paneel ─────────
 
-function PhoneBadge({
-  date,
-  phone,
-  onOffice,
-  big,
+function PhoneRow({
+  date, phone, onOffice,
 }: {
   date: Date
   phone?: PhoneDay
   onOffice: string[]
-  big?: boolean
 }) {
-  const mode: PhoneMode = phone?.mode || 'AUTO'
-  const hasNoOffice = onOffice.length === 0
-
-  let text: string
-  let icon: string
-  let danger = false
-
-  if (mode === 'FORWARD' && phone?.forwardTo) {
-    text = `Doorgeschakeld → ${phone.forwardTo}`
-    icon = '📞'
-  } else if (mode === 'COVER' && phone?.coverBy) {
-    text = `Opgenomen door ${phone.coverBy}`
-    icon = '☎️'
-  } else if (mode === 'AUTO' && !hasNoOffice) {
-    text = `Opgenomen door ${onOffice.join(', ')}`
-    icon = '☎️'
-  } else {
-    text = 'Niemand op kantoor — telefoon-regeling nog niet ingesteld'
-    icon = '⚠️'
-    danger = true
-  }
-
+  const { label, danger } = describePhone(phone, onOffice)
   return (
-    <div
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
+    <div className="flex items-center gap-4 px-5 py-3">
+      <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+        <Icons.phone className="text-gray-400" size={18} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white">Kantoortelefoon</p>
+        <p className="text-[11px] text-gray-500">Vandaag</p>
+      </div>
+      <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium ${
         danger
-          ? 'bg-red-500/15 text-red-300 border border-red-500/30'
-          : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-      } ${big ? 'min-w-0 sm:min-w-[280px]' : ''}`}
-    >
-      <span className="text-base">{icon}</span>
-      <span className="text-xs font-medium truncate">{text}</span>
+          ? 'bg-red-500/10 text-red-300'
+          : 'bg-emerald-500/[0.08] text-emerald-300'
+      }`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${danger ? 'bg-red-400' : 'bg-emerald-400'}`} />
+        {label}
+      </span>
     </div>
   )
 }
 
-// ───────── Week matrix ─────────────────────────────────────
+function describePhone(phone: PhoneDay | undefined, onOffice: string[]): { label: string; danger: boolean } {
+  const mode: PhoneMode = phone?.mode || 'AUTO'
+  if (mode === 'FORWARD' && phone?.forwardTo) return { label: `Doorgeschakeld naar ${phone.forwardTo}`, danger: false }
+  if (mode === 'COVER' && phone?.coverBy) return { label: `Opgenomen door ${phone.coverBy}`, danger: false }
+  if (mode === 'AUTO' && onOffice.length > 0) return { label: `Opgenomen door ${onOffice.join(', ')}`, danger: false }
+  return { label: 'Niemand op kantoor — telefoon niet ingesteld', danger: true }
+}
+
+// ───────── Week matrix ─────────
 
 interface WeekMatrixProps {
   label: string
@@ -507,46 +473,34 @@ interface WeekMatrixProps {
 }
 
 function WeekMatrix({
-  label,
-  days,
-  today,
-  lookup,
-  phoneLookup,
-  editMode,
-  onCycle,
-  onPhoneEdit,
-  onOfficeNames,
+  label, days, today, lookup, phoneLookup, editMode, onCycle, onPhoneEdit, onOfficeNames,
 }: WeekMatrixProps) {
   return (
-    <div className="card overflow-hidden">
-      <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-          <Icons.calendar size={14} className="text-workx-lime" />
-          {label}
-        </h2>
-        <p className="text-xs text-gray-500">
+    <section className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+      <header className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+        <h2 className="text-xs uppercase tracking-[0.2em] font-medium text-gray-400">{label}</h2>
+        <p className="text-xs text-gray-500 tabular-nums">
           {days[0]?.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} —{' '}
           {days[days.length - 1]?.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
         </p>
-      </div>
+      </header>
 
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/5">
-              <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-gray-500 font-semibold w-44">
-                Office team
+              <th className="text-left py-3 px-5 text-[10px] uppercase tracking-widest text-gray-500 font-medium w-48">
+                Medewerker
               </th>
-              {days.map(d => {
+              {days.map((d, i) => {
                 const isToday = isSameDay(d, today)
-                const b = formatDateBadge(d)
                 return (
-                  <th key={d.toISOString()} className={`text-center py-3 px-2 ${isToday ? 'bg-workx-lime/10' : ''}`}>
-                    <div className={`text-[10px] uppercase tracking-wider font-semibold ${isToday ? 'text-workx-lime' : 'text-gray-500'}`}>
-                      {b.weekday}
+                  <th key={d.toISOString()} className={`text-center py-3 px-2 ${isToday ? 'bg-workx-lime/[0.06]' : ''}`}>
+                    <div className={`text-[10px] uppercase tracking-widest font-medium ${isToday ? 'text-workx-lime' : 'text-gray-500'}`}>
+                      {DAYS_NL_SHORT[i]}
                     </div>
-                    <div className={`text-base font-semibold mt-0.5 ${isToday ? 'text-workx-lime' : 'text-white'}`}>
-                      {b.day} <span className="text-xs font-normal text-gray-500">{b.month}</span>
+                    <div className={`text-sm font-medium mt-0.5 tabular-nums ${isToday ? 'text-workx-lime' : 'text-white'}`}>
+                      {d.getDate()} <span className="text-[10px] font-normal text-gray-500">{MONTHS_NL_SHORT[d.getMonth()]}</span>
                     </div>
                   </th>
                 )
@@ -554,24 +508,24 @@ function WeekMatrix({
             </tr>
           </thead>
           <tbody>
-            {OFFICE_PEOPLE.map((p, idx) => {
+            {OFFICE_PEOPLE.map((p) => {
               const photo = getPhotoUrl(p.name)
               return (
-                <tr key={p.key} className={idx % 2 === 0 ? 'bg-white/[0.02]' : ''}>
-                  <td className="py-3 px-4">
+                <tr key={p.key} className="border-b border-white/5 last:border-b-0">
+                  <td className="py-3 px-5">
                     <div className="flex items-center gap-3">
-                      <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-white/10 flex-shrink-0 ring-2 ring-white/5">
+                      <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
                         {photo ? (
-                          <Image src={photo} alt={p.name} fill className="object-cover" sizes="40px" />
+                          <Image src={photo} alt={p.name} fill className="object-cover" sizes="36px" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-sm font-semibold text-gray-300">
+                          <div className="w-full h-full flex items-center justify-center text-xs font-medium text-gray-300">
                             {p.name.charAt(0)}
                           </div>
                         )}
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-white truncate">{p.name.split(' ')[0]}</p>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">{p.role}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{p.role}</p>
                       </div>
                     </div>
                   </td>
@@ -581,22 +535,18 @@ function WeekMatrix({
                     const cfg = status ? STATUS_CONFIG[status] : null
                     const isToday = isSameDay(d, today)
                     return (
-                      <td key={d.toISOString()} className={`py-2 px-2 text-center ${isToday ? 'bg-workx-lime/[0.05]' : ''}`}>
+                      <td key={d.toISOString()} className={`py-2 px-2 ${isToday ? 'bg-workx-lime/[0.04]' : ''}`}>
                         <button
                           onClick={() => editMode && onCycle(p.key, d, status ?? null)}
                           disabled={!editMode}
-                          className={`w-full max-w-[80px] mx-auto px-2 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1 ${
-                            cfg ? `${cfg.bg} ${cfg.text} hover:brightness-125` : 'bg-white/5 text-gray-600 hover:bg-white/10'
-                          } ${editMode ? 'cursor-pointer ring-1 ring-white/10' : 'cursor-default'}`}
+                          className={`relative w-full h-9 rounded-md text-xs font-medium transition-colors flex items-center justify-center overflow-hidden ${
+                            cfg
+                              ? `${cfg.bg} ${cfg.text}`
+                              : 'bg-white/[0.02] text-gray-600'
+                          } ${editMode ? 'cursor-pointer hover:brightness-125 ring-1 ring-inset ring-white/5' : 'cursor-default'}`}
                         >
-                          {cfg ? (
-                            <>
-                              <span>{cfg.emoji}</span>
-                              <span className="hidden lg:inline">{cfg.short}</span>
-                            </>
-                          ) : (
-                            <span className="text-base">·</span>
-                          )}
+                          {cfg && <span className={`absolute left-0 top-1 bottom-1 w-0.5 rounded-r ${cfg.bar}`} />}
+                          {cfg ? cfg.short : <span className="text-gray-600 text-base">·</span>}
                         </button>
                       </td>
                     )
@@ -605,11 +555,13 @@ function WeekMatrix({
               )
             })}
 
-            {/* Phone row */}
-            <tr className="border-t border-white/5 bg-white/[0.02]">
-              <td className="py-3 px-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-base">📞</div>
+            {/* Telefoon-rij */}
+            <tr className="bg-white/[0.02]">
+              <td className="py-3 px-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                    <Icons.phone className="text-gray-400" size={16} />
+                  </div>
                   <div>
                     <p className="text-sm font-medium text-white">Telefoon</p>
                     <p className="text-[10px] text-gray-500">Kantoorlijn</p>
@@ -620,27 +572,28 @@ function WeekMatrix({
                 const dateKey = isoDateOnly(d)
                 const phone = phoneLookup.get(dateKey)
                 const onOfficeList = onOfficeNames(d)
-                const mode: PhoneMode = phone?.mode || 'AUTO'
-                let label: string
-                let danger = false
-                if (mode === 'FORWARD' && phone?.forwardTo) label = `→ ${phone.forwardTo}`
-                else if (mode === 'COVER' && phone?.coverBy) label = phone.coverBy
-                else if (mode === 'AUTO' && onOfficeList.length > 0) label = onOfficeList.join(', ')
-                else { label = 'Niemand'; danger = true }
+                const { label: phoneLabel, danger } = describePhone(phone, onOfficeList)
                 const isToday = isSameDay(d, today)
+                const compact = phone?.mode === 'FORWARD' && phone.forwardTo
+                  ? `→ ${phone.forwardTo}`
+                  : phone?.mode === 'COVER' && phone.coverBy
+                    ? phone.coverBy
+                    : onOfficeList.length > 0
+                      ? onOfficeList.join(', ')
+                      : 'Niemand'
                 return (
-                  <td key={d.toISOString()} className={`py-2 px-2 text-center ${isToday ? 'bg-workx-lime/[0.05]' : ''}`}>
+                  <td key={d.toISOString()} className={`py-2 px-2 ${isToday ? 'bg-workx-lime/[0.04]' : ''}`}>
                     <button
                       onClick={() => editMode && onPhoneEdit(d)}
                       disabled={!editMode}
-                      className={`w-full max-w-[100px] mx-auto px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all truncate ${
+                      className={`relative w-full h-9 rounded-md text-[11px] font-medium transition-colors overflow-hidden truncate px-2 ${
                         danger
-                          ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30'
-                          : 'bg-emerald-500/10 text-emerald-300'
+                          ? 'bg-red-500/10 text-red-300 ring-1 ring-inset ring-red-500/20'
+                          : 'bg-emerald-500/[0.08] text-emerald-300'
                       } ${editMode ? 'cursor-pointer hover:brightness-125' : 'cursor-default'}`}
-                      title={label}
+                      title={phoneLabel}
                     >
-                      {label}
+                      {compact}
                     </button>
                   </td>
                 )
@@ -649,18 +602,14 @@ function WeekMatrix({
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   )
 }
 
-// ───────── Phone edit modal ────────────────────────────────
+// ───────── Phone edit modal ─────────
 
 function PhoneEditModal({
-  date,
-  current,
-  onOfficeNames,
-  onClose,
-  onSave,
+  date, current, onOfficeNames, onClose, onSave,
 }: {
   date: Date
   current?: PhoneDay
@@ -691,23 +640,20 @@ function PhoneEditModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-workx-gray rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-modal-in">
-        {/* Header */}
+      <div className="relative w-full max-w-md bg-workx-gray rounded-xl border border-white/10 shadow-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-widest font-bold text-workx-lime">Kantoortelefoon</p>
-            <h3 className="text-base font-semibold text-white capitalize">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500">Kantoortelefoon</p>
+            <h3 className="text-base font-medium text-white capitalize">
               {date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-md transition-colors">
             <Icons.x size={18} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-5 space-y-5">
-          {/* Mode picker */}
+        <div className="p-5 space-y-4">
           <div className="space-y-2">
             {([
               { id: 'AUTO' as PhoneMode, label: 'Automatisch', desc: onOfficeNames.length > 0 ? `Opgenomen door ${onOfficeNames.join(', ')}` : 'Niemand op kantoor — kies een andere optie' },
@@ -719,71 +665,69 @@ function PhoneEditModal({
                 <button
                   key={o.id}
                   onClick={() => setMode(o.id)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all ${
+                  className={`w-full text-left p-3 rounded-md border transition-colors ${
                     selected
-                      ? 'bg-workx-lime/10 border-workx-lime/40 text-white'
-                      : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'
+                      ? 'bg-workx-lime/[0.08] border-workx-lime/40 text-white'
+                      : 'bg-white/[0.02] border-white/10 text-gray-300 hover:bg-white/5'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{o.label}</span>
                     {selected && <Icons.check size={14} className="text-workx-lime" />}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{o.desc}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{o.desc}</p>
                 </button>
               )
             })}
           </div>
 
-          {/* Input field */}
           {mode === 'COVER' && (
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Opgenomen door</label>
+              <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Opgenomen door</label>
               <input
                 type="text"
                 value={coverBy}
                 onChange={(e) => setCoverBy(e.target.value)}
                 placeholder="Bv. Lotte (vanuit huis) / extern"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
+                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
                 autoFocus
               />
             </div>
           )}
           {mode === 'FORWARD' && (
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5">Doorschakelen naar</label>
+              <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Doorschakelen naar</label>
               <input
                 type="text"
                 value={forwardTo}
                 onChange={(e) => setForwardTo(e.target.value)}
                 placeholder="Bv. 06-12345678 of partner-naam"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
+                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
                 autoFocus
               />
             </div>
           )}
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1.5">Notitie (optioneel)</label>
+            <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Notitie (optioneel)</label>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Bv. 'tot 13u doorgeschakeld'"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
+              className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
             />
           </div>
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-4 border-t border-white/5 flex items-center justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white">
+          <button onClick={onClose} className="px-4 py-2 rounded-md text-sm text-gray-400 hover:text-white">
             Annuleren
           </button>
           <button
             onClick={handleSave}
             disabled={saving || (mode === 'FORWARD' && !forwardTo.trim()) || (mode === 'COVER' && !coverBy.trim())}
-            className="px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40"
+            className="px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-40"
             style={{ background: 'rgb(249, 255, 133)', color: 'rgb(45, 45, 45)' }}
           >
             {saving ? 'Opslaan…' : 'Opslaan'}
