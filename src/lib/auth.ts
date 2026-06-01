@@ -44,7 +44,8 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
-    maxAge: 7 * 24 * 60 * 60, // 7 dagen
+    maxAge: 90 * 24 * 60 * 60, // 90 dagen — sessie blijft 90 dagen geldig
+    updateAge: 24 * 60 * 60,   // elke 24u activiteit verlengt 'm met 90 dagen
   },
   pages: {
     signIn: '/login',
