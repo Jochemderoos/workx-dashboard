@@ -42,6 +42,8 @@ export const teamMenu_Werk: MenuItem[] = [
     description: 'Lopende werkverdeling en verantwoordelijkheden over het team.' },
   { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', iconAnim: 'icon-file-hover',
     description: 'Wekelijks teamoverleg op dinsdag — actiepunten en notulen.' },
+  { href: '/dashboard/office', icon: Icons.building, label: 'Office', iconAnim: 'icon-briefcase-hover',
+    description: 'Wie van back office is op kantoor of remote + kantoortelefoon-regeling per dag.' },
   { href: '/dashboard/arbeidsvoorwaarden', icon: Icons.target, label: 'Mijn coachingbudget', iconAnim: 'icon-target-hover', hideForExternal: true,
     description: 'Persoonlijke coaching-budget tracker (€1.500 ex btw / 3 jaar).' },
   { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', iconAnim: 'icon-file-hover',

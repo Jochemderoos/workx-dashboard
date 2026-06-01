@@ -2162,3 +2162,33 @@ model PerformanceNote {
   @@index([userId, noteDate])
   @@index([authorId])
 }
+
+// Office-aanwezigheid — back office / admin (Hanna, Lotte, Bente, Diyar).
+// PersonKey is een lowercase identifier (hanna|lotte|bente|diyar), niet
+// gekoppeld aan User omdat niet alle office-leden een account hebben.
+model OfficeAttendanceEntry {
+  id        String   @id @default(cuid())
+  personKey String   // 'hanna' | 'lotte' | 'bente' | 'diyar'
+  date      DateTime @db.Date
+  status    String   // 'OFFICE' | 'REMOTE' | 'ABSENT'
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([personKey, date])
+  @@index([date])
+}
+
+// Kantoortelefoon-regeling per dag.
+// mode='AUTO'    → automatisch: opgenomen door wie op kantoor is
+// mode='FORWARD' → handmatig doorgeschakeld naar `forwardTo`
+// mode='COVER'   → handmatig opgenomen door `coverBy`
+model OfficePhoneDay {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  mode      String   @default("AUTO")
+  forwardTo String?
+  coverBy   String?
+  note      String?
+  updatedAt DateTime @updatedAt
+}

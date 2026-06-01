@@ -27,7 +27,9 @@ export const TEAM_PHOTOS: Record<string, string> = {
 
   // Kantoor
   'Hanna Blaauboer': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Hanna.jpg',
-  'Lotte van Sint Truiden': 'https://www.workxadvocaten.nl/wp-content/uploads/2024/01/Lotte.jpg',
+  'Lotte van Sint Truiden': '/team/lotte.jpg',
+  'Bente': '/team/bente.jpg',
+  'Diyar Wakkas': '/team/diyar.png',
 }
 
 // Helper functie om foto URL te krijgen op basis van naam of avatarUrl
@@ -88,4 +90,15 @@ export const ALL_TEAM_MEMBERS = [
   // Kantoor
   'Hanna Blaauboer',
   'Lotte van Sint Truiden',
+  'Bente',
+  'Diyar Wakkas',
+]
+
+// Office-team (back office / admin) — voor de Office aanwezigheidspagina.
+// Volgorde = volgorde in UI.
+export const OFFICE_TEAM: { name: string; role: string }[] = [
+  { name: 'Hanna Blaauboer', role: 'Head of Office' },
+  { name: 'Lotte van Sint Truiden', role: 'Office Manager' },
+  { name: 'Bente', role: 'Office Manager' },
+  { name: 'Diyar Wakkas', role: 'Werkstudent' },
 ]
