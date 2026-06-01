@@ -256,7 +256,7 @@ export default function PerformanceDetailPage() {
           <p className="text-sm text-gray-400">
             Performance-notities ·{' '}
             <span className="text-emerald-400">{stats.positive} positief</span> ·{' '}
-            <span className="text-rose-400">{stats.negative} negatief</span>
+            <span className="text-rose-400">{stats.negative} kritisch</span>
             {stats.open > 0 && <> · <span className="text-amber-400">{stats.open} nog niet besproken</span></>}
           </p>
         </div>
@@ -287,7 +287,7 @@ export default function PerformanceDetailPage() {
                 : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
             }`}
           >
-            <span>👎</span> Verbeterpunt
+            <span>👎</span> Kritisch
           </button>
         </div>
 
@@ -338,7 +338,7 @@ export default function PerformanceDetailPage() {
           { id: 'all' as const, label: 'Alles', count: stats.total },
           { id: 'open' as const, label: 'Nog te bespreken', count: stats.open },
           { id: 'positive' as const, label: 'Positief', count: stats.positive },
-          { id: 'negative' as const, label: 'Negatief', count: stats.negative },
+          { id: 'negative' as const, label: 'Kritisch', count: stats.negative },
         ].map(t => (
           <button
             key={t.id}
@@ -387,7 +387,7 @@ export default function PerformanceDetailPage() {
                       positive ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'
                     }`}>
                       <span>{positive ? '👍' : '👎'}</span>
-                      {positive ? 'Positief' : 'Verbeterpunt'}
+                      {positive ? 'Positief' : 'Kritisch'}
                     </span>
                     <span className="text-gray-400">{formatDate(n.noteDate)}</span>
                     <span className="text-gray-600">·</span>
@@ -436,7 +436,7 @@ export default function PerformanceDetailPage() {
                             : 'bg-white/5 text-gray-400 border border-white/10'
                         }`}
                       >
-                        👎 Verbeterpunt
+                        👎 Kritisch
                       </button>
                       <div className="w-44 ml-auto">
                         <DatePicker

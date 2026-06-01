@@ -143,7 +143,7 @@ export default function PerformanceOverzichtPage() {
         </div>
         <div className="card p-4 border border-rose-500/15">
           <p className="text-xs text-gray-500 mb-1 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-400" /> Negatief
+            <span className="w-2 h-2 rounded-full bg-rose-400" /> Kritisch
           </p>
           <p className="text-2xl font-semibold text-rose-400">{totals.negative}</p>
         </div>
@@ -223,7 +223,7 @@ export default function PerformanceOverzichtPage() {
                     </span>
                     <span className="flex items-center gap-1.5 text-rose-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                      <strong>{row.negative}</strong> negatief
+                      <strong>{row.negative}</strong> kritisch
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-500 mt-3">
@@ -258,7 +258,7 @@ export default function PerformanceOverzichtPage() {
           <div className="text-sm text-gray-400">
             <p className="text-white font-medium mb-1">Waarom?</p>
             <p>
-              Door observaties — groot of klein, positief of negatief — direct kort vast te leggen heb je bij
+              Door observaties — groot of klein, positief of kritisch — direct kort vast te leggen heb je bij
               beoordelingen en werkverdelingsgesprekken een onderbouwde basis. Klik op een medewerker om snel
               iets toe te voegen.
             </p>
