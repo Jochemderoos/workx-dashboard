@@ -45,6 +45,7 @@ const CRON_LIST = [
   { path: '/api/cron/werkoverleg-reminder', label: 'Werkoverleg reminder', schedule: 'Maandag 14:00 NL', channel: 'workx-algemeen' },
   { path: '/api/cron/week-intake-reminder', label: 'Mijn werkweek reminder', schedule: 'Maandag 08:45 NL', channel: 'workx-algemeen' },
   { path: '/api/cron/partneroverleg-reminder', label: 'Partneroverleg reminder', schedule: 'Vrijdag 10:00 NL', channel: '#mt-groot (DM partners)' },
+  { path: '/api/cron/performance-reminder', label: 'Performance Management reminder', schedule: 'Donderdag 14:00 NL (om de week, even ISO-weken)', channel: '#mt-groot' },
   { path: '/api/cron/daily-tip', label: 'Wist je dat? (daily tip)', schedule: 'Ma–Do 09:00 NL', channel: 'workx-algemeen' },
   { path: '/api/cron/birthday-alert', label: 'Verjaardag alert', schedule: 'Dagelijks 08:00 NL', channel: 'workx-algemeen' },
   { path: '/api/cron/onboarding-status', label: 'Onboarding status', schedule: 'Donderdag 09:00 NL', channel: 'mt-groot' },

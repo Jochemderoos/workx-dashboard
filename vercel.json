@@ -41,6 +41,10 @@
     {
       "path": "/api/cron/week-intake-reminder",
       "schedule": "45 6 * * 1"
+    },
+    {
+      "path": "/api/cron/performance-reminder",
+      "schedule": "0 12 * * 4"
     }
   ]
 }

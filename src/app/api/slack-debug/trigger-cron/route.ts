@@ -11,6 +11,7 @@ const ALLOWED_PATHS = new Set([
   '/api/cron/werkoverleg-reminder',
   '/api/cron/partneroverleg-reminder',
   '/api/cron/week-intake-reminder',
+  '/api/cron/performance-reminder',
   '/api/cron/daily-tip',
   '/api/cron/birthday-alert',
   '/api/cron/onboarding-status',
