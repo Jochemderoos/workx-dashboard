@@ -53,31 +53,43 @@ export async function GET(req: NextRequest) {
     const fallback = `Werkoverleg morgen — nog agendapunten? ${werkoverlegUrl}`
     const slackOk = await sendChannelMessage(SLACK_CHANNEL, fallback, slackBlocks)
 
-    // Push naar alle active users (incl. partners — die zitten ook in werkoverleg)
-    const users = await prisma.user.findMany({
-      where: { isActive: true, role: { in: ['EMPLOYEE', 'PARTNER', 'ADMIN'] } },
-      select: { id: true },
-    })
-
-    const pushResult = await sendPushNotificationToUsers(
-      users.map(u => u.id),
-      {
-        title: 'Agendapunten werkoverleg?',
-        body: 'Morgen werkoverleg. Heb je nog punten in te brengen?',
-        url: '/dashboard/werkoverleg',
-        tag: `werkoverleg-${now.toISOString().slice(0, 10)}`,
-        requireInteraction: true,
-      }
-    )
+    // Push naar alle active users (incl. partners — die zitten ook in werkoverleg).
+    // Push-fout mag het hele resultaat niet 500'en als Slack al gelukt is.
+    let userCount = 0
+    let pushResult: unknown = null
+    let pushError: string | null = null
+    try {
+      const users = await prisma.user.findMany({
+        where: { isActive: true, role: { in: ['EMPLOYEE', 'PARTNER', 'ADMIN'] } },
+        select: { id: true },
+      })
+      userCount = users.length
+      pushResult = await sendPushNotificationToUsers(
+        users.map(u => u.id),
+        {
+          title: 'Agendapunten werkoverleg?',
+          body: 'Morgen werkoverleg. Heb je nog punten in te brengen?',
+          url: '/dashboard/werkoverleg',
+          tag: `werkoverleg-${now.toISOString().slice(0, 10)}`,
+          requireInteraction: true,
+        }
+      )
+    } catch (err) {
+      console.error('Push notification failed (slack reminder still sent):', err)
+      pushError = err instanceof Error ? err.message : 'push failed'
+    }
 
     return NextResponse.json({
       ok: true,
-      users: users.length,
+      users: userCount,
       slack: slackOk,
       push: pushResult,
+      pushError,
     })
   } catch (error) {
     console.error('Error in werkoverleg-reminder cron:', error)
-    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : 'Server fout',
+    }, { status: 500 })
   }
 }
