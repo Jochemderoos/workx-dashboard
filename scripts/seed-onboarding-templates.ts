@@ -45,7 +45,7 @@ const TEMPLATES: Array<{ title: string; description?: string; category: string }
   { title: 'Eerste werkverdelingsgesprek gepland', category: 'Eerste maand' },
   { title: 'Eerste mentor-gesprek gehad', category: 'Eerste maand' },
   { title: 'Ontwikkelplan opgesteld', category: 'Eerste maand', description: 'Inhoudelijke kennis, ervaring, ondernemerschap' },
-  { title: 'Coachbudget besproken', category: 'Eerste maand', description: '€ 1.500 ex BTW per 3 jaar + 2 vrije dagen' },
+  { title: 'Coachbudget besproken', category: 'Eerste maand', description: '€ 1.500 ex BTW per 3 jaar + 2x coaching onder werktijd' },
   { title: 'PO-puntenplanning besproken', category: 'Eerste maand', description: '20 PO-punten/jaar, min. 12 arbeidsrecht' },
 ]
 

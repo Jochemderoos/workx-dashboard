@@ -91,7 +91,7 @@ export const GENERAL_TIPS: DashboardTip[] = [
     message: 'Een complete onboarding-checklist voor nieuwe medewerkers, met items om af te vinken en notities toe te voegen.',
   },
   {
-    page: 'Arbeidsvoorwaarden',
+    page: 'Mijn coachingbudget',
     href: '/dashboard/arbeidsvoorwaarden',
     title: '💡 Wist je dat? — Coaching-budget',
     message: 'Je hebt €1.500 ex btw per 3 jaar voor een eigen coach. Houd hier zelf bij wat je hebt besteed.',

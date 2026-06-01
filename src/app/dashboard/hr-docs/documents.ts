@@ -124,8 +124,8 @@ export const THE_WAY_IT_WORKX: Document = {
       icon: '📚',
       content: `
         <h3>5.1 Coach</h3>
-        <p class="text-white/70 mb-4">Iedereen krijgt de mogelijkheid zich verder te ontwikkelen door gebruik te maken van een eigen externe coach. Hiervoor wordt in ieder geval per periode van drie jaar een budget van <strong>€ 1.500 ex btw</strong> beschikbaar gesteld. Voor coaching tijdens werktijd kun je in totaal 2 vrije dagen krijgen gedurende de periode van drie jaar, om te stimuleren dat je hier ook daadwerkelijk gebruik van maakt.</p>
-        <p class="text-white/70 mb-6">Houd zelf bij hoeveel van het budget je hebt besteed via de pagina <strong>Arbeidsvoorwaarden</strong> in het dashboard. Geef de facturen door aan Hanna voor verrekening.</p>
+        <p class="text-white/70 mb-4">Iedereen krijgt de mogelijkheid zich verder te ontwikkelen door gebruik te maken van een eigen externe coach. Hiervoor wordt in ieder geval per periode van drie jaar een budget van <strong>€ 1.500 ex btw</strong> beschikbaar gesteld. Daarnaast mag je gedurende 2 werkdagen onder werktijd coaching volgen in die 3-jaars periode (geen extra vrije dagen), om te stimuleren dat je hier ook daadwerkelijk gebruik van maakt.</p>
+        <p class="text-white/70 mb-6">Houd zelf bij hoeveel van het budget je hebt besteed via de pagina <strong>Mijn coachingbudget</strong> in het dashboard. Geef de facturen door aan Hanna voor verrekening.</p>
 
         <h3>5.2 Plan</h3>
         <p class="text-white/70 mb-6">Voor iedere medewerker zal een persoonlijk ontwikkelplan worden opgesteld. We vinden het belangrijk dat iedereen op verschillende manieren kan groeien. Workx hanteert het adagium; stilstaan is achteruitgang. Het ontwikkelplan is onder andere bedoeld als ondersteuning op het gebied van inhoudelijke kennis, ervaring en ondernemerschap. Je eigen ontwikkelplan staat in het dashboard onder <strong>Ontwikkelplannen</strong> — daar werk je het samen met je mentor of partner bij.</p>

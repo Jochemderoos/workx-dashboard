@@ -219,7 +219,7 @@ export async function GET(req: NextRequest) {
             items.push({
               text: `Coaching-budget loopt over ${daysToEnd} ${daysToEnd === 1 ? 'dag' : 'dagen'} af — nog *${fmtEUR(remaining)}* te besteden.`,
               href: '/dashboard/arbeidsvoorwaarden',
-              linkLabel: 'Arbeidsvoorwaarden',
+              linkLabel: 'Mijn coachingbudget',
             })
           }
         }

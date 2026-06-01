@@ -112,14 +112,14 @@ export default function ArbeidsvoorwaardenPage() {
           className="w-12 h-12 rounded-xl flex items-center justify-center"
           style={{ backgroundColor: 'rgba(140, 150, 30, 0.15)' }}
         >
-          <Icons.briefcase className="text-workx-lime" size={22} />
+          <Icons.target className="text-workx-lime" size={22} />
         </div>
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            Arbeidsvoorwaarden
+            Mijn coachingbudget
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Persoonlijke regelingen en tegoeden — beheer hier je eigen registratie
+            €1.500 ex btw per 3-jarige periode — houd hier zelf bij wat je hebt besteed
           </p>
         </div>
       </div>
@@ -286,7 +286,8 @@ export default function ArbeidsvoorwaardenPage() {
           <div className="space-y-1">
             <p>
               <strong style={{ color: 'var(--color-text-primary)' }}>Werking:</strong> je krijgt €1.500 ex btw per 3-jaars
-              periode voor een externe coach. Daarnaast 2 vrije dagen voor coaching tijdens werktijd.
+              periode voor een externe coach. Daarnaast mag je gedurende 2 werkdagen onder werktijd coaching volgen
+              (geen extra vrije dagen).
             </p>
             <p>
               Houd hier zelf bij hoeveel je hebt besteed. Bewaar de facturen voor verrekening — geef ze door aan Hanna.
