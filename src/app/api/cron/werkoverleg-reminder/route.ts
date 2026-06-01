@@ -41,15 +41,22 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // Slack #algemeen — geen button (vereist interactivity URL), in plaats
-    // daarvan een markdown-link in de section.
+    // Slack #algemeen — rich_text geeft een echte inline-link zonder dat de
+    // lange URL zichtbaar in het bericht staat, en zonder button/interactivity.
     const slackBlocks = [
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*Werkoverleg morgen (dinsdag)*\nHeb je nog onderwerpen voor het werkoverleg? Zet ze nu in het dashboard.\n${werkoverlegUrl}`,
-        },
+        type: 'rich_text',
+        elements: [
+          {
+            type: 'rich_text_section',
+            elements: [
+              { type: 'text', text: 'Werkoverleg morgen (dinsdag)\n', style: { bold: true } },
+              { type: 'text', text: 'Heb je nog onderwerpen voor het werkoverleg? Zet ze nu in ' },
+              { type: 'link', url: werkoverlegUrl, text: 'het dashboard' },
+              { type: 'text', text: '.' },
+            ],
+          },
+        ],
       },
     ]
     const fallback = `Werkoverleg morgen — nog agendapunten? ${werkoverlegUrl}`

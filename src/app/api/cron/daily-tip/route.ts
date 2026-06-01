@@ -48,11 +48,17 @@ export async function GET(req: NextRequest) {
 
     const blocks = [
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*Wist je dat? — ${subject}*\n${tip.message}\n${fullUrl}`,
-        },
+        type: 'rich_text',
+        elements: [
+          {
+            type: 'rich_text_section',
+            elements: [
+              { type: 'text', text: `Wist je dat? — ${subject}\n`, style: { bold: true } },
+              { type: 'text', text: `${tip.message}\n→ ` },
+              { type: 'link', url: fullUrl, text: `Open ${tip.page}` },
+            ],
+          },
+        ],
       },
     ]
     const fallback = `Wist je dat? — ${subject}. ${tip.message} ${fullUrl}`

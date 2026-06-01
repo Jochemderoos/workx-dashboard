@@ -29,11 +29,17 @@ export async function GET(req: NextRequest) {
 
     const blocks = [
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*Mijn werkweek — vergeet niet in te vullen*\nVul vóór 10:00 in wat je deze week op je bord hebt, of je ruimte hebt en welke dagen je afwezig bent. Partners gebruiken dit bij het werkverdelingsgesprek (dinsdag).\n${intakeUrl}`,
-        },
+        type: 'rich_text',
+        elements: [
+          {
+            type: 'rich_text_section',
+            elements: [
+              { type: 'text', text: 'Mijn werkweek — vergeet niet in te vullen\n', style: { bold: true } },
+              { type: 'text', text: 'Vul vóór 10:00 in wat je deze week op je bord hebt, of je ruimte hebt en welke dagen je afwezig bent. Partners gebruiken dit bij het werkverdelingsgesprek (dinsdag).\n→ ' },
+              { type: 'link', url: intakeUrl, text: 'Vul Mijn werkweek in' },
+            ],
+          },
+        ],
       },
     ]
     const fallback = `Vul vóór 10:00 Mijn werkweek in: ${intakeUrl}`

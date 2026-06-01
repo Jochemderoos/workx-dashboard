@@ -29,11 +29,18 @@ export async function GET(req: NextRequest) {
 
     const slackBlocks = [
       {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*Partneroverleg maandag 10:00*\nHeb je nog agendapunten voor het overleg? Zet ze nu in de partner agenda zodat ze klaar staan.\n${notulenUrl}`,
-        },
+        type: 'rich_text',
+        elements: [
+          {
+            type: 'rich_text_section',
+            elements: [
+              { type: 'text', text: 'Partneroverleg maandag 10:00\n', style: { bold: true } },
+              { type: 'text', text: 'Heb je nog agendapunten voor het overleg? Zet ze nu in ' },
+              { type: 'link', url: notulenUrl, text: 'de partner agenda' },
+              { type: 'text', text: ' zodat ze klaar staan.' },
+            ],
+          },
+        ],
       },
     ]
     const fallback = `Partneroverleg maandag 10:00 — agendapunten? ${notulenUrl}`
