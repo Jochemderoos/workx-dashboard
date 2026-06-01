@@ -41,25 +41,15 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // Slack #algemeen
+    // Slack #algemeen — geen button (vereist interactivity URL), in plaats
+    // daarvan een markdown-link in de section.
     const slackBlocks = [
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Werkoverleg morgen (dinsdag)*\nHeb je nog onderwerpen voor het werkoverleg? Zet ze nu in het dashboard.`,
+          text: `*Werkoverleg morgen (dinsdag)*\nHeb je nog onderwerpen voor het werkoverleg? Zet ze nu in <${werkoverlegUrl}|het dashboard>.`,
         },
-      },
-      {
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: 'Open werkoverleg', emoji: false },
-            url: werkoverlegUrl,
-            style: 'primary',
-          },
-        ],
       },
     ]
     const fallback = `Werkoverleg morgen — nog agendapunten? ${werkoverlegUrl}`

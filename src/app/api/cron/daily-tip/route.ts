@@ -51,19 +51,8 @@ export async function GET(req: NextRequest) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Wist je dat? — ${subject}*\n${tip.message}`,
+          text: `*Wist je dat? — ${subject}*\n${tip.message}\n→ <${fullUrl}|Open ${tip.page}>`,
         },
-      },
-      {
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: `Open ${tip.page}` },
-            url: fullUrl,
-            style: 'primary',
-          },
-        ],
       },
     ]
     const fallback = `Wist je dat? — ${subject}. ${tip.message} ${fullUrl}`

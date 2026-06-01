@@ -32,19 +32,8 @@ export async function GET(req: NextRequest) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Partneroverleg maandag 10:00*\nHeb je nog agendapunten voor het overleg? Zet ze nu in het dashboard zodat ze klaar staan.`,
+          text: `*Partneroverleg maandag 10:00*\nHeb je nog agendapunten voor het overleg? Zet ze nu in <${notulenUrl}|de partner agenda> zodat ze klaar staan.`,
         },
-      },
-      {
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: 'Open partner agenda', emoji: false },
-            url: notulenUrl,
-            style: 'primary',
-          },
-        ],
       },
     ]
     const fallback = `Partneroverleg maandag 10:00 — agendapunten? ${notulenUrl}`

@@ -32,19 +32,8 @@ export async function GET(req: NextRequest) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Mijn werkweek — vergeet niet in te vullen*\nVul vóór 10:00 in wat je deze week op je bord hebt, of je ruimte hebt en welke dagen je afwezig bent. Partners gebruiken dit bij het werkverdelingsgesprek (dinsdag).`,
+          text: `*Mijn werkweek — vergeet niet in te vullen*\nVul vóór 10:00 in wat je deze week op je bord hebt, of je ruimte hebt en welke dagen je afwezig bent. Partners gebruiken dit bij het werkverdelingsgesprek (dinsdag). → <${intakeUrl}|Vul Mijn werkweek in>`,
         },
-      },
-      {
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            text: { type: 'plain_text', text: 'Vul Mijn werkweek in', emoji: false },
-            url: intakeUrl,
-            style: 'primary',
-          },
-        ],
       },
     ]
     const fallback = `Vul vóór 10:00 Mijn werkweek in: ${intakeUrl}`

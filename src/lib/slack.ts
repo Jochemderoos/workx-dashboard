@@ -188,23 +188,8 @@ export async function notifyNewZaakAssignment(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `⏰ Reageer binnen *${expiresText}*`,
+        text: `⏰ Reageer binnen *${expiresText}*\n→ <${zaakUrl}|Bekijk in Dashboard>`,
       },
-    },
-    {
-      type: 'actions',
-      elements: [
-        {
-          type: 'button',
-          text: {
-            type: 'plain_text',
-            text: '✅ Bekijk in Dashboard',
-            emoji: true,
-          },
-          url: zaakUrl,
-          style: 'primary',
-        },
-      ],
     },
   ]
 
@@ -307,23 +292,8 @@ export async function notifyZaakReminder(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `🚨 *Laatste kans!* Reageer binnen *${expiresText}*, anders gaat de zaak naar de volgende collega.`,
+        text: `🚨 *Laatste kans!* Reageer binnen *${expiresText}*, anders gaat de zaak naar de volgende collega.\n→ <${zaakUrl}|Nu reageren>`,
       },
-    },
-    {
-      type: 'actions',
-      elements: [
-        {
-          type: 'button',
-          text: {
-            type: 'plain_text',
-            text: '✅ Nu reageren',
-            emoji: true,
-          },
-          url: zaakUrl,
-          style: 'primary',
-        },
-      ],
     },
   ]
 
