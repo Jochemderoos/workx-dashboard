@@ -42,6 +42,8 @@ export const teamMenu_Werk: MenuItem[] = [
     description: 'Lopende werkverdeling en verantwoordelijkheden over het team.' },
   { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', iconAnim: 'icon-file-hover',
     description: 'Wekelijks teamoverleg op dinsdag — actiepunten en notulen.' },
+  { href: '/dashboard/mijn-werkweek', icon: Icons.briefcase, label: 'Mijn werkweek', iconAnim: 'icon-briefcase-hover',
+    description: 'Vul wekelijks in wat je liggen hebt, je beschikbaarheid en bijzonderheden. Partners gebruiken dit voor het werkverdelingsgesprek.' },
   { href: '/dashboard/office', icon: Icons.building, label: 'Office', iconAnim: 'icon-briefcase-hover',
     description: 'Wie van back office is op kantoor of remote + kantoortelefoon-regeling per dag.' },
   { href: '/dashboard/arbeidsvoorwaarden', icon: Icons.target, label: 'Mijn coachingbudget', iconAnim: 'icon-target-hover', hideForExternal: true,

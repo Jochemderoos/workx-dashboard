@@ -157,6 +157,9 @@ model User {
   performanceNotesAbout    PerformanceNote[] @relation("PerformanceNotesAbout")
   performanceNotesAuthored PerformanceNote[] @relation("PerformanceNotesAuthored")
 
+  // Week-intake (medewerker eigen werkweek-input)
+  weekIntakes              WeekIntake[]      @relation("WeekIntakes")
+
   @@index([isActive])
   @@index([role])
 }
@@ -2191,4 +2194,23 @@ model OfficePhoneDay {
   coverBy   String?
   note      String?
   updatedAt DateTime @updatedAt
+}
+
+// Medewerker week-intake — wat hebben ze liggen, beschikbaarheid en bijzonderheden.
+// Gevuld door medewerker, gelezen door partners in Werkverdelingsgesprekken.
+// Window: donderdag 15:00 vóór de target maandag → maandag 10:00 van de target week.
+model WeekIntake {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("WeekIntakes", fields: [userId], references: [id], onDelete: Cascade)
+  weekStartDate DateTime @db.Date // maandag van de target week
+  work          String   @db.Text
+  availability  String?  @db.Text
+  notes         String?  @db.Text
+  submittedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, weekStartDate])
+  @@index([weekStartDate])
 }

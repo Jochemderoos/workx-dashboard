@@ -77,6 +77,7 @@ const mobileMenuItems: MobileMenuItem[] = [
   // Team — werk
   { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', section: 'team', subGroup: 'werk' },
   { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', section: 'team', subGroup: 'werk' },
+  { href: '/dashboard/mijn-werkweek', icon: Icons.briefcase, label: 'Mijn werkweek', section: 'team', subGroup: 'werk' },
   { href: '/dashboard/office', icon: Icons.building, label: 'Office', section: 'team', subGroup: 'werk' },
   { href: '/dashboard/arbeidsvoorwaarden', icon: Icons.target, label: 'Mijn coachingbudget', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
   { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', section: 'team', subGroup: 'werk' },

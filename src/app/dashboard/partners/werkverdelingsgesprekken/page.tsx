@@ -68,12 +68,23 @@ function getCapacityLabel(value: CapacityValue) {
   return CAPACITY_OPTIONS.find(o => o.value === value)?.label || 'Niet ingevuld'
 }
 
+interface WeekIntake {
+  id: string
+  weekStartDate: string
+  work: string
+  availability: string | null
+  notes: string | null
+  submittedAt: string | null
+  user: { id: string; name: string }
+}
+
 export default function WerkverdelingsgesprekkenPage() {
   const [weeks, setWeeks] = useState<Week[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [activeWeekId, setActiveWeekId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [hasAccess, setHasAccess] = useState(false)
+  const [intakes, setIntakes] = useState<WeekIntake[]>([])
 
   // Local state for edits (keyed by `weekId-employeeId`)
   const [localData, setLocalData] = useState<Record<string, { capacity: CapacityValue; notes: string; partnerName: string }>>({})
@@ -146,6 +157,32 @@ export default function WerkverdelingsgesprekkenPage() {
     }
     fetchData()
   }, [hasAccess])
+
+  // Fetch week-intakes voor de actieve week (target maandag = maandag VOOR de meetingDate)
+  useEffect(() => {
+    if (!activeWeekId) return
+    const week = weeks.find(w => w.id === activeWeekId)
+    if (!week) return
+    const meeting = new Date(week.meetingDate)
+    // Bepaal maandag van de week waarin de meetingDate valt
+    const dow = meeting.getDay()
+    const diff = dow === 0 ? -6 : 1 - dow
+    const monday = new Date(meeting.getFullYear(), meeting.getMonth(), meeting.getDate() + diff)
+    const iso = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
+    fetch(`/api/week-intake/by-week?weekStartDate=${iso}`)
+      .then(r => r.ok ? r.json() : { intakes: [] })
+      .then(d => setIntakes(d.intakes || []))
+      .catch(() => setIntakes([]))
+  }, [activeWeekId, weeks])
+
+  // Build lookup: employeeId → intake (via firstName match omdat intake user.id niet altijd matcht met getEmployeeId fallback)
+  const intakeFor = useCallback((employeeName: string): WeekIntake | null => {
+    const targetFirst = employeeName.split(' ')[0].toLowerCase()
+    return intakes.find(it => {
+      const itFirst = it.user.name.split(' ')[0].toLowerCase()
+      return itFirst === targetFirst || it.user.name.toLowerCase() === employeeName.toLowerCase()
+    }) || null
+  }, [intakes])
 
   // Find partner assignment from distributions for a given employee in a given week
   const getPartnerForEmployee = useCallback((week: Week, employeeName: string): string => {
@@ -369,6 +406,8 @@ export default function WerkverdelingsgesprekkenPage() {
               const isEditingNote = editingNotes.has(key)
               const hasSavedNotes = !!(savedData[key]?.notes)
 
+              const intake = intakeFor(name)
+
               return (
                 <div key={name} className={`card p-4 border ${style.border} transition-all`}>
                   {/* Header: foto + naam + partner badge */}
@@ -405,6 +444,43 @@ export default function WerkverdelingsgesprekkenPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Intake van medewerker (read-only) */}
+                  {intake ? (
+                    <div className="mb-3 p-3 rounded-lg bg-workx-lime/5 border border-workx-lime/15 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] uppercase tracking-widest font-bold text-workx-lime flex items-center gap-1">
+                          <Icons.fileText size={10} />
+                          Eigen update
+                        </p>
+                        {intake.submittedAt && (
+                          <span className="text-[10px] text-gray-500">
+                            {new Date(intake.submittedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">📋 Werk</p>
+                        <p className="text-xs text-white/90 whitespace-pre-wrap leading-relaxed">{intake.work}</p>
+                      </div>
+                      {intake.availability && (
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">🌴 Afwezig</p>
+                          <p className="text-xs text-white/80 whitespace-pre-wrap leading-relaxed">{intake.availability}</p>
+                        </div>
+                      )}
+                      {intake.notes && (
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">💬 Bijzonderheden</p>
+                          <p className="text-xs text-white/80 whitespace-pre-wrap leading-relaxed">{intake.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mb-3 p-2.5 rounded-lg bg-white/[0.02] border border-dashed border-white/10">
+                      <p className="text-[11px] text-gray-500 italic">Nog geen eigen update ingevuld voor deze week.</p>
+                    </div>
+                  )}
 
                   {/* Capacity selector */}
                   <div className="mb-3">
