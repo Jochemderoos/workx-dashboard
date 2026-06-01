@@ -228,12 +228,20 @@ export default function WerkoverlegPage() {
         if (!selectedDayId && data.length > 0) {
           const todayStart = new Date()
           todayStart.setHours(0, 0, 0, 0)
-          const upcoming = [...data]
-            .filter((d: WerkoverlegDay) => new Date(d.meetingDate).getTime() >= todayStart.getTime())
-            .sort((a: WerkoverlegDay, b: WerkoverlegDay) =>
-              new Date(a.meetingDate).getTime() - new Date(b.meetingDate).getTime()
-            )[0]
-          setSelectedDayId(upcoming?.id || data[0].id)
+          // API geeft desc; sorteer asc voor positioning.
+          const asc = [...data].sort((a: WerkoverlegDay, b: WerkoverlegDay) =>
+            new Date(a.meetingDate).getTime() - new Date(b.meetingDate).getTime()
+          )
+          const upcomingIdx = asc.findIndex((d: WerkoverlegDay) =>
+            new Date(d.meetingDate).getTime() >= todayStart.getTime()
+          )
+          const targetIdx = upcomingIdx >= 0 ? upcomingIdx : asc.length - 1
+          setSelectedDayId(asc[targetIdx].id)
+          // Schuif de zichtbare 3-weken venster zo dat target rechts staat.
+          // visibleDays = asc.slice(endIndex - 3, endIndex), endIndex = totalDays - weekOffset
+          // Voor target rechts: endIndex = targetIdx + 1 → weekOffset = totalDays - (targetIdx + 1)
+          const offset = asc.length - (targetIdx + 1)
+          if (offset > 0) setWeekOffset(offset)
         }
       }
     } catch {
