@@ -105,6 +105,7 @@ const mobileMenuItems: MobileMenuItem[] = [
   { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['EXTERNAL'], section: 'partner' },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+  { href: '/dashboard/financien/omzet-classificatie', icon: Icons.pieChart, label: 'Omzet werknemer/werkgever', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
 
   // Extra (uitklapbaar)

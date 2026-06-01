@@ -108,6 +108,8 @@ export const partnersMenuItems: MenuItem[] = [
     description: 'Sollicitanten beheren, CVs uploaden, gesprekken plannen + sollicitatiebeleid.' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover',
     description: 'Omzet/kosten/saldo overzicht, jaarrekening.' },
+  { href: '/dashboard/financien/omzet-classificatie', icon: Icons.pieChart, label: 'Omzet werknemer/werkgever', iconAnim: 'icon-piechart-hover',
+    description: 'Omzet 2025 uitgesplitst naar werknemer- en werkgeverszaken.' },
   { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', iconAnim: 'icon-euro-hover',
     description: 'MT940-import, categorieën, vendor-aliases voor financiële administratie.' },
 ]
