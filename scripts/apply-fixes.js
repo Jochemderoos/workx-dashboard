@@ -1,0 +1,1 @@
+var fs=require("fs"),f="src/app/api/claude/chat/route.ts",c=fs.readFileSync(f,"utf8"),n=0;console.log("start",c.length);

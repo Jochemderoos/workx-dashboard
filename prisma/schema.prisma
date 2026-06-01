@@ -2215,16 +2215,3 @@ model WeekIntake {
   @@index([weekStartDate])
 }
 
-// Handmatige classificatie van klanten als 'werknemer' of 'werkgever'.
-// Wordt overlay op de heuristiek (eerste deel van projectName) toegepast.
-model ClientClassification {
-  id           String   @id @default(cuid())
-  clientKey    String   @unique  // genormaliseerde naam (lowercase, trimmed) — bv. "de koning"
-  displayName  String              // origineel zoals het in BaseNet staat
-  type         String              // 'WERKNEMER' | 'WERKGEVER'
-  notes        String?
-  updatedAt    DateTime @updatedAt
-  updatedById  String?
-
-  @@index([type])
-}
