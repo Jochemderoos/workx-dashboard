@@ -69,13 +69,14 @@ export const teamMenu_Tools: MenuItem[] = [
 
 export const teamMenu_Docs: MenuItem[] = [
   { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', iconAnim: 'icon-books-hover', hideForExternal: true,
-    description: 'The Way it Workx, Kantoorhandboek, Klachtenregeling, Wachtwoorden, Salarishuis, Stappenplan partner.',
+    description: 'The Way it Workx, Kantoorhandboek, Klachtenregeling, Wachtwoorden, Salarishuis, Tarieven, Stappenplan partner.',
     children: [
       { href: '/dashboard/hr-docs?doc=the-way-it-workx', icon: Icons.smile, label: 'The Way it Workx', description: 'Personeelshandboek: welkom, start, werkplek, team, ontwikkelen, veilig werken, vakantie, beloning.' },
       { href: '/dashboard/hr-docs?doc=kantoorhandboek', icon: Icons.shield, label: 'Kantoorhandboek', description: 'Vakbekwaamheid, kantoororganisatie, Wwft, Stichting Derdengelden.' },
       { href: '/dashboard/hr-docs?doc=klachtenregeling', icon: Icons.fileText, label: 'Klachtenregeling', description: 'Procedure bij klachten van cliënten.' },
       { href: '/dashboard/hr-docs?doc=wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', description: 'Gedeelde inloggegevens en belangrijke services.' },
-      { href: '/dashboard/hr-docs?doc=salarishuis', icon: Icons.euro, label: 'Salarishuis', description: 'Indicatieve salarisschalen per ervaringsjaar.' },
+      { href: '/dashboard/hr-docs?doc=salarishuis', icon: Icons.euro, label: 'Salarishuis', description: 'Indicatief bruto maandsalaris per ervaringsjaar.' },
+      { href: '/dashboard/hr-docs?doc=tarieven', icon: Icons.euro, label: 'Tarieven', description: 'Standaard uurtarieven + afwijkende klant-tarieven.' },
       { href: '/dashboard/hr-docs?doc=stappenplan-partner', icon: Icons.target, label: 'Stappenplan partner', description: 'Counsel → Director → Partner groeipad.' },
       { href: '/dashboard/hr-docs?doc=knowhow-officemanagement', icon: Icons.briefcase, label: 'Know how — Office Management', description: 'Telefoonnummers, inloggegevens, BaseNet tips, Doxflow.' },
     ] },

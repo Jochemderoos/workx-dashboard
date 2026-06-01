@@ -558,11 +558,11 @@ export const STAPPENPLAN_PARTNER: Document = {
   ],
 }
 
-// Salarishuis — tabel met salarisschalen per ervaringsjaar. Bewerkbaar door partner/admin.
+// Salarishuis — alleen bruto maandsalaris per ervaringsjaar.
 export const SALARISHUIS: Document = {
   id: 'salarishuis',
   title: 'Salarishuis',
-  description: 'Indicatieve salarisschalen per ervaringsjaar',
+  description: 'Indicatief bruto maandsalaris per ervaringsjaar',
   icon: '💶',
   lastUpdated: '2026',
   chapters: [
@@ -571,6 +571,23 @@ export const SALARISHUIS: Document = {
       title: 'Salarishuis',
       icon: '💶',
       content: '<!--component:salarishuis-->',
+    },
+  ],
+}
+
+// Tarieven — standaard uurtarieven per ervaringsjaar + afwijkende klant-tarieven.
+export const TARIEVEN: Document = {
+  id: 'tarieven',
+  title: 'Tarieven',
+  description: 'Standaard uurtarieven per ervaringsjaar + afwijkende klant-tarieven',
+  icon: '💰',
+  lastUpdated: '2026',
+  chapters: [
+    {
+      id: 'tarieven-content',
+      title: 'Tarieven',
+      icon: '💰',
+      content: '<!--component:tarieven-->',
     },
   ],
 }
@@ -599,5 +616,6 @@ export const DOCUMENTS: Document[] = [
   KLACHTENREGELING,
   WACHTWOORDEN,
   SALARISHUIS,
+  TARIEVEN,
   STAPPENPLAN_PARTNER,
 ]

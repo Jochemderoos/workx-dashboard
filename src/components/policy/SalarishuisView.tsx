@@ -95,10 +95,12 @@ export default function SalarishuisView() {
                 Salarishuis
               </p>
               <h2 className="text-3xl font-bold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
-                Tarieven per ervaringsjaar
+                Bruto maandsalaris per ervaringsjaar
               </h2>
               <p className="text-sm mt-2 max-w-2xl" style={{ color: 'var(--color-text-secondary)' }}>
-                Het salarishuis van Workx Advocaten. Alle medewerkers gaan per 1 maart elk jaar automatisch een stap omhoog.
+                Het salarishuis van Workx Advocaten: indicatieve bruto maandsalarissen per ervaringsjaar.
+                Alle medewerkers gaan per 1 maart elk jaar automatisch een stap omhoog.
+                Voor de uurtarieven die hierop gebaseerd zijn, zie het document <strong>Tarieven</strong>.
               </p>
             </div>
           </div>
@@ -129,7 +131,7 @@ export default function SalarishuisView() {
               Indicatief salarishuis
             </p>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-              Dit overzicht is <strong>indicatief</strong> en kan worden gewijzigd. Bedragen geven een richtlijn per ervaringsjaar; werkelijke salarissen worden bepaald in de arbeidsovereenkomst.
+              Dit salarisoverzicht is <strong>indicatief</strong> en kan worden gewijzigd. Bedragen geven een richtlijn voor het bruto maandsalaris per ervaringsjaar; werkelijke salarissen worden bepaald in de arbeidsovereenkomst.
             </p>
           </div>
         </div>
@@ -161,9 +163,7 @@ export default function SalarishuisView() {
                 <thead>
                   <tr style={{ background: 'var(--color-bg-glass)', borderBottom: '1px solid var(--color-border-subtle)' }}>
                     <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgb(140, 150, 30)' }}>Ervaringsjaar</th>
-                    <th className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgb(140, 150, 30)' }}>Bruto Salaris</th>
-                    <th className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgb(140, 150, 30)' }}>Uurtarief</th>
-                    <th className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgb(140, 150, 30)' }}>Range</th>
+                    <th className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgb(140, 150, 30)' }}>Bruto maandsalaris</th>
                     {bulkEdit && <th className="w-12"></th>}
                   </tr>
                 </thead>
@@ -205,48 +205,6 @@ export default function SalarishuisView() {
                             </>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-right">
-                          {isEditingRow ? (
-                            <input
-                              type="number"
-                              id={`hourlyRate-${scale.id}`}
-                              defaultValue={scale.hourlyRateBase}
-                              className="rounded-md px-2 py-1 text-sm w-20 text-right focus:outline-none"
-                              style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
-                            />
-                          ) : (
-                            <span className="font-bold tabular-nums" style={{ color: 'rgb(140, 150, 30)' }}>€{scale.hourlyRateBase}</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {isEditingRow ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                id={`rateMin-${scale.id}`}
-                                defaultValue={scale.hourlyRateMin || ''}
-                                placeholder="min"
-                                className="rounded-md px-2 py-1 text-sm w-16 text-right focus:outline-none"
-                                style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
-                              />
-                              <span style={{ color: 'var(--color-text-tertiary)' }}>–</span>
-                              <input
-                                type="number"
-                                id={`rateMax-${scale.id}`}
-                                defaultValue={scale.hourlyRateMax || ''}
-                                placeholder="max"
-                                className="rounded-md px-2 py-1 text-sm w-16 text-right focus:outline-none"
-                                style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
-                              />
-                            </div>
-                          ) : scale.hourlyRateMin && scale.hourlyRateMax ? (
-                            <span className="text-sm tabular-nums" style={{ color: 'var(--color-text-secondary)' }}>
-                              €{scale.hourlyRateMin} – €{scale.hourlyRateMax}
-                            </span>
-                          ) : (
-                            <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-                          )}
-                        </td>
                         {bulkEdit && (
                           <td className="py-3 px-2">
                             {isEditingRow ? (
@@ -254,14 +212,8 @@ export default function SalarishuisView() {
                                 <button
                                   onClick={() => {
                                     const salary = (document.getElementById(`salary-${scale.id}`) as HTMLInputElement).value
-                                    const rate = (document.getElementById(`hourlyRate-${scale.id}`) as HTMLInputElement).value
-                                    const min = (document.getElementById(`rateMin-${scale.id}`) as HTMLInputElement).value
-                                    const max = (document.getElementById(`rateMax-${scale.id}`) as HTMLInputElement).value
                                     saveScale(scale, {
                                       salary: parseFloat(salary) || scale.salary,
-                                      hourlyRateBase: parseFloat(rate) || scale.hourlyRateBase,
-                                      hourlyRateMin: parseFloat(min) || null,
-                                      hourlyRateMax: parseFloat(max) || null,
                                     })
                                   }}
                                   className="p-1.5 rounded-md transition-colors"

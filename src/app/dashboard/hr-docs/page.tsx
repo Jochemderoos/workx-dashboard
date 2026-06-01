@@ -12,6 +12,7 @@ import WwftGuide from '@/components/policy/WwftGuide'
 import KantoororganisatieGuide from '@/components/policy/KantoororganisatieGuide'
 import VeiligWerkenGuide from '@/components/policy/VeiligWerkenGuide'
 import SalarishuisView from '@/components/policy/SalarishuisView'
+import TarievenView from '@/components/policy/TarievenView'
 import WachtwoordenView from '@/components/policy/WachtwoordenView'
 import { DOCUMENTS as BASE_DOCUMENTS, Chapter, Document } from './documents'
 import { KNOWHOW_OFFICEMANAGEMENT } from './knowhow-document'
@@ -753,6 +754,8 @@ export default function HRDocsPage() {
                 <VeiligWerkenGuide />
               ) : chapter.content.trim() === '<!--component:salarishuis-->' ? (
                 <SalarishuisView />
+              ) : chapter.content.trim() === '<!--component:tarieven-->' ? (
+                <TarievenView />
               ) : chapter.content.trim() === '<!--component:wachtwoorden-->' ? (
                 <WachtwoordenView />
               ) : (
