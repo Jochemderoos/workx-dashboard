@@ -99,6 +99,7 @@ const mobileMenuItems: MobileMenuItem[] = [
   { href: '/dashboard/partners/verantwoordelijk', icon: Icons.users, label: 'Verantwoordelijk', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Partner agenda/notulen', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
+  { href: '/dashboard/partners/coaching-budgetten', icon: Icons.target, label: 'Coaching-budgetten', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['EXTERNAL'], section: 'partner' },
   { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
