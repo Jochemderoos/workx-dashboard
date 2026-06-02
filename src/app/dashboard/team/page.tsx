@@ -1485,6 +1485,25 @@ export default function TeamPage() {
               <Icons.dollarSign size={16} />
               <span className="hidden sm:inline">Uurtarief</span>
             </button>
+            <button
+              onClick={async () => {
+                if (!confirm('Importeer telefoonnummers van workxadvocaten.nl voor alle teamleden (idempotent — overschrijft bestaande nummers).')) return
+                try {
+                  const res = await fetch('/api/team/bulk-import-phones', { method: 'POST' })
+                  if (!res.ok) throw new Error()
+                  const data = await res.json()
+                  alert(`${data.updated.length} bijgewerkt, ${data.skipped.length} overgeslagen.\n\nBijgewerkt:\n${data.updated.map((u: { name: string; newPhone: string }) => `• ${u.name} → ${u.newPhone}`).join('\n')}`)
+                  window.location.reload()
+                } catch {
+                  alert('Import mislukt')
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 font-medium rounded-xl transition-all border border-purple-500/20"
+              title="Eenmalige import van telefoonnummers vanuit workxadvocaten.nl"
+            >
+              <Icons.phone size={16} />
+              <span className="hidden sm:inline">Tel.import</span>
+            </button>
           </div>
         )}
       </div>
