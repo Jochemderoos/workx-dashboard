@@ -660,9 +660,36 @@ export default function KostenPage() {
           {/* Active month panel */}
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl mb-8">
             <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between rounded-t-2xl bg-white/[0.02]">
-              <div>
-                <h2 className="text-lg font-semibold text-white">{MONTHS[activeMonth]} {year}</h2>
-                <p className="text-xs text-gray-500">{byMonth[activeMonth].length} posten</p>
+              <div className="flex items-center gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">{MONTHS[activeMonth]} {year}</h2>
+                  <p className="text-xs text-gray-500">{byMonth[activeMonth].length} posten</p>
+                </div>
+                {byMonth[activeMonth].length > 0 && (
+                  <button
+                    onClick={async () => {
+                      const count = byMonth[activeMonth].length
+                      if (!confirm(`Alle ${count} kostenposten van ${MONTHS[activeMonth]} ${year} verwijderen? Dit kan niet ongedaan worden gemaakt — je kunt ze daarna opnieuw via MT940 importeren.`)) return
+                      try {
+                        const res = await fetch('/api/monthly-costs/clear-month', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ year, month: activeMonth }),
+                        })
+                        if (!res.ok) throw new Error()
+                        const data = await res.json()
+                        toast.success(`${data.deleted} posten verwijderd`)
+                        await fetchData()
+                      } catch {
+                        toast.error('Kon maand niet wissen')
+                      }
+                    }}
+                    className="text-[11px] px-2.5 py-1 rounded-md bg-red-500/10 text-red-300 border border-red-500/30 hover:bg-red-500/20 transition-colors"
+                    title="Verwijder alle posten van deze maand"
+                  >
+                    🗑 Wis hele maand
+                  </button>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-500">Subtotaal ex BTW</p>
