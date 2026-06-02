@@ -124,15 +124,33 @@ export default function WerkverdelingsgesprekkenPage() {
         setWeeks(data.weeks)
         setEmployees(data.employees)
         if (data.weeks.length > 0) {
-          // API levert chronologisch op (oud → nieuw); pak de eerstvolgende
-          // toekomstige vergadering (incl. vandaag) als actieve tab, of de
-          // meest recente als geen toekomstige bestaat.
-          const todayStart = new Date()
-          todayStart.setHours(0, 0, 0, 0)
-          const upcoming = (data.weeks as Week[]).find(
-            (w) => new Date(w.meetingDate).getTime() >= todayStart.getTime()
+          // Active week = huidige werkweek (ma–vr van NU).
+          // Na maandag 10:00 (sluiting 'Mijn werkweek'-venster) springen
+          // we naar de volgende werkweek — dan vullen partners de
+          // gesprekken in voor de week die net is begonnen.
+          const now = new Date()
+          const day = now.getDay() // 0=zo, 1=ma, ..., 6=za
+          const dayOffset = day === 0 ? -6 : 1 - day // naar maandag
+          const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset)
+          monday.setHours(0, 0, 0, 0)
+          if (day === 1 && now.getHours() >= 10) {
+            monday.setDate(monday.getDate() + 7)
+          }
+          const upperBound = new Date(monday)
+          upperBound.setDate(monday.getDate() + 7)
+
+          // Vind MeetingWeek waarvan meetingDate in [monday, monday+7) valt.
+          const inThisWeek = (data.weeks as Week[]).find((w) => {
+            const md = new Date(w.meetingDate)
+            return md >= monday && md < upperBound
+          })
+
+          // Fallback: eerstvolgende toekomstige meeting, of laatste in lijst.
+          const fallback = (data.weeks as Week[]).find(
+            (w) => new Date(w.meetingDate).getTime() >= monday.getTime()
           )
-          setActiveWeekId(upcoming?.id || data.weeks[data.weeks.length - 1].id)
+
+          setActiveWeekId(inThisWeek?.id || fallback?.id || data.weeks[data.weeks.length - 1].id)
         }
 
         // Build local state from existing conversations
