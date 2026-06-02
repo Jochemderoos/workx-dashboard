@@ -51,6 +51,7 @@ interface EmployeeData {
   role: string
   startDate: string | null
   department: string | null
+  phoneNumber: string | null
   compensation: {
     experienceYear: number | null
     hourlyRate: number
