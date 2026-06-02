@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendDirectMessage } from '@/lib/slack'
 
 export async function GET() {
   try {
@@ -57,6 +58,14 @@ export async function PUT(req: NextRequest) {
       )
     }
 
+    // Detecteer of partner-toewijzing wijzigt (voor Slack DM)
+    const previous = await prisma.workConversation.findUnique({
+      where: { weekId_employeeId: { weekId, employeeId } },
+      select: { partnerName: true },
+    })
+    const previousAssigned = previous?.partnerName && previous.partnerName !== '-' ? previous.partnerName : null
+    const newAssigned = partnerName && partnerName !== '-' ? partnerName : null
+
     const conversation = await prisma.workConversation.upsert({
       where: {
         weekId_employeeId: { weekId, employeeId },
@@ -75,6 +84,43 @@ export async function PUT(req: NextRequest) {
         notes: notes || null,
       },
     })
+
+    // Slack DM naar medewerker bij nieuwe / gewijzigde partner-toewijzing
+    if (newAssigned && newAssigned !== previousAssigned) {
+      void (async () => {
+        try {
+          const employee = await prisma.user.findUnique({
+            where: { id: employeeId },
+            select: { email: true, name: true },
+          })
+          if (!employee?.email) return
+          const base = (process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app').replace(/\/$/, '')
+          const url = `${base}/dashboard`
+          const blocks = [
+            {
+              type: 'rich_text',
+              elements: [
+                {
+                  type: 'rich_text_section',
+                  elements: [
+                    { type: 'text', text: 'Werkverdelingsgesprek deze week\n', style: { bold: true } },
+                    { type: 'text', text: `Je hebt deze week een werkverdelingsgesprek met ${newAssigned}. Plan het samen in.\n→ ` },
+                    { type: 'link', url, text: 'Open dashboard' },
+                  ],
+                },
+              ],
+            },
+          ]
+          await sendDirectMessage(
+            employee.email,
+            `Werkverdelingsgesprek deze week met ${newAssigned}. ${url}`,
+            blocks as any
+          )
+        } catch (err) {
+          console.error('Slack DM voor werkverdelingsgesprek mislukt (non-blocking):', err)
+        }
+      })()
+    }
 
     return NextResponse.json(conversation)
   } catch (error) {
