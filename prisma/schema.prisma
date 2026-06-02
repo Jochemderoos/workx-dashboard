@@ -2215,3 +2215,16 @@ model WeekIntake {
   @@index([weekStartDate])
 }
 
+
+// Log van debiteuren- en kosten-uploads. Wordt gebruikt om Jochem/Hanna/Lotte
+// in hun notification-bell te tonen wie wat heeft geupload.
+model ImportEvent {
+  id           String   @id @default(cuid())
+  type         String   // 'DEBITEUREN' | 'KOSTEN'
+  uploaderId   String
+  uploaderName String
+  summary      String
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}

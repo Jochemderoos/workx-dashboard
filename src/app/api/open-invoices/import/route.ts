@@ -5,6 +5,11 @@ import { prisma } from '@/lib/prisma'
 import { parseDebiteurenPDF, parseDebiteurenWord, matchAttorney } from '@/lib/parse-debiteuren-pdf'
 import { notifyImport } from '@/lib/slack-import-notify'
 
+// PDF + Word parsing kan veel facturen tegelijk verwerken — verhoog de timeout
+// boven Vercel's default 10s. 5 minuten is genoeg en is het maximum voor Pro.
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
+
 async function requireManager() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { error: NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 }) }

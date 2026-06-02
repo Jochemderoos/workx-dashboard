@@ -126,6 +126,34 @@ export async function GET() {
       select: { role: true, name: true },
     })
 
+    // 3b. Recent debiteuren/kosten uploads — alleen voor Jochem / Hanna / Lotte,
+    // en niet voor de uploader zelf.
+    const firstName = currentUser?.name?.split(' ')[0] || ''
+    if (['Jochem', 'Hanna', 'Lotte'].includes(firstName)) {
+      const recentImports = await prisma.importEvent.findMany({
+        where: {
+          createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+          uploaderId: { not: userId },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      })
+      recentImports.forEach((ev) => {
+        const key = `import-${ev.id}`
+        if (dismissedKeys.has(key)) return
+        const isDebiteuren = ev.type === 'DEBITEUREN'
+        notifications.push({
+          id: key,
+          type: 'import',
+          title: isDebiteuren ? 'Debiteuren-upload' : 'Kosten-upload',
+          message: `${ev.uploaderName} — ${ev.summary}`,
+          createdAt: ev.createdAt,
+          read: false,
+          href: isDebiteuren ? '/dashboard/debiteuren' : '/dashboard/kosten',
+        })
+      })
+    }
+
     if (currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER') {
       const unprocessedFeedback = await prisma.feedback.count({
         where: { processed: false },
