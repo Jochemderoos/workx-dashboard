@@ -1523,6 +1523,28 @@ export default function TeamPage() {
               <Icons.phone size={16} />
               <span className="hidden sm:inline">Tel.import</span>
             </button>
+            <button
+              onClick={async () => {
+                if (!confirm('Importeer ontbrekende emails vanuit workxadvocaten.nl.\n\nBestaande emails worden NIET overschreven (login-afhankelijkheid). Alleen lege of placeholder-emails worden ingevuld.')) return
+                try {
+                  const res = await fetch('/api/team/bulk-import-emails', { method: 'POST' })
+                  if (!res.ok) throw new Error()
+                  const data = await res.json()
+                  const updated = data.updated.length > 0
+                    ? `\n\nBijgewerkt:\n${data.updated.map((u: { name: string; newEmail: string }) => `• ${u.name} → ${u.newEmail}`).join('\n')}`
+                    : '\n\nGeen lege emails gevonden — alle teamleden hebben al een email.'
+                  alert(`${data.updated.length} bijgewerkt, ${data.skippedExisting.length} hadden al een email.${updated}`)
+                  window.location.reload()
+                } catch {
+                  alert('Import mislukt')
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 font-medium rounded-xl transition-all border border-pink-500/20"
+              title="Vul ontbrekende emails in (overschrijft niet)"
+            >
+              <Icons.mail size={16} />
+              <span className="hidden sm:inline">Email-import</span>
+            </button>
           </div>
         )}
       </div>
