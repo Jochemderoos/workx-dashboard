@@ -122,10 +122,24 @@ export default function DebiteurenPage() {
   // bv. 20 Stek-zaken het overzicht vervuilen. Aanschrijven is bij deze
   // partijen niet relevant (loopt via onderling kanaal).
   const COLLAPSIBLE_CLIENTS: { id: string; label: string; patterns: RegExp[] }[] = [
-    { id: 'stek', label: 'Stek Advocaten', patterns: [/\bstek\b/i] },
-    { id: 'debrij', label: 'DeBrij', patterns: [/\bde\s*brij\b/i] },
-    { id: 'jblaw', label: 'JB Law', patterns: [/\bjb[\s-]*law\b/i] },
-    { id: 'vcl', label: 'Van Campen Liem', patterns: [/van\s*campen\s*liem/i, /\bcampen\s*liem\b/i] },
+    { id: 'stek', label: 'Stek Advocaten', patterns: [
+      /\bstek\b/i,
+      /stek[\s-]*advocaten/i,
+    ] },
+    { id: 'debrij', label: 'DeBrij', patterns: [
+      /\bde\s*brij\b/i,
+      /\bdebrij\b/i,
+    ] },
+    { id: 'jblaw', label: 'JB Law', patterns: [
+      /\bjb[\s-]*law\b/i,
+      /\bjblaw\b/i,
+    ] },
+    { id: 'vcl', label: 'Van Campen Liem', patterns: [
+      /van\s*campen\s*liem/i,
+      /\bcampen\s*liem\b/i,
+      /\bvancampenliem\b/i,
+      /\bvcl\b/i,
+    ] },
   ]
   const matchCollapsible = (inv: { clientName?: string | null; projectName?: string | null }) => {
     const hay = `${inv.clientName || ''} ${inv.projectName || ''}`
