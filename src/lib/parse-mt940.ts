@@ -110,8 +110,15 @@ function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | null {
   return null
 }
 
-function hashTransaction(dateIso: string, amount: number, rawKey: string): string {
-  const key = `${dateIso}|${amount.toFixed(2)}|${rawKey}`
+// Stabiele hash op basis van de RUWE bank-data (datum + bedrag + ruwe
+// description). Niet baseren op normalizeVendor-output omdat die tussen
+// code-versies kan verschuiven en dezelfde transactie dan een andere
+// externalRef krijgt → dubbele imports.
+function hashTransaction(dateIso: string, amount: number, rawDesc: string): string {
+  // Normaliseer alleen whitespace en case in de hash-input; verander
+  // verder niets aan de oorspronkelijke description.
+  const stable = rawDesc.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 200)
+  const key = `${dateIso}|${amount.toFixed(2)}|${stable}`
   return crypto.createHash('sha256').update(key).digest('hex').slice(0, 20)
 }
 
@@ -159,7 +166,8 @@ export function parseMT940(content: string): MT940Transaction[] {
           amount: currentTx.amount,
           description: finalDesc,
           rawKey: finalRawKey,
-          externalRef: hashTransaction(dateIso, currentTx.amount, finalRawKey),
+          // Hash op ruwe bank-description (stabiel tussen code-versies)
+          externalRef: hashTransaction(dateIso, currentTx.amount, currentTx.desc),
           category,
         })
       } else if (detected === 'UWV' || detected === 'ASR') {
@@ -173,7 +181,8 @@ export function parseMT940(content: string): MT940Transaction[] {
           amount: negAmount,
           description: label,
           rawKey: `${detected}:${rawKey}`,
-          externalRef: hashTransaction(dateIso, negAmount, `${detected}:${rawKey}`),
+          // Hash op ruwe bank-description (stabiel)
+          externalRef: hashTransaction(dateIso, negAmount, currentTx.desc),
           category: detected,
         })
       }
