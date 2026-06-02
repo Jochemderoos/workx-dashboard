@@ -92,7 +92,7 @@ export const TEAM_CV_PAGES: Record<string, number> = {
   'Justine Schellekens': 21,
   'Wies van Pesch': 22,
   'Emma van der Vos': 23,
-  'Alain Heunen': 24,
+  'Alexander Collot d\'Escury': 24,
   'Erika van Zadelhof': 25,
   'Heleen Pesser': 26,
   'Julia Groen': 27,
