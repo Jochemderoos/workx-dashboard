@@ -16,11 +16,13 @@ export const OFFICE_PEOPLE: OfficePerson[] = [
 
 export const OFFICE_PERSON_KEYS = OFFICE_PEOPLE.map(p => p.key)
 
-// Wie mag het office-schema bewerken? ADMIN-rol, of een van de office-personen
-// (op naam-match, voor gevallen waar Lotte/Bente/Diyar geen ADMIN-rol hebben).
+// Wie mag het office-schema bewerken? ADMIN of PARTNER-rol, of een van de
+// office-personen op naam-match (voor Lotte/Bente/Diyar zonder ADMIN-rol).
+// Partners hebben edit-rechten zodat ze bij afwezigheid van office-team ook
+// kunnen bijwerken én voor testdoeleinden.
 export function canEditOffice(session: { user?: { name?: string | null; role?: string | null } } | null | undefined): boolean {
   if (!session?.user) return false
-  if (session.user.role === 'ADMIN') return true
+  if (session.user.role === 'ADMIN' || session.user.role === 'PARTNER') return true
   const name = session.user.name?.toLowerCase() || ''
   return OFFICE_PEOPLE.some(p => p.name.toLowerCase() === name)
 }
