@@ -13,25 +13,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
-    // Selectie: alle weken in een rolling venster (-12 maanden tot +6 maanden)
-    // PLUS alle weken waar al een WorkConversation in zit (zodat ingevulde
-    // data nooit verdwijnt door filterwijzigingen, ongeacht meetingDate).
-    // Chronologisch terug naar de client; de pagina kiest standaard de
-    // eerstvolgende toekomstige vergadering.
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const rangeStart = new Date(today)
-    rangeStart.setMonth(rangeStart.getMonth() - 12)
-    const rangeEnd = new Date(today)
-    rangeEnd.setMonth(rangeEnd.getMonth() + 6)
-
+    // Selectie: ALLE MeetingWeek-records, chronologisch.
+    // Geen filter — zo blijven historische gesprekken altijd zichtbaar.
+    // De pagina kiest standaard de eerstvolgende toekomstige vergadering
+    // als actieve tab.
     const weeks = await prisma.meetingWeek.findMany({
-      where: {
-        OR: [
-          { meetingDate: { gte: rangeStart, lte: rangeEnd } },
-          { conversations: { some: {} } },
-        ],
-      },
       orderBy: { meetingDate: 'asc' },
       include: { distributions: true, conversations: true },
     })
