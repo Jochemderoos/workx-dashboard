@@ -664,6 +664,24 @@ export default function TeamPage() {
                     {yearsAtWorkx !== null && yearsAtWorkx > 0 && ` (${yearsAtWorkx} jaar)`}
                   </p>
                 )}
+                {employee.phoneNumber && (
+                  <a
+                    href={`tel:${employee.phoneNumber.replace(/\s/g, '')}`}
+                    className="text-gray-400 hover:text-workx-lime text-xs mt-1 flex items-center gap-1 transition-colors w-fit"
+                  >
+                    <Icons.phone size={11} />
+                    {employee.phoneNumber}
+                  </a>
+                )}
+                {employee.email && (
+                  <a
+                    href={`mailto:${employee.email}`}
+                    className="text-gray-400 hover:text-workx-lime text-xs mt-0.5 flex items-center gap-1 transition-colors w-fit truncate"
+                  >
+                    <Icons.mail size={11} />
+                    <span className="truncate">{employee.email}</span>
+                  </a>
+                )}
               </div>
             </div>
           </div>
