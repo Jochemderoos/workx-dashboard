@@ -54,6 +54,9 @@ export async function POST(req: NextRequest) {
         skipped++
         continue
       }
+      // BINNEN-BATCH dedup: als deze externalRef nu wordt toegevoegd,
+      // zorg dat hij hierna ook als 'duplicate' wordt herkend.
+      if (it.externalRef) dupSet.add(it.externalRef)
       const key = `${it.year}-${it.month}`
       if (!(key in sortByMonth)) {
         const maxSort = await prisma.monthlyCost.aggregate({
