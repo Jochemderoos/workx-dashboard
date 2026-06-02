@@ -2,7 +2,7 @@
 // - Slack-post in #workx-algemeen
 // - Push naar alle active employees/partners
 //
-// Schedule in vercel.json: 45 6 * * 1  (= 08:45 NL zomertijd, 07:45 winter)
+// Schedule in vercel.json: 0 7 * * 1  (= 09:00 NL zomertijd, 08:00 winter)
 
 import { NextRequest, NextResponse } from 'next/server'
 import { sendChannelMessage } from '@/lib/slack'

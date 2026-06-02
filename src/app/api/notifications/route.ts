@@ -428,6 +428,54 @@ export async function GET() {
       }
     }
 
+    // 14. Werkverdeling invullen — vanaf donderdag 15:00 NL tot maandag 09:00 NL
+    //     (wanneer de Slack-reminder fired). Alleen voor EMPLOYEE.
+    if (currentUser?.role === 'EMPLOYEE') {
+      const nlNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }))
+      const nlDay = nlNow.getDay() // 0=zo, 1=ma, ..., 4=do
+      const nlHour = nlNow.getHours()
+
+      const inWindow =
+        (nlDay === 4 && nlHour >= 15) ||
+        nlDay === 5 || nlDay === 6 || nlDay === 0 ||
+        (nlDay === 1 && nlHour < 9)
+
+      if (inWindow) {
+        // Doelweek: aanstaande maandag (vandaag als vandaag al maandag is)
+        const targetMonday = new Date(nlNow)
+        if (nlDay !== 1) {
+          const daysUntilMonday = (1 - nlDay + 7) % 7 || 7
+          targetMonday.setDate(targetMonday.getDate() + daysUntilMonday)
+        }
+        targetMonday.setHours(0, 0, 0, 0)
+
+        // Skip als al ingevuld
+        const submitted = await prisma.weekIntake.findUnique({
+          where: { userId_weekStartDate: { userId, weekStartDate: targetMonday } },
+          select: { submittedAt: true },
+        }).catch(() => null)
+
+        if (!submitted?.submittedAt) {
+          const isoTarget = targetMonday.toISOString().slice(0, 10)
+          const key = `werkverdeling-invullen-${isoTarget}`
+          if (!dismissedKeys.has(key)) {
+            const weekStr = targetMonday.toLocaleDateString('nl-NL', {
+              day: 'numeric', month: 'long', timeZone: 'Europe/Amsterdam',
+            })
+            notifications.push({
+              id: key,
+              type: 'system',
+              title: 'Werkverdeling invullen',
+              message: `Vul je werkweek in voor de week van ${weekStr}.`,
+              createdAt: nlNow,
+              read: false,
+              href: '/dashboard/mijn-werkweek',
+            })
+          }
+        }
+      }
+    }
+
     // 12. Werkoverleg actiepunten reminder (elke maandag)
     if (now.getDay() === 1) {
       const werkoverlegKey = `werkoverleg-acties-${now.toISOString().split('T')[0]}`
