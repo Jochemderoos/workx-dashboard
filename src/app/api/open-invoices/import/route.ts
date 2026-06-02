@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseDebiteurenPDF, parseDebiteurenWord, matchAttorney } from '@/lib/parse-debiteuren-pdf'
+import { notifyImport } from '@/lib/slack-import-notify'
 
 async function requireManager() {
   const session = await getServerSession(authOptions)
@@ -151,6 +152,20 @@ export async function POST(req: NextRequest) {
     if (toRemove.length > 0) {
       await prisma.openInvoice.deleteMany({ where: { id: { in: toRemove.map(t => t.id) } } })
       removed = toRemove.length
+    }
+
+    // Slack DM naar Jochem / Hanna / Lotte (uploader uitgesloten) — niet-blokkerend
+    const uploader = await prisma.user.findUnique({
+      where: { id: guard.session!.user.id },
+      select: { id: true, name: true },
+    })
+    if (uploader) {
+      void notifyImport({
+        uploaderId: uploader.id,
+        uploaderName: uploader.name,
+        type: 'debiteuren',
+        summary: `${upserted} facturen bijgewerkt${removed > 0 ? `, ${removed} betaald (weg)` : ''}.`,
+      })
     }
 
     return NextResponse.json({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyImport } from '@/lib/slack-import-notify'
 
 async function requireAccess() {
   const session = await getServerSession(authOptions)
@@ -70,6 +71,22 @@ export async function POST(req: NextRequest) {
         },
       })
       added++
+    }
+
+    // Slack DM naar Jochem / Hanna / Lotte (uploader uitgesloten) — niet-blokkerend
+    if (added > 0) {
+      const uploader = await prisma.user.findUnique({
+        where: { id: guard.session!.user.id },
+        select: { id: true, name: true },
+      })
+      if (uploader) {
+        void notifyImport({
+          uploaderId: uploader.id,
+          uploaderName: uploader.name,
+          type: 'kosten',
+          summary: `${added} kostenposten toegevoegd${skipped > 0 ? `, ${skipped} overgeslagen (duplicaten)` : ''}.`,
+        })
+      }
     }
 
     return NextResponse.json({ added, skipped })
