@@ -294,7 +294,8 @@ export default function DebiteurenPage() {
       toast.success(`${data.upserted} facturen bijgewerkt${data.removed > 0 ? `, ${data.removed} betaald (weg)` : ''}`)
     } catch (err) {
       console.error('Import error:', err)
-      toast.error('Import mislukt — kon bestand niet uitlezen')
+      const msg = err instanceof Error ? err.message : 'onbekende fout'
+      toast.error(`Import mislukt: ${msg}`, { duration: 8000 })
     } finally {
       setImporting(false)
     }
