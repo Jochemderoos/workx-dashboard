@@ -473,14 +473,26 @@ export default function WerkverdelingsgesprekkenPage() {
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-[10px] text-gray-600 uppercase tracking-wider">Partner</span>
                         <select
-                          value={data.partnerName && data.partnerName !== '-' ? data.partnerName : ''}
+                          // Normaliseer naar voornaam: notulen-distribution slaat
+                          // 'Jochem' op, oude conversations soms 'Jochem de Roos'.
+                          // Beide moeten matchen met option value = voornaam.
+                          value={(() => {
+                            const v = data.partnerName && data.partnerName !== '-' ? data.partnerName : ''
+                            if (!v) return ''
+                            const lc = v.toLowerCase()
+                            const match = PARTNER_OPTIONS.find(p =>
+                              p.toLowerCase() === lc || p.split(' ')[0].toLowerCase() === lc
+                            )
+                            return match ? match.split(' ')[0] : ''
+                          })()}
                           onChange={(e) => handleChange(activeWeek.id, name, 'partnerName', e.target.value || '-')}
                           className="text-xs bg-transparent border border-white/10 rounded-md px-1.5 py-0.5 text-gray-300 hover:border-workx-lime/30 focus:border-workx-lime/40 focus:outline-none cursor-pointer"
                         >
                           <option value="" className="bg-workx-dark">— niet toegewezen —</option>
-                          {PARTNER_OPTIONS.map(p => (
-                            <option key={p} value={p} className="bg-workx-dark">{p.split(' ')[0]}</option>
-                          ))}
+                          {PARTNER_OPTIONS.map(p => {
+                            const first = p.split(' ')[0]
+                            return <option key={p} value={first} className="bg-workx-dark">{first}</option>
+                          })}
                         </select>
                       </div>
                     </div>
