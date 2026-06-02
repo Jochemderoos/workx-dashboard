@@ -21,9 +21,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const existing = await prisma.monthlyCost.findUnique({ where: { id: params.id } })
     if (!existing) return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
 
-    const data: { amount?: number; description?: string } = {}
+    const data: { amount?: number; description?: string; category?: string | null } = {}
     if (body.amount !== undefined) data.amount = Number(body.amount)
     if (body.description !== undefined) data.description = String(body.description).trim()
+    if (body.category !== undefined) data.category = body.category === null ? null : String(body.category)
 
     const updated = await prisma.monthlyCost.update({ where: { id: params.id }, data })
 

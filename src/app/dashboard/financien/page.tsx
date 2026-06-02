@@ -196,6 +196,11 @@ export default function FinancienPage() {
           for (const it of [...d2026, ...d2025] as { year: number; month: number; amount: number; description?: string; category?: string | null }[]) {
             if (it.month < 1 || it.month > 12) continue
             const exBtw = amountExVat({ amount: it.amount, description: it.description, category: it.category })
+            if (it.category === 'BALANS') {
+              // Balansposten (waarborgsommen, vooruitbetalingen, deposito's) —
+              // geen operationele kosten; horen op de balans, niet in W&V.
+              continue
+            }
             if (it.category === 'UWV') {
               if (!uwv[it.year]) uwv[it.year] = Array(12).fill(0)
               uwv[it.year][it.month - 1] += Math.abs(it.amount)
