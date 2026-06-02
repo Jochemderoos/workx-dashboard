@@ -468,6 +468,29 @@ export default function KostenPage() {
                 <Icons.alertTriangle size={14} />
                 Dubbele posten
               </a>
+              <button
+                onClick={async () => {
+                  if (!confirm('Alle rijen met "waarborgsom" / "borgsom" / "deposito" / "vooruitbetaling" in de omschrijving worden als balanspost gemarkeerd (geen kost meer). Doorgaan?')) return
+                  try {
+                    const res = await fetch('/api/monthly-costs/fix-balanspost', { method: 'POST' })
+                    if (!res.ok) throw new Error()
+                    const data = await res.json()
+                    if (data.updated === 0) {
+                      toast.success('Geen rijen gevonden — alles staat al goed.')
+                    } else {
+                      toast.success(`${data.updated} balansposten gemarkeerd`)
+                    }
+                    await fetchData()
+                  } catch {
+                    toast.error('Kon balansposten niet markeren')
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 text-blue-300 text-sm font-medium border border-blue-500/30 hover:bg-blue-500/20 transition-colors"
+                title="Markeer waarborgsommen en deposito's als balansposten"
+              >
+                <Icons.layers size={14} />
+                Auto-fix balansposten
+              </button>
             </>
           )}
         </div>
