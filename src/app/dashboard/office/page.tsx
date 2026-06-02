@@ -105,7 +105,6 @@ export default function OfficePage() {
   const [phoneDays, setPhoneDays] = useState<PhoneDay[]>([])
   const [loading, setLoading] = useState(true)
   const [weekOffset, setWeekOffset] = useState(0)
-  const [editMode, setEditMode] = useState(false)
   const [phoneEditFor, setPhoneEditFor] = useState<string | null>(null)
 
   useEffect(() => {
@@ -178,11 +177,12 @@ export default function OfficePage() {
 
   const cycleStatus = async (personKey: string, date: Date, current: Status | null) => {
     const dateStr = isoDateOnly(date)
-    const next: Record<Status, Status> = { OFFICE: 'REMOTE', REMOTE: 'ABSENT', ABSENT: 'OFFICE' }
+    // Cycle: leeg (= afwezig) → OFFICE → REMOTE → leeg. Geen aparte ABSENT-klik.
+    // Legacy ABSENT-records cyclen ook terug naar leeg.
     let newStatus: Status | null
     if (!current) newStatus = 'OFFICE'
-    else if (current === 'ABSENT') newStatus = null
-    else newStatus = next[current]
+    else if (current === 'OFFICE') newStatus = 'REMOTE'
+    else newStatus = null // REMOTE → leeg, ABSENT → leeg
 
     try {
       if (newStatus === null) {
@@ -258,16 +258,7 @@ export default function OfficePage() {
           </p>
         </div>
         {canEdit && (
-          <button
-            onClick={() => setEditMode(v => !v)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              editMode
-                ? 'bg-workx-lime text-workx-dark'
-                : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
-            }`}
-          >
-            {editMode ? 'Klaar' : 'Bewerken'}
-          </button>
+          <p className="text-xs text-gray-500">Klik op een cel om Kantoor / Remote / Afwezig te kiezen.</p>
         )}
       </div>
 
@@ -364,7 +355,7 @@ export default function OfficePage() {
             today={today}
             lookup={lookup}
             phoneLookup={phoneLookup}
-            editMode={editMode && canEdit}
+            editMode={canEdit}
             onCycle={cycleStatus}
             onPhoneEdit={(d) => setPhoneEditFor(isoDateOnly(d))}
             onOfficeNames={onOfficeNames}
@@ -375,7 +366,7 @@ export default function OfficePage() {
             today={today}
             lookup={lookup}
             phoneLookup={phoneLookup}
-            editMode={editMode && canEdit}
+            editMode={canEdit}
             onCycle={cycleStatus}
             onPhoneEdit={(d) => setPhoneEditFor(isoDateOnly(d))}
             onOfficeNames={onOfficeNames}
@@ -386,23 +377,21 @@ export default function OfficePage() {
       {/* Legenda */}
       <div className="rounded-xl border border-white/5 bg-white/[0.02] px-5 py-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
         <span className="text-gray-500 uppercase tracking-widest font-medium">Legenda</span>
-        {(['OFFICE', 'REMOTE', 'ABSENT'] as Status[]).map(s => {
-          const cfg = STATUS_CONFIG[s]
-          return (
-            <span key={s} className={`flex items-center gap-1.5 ${cfg.text}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${cfg.bar}`} />
-              {cfg.label}
-            </span>
-          )
-        })}
-        {canEdit && (
-          <span className="text-gray-500 ml-auto">
-            {editMode ? 'Klik op een cel om door de statussen te wisselen.' : 'Zet "Bewerken" aan om aan te passen.'}
-          </span>
-        )}
+        <span className={`flex items-center gap-1.5 ${STATUS_CONFIG.OFFICE.text}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG.OFFICE.bar}`} />
+          Op kantoor
+        </span>
+        <span className={`flex items-center gap-1.5 ${STATUS_CONFIG.REMOTE.text}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG.REMOTE.bar}`} />
+          Remote
+        </span>
+        <span className="flex items-center gap-1.5 text-gray-500">
+          <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
+          Afwezig (niet ingevuld)
+        </span>
       </div>
 
-      {/* Phone-edit modal */}
+      {/* Phone-edit modal — open voor iedereen die canEdit heeft */}
       {phoneEditFor && canEdit && (
         <PhoneEditModal
           date={new Date(phoneEditFor)}
