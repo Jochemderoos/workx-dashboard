@@ -52,24 +52,32 @@ export async function POST(req: NextRequest) {
       select: { id: true, name: true },
     })
 
-    let upserted = 0
-    let removed = 0
-    const newInvoiceNumbers = new Set<string>()
-
-    // Bepaal de master-set facturen: alle in Word + alle in PDF (Word usually
-    // is een superset). Voor de tweede uitzondering (alleen-PDF) blijven we
-    // backward-compatible — geen Word geupload? Dan is PDF de master.
+    // Bepaal de master-set facturen: alle in Word + alle in PDF.
     const allInvoiceNumbers = new Set<string>([
       ...Array.from(wordMap.keys()),
       ...Array.from(pdfMap.keys()),
     ])
 
+    // Bouw alle factuur-data + lines in-memory voordat we de DB raken.
+    interface InvoiceData {
+      invoiceNumber: string
+      bookYear: number
+      bookPeriod: number
+      projectCode: string | null
+      projectName: string | null
+      clientName: string | null
+      issueDate: Date | null
+      dueDate: Date | null
+      totalExcl: number
+      totalIncl: number
+      totalBtw: number
+      primaryUserId: string | null
+      lines: Array<{ attorneyName: string; userId: string | null; hours: number; hourlyRate: number; amount: number }>
+    }
+    const invoiceDataMap = new Map<string, InvoiceData>()
     for (const invoiceNumber of Array.from(allInvoiceNumbers)) {
-      newInvoiceNumbers.add(invoiceNumber)
       const pdfData = pdfMap.get(invoiceNumber)
       const wordData = wordMap.get(invoiceNumber)
-
-      // Lines uit PDF (alleen beschikbaar als factuur ook in PDF zat)
       const linesData = pdfData
         ? pdfData.lines.map(l => {
             const user = matchAttorney(l.attorneyName, users)
@@ -80,84 +88,129 @@ export async function POST(req: NextRequest) {
       const primary = matched.length > 0
         ? matched.reduce((a, b) => (a.hours >= b.hours ? a : b))
         : null
-
-      // Bedrag: Word is leidend (= open bedrag na deelbetalingen).
-      // Voor records zonder Word: fallback op PDF totalIncl.
       const totalIncl = wordData?.openAmount ?? pdfData?.totalIncl ?? 0
-      // Voor totalExcl/totalBtw: alleen uit PDF beschikbaar; anders berekenen
       const totalBtw = pdfData?.totalBtw ?? +(totalIncl * 0.21 / 1.21).toFixed(2)
       const totalExcl = pdfData?.totalExcl ?? +(totalIncl - totalBtw).toFixed(2)
-
-      // bookYear/bookPeriod: PDF heeft Verkoopboek; anders uit Word-issueDate
       const issueDate = wordData?.issueDate ?? null
       const dueDate = wordData?.dueDate ?? null
       const bookYear = pdfData?.bookYear ?? (issueDate?.getFullYear() ?? new Date().getFullYear())
       const bookPeriod = pdfData?.bookPeriod ?? ((issueDate?.getMonth() ?? 0) + 1)
-
       const clientName = pdfData?.clientName || wordData?.clientName || null
 
-      await prisma.openInvoice.upsert({
-        where: { invoiceNumber },
-        update: {
-          bookYear,
-          bookPeriod,
-          projectCode: pdfData?.projectCode || null,
-          projectName: pdfData?.projectName || null,
-          clientName,
-          issueDate,
-          dueDate,
-          totalExcl,
-          totalIncl,
-          totalBtw,
-          primaryUserId: primary?.userId || null,
-          reminderSentAt: null,
-          lines: {
-            deleteMany: {},
-            create: linesData.map(l => ({
-              attorneyName: l.attorneyName,
-              userId: l.userId,
-              hours: l.hours,
-              hourlyRate: l.hourlyRate,
-              amount: l.amount,
-            })),
-          },
-        },
-        create: {
-          invoiceNumber,
-          bookYear,
-          bookPeriod,
-          projectCode: pdfData?.projectCode || null,
-          projectName: pdfData?.projectName || null,
-          clientName,
-          issueDate,
-          dueDate,
-          totalExcl,
-          totalIncl,
-          totalBtw,
-          primaryUserId: primary?.userId || null,
-          reminderSentAt: null,
-          lines: {
-            create: linesData.map(l => ({
-              attorneyName: l.attorneyName,
-              userId: l.userId,
-              hours: l.hours,
-              hourlyRate: l.hourlyRate,
-              amount: l.amount,
-            })),
-          },
-        },
+      invoiceDataMap.set(invoiceNumber, {
+        invoiceNumber,
+        bookYear,
+        bookPeriod,
+        projectCode: pdfData?.projectCode || null,
+        projectName: pdfData?.projectName || null,
+        clientName,
+        issueDate,
+        dueDate,
+        totalExcl,
+        totalIncl,
+        totalBtw,
+        primaryUserId: primary?.userId || null,
+        lines: linesData,
       })
-      upserted++
     }
 
-    const toRemove = await prisma.openInvoice.findMany({
-      where: { invoiceNumber: { notIn: Array.from(newInvoiceNumbers) } },
-      select: { id: true },
+    // 1 query: bestaande OpenInvoices opzoeken op invoiceNumber
+    const existing = await prisma.openInvoice.findMany({
+      where: { invoiceNumber: { in: Array.from(allInvoiceNumbers) } },
+      select: { id: true, invoiceNumber: true },
     })
-    if (toRemove.length > 0) {
-      await prisma.openInvoice.deleteMany({ where: { id: { in: toRemove.map(t => t.id) } } })
-      removed = toRemove.length
+    const existingByNumber = new Map(existing.map(e => [e.invoiceNumber, e.id]))
+
+    let upserted = 0
+
+    // Bulk: maak nieuwe OpenInvoices aan met createMany (zonder lines — die in een 2e stap)
+    const toCreate = Array.from(invoiceDataMap.values()).filter(d => !existingByNumber.has(d.invoiceNumber))
+    if (toCreate.length > 0) {
+      await prisma.openInvoice.createMany({
+        data: toCreate.map(d => ({
+          invoiceNumber: d.invoiceNumber,
+          bookYear: d.bookYear,
+          bookPeriod: d.bookPeriod,
+          projectCode: d.projectCode,
+          projectName: d.projectName,
+          clientName: d.clientName,
+          issueDate: d.issueDate,
+          dueDate: d.dueDate,
+          totalExcl: d.totalExcl,
+          totalIncl: d.totalIncl,
+          totalBtw: d.totalBtw,
+          primaryUserId: d.primaryUserId,
+          reminderSentAt: null,
+        })),
+      })
+      upserted += toCreate.length
+      // Re-fetch om id's te krijgen van nieuw aangemaakte rijen
+      const newRows = await prisma.openInvoice.findMany({
+        where: { invoiceNumber: { in: toCreate.map(d => d.invoiceNumber) } },
+        select: { id: true, invoiceNumber: true },
+      })
+      for (const r of newRows) existingByNumber.set(r.invoiceNumber, r.id)
     }
+
+    // Bulk: update bestaande OpenInvoices (parallel in chunks)
+    const toUpdate = Array.from(invoiceDataMap.values()).filter(d => existingByNumber.has(d.invoiceNumber))
+    const CHUNK = 25
+    for (let i = 0; i < toUpdate.length; i += CHUNK) {
+      const chunk = toUpdate.slice(i, i + CHUNK)
+      await Promise.all(chunk.map(d => prisma.openInvoice.update({
+        where: { invoiceNumber: d.invoiceNumber },
+        data: {
+          bookYear: d.bookYear,
+          bookPeriod: d.bookPeriod,
+          projectCode: d.projectCode,
+          projectName: d.projectName,
+          clientName: d.clientName,
+          issueDate: d.issueDate,
+          dueDate: d.dueDate,
+          totalExcl: d.totalExcl,
+          totalIncl: d.totalIncl,
+          totalBtw: d.totalBtw,
+          primaryUserId: d.primaryUserId,
+        },
+      })))
+      upserted += chunk.length
+    }
+
+    // Bulk lines: 1 deleteMany voor alle lines van betrokken facturen,
+    // dan 1 createMany met alle nieuwe lines.
+    const allInvoiceIds = Array.from(existingByNumber.values())
+    if (allInvoiceIds.length > 0) {
+      await prisma.openInvoiceLine.deleteMany({
+        where: { invoiceId: { in: allInvoiceIds } },
+      })
+      const newLines: Array<{
+        invoiceId: string; attorneyName: string; userId: string | null; hours: number; hourlyRate: number; amount: number
+      }> = []
+      for (const d of Array.from(invoiceDataMap.values())) {
+        const invoiceId = existingByNumber.get(d.invoiceNumber)
+        if (!invoiceId) continue
+        for (const l of d.lines) {
+          newLines.push({
+            invoiceId,
+            attorneyName: l.attorneyName,
+            userId: l.userId,
+            hours: l.hours,
+            hourlyRate: l.hourlyRate,
+            amount: l.amount,
+          })
+        }
+      }
+      if (newLines.length > 0) {
+        await prisma.openInvoiceLine.createMany({ data: newLines })
+      }
+    }
+
+    // Bulk remove: facturen die niet meer in de upload zitten (presumed betaald).
+    let removed = 0
+    const toRemoveResult = await prisma.openInvoice.deleteMany({
+      where: { invoiceNumber: { notIn: Array.from(allInvoiceNumbers) } },
+    })
+    removed = toRemoveResult.count
 
     // Slack DM naar Jochem / Hanna / Lotte (uploader uitgesloten) — niet-blokkerend
     const uploader = await prisma.user.findUnique({
