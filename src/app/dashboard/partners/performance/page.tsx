@@ -69,9 +69,11 @@ export default function PerformanceOverzichtPage() {
   }, [hasAccess])
 
   const filtered = useMemo(() => {
+    // Partners doen geen performance management over elkaar — eruit filteren.
+    const nonPartners = rows.filter(r => r.role !== 'PARTNER')
     const q = filter.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter(r => r.name.toLowerCase().includes(q))
+    if (!q) return nonPartners
+    return nonPartners.filter(r => r.name.toLowerCase().includes(q))
   }, [rows, filter])
 
   const totals = useMemo(() => {
