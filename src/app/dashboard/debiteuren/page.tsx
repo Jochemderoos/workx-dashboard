@@ -116,6 +116,28 @@ export default function DebiteurenPage() {
   const [pendingWord, setPendingWord] = useState<File | null>(null)
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; avatarUrl: string | null }>>([])
   const [assignMenuId, setAssignMenuId] = useState<string | null>(null)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+
+  // Externe kantoren waarvoor we facturen samen-vouwen — voorkomt dat
+  // bv. 20 Stek-zaken het overzicht vervuilen. Aanschrijven is bij deze
+  // partijen niet relevant (loopt via onderling kanaal).
+  const COLLAPSIBLE_CLIENTS: { id: string; label: string; patterns: RegExp[] }[] = [
+    { id: 'stek', label: 'Stek Advocaten', patterns: [/\bstek\b/i] },
+    { id: 'debrij', label: 'DeBrij', patterns: [/\bde\s*brij\b/i] },
+    { id: 'jblaw', label: 'JB Law', patterns: [/\bjb[\s-]*law\b/i] },
+    { id: 'vcl', label: 'Van Campen Liem', patterns: [/van\s*campen\s*liem/i, /\bcampen\s*liem\b/i] },
+  ]
+  const matchCollapsible = (inv: { clientName?: string | null; projectName?: string | null }) => {
+    const hay = `${inv.clientName || ''} ${inv.projectName || ''}`
+    return COLLAPSIBLE_CLIENTS.find(c => c.patterns.some(p => p.test(hay))) || null
+  }
+  const toggleGroup = (id: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   const fetchData = useCallback(async () => {
     try {
@@ -412,9 +434,6 @@ export default function DebiteurenPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-2 relative">
-          {/* Connector lijn op desktop */}
-          <div className="hidden md:block absolute top-9 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-workx-lime/30 via-workx-lime/40 to-workx-lime/30 pointer-events-none" />
-
           {/* Stap 1 */}
           <div className="relative bg-white/[0.03] border border-white/10 rounded-xl p-4">
             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-workx-lime text-workx-dark text-sm font-bold mb-3 relative z-10 mx-auto md:mx-0">
@@ -544,9 +563,9 @@ export default function DebiteurenPage() {
                   ))}
                 </div>
 
-                {/* Lijst — oudste eerst */}
-                <div className="space-y-1.5">
-                  {sorted.map(inv => {
+                {/* Lijst — oudste eerst, met collapsing voor Stek/DeBrij/JB Law/Van Campen Liem */}
+                {(() => {
+                  const renderInvRow = (inv: Invoice) => {
                     const age = daysOverdue(inv)
                     const b = bucketOf(age)
                     const isActive = needsAction(inv)
@@ -614,8 +633,54 @@ export default function DebiteurenPage() {
                         </div>
                       </div>
                     )
-                  })}
-                </div>
+                  }
+
+                  // Splits in: reguliere + groepen voor specifieke externe kantoren
+                  const groupedMap = new Map<string, Invoice[]>()
+                  COLLAPSIBLE_CLIENTS.forEach(c => groupedMap.set(c.id, []))
+                  const ungrouped: Invoice[] = []
+                  for (const inv of sorted) {
+                    const m = matchCollapsible(inv)
+                    if (m) groupedMap.get(m.id)!.push(inv)
+                    else ungrouped.push(inv)
+                  }
+
+                  return (
+                    <div className="space-y-1.5">
+                      {ungrouped.map(renderInvRow)}
+                      {COLLAPSIBLE_CLIENTS.map(c => {
+                        const items = groupedMap.get(c.id) || []
+                        if (items.length === 0) return null
+                        const expanded = expandedGroups.has(c.id)
+                        const sum = items.reduce((s, i) => s + i.totalIncl, 0)
+                        return (
+                          <div key={c.id} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                            <button
+                              onClick={() => toggleGroup(c.id)}
+                              className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/[0.03] transition-colors"
+                              title={`${c.label} — niet zelf aanschrijven`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Icons.chevronRight
+                                  size={14}
+                                  className={`text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                                />
+                                <span className="text-sm font-medium text-white">{c.label}</span>
+                                <span className="text-[10px] text-gray-500">· {items.length} factu{items.length === 1 ? 'ur' : 'ren'}</span>
+                              </div>
+                              <span className="text-sm tabular-nums text-gray-400 shrink-0">{formatEUR(sum)}</span>
+                            </button>
+                            {expanded && (
+                              <div className="space-y-1.5 px-2 pb-2 pt-1">
+                                {items.map(renderInvRow)}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
               </div>
             )
           })()}
