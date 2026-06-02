@@ -1750,13 +1750,22 @@ export default function DashboardHome() {
                   </p>
                 </div>
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                partnerWerkverdelingOverview.filter(e => !e.isCompleted).length === 0
-                  ? 'bg-green-500/20 text-green-300'
-                  : 'bg-blue-500/20 text-blue-300'
-              }`}>
-                {partnerWerkverdelingOverview.filter(e => e.isCompleted).length}/{partnerWerkverdelingOverview.length}
-              </span>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/dashboard/partners/werkverdelingsgesprekken"
+                  className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-medium transition-all"
+                  title="Wijzigen of nieuwe toewijzing"
+                >
+                  Wijzigen
+                </Link>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  partnerWerkverdelingOverview.filter(e => !e.isCompleted).length === 0
+                    ? 'bg-green-500/20 text-green-300'
+                    : 'bg-blue-500/20 text-blue-300'
+                }`}>
+                  {partnerWerkverdelingOverview.filter(e => e.isCompleted).length}/{partnerWerkverdelingOverview.length}
+                </span>
+              </div>
             </div>
 
             <div className="space-y-2">

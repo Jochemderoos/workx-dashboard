@@ -327,7 +327,7 @@ export async function GET() {
         twoWeeksAhead.setUTCHours(23, 59, 59, 999)
         return prisma.meetingWeek.findFirst({
           where: { meetingDate: { gte: twoWeeksAgo, lte: twoWeeksAhead } },
-          include: { distributions: true },
+          include: { distributions: true, conversations: true },
           orderBy: { meetingDate: 'desc' },
         }).catch(() => null)
       })(),
@@ -553,14 +553,20 @@ export async function GET() {
     }))
 
     // Build partner overview - for partners AND admins whose name appears in distributions
+    // OR who hebben WorkConversation-records met partnerName == hun voornaam
+    // (handmatige toewijzing via /partners/werkverdelingsgesprekken pagina).
     let partnerWerkverdelingOverview: any[] | null = null
     const isPartnerOrAdmin = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
     const userFirstName = currentUser?.name?.split(' ')[0] || ''
+    const conversationsAll: any[] = (currentWeekDistribution as any)?.conversations || []
     const hasDistributions = currentWeekDistribution?.distributions?.some(
       (d: any) => d.partnerName === userFirstName
     )
+    const hasConversations = conversationsAll.some(
+      (c: any) => c.partnerName === userFirstName
+    )
 
-    if (isPartnerOrAdmin && hasDistributions && currentWeekDistribution) {
+    if (isPartnerOrAdmin && (hasDistributions || hasConversations) && currentWeekDistribution) {
       const partnerFirstName = userFirstName
       const partnerDistributions = currentWeekDistribution.distributions?.filter(
         (d: any) => d.partnerName === partnerFirstName
@@ -575,14 +581,17 @@ export async function GET() {
       })
 
       const employeeEntries: any[] = []
+      const seenEmployeeIds = new Set<string>()
+
+      // Bron 1: notulen-distributies (oude flow)
       for (const d of partnerDistributions) {
         if (!d.employeeName) continue
         const names = d.employeeName.split(', ').map((n: string) => n.trim())
         for (const name of names) {
-          // Find user from pre-loaded list
           const employeeUser = allActiveUsers.find(u => u.name?.includes(name))
-          // Always prefer the individual user's ID, never the shared distribution row ID
           const empId = employeeUser?.id || `name-${name}`
+          if (seenEmployeeIds.has(empId)) continue
+          seenEmployeeIds.add(empId)
           employeeEntries.push({
             employeeId: empId,
             employeeName: employeeUser?.name || name,
@@ -595,6 +604,25 @@ export async function GET() {
           })
         }
       }
+
+      // Bron 2: handmatige WorkConversation-records (nieuwe flow via partner-dropdown)
+      for (const conv of conversationsAll) {
+        if (conv.partnerName !== partnerFirstName) continue
+        if (!conv.employeeId || seenEmployeeIds.has(conv.employeeId)) continue
+        seenEmployeeIds.add(conv.employeeId)
+        const employeeUser = allActiveUsers.find(u => u.id === conv.employeeId)
+        employeeEntries.push({
+          employeeId: conv.employeeId,
+          employeeName: employeeUser?.name || conv.employeeName,
+          avatarUrl: employeeUser?.avatarUrl || null,
+          partnerName: conv.partnerName,
+          weekId: weekId,
+          isCompleted: completions.some(
+            (c: any) => c.partnerName === conv.partnerName && (c.employeeId === conv.employeeId || c.employeeName === conv.employeeName)
+          ),
+        })
+      }
+
       partnerWerkverdelingOverview = employeeEntries
     }
 
