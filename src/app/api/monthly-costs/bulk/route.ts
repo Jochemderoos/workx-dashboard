@@ -29,11 +29,35 @@ export async function POST(req: NextRequest) {
     const refs: string[] = items
       .map((i: { externalRef?: string }) => i.externalRef)
       .filter((r: string | undefined): r is string => typeof r === 'string' && r.length > 0)
-    const existing = await prisma.monthlyCost.findMany({
+    const existingByRef = await prisma.monthlyCost.findMany({
       where: { externalRef: { in: refs } },
       select: { externalRef: true },
     })
-    const dupSet = new Set(existing.map(r => r.externalRef).filter(Boolean))
+    const dupSet = new Set(existingByRef.map(r => r.externalRef).filter(Boolean))
+
+    // Tweede dedup-laag: content-key (year, month, abs(amount), description-normalized)
+    // Hiermee voorkomen we duplicaten van transacties die in verschillende
+    // MT940-uploads een andere externalRef krijgen maar functioneel hetzelfde zijn
+    // (bv. management fee 1x per maand).
+    const normalizeDesc = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+    const contentKey = (year: number, month: number, amount: number, desc: string) =>
+      `${year}-${month}|${Math.abs(amount).toFixed(2)}|${normalizeDesc(desc)}`
+
+    // Pak alle bestaande costs van betrokken maanden om te dedupen op content
+    const periodsInItems = new Set(items.map((i: any) => `${i.year}-${i.month}`))
+    const yearMonths = Array.from(periodsInItems).map((s: any) => {
+      const [y, m] = String(s).split('-').map(Number)
+      return { year: y, month: m }
+    })
+    const existingInPeriods = yearMonths.length > 0
+      ? await prisma.monthlyCost.findMany({
+          where: { OR: yearMonths.map(ym => ({ year: ym.year, month: ym.month })) },
+          select: { year: true, month: true, amount: true, description: true },
+        })
+      : []
+    const contentDupSet = new Set(
+      existingInPeriods.map(c => contentKey(c.year, c.month, c.amount, c.description))
+    )
 
     let added = 0
     let skipped = 0
@@ -50,6 +74,13 @@ export async function POST(req: NextRequest) {
         skipped++
         continue
       }
+      // Content-key dup-check (zelfde bedrag + omschrijving in dezelfde maand)
+      const ck = contentKey(it.year, it.month, it.amount, it.description)
+      if (contentDupSet.has(ck)) {
+        skipped++
+        continue
+      }
+      contentDupSet.add(ck) // ook binnen dezelfde batch dedupen
       const key = `${it.year}-${it.month}`
       if (!(key in sortByMonth)) {
         const maxSort = await prisma.monthlyCost.aggregate({

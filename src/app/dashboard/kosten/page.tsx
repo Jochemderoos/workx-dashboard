@@ -456,6 +456,14 @@ export default function KostenPage() {
                 <Icons.upload size={14} />
                 Importeer MT940
               </button>
+              <a
+                href="/dashboard/kosten/duplicates"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 text-amber-300 text-sm font-medium border border-amber-500/30 hover:bg-amber-500/20 transition-colors"
+                title="Vind en verwijder dubbele kostenposten"
+              >
+                <Icons.alertTriangle size={14} />
+                Dubbele posten
+              </a>
             </>
           )}
         </div>
