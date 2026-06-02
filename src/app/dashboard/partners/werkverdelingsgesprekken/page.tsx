@@ -153,15 +153,31 @@ export default function WerkverdelingsgesprekkenPage() {
           setActiveWeekId(inThisWeek?.id || fallback?.id || data.weeks[data.weeks.length - 1].id)
         }
 
-        // Build local state from existing conversations
+        // Build local state from existing conversations.
+        // Als een conversation nog geen (geldige) partnerName heeft, kijken
+        // we naar de huidige distribution in dezelfde week zodat een
+        // achteraf-ingevulde notulen-werkverdeling alsnog doorkomt.
         const initial: Record<string, { capacity: CapacityValue; notes: string; partnerName: string }> = {}
         for (const week of data.weeks as Week[]) {
           for (const conv of week.conversations) {
             const key = `${week.id}-${conv.employeeId}`
+            let partnerName = conv.partnerName
+            if (!partnerName || partnerName === '-') {
+              const empFirst = (conv.employeeName || '').split(' ')[0].toLowerCase()
+              const dist = week.distributions.find((d) => {
+                if (!d.employeeName) return false
+                const names = d.employeeName.split(',').map((n) => n.trim())
+                return names.some((name) => {
+                  const nameFirst = name.split(' ')[0].toLowerCase()
+                  return nameFirst === empFirst || name.toLowerCase() === (conv.employeeName || '').toLowerCase()
+                })
+              })
+              if (dist?.partnerName) partnerName = dist.partnerName
+            }
             initial[key] = {
               capacity: conv.capacity as CapacityValue,
               notes: conv.notes || '',
-              partnerName: conv.partnerName,
+              partnerName: partnerName || '',
             }
           }
         }
@@ -338,12 +354,19 @@ export default function WerkverdelingsgesprekkenPage() {
 
       <div className="max-w-7xl mx-auto space-y-6 p-4 sm:p-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-blue-500/10 flex items-center justify-center">
               <Icons.chat className="text-green-400" size={18} />
             </div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-white"><TextReveal>Werkverdelingsgesprekken</TextReveal></h1>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white"><TextReveal>Werkverdelingsgesprekken</TextReveal></h1>
+              {activeWeek && (
+                <p className="text-sm text-workx-lime mt-1">
+                  {activeWeek.dateLabel}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
