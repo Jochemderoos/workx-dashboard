@@ -67,7 +67,11 @@ export default function KostenPage() {
       // UWV/ASR zijn werkgeversvergoedingen (negatieve bedragen die bij
       // werkgeverslasten worden afgetrokken in Financien). Niet tonen als
       // kost om dubbeltelling te voorkomen.
-      const filterRows = (rows: Cost[]) => rows.filter(c => c.category !== 'UWV' && c.category !== 'ASR')
+      // BALANS = vooruitbetalingen / waarborgsommen — geen operationele kosten,
+      // horen op de balans en niet in maandtotaal.
+      const filterRows = (rows: Cost[]) => rows.filter(c =>
+        c.category !== 'UWV' && c.category !== 'ASR' && c.category !== 'BALANS'
+      )
       if (r1.ok) setCosts(filterRows(await r1.json()))
       if (r2.ok) setCostsOther(filterRows(await r2.json()))
     } catch {
@@ -748,6 +752,27 @@ export default function KostenPage() {
                             title="Bewerk naam & bedrag"
                           >
                             <Icons.edit size={14} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!confirm('Verplaats naar balansposten? Deze post telt dan niet mee in het kosten-totaal (gebruik voor waarborgsommen, vooruitbetalingen, deposito\'s etc.).')) return
+                              try {
+                                const res = await fetch(`/api/monthly-costs/${c.id}`, {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ category: 'BALANS' }),
+                                })
+                                if (!res.ok) throw new Error()
+                                toast.success('Naar balansposten verplaatst')
+                                await fetchData()
+                              } catch {
+                                toast.error('Kon niet bijwerken')
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                            title="Naar balansposten (geen kost — bv. waarborgsom)"
+                          >
+                            <Icons.layers size={14} />
                           </button>
                           <button
                             onClick={() => deleteCost(c.id)}
