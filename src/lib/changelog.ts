@@ -1,4 +1,4 @@
-export const CHANGELOG_VERSION = '2026-03-17'
+export const CHANGELOG_VERSION = '2026-06-02'
 
 export interface ChangelogFeature {
   icon: string
@@ -19,43 +19,46 @@ export interface ChangelogEntry {
 }
 
 export const CURRENT_CHANGELOG: ChangelogEntry = {
-  version: '2026-03-17',
-  date: 'Maart 2026',
+  version: '2026-06-02',
+  date: 'Juni 2026',
   features: [
     {
-      icon: 'sun',
-      title: 'Light Mode',
-      description: 'Wissel tussen donker en licht thema via de toggle in de sidebar (onderaan). Je voorkeur wordt onthouden.',
-      href: '/dashboard',
-      color: 'from-amber-500/20 to-yellow-500/20',
+      icon: 'calendar',
+      title: 'Werkverdelingsgesprekken',
+      description: 'Wekelijkse koppeling advocaat ↔ partner. De medewerker krijgt automatisch een Slack-DM met de afspraak.',
+      href: '/dashboard/partners/werkverdelingsgesprekken',
+      color: 'from-workx-lime/20 to-emerald-500/20',
+      iconColor: 'text-workx-lime',
+      iconBg: 'bg-workx-lime/10',
+      isNew: true,
+    },
+    {
+      icon: 'briefcase',
+      title: 'Office',
+      description: 'Wie is wanneer op kantoor of remote? Klik een cel om te wisselen — geen bewerkingsmodus, geen rompslomp.',
+      href: '/dashboard/office',
+      color: 'from-amber-500/20 to-orange-500/20',
       iconColor: 'text-amber-400',
       iconBg: 'bg-amber-500/10',
       isNew: true,
     },
     {
-      icon: 'sparkles',
-      title: 'Claude-only modus',
-      description: 'Paarse knop naast het invoerveld: snel antwoord zonder juridische bronnen. Perfect voor vertalingen en e-mails.',
-      href: '/dashboard/ai',
-      color: 'from-purple-500/20 to-indigo-500/20',
-      iconColor: 'text-purple-400',
-      iconBg: 'bg-purple-500/10',
-      isNew: true,
-    },
-    {
-      icon: 'users',
-      title: 'Werkstudent',
-      description: 'Overzicht van opdrachten aan de werkstudent: deadline, prioriteit en status bijhouden.',
-      href: '/dashboard/werkstudent',
-      color: 'from-cyan-500/20 to-blue-500/20',
-      iconColor: 'text-cyan-400',
-      iconBg: 'bg-cyan-500/10',
+      icon: 'star',
+      title: 'Performance Management',
+      description: 'Per advocaat een dossier voor ontwikkelpunten, doelen en beoordelingen.',
+      href: '/dashboard/partners/performance',
+      color: 'from-violet-500/20 to-fuchsia-500/20',
+      iconColor: 'text-violet-400',
+      iconBg: 'bg-violet-500/10',
       isNew: true,
     },
   ],
   improvements: [
-    'AI Assistent geeft nu direct antwoord zonder eerst vragen te stellen',
-    'Verbeterde documentverwerking bij het uploaden van bestanden naar AI',
-    'Toggle voor donker/licht thema is prominenter in de sidebar',
+    'Telefoon en email zichtbaar op elke teamkaart — klikbaar',
+    'Notificatie in dashboard-bel bij debiteuren- of kosten-import',
+    'Debiteuren samengevouwen per cliëntgroep (Stek, DeBrij, JB Law, Van Campen Liem)',
+    'Tarieven-document met afwijkende cliënt-uurtarieven',
+    'MT940-import: stabiele dedup en aparte BALANS-categorie voor waarborgsommen',
+    'Sessie blijft 90 dagen actief — minder vaak opnieuw inloggen',
   ],
 }
