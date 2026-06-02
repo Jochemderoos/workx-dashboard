@@ -653,20 +653,39 @@ export default function DebiteurenPage() {
                         if (items.length === 0) return null
                         const expanded = expandedGroups.has(c.id)
                         const sum = items.reduce((s, i) => s + i.totalIncl, 0)
+                        const overdueItems = items.filter(i => daysOverdue(i) > 0)
+                        // Periode: oudste t/m nieuwste due-date (val. terug op issueDate)
+                        const dates = items
+                          .map(i => i.dueDate || i.issueDate)
+                          .filter((d): d is string => !!d)
+                          .map(d => new Date(d))
+                          .sort((a, b) => a.getTime() - b.getTime())
+                        const fmtShort = (d: Date) =>
+                          d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: '2-digit' })
+                        const period = dates.length > 0
+                          ? dates.length === 1
+                            ? fmtShort(dates[0])
+                            : `${fmtShort(dates[0])} — ${fmtShort(dates[dates.length - 1])}`
+                          : null
                         return (
                           <div key={c.id} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
                             <button
                               onClick={() => toggleGroup(c.id)}
-                              className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/[0.03] transition-colors"
+                              className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/[0.03] transition-colors text-left"
                               title={`${c.label} — niet zelf aanschrijven`}
                             >
-                              <div className="flex items-center gap-2 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <Icons.chevronRight
                                   size={14}
-                                  className={`text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                                  className={`text-gray-400 transition-transform shrink-0 ${expanded ? 'rotate-90' : ''}`}
                                 />
-                                <span className="text-sm font-medium text-white">{c.label}</span>
-                                <span className="text-[10px] text-gray-500">· {items.length} factu{items.length === 1 ? 'ur' : 'ren'}</span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-white">{c.label}</p>
+                                  <p className="text-[10px] text-gray-500">
+                                    {overdueItems.length} te laat van {items.length} openstaand
+                                    {period && <> · {period}</>}
+                                  </p>
+                                </div>
                               </div>
                               <span className="text-sm tabular-nums text-gray-400 shrink-0">{formatEUR(sum)}</span>
                             </button>
