@@ -299,7 +299,39 @@ export async function GET() {
             }
           }
         } else {
-          // Employee: notification per open conversation
+          // Employee: notification ook bij handmatige toewijzing via
+          // werkverdelingsgesprekken-pagina (WorkConversation.partnerName).
+          // Dit naast de bestaande distribution-check zodat we niet
+          // afhankelijk zijn van notulen-distribution alleen.
+          try {
+            const myConvs = await prisma.workConversation.findMany({
+              where: {
+                weekId: currentWeek.id,
+                employeeId: userId,
+                partnerName: { not: '-' },
+              },
+            })
+            for (const conv of myConvs) {
+              if (!conv.partnerName || conv.partnerName === '-') continue
+              const isComplete = completions.some(
+                (c: any) => c.partnerName === conv.partnerName && c.employeeId === userId
+              )
+              if (isComplete) continue
+              const key = `werkverdeling-conv-${currentWeek.id}-${conv.partnerName}-${userId}`
+              if (dismissedKeys.has(key)) continue
+              notifications.push({
+                id: key,
+                type: 'werkverdeling',
+                title: 'Werkverdelingsgesprek',
+                message: `Plan je gesprek met ${conv.partnerName} deze week in`,
+                createdAt: currentWeek.meetingDate,
+                read: false,
+                href: '/dashboard',
+              })
+            }
+          } catch { /* ignore */ }
+
+          // Employee: notification per open conversation (notulen-distribution)
           for (const d of currentWeek.distributions) {
             if (!d.employeeName) continue
             const names = d.employeeName.split(',').map((n: string) => n.trim())

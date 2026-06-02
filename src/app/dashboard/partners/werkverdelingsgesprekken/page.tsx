@@ -94,6 +94,21 @@ export default function WerkverdelingsgesprekkenPage() {
   const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set())
   // Track which cards are in notes edit mode
   const [editingNotes, setEditingNotes] = useState<Set<string>>(new Set())
+  // Welke partner-dropdown is open (key = `weekId-employeeId`)
+  const [partnerDropdownOpen, setPartnerDropdownOpen] = useState<string | null>(null)
+
+  // Click-outside om dropdown te sluiten
+  useEffect(() => {
+    if (!partnerDropdownOpen) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-partner-dropdown]')) {
+        setPartnerDropdownOpen(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [partnerDropdownOpen])
 
   // Check access
   useEffect(() => {
@@ -472,28 +487,92 @@ export default function WerkverdelingsgesprekkenPage() {
                       <p className="text-white font-medium text-sm truncate">{name}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-[10px] text-gray-600 uppercase tracking-wider">Partner</span>
-                        <select
-                          // Normaliseer naar voornaam: notulen-distribution slaat
-                          // 'Jochem' op, oude conversations soms 'Jochem de Roos'.
-                          // Beide moeten matchen met option value = voornaam.
-                          value={(() => {
-                            const v = data.partnerName && data.partnerName !== '-' ? data.partnerName : ''
-                            if (!v) return ''
-                            const lc = v.toLowerCase()
-                            const match = PARTNER_OPTIONS.find(p =>
-                              p.toLowerCase() === lc || p.split(' ')[0].toLowerCase() === lc
-                            )
-                            return match ? match.split(' ')[0] : ''
-                          })()}
-                          onChange={(e) => handleChange(activeWeek.id, name, 'partnerName', e.target.value || '-')}
-                          className="text-xs bg-transparent border border-white/10 rounded-md px-1.5 py-0.5 text-gray-300 hover:border-workx-lime/30 focus:border-workx-lime/40 focus:outline-none cursor-pointer"
-                        >
-                          <option value="" className="bg-workx-dark">— niet toegewezen —</option>
-                          {PARTNER_OPTIONS.map(p => {
-                            const first = p.split(' ')[0]
-                            return <option key={p} value={first} className="bg-workx-dark">{first}</option>
-                          })}
-                        </select>
+                        {(() => {
+                          const v = data.partnerName && data.partnerName !== '-' ? data.partnerName : ''
+                          const lc = v.toLowerCase()
+                          const matchedPartner = v
+                            ? PARTNER_OPTIONS.find(p =>
+                                p.toLowerCase() === lc || p.split(' ')[0].toLowerCase() === lc
+                              ) || null
+                            : null
+                          const partnerPhoto = matchedPartner ? getPhotoUrl(matchedPartner) : null
+                          const dropdownKey = `${activeWeek.id}-${name}`
+                          const isOpen = partnerDropdownOpen === dropdownKey
+                          return (
+                            <div className="relative" data-partner-dropdown>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setPartnerDropdownOpen(isOpen ? null : dropdownKey)
+                                }}
+                                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-white/[0.04] border border-white/10 hover:border-workx-lime/30 hover:bg-white/[0.08] text-gray-300 transition-colors"
+                              >
+                                {matchedPartner && partnerPhoto ? (
+                                  <Image
+                                    src={partnerPhoto}
+                                    alt={matchedPartner}
+                                    width={16}
+                                    height={16}
+                                    className="w-4 h-4 rounded-full object-cover"
+                                  />
+                                ) : null}
+                                <span>{matchedPartner ? matchedPartner.split(' ')[0] : 'niet toegewezen'}</span>
+                                <Icons.chevronDown size={11} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                              {isOpen && (
+                                <div className="absolute left-0 top-full mt-1 z-30 min-w-[180px] rounded-lg border border-white/10 bg-workx-dark shadow-2xl py-1 max-h-72 overflow-y-auto">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleChange(activeWeek.id, name, 'partnerName', '-')
+                                      setPartnerDropdownOpen(null)
+                                    }}
+                                    className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/5 transition-colors flex items-center gap-2 ${
+                                      !matchedPartner ? 'text-workx-lime' : 'text-gray-400'
+                                    }`}
+                                  >
+                                    <span className="w-4 h-4 flex items-center justify-center text-gray-600">—</span>
+                                    niet toegewezen
+                                  </button>
+                                  {PARTNER_OPTIONS.map(p => {
+                                    const first = p.split(' ')[0]
+                                    const photo = getPhotoUrl(p)
+                                    const isSelected = matchedPartner === p
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={p}
+                                        onClick={() => {
+                                          handleChange(activeWeek.id, name, 'partnerName', first)
+                                          setPartnerDropdownOpen(null)
+                                        }}
+                                        className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/5 transition-colors flex items-center gap-2 ${
+                                          isSelected ? 'text-workx-lime bg-workx-lime/10' : 'text-white/80'
+                                        }`}
+                                      >
+                                        {photo ? (
+                                          <Image
+                                            src={photo}
+                                            alt={p}
+                                            width={18}
+                                            height={18}
+                                            className="w-[18px] h-[18px] rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <span className="w-[18px] h-[18px] rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold">
+                                            {first.charAt(0)}
+                                          </span>
+                                        )}
+                                        {first}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>

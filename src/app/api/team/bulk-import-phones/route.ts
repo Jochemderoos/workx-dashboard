@@ -24,6 +24,7 @@ const PHONE_MAPPING: Record<string, string> = {
   'Heleen Pesser': '+31 6 13 23 19 80',
   'Alexander Collot d\'Escury': '+31 6 23 52 85 46',
   'Lodewijk van Thiel': '+31 6 30 48 71 25',
+  'Hanna Blaauboer': '+31 6 16 86 84 50',
 }
 
 export async function POST() {
