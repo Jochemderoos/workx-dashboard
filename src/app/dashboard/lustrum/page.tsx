@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
 import {
@@ -1459,14 +1460,15 @@ export default function LustrumPage() {
       </div>
 
       {/* Flight Modal */}
-      {showFlightModal && (
+      {showFlightModal && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowFlightModal(false)}
         >
-          <div className="min-h-full flex items-start justify-center p-4" style={{ paddingTop: '15vh' }}>
+          <div className="w-full flex items-center justify-center">
             <div
-              className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl animate-modal-in"
+              className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl animate-modal-in flex flex-col overflow-hidden"
+              style={{ maxHeight: '90vh' }}
               onClick={(e) => e.stopPropagation()}
             >
             <div className="p-6 border-b border-white/10">
@@ -1627,16 +1629,17 @@ export default function LustrumPage() {
             </div>
           </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Program Modal */}
-      {showProgramModal && (
+      {showProgramModal && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowProgramModal(false)}
         >
-          <div className="min-h-full flex items-start justify-center p-4" style={{ paddingTop: '15vh' }}>
+          <div className="w-full flex items-center justify-center">
             <div
               className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl animate-modal-in flex flex-col"
               style={{ maxHeight: '85vh' }}
@@ -1833,7 +1836,8 @@ export default function LustrumPage() {
             </div>
           </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Hotspots Section */}
