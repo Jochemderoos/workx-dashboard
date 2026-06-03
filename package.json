@@ -6,6 +6,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "scripts": {
+    "postinstall": "node -e \"try { require('child_process').execSync('git config core.hooksPath scripts/git-hooks', {stdio:'ignore'}) } catch {}\"",
     "dev": "next dev",
     "build": "next build",
     "build:full": "prisma generate && next build",

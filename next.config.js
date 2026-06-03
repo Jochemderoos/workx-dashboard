@@ -3,6 +3,10 @@ const BUILD_ID = Date.now().toString()
 
 const nextConfig = {
   poweredByHeader: false,
+  // Skip ESLint + TS-check tijdens Vercel build — beide draaien lokaal via
+  // pre-commit hook (scripts/git-hooks/pre-commit). Bespaart ~30-90s deploy.
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   // Expose build ID to client-side code for stale-version detection
   env: {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,

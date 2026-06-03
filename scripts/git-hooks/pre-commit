@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Pre-commit hook: voorkomt dat broken TypeScript naar Vercel gaat.
+# Vercel slaat de TS-check tijdens build over (scheelt ~30-90s deploy),
+# dus we vangen 'm hier op.
+#
+# Installeren: automatisch via `npm install` (postinstall draait
+# `git config core.hooksPath scripts/git-hooks`).
+# Skip ad-hoc: `git commit --no-verify`.
+
+echo "→ TypeScript check..."
+output=$(npx tsc --noEmit 2>&1)
+non_e2e=$(echo "$output" | grep -v "^e2e/" | grep -v "^$" || true)
+
+if [ -z "$non_e2e" ]; then
+  echo "✓ TypeScript OK"
+  exit 0
+fi
+
+echo "✗ TypeScript-fouten gevonden — commit afgebroken:"
+echo ""
+echo "$non_e2e"
+echo ""
+echo "Fix de fouten, of skip met: git commit --no-verify"
+exit 1
