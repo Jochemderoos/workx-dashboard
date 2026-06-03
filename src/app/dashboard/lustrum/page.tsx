@@ -1315,20 +1315,18 @@ export default function LustrumPage() {
                               <div className="flex items-start gap-3 sm:gap-4">
                                 {/* Photo-thumb (klein) of period-icon-kolom */}
                                 {photo ? (
-                                  <div className="relative w-32 h-32 sm:w-52 sm:h-52 rounded-xl overflow-hidden flex-shrink-0 shadow-lg">
+                                  <div className="relative w-32 h-32 sm:w-52 sm:h-52 rounded-xl overflow-hidden flex-shrink-0 shadow-lg ring-1 ring-white/10">
                                     <img
                                       src={photo}
                                       alt={item.title}
-                                      className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
+                                      className="block w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
                                     />
-                                    <div className="absolute top-1.5 left-1.5 w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm flex items-center justify-center text-base">
-                                      {periodIcon}
+                                    <div className="absolute top-1.5 left-1.5 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-sm">
+                                      <span className="text-sm">{periodIcon}</span>
+                                      {item.time && (
+                                        <span className="text-xs font-mono text-white tabular-nums">{item.time}</span>
+                                      )}
                                     </div>
-                                    {item.time && (
-                                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent text-xs sm:text-sm font-mono text-white tabular-nums text-center py-1.5">
-                                        {item.time}
-                                      </div>
-                                    )}
                                   </div>
                                 ) : (
                                   <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-12">
