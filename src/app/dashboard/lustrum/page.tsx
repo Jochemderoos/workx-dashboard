@@ -18,6 +18,7 @@ import {
   type HotspotCategory,
   type PacklistItem,
 } from '@/lib/lustrum-data'
+import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
 
 // Weather code mapping
@@ -78,6 +79,25 @@ interface TeamMember {
   role: string
 }
 
+// Dagen van de trip — per dag eigen sfeer/kleur (FOMO-design)
+const TRIP_DAYS: {
+  date: string
+  label: string
+  subtitle: string
+  teaser: string
+  emoji: string
+  gradient: string
+  border: string
+  iconBg: string
+  accent: string
+}[] = [
+  { date: '2026-09-30', label: 'Wo 30 september', subtitle: 'Aankomstdag', teaser: 'We landen — themafeest & poolparty!', emoji: '🛬', gradient: 'from-violet-500/15 via-purple-500/5 to-fuchsia-500/10', border: 'border-violet-500/20', iconBg: 'bg-violet-500/30', accent: 'text-violet-300' },
+  { date: '2026-10-01', label: 'Do 1 oktober', subtitle: 'Dag 2', teaser: 'Wandeling Port de Sóller → Deià, daarna rooftop in Palma', emoji: '🥾', gradient: 'from-emerald-500/15 via-teal-500/5 to-cyan-500/10', border: 'border-emerald-500/20', iconBg: 'bg-emerald-500/30', accent: 'text-emerald-300' },
+  { date: '2026-10-02', label: 'Vr 2 oktober', subtitle: 'Dag 3', teaser: 'Spa-middag bij het zwembad — daarna dansen in Palma', emoji: '🧖', gradient: 'from-pink-500/15 via-rose-500/5 to-red-500/10', border: 'border-pink-500/20', iconBg: 'bg-pink-500/30', accent: 'text-pink-300' },
+  { date: '2026-10-03', label: 'Za 3 oktober', subtitle: 'Dag 4', teaser: 'Boot, snorkelen, strandlunch — en niet-inkak-avond', emoji: '⛵', gradient: 'from-sky-500/15 via-blue-500/5 to-cyan-500/10', border: 'border-sky-500/20', iconBg: 'bg-sky-500/30', accent: 'text-sky-300' },
+  { date: '2026-10-04', label: 'Zo 4 oktober', subtitle: 'Vertrekdag', teaser: 'Naar huis met een te volle koffer en zon in het hoofd', emoji: '🛫', gradient: 'from-amber-500/15 via-orange-500/5 to-yellow-500/10', border: 'border-amber-500/20', iconBg: 'bg-amber-500/30', accent: 'text-amber-300' },
+]
+
 // Distances from Can Fressa (Alaró) in minutes by car
 const DISTANCES_FROM_CAN_FRESSA: Record<string, { minutes: number; km: number }> = {
   'palma': { minutes: 25, km: 28 },
@@ -113,6 +133,8 @@ export default function LustrumPage() {
   // Program state
   const [programItems, setProgramItems] = useState<ProgramItem[]>([])
   const [showProgramModal, setShowProgramModal] = useState(false)
+  const [editingProgramId, setEditingProgramId] = useState<string | null>(null)
+  const [teamDropdownOpen, setTeamDropdownOpen] = useState(false)
   const [programForm, setProgramForm] = useState<Omit<ProgramItem, 'id'>>({
     date: '2026-09-30', time: '', title: '', description: '', responsible: []
   })
@@ -344,24 +366,51 @@ export default function LustrumPage() {
     }
   }
 
-  // Save program item via API
+  // Open modal — voor nieuw item of bestaande wijzigen
+  const openProgramEditor = (item?: ProgramItem) => {
+    if (item) {
+      setEditingProgramId(item.id)
+      setProgramForm({
+        date: item.date,
+        time: item.time || '',
+        title: item.title,
+        description: item.description || '',
+        responsible: item.responsible || [],
+      })
+    } else {
+      setEditingProgramId(null)
+      setProgramForm({ date: '2026-09-30', time: '', title: '', description: '', responsible: [] })
+    }
+    setTeamDropdownOpen(false)
+    setShowProgramModal(true)
+  }
+
+  // Save program item via API — POST voor nieuwe, PATCH voor bestaande
   const saveProgramItem = async () => {
     setIsSavingProgram(true)
     try {
-      const res = await fetch('/api/lustrum/program', {
-        method: 'POST',
+      const endpoint = editingProgramId
+        ? `/api/lustrum/program/${editingProgramId}`
+        : '/api/lustrum/program'
+      const method = editingProgramId ? 'PATCH' : 'POST'
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(programForm),
       })
       if (res.ok) {
-        const newItem = await res.json()
-        const updated = [...programItems, newItem].sort((a, b) => {
+        const saved = await res.json()
+        const merged = editingProgramId
+          ? programItems.map(p => p.id === saved.id ? saved : p)
+          : [...programItems, saved]
+        const sorted = merged.sort((a, b) => {
           const dateCompare = a.date.localeCompare(b.date)
           if (dateCompare !== 0) return dateCompare
           return (a.time || '').localeCompare(b.time || '')
         })
-        setProgramItems(updated)
+        setProgramItems(sorted)
         setProgramForm({ date: '2026-09-30', time: '', title: '', description: '', responsible: [] })
+        setEditingProgramId(null)
         setShowProgramModal(false)
       } else {
         const error = await res.json()
@@ -392,6 +441,19 @@ export default function LustrumPage() {
       toast.error('Fout bij verwijderen')
     }
   }
+
+  // Sluit team-dropdown bij klik buiten
+  useEffect(() => {
+    if (!teamDropdownOpen) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-team-dropdown]')) {
+        setTeamDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [teamDropdownOpen])
 
   // Toggle responsible person
   const toggleResponsible = (name: string) => {
@@ -1075,9 +1137,8 @@ export default function LustrumPage() {
         </div>
       </div>
 
-      {/* Flight Info + Program Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Flight Info */}
+      {/* Flight Info */}
+      <div>
         <div className="card p-5 group/flight">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -1162,127 +1223,160 @@ export default function LustrumPage() {
           )}
         </div>
 
-        {/* Day Program */}
-        <div className="card p-5 group/program">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center group-hover/program:scale-110 group-hover/program:bg-violet-500/20 transition-all duration-300">
-                <span className="text-lg group-hover/program:rotate-12 transition-transform">📅</span>
-              </div>
-              <div>
-                <h2 className="text-lg font-medium text-white">Dagprogramma</h2>
-                <p className="text-xs text-gray-400">30 sept - 4 okt 2026</p>
-              </div>
-            </div>
-            {userCanEdit && (
-              <button
-                onClick={() => setShowProgramModal(true)}
-                className="px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-400 text-xs font-medium hover:bg-violet-500/30 transition-colors flex items-center gap-1.5"
-              >
-                <Icons.plus size={12} />
-                Toevoegen
-              </button>
-            )}
-          </div>
-
-          {programItems.length > 0 ? (
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-              {/* Group items by date */}
-              {(() => {
-                const groupedByDate: Record<string, typeof programItems> = {}
-                const tripDays = [
-                  { date: '2026-09-30', label: 'Woensdag 30 september', subtitle: 'Aankomstdag' },
-                  { date: '2026-10-01', label: 'Donderdag 1 oktober', subtitle: 'Dag 2' },
-                  { date: '2026-10-02', label: 'Vrijdag 2 oktober', subtitle: 'Dag 3' },
-                  { date: '2026-10-03', label: 'Zaterdag 3 oktober', subtitle: 'Dag 4' },
-                  { date: '2026-10-04', label: 'Zondag 4 oktober', subtitle: 'Vertrekdag' },
-                ]
-
-                // Initialize all days
-                tripDays.forEach(day => { groupedByDate[day.date] = [] })
-
-                // Group items
-                programItems.forEach(item => {
-                  if (!groupedByDate[item.date]) groupedByDate[item.date] = []
-                  groupedByDate[item.date].push(item)
-                })
-
-                // Only show days that have items
-                const daysWithItems = tripDays.filter(day => groupedByDate[day.date].length > 0)
-
-                return daysWithItems.map((day, dayIndex) => (
-                  <div key={day.date} className="space-y-2">
-                    {/* Day Header */}
-                    <div className={`flex items-center gap-3 ${dayIndex > 0 ? 'pt-2 border-t border-white/5' : ''}`}>
-                      <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
-                        <span className="text-lg">
-                          {day.date === '2026-09-30' ? '🛬' : day.date === '2026-10-04' ? '🛫' : '☀️'}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">{day.label}</p>
-                        <p className="text-xs text-violet-400">{day.subtitle}</p>
-                      </div>
-                    </div>
-
-                    {/* Items for this day */}
-                    <div className="ml-[52px] space-y-2">
-                      {groupedByDate[day.date].map((item) => (
-                        <div
-                          key={item.id}
-                          className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-violet-500/30 transition-colors group/item"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                {item.time && (
-                                  <span className="text-xs text-violet-400 font-medium bg-violet-500/10 px-2 py-0.5 rounded">
-                                    {item.time}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-white font-medium">{item.title}</p>
-                              {item.description && (
-                                <p className="text-xs text-gray-400 mt-1">{item.description}</p>
-                              )}
-                              {item.responsible.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {item.responsible.map((name) => (
-                                    <span
-                                      key={name}
-                                      className="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 text-xs font-medium"
-                                    >
-                                      {name}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            {userCanEdit && (
-                              <button
-                                onClick={() => deleteProgramItem(item.id)}
-                                className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover/item:opacity-100"
-                              >
-                                <Icons.x size={14} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              })()}
-            </div>
-          ) : (
-            <div className="p-8 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-center">
-              <span className="text-4xl mb-3 opacity-30">📅</span>
-              <p className="text-gray-400 text-sm">Nog geen programma</p>
-              <p className="text-white/25 text-xs mt-1">Klik op 'Toevoegen' om activiteiten toe te voegen</p>
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* Day Program — FOMO design, alleen voor partners + Hanna */}
+      {userCanEdit && (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/15 via-fuchsia-500/8 to-orange-500/15 border border-violet-500/20 p-5 sm:p-8">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
+
+          <div className="relative">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 sm:mb-8">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-3xl sm:text-4xl">🌴</span>
+                  <span className="px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                    Het programma
+                  </span>
+                </div>
+                <h2 className="text-2xl sm:text-4xl font-bold text-white mb-1 leading-tight">
+                  Vijf dagen Mallorca-magie
+                </h2>
+                <p className="text-white/60 text-sm sm:text-base max-w-xl">
+                  Sun, sea, vino en gezelligheid. Mis dit niet — dit wordt dé week van het jaar.
+                </p>
+              </div>
+              <button
+                onClick={() => openProgramEditor()}
+                className="self-start sm:self-end inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium hover:from-violet-600 hover:to-fuchsia-600 transition-all shadow-lg shadow-violet-500/30 hover:scale-[1.03]"
+              >
+                <Icons.plus size={16} />
+                Activiteit toevoegen
+              </button>
+            </div>
+
+            {/* Days timeline */}
+            <div className="space-y-4 sm:space-y-5">
+              {TRIP_DAYS.map((day) => {
+                const items = programItems
+                  .filter(i => i.date === day.date)
+                  .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+                return (
+                  <div
+                    key={day.date}
+                    className={`rounded-2xl bg-gradient-to-br ${day.gradient} border ${day.border} overflow-hidden`}
+                  >
+                    {/* Day header */}
+                    <div className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 border-b border-white/5 bg-black/20">
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl ${day.iconBg} flex items-center justify-center flex-shrink-0`}>
+                        <span className="text-2xl sm:text-3xl">{day.emoji}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-3 flex-wrap">
+                          <h3 className="text-base sm:text-xl font-bold text-white">{day.label}</h3>
+                          <span className={`text-[10px] sm:text-xs font-semibold uppercase tracking-wider ${day.accent}`}>
+                            {day.subtitle}
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-white/60 mt-0.5">{day.teaser}</p>
+                      </div>
+                      <span className="hidden sm:block text-xs text-white/40">
+                        {items.length} {items.length === 1 ? 'activiteit' : 'activiteiten'}
+                      </span>
+                    </div>
+
+                    {/* Items */}
+                    {items.length > 0 ? (
+                      <div className="p-3 sm:p-4 space-y-2">
+                        {items.map((item) => {
+                          const hour = parseInt(item.time?.split(':')[0] || '12', 10)
+                          const periodIcon = hour < 12 ? '🌅' : hour < 17 ? '☀️' : '🌙'
+                          const periodLabel = hour < 12 ? 'Ochtend' : hour < 17 ? 'Middag' : 'Avond'
+                          return (
+                            <div
+                              key={item.id}
+                              onClick={() => openProgramEditor(item)}
+                              className="group/item cursor-pointer rounded-xl bg-white/5 hover:bg-white/[0.08] border border-white/5 hover:border-white/15 p-3 sm:p-4 transition-all"
+                            >
+                              <div className="flex items-start gap-3 sm:gap-4">
+                                <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-12">
+                                  <span className="text-xl sm:text-2xl">{periodIcon}</span>
+                                  {item.time && (
+                                    <span className="text-[10px] font-mono text-white/50 tabular-nums">{item.time}</span>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block">
+                                    {periodLabel}
+                                  </span>
+                                  <h4 className="text-sm sm:text-base font-semibold text-white mt-0.5">{item.title}</h4>
+                                  {item.description && (
+                                    <p className="text-xs sm:text-sm text-white/60 mt-1">{item.description}</p>
+                                  )}
+                                  {item.responsible.length > 0 && (
+                                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                      <span className="text-[10px] uppercase tracking-wider text-white/40">Door</span>
+                                      {item.responsible.map((name) => {
+                                        const photo = getPhotoUrl(name)
+                                        return (
+                                          <div key={name} className="flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full bg-white/10">
+                                            {photo ? (
+                                              <img src={photo} alt={name} className="w-5 h-5 rounded-full object-cover" />
+                                            ) : (
+                                              <div className="w-5 h-5 rounded-full bg-violet-500/30 flex items-center justify-center text-[10px] text-white/70">
+                                                {name.charAt(0)}
+                                              </div>
+                                            )}
+                                            <span className="text-xs text-white/80">{name.split(' ')[0]}</span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openProgramEditor(item) }}
+                                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                    title="Wijzigen"
+                                  >
+                                    <Icons.edit size={14} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); if (confirm(`'${item.title}' verwijderen?`)) deleteProgramItem(item.id) }}
+                                    className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                    title="Verwijderen"
+                                  >
+                                    <Icons.x size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setEditingProgramId(null)
+                          setProgramForm({ date: day.date, time: '', title: '', description: '', responsible: [] })
+                          setTeamDropdownOpen(false)
+                          setShowProgramModal(true)
+                        }}
+                        className="w-[calc(100%-2rem)] m-4 p-4 text-center text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors text-sm border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl"
+                      >
+                        + Activiteit toevoegen voor deze dag
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Ideas Box - Centered Call to Action */}
       <div className="max-w-2xl mx-auto">
@@ -1544,14 +1638,17 @@ export default function LustrumPage() {
         >
           <div className="min-h-full flex items-start justify-center p-4" style={{ paddingTop: '15vh' }}>
             <div
-              className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl animate-modal-in"
+              className="w-full max-w-lg bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl animate-modal-in flex flex-col"
+              style={{ maxHeight: '85vh' }}
               onClick={(e) => e.stopPropagation()}
             >
-            <div className="p-6 border-b border-white/10">
+            <div className="p-6 border-b border-white/10 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">📅</span>
-                  <h3 className="text-xl font-semibold text-white">Programma toevoegen</h3>
+                  <h3 className="text-xl font-semibold text-white">
+                    {editingProgramId ? 'Activiteit wijzigen' : 'Activiteit toevoegen'}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setShowProgramModal(false)}
@@ -1562,20 +1659,18 @@ export default function LustrumPage() {
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-gray-400 block mb-1">Datum</label>
+                  <label className="text-xs text-gray-400 block mb-1">Dag</label>
                   <select
                     value={programForm.date}
                     onChange={(e) => setProgramForm(prev => ({ ...prev, date: e.target.value }))}
                     className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-violet-500/50 focus:outline-none"
                   >
-                    <option value="2026-09-30">Wo 30 sept - Aankomst</option>
-                    <option value="2026-10-01">Do 1 okt</option>
-                    <option value="2026-10-02">Vr 2 okt</option>
-                    <option value="2026-10-03">Za 3 okt</option>
-                    <option value="2026-10-04">Zo 4 okt - Vertrek</option>
+                    {TRIP_DAYS.map(d => (
+                      <option key={d.date} value={d.date}>{d.emoji} {d.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -1595,64 +1690,146 @@ export default function LustrumPage() {
                   type="text"
                   value={programForm.title}
                   onChange={(e) => setProgramForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Bijv. Gezamenlijk diner, Stranddag, Wijnproeverij..."
+                  placeholder="Bijv. Boot varen, Diner in Palma, Wijnproeverij..."
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-violet-500/50 focus:outline-none placeholder:text-white/20"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-gray-400 block mb-1">Beschrijving (optioneel)</label>
+                <label className="text-xs text-gray-400 block mb-1">Beschrijving / opmerkingen</label>
                 <textarea
                   value={programForm.description}
                   onChange={(e) => setProgramForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Extra details..."
+                  placeholder="Eten, locatie, extra details..."
                   rows={2}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-violet-500/50 focus:outline-none placeholder:text-white/20 resize-none"
                 />
               </div>
 
+              {/* Wie? — modern dropdown met foto's */}
               <div>
-                <label className="text-xs text-gray-400 block mb-2">Verantwoordelijk (optioneel)</label>
-                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                  {teamMembers.map((member) => (
-                    <button
-                      key={member.id}
-                      onClick={() => toggleResponsible(member.name)}
-                      className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
-                        programForm.responsible.includes(member.name)
-                          ? 'bg-violet-500/30 text-violet-300 border border-violet-500/50'
-                          : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
-                      }`}
-                    >
-                      {member.name}
-                      {member.role === 'PARTNER' && <span className="ml-1 text-xs text-orange-400">●</span>}
-                      {member.role === 'ADMIN' && <span className="ml-1 text-xs text-sky-400">●</span>}
-                    </button>
-                  ))}
+                <label className="text-xs text-gray-400 block mb-2">Wie organiseert / is verantwoordelijk?</label>
+                <div className="relative" data-team-dropdown>
+                  <button
+                    type="button"
+                    onClick={() => setTeamDropdownOpen(o => !o)}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
+                  >
+                    {programForm.responsible.length === 0 ? (
+                      <span className="text-sm text-white/40">Selecteer teamleden…</span>
+                    ) : (
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex -space-x-2 flex-shrink-0">
+                          {programForm.responsible.slice(0, 4).map(name => {
+                            const photo = getPhotoUrl(name)
+                            return (
+                              <div key={name} className="w-7 h-7 rounded-full border-2 border-slate-900 overflow-hidden bg-violet-500/30 flex items-center justify-center">
+                                {photo ? (
+                                  <img src={photo} alt={name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-[10px] text-white">{name.charAt(0)}</span>
+                                )}
+                              </div>
+                            )
+                          })}
+                          {programForm.responsible.length > 4 && (
+                            <div className="w-7 h-7 rounded-full border-2 border-slate-900 bg-white/10 flex items-center justify-center text-[10px] text-white/80">
+                              +{programForm.responsible.length - 4}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm text-white truncate">
+                          {programForm.responsible.length === 1
+                            ? programForm.responsible[0]
+                            : `${programForm.responsible.length} personen`}
+                        </span>
+                      </div>
+                    )}
+                    <Icons.chevronDown size={16} className={`text-white/40 transition-transform ${teamDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {teamDropdownOpen && (
+                    <div className="absolute z-20 mt-2 left-0 right-0 p-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-72 overflow-y-auto">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        {teamMembers.map((member) => {
+                          const selected = programForm.responsible.includes(member.name)
+                          const photo = getPhotoUrl(member.name)
+                          return (
+                            <button
+                              type="button"
+                              key={member.id}
+                              onClick={() => toggleResponsible(member.name)}
+                              className={`flex items-center gap-2 p-2 rounded-lg transition-all text-left ${
+                                selected
+                                  ? 'bg-violet-500/30 ring-1 ring-violet-500/50'
+                                  : 'bg-white/5 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="relative flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full overflow-hidden bg-violet-500/30 flex items-center justify-center">
+                                  {photo ? (
+                                    <img src={photo} alt={member.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span className="text-xs text-white">{member.name.charAt(0)}</span>
+                                  )}
+                                </div>
+                                {selected && (
+                                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center ring-2 ring-slate-900">
+                                    <Icons.check size={9} className="text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-white truncate font-medium">{member.name.split(' ')[0]}</p>
+                                <p className="text-[10px] text-white/40 truncate">
+                                  {member.role === 'PARTNER' ? 'Partner' : member.role === 'ADMIN' ? 'Office' : 'Advocaat'}
+                                </p>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-white/30 mt-2">
-                  <span className="text-orange-400">●</span> Partner <span className="text-sky-400 ml-2">●</span> Admin
-                </p>
               </div>
             </div>
 
-            <div className="p-6 border-t border-white/10 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setProgramForm({ date: '2026-09-30', time: '', title: '', description: '', responsible: [] })
-                  setShowProgramModal(false)
-                }}
-                className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                Annuleren
-              </button>
-              <button
-                onClick={saveProgramItem}
-                disabled={!programForm.title.trim() || isSavingProgram}
-                className="px-6 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium hover:from-violet-600 hover:to-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSavingProgram ? 'Toevoegen...' : 'Toevoegen'}
-              </button>
+            <div className="p-6 border-t border-white/10 flex justify-between gap-3 flex-shrink-0">
+              {editingProgramId ? (
+                <button
+                  onClick={() => {
+                    if (confirm(`'${programForm.title}' verwijderen?`)) {
+                      deleteProgramItem(editingProgramId)
+                      setShowProgramModal(false)
+                      setEditingProgramId(null)
+                    }
+                  }}
+                  className="px-4 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-2 text-sm"
+                >
+                  <Icons.x size={14} />
+                  Verwijderen
+                </button>
+              ) : <div />}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setProgramForm({ date: '2026-09-30', time: '', title: '', description: '', responsible: [] })
+                    setEditingProgramId(null)
+                    setShowProgramModal(false)
+                  }}
+                  className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  Annuleren
+                </button>
+                <button
+                  onClick={saveProgramItem}
+                  disabled={!programForm.title.trim() || isSavingProgram}
+                  className="px-6 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium hover:from-violet-600 hover:to-fuchsia-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSavingProgram ? 'Opslaan…' : editingProgramId ? 'Opslaan' : 'Toevoegen'}
+                </button>
+              </div>
             </div>
           </div>
           </div>
