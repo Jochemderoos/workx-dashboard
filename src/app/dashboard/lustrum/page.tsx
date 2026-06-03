@@ -1310,129 +1310,82 @@ export default function LustrumPage() {
                             <div
                               key={item.id}
                               onClick={() => openProgramEditor(item)}
-                              className="group/item cursor-pointer rounded-xl bg-white/5 hover:bg-white/[0.08] border border-white/5 hover:border-white/15 overflow-hidden transition-all"
+                              className="group/item cursor-pointer rounded-xl bg-white/5 hover:bg-white/[0.08] border border-white/5 hover:border-white/15 p-3 sm:p-4 transition-all"
                             >
-                              {/* Hero photo — only when matched */}
-                              {photo && (
-                                <div className="relative aspect-[21/9] w-full overflow-hidden">
-                                  <img
-                                    src={photo}
-                                    alt={item.title}
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover/item:scale-105"
-                                  />
-                                  {/* Dark gradient for text legibility */}
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                                  {/* Title overlay bottom-left */}
-                                  <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-lg">{periodIcon}</span>
-                                      <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">{periodLabel}</span>
-                                      {item.time && (
-                                        <span className="text-[10px] font-mono text-white/60 tabular-nums ml-auto">{item.time}</span>
-                                      )}
+                              <div className="flex items-start gap-3 sm:gap-4">
+                                {/* Photo-thumb (klein) of period-icon-kolom */}
+                                {photo ? (
+                                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden flex-shrink-0 shadow-md">
+                                    <img
+                                      src={photo}
+                                      alt={item.title}
+                                      className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
+                                    />
+                                    <div className="absolute top-0.5 left-0.5 w-5 h-5 rounded-md bg-black/60 backdrop-blur-sm flex items-center justify-center text-[11px]">
+                                      {periodIcon}
                                     </div>
-                                    <h4 className="text-lg sm:text-xl font-bold text-white drop-shadow-lg">{item.title}</h4>
-                                    {item.description && (
-                                      <p className="text-xs sm:text-sm text-white/80 mt-1 drop-shadow">{item.description}</p>
+                                    {item.time && (
+                                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm text-[10px] font-mono text-white/90 tabular-nums text-center py-0.5">
+                                        {item.time}
+                                      </div>
                                     )}
                                   </div>
-                                  {/* Edit/delete buttons top-right */}
-                                  <div className="absolute top-2 right-2 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1">
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); openProgramEditor(item) }}
-                                      className="p-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white/80 hover:text-white hover:bg-black/70 transition-all"
-                                      title="Wijzigen"
-                                    >
-                                      <Icons.edit size={14} />
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); if (confirm(`'${item.title}' verwijderen?`)) deleteProgramItem(item.id) }}
-                                      className="p-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white/80 hover:text-red-300 hover:bg-red-500/30 transition-all"
-                                      title="Verwijderen"
-                                    >
-                                      <Icons.x size={14} />
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Body */}
-                              {photo ? (
-                                item.responsible.length > 0 && (
-                                  <div className="px-4 sm:px-5 py-3 flex items-center gap-2 flex-wrap border-t border-white/5 bg-black/20">
-                                    <span className="text-[10px] uppercase tracking-wider text-white/40">Door</span>
-                                    {item.responsible.map((name) => {
-                                      const personPhoto = getPhotoUrl(name)
-                                      return (
-                                        <div key={name} className="flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full bg-white/10">
-                                          {personPhoto ? (
-                                            <img src={personPhoto} alt={name} className="w-5 h-5 rounded-full object-cover" />
-                                          ) : (
-                                            <div className="w-5 h-5 rounded-full bg-violet-500/30 flex items-center justify-center text-[10px] text-white/70">
-                                              {name.charAt(0)}
-                                            </div>
-                                          )}
-                                          <span className="text-xs text-white/80">{name.split(' ')[0]}</span>
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                )
-                              ) : (
-                                <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4">
+                                ) : (
                                   <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-12">
                                     <span className="text-xl sm:text-2xl">{periodIcon}</span>
                                     {item.time && (
                                       <span className="text-[10px] font-mono text-white/50 tabular-nums">{item.time}</span>
                                     )}
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block">
-                                      {periodLabel}
-                                    </span>
-                                    <h4 className="text-sm sm:text-base font-semibold text-white mt-0.5">{item.title}</h4>
-                                    {item.description && (
-                                      <p className="text-xs sm:text-sm text-white/60 mt-1">{item.description}</p>
-                                    )}
-                                    {item.responsible.length > 0 && (
-                                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                        <span className="text-[10px] uppercase tracking-wider text-white/40">Door</span>
-                                        {item.responsible.map((name) => {
-                                          const personPhoto = getPhotoUrl(name)
-                                          return (
-                                            <div key={name} className="flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full bg-white/10">
-                                              {personPhoto ? (
-                                                <img src={personPhoto} alt={name} className="w-5 h-5 rounded-full object-cover" />
-                                              ) : (
-                                                <div className="w-5 h-5 rounded-full bg-violet-500/30 flex items-center justify-center text-[10px] text-white/70">
-                                                  {name.charAt(0)}
-                                                </div>
-                                              )}
-                                              <span className="text-xs text-white/80">{name.split(' ')[0]}</span>
-                                            </div>
-                                          )
-                                        })}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); openProgramEditor(item) }}
-                                      className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                                      title="Wijzigen"
-                                    >
-                                      <Icons.edit size={14} />
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); if (confirm(`'${item.title}' verwijderen?`)) deleteProgramItem(item.id) }}
-                                      className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                                      title="Verwijderen"
-                                    >
-                                      <Icons.x size={14} />
-                                    </button>
-                                  </div>
+                                )}
+
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block">
+                                    {periodLabel}
+                                  </span>
+                                  <h4 className="text-sm sm:text-base font-semibold text-white mt-0.5">{item.title}</h4>
+                                  {item.description && (
+                                    <p className="text-xs sm:text-sm text-white/60 mt-1">{item.description}</p>
+                                  )}
+                                  {item.responsible.length > 0 && (
+                                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                      <span className="text-[10px] uppercase tracking-wider text-white/40">Door</span>
+                                      {item.responsible.map((name) => {
+                                        const personPhoto = getPhotoUrl(name)
+                                        return (
+                                          <div key={name} className="flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full bg-white/10">
+                                            {personPhoto ? (
+                                              <img src={personPhoto} alt={name} className="w-5 h-5 rounded-full object-cover" />
+                                            ) : (
+                                              <div className="w-5 h-5 rounded-full bg-violet-500/30 flex items-center justify-center text-[10px] text-white/70">
+                                                {name.charAt(0)}
+                                              </div>
+                                            )}
+                                            <span className="text-xs text-white/80">{name.split(' ')[0]}</span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+
+                                <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openProgramEditor(item) }}
+                                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                    title="Wijzigen"
+                                  >
+                                    <Icons.edit size={14} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); if (confirm(`'${item.title}' verwijderen?`)) deleteProgramItem(item.id) }}
+                                    className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                    title="Verwijderen"
+                                  >
+                                    <Icons.x size={14} />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           )
                         })}
