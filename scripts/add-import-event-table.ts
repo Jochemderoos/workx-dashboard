@@ -1,11 +1,11 @@
 import { PrismaClient } from '@prisma/client'
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[add-import-event] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "ImportEvent" (
@@ -24,7 +24,7 @@ export async function main() {
   } catch (err) {
     console.error('[add-import-event] mislukt:', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 if (require.main === module) main()

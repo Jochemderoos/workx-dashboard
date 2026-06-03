@@ -49,12 +49,12 @@ function refOf(e: Entry, idx: number): string {
   return `historic-${e.category}-${e.year}-${String(e.month).padStart(2, '0')}-${String(e.day).padStart(2, '0')}-${e.amount.toFixed(2)}-${idx}`
 }
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-uwv-asr-historic] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     let added = 0
     let skipped = 0
@@ -92,7 +92,7 @@ export async function main() {
   } catch (err) {
     console.error('[seed-uwv-asr-historic] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

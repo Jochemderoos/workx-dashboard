@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   const emma = await prisma.user.findFirst({ where: { name: { contains: 'Emma' } } })
   if (!emma) {
     console.log('Emma niet gevonden')

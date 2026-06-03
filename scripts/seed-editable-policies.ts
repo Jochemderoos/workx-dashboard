@@ -180,12 +180,12 @@ const SOLLICITATIEBELEID = {
   },
 }
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-editable-policies] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     const seeds: Array<{ key: string; content: unknown }> = [
       { key: 'stappenplan-partner', content: STAPPENPLAN_PARTNER },
@@ -205,7 +205,7 @@ export async function main() {
   } catch (err) {
     console.error('[seed-editable-policies] mislukt:', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

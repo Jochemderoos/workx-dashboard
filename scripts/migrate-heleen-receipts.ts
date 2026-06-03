@@ -8,13 +8,13 @@
 
 import { PrismaClient } from '@prisma/client'
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[migrate-heleen] geen DATABASE_URL — overslaan')
     return
   }
 
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     const heleen = await prisma.user.findFirst({
       where: { name: { startsWith: 'Heleen' } },
@@ -57,7 +57,7 @@ export async function main() {
   } catch (err) {
     console.error('[migrate-heleen] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

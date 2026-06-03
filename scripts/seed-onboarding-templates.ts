@@ -49,12 +49,12 @@ const TEMPLATES: Array<{ title: string; description?: string; category: string }
   { title: 'PO-puntenplanning besproken', category: 'Eerste maand', description: '20 PO-punten/jaar, min. 12 arbeidsrecht' },
 ]
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-onboarding-templates] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     // SortOrder = volgorde binnen categorie
     const categoryOrder = new Map<string, number>()
@@ -86,7 +86,7 @@ export async function main() {
   } catch (err) {
     console.error('[seed-onboarding-templates] mislukt:', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

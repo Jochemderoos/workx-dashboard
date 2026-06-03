@@ -3,12 +3,12 @@
 
 import { PrismaClient } from '@prisma/client'
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[add-monthly-cost-external-ref] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     await prisma.$executeRawUnsafe(
       `ALTER TABLE "MonthlyCost" ADD COLUMN IF NOT EXISTS "externalRef" TEXT`
@@ -20,7 +20,7 @@ export async function main() {
   } catch (err) {
     console.error('[add-monthly-cost-external-ref] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

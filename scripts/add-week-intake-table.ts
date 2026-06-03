@@ -3,12 +3,12 @@
 
 import { PrismaClient } from '@prisma/client'
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[add-week-intake-table] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "WeekIntake" (
@@ -37,7 +37,7 @@ export async function main() {
   } catch (err) {
     console.error('[add-week-intake-table] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

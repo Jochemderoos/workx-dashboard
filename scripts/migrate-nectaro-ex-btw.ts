@@ -23,12 +23,12 @@ const FIXES: Fix[] = [
 const NEW_DESCRIPTION = 'Nectaro B.V. (Lodewijk) — excl. BTW'
 const EPS = 0.01
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[migrate-nectaro-ex-btw] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     let updated = 0
     let alreadyOk = 0
@@ -69,7 +69,7 @@ export async function main() {
   } catch (err) {
     console.error('[migrate-nectaro-ex-btw] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

@@ -42,12 +42,12 @@ const SKIP_LIKE_PATTERNS: string[] = [
 const DIVIDEND_KEYWORDS = ['dividend', 'interim dividend']
 const PARTNER_NAMES = ['les dents du midi', 'cavalieri', 'nilsson', 'jader', 'isma b.v.']
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[migrate-cleanup-mt940-all-years] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     // 1) Skip-like records (medewerkers/belasting/pensioen/intern)
     const skipLike = await prisma.monthlyCost.deleteMany({
@@ -82,7 +82,7 @@ export async function main() {
   } catch (err) {
     console.error('[migrate-cleanup-mt940-all-years] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

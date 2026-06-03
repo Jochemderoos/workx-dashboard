@@ -22,7 +22,7 @@ const JAR_SCHEDULE_2026 = [
   { date: '2026-12-24', name: 'Wies' },
 ]
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   console.log('Seeding JAR rooster 2026...')
 
   // Get first user to use as creator

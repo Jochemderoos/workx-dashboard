@@ -7,12 +7,12 @@ import { PrismaClient } from '@prisma/client'
 const OLD_NAME = 'Alain Heunen'
 const NEW_NAME = "Alexander Collot d'Escury"
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[migrate-pitch-alain-to-alexander] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     const candidates = await prisma.pitchDocument.findMany({
       where: {
@@ -38,7 +38,7 @@ export async function main() {
   } catch (err) {
     console.error('[migrate-pitch-alain-to-alexander] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect()
+    if (!externalPrisma) await prisma.$disconnect()
   }
 }
 

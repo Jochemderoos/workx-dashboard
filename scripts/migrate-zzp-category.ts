@@ -6,12 +6,12 @@ import { PrismaClient } from '@prisma/client'
 
 const ZZP_PATTERN = /nectaro|lodewijk|tentoo/i
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[migrate-zzp-category] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     const candidates = await prisma.monthlyCost.findMany({
       where: { category: null },
@@ -28,7 +28,7 @@ export async function main() {
   } catch (err) {
     console.error('[migrate-zzp-category] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

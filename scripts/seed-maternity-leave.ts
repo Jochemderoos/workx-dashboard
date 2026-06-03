@@ -15,7 +15,7 @@ const MATERNITY_LEAVES = [
   },
 ]
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   console.log('Adding maternity leave (zwangerschapsverlof)...\n')
 
   for (const leave of MATERNITY_LEAVES) {

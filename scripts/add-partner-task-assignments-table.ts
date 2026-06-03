@@ -6,12 +6,12 @@
 
 import { PrismaClient } from '@prisma/client'
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[add-partner-task-assignments-table] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     // Drop oude unique index (heette eerder ..._key) en vervang door gewone index
     await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS "Responsibility_partnerTaskId_key"`)
@@ -41,7 +41,7 @@ export async function main() {
   } catch (err) {
     console.error('[add-partner-task-assignments-table] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

@@ -58,12 +58,12 @@ const INTERNATIONAL = [
   { category: 'Zwitserland', naam: 'Prager Dreifuss AG', adres: 'Mühlebachstrasse 6, 8008', plaats: 'Zürich', telefoon: '+41 44 254 55 55', contactDaar: 'Mr. Ralph Butz (Partner) — ralph.butz@prager-dreifuss.com\nMrs. Corinne Nobs (Counsel) — corinne.nobs@prager-dreifuss.com', sortOrder: 0 },
 ]
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-bevriende-kantoren] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     const existing = await prisma.bevriendKantoor.count()
     if (existing > 0) {
@@ -79,7 +79,7 @@ export async function main() {
   } catch (err) {
     console.error('[seed-bevriende-kantoren] mislukt:', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

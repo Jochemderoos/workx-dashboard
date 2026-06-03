@@ -27,7 +27,7 @@ interface DumpedTx {
   category: 'UWV' | 'ASR' | 'ZZP' | 'MGMT' | null
 }
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-monthly-costs-2026-mt940] geen DATABASE_URL — overslaan')
     return
@@ -50,7 +50,7 @@ export async function main() {
     return
   }
 
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     // Welke externalRefs zitten al in de DB?
     const refs = filtered.map(t => t.externalRef)
@@ -96,7 +96,7 @@ export async function main() {
   } catch (err) {
     console.error('[seed-monthly-costs-2026-mt940] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

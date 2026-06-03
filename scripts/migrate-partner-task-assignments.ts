@@ -3,12 +3,12 @@
 
 import { PrismaClient } from '@prisma/client'
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[migrate-partner-task-assignments] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     const tasks = await prisma.partnerTask.findMany({
       where: { responsibleId: { not: null } },
@@ -35,7 +35,7 @@ export async function main() {
   } catch (err) {
     console.error('[migrate-partner-task-assignments] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

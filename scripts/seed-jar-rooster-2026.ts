@@ -21,12 +21,12 @@ const SESSIONS_2026: Array<{ month: number; day: number; name: string }> = [
   { month: 12, day: 24, name: 'Wies van Pesch' },
 ]
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-jar-rooster-2026] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     let created = 0
     let skipped = 0
@@ -46,7 +46,7 @@ export async function main() {
   } catch (err) {
     console.error('[seed-jar-rooster-2026] mislukt:', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 if (require.main === module) main()

@@ -297,12 +297,12 @@ const DATES = new Map([
   ['22936', { issueDate: '2026-05-19', dueDate: '2026-06-18' }],
 ])
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-open-invoice-dates] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     let updated = 0
     let skipped = 0
@@ -333,7 +333,7 @@ export async function main() {
   } catch (err) {
     console.error('[seed-open-invoice-dates] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

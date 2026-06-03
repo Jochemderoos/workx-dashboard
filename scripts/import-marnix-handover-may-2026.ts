@@ -80,12 +80,12 @@ const CASES: CaseInput[] = [
   { dossiernaam: 'Stek - Tata Steel (project Dynamo)', contactpersoon: 'Ruben Tros', beschrijving: 'HR-commitments. Mogelijk ontslag/herplaatsing werknemer.', waarnemers: 'Juliette' },
 ]
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[import-marnix-handover] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     const marnix = await prisma.user.findFirst({
       where: { name: { startsWith: 'Marnix' } },
@@ -130,7 +130,7 @@ export async function main() {
   } catch (err) {
     console.error('[import-marnix-handover] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 

@@ -36,12 +36,12 @@ const PROGRAM: ProgramSeed[] = [
   { date: '2026-10-04', time: '10:25', title: 'Vertrek vlucht', description: 'Tot volgende keer, Mallorca!', responsible: [] },
 ]
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-lustrum-program] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     // Eenmalige rename: Spelletjes-avond → Workx Awards & Movie Night
     await prisma.lustrumProgram.updateMany({
@@ -77,7 +77,7 @@ export async function main() {
   } catch (err) {
     console.error('[seed-lustrum-program] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect()
+    if (!externalPrisma) await prisma.$disconnect()
   }
 }
 

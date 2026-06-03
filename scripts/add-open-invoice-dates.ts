@@ -4,12 +4,12 @@
 
 import { PrismaClient } from '@prisma/client'
 
-export async function main() {
+export async function main(externalPrisma?: PrismaClient) {
   if (!process.env.DATABASE_URL) {
     console.log('[add-open-invoice-dates] geen DATABASE_URL — overslaan')
     return
   }
-  const prisma = new PrismaClient()
+  const prisma = externalPrisma ?? new PrismaClient()
   try {
     await prisma.$executeRawUnsafe(
       `ALTER TABLE "OpenInvoice" ADD COLUMN IF NOT EXISTS "issueDate" TIMESTAMP(3)`
@@ -24,7 +24,7 @@ export async function main() {
   } catch (err) {
     console.error('[add-open-invoice-dates] mislukt (build gaat door):', err)
   } finally {
-    await prisma.$disconnect().catch(() => {})
+    if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }
 }
 
