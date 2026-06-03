@@ -30,7 +30,7 @@ const PROGRAM: ProgramSeed[] = [
   // Zaterdag 3 oktober
   { date: '2026-10-03', time: '09:00', title: 'Ontbijt in huis', description: null, responsible: [] },
   { date: '2026-10-03', time: '13:00', title: 'Boot varen & snorkelen', description: 'Lunch op het strand', responsible: [] },
-  { date: '2026-10-03', time: '19:00', title: 'Spelletjes-avond', description: 'Diner in huis (of andere niet-inkak-avond)', responsible: [] },
+  { date: '2026-10-03', time: '20:00', title: 'Workx Awards & Movie Night', description: 'Diner in huis — sterren, statuettes en stiekem een traan', responsible: [] },
 
   // Zondag 4 oktober — vertrekdag
   { date: '2026-10-04', time: '10:25', title: 'Vertrek vlucht', description: 'Tot volgende keer, Mallorca!', responsible: [] },
@@ -43,6 +43,16 @@ async function main() {
   }
   const prisma = new PrismaClient()
   try {
+    // Eenmalige rename: Spelletjes-avond → Workx Awards & Movie Night
+    await prisma.lustrumProgram.updateMany({
+      where: { date: '2026-10-03', title: 'Spelletjes-avond' },
+      data: {
+        title: 'Workx Awards & Movie Night',
+        time: '20:00',
+        description: 'Diner in huis — sterren, statuettes en stiekem een traan',
+      },
+    })
+
     const existing = await prisma.lustrumProgram.findMany({
       select: { date: true, title: true },
     })
