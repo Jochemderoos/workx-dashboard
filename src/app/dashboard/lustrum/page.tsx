@@ -80,14 +80,17 @@ interface TeamMember {
   role: string
 }
 
-// Sfeerfoto's per activiteit — match op exacte titel
-const ACTIVITY_PHOTOS: Record<string, string> = {
-  'Themafeest & poolparty': '/lustrum/poolparty.webp',
-  'Wandelen Port de Sóller – Deià': '/lustrum/wandelen-deia.jpg',
-  'Diner in Palma & rooftopbar': '/lustrum/rooftop-palma.webp',
-  'Boot varen & snorkelen': '/lustrum/boot-snorkelen.jpg',
-  'Club in Palma': '/lustrum/club-palma.jpg',
-  'Workx Awards & Movie Night': '/lustrum/workx-awards.jpg',
+// Sfeerfoto's per activiteit — fuzzy match op trefwoorden in de titel,
+// zodat hernoemde / samengevoegde items toch een foto krijgen.
+function getActivityPhoto(title: string): string | undefined {
+  const t = title.toLowerCase()
+  if (t.includes('award') || t.includes('lustrumfilm') || t.includes('lustrum film') || t.includes('movie')) return '/lustrum/workx-awards.jpg'
+  if (t.includes('themafeest') || t.includes('pool')) return '/lustrum/poolparty.webp'
+  if (t.includes('wandel') || t.includes('sóller') || t.includes('soller') || t.includes('deià') || t.includes('deia')) return '/lustrum/wandelen-deia.jpg'
+  if (t.includes('rooftop') || (t.includes('palma') && t.includes('diner'))) return '/lustrum/rooftop-palma.webp'
+  if (t.includes('boot') || t.includes('snorkel')) return '/lustrum/boot-snorkelen.jpg'
+  if (t.includes('club')) return '/lustrum/club-palma.jpg'
+  return undefined
 }
 
 // Dagen van de trip — per dag eigen sfeer/kleur (FOMO-design)
@@ -1305,7 +1308,7 @@ export default function LustrumPage() {
                           const hour = parseInt(item.time?.split(':')[0] || '12', 10)
                           const periodIcon = hour < 12 ? '🌅' : hour < 17 ? '☀️' : '🌙'
                           const periodLabel = hour < 12 ? 'Ochtend' : hour < 17 ? 'Middag' : 'Avond'
-                          const photo = ACTIVITY_PHOTOS[item.title]
+                          const photo = getActivityPhoto(item.title)
                           return (
                             <div
                               key={item.id}
