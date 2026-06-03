@@ -21,7 +21,7 @@ const SESSIONS_2026: Array<{ month: number; day: number; name: string }> = [
   { month: 12, day: 24, name: 'Wies van Pesch' },
 ]
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-jar-rooster-2026] geen DATABASE_URL — overslaan')
     return
@@ -49,4 +49,4 @@ async function main() {
     await prisma.$disconnect().catch(() => {})
   }
 }
-main()
+if (require.main === module) main()

@@ -36,7 +36,7 @@ const PROGRAM: ProgramSeed[] = [
   { date: '2026-10-04', time: '10:25', title: 'Vertrek vlucht', description: 'Tot volgende keer, Mallorca!', responsible: [] },
 ]
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-lustrum-program] geen DATABASE_URL — overslaan')
     return
@@ -81,4 +81,4 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()

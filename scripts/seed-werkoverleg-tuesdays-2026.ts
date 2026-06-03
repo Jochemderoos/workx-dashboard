@@ -43,7 +43,7 @@ function dateLabel(d: Date): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-async function main() {
+export async function main() {
   const { PrismaClient } = await import('@prisma/client')
   const p = new PrismaClient()
   try {

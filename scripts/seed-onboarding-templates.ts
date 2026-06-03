@@ -49,7 +49,7 @@ const TEMPLATES: Array<{ title: string; description?: string; category: string }
   { title: 'PO-puntenplanning besproken', category: 'Eerste maand', description: '20 PO-punten/jaar, min. 12 arbeidsrecht' },
 ]
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-onboarding-templates] geen DATABASE_URL — overslaan')
     return
@@ -90,4 +90,4 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()

@@ -58,7 +58,7 @@ const INTERNATIONAL = [
   { category: 'Zwitserland', naam: 'Prager Dreifuss AG', adres: 'Mühlebachstrasse 6, 8008', plaats: 'Zürich', telefoon: '+41 44 254 55 55', contactDaar: 'Mr. Ralph Butz (Partner) — ralph.butz@prager-dreifuss.com\nMrs. Corinne Nobs (Counsel) — corinne.nobs@prager-dreifuss.com', sortOrder: 0 },
 ]
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-bevriende-kantoren] geen DATABASE_URL — overslaan')
     return
@@ -83,4 +83,4 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()

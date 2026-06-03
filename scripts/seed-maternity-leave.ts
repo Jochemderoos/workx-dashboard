@@ -15,7 +15,7 @@ const MATERNITY_LEAVES = [
   },
 ]
 
-async function main() {
+export async function main() {
   console.log('Adding maternity leave (zwangerschapsverlof)...\n')
 
   for (const leave of MATERNITY_LEAVES) {
@@ -101,7 +101,7 @@ async function main() {
   console.log('Done!')
 }
 
-main()
+if (require.main === module) main()
   .catch((e) => {
     console.error(e)
     process.exit(1)

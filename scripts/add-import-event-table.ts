@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[add-import-event] geen DATABASE_URL — overslaan')
     return
@@ -27,4 +27,4 @@ async function main() {
     await prisma.$disconnect().catch(() => {})
   }
 }
-main()
+if (require.main === module) main()

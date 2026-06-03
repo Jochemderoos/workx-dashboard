@@ -23,7 +23,7 @@ const FIXES: Fix[] = [
 const NEW_DESCRIPTION = 'Nectaro B.V. (Lodewijk) — excl. BTW'
 const EPS = 0.01
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[migrate-nectaro-ex-btw] geen DATABASE_URL — overslaan')
     return
@@ -73,4 +73,4 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()

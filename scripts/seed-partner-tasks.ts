@@ -93,7 +93,7 @@ const SEED: ChapterSeed[] = [
   ] },
 ]
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-partner-tasks] geen DATABASE_URL — overslaan')
     return
@@ -134,4 +134,4 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()

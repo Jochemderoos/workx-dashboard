@@ -49,7 +49,7 @@ function refOf(e: Entry, idx: number): string {
   return `historic-${e.category}-${e.year}-${String(e.month).padStart(2, '0')}-${String(e.day).padStart(2, '0')}-${e.amount.toFixed(2)}-${idx}`
 }
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[seed-uwv-asr-historic] geen DATABASE_URL — overslaan')
     return
@@ -96,4 +96,4 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()

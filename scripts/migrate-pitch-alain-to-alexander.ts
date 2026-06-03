@@ -7,7 +7,7 @@ import { PrismaClient } from '@prisma/client'
 const OLD_NAME = 'Alain Heunen'
 const NEW_NAME = "Alexander Collot d'Escury"
 
-async function main() {
+export async function main() {
   if (!process.env.DATABASE_URL) {
     console.log('[migrate-pitch-alain-to-alexander] geen DATABASE_URL — overslaan')
     return
@@ -42,4 +42,4 @@ async function main() {
   }
 }
 
-main()
+if (require.main === module) main()

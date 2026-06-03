@@ -22,7 +22,7 @@ const JAR_SCHEDULE_2026 = [
   { date: '2026-12-24', name: 'Wies' },
 ]
 
-async function main() {
+export async function main() {
   console.log('Seeding JAR rooster 2026...')
 
   // Get first user to use as creator
@@ -87,7 +87,7 @@ async function main() {
   console.log(`\n✅ Successfully created ${JAR_SCHEDULE_2026.length} JAR events!`)
 }
 
-main()
+if (require.main === module) main()
   .catch((e) => {
     console.error(e)
     process.exit(1)

@@ -39,7 +39,7 @@ function dateLabel(d: Date): string {
   return `Maandag ${d.getUTCDate()} ${MONTH_LABELS[d.getUTCMonth() + 1].toLowerCase()} ${d.getUTCFullYear()}`
 }
 
-async function main() {
+export async function main() {
   const { PrismaClient } = await import('@prisma/client')
   const p = new PrismaClient()
   try {
