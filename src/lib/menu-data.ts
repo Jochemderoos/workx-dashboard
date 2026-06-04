@@ -57,6 +57,8 @@ export const teamMenu_Werk: MenuItem[] = [
     description: 'Openstaande facturen, aanschrijven-knop, BaseNet-import voor het hele kantoor.' },
   { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', iconAnim: 'icon-briefcase-hover', hideForExternal: true,
     description: 'Due-diligence projecten met team-toewijzing en status.' },
+  { href: '/dashboard/recruitment', icon: Icons.target, label: 'Recruitment', iconAnim: 'icon-target-hover',
+    description: 'Jouw lijstje met potentiele Workxers, ambassadeurs en LinkedIn-ideeën. Doorlopend in te vullen.' },
 ]
 
 export const teamMenu_Tools: MenuItem[] = [

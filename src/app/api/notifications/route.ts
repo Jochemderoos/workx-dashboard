@@ -428,6 +428,40 @@ export async function GET() {
       }
     }
 
+    // 15. Recruitment — partners/Hanna krijgen melding bij nieuwe kandidaten
+    //     die ná het reveal-moment zijn toegevoegd (laatste 7 dagen).
+    if (currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN') {
+      try {
+        const { RECRUITMENT_REVEAL_AT } = await import('@/lib/recruitment-config')
+        const since = new Date(Math.max(
+          RECRUITMENT_REVEAL_AT.getTime(),
+          now.getTime() - 7 * 24 * 60 * 60 * 1000,
+        ))
+        const recentCands = await prisma.recruitmentCandidate.findMany({
+          where: { createdAt: { gt: since } },
+          include: { entry: { include: { user: { select: { id: true, name: true } } } } },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        })
+        for (const c of recentCands) {
+          if (c.entry.user.id === userId) continue // niet voor jezelf
+          const key = `recruitment-${c.id}`
+          if (dismissedKeys.has(key)) continue
+          const who = c.entry.user.name?.split(' ')[0] || 'iemand'
+          const label = c.type === 'ambassador' ? 'ambassadeur' : 'kandidaat'
+          notifications.push({
+            id: key,
+            type: 'recruitment',
+            title: 'Nieuwe recruitment-input',
+            message: `${who} heeft ${c.name} (${label}) toegevoegd`,
+            createdAt: c.createdAt,
+            read: false,
+            href: '/dashboard/recruitment',
+          })
+        }
+      } catch { /* ignore */ }
+    }
+
     // 14. Werkverdeling invullen — vanaf donderdag 15:00 NL tot maandag 09:00 NL
     //     (wanneer de Slack-reminder fired). Alleen voor EMPLOYEE.
     if (currentUser?.role === 'EMPLOYEE') {

@@ -45,6 +45,18 @@
     {
       "path": "/api/cron/performance-reminder",
       "schedule": "0 12 * * 4"
+    },
+    {
+      "path": "/api/cron/recruitment-reminder",
+      "schedule": "0 8 * * 5"
+    },
+    {
+      "path": "/api/cron/recruitment-reminder",
+      "schedule": "15 7 * * 1"
+    },
+    {
+      "path": "/api/cron/recruitment-weekly-nudge",
+      "schedule": "0 7-15 * * 1-5"
     }
   ]
 }
