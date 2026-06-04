@@ -64,6 +64,25 @@ export async function main(externalPrisma?: PrismaClient) {
       update: {},
     })
 
+    // Dedupe vooraf: meerdere records met dezelfde (lowercase) naam in deze
+    // entry samenvoegen — houd de oudste aan, gooi de rest weg. Voorkomt
+    // 'X× genoemd' badges veroorzaakt door eerdere seed-iteraties.
+    const allExisting = await prisma.recruitmentCandidate.findMany({
+      where: { entryId: entry.id },
+      orderBy: { createdAt: 'asc' },
+    })
+    const seenKeys = new Set<string>()
+    const toDelete: string[] = []
+    for (const c of allExisting) {
+      const key = `${c.type}|${c.name.trim().toLowerCase()}`
+      if (seenKeys.has(key)) toDelete.push(c.id)
+      else seenKeys.add(key)
+    }
+    if (toDelete.length > 0) {
+      await prisma.recruitmentCandidate.deleteMany({ where: { id: { in: toDelete } } })
+      console.log(`[seed-recruitment-historical] ${toDelete.length} duplicate kandidaten opgeruimd`)
+    }
+
     // Kandidaten — upsert per (entry, name)
     const existing = await prisma.recruitmentCandidate.findMany({
       where: { entryId: entry.id, type: 'candidate' },

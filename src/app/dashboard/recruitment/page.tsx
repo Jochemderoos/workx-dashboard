@@ -116,6 +116,15 @@ export default function RecruitmentPage() {
   // Overview filters
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [showMineOnly, setShowMineOnly] = useState(false)
+  const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(new Set())
+  const toggleEmployeeExpand = (userId: string) => {
+    setExpandedEmployees(prev => {
+      const next = new Set(prev)
+      if (next.has(userId)) next.delete(userId)
+      else next.add(userId)
+      return next
+    })
+  }
 
   // Approach edit modal
   const [editingCandidate, setEditingCandidate] = useState<{
@@ -286,7 +295,10 @@ export default function RecruitmentPage() {
         const mention = { name: entry.user.name, role: entry.user.role, userId: entry.user.id }
         const existing = map.get(key)
         if (existing) {
-          existing.mentionedBy.push(mention)
+          // Dezelfde user maar één keer tellen — zelfs als hun entry per ongeluk
+          // meerdere records voor dezelfde naam bevat
+          const alreadyMentioned = existing.mentionedBy.some(m => m.userId === mention.userId)
+          if (!alreadyMentioned) existing.mentionedBy.push(mention)
           if (c.id) existing.allIds.push(c.id)
           // Take any non-null approach data (latest wins via order)
           if (c.approachStatus) existing.approachStatus = c.approachStatus
@@ -490,7 +502,11 @@ export default function RecruitmentPage() {
                 const candCount = entry?.candidates.filter(c => c.type === 'candidate').length || 0
                 const hasAmb = entry?.candidates.some(c => c.type === 'ambassador') || false
                 return (
-                  <div key={u.id} className={`rounded-xl border p-3 ${entry ? 'border-white/10 bg-white/5' : 'border-white/5 bg-white/[0.02]'}`}>
+                  <div
+                    key={u.id}
+                    onClick={() => entry && toggleEmployeeExpand(u.id)}
+                    className={`rounded-xl border p-3 transition-colors ${entry ? 'border-white/10 bg-white/5 cursor-pointer hover:border-white/20 hover:bg-white/[0.08]' : 'border-white/5 bg-white/[0.02]'}`}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-9 h-9 rounded-full overflow-hidden bg-white/5 flex-shrink-0">
                         {photo ? <Image src={photo} alt={u.name} width={36} height={36} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-white/40">{u.name.charAt(0)}</div>}
@@ -500,7 +516,10 @@ export default function RecruitmentPage() {
                         <p className="text-[10px] text-white/40">{u.role === 'PARTNER' ? 'Partner' : u.role === 'ADMIN' ? 'Office' : 'Advocaat'}</p>
                       </div>
                       {entry ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-300">✓</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-300">✓</span>
+                          <Icons.chevronDown size={14} className={`text-white/40 transition-transform ${expandedEmployees.has(u.id) ? 'rotate-180' : ''}`} />
+                        </div>
                       ) : (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/40">leeg</span>
                       )}
@@ -513,8 +532,55 @@ export default function RecruitmentPage() {
                             Posten: {POSTING_OPTIONS.find(o => o.value === entry.willPostHimself)?.label}
                           </div>
                         )}
-                        {entry.visibilityIdeas && (
+                        {entry.visibilityIdeas && !expandedEmployees.has(u.id) && (
                           <p className="text-[11px] text-white/40 italic truncate">"{entry.visibilityIdeas.slice(0, 80)}{entry.visibilityIdeas.length > 80 ? '...' : ''}"</p>
+                        )}
+                        {expandedEmployees.has(u.id) && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-3 pt-3 border-t border-white/10 space-y-2"
+                          >
+                            {entry.visibilityIdeas && (
+                              <div className="rounded-lg bg-white/5 p-2">
+                                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">LinkedIn-ideeën</p>
+                                <p className="text-xs text-white/70 whitespace-pre-line italic">{entry.visibilityIdeas}</p>
+                              </div>
+                            )}
+                            {entry.candidates.filter(c => c.type === 'candidate').length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Kandidaten</p>
+                                <ul className="space-y-1">
+                                  {entry.candidates.filter(c => c.type === 'candidate').map((c) => (
+                                    <li key={c.id} className="flex items-baseline gap-2 text-xs">
+                                      <span className="text-white">{c.name}</span>
+                                      {c.experienceYear !== null && <span className="text-white/40">· {c.experienceYear}j</span>}
+                                      {c.currentOffice && <span className="text-white/40 truncate">· {c.currentOffice}</span>}
+                                      {c.inNetwork && <span className="text-[9px] text-emerald-300">●</span>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {entry.candidates.filter(c => c.type === 'ambassador').length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-pink-300 font-semibold mb-1">Ambassadeur(s)</p>
+                                <ul className="space-y-1">
+                                  {entry.candidates.filter(c => c.type === 'ambassador').map((c) => (
+                                    <li key={c.id} className="flex items-baseline gap-2 text-xs">
+                                      <span className="text-white">{c.name}</span>
+                                      {c.currentOffice && <span className="text-white/40 truncate">· {c.currentOffice}</span>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {entry.postingFormat && (
+                              <div className="rounded-lg bg-white/5 p-2">
+                                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Posting-vorm</p>
+                                <p className="text-xs text-white/70 italic">{entry.postingFormat}</p>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -861,7 +927,11 @@ export default function RecruitmentPage() {
                 const candCount = entry?.candidates.filter(c => c.type === 'candidate').length || 0
                 const hasAmb = entry?.candidates.some(c => c.type === 'ambassador') || false
                 return (
-                  <div key={u.id} className={`rounded-xl border p-3 ${entry ? 'border-white/10 bg-white/5' : 'border-white/5 bg-white/[0.02]'}`}>
+                  <div
+                    key={u.id}
+                    onClick={() => entry && toggleEmployeeExpand(u.id)}
+                    className={`rounded-xl border p-3 transition-colors ${entry ? 'border-white/10 bg-white/5 cursor-pointer hover:border-white/20 hover:bg-white/[0.08]' : 'border-white/5 bg-white/[0.02]'}`}
+                  >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-9 h-9 rounded-full overflow-hidden bg-white/5 flex-shrink-0">
                         {photo ? <Image src={photo} alt={u.name} width={36} height={36} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-white/40">{u.name.charAt(0)}</div>}
@@ -871,7 +941,10 @@ export default function RecruitmentPage() {
                         <p className="text-[10px] text-white/40">{u.role === 'PARTNER' ? 'Partner' : u.role === 'ADMIN' ? 'Office' : 'Advocaat'}</p>
                       </div>
                       {entry ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-300">✓</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-300">✓</span>
+                          <Icons.chevronDown size={14} className={`text-white/40 transition-transform ${expandedEmployees.has(u.id) ? 'rotate-180' : ''}`} />
+                        </div>
                       ) : (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/40">leeg</span>
                       )}
@@ -884,8 +957,55 @@ export default function RecruitmentPage() {
                             Posten: {POSTING_OPTIONS.find(o => o.value === entry.willPostHimself)?.label}
                           </div>
                         )}
-                        {entry.visibilityIdeas && (
+                        {entry.visibilityIdeas && !expandedEmployees.has(u.id) && (
                           <p className="text-[11px] text-white/40 italic truncate">"{entry.visibilityIdeas.slice(0, 80)}{entry.visibilityIdeas.length > 80 ? '...' : ''}"</p>
+                        )}
+                        {expandedEmployees.has(u.id) && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-3 pt-3 border-t border-white/10 space-y-2"
+                          >
+                            {entry.visibilityIdeas && (
+                              <div className="rounded-lg bg-white/5 p-2">
+                                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">LinkedIn-ideeën</p>
+                                <p className="text-xs text-white/70 whitespace-pre-line italic">{entry.visibilityIdeas}</p>
+                              </div>
+                            )}
+                            {entry.candidates.filter(c => c.type === 'candidate').length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Kandidaten</p>
+                                <ul className="space-y-1">
+                                  {entry.candidates.filter(c => c.type === 'candidate').map((c) => (
+                                    <li key={c.id} className="flex items-baseline gap-2 text-xs">
+                                      <span className="text-white">{c.name}</span>
+                                      {c.experienceYear !== null && <span className="text-white/40">· {c.experienceYear}j</span>}
+                                      {c.currentOffice && <span className="text-white/40 truncate">· {c.currentOffice}</span>}
+                                      {c.inNetwork && <span className="text-[9px] text-emerald-300">●</span>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {entry.candidates.filter(c => c.type === 'ambassador').length > 0 && (
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wider text-pink-300 font-semibold mb-1">Ambassadeur(s)</p>
+                                <ul className="space-y-1">
+                                  {entry.candidates.filter(c => c.type === 'ambassador').map((c) => (
+                                    <li key={c.id} className="flex items-baseline gap-2 text-xs">
+                                      <span className="text-white">{c.name}</span>
+                                      {c.currentOffice && <span className="text-white/40 truncate">· {c.currentOffice}</span>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {entry.postingFormat && (
+                              <div className="rounded-lg bg-white/5 p-2">
+                                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Posting-vorm</p>
+                                <p className="text-xs text-white/70 italic">{entry.postingFormat}</p>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     ) : (
