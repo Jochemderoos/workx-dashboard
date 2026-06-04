@@ -389,14 +389,6 @@ export default function RecruitmentPage() {
               Sollicitaties
             </button>
           )}
-          {isManager && (
-            <button
-              onClick={() => router.push('/dashboard/recruitment/oude-lijst')}
-              className="px-4 py-1.5 rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              (oude) lijst kandidaten
-            </button>
-          )}
           {isJochem && (
             <button
               onClick={() => setPreviewAsEmployee(!previewAsEmployee)}
@@ -564,6 +556,14 @@ export default function RecruitmentPage() {
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-[11px] text-white/40">Genoemd door</span>
                           {c.mentionedBy.map(m => {
+                            if (m.name === 'Eerdere ronde') {
+                              return (
+                                <div key={m.userId} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                  <span className="text-[10px]">📚</span>
+                                  <span className="text-[11px] font-medium">Eerdere ronde</span>
+                                </div>
+                              )
+                            }
                             const ph = getPhotoUrl(m.name)
                             return (
                               <div key={m.userId} className="flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full bg-white/5 border border-white/10">
@@ -951,6 +951,14 @@ export default function RecruitmentPage() {
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-[11px] text-white/40">Genoemd door</span>
                           {c.mentionedBy.map(m => {
+                            if (m.name === 'Eerdere ronde') {
+                              return (
+                                <div key={m.userId} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                  <span className="text-[10px]">📚</span>
+                                  <span className="text-[11px] font-medium">Eerdere ronde</span>
+                                </div>
+                              )
+                            }
                             const ph = getPhotoUrl(m.name)
                             return (
                               <div key={m.userId} className="flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full bg-white/5 border border-white/10">
