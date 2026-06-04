@@ -28,6 +28,7 @@ export default function BonusPage() {
   const [calculations, setCalculations] = useState<Calculation[]>([])
   const [adminCalculations, setAdminCalculations] = useState<Calculation[]>([])
   const [activeTab, setActiveTab] = useState<'mijn' | 'ingediend' | 'overzicht'>('mijn')
+  const [ingediendGroupBy, setIngediendGroupBy] = useState<'period' | 'client'>('period')
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -950,39 +951,78 @@ export default function BonusPage() {
       {/* === TAB: Ingediende bonussen === */}
       {activeTab === 'ingediend' && (() => {
         const submitted = calculations.filter(c => c.status === 'SUBMITTED' || c.status === 'PAID')
-        // Groepeer per kwartaal van indiening
-        const grouped = submitted.reduce((acc, calc) => {
+
+        // Groep-keuze: per kwartaal of per klant
+        const groupKey = (calc: Calculation) => {
+          if (ingediendGroupBy === 'client') {
+            return calc.clientName?.trim() || 'Geen klant ingevuld'
+          }
           const date = calc.submittedAt ? new Date(calc.submittedAt) : new Date(calc.createdAt)
           const q = Math.ceil((date.getMonth() + 1) / 3)
-          const key = `Q${q} ${date.getFullYear()}`
+          return `Q${q} ${date.getFullYear()}`
+        }
+        const grouped = submitted.reduce((acc, calc) => {
+          const key = groupKey(calc)
           if (!acc[key]) acc[key] = []
           acc[key].push(calc)
           return acc
         }, {} as Record<string, Calculation[]>)
         const totalSubmitted = submitted.reduce((s, c) => s + c.bonusAmount, 0)
+        // Sortering: per kwartaal alfabetisch desc; per klant op totaal DESC
+        const sortedGroups = Object.entries(grouped).sort(([aKey, aCalcs], [bKey, bCalcs]) => {
+          if (ingediendGroupBy === 'client') {
+            const aTotal = aCalcs.reduce((s, c) => s + c.bonusAmount, 0)
+            const bTotal = bCalcs.reduce((s, c) => s + c.bonusAmount, 0)
+            return bTotal - aTotal
+          }
+          return bKey.localeCompare(aKey)
+        })
 
         return (
           <div className="space-y-6">
             {/* Totaal overzicht */}
             <div className="card p-6 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <div className="relative flex items-center justify-between">
+              <div className="relative flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Totaal ingediend</p>
                   <p className="text-3xl font-semibold text-white">{formatCurrency(totalSubmitted)}</p>
-                  <p className="text-xs text-gray-500 mt-1">{submitted.length} bonussen in {Object.keys(grouped).length} periode{Object.keys(grouped).length !== 1 ? 's' : ''}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {submitted.length} bonus{submitted.length !== 1 ? 'sen' : ''} in {Object.keys(grouped).length} {ingediendGroupBy === 'client' ? `klant${Object.keys(grouped).length !== 1 ? 'en' : ''}` : `periode${Object.keys(grouped).length !== 1 ? 's' : ''}`}
+                  </p>
                 </div>
-                <div className="flex gap-3">
-                  <div className="text-center">
-                    <p className="text-2xl font-semibold text-blue-400">{submitted.filter(c => c.status === 'SUBMITTED').length}</p>
-                    <p className="text-[10px] text-gray-500">Ingediend</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-semibold text-emerald-400">{submitted.filter(c => c.status === 'PAID').length}</p>
-                    <p className="text-[10px] text-gray-500">Uitbetaald</p>
+                <div className="flex items-center gap-4">
+                  <div className="flex gap-3">
+                    <div className="text-center">
+                      <p className="text-2xl font-semibold text-blue-400">{submitted.filter(c => c.status === 'SUBMITTED').length}</p>
+                      <p className="text-[10px] text-gray-500">Ingediend</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-semibold text-emerald-400">{submitted.filter(c => c.status === 'PAID').length}</p>
+                      <p className="text-[10px] text-gray-500">Uitbetaald</p>
+                    </div>
                   </div>
                 </div>
               </div>
+              {submitted.length > 0 && (
+                <div className="relative mt-4 pt-4 border-t border-white/5 flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Groeperen op</span>
+                  <div className="flex gap-1 p-1 rounded-lg bg-white/5 border border-white/10">
+                    <button
+                      onClick={() => setIngediendGroupBy('period')}
+                      className={`px-3 py-1 rounded text-xs font-medium transition-colors ${ingediendGroupBy === 'period' ? 'bg-workx-lime/20 text-workx-lime' : 'text-white/50 hover:text-white/80'}`}
+                    >
+                      Kwartaal
+                    </button>
+                    <button
+                      onClick={() => setIngediendGroupBy('client')}
+                      className={`px-3 py-1 rounded text-xs font-medium transition-colors ${ingediendGroupBy === 'client' ? 'bg-workx-lime/20 text-workx-lime' : 'text-white/50 hover:text-white/80'}`}
+                    >
+                      Klant
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {submitted.length === 0 ? (
@@ -996,16 +1036,23 @@ export default function BonusPage() {
                 </p>
               </div>
             ) : (
-              Object.entries(grouped).sort(([a], [b]) => b.localeCompare(a)).map(([period, calcs]) => {
-                const periodTotal = calcs.reduce((s, c) => s + c.bonusAmount, 0)
+              sortedGroups.map(([groupName, calcs]) => {
+                const groupTotal = calcs.reduce((s, c) => s + c.bonusAmount, 0)
+                const totalInvoiceAmount = calcs.reduce((s, c) => s + c.invoiceAmount, 0)
                 return (
-                  <div key={period}>
-                    <div className="flex items-center justify-between mb-3">
+                  <div key={groupName}>
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                       <h3 className="text-sm font-medium text-white flex items-center gap-2">
                         <span className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center text-[10px] text-blue-400 font-bold">{calcs.length}</span>
-                        {period}
+                        {ingediendGroupBy === 'client' && <span className="text-base">👤</span>}
+                        {groupName}
                       </h3>
-                      <span className="text-sm font-semibold text-white">{formatCurrency(periodTotal)}</span>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold text-white">{formatCurrency(groupTotal)}</span>
+                        {ingediendGroupBy === 'client' && (
+                          <p className="text-[10px] text-gray-500">over {formatCurrency(totalInvoiceAmount)} factuur</p>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-2">
                       {calcs.map(calc => (
@@ -1021,9 +1068,9 @@ export default function BonusPage() {
                                   {calc.status === 'PAID' ? 'Uitbetaald' : 'Ingediend'}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                              <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 flex-wrap">
                                 <span>{formatCurrency(calc.invoiceAmount)} × {calc.bonusPercentage}%</span>
-                                {calc.clientName && <><span>·</span><span>{calc.clientName}</span></>}
+                                {ingediendGroupBy !== 'client' && calc.clientName && <><span>·</span><span>{calc.clientName}</span></>}
                                 {calc.invoiceNumber && <><span>·</span><span>#{calc.invoiceNumber}</span></>}
                                 {calc.submittedAt && <><span>·</span><span>{new Date(calc.submittedAt).toLocaleDateString('nl-NL')}</span></>}
                               </div>
