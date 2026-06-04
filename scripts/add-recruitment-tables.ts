@@ -55,6 +55,12 @@ export async function main(externalPrisma?: PrismaClient) {
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "RecruitmentCandidate" ADD COLUMN IF NOT EXISTS "linkedinUrl" TEXT
     `)
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "RecruitmentCandidate" ADD COLUMN IF NOT EXISTS "aiSummary" TEXT
+    `)
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "RecruitmentCandidate" ADD COLUMN IF NOT EXISTS "aiSummaryAt" TIMESTAMP(3)
+    `)
     console.log('[add-recruitment-tables] tabellen aanwezig')
   } catch (err) {
     console.error('[add-recruitment-tables] mislukt (build gaat door):', err)

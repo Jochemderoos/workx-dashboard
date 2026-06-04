@@ -2274,6 +2274,9 @@ model RecruitmentCandidate {
   approachNotes   String?  @db.Text
   networkOwner    String?
 
+  aiSummary       String?  @db.Text
+  aiSummaryAt     DateTime?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

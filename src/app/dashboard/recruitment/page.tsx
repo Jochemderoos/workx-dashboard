@@ -31,6 +31,8 @@ interface Candidate {
   approachedBy?: string | null
   approachNotes?: string | null
   networkOwner?: string | null
+  aiSummary?: string | null
+  aiSummaryAt?: string | null
 }
 
 interface User {
@@ -117,6 +119,35 @@ export default function RecruitmentPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [showMineOnly, setShowMineOnly] = useState(false)
   const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(new Set())
+  // AI samenvattingen per kandidaat-key
+  const [aiSummaries, setAiSummaries] = useState<Record<string, { loading: boolean; text?: string; error?: string }>>({})
+
+  const requestAiSummary = async (candidate: { canonicalId: string; allIds: string[]; name: string; type: string; aiSummary?: string | null }, force = false) => {
+    const key = `${candidate.type}|${candidate.name}`
+    // Bij eerste klik en summary al in db: toon meteen
+    if (!force && candidate.aiSummary) {
+      setAiSummaries(prev => ({ ...prev, [key]: { loading: false, text: candidate.aiSummary || '' } }))
+      return
+    }
+    setAiSummaries(prev => ({ ...prev, [key]: { loading: true } }))
+    try {
+      const id = candidate.canonicalId || candidate.allIds[0]
+      if (!id) throw new Error('Geen candidate-id')
+      const res = await fetch('/api/recruitment/ai-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateId: id, force }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'AI-samenvatting mislukt')
+      setAiSummaries(prev => ({ ...prev, [key]: { loading: false, text: data.summary } }))
+    } catch (e) {
+      setAiSummaries(prev => ({
+        ...prev,
+        [key]: { loading: false, error: e instanceof Error ? e.message : 'Onbekende fout' },
+      }))
+    }
+  }
   const toggleEmployeeExpand = (userId: string) => {
     setExpandedEmployees(prev => {
       const next = new Set(prev)
@@ -308,6 +339,7 @@ export default function RecruitmentPage() {
           if (!existing.experienceYear && c.experienceYear) existing.experienceYear = c.experienceYear
           if (!existing.currentOffice && c.currentOffice) existing.currentOffice = c.currentOffice
           if (!existing.linkedinUrl && c.linkedinUrl) existing.linkedinUrl = c.linkedinUrl
+          if (!existing.aiSummary && c.aiSummary) existing.aiSummary = c.aiSummary
         } else {
           map.set(key, {
             ...c,
@@ -674,38 +706,83 @@ export default function RecruitmentPage() {
                             {c.approachNotes && <div className="italic text-white/60">"{c.approachNotes}"</div>}
                           </div>
                         )}
+                        {/* AI-samenvatting paneel */}
+                        {(() => {
+                          const sumKey = `${c.type}|${c.name}`
+                          const s = aiSummaries[sumKey]
+                          const text = s?.text ?? c.aiSummary
+                          if (!s && !text) return null
+                          return (
+                            <div className="mt-2 pt-2 border-t border-white/5">
+                              <div className="flex items-baseline justify-between gap-2 mb-1">
+                                <span className="text-[10px] uppercase tracking-wider text-violet-300 font-semibold">🤖 AI-samenvatting</span>
+                                {text && !s?.loading && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); requestAiSummary(c, true) }}
+                                    className="text-[10px] text-white/40 hover:text-white/70 underline"
+                                  >
+                                    Opnieuw zoeken
+                                  </button>
+                                )}
+                              </div>
+                              {s?.loading && (
+                                <p className="text-xs text-white/50 italic">Aan het zoeken op het web…</p>
+                              )}
+                              {s?.error && (
+                                <p className="text-xs text-red-300 italic">{s.error}</p>
+                              )}
+                              {text && !s?.loading && (
+                                <p className="text-xs text-white/70 whitespace-pre-line leading-relaxed">{text}</p>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <a
-                          href={c.linkedinUrl || linkedInSearchUrl(c.name)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-300 text-xs font-medium hover:bg-blue-500/25 transition-colors"
-                          title={c.linkedinUrl ? 'Open LinkedIn-profiel' : 'Zoek op LinkedIn'}
-                        >
-                          {c.linkedinUrl ? '🔗 Profiel' : '🔍 LinkedIn'}
-                        </a>
-                        <button
-                          onClick={() => setEditingCandidate({
-                            key: `${c.type}|${c.name}`,
-                            ids: c.allIds,
-                            type: c.type,
-                            name: c.name,
-                            experienceYear: c.experienceYear?.toString() ?? '',
-                            currentOffice: c.currentOffice ?? '',
-                            linkedinUrl: c.linkedinUrl ?? '',
-                            inNetwork: c.inNetwork ?? false,
-                            candidateNotes: c.notes ?? '',
-                            status: c.approachStatus || '',
-                            by: c.approachedBy || '',
-                            networkOwner: c.networkOwner || '',
-                            approachNotes: c.approachNotes || '',
-                          })}
-                          className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
-                        >
-                          Bewerken
-                        </button>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={c.linkedinUrl || linkedInSearchUrl(c.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-300 text-xs font-medium hover:bg-blue-500/25 transition-colors"
+                            title={c.linkedinUrl ? 'Open LinkedIn-profiel' : 'Zoek op LinkedIn'}
+                          >
+                            {c.linkedinUrl ? '🔗 Profiel' : '🔍 LinkedIn'}
+                          </a>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); requestAiSummary(c) }}
+                            disabled={aiSummaries[`${c.type}|${c.name}`]?.loading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/15 text-violet-300 text-xs font-medium hover:bg-violet-500/25 transition-colors disabled:opacity-50"
+                            title="AI zoekt publieke info en maakt 3-zin samenvatting"
+                          >
+                            {aiSummaries[`${c.type}|${c.name}`]?.loading ? (
+                              <span className="w-3 h-3 border-2 border-violet-300/30 border-t-violet-300 rounded-full animate-spin" />
+                            ) : (
+                              <>🤖 AI-samenvatting</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setEditingCandidate({
+                              key: `${c.type}|${c.name}`,
+                              ids: c.allIds,
+                              type: c.type,
+                              name: c.name,
+                              experienceYear: c.experienceYear?.toString() ?? '',
+                              currentOffice: c.currentOffice ?? '',
+                              linkedinUrl: c.linkedinUrl ?? '',
+                              inNetwork: c.inNetwork ?? false,
+                              candidateNotes: c.notes ?? '',
+                              status: c.approachStatus || '',
+                              by: c.approachedBy || '',
+                              networkOwner: c.networkOwner || '',
+                              approachNotes: c.approachNotes || '',
+                            })}
+                            className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
+                          >
+                            Bewerken
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1135,38 +1212,83 @@ export default function RecruitmentPage() {
                             {c.approachNotes && <div className="italic text-white/60">"{c.approachNotes}"</div>}
                           </div>
                         )}
+                        {/* AI-samenvatting paneel */}
+                        {(() => {
+                          const sumKey = `${c.type}|${c.name}`
+                          const s = aiSummaries[sumKey]
+                          const text = s?.text ?? c.aiSummary
+                          if (!s && !text) return null
+                          return (
+                            <div className="mt-2 pt-2 border-t border-white/5">
+                              <div className="flex items-baseline justify-between gap-2 mb-1">
+                                <span className="text-[10px] uppercase tracking-wider text-violet-300 font-semibold">🤖 AI-samenvatting</span>
+                                {text && !s?.loading && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); requestAiSummary(c, true) }}
+                                    className="text-[10px] text-white/40 hover:text-white/70 underline"
+                                  >
+                                    Opnieuw zoeken
+                                  </button>
+                                )}
+                              </div>
+                              {s?.loading && (
+                                <p className="text-xs text-white/50 italic">Aan het zoeken op het web…</p>
+                              )}
+                              {s?.error && (
+                                <p className="text-xs text-red-300 italic">{s.error}</p>
+                              )}
+                              {text && !s?.loading && (
+                                <p className="text-xs text-white/70 whitespace-pre-line leading-relaxed">{text}</p>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <a
-                          href={c.linkedinUrl || linkedInSearchUrl(c.name)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-300 text-xs font-medium hover:bg-blue-500/25 transition-colors"
-                          title={c.linkedinUrl ? 'Open LinkedIn-profiel' : 'Zoek op LinkedIn'}
-                        >
-                          {c.linkedinUrl ? '🔗 Profiel' : '🔍 LinkedIn'}
-                        </a>
-                        <button
-                          onClick={() => setEditingCandidate({
-                            key: `${c.type}|${c.name}`,
-                            ids: c.allIds,
-                            type: c.type,
-                            name: c.name,
-                            experienceYear: c.experienceYear?.toString() ?? '',
-                            currentOffice: c.currentOffice ?? '',
-                            linkedinUrl: c.linkedinUrl ?? '',
-                            inNetwork: c.inNetwork ?? false,
-                            candidateNotes: c.notes ?? '',
-                            status: c.approachStatus || '',
-                            by: c.approachedBy || '',
-                            networkOwner: c.networkOwner || '',
-                            approachNotes: c.approachNotes || '',
-                          })}
-                          className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
-                        >
-                          Bewerken
-                        </button>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={c.linkedinUrl || linkedInSearchUrl(c.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-300 text-xs font-medium hover:bg-blue-500/25 transition-colors"
+                            title={c.linkedinUrl ? 'Open LinkedIn-profiel' : 'Zoek op LinkedIn'}
+                          >
+                            {c.linkedinUrl ? '🔗 Profiel' : '🔍 LinkedIn'}
+                          </a>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); requestAiSummary(c) }}
+                            disabled={aiSummaries[`${c.type}|${c.name}`]?.loading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/15 text-violet-300 text-xs font-medium hover:bg-violet-500/25 transition-colors disabled:opacity-50"
+                            title="AI zoekt publieke info en maakt 3-zin samenvatting"
+                          >
+                            {aiSummaries[`${c.type}|${c.name}`]?.loading ? (
+                              <span className="w-3 h-3 border-2 border-violet-300/30 border-t-violet-300 rounded-full animate-spin" />
+                            ) : (
+                              <>🤖 AI-samenvatting</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setEditingCandidate({
+                              key: `${c.type}|${c.name}`,
+                              ids: c.allIds,
+                              type: c.type,
+                              name: c.name,
+                              experienceYear: c.experienceYear?.toString() ?? '',
+                              currentOffice: c.currentOffice ?? '',
+                              linkedinUrl: c.linkedinUrl ?? '',
+                              inNetwork: c.inNetwork ?? false,
+                              candidateNotes: c.notes ?? '',
+                              status: c.approachStatus || '',
+                              by: c.approachedBy || '',
+                              networkOwner: c.networkOwner || '',
+                              approachNotes: c.approachNotes || '',
+                            })}
+                            className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
+                          >
+                            Bewerken
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
