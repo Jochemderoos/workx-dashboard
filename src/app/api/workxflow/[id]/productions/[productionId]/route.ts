@@ -41,6 +41,8 @@ export async function PATCH(
       documentType,
       pageCount,
       sortOrder,
+      customLabel,
+      skipCoverSheet,
     } = body
 
     const updated = await prisma.workxflowProduction.update({
@@ -53,6 +55,8 @@ export async function PATCH(
         ...(documentType !== undefined && { documentType }),
         ...(pageCount !== undefined && { pageCount }),
         ...(sortOrder !== undefined && { sortOrder }),
+        ...(customLabel !== undefined && { customLabel: customLabel || null }),
+        ...(skipCoverSheet !== undefined && { skipCoverSheet: !!skipCoverSheet }),
       },
     })
 

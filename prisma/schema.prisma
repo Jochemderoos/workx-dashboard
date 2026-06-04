@@ -1024,6 +1024,8 @@ model WorkxflowProduction {
   // Productie info
   productionNumber String  // Productienummer (1, 2, 1a, 1b, etc.)
   title           String   // Titel/beschrijving van de productie
+  customLabel     String?  // Override voor 'PRODUCTIE X' label op het gele vel
+  skipCoverSheet  Boolean  @default(false) // Verberg het gele productievel volledig
 
   // Document
   documentUrl     String?  // URL naar geüploade document

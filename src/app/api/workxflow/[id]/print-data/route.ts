@@ -146,31 +146,65 @@ export async function POST(
     }> = []
 
     for (const production of bundle.productions) {
+      // Skip het gele vel volledig wanneer de gebruiker dat heeft uitgezet
+      const skipCoverSheet = (production as any).skipCoverSheet === true
+      const customLabel = (production as any).customLabel as string | null | undefined
+
+      if (skipCoverSheet) {
+        // Geen productievel — alleen de productie zelf naar de printer
+        if (production.documentUrl) {
+          interleavedJobs.push({
+            name: `${isBijlage ? 'Bijlage' : 'Productie'} ${production.productionNumber}: ${production.title}`,
+            tray: 1,
+            copies: 1,
+            documentUrl: production.documentUrl,
+            description: `${isBijlage ? 'Bijlage' : 'Productie'} ${production.productionNumber}`,
+          })
+        }
+        continue
+      }
+
       // Create individual production sheet PDF
       const sheetPdf = await PDFDocument.create()
       const sheetFont = await sheetPdf.embedFont(StandardFonts.HelveticaBold)
       const sheetPage = sheetPdf.addPage([pageWidth, pageHeight])
 
-      // Production label - large centered
-      const labelWidth = sheetFont.widthOfTextAtSize(label, 72)
-      sheetPage.drawText(label, {
-        x: (pageWidth - labelWidth) / 2,
-        y: pageHeight / 2 + 40,
-        size: 72,
-        font: sheetFont,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
+      // Production label - large centered (of custom label wanneer ingesteld)
+      if (customLabel && customLabel.trim()) {
+        const txt = customLabel.trim()
+        let fontSize = 72
+        while (fontSize > 24 && sheetFont.widthOfTextAtSize(txt, fontSize) > pageWidth - 60) {
+          fontSize -= 4
+        }
+        const w = sheetFont.widthOfTextAtSize(txt, fontSize)
+        sheetPage.drawText(txt, {
+          x: (pageWidth - w) / 2,
+          y: pageHeight / 2 - fontSize / 2 + 20,
+          size: fontSize,
+          font: sheetFont,
+          color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+        })
+      } else {
+        const labelWidth = sheetFont.widthOfTextAtSize(label, 72)
+        sheetPage.drawText(label, {
+          x: (pageWidth - labelWidth) / 2,
+          y: pageHeight / 2 + 40,
+          size: 72,
+          font: sheetFont,
+          color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+        })
 
-      // Production number - even larger below
-      const numText = String(production.productionNumber)
-      const numWidth = sheetFont.widthOfTextAtSize(numText, 96)
-      sheetPage.drawText(numText, {
-        x: (pageWidth - numWidth) / 2,
-        y: pageHeight / 2 - 60,
-        size: 96,
-        font: sheetFont,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
+        // Production number - even larger below
+        const numText = String(production.productionNumber)
+        const numWidth = sheetFont.widthOfTextAtSize(numText, 96)
+        sheetPage.drawText(numText, {
+          x: (pageWidth - numWidth) / 2,
+          y: pageHeight / 2 - 60,
+          size: 96,
+          font: sheetFont,
+          color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+        })
+      }
 
       // Horizontal line
       sheetPage.drawRectangle({

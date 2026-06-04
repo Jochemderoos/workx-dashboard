@@ -315,64 +315,108 @@ export async function POST(
       // Bookmark for this production
       bookmarks.push({ title: `${productionLabel} ${production.productionNumber} - ${production.title}`, pageIndex: pdfDoc.getPageCount() })
 
-      // Add production sheet (yellow page with logo)
-      const sheetPage = pdfDoc.addPage([pageWidth, pageHeight])
+      // Skip het gele vel volledig wanneer partner dat heeft uitgezet
+      const skipCoverSheet = (production as any).skipCoverSheet === true
+      const customLabel = (production as any).customLabel as string | null | undefined
 
-      // Yellow background
-      sheetPage.drawRectangle({
-        x: 0,
-        y: 0,
-        width: pageWidth,
-        height: pageHeight,
-        color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
-      })
+      if (!skipCoverSheet) {
+        // Add production sheet (yellow page with logo)
+        const sheetPage = pdfDoc.addPage([pageWidth, pageHeight])
 
-      // Logo on production sheet only if enabled (for digital PDF, not print)
-      if (includeLogoOnProductieblad) {
-        await drawWorkxLogo(sheetPage, pdfDoc)
+        // Yellow background
+        sheetPage.drawRectangle({
+          x: 0,
+          y: 0,
+          width: pageWidth,
+          height: pageHeight,
+          color: rgb(WORKX_LIME.r, WORKX_LIME.g, WORKX_LIME.b),
+        })
+
+        // Logo on production sheet only if enabled (for digital PDF, not print)
+        if (includeLogoOnProductieblad) {
+          await drawWorkxLogo(sheetPage, pdfDoc)
+        }
+
+        if (customLabel && customLabel.trim()) {
+          // Eén regel custom label, geen apart nummer eronder
+          const txt = customLabel.trim()
+          // Auto-shrink font for long labels
+          let fontSize = 72
+          while (fontSize > 24 && helveticaBold.widthOfTextAtSize(txt, fontSize) > pageWidth - 60) {
+            fontSize -= 4
+          }
+          const w = helveticaBold.widthOfTextAtSize(txt, fontSize)
+          sheetPage.drawText(txt, {
+            x: (pageWidth - w) / 2,
+            y: pageHeight / 2 - fontSize / 2,
+            size: fontSize,
+            font: helveticaBold,
+            color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+          })
+
+          // Horizontal line + title onder
+          const lineY = pageHeight / 2 - fontSize / 2 - 30
+          sheetPage.drawRectangle({
+            x: pageWidth / 2 - 100,
+            y: lineY,
+            width: 200,
+            height: 1.5,
+            color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+          })
+          if (production.title) {
+            const titleWidth = helvetica.widthOfTextAtSize(production.title, 18)
+            sheetPage.drawText(production.title, {
+              x: (pageWidth - titleWidth) / 2,
+              y: lineY - 30,
+              size: 18,
+              font: helvetica,
+              color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+            })
+          }
+        } else {
+          // Standaard PRODUCTIE/BIJLAGE + nummer + titel
+          const labelText = productionLabel
+          const labelWidth = helveticaBold.widthOfTextAtSize(labelText, 72)
+          sheetPage.drawText(labelText, {
+            x: (pageWidth - labelWidth) / 2,
+            y: pageHeight / 2 + 40,
+            size: 72,
+            font: helveticaBold,
+            color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+          })
+
+          // Production number
+          const numText = String(production.productionNumber)
+          const numWidth = helveticaBold.widthOfTextAtSize(numText, 96)
+          sheetPage.drawText(numText, {
+            x: (pageWidth - numWidth) / 2,
+            y: pageHeight / 2 - 60,
+            size: 96,
+            font: helveticaBold,
+            color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+          })
+
+          // Horizontal line
+          const lineY = pageHeight / 2 - 90
+          sheetPage.drawRectangle({
+            x: pageWidth / 2 - 100,
+            y: lineY,
+            width: 200,
+            height: 1.5,
+            color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+          })
+
+          // Production title below line
+          const titleWidth = helvetica.widthOfTextAtSize(production.title, 18)
+          sheetPage.drawText(production.title, {
+            x: (pageWidth - titleWidth) / 2,
+            y: lineY - 30,
+            size: 18,
+            font: helvetica,
+            color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
+          })
+        }
       }
-
-      // Production label - large centered
-      const labelText = productionLabel
-      const labelWidth = helveticaBold.widthOfTextAtSize(labelText, 72)
-      sheetPage.drawText(labelText, {
-        x: (pageWidth - labelWidth) / 2,
-        y: pageHeight / 2 + 40,
-        size: 72,
-        font: helveticaBold,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
-
-      // Production number - even larger below
-      const numText = String(production.productionNumber)
-      const numWidth = helveticaBold.widthOfTextAtSize(numText, 96)
-      sheetPage.drawText(numText, {
-        x: (pageWidth - numWidth) / 2,
-        y: pageHeight / 2 - 60,
-        size: 96,
-        font: helveticaBold,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
-
-      // Horizontal line between number and title
-      const lineY = pageHeight / 2 - 90
-      sheetPage.drawRectangle({
-        x: pageWidth / 2 - 100,
-        y: lineY,
-        width: 200,
-        height: 1.5,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
-
-      // Production title below line
-      const titleWidth = helvetica.widthOfTextAtSize(production.title, 18)
-      sheetPage.drawText(production.title, {
-        x: (pageWidth - titleWidth) / 2,
-        y: lineY - 30,
-        size: 18,
-        font: helvetica,
-        color: rgb(WORKX_DARK.r, WORKX_DARK.g, WORKX_DARK.b),
-      })
 
       // Detect actual document type from the data URL
       const docType = detectDocumentType(production.documentUrl, production.documentType)

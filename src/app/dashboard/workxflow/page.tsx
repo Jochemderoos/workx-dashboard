@@ -78,6 +78,8 @@ interface Production {
   documentType?: string
   pageCount: number
   sortOrder: number
+  customLabel?: string | null
+  skipCoverSheet?: boolean
   file?: File // For local file before upload
   previewUrl?: string // For local preview
 }
@@ -653,8 +655,8 @@ export default function WorkxflowPage() {
     }
   }
 
-  // Local edit state for debounced fields (title, productionNumber)
-  const [localEdits, setLocalEdits] = useState<Record<string, { title?: string; productionNumber?: string }>>({})
+  // Local edit state for debounced fields (title, productionNumber, customLabel)
+  const [localEdits, setLocalEdits] = useState<Record<string, { title?: string; productionNumber?: string; customLabel?: string }>>({})
 
   const updateProductionServer = useCallback(async (bundleId: string, productionId: string, updates: Partial<Production>) => {
     try {
@@ -677,8 +679,8 @@ export default function WorkxflowPage() {
 
   const debouncedUpdateProduction = useDebounceCallback(updateProductionServer, 500)
 
-  // For title and productionNumber: update local state immediately, debounce server call
-  const updateProductionField = (productionId: string, field: 'title' | 'productionNumber', value: string) => {
+  // For title, productionNumber, customLabel: update local state immediately, debounce server
+  const updateProductionField = (productionId: string, field: 'title' | 'productionNumber' | 'customLabel', value: string) => {
     setLocalEdits(prev => ({
       ...prev,
       [productionId]: { ...prev[productionId], [field]: value },
@@ -686,6 +688,17 @@ export default function WorkxflowPage() {
     if (activeBundle) {
       debouncedUpdateProduction(activeBundle.id, productionId, { [field]: value })
     }
+  }
+
+  // Toggle: gele productievel wel/niet meedrukken
+  const toggleSkipCoverSheet = async (production: Production) => {
+    if (!activeBundle) return
+    const next = !production.skipCoverSheet
+    setActiveBundle(prev => prev ? {
+      ...prev,
+      productions: prev.productions.map(p => p.id === production.id ? { ...p, skipCoverSheet: next } : p),
+    } : null)
+    await updateProductionServer(activeBundle.id, production.id, { skipCoverSheet: next })
   }
 
   // For non-debounced updates (like file uploads)
@@ -1799,38 +1812,94 @@ export default function WorkxflowPage() {
                           </button>
                         </div>
 
-                        {/* Production sheet preview (yellow page with correct logo) */}
-                        <div
-                          className="relative rounded-lg overflow-hidden shadow-lg"
-                          style={{
-                            aspectRatio: '210/297',
-                            background: '#f9ff85'
-                          }}
-                        >
-                          {/* Logo on production sheet only if enabled */}
-                          {includeLogoOnProductieblad && (
-                            <div className="absolute top-0 left-0 z-10">
-                              <WorkxLogoPreview />
+                        {/* Production sheet preview (yellow page) OR skipped placeholder */}
+                        {production.skipCoverSheet ? (
+                          <div
+                            className="relative rounded-lg border-2 border-dashed border-white/15 bg-white/[0.02] flex items-center justify-center p-3"
+                            style={{ aspectRatio: '210/297' }}
+                          >
+                            <div className="text-center">
+                              <Icons.x size={20} className="text-white/30 mx-auto mb-1" />
+                              <p className="text-[10px] text-white/40 leading-tight">Geen productievel<br/>direct na vorige stuk</p>
+                              <button
+                                onClick={() => toggleSkipCoverSheet(production)}
+                                className="mt-2 text-[9px] text-yellow-400 hover:underline"
+                              >
+                                Herstel
+                              </button>
                             </div>
-                          )}
-                          {/* Centered production text */}
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <p className="text-[#1e1e1e] font-bold text-sm tracking-widest uppercase">
-                              {activeBundle.productionLabel === 'BIJLAGE' ? 'BIJLAGE' : 'PRODUCTIE'}
-                            </p>
-                            <p className="text-[#1e1e1e] font-bold text-2xl mt-0.5">
-                              {production.productionNumber}
-                            </p>
-                            <div className="w-8 h-px bg-[#1e1e1e]/40 mt-1.5 mb-1.5" />
-                            <p className="text-[#1e1e1e]/60 text-[8px] px-4 text-center line-clamp-2">
-                              {production.title}
-                            </p>
                           </div>
-                          {/* Yellow indicator */}
-                          <div className="absolute bottom-0 left-0 right-0 bg-yellow-600/40 p-1.5">
-                            <p className="text-[8px] text-yellow-900 text-center font-medium">Lade {printerSettings.productiebladenTray} • {printerSettings[`tray${printerSettings.productiebladenTray}Name` as keyof typeof printerSettings]}</p>
+                        ) : (
+                          <div
+                            className="relative rounded-lg overflow-hidden shadow-lg group/sheet"
+                            style={{
+                              aspectRatio: '210/297',
+                              background: '#f9ff85'
+                            }}
+                          >
+                            {/* Remove sheet — top-right overlay knop */}
+                            <button
+                              onClick={() => toggleSkipCoverSheet(production)}
+                              className="absolute top-1.5 right-1.5 z-20 p-1 rounded bg-black/40 hover:bg-red-500/70 text-white/80 hover:text-white opacity-0 group-hover/sheet:opacity-100 transition-opacity"
+                              title="Productievel verwijderen (bijlage komt direct na vorig stuk)"
+                            >
+                              <Icons.trash size={11} />
+                            </button>
+
+                            {/* Logo on production sheet only if enabled */}
+                            {includeLogoOnProductieblad && (
+                              <div className="absolute top-0 left-0 z-10">
+                                <WorkxLogoPreview />
+                              </div>
+                            )}
+                            {/* Centered production text — custom label OF standaard PRODUCTIE+nummer */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center px-3">
+                              {(localEdits[production.id]?.customLabel ?? production.customLabel ?? '').trim() ? (
+                                <input
+                                  type="text"
+                                  value={localEdits[production.id]?.customLabel ?? production.customLabel ?? ''}
+                                  onChange={(e) => updateProductionField(production.id, 'customLabel', e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-full text-center bg-transparent text-[#1e1e1e] font-bold text-sm border-b border-[#1e1e1e]/30 focus:border-[#1e1e1e] outline-none px-1"
+                                />
+                              ) : (
+                                <>
+                                  <p className="text-[#1e1e1e] font-bold text-sm tracking-widest uppercase">
+                                    {activeBundle.productionLabel === 'BIJLAGE' ? 'BIJLAGE' : 'PRODUCTIE'}
+                                  </p>
+                                  <p className="text-[#1e1e1e] font-bold text-2xl mt-0.5">
+                                    {production.productionNumber}
+                                  </p>
+                                </>
+                              )}
+                              <div className="w-8 h-px bg-[#1e1e1e]/40 mt-1.5 mb-1.5" />
+                              <p className="text-[#1e1e1e]/60 text-[8px] px-2 text-center line-clamp-2">
+                                {production.title}
+                              </p>
+                              {/* Rename-actie wanneer geen custom label */}
+                              {!((localEdits[production.id]?.customLabel ?? production.customLabel ?? '').trim()) && (
+                                <button
+                                  onClick={() => updateProductionField(production.id, 'customLabel', production.title || 'Eigen naam')}
+                                  className="mt-2 text-[8px] text-[#1e1e1e]/60 hover:text-[#1e1e1e] underline opacity-0 group-hover/sheet:opacity-100 transition-opacity"
+                                >
+                                  Naam aanpassen
+                                </button>
+                              )}
+                              {(localEdits[production.id]?.customLabel ?? production.customLabel ?? '').trim() && (
+                                <button
+                                  onClick={() => updateProductionField(production.id, 'customLabel', '')}
+                                  className="mt-1 text-[8px] text-[#1e1e1e]/60 hover:text-[#1e1e1e] underline"
+                                >
+                                  Herstel standaard
+                                </button>
+                              )}
+                            </div>
+                            {/* Yellow indicator */}
+                            <div className="absolute bottom-0 left-0 right-0 bg-yellow-600/40 p-1.5">
+                              <p className="text-[8px] text-yellow-900 text-center font-medium">Lade {printerSettings.productiebladenTray} • {printerSettings[`tray${printerSettings.productiebladenTray}Name` as keyof typeof printerSettings]}</p>
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* Production document thumbnail */}
                         {production.documentUrl ? (
