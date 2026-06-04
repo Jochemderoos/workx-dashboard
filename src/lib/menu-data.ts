@@ -106,8 +106,8 @@ export const partnersMenuItems: MenuItem[] = [
     description: 'Wekelijkse 1-op-1 gesprekken partner ↔ medewerker.' },
   { href: '/dashboard/partners/performance', icon: Icons.target, label: 'Performance Management', iconAnim: 'icon-target-hover',
     description: 'Per medewerker observaties noteren — basis voor beoordelingsgesprekken.' },
-  { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', iconAnim: 'icon-user-hover',
-    description: 'Sollicitanten beheren, CVs uploaden, gesprekken plannen + sollicitatiebeleid.' },
+  // Sollicitaties zit nu als tab onder /dashboard/recruitment — geen aparte
+  // sidebar-link meer nodig.
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover',
     description: 'Omzet/kosten/saldo overzicht, jaarrekening + werknemer/werkgever uitsplitsing.' },
   { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', iconAnim: 'icon-euro-hover',

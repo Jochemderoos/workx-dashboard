@@ -606,13 +606,20 @@ export default function RecruitmentPage() {
         </>
       )}
 
-      {/* Preamble — grafisch + bondig */}
+      {/* Preamble — verandert mee na het reveal-moment */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {[
-          { icon: '👥', title: '5 advocaten', body: 'Die volgens jou passen. Binnen of buiten je netwerk — alleen niet wie al bedankt heeft.' },
-          { icon: '🤝', title: 'Een ambassadeur', body: 'Iemand die ons niet wérkt bij ons maar wel enthousiast is en een groot netwerk heeft.' },
-          { icon: '📣', title: 'Zichtbaarheid', body: 'Ideeën voor LinkedIn-posts vanuit Workx of jezelf. Wil je zelf posten?' },
-        ].map((c, i) => (
+        {(data?.isBeforeReveal
+          ? [
+              { icon: '👥', title: '5 advocaten', body: 'Die volgens jou passen. Binnen of buiten je netwerk — alleen niet wie al bedankt heeft.' },
+              { icon: '🤝', title: 'Een ambassadeur', body: 'Iemand die ons niet werkt bij ons maar wel enthousiast is en een groot netwerk heeft.' },
+              { icon: '📣', title: 'Zichtbaarheid', body: 'Ideeën voor LinkedIn-posts vanuit Workx of jezelf. Wil je zelf posten?' },
+            ]
+          : [
+              { icon: '➕', title: 'Nieuwe kandidaten', body: 'Kom je iemand tegen die wel zou passen? Voeg \'m toe. We zoeken het hele jaar door — je lijst hoeft nooit af.' },
+              { icon: '🔄', title: 'Bijhouden & opvolgen', body: 'Heb je iemand benaderd of gesproken? Houd de status bij in het overzicht hierboven — dan blijven we synchroon.' },
+              { icon: '💡', title: 'Zichtbaarheid', body: 'Nieuwe ideeën voor LinkedIn of Workx-posts? Update je input — anderen pikken het op.' },
+            ]
+        ).map((c, i) => (
           <div
             key={i}
             className="rounded-2xl border border-white/10 bg-gradient-to-br from-workx-lime/5 via-transparent to-violet-500/5 p-4 hover:border-workx-lime/30 transition-colors"
