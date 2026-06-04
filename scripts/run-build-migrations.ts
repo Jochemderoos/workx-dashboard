@@ -45,6 +45,7 @@ import { main as seedOnboardingTemplates } from './seed-onboarding-templates'
 import { main as seedJarRooster2026 } from './seed-jar-rooster-2026'
 import { main as seedLustrumProgram } from './seed-lustrum-program'
 import { main as seedRecruitmentHistorical } from './seed-recruitment-historical'
+import { main as seedLaetitia } from './seed-laetitia'
 
 // Eenmalige migrations + dated seeds zijn bewust niet meer geïmporteerd.
 // Indien een fresh-DB nodig is, draai ze handmatig (`npx tsx scripts/X.ts`):
@@ -93,6 +94,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'seed-jar-rooster-2026', run: seedJarRooster2026 },
   { name: 'seed-lustrum-program', run: seedLustrumProgram },
   { name: 'seed-recruitment-historical', run: seedRecruitmentHistorical },
+  { name: 'seed-laetitia', run: seedLaetitia },
 ]
 
 async function main() {

@@ -428,6 +428,45 @@ export async function GET() {
       }
     }
 
+    // 16. Contract-evaluatie reminders — partners + Hanna, vanaf 14 dagen voor de datum
+    if (currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN') {
+      try {
+        const usersWithEvals = await prisma.user.findMany({
+          where: {
+            isActive: true,
+            contractEvaluations: { not: null },
+          },
+          select: { id: true, name: true, contractEvaluations: true },
+        })
+        for (const u of usersWithEvals) {
+          if (!u.contractEvaluations) continue
+          let dates: string[] = []
+          try { dates = JSON.parse(u.contractEvaluations) } catch { continue }
+          for (const isoDate of dates) {
+            const evalDate = new Date(isoDate)
+            const daysUntil = Math.ceil((evalDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+            if (daysUntil > 14 || daysUntil < -7) continue // toon van 14 dagen vooraf tot 7 dagen erna
+            const key = `contract-eval-${u.id}-${isoDate}`
+            if (dismissedKeys.has(key)) continue
+            const dateStr = evalDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Amsterdam' })
+            notifications.push({
+              id: key,
+              type: 'system',
+              title: 'Contract-evaluatie',
+              message: daysUntil > 0
+                ? `Over ${daysUntil} ${daysUntil === 1 ? 'dag' : 'dagen'}: evaluatie ${u.name} (${dateStr})`
+                : daysUntil === 0
+                ? `Vandaag: evaluatie ${u.name}`
+                : `${Math.abs(daysUntil)} ${Math.abs(daysUntil) === 1 ? 'dag' : 'dagen'} geleden: evaluatie ${u.name} — nog doen?`,
+              createdAt: evalDate,
+              read: false,
+              href: '/dashboard/team',
+            })
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
     // 15. Recruitment — partners/Hanna krijgen melding bij nieuwe kandidaten
     //     die ná het reveal-moment zijn toegevoegd (laatste 7 dagen).
     if (currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN') {

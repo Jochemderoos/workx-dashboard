@@ -23,7 +23,11 @@ export async function GET() {
   if (!me) return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
 
   const isManager = me.role === 'PARTNER' || me.role === 'ADMIN'
-  const canSeeAll = isManager || !isBeforeReveal()
+  // Ranking-paneel is altijd zichtbaar voor iedereen — data wordt
+  // server-side privacy-gefilterd voor non-managers (alleen namen,
+  // geen afgewezen kandidaten, geen 'Eerdere ronde').
+  const canSeeAll = true
+  const canSeeDetails = isManager // bepaalt zichtbaarheid van approach/edit/AI knoppen
 
   // Eigen entry
   const ownEntry = await prisma.recruitmentEntry.findUnique({
@@ -34,17 +38,49 @@ export async function GET() {
   // Alle entries (alleen voor wie 't mag zien)
   let allEntries: any[] = []
   let activeUsers: any[] = []
-  if (canSeeAll) {
-    allEntries = await prisma.recruitmentEntry.findMany({
+  // Iedereen krijgt allEntries — maar voor niet-managers wordt 't gefilterd
+  // (geen afgewezen kandidaten, geen 'Eerdere ronde') en gesanitized (alleen
+  // de naam zichtbaar, geen kantoor/ervaring/notities/approach-data).
+  {
+    const raw = await prisma.recruitmentEntry.findMany({
       include: {
         user: { select: { id: true, name: true, role: true, avatarUrl: true } },
         candidates: { orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }] },
       },
       orderBy: { updatedAt: 'desc' },
     })
-    // De historische lijst ('Eerdere ronde') is alleen voor partners + Hanna.
-    if (!isManager) {
-      allEntries = allEntries.filter((e: any) => e.user?.name !== 'Eerdere ronde')
+    if (isManager) {
+      allEntries = raw
+    } else {
+      // Privacy-filter: geen Eerdere ronde, geen afgewezen, alleen naam + type
+      allEntries = raw
+        .filter((e: any) => e.user?.name !== 'Eerdere ronde')
+        .map((e: any) => ({
+          ...e,
+          visibilityIdeas: null,
+          willPostHimself: null,
+          postingFormat: null,
+          candidates: e.candidates
+            .filter((c: any) => c.approachStatus !== 'afgewezen')
+            .map((c: any) => ({
+              id: c.id,
+              entryId: c.entryId,
+              type: c.type,
+              name: c.name,
+              experienceYear: null,
+              currentOffice: null,
+              linkedinUrl: null,
+              inNetwork: false,
+              notes: null,
+              sortOrder: c.sortOrder,
+              approachStatus: null,
+              approachedBy: null,
+              approachNotes: null,
+              networkOwner: null,
+              aiSummary: null,
+              aiSummaryAt: null,
+            })),
+        }))
     }
     // Het overzicht 'wie heeft wat ingevuld' gaat over onze advocaten —
     // partners + office (Hanna, Lotte, Bente, Diyar) excluderen, want
@@ -66,6 +102,7 @@ export async function GET() {
     revealAt: RECRUITMENT_REVEAL_AT.toISOString(),
     isBeforeReveal: isBeforeReveal(),
     canSeeAll,
+    canSeeDetails,
     ownEntry,
     allEntries,
     activeUsers,

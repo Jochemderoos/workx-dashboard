@@ -61,6 +61,7 @@ interface ApiData {
   revealAt: string
   isBeforeReveal: boolean
   canSeeAll: boolean
+  canSeeDetails: boolean
   ownEntry: Entry | null
   allEntries: EntryWithUser[]
   activeUsers: User[]
@@ -121,15 +122,34 @@ export default function RecruitmentPage() {
   const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(new Set())
   // AI samenvattingen per kandidaat-key
   const [aiSummaries, setAiSummaries] = useState<Record<string, { loading: boolean; text?: string; error?: string }>>({})
+  // Of het samenvattings-paneel open is per kandidaat-key
+  const [aiOpen, setAiOpen] = useState<Set<string>>(new Set())
 
   const requestAiSummary = async (candidate: { canonicalId: string; allIds: string[]; name: string; type: string; aiSummary?: string | null }, force = false) => {
     const key = `${candidate.type}|${candidate.name}`
-    // Bij eerste klik en summary al in db: toon meteen
-    if (!force && candidate.aiSummary) {
-      setAiSummaries(prev => ({ ...prev, [key]: { loading: false, text: candidate.aiSummary || '' } }))
-      return
+    // Toggle als al geladen, niet aan het laden, en niet force-refresh
+    if (!force) {
+      const cached = aiSummaries[key]
+      const hasText = cached?.text || candidate.aiSummary
+      const isOpen = aiOpen.has(key)
+      if (hasText && !cached?.loading) {
+        // Toggle open/closed zonder opnieuw te fetchen
+        setAiOpen(prev => {
+          const next = new Set(prev)
+          if (next.has(key)) next.delete(key)
+          else next.add(key)
+          return next
+        })
+        // Eerste keer dat we openen + summary uit DB nog niet in state: zet 'm in state
+        if (!cached?.text && candidate.aiSummary && !isOpen) {
+          setAiSummaries(prev => ({ ...prev, [key]: { loading: false, text: candidate.aiSummary || '' } }))
+        }
+        return
+      }
     }
+    // Fetchen + automatisch openen
     setAiSummaries(prev => ({ ...prev, [key]: { loading: true } }))
+    setAiOpen(prev => new Set(prev).add(key))
     try {
       const id = candidate.canonicalId || candidate.allIds[0]
       if (!id) throw new Error('Geen candidate-id')
@@ -706,24 +726,33 @@ export default function RecruitmentPage() {
                             {c.approachNotes && <div className="italic text-white/60">"{c.approachNotes}"</div>}
                           </div>
                         )}
-                        {/* AI-samenvatting paneel */}
-                        {(() => {
+                        {/* AI-samenvatting paneel — alleen open wanneer in aiOpen */}
+                        {data?.canSeeDetails && (() => {
                           const sumKey = `${c.type}|${c.name}`
                           const s = aiSummaries[sumKey]
                           const text = s?.text ?? c.aiSummary
-                          if (!s && !text) return null
+                          const open = aiOpen.has(sumKey)
+                          if (!open) return null
                           return (
                             <div className="mt-2 pt-2 border-t border-white/5">
                               <div className="flex items-baseline justify-between gap-2 mb-1">
                                 <span className="text-[10px] uppercase tracking-wider text-violet-300 font-semibold">🤖 AI-samenvatting</span>
-                                {text && !s?.loading && (
+                                <div className="flex items-center gap-3">
+                                  {text && !s?.loading && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); requestAiSummary(c, true) }}
+                                      className="text-[10px] text-white/40 hover:text-white/70 underline"
+                                    >
+                                      Opnieuw zoeken
+                                    </button>
+                                  )}
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); requestAiSummary(c, true) }}
+                                    onClick={(e) => { e.stopPropagation(); setAiOpen(prev => { const n = new Set(prev); n.delete(sumKey); return n }) }}
                                     className="text-[10px] text-white/40 hover:text-white/70 underline"
                                   >
-                                    Opnieuw zoeken
+                                    Inklappen
                                   </button>
-                                )}
+                                </div>
                               </div>
                               {s?.loading && (
                                 <p className="text-xs text-white/50 italic">Aan het zoeken op het web…</p>
@@ -750,38 +779,42 @@ export default function RecruitmentPage() {
                           >
                             {c.linkedinUrl ? '🔗 Profiel' : '🔍 LinkedIn'}
                           </a>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); requestAiSummary(c) }}
-                            disabled={aiSummaries[`${c.type}|${c.name}`]?.loading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/15 text-violet-300 text-xs font-medium hover:bg-violet-500/25 transition-colors disabled:opacity-50"
-                            title="AI zoekt publieke info en maakt 3-zin samenvatting"
-                          >
-                            {aiSummaries[`${c.type}|${c.name}`]?.loading ? (
-                              <span className="w-3 h-3 border-2 border-violet-300/30 border-t-violet-300 rounded-full animate-spin" />
-                            ) : (
-                              <>🤖 AI-samenvatting</>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => setEditingCandidate({
-                              key: `${c.type}|${c.name}`,
-                              ids: c.allIds,
-                              type: c.type,
-                              name: c.name,
-                              experienceYear: c.experienceYear?.toString() ?? '',
-                              currentOffice: c.currentOffice ?? '',
-                              linkedinUrl: c.linkedinUrl ?? '',
-                              inNetwork: c.inNetwork ?? false,
-                              candidateNotes: c.notes ?? '',
-                              status: c.approachStatus || '',
-                              by: c.approachedBy || '',
-                              networkOwner: c.networkOwner || '',
-                              approachNotes: c.approachNotes || '',
-                            })}
-                            className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
-                          >
-                            Bewerken
-                          </button>
+                          {data?.canSeeDetails && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); requestAiSummary(c) }}
+                              disabled={aiSummaries[`${c.type}|${c.name}`]?.loading}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/15 text-violet-300 text-xs font-medium hover:bg-violet-500/25 transition-colors disabled:opacity-50"
+                              title="AI zoekt publieke info en maakt 3-zin samenvatting"
+                            >
+                              {aiSummaries[`${c.type}|${c.name}`]?.loading ? (
+                                <span className="w-3 h-3 border-2 border-violet-300/30 border-t-violet-300 rounded-full animate-spin" />
+                              ) : (
+                                <>🤖 AI-samenvatting{aiOpen.has(`${c.type}|${c.name}`) ? ' ▴' : ''}</>
+                              )}
+                            </button>
+                          )}
+                          {data?.canSeeDetails && (
+                            <button
+                              onClick={() => setEditingCandidate({
+                                key: `${c.type}|${c.name}`,
+                                ids: c.allIds,
+                                type: c.type,
+                                name: c.name,
+                                experienceYear: c.experienceYear?.toString() ?? '',
+                                currentOffice: c.currentOffice ?? '',
+                                linkedinUrl: c.linkedinUrl ?? '',
+                                inNetwork: c.inNetwork ?? false,
+                                candidateNotes: c.notes ?? '',
+                                status: c.approachStatus || '',
+                                by: c.approachedBy || '',
+                                networkOwner: c.networkOwner || '',
+                                approachNotes: c.approachNotes || '',
+                              })}
+                              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
+                            >
+                              Bewerken
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1212,24 +1245,33 @@ export default function RecruitmentPage() {
                             {c.approachNotes && <div className="italic text-white/60">"{c.approachNotes}"</div>}
                           </div>
                         )}
-                        {/* AI-samenvatting paneel */}
-                        {(() => {
+                        {/* AI-samenvatting paneel — alleen open wanneer in aiOpen */}
+                        {data?.canSeeDetails && (() => {
                           const sumKey = `${c.type}|${c.name}`
                           const s = aiSummaries[sumKey]
                           const text = s?.text ?? c.aiSummary
-                          if (!s && !text) return null
+                          const open = aiOpen.has(sumKey)
+                          if (!open) return null
                           return (
                             <div className="mt-2 pt-2 border-t border-white/5">
                               <div className="flex items-baseline justify-between gap-2 mb-1">
                                 <span className="text-[10px] uppercase tracking-wider text-violet-300 font-semibold">🤖 AI-samenvatting</span>
-                                {text && !s?.loading && (
+                                <div className="flex items-center gap-3">
+                                  {text && !s?.loading && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); requestAiSummary(c, true) }}
+                                      className="text-[10px] text-white/40 hover:text-white/70 underline"
+                                    >
+                                      Opnieuw zoeken
+                                    </button>
+                                  )}
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); requestAiSummary(c, true) }}
+                                    onClick={(e) => { e.stopPropagation(); setAiOpen(prev => { const n = new Set(prev); n.delete(sumKey); return n }) }}
                                     className="text-[10px] text-white/40 hover:text-white/70 underline"
                                   >
-                                    Opnieuw zoeken
+                                    Inklappen
                                   </button>
-                                )}
+                                </div>
                               </div>
                               {s?.loading && (
                                 <p className="text-xs text-white/50 italic">Aan het zoeken op het web…</p>
@@ -1256,38 +1298,42 @@ export default function RecruitmentPage() {
                           >
                             {c.linkedinUrl ? '🔗 Profiel' : '🔍 LinkedIn'}
                           </a>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); requestAiSummary(c) }}
-                            disabled={aiSummaries[`${c.type}|${c.name}`]?.loading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/15 text-violet-300 text-xs font-medium hover:bg-violet-500/25 transition-colors disabled:opacity-50"
-                            title="AI zoekt publieke info en maakt 3-zin samenvatting"
-                          >
-                            {aiSummaries[`${c.type}|${c.name}`]?.loading ? (
-                              <span className="w-3 h-3 border-2 border-violet-300/30 border-t-violet-300 rounded-full animate-spin" />
-                            ) : (
-                              <>🤖 AI-samenvatting</>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => setEditingCandidate({
-                              key: `${c.type}|${c.name}`,
-                              ids: c.allIds,
-                              type: c.type,
-                              name: c.name,
-                              experienceYear: c.experienceYear?.toString() ?? '',
-                              currentOffice: c.currentOffice ?? '',
-                              linkedinUrl: c.linkedinUrl ?? '',
-                              inNetwork: c.inNetwork ?? false,
-                              candidateNotes: c.notes ?? '',
-                              status: c.approachStatus || '',
-                              by: c.approachedBy || '',
-                              networkOwner: c.networkOwner || '',
-                              approachNotes: c.approachNotes || '',
-                            })}
-                            className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
-                          >
-                            Bewerken
-                          </button>
+                          {data?.canSeeDetails && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); requestAiSummary(c) }}
+                              disabled={aiSummaries[`${c.type}|${c.name}`]?.loading}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/15 text-violet-300 text-xs font-medium hover:bg-violet-500/25 transition-colors disabled:opacity-50"
+                              title="AI zoekt publieke info en maakt 3-zin samenvatting"
+                            >
+                              {aiSummaries[`${c.type}|${c.name}`]?.loading ? (
+                                <span className="w-3 h-3 border-2 border-violet-300/30 border-t-violet-300 rounded-full animate-spin" />
+                              ) : (
+                                <>🤖 AI-samenvatting{aiOpen.has(`${c.type}|${c.name}`) ? ' ▴' : ''}</>
+                              )}
+                            </button>
+                          )}
+                          {data?.canSeeDetails && (
+                            <button
+                              onClick={() => setEditingCandidate({
+                                key: `${c.type}|${c.name}`,
+                                ids: c.allIds,
+                                type: c.type,
+                                name: c.name,
+                                experienceYear: c.experienceYear?.toString() ?? '',
+                                currentOffice: c.currentOffice ?? '',
+                                linkedinUrl: c.linkedinUrl ?? '',
+                                inNetwork: c.inNetwork ?? false,
+                                candidateNotes: c.notes ?? '',
+                                status: c.approachStatus || '',
+                                by: c.approachedBy || '',
+                                networkOwner: c.networkOwner || '',
+                                approachNotes: c.approachNotes || '',
+                              })}
+                              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
+                            >
+                              Bewerken
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
