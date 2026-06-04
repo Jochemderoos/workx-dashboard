@@ -96,7 +96,8 @@ const COLOR_MAP: Record<string, { bg: string; text: string; ring: string }> = {
 export default function RecruitmentPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const [data, setData] = useState<ApiData | null>(null)
+  const [rawData, setRawData] = useState<ApiData | null>(null)
+  const [previewAsEmployee, setPreviewAsEmployee] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -120,6 +121,24 @@ export default function RecruitmentPage() {
   const [editingCandidate, setEditingCandidate] = useState<{ key: string; name: string; ids: string[]; status: string; by: string; notes: string; netOwner: string } | null>(null)
   const [savingApproach, setSavingApproach] = useState(false)
 
+  // Jochem mag een "alsof ik medewerker ben" preview-tab gebruiken
+  const isJochem = session?.user?.email === 'jochem.deroos@workxadvocaten.nl'
+
+  // Effective data: respecteert de preview-toggle (alleen voor Jochem)
+  const data: ApiData | null = useMemo(() => {
+    if (!rawData) return null
+    if (previewAsEmployee && isJochem) {
+      return {
+        ...rawData,
+        canSeeAll: false,
+        isBeforeReveal: true,
+        allEntries: [],
+        activeUsers: [],
+      }
+    }
+    return rawData
+  }, [rawData, previewAsEmployee, isJochem])
+
   const isManager = data?.currentUser.role === 'PARTNER' || data?.currentUser.role === 'ADMIN'
 
   const loadData = useCallback(async () => {
@@ -131,7 +150,7 @@ export default function RecruitmentPage() {
         return
       }
       const d: ApiData = await res.json()
-      setData(d)
+      setRawData(d)
       if (d.ownEntry) {
         const cands = d.ownEntry.candidates.filter(c => c.type === 'candidate')
         const amb = d.ownEntry.candidates.find(c => c.type === 'ambassador')
@@ -352,7 +371,11 @@ export default function RecruitmentPage() {
         <div className="flex items-center gap-2 self-start sm:self-end p-1 rounded-xl bg-white/5 border border-white/10">
           <button
             onClick={() => router.push('/dashboard/recruitment')}
-            className="px-4 py-1.5 rounded-lg text-sm font-medium bg-workx-lime/20 text-workx-lime"
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              previewAsEmployee
+                ? 'text-white/60 hover:text-white hover:bg-white/5'
+                : 'bg-workx-lime/20 text-workx-lime'
+            }`}
           >
             Recruitment
           </button>
@@ -364,8 +387,37 @@ export default function RecruitmentPage() {
               Sollicitaties
             </button>
           )}
+          {isJochem && (
+            <button
+              onClick={() => setPreviewAsEmployee(!previewAsEmployee)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                previewAsEmployee ? 'bg-violet-500/30 text-violet-200' : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+              title="Toon zoals een medewerker dit ziet vóór maandag 10:45"
+            >
+              👁 Medewerker-view
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Voorvertoning-banner (alleen Jochem, alleen actief) */}
+      {previewAsEmployee && isJochem && (
+        <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span>👁</span>
+            <span className="text-violet-200">
+              <span className="font-semibold">Medewerker-voorvertoning</span> — dit is wat een advocaat/medewerker tot maandag 10:45 ziet. Je eigen ingevulde lijst blijft zichtbaar, maar geen overzicht van anderen.
+            </span>
+          </div>
+          <button
+            onClick={() => setPreviewAsEmployee(false)}
+            className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium flex-shrink-0"
+          >
+            Sluiten
+          </button>
+        </div>
+      )}
 
       {/* Countdown banner */}
       {countdown && (
