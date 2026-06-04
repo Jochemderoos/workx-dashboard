@@ -42,8 +42,16 @@ export async function GET() {
       },
       orderBy: { updatedAt: 'desc' },
     })
+    // Het overzicht 'wie heeft wat ingevuld' gaat over onze advocaten —
+    // partners + office (Hanna, Lotte, Bente, Diyar) excluderen, want
+    // het hoort niet bij hun rol om dit lijstje in te vullen.
+    const OFFICE_NAMES = ['Hanna Blaauboer', 'Lotte van Sint Truiden', 'Bente Karels', 'Diyar Wakkas']
     activeUsers = await prisma.user.findMany({
-      where: { isActive: true, role: { in: ['EMPLOYEE', 'PARTNER', 'ADMIN'] } },
+      where: {
+        isActive: true,
+        role: 'EMPLOYEE',
+        name: { notIn: OFFICE_NAMES },
+      },
       select: { id: true, name: true, role: true, avatarUrl: true },
       orderBy: { name: 'asc' },
     })
