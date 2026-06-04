@@ -286,12 +286,31 @@ export default function SollicitatiesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — tab-nav identiek aan /dashboard/recruitment */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Sollicitaties</h1>
-          <p className="text-white/40 text-sm mt-1">Beheer sollicitanten, CV's en gesprekken</p>
+          <div className="flex items-center gap-3 mb-1">
+            <span className="text-3xl">🎯</span>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Recruitment</h1>
+          </div>
+          <p className="text-sm text-gray-400">Sollicitanten beheren, CV's en gesprekken.</p>
         </div>
+        <div className="flex items-center gap-2 self-start sm:self-end p-1 rounded-xl bg-white/5 border border-white/10">
+          <button
+            onClick={() => router.push('/dashboard/recruitment')}
+            className="px-4 py-1.5 rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            Recruitment
+          </button>
+          <button
+            className="px-4 py-1.5 rounded-lg text-sm font-medium bg-workx-lime/20 text-workx-lime"
+          >
+            Sollicitaties
+          </button>
+        </div>
+      </div>
+
+      <div className="flex justify-end">
         <button
           onClick={() => setShowNewForm(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20 font-medium text-sm transition-all border border-workx-lime/20"

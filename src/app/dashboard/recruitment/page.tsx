@@ -67,7 +67,7 @@ interface ApiData {
 // ─── Statics ───────────────────────────────────────────────────────────────
 
 const TRIPS = [
-  { name: 'Een trip naar Parijs', img: '/recruitment/parijs.png', tag: 'Hoofdprijs' },
+  { name: 'Een trip naar Parijs', img: '/recruitment/parijs.png', tag: 'Luxe city-trip' },
   { name: 'Botanic Sanctuary Antwerpen', img: '/recruitment/antwerpen.png', tag: 'Luxe city-trip' },
   { name: 'Boutique Bungalow — Peace & Quiet', img: '/recruitment/peace-and-quiet.png', tag: 'Bos retreat' },
 ]
@@ -103,9 +103,9 @@ export default function RecruitmentPage() {
 
   // Form state
   const [candidates, setCandidates] = useState<Candidate[]>([])
-  const [ambassador, setAmbassador] = useState<Candidate>({
-    type: 'ambassador', name: '', experienceYear: null, currentOffice: null, inNetwork: false,
-  })
+  const [ambassadors, setAmbassadors] = useState<Candidate[]>([
+    { type: 'ambassador', name: '', experienceYear: null, currentOffice: null, inNetwork: false },
+  ])
   const [visibilityIdeas, setVisibilityIdeas] = useState('')
   const [willPostHimself, setWillPostHimself] = useState('')
   const [postingFormat, setPostingFormat] = useState('')
@@ -153,13 +153,15 @@ export default function RecruitmentPage() {
       setRawData(d)
       if (d.ownEntry) {
         const cands = d.ownEntry.candidates.filter(c => c.type === 'candidate')
-        const amb = d.ownEntry.candidates.find(c => c.type === 'ambassador')
+        const ambs = d.ownEntry.candidates.filter(c => c.type === 'ambassador')
         const padded = [...cands]
         while (padded.length < INITIAL_CANDIDATE_SLOTS) {
           padded.push({ type: 'candidate', name: '', experienceYear: null, currentOffice: null, inNetwork: false })
         }
         setCandidates(padded)
-        setAmbassador(amb || { type: 'ambassador', name: '', experienceYear: null, currentOffice: null, inNetwork: false })
+        setAmbassadors(ambs.length > 0
+          ? ambs
+          : [{ type: 'ambassador', name: '', experienceYear: null, currentOffice: null, inNetwork: false }])
         setVisibilityIdeas(d.ownEntry.visibilityIdeas || '')
         setWillPostHimself(d.ownEntry.willPostHimself || '')
         setPostingFormat(d.ownEntry.postingFormat || '')
@@ -211,18 +213,18 @@ export default function RecruitmentPage() {
           sortOrder: i,
         })),
       ]
-      if (ambassador.name.trim()) {
+      ambassadors.filter(a => a.name.trim()).forEach((a, idx) => {
         allCands.push({
           type: 'ambassador' as any,
-          name: ambassador.name.trim(),
-          experienceYear: ambassador.experienceYear,
-          currentOffice: ambassador.currentOffice,
-          linkedinUrl: ambassador.linkedinUrl ?? null,
-          inNetwork: ambassador.inNetwork,
-          notes: ambassador.notes ?? null,
-          sortOrder: 0,
+          name: a.name.trim(),
+          experienceYear: a.experienceYear,
+          currentOffice: a.currentOffice,
+          linkedinUrl: a.linkedinUrl ?? null,
+          inNetwork: a.inNetwork,
+          notes: a.notes ?? null,
+          sortOrder: idx,
         })
-      }
+      })
       const res = await fetch('/api/recruitment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -662,17 +664,29 @@ export default function RecruitmentPage() {
           </button>
         </div>
 
-        {/* Ambassador */}
+        {/* Ambassadeurs — kunnen er meerdere zijn */}
         <div>
           <h3 className="text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
-            <span>🤝</span> Workx-ambassadeur (optioneel)
+            <span>🤝</span> Workx-ambassadeur(s)
           </h3>
-          <p className="text-xs text-white/50 mb-3">Iemand die niet bij ons werkt maar wel enthousiast is en een groot netwerk heeft.</p>
-          <CandidateRow
-            value={ambassador}
-            index={0}
-            onChange={(p) => setAmbassador({ ...ambassador, ...p })}
-          />
+          <p className="text-xs text-white/50 mb-3">Iemand die niet bij ons werkt maar wel enthousiast is en een groot netwerk heeft. Ken je er meerdere? Voeg ze allemaal toe.</p>
+          <div className="space-y-2">
+            {ambassadors.map((a, i) => (
+              <CandidateRow
+                key={i}
+                value={a}
+                index={i}
+                onChange={(p) => setAmbassadors(ambassadors.map((x, idx) => idx === i ? { ...x, ...p } : x))}
+                onRemove={ambassadors.length > 1 ? () => setAmbassadors(ambassadors.filter((_, idx) => idx !== i)) : undefined}
+              />
+            ))}
+          </div>
+          <button
+            onClick={() => setAmbassadors([...ambassadors, { type: 'ambassador', name: '', experienceYear: null, currentOffice: null, inNetwork: false }])}
+            className="mt-3 flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 transition-colors"
+          >
+            <Icons.plus size={14} /> Nog een ambassadeur toevoegen
+          </button>
         </div>
 
         {/* Visibility ideas */}
@@ -735,9 +749,11 @@ export default function RecruitmentPage() {
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
-            <span>🎁</span> Wat krijg je terug?
+            <span>🎁</span> What's in it for me?
           </h2>
-          <p className="text-xs text-white/60">Twee parallelle incentives — een referral-menu bij een geslaagde aanname, plus een extra weekend weg.</p>
+          <p className="text-sm text-white/70 max-w-3xl leading-relaxed">
+            Ten eerste natuurlijk een leuke nieuwe collega. En een nog betere werkverdeling. Maar we willen ook een echte beloning geven, vandaar — een referral-menu bij een geslaagde aanname, plus een extra weekend weg.
+          </p>
         </div>
 
         {/* Referral menu — afbeelding groot zodat 'ie leesbaar is */}
