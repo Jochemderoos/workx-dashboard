@@ -93,6 +93,19 @@ function getActivityPhoto(title: string): string | undefined {
   return undefined
 }
 
+// Sub-opties die uitklapbaar onder een activiteit verschijnen.
+function getActivityExtras(title: string): { label: string; img: string }[] | null {
+  const t = title.toLowerCase()
+  if (t.includes('vrije dag') || (t.includes('vrij') && t.includes('zelf'))) {
+    return [
+      { label: 'Spa at the Pool', img: '/lustrum/vrije-spa.avif' },
+      { label: 'Mountainbiken',  img: '/lustrum/vrije-mountainbiken.jpg' },
+      { label: 'Shoppen',         img: '/lustrum/vrije-shoppen.jpg' },
+    ]
+  }
+  return null
+}
+
 // Dagen van de trip — per dag eigen sfeer/kleur (FOMO-design)
 const TRIP_DAYS: {
   date: string
@@ -153,6 +166,7 @@ export default function LustrumPage() {
     date: '2026-09-30', time: '', title: '', description: '', responsible: []
   })
   const [isSavingProgram, setIsSavingProgram] = useState(false)
+  const [expandedItemIds, setExpandedItemIds] = useState<Set<string>>(new Set())
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [userCanEdit, setUserCanEdit] = useState(false)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -1309,6 +1323,8 @@ export default function LustrumPage() {
                           const periodIcon = hour < 12 ? '🌅' : hour < 17 ? '☀️' : '🌙'
                           const periodLabel = hour < 12 ? 'Ochtend' : hour < 17 ? 'Middag' : 'Avond'
                           const photo = getActivityPhoto(item.title)
+                          const extras = getActivityExtras(item.title)
+                          const isExpanded = expandedItemIds.has(item.id)
                           return (
                             <div
                               key={item.id}
@@ -1366,6 +1382,51 @@ export default function LustrumPage() {
                                           </div>
                                         )
                                       })}
+                                    </div>
+                                  )}
+
+                                  {/* Uitklapbare sub-opties (bv. vrije dag) */}
+                                  {extras && (
+                                    <div className="mt-3">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setExpandedItemIds(prev => {
+                                            const next = new Set(prev)
+                                            if (next.has(item.id)) next.delete(item.id)
+                                            else next.add(item.id)
+                                            return next
+                                          })
+                                        }}
+                                        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 hover:border-pink-500/50 text-pink-200 transition-all"
+                                      >
+                                        <span className="flex items-center gap-2 text-sm font-medium">
+                                          <span>✨</span>
+                                          {isExpanded ? `Verberg ${extras.length} opties` : `Bekijk ${extras.length} opties — klik hier`}
+                                        </span>
+                                        <Icons.chevronDown
+                                          size={16}
+                                          className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                        />
+                                      </button>
+                                      {isExpanded && (
+                                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                          {extras.map((ex) => (
+                                            <div
+                                              key={ex.label}
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="rounded-xl overflow-hidden border border-white/10 bg-black/30 hover:border-pink-400/40 transition-colors cursor-default"
+                                            >
+                                              <div className="relative aspect-[16/10]">
+                                                <img src={ex.img} alt={ex.label} className="w-full h-full object-cover" />
+                                              </div>
+                                              <div className="px-3 py-2">
+                                                <p className="text-sm font-medium text-white">{ex.label}</p>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>

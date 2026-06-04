@@ -24,7 +24,7 @@ const PROGRAM: ProgramSeed[] = [
 
   // Vrijdag 2 oktober
   { date: '2026-10-02', time: '09:00', title: 'Ontbijt in huis', description: null, responsible: [] },
-  { date: '2026-10-02', time: '13:00', title: 'Vrije middag — €50 vrije besteding', description: 'Optie voor massages / facials bij het zwembad', responsible: [] },
+  { date: '2026-10-02', time: '13:00', title: 'Zelf in te vullen vrije dag', description: 'denk aan:', responsible: [] },
   { date: '2026-10-02', time: '21:00', title: 'Club in Palma', description: null, responsible: ['Hanna Blaauboer'] },
 
   // Zaterdag 3 oktober
@@ -50,6 +50,14 @@ export async function main(externalPrisma?: PrismaClient) {
         title: 'Workx Awards & Movie Night',
         time: '20:00',
         description: 'Diner in huis — sterren, statuettes en stiekem een traan',
+      },
+    })
+    // Eenmalige rename: Vrije middag €50 → Zelf in te vullen vrije dag
+    await prisma.lustrumProgram.updateMany({
+      where: { date: '2026-10-02', title: 'Vrije middag — €50 vrije besteding' },
+      data: {
+        title: 'Zelf in te vullen vrije dag',
+        description: 'denk aan:',
       },
     })
 
