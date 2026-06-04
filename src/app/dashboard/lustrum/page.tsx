@@ -82,10 +82,20 @@ interface TeamMember {
 
 // Sfeerfoto's per activiteit — fuzzy match op trefwoorden in de titel,
 // zodat hernoemde / samengevoegde items toch een foto krijgen.
-function getActivityPhoto(title: string): string | undefined {
+const BREAKFAST_PHOTOS_BY_DATE: Record<string, string> = {
+  '2026-10-01': '/lustrum/breakfast-1.jpg',
+  '2026-10-02': '/lustrum/breakfast-2.jpg',
+  '2026-10-03': '/lustrum/breakfast-3.webp',
+}
+
+function getActivityPhoto(title: string, date?: string): string | undefined {
   const t = title.toLowerCase()
+  if ((t.includes('breakfast') || t.includes('ontbijt')) && date && BREAKFAST_PHOTOS_BY_DATE[date]) {
+    return BREAKFAST_PHOTOS_BY_DATE[date]
+  }
+  // Themafeest matched first omdat "poolparty" óók 'pool' bevat
+  if (t.includes('themafeest') || t.includes('poolparty')) return '/lustrum/poolparty.webp'
   if (t.includes('award') || t.includes('lustrumfilm') || t.includes('lustrum film') || t.includes('movie')) return '/lustrum/workx-awards.jpg'
-  if (t.includes('themafeest') || t.includes('pool')) return '/lustrum/poolparty.webp'
   if (t.includes('wandel') || t.includes('sóller') || t.includes('soller') || t.includes('deià') || t.includes('deia')) return '/lustrum/wandelen-deia.jpg'
   if (t.includes('rooftop') || (t.includes('palma') && t.includes('diner'))) return '/lustrum/rooftop-palma.webp'
   if (t.includes('boot') || t.includes('snorkel')) return '/lustrum/boot-snorkelen.jpg'
@@ -1322,7 +1332,7 @@ export default function LustrumPage() {
                           const hour = parseInt(item.time?.split(':')[0] || '12', 10)
                           const periodIcon = hour < 12 ? '🌅' : hour < 17 ? '☀️' : '🌙'
                           const periodLabel = hour < 12 ? 'Ochtend' : hour < 17 ? 'Middag' : 'Avond'
-                          const photo = getActivityPhoto(item.title)
+                          const photo = getActivityPhoto(item.title, item.date)
                           const extras = getActivityExtras(item.title)
                           const isExpanded = expandedItemIds.has(item.id)
                           return (

@@ -18,17 +18,17 @@ const PROGRAM: ProgramSeed[] = [
   { date: '2026-09-30', time: '19:00', title: 'Themafeest & poolparty', description: 'Diner in huis', responsible: [] },
 
   // Donderdag 1 oktober
-  { date: '2026-10-01', time: '09:00', title: 'Ontbijt in huis', description: null, responsible: [] },
+  { date: '2026-10-01', time: '09:00', title: 'Breakfast @ the Pool', description: null, responsible: [] },
   { date: '2026-10-01', time: '13:00', title: 'Wandelen Port de Sóller – Deià', description: 'Lunch op andere locatie', responsible: [] },
   { date: '2026-10-01', time: '19:00', title: 'Diner in Palma & rooftopbar', description: null, responsible: [] },
 
   // Vrijdag 2 oktober
-  { date: '2026-10-02', time: '09:00', title: 'Ontbijt in huis', description: null, responsible: [] },
+  { date: '2026-10-02', time: '09:00', title: 'Breakfast @ the Pool', description: null, responsible: [] },
   { date: '2026-10-02', time: '13:00', title: 'Zelf in te vullen vrije dag', description: 'denk aan:', responsible: [] },
   { date: '2026-10-02', time: '21:00', title: 'Club in Palma', description: null, responsible: ['Hanna Blaauboer'] },
 
   // Zaterdag 3 oktober
-  { date: '2026-10-03', time: '09:00', title: 'Ontbijt in huis', description: null, responsible: [] },
+  { date: '2026-10-03', time: '09:00', title: 'Breakfast @ the Pool', description: null, responsible: [] },
   { date: '2026-10-03', time: '13:00', title: 'Boot varen & snorkelen', description: 'Lunch op het strand', responsible: [] },
   { date: '2026-10-03', time: '20:00', title: 'Workx Awards & Movie Night', description: 'Diner in huis — sterren, statuettes en stiekem een traan', responsible: [] },
 
@@ -60,6 +60,33 @@ export async function main(externalPrisma?: PrismaClient) {
         description: 'denk aan:',
       },
     })
+    // Bulk rename: Ontbijt in huis → Breakfast @ the Pool (alle dagen)
+    await prisma.lustrumProgram.updateMany({
+      where: { title: 'Ontbijt in huis' },
+      data: { title: 'Breakfast @ the Pool' },
+    })
+
+    // Dedupe: per (date, title) max 1 record. Houdt de oudste (kleinste createdAt) aan
+    // en verwijdert duplicaten — zo verdwijnen ook "ghost" items die niet wegklikbaar
+    // zijn omdat ze in een onverwachte state staan.
+    const allItems = await prisma.lustrumProgram.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, date: true, title: true },
+    })
+    const seenKeys = new Set<string>()
+    const toDeleteIds: string[] = []
+    for (const it of allItems) {
+      const k = `${it.date}|${it.title}`
+      if (seenKeys.has(k)) {
+        toDeleteIds.push(it.id)
+      } else {
+        seenKeys.add(k)
+      }
+    }
+    if (toDeleteIds.length > 0) {
+      await prisma.lustrumProgram.deleteMany({ where: { id: { in: toDeleteIds } } })
+      console.log(`[seed-lustrum-program] ${toDeleteIds.length} dubbele item(s) opgeruimd`)
+    }
 
     const existing = await prisma.lustrumProgram.findMany({
       select: { date: true, title: true },
