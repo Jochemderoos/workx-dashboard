@@ -553,22 +553,28 @@ export default function RecruitmentPage() {
                           <h4 className="text-base sm:text-lg font-semibold text-white">{c.name}</h4>
                           {c.currentOffice && <span className="text-sm text-white/60">· {c.currentOffice}</span>}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[11px] text-white/40">Genoemd door</span>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className="text-[10px] uppercase tracking-wider text-white/50 font-semibold">Genoemd door</span>
                           {c.mentionedBy.map(m => {
                             if (m.name === 'Eerdere ronde') {
                               return (
-                                <div key={m.userId} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                                  <span className="text-[10px]">📚</span>
-                                  <span className="text-[11px] font-medium">Eerdere ronde</span>
+                                <div key={m.userId} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-200 border border-amber-500/30">
+                                  <span className="text-sm">📚</span>
+                                  <span className="text-xs font-medium">Eerdere ronde</span>
                                 </div>
                               )
                             }
                             const ph = getPhotoUrl(m.name)
                             return (
-                              <div key={m.userId} className="flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-                                {ph ? <Image src={ph} alt={m.name} width={18} height={18} className="w-4 h-4 rounded-full object-cover" /> : <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[8px]">{m.name.charAt(0)}</div>}
-                                <span className="text-[11px] text-white/70">{m.name.split(' ')[0]}</span>
+                              <div key={m.userId} className="flex items-center gap-1.5 pl-0.5 pr-2.5 py-0.5 rounded-full bg-white/10 border border-white/20">
+                                {ph ? (
+                                  <Image src={ph} alt={m.name} width={24} height={24} className="w-6 h-6 rounded-full object-cover" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center text-[10px] text-white/80 font-semibold">
+                                    {m.name.charAt(0)}
+                                  </div>
+                                )}
+                                <span className="text-xs text-white font-medium">{m.name.split(' ')[0]}</span>
                               </div>
                             )
                           })}
@@ -948,22 +954,28 @@ export default function RecruitmentPage() {
                             <span className="text-sm text-white/60">· {c.currentOffice}</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[11px] text-white/40">Genoemd door</span>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className="text-[10px] uppercase tracking-wider text-white/50 font-semibold">Genoemd door</span>
                           {c.mentionedBy.map(m => {
                             if (m.name === 'Eerdere ronde') {
                               return (
-                                <div key={m.userId} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                                  <span className="text-[10px]">📚</span>
-                                  <span className="text-[11px] font-medium">Eerdere ronde</span>
+                                <div key={m.userId} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-200 border border-amber-500/30">
+                                  <span className="text-sm">📚</span>
+                                  <span className="text-xs font-medium">Eerdere ronde</span>
                                 </div>
                               )
                             }
                             const ph = getPhotoUrl(m.name)
                             return (
-                              <div key={m.userId} className="flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-                                {ph ? <Image src={ph} alt={m.name} width={18} height={18} className="w-4 h-4 rounded-full object-cover" /> : <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[8px]">{m.name.charAt(0)}</div>}
-                                <span className="text-[11px] text-white/70">{m.name.split(' ')[0]}</span>
+                              <div key={m.userId} className="flex items-center gap-1.5 pl-0.5 pr-2.5 py-0.5 rounded-full bg-white/10 border border-white/20">
+                                {ph ? (
+                                  <Image src={ph} alt={m.name} width={24} height={24} className="w-6 h-6 rounded-full object-cover" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center text-[10px] text-white/80 font-semibold">
+                                    {m.name.charAt(0)}
+                                  </div>
+                                )}
+                                <span className="text-xs text-white font-medium">{m.name.split(' ')[0]}</span>
                               </div>
                             )
                           })}
