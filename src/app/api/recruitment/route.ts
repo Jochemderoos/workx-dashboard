@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
       name: string
       experienceYear?: number | null
       currentOffice?: string | null
+      linkedinUrl?: string | null
       inNetwork?: boolean
       notes?: string | null
       sortOrder?: number
@@ -141,6 +142,7 @@ export async function POST(req: NextRequest) {
         data: {
           experienceYear: c.experienceYear ?? null,
           currentOffice: c.currentOffice ?? null,
+          linkedinUrl: c.linkedinUrl ?? null,
           inNetwork: c.inNetwork ?? false,
           notes: c.notes ?? null,
           sortOrder: c.sortOrder ?? i,
@@ -154,6 +156,7 @@ export async function POST(req: NextRequest) {
           name: c.name.trim(),
           experienceYear: c.experienceYear ?? null,
           currentOffice: c.currentOffice ?? null,
+          linkedinUrl: c.linkedinUrl ?? null,
           inNetwork: c.inNetwork ?? false,
           notes: c.notes ?? null,
           sortOrder: c.sortOrder ?? i,

@@ -51,6 +51,10 @@ export async function main(externalPrisma?: PrismaClient) {
     await prisma.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "RecruitmentCandidate_type_idx" ON "RecruitmentCandidate"("type")
     `)
+    // Idempotente kolom-add voor latere uitbreidingen
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "RecruitmentCandidate" ADD COLUMN IF NOT EXISTS "linkedinUrl" TEXT
+    `)
     console.log('[add-recruitment-tables] tabellen aanwezig')
   } catch (err) {
     console.error('[add-recruitment-tables] mislukt (build gaat door):', err)

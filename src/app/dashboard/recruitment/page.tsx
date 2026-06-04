@@ -23,6 +23,7 @@ interface Candidate {
   name: string
   experienceYear: number | null
   currentOffice: string | null
+  linkedinUrl?: string | null
   inNetwork: boolean
   notes?: string | null
   sortOrder?: number
@@ -64,14 +65,6 @@ interface ApiData {
 }
 
 // ─── Statics ───────────────────────────────────────────────────────────────
-
-const PREAMBLE = `Maak een lijstje van vijf advocaten waarvan je denkt dat ze bij Workx zouden passen. Dit mag binnen of buiten je eigen netwerk zijn. Zolang het maar niet iemand is die heeft "bedankt" voor Workx.
-
-Ken je een Workx-ambassadeur — iemand die niet bij ons werkt maar wel enthousiast is en een groot netwerk heeft? Schrijf die er dan ook bij.
-
-We gaan dan samen bedenken hoe we deze mensen het beste kunnen benaderen.
-
-Employer branding: we merken dat we aan zichtbaarheid tekortschieten. En mensen weten niet altijd dat we mooie klanten hebben en hoogwaardig werk doen. Daar gaan we aan werken: een nieuw Workx-filmpje, een paar mini-docu's over advocaten bij Workx, en meer activiteit op LinkedIn — zowel vanuit het Workx-account als mogelijk vanuit eigen accounts.`
 
 const TRIPS = [
   { name: 'Een trip naar Parijs', img: '/recruitment/parijs.png', tag: 'Hoofdprijs' },
@@ -193,6 +186,7 @@ export default function RecruitmentPage() {
           name: c.name.trim(),
           experienceYear: c.experienceYear,
           currentOffice: c.currentOffice,
+          linkedinUrl: c.linkedinUrl ?? null,
           inNetwork: c.inNetwork,
           notes: c.notes ?? null,
           sortOrder: i,
@@ -204,6 +198,7 @@ export default function RecruitmentPage() {
           name: ambassador.name.trim(),
           experienceYear: ambassador.experienceYear,
           currentOffice: ambassador.currentOffice,
+          linkedinUrl: ambassador.linkedinUrl ?? null,
           inNetwork: ambassador.inNetwork,
           notes: ambassador.notes ?? null,
           sortOrder: 0,
@@ -263,6 +258,7 @@ export default function RecruitmentPage() {
           if (c.networkOwner) existing.networkOwner = c.networkOwner
           if (!existing.experienceYear && c.experienceYear) existing.experienceYear = c.experienceYear
           if (!existing.currentOffice && c.currentOffice) existing.currentOffice = c.currentOffice
+          if (!existing.linkedinUrl && c.linkedinUrl) existing.linkedinUrl = c.linkedinUrl
         } else {
           map.set(key, {
             ...c,
@@ -398,11 +394,182 @@ export default function RecruitmentPage() {
         </div>
       )}
 
-      {/* Preamble */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
-        <div className="prose prose-invert max-w-none text-sm sm:text-base text-white/80 whitespace-pre-line leading-relaxed">
-          {PREAMBLE}
-        </div>
+      {/* Overview na reveal — bovenaan vanaf maandag 10:45 */}
+      {!data?.isBeforeReveal && data?.canSeeAll && (
+        <>
+          {/* Per-medewerker grid */}
+          <div className="space-y-4">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span>👥</span> Wie heeft wat ingevuld
+              </h2>
+              <span className="text-xs text-white/50">
+                {data.allEntries.length} van {data.activeUsers.length} medewerkers
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {data.activeUsers.map(u => {
+                const entry = data.allEntries.find(e => e.user.id === u.id)
+                const photo = getPhotoUrl(u.name, u.avatarUrl)
+                const candCount = entry?.candidates.filter(c => c.type === 'candidate').length || 0
+                const hasAmb = entry?.candidates.some(c => c.type === 'ambassador') || false
+                return (
+                  <div key={u.id} className={`rounded-xl border p-3 ${entry ? 'border-white/10 bg-white/5' : 'border-white/5 bg-white/[0.02]'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-white/5 flex-shrink-0">
+                        {photo ? <Image src={photo} alt={u.name} width={36} height={36} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs text-white/40">{u.name.charAt(0)}</div>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{u.name}</p>
+                        <p className="text-[10px] text-white/40">{u.role === 'PARTNER' ? 'Partner' : u.role === 'ADMIN' ? 'Office' : 'Advocaat'}</p>
+                      </div>
+                      {entry ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-300">✓</span>
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/40">leeg</span>
+                      )}
+                    </div>
+                    {entry ? (
+                      <div className="space-y-1 text-xs text-white/70">
+                        <div>{candCount} kandida{candCount === 1 ? 'at' : 'aten'}{hasAmb && ', 1 ambassadeur'}</div>
+                        {entry.willPostHimself && (
+                          <div className="text-[11px] text-white/50">
+                            Posten: {POSTING_OPTIONS.find(o => o.value === entry.willPostHimself)?.label}
+                          </div>
+                        )}
+                        {entry.visibilityIdeas && (
+                          <p className="text-[11px] text-white/40 italic truncate">"{entry.visibilityIdeas.slice(0, 80)}{entry.visibilityIdeas.length > 80 ? '...' : ''}"</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-white/30 italic">Nog niet ingevuld</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Total ranking */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <span>🏆</span> Alle kandidaten — gerangschikt op ervaring
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowMineOnly(!showMineOnly)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    showMineOnly ? 'bg-workx-lime/20 text-workx-lime border-workx-lime/40' : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  Mijn kandidaten
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <FilterChip active={statusFilter === 'all'} label="Alles" count={statusCounts.all} onClick={() => setStatusFilter('all')} color="gray" />
+              {APPROACH_STATUSES.map(s => (
+                <FilterChip key={s.value} active={statusFilter === s.value} label={s.label} count={statusCounts[s.value] || 0} onClick={() => setStatusFilter(s.value)} color={s.color} />
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              {filteredRanking.length === 0 && (
+                <p className="text-sm text-white/40 italic py-8 text-center">Geen kandidaten in deze filter.</p>
+              )}
+              {filteredRanking.map((c) => {
+                const sm = statusMeta(c.approachStatus)
+                const color = COLOR_MAP[sm?.color || 'gray']
+                const isAmb = c.type === 'ambassador'
+                const multi = c.mentionedBy.length > 1
+                return (
+                  <div key={`top-${c.type}|${c.name}`} className={`rounded-xl border p-3 sm:p-4 transition-colors ${color.bg} ${color.ring} ring-1 ${isAmb ? 'border-pink-500/20' : 'border-white/10'}`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${isAmb ? 'bg-pink-500/20 text-pink-300' : 'bg-blue-500/15 text-blue-300'}`}>{isAmb ? 'Ambassadeur' : 'Kandidaat'}</span>
+                          {c.experienceYear !== null && <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">{c.experienceYear} jr ervaring</span>}
+                          {c.inNetwork && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300">In netwerk</span>}
+                          {multi && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold">{c.mentionedBy.length}× genoemd</span>}
+                          {sm && <span className={`text-[10px] px-2 py-0.5 rounded-full ${color.text} ${color.bg}`}>{sm.label}</span>}
+                        </div>
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <h4 className="text-base sm:text-lg font-semibold text-white">{c.name}</h4>
+                          {c.currentOffice && <span className="text-sm text-white/60">· {c.currentOffice}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-[11px] text-white/40">Genoemd door</span>
+                          {c.mentionedBy.map(m => {
+                            const ph = getPhotoUrl(m.name)
+                            return (
+                              <div key={m.userId} className="flex items-center gap-1 pl-0.5 pr-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                                {ph ? <Image src={ph} alt={m.name} width={18} height={18} className="w-4 h-4 rounded-full object-cover" /> : <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[8px]">{m.name.charAt(0)}</div>}
+                                <span className="text-[11px] text-white/70">{m.name.split(' ')[0]}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {(c.approachedBy || c.networkOwner || c.approachNotes) && (
+                          <div className="mt-2 pt-2 border-t border-white/5 space-y-1 text-xs text-white/70">
+                            {c.approachedBy && <div><span className="text-white/40">Opvolging:</span> {c.approachedBy}</div>}
+                            {c.networkOwner && <div><span className="text-white/40">Netwerk via:</span> {c.networkOwner}</div>}
+                            {c.approachNotes && <div className="italic text-white/60">"{c.approachNotes}"</div>}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <a
+                          href={c.linkedinUrl || linkedInSearchUrl(c.name)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-300 text-xs font-medium hover:bg-blue-500/25 transition-colors"
+                          title={c.linkedinUrl ? 'Open LinkedIn-profiel' : 'Zoek op LinkedIn'}
+                        >
+                          {c.linkedinUrl ? '🔗 Profiel' : '🔍 LinkedIn'}
+                        </a>
+                        <button
+                          onClick={() => setEditingCandidate({
+                            key: `${c.type}|${c.name}`,
+                            name: c.name,
+                            ids: c.allIds,
+                            status: c.approachStatus || '',
+                            by: c.approachedBy || '',
+                            notes: c.approachNotes || '',
+                            netOwner: c.networkOwner || '',
+                          })}
+                          className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
+                        >
+                          Opvolging…
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Preamble — grafisch + bondig */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {[
+          { icon: '👥', title: '5 advocaten', body: 'Die volgens jou passen. Binnen of buiten je netwerk — alleen niet wie al bedankt heeft.' },
+          { icon: '🤝', title: 'Een ambassadeur', body: 'Iemand die ons niet wérkt bij ons maar wel enthousiast is en een groot netwerk heeft.' },
+          { icon: '📣', title: 'Zichtbaarheid', body: 'Ideeën voor LinkedIn-posts vanuit Workx of jezelf. Wil je zelf posten?' },
+        ].map((c, i) => (
+          <div
+            key={i}
+            className="rounded-2xl border border-white/10 bg-gradient-to-br from-workx-lime/5 via-transparent to-violet-500/5 p-4 hover:border-workx-lime/30 transition-colors"
+          >
+            <div className="text-3xl mb-2">{c.icon}</div>
+            <h3 className="text-white font-semibold mb-1">{c.title}</h3>
+            <p className="text-sm text-white/60 leading-snug">{c.body}</p>
+          </div>
+        ))}
       </div>
 
       {/* Form section */}
@@ -514,33 +681,23 @@ export default function RecruitmentPage() {
           <p className="text-xs text-white/60">Twee parallelle incentives — een referral-menu bij een geslaagde aanname, plus een extra weekend weg.</p>
         </div>
 
-        {/* Referral menu */}
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 overflow-hidden">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase tracking-wider mb-2">
-                Referral Menu
-              </div>
-              <h3 className="text-white font-bold text-xl mb-2">Breng jij DE nieuwe Workxer aan?</h3>
-              <p className="text-sm text-white/70 mb-4">Cadeautje voor jou — plus een beloning voor het hele team. Kies je MAIN.</p>
-              <div className="space-y-2 text-sm">
-                <div><span className="text-amber-300 font-semibold">Starter (voor jou):</span> <span className="text-white/80">Free Friday holiday</span></div>
-                <div>
-                  <div className="text-amber-300 font-semibold mb-1">Main (for all):</div>
-                  <ul className="text-white/80 space-y-1 ml-4 list-disc">
-                    <li>Wellness day at the office (stoelmassages)</li>
-                    <li>Sport voucher ClassPass €50</li>
-                    <li>Bijenkorf bon €50</li>
-                  </ul>
-                </div>
-                <div><span className="text-amber-300 font-semibold">Dessert (for all):</span> <span className="text-white/80">**applausje**</span></div>
-              </div>
-            </div>
-            <div className="md:w-72 flex-shrink-0">
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/10">
-                <Image src={REFERRAL_MENU_IMG} alt="Referral menu" fill className="object-cover" />
-              </div>
-            </div>
+        {/* Referral menu — afbeelding groot zodat 'ie leesbaar is */}
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 sm:p-6 overflow-hidden">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase tracking-wider mb-3">
+            Referral Menu
+          </div>
+          <h3 className="text-white font-bold text-xl mb-1">Breng jij DE nieuwe Workxer aan?</h3>
+          <p className="text-sm text-white/70 mb-4">Cadeautje voor jou — plus een beloning voor het hele team.</p>
+          {/* Grote, leesbare afbeelding */}
+          <div className="relative w-full max-w-2xl mx-auto rounded-xl overflow-hidden border border-white/10 bg-black/20">
+            <Image
+              src={REFERRAL_MENU_IMG}
+              alt="Referral menu"
+              width={1024}
+              height={1448}
+              className="w-full h-auto block"
+              priority
+            />
           </div>
         </div>
 
@@ -567,8 +724,8 @@ export default function RecruitmentPage() {
         </div>
       </div>
 
-      {/* Overview (alleen voor wie 't mag zien) */}
-      {data?.canSeeAll && (
+      {/* Overview pre-reveal (= alleen partners/admin zien 'm onder de form) */}
+      {data?.canSeeAll && data.isBeforeReveal && (
         <>
           {/* Per-medewerker grid */}
           <div className="space-y-4">
@@ -730,14 +887,14 @@ export default function RecruitmentPage() {
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <a
-                          href={linkedInSearchUrl(c.name)}
+                          href={c.linkedinUrl || linkedInSearchUrl(c.name)}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 text-blue-300 text-xs font-medium hover:bg-blue-500/25 transition-colors"
-                          title="Zoek op LinkedIn"
+                          title={c.linkedinUrl ? 'Open LinkedIn-profiel' : 'Zoek op LinkedIn'}
                         >
-                          🔍 LinkedIn
+                          {c.linkedinUrl ? '🔗 Profiel' : '🔍 LinkedIn'}
                         </a>
                         <button
                           onClick={() => setEditingCandidate({
@@ -867,52 +1024,77 @@ function CandidateRow({
   onRemove?: () => void
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-xl bg-black/20 border border-white/5 p-2.5">
-      <div className="sm:col-span-1 hidden sm:flex items-center justify-center text-white/30 text-sm font-bold">
-        {value.type === 'ambassador' ? '🤝' : `#${index + 1}`}
-      </div>
-      <input
-        type="text"
-        value={value.name}
-        onChange={(e) => onChange({ name: e.target.value })}
-        placeholder="Naam"
-        className="sm:col-span-4 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
-      />
-      <input
-        type="number"
-        value={value.experienceYear ?? ''}
-        onChange={(e) => onChange({ experienceYear: e.target.value === '' ? null : parseInt(e.target.value) })}
-        placeholder="Jaren"
-        min={0}
-        max={50}
-        className="sm:col-span-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
-      />
-      <input
-        type="text"
-        value={value.currentOffice ?? ''}
-        onChange={(e) => onChange({ currentOffice: e.target.value })}
-        placeholder="Huidig kantoor"
-        className="sm:col-span-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
-      />
-      <button
-        onClick={() => onChange({ inNetwork: !value.inNetwork })}
-        className={`sm:col-span-1 px-2 py-2 rounded-lg text-xs font-medium border transition-colors ${
-          value.inNetwork ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10'
-        }`}
-        title={value.inNetwork ? 'In netwerk' : 'Buiten netwerk'}
-      >
-        {value.inNetwork ? 'In netwerk' : 'Buiten'}
-      </button>
-      <div className="sm:col-span-1 flex items-center justify-end">
+    <div className="rounded-xl bg-black/20 border border-white/5 p-3 space-y-2">
+      <div className="flex items-start gap-2">
+        <div className="hidden sm:flex items-center justify-center text-white/30 text-sm font-bold w-7 pt-2 flex-shrink-0">
+          {value.type === 'ambassador' ? '🤝' : `#${index + 1}`}
+        </div>
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-2">
+          <input
+            type="text"
+            value={value.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            placeholder="Naam"
+            className="sm:col-span-5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
+          />
+          <input
+            type="number"
+            value={value.experienceYear ?? ''}
+            onChange={(e) => onChange({ experienceYear: e.target.value === '' ? null : parseInt(e.target.value) })}
+            placeholder="Jaren ervaring"
+            min={0}
+            max={50}
+            className="sm:col-span-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
+          />
+          <input
+            type="text"
+            value={value.currentOffice ?? ''}
+            onChange={(e) => onChange({ currentOffice: e.target.value })}
+            placeholder="Huidig kantoor"
+            className="sm:col-span-4 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
+          />
+        </div>
         {onRemove && (
           <button
             onClick={onRemove}
-            className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0 mt-1"
             title="Verwijderen"
           >
             <Icons.x size={14} />
           </button>
         )}
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2 sm:pl-9">
+        {/* LinkedIn-URL */}
+        <div className="flex-1 relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-400 text-sm">in</span>
+          <input
+            type="url"
+            value={value.linkedinUrl ?? ''}
+            onChange={(e) => onChange({ linkedinUrl: e.target.value })}
+            placeholder="LinkedIn-URL (optioneel) — bv. linkedin.com/in/…"
+            className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs sm:text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
+          />
+        </div>
+        {/* Netwerk binary toggle — twee duidelijke knoppen */}
+        <div className="flex gap-1.5 p-1 rounded-lg bg-white/5 border border-white/10 sm:w-auto">
+          <button
+            onClick={() => onChange({ inNetwork: true })}
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              value.inNetwork ? 'bg-emerald-500/25 text-emerald-200' : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            In mijn netwerk
+          </button>
+          <button
+            onClick={() => onChange({ inNetwork: false })}
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              !value.inNetwork ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            Daarbuiten
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -2262,6 +2262,7 @@ model RecruitmentCandidate {
   name            String
   experienceYear  Int?
   currentOffice   String?
+  linkedinUrl     String?
   inNetwork       Boolean  @default(false)
   notes           String?  @db.Text
   sortOrder       Int      @default(0)
