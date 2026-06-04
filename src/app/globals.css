@@ -92,73 +92,74 @@
 
 /* ==================== LIGHT MODE ==================== */
 [data-theme="light"] {
-  /* Silicon Valley aesthetic — clean whites, warm grays, subtle color glow */
-  --color-bg-primary: #f7f7f5;
+  /* Vercel-stark — pure-white cards, hairline borders, hoog contrast,
+     workx-lime als enige accent. Geen gradients, minimale schaduwen. */
+  --color-bg-primary: #fafafa;
   --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #f0f0ee;
-  --color-bg-card: linear-gradient(145deg, #ffffff 0%, #fafaf8 100%);
-  --color-bg-card-hover: linear-gradient(145deg, #ffffff 0%, #f8f8f6 100%);
-  --color-bg-input: linear-gradient(145deg, #ffffff 0%, #fafaf8 100%);
-  --color-bg-input-hover: linear-gradient(145deg, #ffffff 0%, #f7f7f5 100%);
-  --color-bg-input-focus: linear-gradient(145deg, #ffffff 0%, #fefefe 100%);
-  --color-bg-glass: rgba(255, 255, 255, 0.75);
-  --color-bg-glass-hover: rgba(255, 255, 255, 0.9);
-  --color-bg-nav-hover: rgba(0, 0, 0, 0.035);
-  --color-bg-sidebar: linear-gradient(180deg, #ffffff 0%, #f9f9f7 50%, #f5f5f3 100%);
-  --color-bg-topbar: rgba(255, 255, 255, 0.92);
+  --color-bg-tertiary: #f5f5f5;
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #fafafa;
+  --color-bg-input: #ffffff;
+  --color-bg-input-hover: #fafafa;
+  --color-bg-input-focus: #ffffff;
+  --color-bg-glass: #ffffff;
+  --color-bg-glass-hover: #fafafa;
+  --color-bg-nav-hover: rgba(0, 0, 0, 0.04);
+  --color-bg-sidebar: #ffffff;
+  --color-bg-topbar: rgba(255, 255, 255, 0.95);
   --color-bg-dropdown: #ffffff;
-  --color-bg-modal: rgba(0, 0, 0, 0.25);
+  --color-bg-modal: rgba(0, 0, 0, 0.4);
 
-  --color-text-primary: #1a1a1a;
-  --color-text-secondary: #4a4a4a;
-  --color-text-tertiary: #7a7a7a;
-  --color-text-muted: #a0a0a0;
-  --color-text-on-lime: #1e1e1e;
+  --color-text-primary: #000000;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #737373;
+  --color-text-muted: #a3a3a3;
+  --color-text-on-lime: #000000;
 
-  --color-border: rgba(0, 0, 0, 0.08);
-  --color-border-subtle: rgba(0, 0, 0, 0.05);
-  --color-border-hover: rgba(180, 185, 50, 0.5);
+  --color-border: #e5e5e5;
+  --color-border-subtle: #f0f0f0;
+  --color-border-hover: #000000;
 
-  /* Soft glowing shadows — silicon valley depth */
-  --color-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 12px 28px -6px rgba(0, 0, 0, 0.08);
-  --color-shadow-card-glow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 0 48px -12px rgba(180, 185, 50, 0.12);
-  --color-shadow-input: 0 1px 3px rgba(0, 0, 0, 0.04), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  /* Stark: minimale schaduwen, geen gloed */
+  --color-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --color-shadow-card-glow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --color-shadow-input: 0 1px 2px rgba(0, 0, 0, 0.04);
 
-  --color-scrollbar-track: rgba(0, 0, 0, 0.02);
-  --color-scrollbar-thumb: linear-gradient(180deg, #d0d0d0, #c0c0c0);
+  --color-scrollbar-track: transparent;
+  --color-scrollbar-thumb: #d4d4d4;
 
-  --color-badge-bg: linear-gradient(145deg, rgba(0, 0, 0, 0.04) 0%, rgba(0, 0, 0, 0.02) 100%);
-  --color-badge-border: rgba(0, 0, 0, 0.08);
+  --color-badge-bg: #f5f5f5;
+  --color-badge-border: #e5e5e5;
 
   --color-autofill-bg: #ffffff;
-  --color-autofill-text: #1a1a1a;
+  --color-autofill-text: #000000;
 
-  --color-selection-bg: rgba(200, 205, 60, 0.25);
-  --color-selection-text: #1a1a1a;
+  --color-selection-bg: #f9ff85;
+  --color-selection-text: #000000;
 
   --color-focus-ring-inner: rgba(255, 255, 255, 1);
-  --color-focus-ring-outer: rgba(180, 185, 50, 0.6);
+  --color-focus-ring-outer: #000000;
 
-  /* Frosted glass — refined light mode */
-  --color-liquid-glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.65) 50%, rgba(255, 255, 255, 0.75) 100%);
-  --color-liquid-glass-border: rgba(0, 0, 0, 0.06);
-  --color-liquid-glass-sm-bg: rgba(255, 255, 255, 0.75);
-  --color-liquid-glass-sm-border: rgba(0, 0, 0, 0.05);
+  /* Glas: vlak wit, geen blur-gradient in Vercel-stark */
+  --color-liquid-glass-bg: #ffffff;
+  --color-liquid-glass-border: #e5e5e5;
+  --color-liquid-glass-sm-bg: #ffffff;
+  --color-liquid-glass-sm-border: #e5e5e5;
 
-  --color-divider: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
-  --color-progress-track: rgba(0, 0, 0, 0.06);
+  --color-divider: linear-gradient(90deg, transparent, #e5e5e5, transparent);
+  --color-progress-track: #f0f0f0;
 
-  --color-table-header-text: #7a7a7a;
-  --color-table-border: rgba(0, 0, 0, 0.05);
-  --color-table-row-hover: rgba(180, 185, 50, 0.04);
+  --color-table-header-text: #737373;
+  --color-table-border: #f0f0f0;
+  --color-table-row-hover: #fafafa;
 
-  --color-checkbox-border: rgba(0, 0, 0, 0.18);
-  --color-radio-border: rgba(0, 0, 0, 0.18);
+  --color-checkbox-border: #d4d4d4;
+  --color-radio-border: #d4d4d4;
 
   --color-select-option-bg: #ffffff;
-  --color-select-option-text: #1a1a1a;
+  --color-select-option-text: #000000;
 
-  --color-chat-input-bg: linear-gradient(to top, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 60%, rgba(255, 255, 255, 0.85) 100%);
+  --color-chat-input-bg: #ffffff;
 
   --logo-filter: none;
   --pand-filter: brightness(0.2);
