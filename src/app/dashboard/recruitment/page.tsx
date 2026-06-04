@@ -118,7 +118,23 @@ export default function RecruitmentPage() {
   const [showMineOnly, setShowMineOnly] = useState(false)
 
   // Approach edit modal
-  const [editingCandidate, setEditingCandidate] = useState<{ key: string; name: string; ids: string[]; status: string; by: string; notes: string; netOwner: string } | null>(null)
+  const [editingCandidate, setEditingCandidate] = useState<{
+    key: string
+    ids: string[]
+    type: 'candidate' | 'ambassador'
+    // Kandidaat-velden
+    name: string
+    experienceYear: string
+    currentOffice: string
+    linkedinUrl: string
+    inNetwork: boolean
+    candidateNotes: string
+    // Opvolging
+    status: string
+    by: string
+    networkOwner: string
+    approachNotes: string
+  } | null>(null)
   const [savingApproach, setSavingApproach] = useState(false)
 
   // Jochem mag een "alsof ik medewerker ben" preview-tab gebruiken
@@ -330,10 +346,16 @@ export default function RecruitmentPage() {
     setSavingApproach(true)
     try {
       const payload = {
+        name: editingCandidate.name.trim() || undefined,
+        experienceYear: editingCandidate.experienceYear ? parseInt(editingCandidate.experienceYear, 10) : null,
+        currentOffice: editingCandidate.currentOffice.trim() || null,
+        linkedinUrl: editingCandidate.linkedinUrl.trim() || null,
+        inNetwork: editingCandidate.inNetwork,
+        notes: editingCandidate.candidateNotes.trim() || null,
         approachStatus: editingCandidate.status || null,
         approachedBy: editingCandidate.by || null,
-        approachNotes: editingCandidate.notes || null,
-        networkOwner: editingCandidate.netOwner || null,
+        networkOwner: editingCandidate.networkOwner || null,
+        approachNotes: editingCandidate.approachNotes || null,
       }
       // Update alle records met dezelfde name+type zodat de dedup consistent blijft
       await Promise.all(editingCandidate.ids.map(id =>
@@ -601,16 +623,22 @@ export default function RecruitmentPage() {
                         <button
                           onClick={() => setEditingCandidate({
                             key: `${c.type}|${c.name}`,
-                            name: c.name,
                             ids: c.allIds,
+                            type: c.type,
+                            name: c.name,
+                            experienceYear: c.experienceYear?.toString() ?? '',
+                            currentOffice: c.currentOffice ?? '',
+                            linkedinUrl: c.linkedinUrl ?? '',
+                            inNetwork: c.inNetwork ?? false,
+                            candidateNotes: c.notes ?? '',
                             status: c.approachStatus || '',
                             by: c.approachedBy || '',
-                            notes: c.approachNotes || '',
-                            netOwner: c.networkOwner || '',
+                            networkOwner: c.networkOwner || '',
+                            approachNotes: c.approachNotes || '',
                           })}
                           className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
                         >
-                          Opvolging…
+                          Bewerken
                         </button>
                       </div>
                     </div>
@@ -1002,16 +1030,22 @@ export default function RecruitmentPage() {
                         <button
                           onClick={() => setEditingCandidate({
                             key: `${c.type}|${c.name}`,
-                            name: c.name,
                             ids: c.allIds,
+                            type: c.type,
+                            name: c.name,
+                            experienceYear: c.experienceYear?.toString() ?? '',
+                            currentOffice: c.currentOffice ?? '',
+                            linkedinUrl: c.linkedinUrl ?? '',
+                            inNetwork: c.inNetwork ?? false,
+                            candidateNotes: c.notes ?? '',
                             status: c.approachStatus || '',
                             by: c.approachedBy || '',
-                            notes: c.approachNotes || '',
-                            netOwner: c.networkOwner || '',
+                            networkOwner: c.networkOwner || '',
+                            approachNotes: c.approachNotes || '',
                           })}
                           className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
                         >
-                          Opvolging…
+                          Bewerken
                         </button>
                       </div>
                     </div>
@@ -1037,8 +1071,8 @@ export default function RecruitmentPage() {
             <div className="p-5 border-b border-white/10 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-white/50">Opvolging — {editingCandidate.name}</p>
-                  <h3 className="text-lg font-semibold text-white">Wie pakt het op en hoe?</h3>
+                  <p className="text-xs text-white/50">Bewerken — {editingCandidate.type === 'ambassador' ? 'ambassadeur' : 'kandidaat'}</p>
+                  <h3 className="text-lg font-semibold text-white">{editingCandidate.name || 'Nieuwe naam'}</h3>
                 </div>
                 <button onClick={() => setEditingCandidate(null)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white">
                   <Icons.x size={20} />
@@ -1046,54 +1080,133 @@ export default function RecruitmentPage() {
               </div>
             </div>
 
-            <div className="p-5 space-y-4 overflow-y-auto flex-1">
-              <div>
-                <label className="text-xs text-gray-400 block mb-2">Status</label>
+            <div className="p-5 space-y-5 overflow-y-auto flex-1">
+              {/* Kandidaat-velden */}
+              <div className="space-y-3">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Kandidaat-info</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {APPROACH_STATUSES.map(s => {
-                    const c = COLOR_MAP[s.color]
-                    const sel = editingCandidate.status === s.value
-                    return (
-                      <button
-                        key={s.value}
-                        onClick={() => setEditingCandidate({ ...editingCandidate, status: s.value })}
-                        className={`p-2.5 rounded-lg text-sm border transition-colors text-left ${sel ? `${c.bg} ${c.text} ${c.ring} ring-1` : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'}`}
-                      >
-                        {s.label}
-                      </button>
-                    )
-                  })}
+                  <div>
+                    <label className="text-xs text-gray-400 block mb-1">Naam</label>
+                    <input
+                      type="text"
+                      value={editingCandidate.name}
+                      onChange={(e) => setEditingCandidate({ ...editingCandidate, name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 block mb-1">Jaren ervaring</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={50}
+                      value={editingCandidate.experienceYear}
+                      onChange={(e) => setEditingCandidate({ ...editingCandidate, experienceYear: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Huidig kantoor</label>
+                  <input
+                    type="text"
+                    value={editingCandidate.currentOffice}
+                    onChange={(e) => setEditingCandidate({ ...editingCandidate, currentOffice: e.target.value })}
+                    placeholder="Bijv. Dentons, Stibbe…"
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-400 text-sm pointer-events-none">in</span>
+                  <input
+                    type="url"
+                    value={editingCandidate.linkedinUrl}
+                    onChange={(e) => setEditingCandidate({ ...editingCandidate, linkedinUrl: e.target.value })}
+                    placeholder="LinkedIn-URL (optioneel)"
+                    className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
+                  />
+                </div>
+                <div className="flex gap-1.5 p-1 rounded-lg bg-white/5 border border-white/10 w-fit">
+                  <button
+                    onClick={() => setEditingCandidate({ ...editingCandidate, inNetwork: true })}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      editingCandidate.inNetwork ? 'bg-emerald-500/25 text-emerald-200' : 'text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    In netwerk
+                  </button>
+                  <button
+                    onClick={() => setEditingCandidate({ ...editingCandidate, inNetwork: false })}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      !editingCandidate.inNetwork ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    Daarbuiten
+                  </button>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Notities over de kandidaat</label>
+                  <textarea
+                    value={editingCandidate.candidateNotes}
+                    onChange={(e) => setEditingCandidate({ ...editingCandidate, candidateNotes: e.target.value })}
+                    rows={2}
+                    placeholder="Achtergrond, partnerambities, bijzonderheden…"
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25 resize-none"
+                  />
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Wie pakt het op? (voornaam of namen)</label>
-                <input
-                  type="text"
-                  value={editingCandidate.by}
-                  onChange={(e) => setEditingCandidate({ ...editingCandidate, by: e.target.value })}
-                  placeholder="Bijv. Marnix, Hanna"
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Binnen wiens (afgeleide) netwerk?</label>
-                <input
-                  type="text"
-                  value={editingCandidate.netOwner}
-                  onChange={(e) => setEditingCandidate({ ...editingCandidate, netOwner: e.target.value })}
-                  placeholder="Bijv. Maaike via NautaDutilh"
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Notities</label>
-                <textarea
-                  value={editingCandidate.notes}
-                  onChange={(e) => setEditingCandidate({ ...editingCandidate, notes: e.target.value })}
-                  rows={3}
-                  placeholder="Vrije aantekeningen, datum laatste contact, etc."
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25 resize-none"
-                />
+
+              {/* Opvolging */}
+              <div className="space-y-3 pt-4 border-t border-white/10">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Opvolging</p>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-2">Status</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {APPROACH_STATUSES.map(s => {
+                      const c = COLOR_MAP[s.color]
+                      const sel = editingCandidate.status === s.value
+                      return (
+                        <button
+                          key={s.value}
+                          onClick={() => setEditingCandidate({ ...editingCandidate, status: s.value })}
+                          className={`p-2.5 rounded-lg text-sm border transition-colors text-left ${sel ? `${c.bg} ${c.text} ${c.ring} ring-1` : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10'}`}
+                        >
+                          {s.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Wie pakt het op?</label>
+                  <input
+                    type="text"
+                    value={editingCandidate.by}
+                    onChange={(e) => setEditingCandidate({ ...editingCandidate, by: e.target.value })}
+                    placeholder="Bijv. Marnix, Hanna"
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Binnen wiens (afgeleide) netwerk?</label>
+                  <input
+                    type="text"
+                    value={editingCandidate.networkOwner}
+                    onChange={(e) => setEditingCandidate({ ...editingCandidate, networkOwner: e.target.value })}
+                    placeholder="Bijv. Maaike via NautaDutilh"
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Opvolging-notities</label>
+                  <textarea
+                    value={editingCandidate.approachNotes}
+                    onChange={(e) => setEditingCandidate({ ...editingCandidate, approachNotes: e.target.value })}
+                    rows={3}
+                    placeholder="Datum laatste contact, volgende actie, etc."
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-workx-lime/50 focus:outline-none placeholder:text-white/25 resize-none"
+                  />
+                </div>
               </div>
             </div>
 

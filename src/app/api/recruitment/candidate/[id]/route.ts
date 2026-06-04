@@ -19,7 +19,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json()
-  const { approachStatus, approachedBy, approachNotes, networkOwner } = body as {
+  const {
+    name,
+    experienceYear,
+    currentOffice,
+    linkedinUrl,
+    inNetwork,
+    notes,
+    approachStatus,
+    approachedBy,
+    approachNotes,
+    networkOwner,
+  } = body as {
+    name?: string
+    experienceYear?: number | null
+    currentOffice?: string | null
+    linkedinUrl?: string | null
+    inNetwork?: boolean
+    notes?: string | null
     approachStatus?: string | null
     approachedBy?: string | null
     approachNotes?: string | null
@@ -29,6 +46,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const updated = await prisma.recruitmentCandidate.update({
     where: { id: params.id },
     data: {
+      ...(name !== undefined && name.trim() ? { name: name.trim() } : {}),
+      ...(experienceYear !== undefined ? { experienceYear: experienceYear } : {}),
+      ...(currentOffice !== undefined ? { currentOffice: currentOffice || null } : {}),
+      ...(linkedinUrl !== undefined ? { linkedinUrl: linkedinUrl || null } : {}),
+      ...(inNetwork !== undefined ? { inNetwork } : {}),
+      ...(notes !== undefined ? { notes: notes || null } : {}),
       ...(approachStatus !== undefined ? { approachStatus: approachStatus || null } : {}),
       ...(approachedBy !== undefined ? { approachedBy: approachedBy || null } : {}),
       ...(approachNotes !== undefined ? { approachNotes: approachNotes || null } : {}),
