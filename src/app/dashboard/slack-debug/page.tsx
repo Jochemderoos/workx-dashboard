@@ -63,6 +63,44 @@ export default function SlackDebugPage() {
   const [cronResults, setCronResults] = useState<Record<string, CronResult>>({})
   const [triggering, setTriggering] = useState<string | null>(null)
 
+  // Eigen bericht
+  const [customChannel, setCustomChannel] = useState<'workx-algemeen' | 'mt-groot'>('workx-algemeen')
+  const [customTitle, setCustomTitle] = useState('')
+  const [customBody, setCustomBody] = useState('')
+  const [customLinkUrl, setCustomLinkUrl] = useState('')
+  const [customLinkLabel, setCustomLinkLabel] = useState('Open dashboard')
+  const [customSending, setCustomSending] = useState(false)
+  const [customResult, setCustomResult] = useState<{ ok: boolean; channel?: string; error?: string } | null>(null)
+
+  const sendCustom = async () => {
+    setCustomSending(true)
+    setCustomResult(null)
+    try {
+      const res = await fetch('/api/slack-debug/send-custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: customChannel,
+          title: customTitle.trim() || undefined,
+          body: customBody.trim(),
+          linkUrl: customLinkUrl.trim() || undefined,
+          linkLabel: customLinkLabel.trim() || undefined,
+        }),
+      })
+      const data = await res.json()
+      setCustomResult(data)
+      if (data.ok) {
+        setCustomTitle('')
+        setCustomBody('')
+        setCustomLinkUrl('')
+      }
+    } catch (err) {
+      setCustomResult({ ok: false, error: err instanceof Error ? err.message : 'Unknown' })
+    } finally {
+      setCustomSending(false)
+    }
+  }
+
   useEffect(() => {
     const check = async () => {
       try {
@@ -318,6 +356,113 @@ export default function SlackDebugPage() {
                 <summary className="cursor-pointer text-white/60">Raw Slack response</summary>
                 <pre className="mt-1 text-[10px] overflow-x-auto text-white/70">{JSON.stringify(testResult.raw, null, 2)}</pre>
               </details>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Verstuur eigen bericht */}
+      <div className="card p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+          <Icons.edit size={14} className="text-workx-lime" />
+          Verstuur eigen bericht
+        </h2>
+        <p className="text-xs text-gray-400">
+          Schrijf een bericht en stuur 'm direct naar #workx-algemeen of #mt-groot. Voeg optioneel een dashboard-link toe.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Kanaal</label>
+            <div className="flex gap-1 p-1 rounded-lg bg-white/5 border border-white/10">
+              {(['workx-algemeen', 'mt-groot'] as const).map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCustomChannel(c)}
+                  className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                    customChannel === c ? 'bg-workx-lime/20 text-workx-lime' : 'text-white/50 hover:text-white/80'
+                  }`}
+                >
+                  #{c}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Titel (optioneel, vet)</label>
+            <input
+              value={customTitle}
+              onChange={(e) => setCustomTitle(e.target.value)}
+              placeholder="Bijv. Reminder: notulen invullen"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-gray-400 block mb-1">Bericht</label>
+          <textarea
+            value={customBody}
+            onChange={(e) => setCustomBody(e.target.value)}
+            rows={4}
+            placeholder="Wat wil je laten weten?"
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30 resize-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div className="sm:col-span-2">
+            <label className="text-xs text-gray-400 block mb-1">Dashboard-link (optioneel)</label>
+            <input
+              value={customLinkUrl}
+              onChange={(e) => setCustomLinkUrl(e.target.value)}
+              placeholder="/dashboard/recruitment   of   volledige URL"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Link-tekst</label>
+            <input
+              value={customLinkLabel}
+              onChange={(e) => setCustomLinkLabel(e.target.value)}
+              placeholder="Open dashboard"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <p className="text-[11px] text-white/40">
+            Paden zoals <code className="bg-white/5 px-1 py-0.5 rounded">/dashboard/recruitment</code> worden automatisch volledig gemaakt.
+          </p>
+          <button
+            onClick={sendCustom}
+            disabled={customSending || !customBody.trim()}
+            className="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 disabled:opacity-40"
+            style={{ background: 'rgb(249, 255, 133)', color: 'rgb(45, 45, 45)' }}
+          >
+            {customSending ? (
+              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <><Icons.send size={14} /> Verstuur</>
+            )}
+          </button>
+        </div>
+
+        {customResult && (
+          <div className={`rounded-lg p-3 border text-xs ${
+            customResult.ok
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+              : 'bg-red-500/10 border-red-500/30 text-red-200'
+          }`}>
+            {customResult.ok ? (
+              <p className="font-semibold flex items-center gap-1.5">
+                <Icons.check size={12} /> Verstuurd naar #{customResult.channel}
+              </p>
+            ) : (
+              <p className="font-semibold flex items-center gap-1.5">
+                <Icons.alertTriangle size={12} /> {customResult.error || 'Onbekende fout'}
+              </p>
             )}
           </div>
         )}
