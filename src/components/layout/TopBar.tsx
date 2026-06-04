@@ -16,6 +16,16 @@ function WorkxLogoMobile() {
 }
 import { useTeam, useCalendarEvents, useWorkItems } from '@/lib/hooks/useData'
 import { ThemeToggleCompact } from '@/components/ui/ThemeToggle'
+import {
+  teamMenu_Algemeen,
+  teamMenu_Werk,
+  teamMenu_Tools,
+  teamMenu_Docs,
+  partnersMenuItems,
+  extraMenuItems,
+  manageMenuItems,
+  type MenuItem,
+} from '@/lib/menu-data'
 
 interface TopBarProps {
   user: {
@@ -65,59 +75,41 @@ type MobileMenuItem = {
   badge?: string
 }
 
+// Mobile menu wordt afgeleid van menu-data.ts (single source of truth) zodat
+// het automatisch meebeweegt met de desktop sidebar. Geen handmatige drift meer.
+function flagsToRoles(item: MenuItem): string[] | undefined {
+  if (item.adminOnly) return ['ADMIN']
+  if (item.partnerOnly) return ['PARTNER', 'ADMIN']
+  if (item.hideForExternal) return ['EMPLOYEE', 'PARTNER', 'ADMIN']
+  return undefined
+}
+
+function toMobile(
+  items: MenuItem[],
+  section: MobileMenuItem['section'],
+  subGroup?: MobileMenuItem['subGroup'],
+): MobileMenuItem[] {
+  return items.map((item) => ({
+    href: item.href,
+    icon: item.icon,
+    label: item.label,
+    section,
+    subGroup,
+    badge: item.badge,
+    roles: flagsToRoles(item),
+  }))
+}
+
 const mobileMenuItems: MobileMenuItem[] = [
-  // Team — algemeen
-  { href: '/dashboard', icon: Icons.home, label: 'Dashboard', section: 'team', subGroup: 'algemeen' },
-  { href: '/dashboard/overzicht', icon: Icons.layers, label: 'Overzicht', section: 'team', subGroup: 'algemeen' },
-  { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', badge: '15 jaar!', section: 'team', subGroup: 'algemeen' },
-  { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', section: 'team', subGroup: 'algemeen' },
-  { href: '/dashboard/office', icon: Icons.building, label: 'Office', section: 'team', subGroup: 'algemeen' },
-  { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', section: 'team', subGroup: 'algemeen' },
-  { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'algemeen' },
-  { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', section: 'team', subGroup: 'algemeen' },
-  // Team — werk
-  { href: '/dashboard/werk', icon: Icons.users, label: 'Wie doet Wat', section: 'team', subGroup: 'werk' },
-  { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', section: 'team', subGroup: 'werk' },
-  { href: '/dashboard/mijn-werkweek', icon: Icons.briefcase, label: 'Mijn werkweek', section: 'team', subGroup: 'werk' },
-  { href: '/dashboard/arbeidsvoorwaarden', icon: Icons.target, label: 'Mijn coachingbudget', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
-  { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', section: 'team', subGroup: 'werk' },
-  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
-  { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
-  { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'werk' },
-  // Team — tools
-  { href: '/dashboard/eigen-taken', icon: Icons.check, label: 'Eigen taken', section: 'team', subGroup: 'tools' },
-  { href: '/dashboard/onboarding', icon: Icons.userPlus, label: 'Onboarding', section: 'team', subGroup: 'tools' },
-  { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'tools' },
-  { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', section: 'team', subGroup: 'tools' },
-  { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'tools' },
-  // Team — docs
-  { href: '/dashboard/hr-docs', icon: Icons.books, label: 'Workx Docs', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'docs' },
-  { href: '/dashboard/wachtwoorden', icon: Icons.lock, label: 'Wachtwoorden', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'team', subGroup: 'docs' },
-  { href: '/dashboard/bevriende-kantoren', icon: Icons.building, label: 'Bevriende kantoren', section: 'team', subGroup: 'docs' },
-  { href: '/dashboard/team', icon: Icons.users, label: 'Team', section: 'team', subGroup: 'docs' },
-
-  // Partner
-  { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-  { href: '/dashboard/partners/verantwoordelijk', icon: Icons.users, label: 'Verantwoordelijk', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-  { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Partner agenda/notulen', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-  { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-  { href: '/dashboard/partners/performance', icon: Icons.target, label: 'Performance Management', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-  { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', roles: ['EXTERNAL'], section: 'partner' },
-  { href: '/dashboard/partners/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-  { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-  { href: '/dashboard/kosten', icon: Icons.euro, label: 'Kosten', roles: ['PARTNER', 'ADMIN'], section: 'partner' },
-
-  // Extra (uitklapbaar)
-  { href: '/dashboard/werkstudent', icon: Icons.clipboard, label: 'Werkstudent', section: 'extra' },
-  { href: '/dashboard/workxflow', icon: Icons.printer, label: 'Workxflow', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'extra' },
-  { href: '/dashboard/afspiegeling', icon: Icons.layers, label: 'Afspiegeling', section: 'extra' },
-  { href: '/dashboard/pitch', icon: Icons.file, label: 'Pitch Maker', roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'], section: 'extra' },
-
-  // Beheer
-  { href: '/dashboard/feedback', icon: Icons.chat, label: 'Feedback', section: 'beheer' },
-  { href: '/dashboard/partners/coaching-budgetten', icon: Icons.target, label: 'Coaching-budgetten beheer', roles: ['ADMIN'], section: 'beheer' },
-  { href: '/dashboard/slack-debug', icon: Icons.settings, label: 'Slack diagnose', roles: ['PARTNER', 'ADMIN'], section: 'beheer' },
-  { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', section: 'beheer' },
+  ...toMobile(teamMenu_Algemeen, 'team', 'algemeen'),
+  ...toMobile(teamMenu_Werk,     'team', 'werk'),
+  ...toMobile(teamMenu_Tools,    'team', 'tools'),
+  ...toMobile(teamMenu_Docs,     'team', 'docs'),
+  // Partner — alle partner-pagina's vereisen PARTNER/ADMIN, zelfs als 't niet
+  // expliciet in menu-data.ts staat (de Sidebar gate is via sectie-rendering).
+  ...toMobile(partnersMenuItems, 'partner').map(i => ({ ...i, roles: i.roles ?? ['PARTNER', 'ADMIN'] })),
+  ...toMobile(extraMenuItems,    'extra'),
+  ...toMobile(manageMenuItems,   'beheer'),
 ]
 
 interface SearchResult {
