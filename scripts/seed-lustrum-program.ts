@@ -66,6 +66,28 @@ export async function main(externalPrisma?: PrismaClient) {
       data: { title: 'Breakfast @ the Pool' },
     })
 
+    // Zaterdag-avond: als partners zelf een award/lustrumfilm-item hebben
+    // toegevoegd (eigen titel + uitleg), is de canonical 'Workx Awards &
+    // Movie Night' overbodig. Verwijder 'm en sla 'm over in de loop.
+    const saturdayItems = await prisma.lustrumProgram.findMany({
+      where: { date: '2026-10-03' },
+      select: { id: true, title: true },
+    })
+    const customAward = saturdayItems.find((it) => {
+      const t = it.title.toLowerCase()
+      return (
+        (t.includes('award') || t.includes('lustrumfilm') || t.includes('lustrum film') || t.includes('movie')) &&
+        it.title !== 'Workx Awards & Movie Night'
+      )
+    })
+    const skipCanonicalAward = !!customAward
+    if (skipCanonicalAward) {
+      await prisma.lustrumProgram.deleteMany({
+        where: { date: '2026-10-03', title: 'Workx Awards & Movie Night' },
+      })
+      console.log(`[seed-lustrum-program] eigen award-item '${customAward!.title}' gedetecteerd — canonical Movie Night opgeruimd`)
+    }
+
     // Dedupe: per (date, title) max 1 record. Houdt de oudste (kleinste createdAt) aan
     // en verwijdert duplicaten — zo verdwijnen ook "ghost" items die niet wegklikbaar
     // zijn omdat ze in een onverwachte state staan.
@@ -97,6 +119,7 @@ export async function main(externalPrisma?: PrismaClient) {
     for (const item of PROGRAM) {
       const key = `${item.date}|${item.title}`
       if (existingSet.has(key)) continue
+      if (skipCanonicalAward && item.date === '2026-10-03' && item.title === 'Workx Awards & Movie Night') continue
       await prisma.lustrumProgram.create({
         data: {
           date: item.date,
