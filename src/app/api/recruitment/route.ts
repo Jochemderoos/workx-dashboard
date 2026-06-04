@@ -42,6 +42,10 @@ export async function GET() {
       },
       orderBy: { updatedAt: 'desc' },
     })
+    // De historische lijst ('Eerdere ronde') is alleen voor partners + Hanna.
+    if (!isManager) {
+      allEntries = allEntries.filter((e: any) => e.user?.name !== 'Eerdere ronde')
+    }
     // Het overzicht 'wie heeft wat ingevuld' gaat over onze advocaten —
     // partners + office (Hanna, Lotte, Bente, Diyar) excluderen, want
     // het hoort niet bij hun rol om dit lijstje in te vullen.
