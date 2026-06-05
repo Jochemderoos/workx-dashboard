@@ -783,7 +783,7 @@ export default function TransitiePage() {
                           {suggested.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                         <p className="text-white/50 mt-0.5 leading-tight">
-                          {noticeMonths} mnd opzegtermijn (~{Math.floor(dienstjaren)} jr dienst), bij VSO-akkoord deze maand, tegen einde maand.
+                          {noticeMonths} mnd opzegtermijn (~{Math.floor(dienstjaren)} jr dienst), bij VSO-akkoord deze maand.
                         </p>
                         {!isAlreadySet && (
                           <button
