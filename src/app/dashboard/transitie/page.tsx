@@ -1396,8 +1396,11 @@ export default function TransitiePage() {
                         onChange={(e) => setWhatIfMultiplier(parseFloat(e.target.value))}
                         className="w-full accent-amber-400"
                       />
-                      <div className="flex justify-between text-[10px] text-white/30 mt-0.5">
-                        <span>0.5×</span><span>1×</span><span>2×</span><span>3×</span>
+                      <div className="relative h-3 mt-0.5 text-[10px] text-white/30">
+                        <span className="absolute left-0">0.5×</span>
+                        <span className="absolute" style={{ left: '20%', transform: 'translateX(-50%)' }}>1×</span>
+                        <span className="absolute" style={{ left: '60%', transform: 'translateX(-50%)' }}>2×</span>
+                        <span className="absolute right-0">3×</span>
                       </div>
                     </div>
 
