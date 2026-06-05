@@ -391,6 +391,11 @@ export default function WerkverdelingsgesprekkenPage() {
             {weeks.map((week) => (
               <button
                 key={week.id}
+                ref={(el) => {
+                  if (el && activeWeekId === week.id) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+                  }
+                }}
                 onClick={() => setActiveWeekId(week.id)}
                 className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
                   activeWeekId === week.id

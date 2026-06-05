@@ -14,11 +14,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
-    // Selectie: ALLE MeetingWeek-records, chronologisch.
-    // Geen filter — zo blijven historische gesprekken altijd zichtbaar.
-    // De pagina kiest standaard de eerstvolgende toekomstige vergadering
-    // als actieve tab.
+    // Selectie: alleen weken vanaf 1 maand terug t/m alle toekomstige.
+    // Historie verder dan 1 maand maakt de week-picker onleesbaar lang.
+    const oneMonthAgo = new Date()
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+    oneMonthAgo.setHours(0, 0, 0, 0)
     const weeks = await prisma.meetingWeek.findMany({
+      where: { meetingDate: { gte: oneMonthAgo } },
       orderBy: { meetingDate: 'asc' },
       include: { distributions: true, conversations: true },
     })
