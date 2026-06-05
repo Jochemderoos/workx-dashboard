@@ -121,16 +121,6 @@ export default function TransitiePage() {
   } | null>(null)
   const [savedCalculations, setSavedCalculations] = useState<SavedCalculation[]>([])
   const [listSearch, setListSearch] = useState('')
-  const [compareIds, setCompareIds] = useState<Set<string>>(new Set())
-  const [showCompareModal, setShowCompareModal] = useState(false)
-  const toggleCompare = (id: string) => {
-    setCompareIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else if (next.size < 3) next.add(id) // max 3
-      return next
-    })
-  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showWhatIfModal, setShowWhatIfModal] = useState(false)
 
@@ -374,15 +364,10 @@ export default function TransitiePage() {
     }
   }
 
-  // Slaat de huidige what-if variant op (factor + einddatum-override) als
-  // NIEUWE record. Dit is per definitie geen TV maar een beëindigingsvergoeding.
-  const saveVariant = async () => {
-    if (!result || !liveResult) return
-    const isVariant = whatIfMultiplier !== 1 || (whatIfEndDate && whatIfEndDate !== form.endDate)
-    if (!isVariant) {
-      toast.error('Pas eerst factor of einddatum aan om een variant te maken')
-      return
-    }
+  // Slaat what-if variant op en retourneert de aangemaakte calc (of null).
+  // Wordt hergebruikt door saveVariant (UI) én door de Word-download knop.
+  const persistVariant = async () => {
+    if (!result || !liveResult) return null
     const effEnd = whatIfEndDate || form.endDate
     const variantAmount = Math.round(liveResult.amount * whatIfMultiplier * 100) / 100
     const data = {
@@ -417,19 +402,67 @@ export default function TransitiePage() {
       multiplier: whatIfMultiplier,
       clientParty: form.clientParty || null,
     }
+    const res = await fetch('/api/transitie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('Kon variant niet opslaan')
+    const newCalc = await res.json()
+    setSavedCalculations(prev => [newCalc, ...prev])
+    return newCalc
+  }
+
+  const saveVariant = async () => {
+    const isVariant = whatIfMultiplier !== 1 || (whatIfEndDate && whatIfEndDate !== form.endDate)
+    if (!isVariant) {
+      toast.error('Pas eerst factor of einddatum aan om een variant te maken')
+      return
+    }
     try {
-      const res = await fetch('/api/transitie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) throw new Error('Kon niet opslaan')
-      const newCalc = await res.json()
-      setSavedCalculations(prev => [newCalc, ...prev])
+      await persistVariant()
       toast.success('Variant opgeslagen')
     } catch (e) {
       console.error('saveVariant failed', e)
       toast.error('Opslaan mislukt')
+    }
+  }
+
+  // Download Word-vergelijking TV ↔ variant. Slaat variant eerst op (zodat
+  // beide records bestaan), roept compare-export aan met beide IDs.
+  const downloadWhatIfWord = async () => {
+    if (!editingId) {
+      toast.error('Bereken eerst de TV (auto-opslaan)')
+      return
+    }
+    const isVariant = whatIfMultiplier !== 1 || (whatIfEndDate && whatIfEndDate !== form.endDate)
+    if (!isVariant) {
+      toast.error('Pas eerst factor of einddatum aan')
+      return
+    }
+    try {
+      const variant = await persistVariant()
+      if (!variant) throw new Error('variant null')
+      const res = await fetch('/api/transitie/compare-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [editingId, variant.id] }),
+      })
+      if (!res.ok) throw new Error('export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const slug = (form.employeeName || 'vergelijking').replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+      a.download = `Vergelijking-TV-${slug}-${new Date().toISOString().slice(0, 10)}.docx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Variant opgeslagen + Word gedownload')
+    } catch (e) {
+      console.error('downloadWhatIfWord failed', e)
+      toast.error('Download mislukt')
     }
   }
 
@@ -1338,9 +1371,9 @@ export default function TransitiePage() {
                 return (
                   <div className="rounded-xl bg-gradient-to-br from-amber-500/8 to-orange-500/5 border border-amber-500/20 p-5 space-y-4">
                     <div className="flex items-start gap-2">
-                      <Icons.sparkles size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                      <Icons.layers size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-amber-200">Speel met scenario&apos;s</p>
+                        <p className="text-sm font-semibold text-amber-200">Vergelijken &amp; varianten</p>
                         <p className="text-xs text-white/50 leading-snug">
                           Pas factor of einddatum aan om de impact te zien. TV hierboven blijft altijd het wettelijke bedrag.
                           Met een factor &gt; 1 wordt het een <strong className="text-amber-300">beëindigingsvergoeding</strong>.
@@ -1681,37 +1714,6 @@ export default function TransitiePage() {
           : savedCalculations
         return (
         <div className="card p-4 sm:p-6">
-          {/* Visuele instructie voor vergelijken — zichtbaar zolang minder
-              dan 2 berekeningen zijn aangevinkt */}
-          {savedCalculations.length >= 2 && compareIds.size < 2 && (
-            <div className="mb-5 rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/8 via-indigo-500/5 to-transparent p-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-              <div className="relative flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                  <Icons.layers className="text-purple-300" size={18} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-white font-semibold text-sm mb-1 flex items-center gap-2">
-                    Wist je dat je berekeningen kunt vergelijken?
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase tracking-wider">Nieuw</span>
-                  </p>
-                  <p className="text-xs text-white/70 leading-relaxed mb-2">
-                    Vink 2 of 3 berekeningen aan (
-                    <span className="inline-flex items-center justify-center w-4 h-4 rounded border border-purple-500/50 bg-white/5 align-middle mx-0.5"></span>
-                    ) en klik op <span className="text-purple-300 font-medium">"Vergelijken"</span>. Handig om scenario's met afwijkende startdatum, bonus of vakantiegeld naast elkaar te zien.
-                  </p>
-                  <div className="flex items-center gap-3 text-[10px] text-white/40">
-                    <span>1. Vink aan</span>
-                    <span>→</span>
-                    <span>2. Klik vergelijken</span>
-                    <span>→</span>
-                    <span>3. Download als Word</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
             <h2 className="font-medium text-white flex items-center gap-2">
               <Icons.history size={16} className="text-gray-400" />
@@ -1719,23 +1721,6 @@ export default function TransitiePage() {
               <span className="text-xs text-white/40 font-normal">({filteredCalcs.length}{q && ` van ${savedCalculations.length}`})</span>
             </h2>
             <div className="flex items-center gap-2 flex-wrap">
-              {compareIds.size >= 2 && (
-                <button
-                  onClick={() => setShowCompareModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 text-purple-300 text-sm font-semibold border border-purple-500/40 hover:bg-purple-500/30 transition-colors"
-                >
-                  <Icons.layers size={14} />
-                  Vergelijken ({compareIds.size})
-                </button>
-              )}
-              {compareIds.size > 0 && (
-                <button
-                  onClick={() => setCompareIds(new Set())}
-                  className="text-xs text-white/40 hover:text-white/70 underline"
-                >
-                  Selectie wissen
-                </button>
-              )}
               <div className="relative w-full sm:w-72">
               <Icons.search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
               <input
@@ -1775,10 +1760,17 @@ export default function TransitiePage() {
               >
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="text-white font-medium">{calc.employeeName || '-'}</p>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-white font-medium">{calc.employeeName || '-'}</p>
+                      {(calc.multiplier ?? 1) !== 1 ? (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[10px] font-medium border border-amber-500/30">Variant {(calc.multiplier ?? 1)}×</span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 text-[10px] font-medium border border-purple-500/30">TV</span>
+                      )}
+                    </div>
                     <p className="text-xs text-white/50">{calc.employerName || '-'}</p>
                   </div>
-                  <span className="text-lg font-semibold text-purple-400">
+                  <span className={`text-lg font-semibold ${(calc.multiplier ?? 1) !== 1 ? 'text-amber-300' : 'text-purple-400'}`}>
                     {formatCurrency(calc.amount)}
                   </span>
                 </div>
@@ -1788,15 +1780,6 @@ export default function TransitiePage() {
                   <span>{formatCurrency(calc.totalSalary)}/m</span>
                 </div>
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => toggleCompare(calc.id)}
-                    className={`py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
-                      compareIds.has(calc.id) ? 'bg-purple-500/30 text-purple-200 border-purple-500/50' : 'bg-white/5 text-white/60 border-white/10'
-                    }`}
-                    title="Toevoegen aan vergelijking"
-                  >
-                    {compareIds.has(calc.id) ? '✓' : '+'}
-                  </button>
                   <button
                     onClick={() => loadCalculation(calc)}
                     className="flex-1 py-2 px-3 rounded-lg bg-purple-500/20 text-purple-400 text-sm font-medium"
@@ -1819,13 +1802,13 @@ export default function TransitiePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="text-center py-3 px-2 text-gray-400 font-medium w-10" title="Vergelijken"><Icons.layers size={12} /></th>
                   <th className="text-left py-3 px-2 text-gray-400 font-medium">Datum</th>
                   <th className="text-left py-3 px-2 text-gray-400 font-medium">Werkgever</th>
                   <th className="text-left py-3 px-2 text-gray-400 font-medium">Werknemer</th>
+                  <th className="text-left py-3 px-2 text-gray-400 font-medium">Type</th>
                   <th className="text-left py-3 px-2 text-gray-400 font-medium">Dienstverband</th>
                   <th className="text-right py-3 px-2 text-gray-400 font-medium">Salaris</th>
-                  <th className="text-right py-3 px-2 text-gray-400 font-medium">Transitie</th>
+                  <th className="text-right py-3 px-2 text-gray-400 font-medium">Bedrag</th>
                   <th className="text-right py-3 px-2 text-gray-400 font-medium">Acties</th>
                 </tr>
               </thead>
@@ -1835,31 +1818,31 @@ export default function TransitiePage() {
                     key={calc.id}
                     className={`border-b border-white/5 hover:bg-white/5 ${
                       editingId === calc.id ? 'bg-purple-500/10' : ''
-                    } ${compareIds.has(calc.id) ? 'bg-purple-500/5' : ''}`}
+                    }`}
                   >
-                    <td className="py-3 px-2 text-center">
-                      <button
-                        onClick={() => toggleCompare(calc.id)}
-                        className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                          compareIds.has(calc.id) ? 'bg-purple-500 border-purple-500' : 'bg-white/5 border-white/20 hover:border-purple-500/50'
-                        }`}
-                        title="Selecteer voor vergelijken"
-                      >
-                        {compareIds.has(calc.id) && <Icons.check size={12} className="text-white" />}
-                      </button>
-                    </td>
                     <td className="py-3 px-2 text-gray-400">
                       <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}</span>
                     </td>
                     <td className="py-3 px-2 text-white">{calc.employerName || '-'}</td>
                     <td className="py-3 px-2 text-white">{calc.employeeName || '-'}</td>
+                    <td className="py-3 px-2">
+                      {(calc.multiplier ?? 1) !== 1 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 text-[11px] font-medium border border-amber-500/30">
+                          Variant {(calc.multiplier ?? 1)}×
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 text-[11px] font-medium border border-purple-500/30">
+                          TV
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3 px-2 text-gray-400">
                       {calc.years}j {calc.months}m
                     </td>
                     <td className="py-3 px-2 text-white text-right">
                       {formatCurrency(calc.totalSalary)}
                     </td>
-                    <td className="py-3 px-2 text-purple-400 font-medium text-right">
+                    <td className={`py-3 px-2 font-medium text-right ${(calc.multiplier ?? 1) !== 1 ? 'text-amber-300' : 'text-purple-400'}`}>
                       {formatCurrency(calc.amount)}
                     </td>
                     <td className="py-3 px-2 text-right">
@@ -1888,138 +1871,6 @@ export default function TransitiePage() {
         </div>
         )
       })()}
-
-      {/* Vergelijk-modal */}
-      {showCompareModal && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setShowCompareModal(false)}
-        >
-          <div
-            className="w-full max-w-6xl bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden"
-            style={{ maxHeight: '90vh' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                  <Icons.layers size={20} className="text-purple-300" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Berekeningen vergelijken</h3>
-                  <p className="text-xs text-white/50">{compareIds.size} naast elkaar</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={async () => {
-                    try {
-                      const res = await fetch('/api/transitie/compare-export', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ids: Array.from(compareIds) }),
-                      })
-                      if (!res.ok) throw new Error()
-                      const blob = await res.blob()
-                      const url = URL.createObjectURL(blob)
-                      const a = document.createElement('a')
-                      a.href = url
-                      a.download = `Vergelijking-transitie-${new Date().toISOString().slice(0, 10)}.docx`
-                      document.body.appendChild(a)
-                      a.click()
-                      a.remove()
-                      URL.revokeObjectURL(url)
-                    } catch {
-                      toast.error('Download mislukt')
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime/15 hover:bg-workx-lime/25 text-workx-lime text-sm font-medium border border-workx-lime/30 transition-colors"
-                  title="Download vergelijking als Word"
-                >
-                  <Icons.fileText size={14} />
-                  Word
-                </button>
-                <button onClick={() => setShowCompareModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white">
-                  <Icons.x size={20} />
-                </button>
-              </div>
-            </div>
-            <div className="p-5 overflow-y-auto flex-1">
-              {(() => {
-                const selected = savedCalculations.filter(c => compareIds.has(c.id))
-                if (selected.length < 2) return <p className="text-white/50">Selecteer minimaal 2.</p>
-                const cols = selected.length
-                const effective = (s: SavedCalculation) => s.amount * (s.multiplier ?? 1)
-                const minAmount = Math.min(...selected.map(effective))
-                const maxAmount = Math.max(...selected.map(effective))
-                const rows: { label: string; values: (string | number)[] }[] = [
-                  { label: 'Werkgever', values: selected.map(s => s.employerName || '—') },
-                  { label: 'Dienstverband', values: selected.map(s => `${s.years}j ${s.months}m${s.days ? ` ${s.days}d` : ''}`) },
-                  { label: 'Basissalaris (p/m)', values: selected.map(s => formatCurrency(s.salary)) },
-                  { label: 'Vakantiegeld', values: selected.map(s => s.vacationMoney ? `${s.vacationPercent}%` : '—') },
-                  { label: '13e maand', values: selected.map(s => s.thirteenthMonth ? 'Ja' : '—') },
-                  { label: 'Bonus', values: selected.map(s => s.bonusType === 'fixed' ? formatCurrency(s.bonusFixed) : s.bonusType === 'average' ? `Avg ${formatCurrency((s.bonusYear1 + s.bonusYear2 + s.bonusYear3) / 3)}/j` : '—') },
-                  { label: 'Totaal bruto p/m', values: selected.map(s => formatCurrency(s.totalSalary)) },
-                  { label: 'Jaarsalaris', values: selected.map(s => formatCurrency(s.yearlySalary)) },
-                  { label: 'Factor', values: selected.map(s => `${s.multiplier ?? 1}×`) },
-                  { label: 'Met factor', values: selected.map(s => formatCurrency(s.amount * (s.multiplier ?? 1))) },
-                ]
-                return (
-                  <div className="space-y-4">
-                    {/* Naam-kop + bedrag */}
-                    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-                      {selected.map(s => {
-                        const eff = effective(s)
-                        const mult = s.multiplier ?? 1
-                        const isMax = eff === maxAmount && minAmount !== maxAmount
-                        const isMin = eff === minAmount && minAmount !== maxAmount
-                        return (
-                          <div key={s.id} className={`rounded-xl p-4 border ${isMax ? 'border-purple-500/40 bg-purple-500/10' : 'border-white/10 bg-white/5'}`}>
-                            <p className="text-xs text-white/50 mb-1">{new Date(s.createdAt).toLocaleDateString('nl-NL')}</p>
-                            <p className="text-base font-semibold text-white truncate">{s.employeeName || '—'}</p>
-                            {s.employerName && <p className="text-xs text-white/50 truncate">{s.employerName}</p>}
-                            <div className="mt-3 pt-3 border-t border-white/10">
-                              <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">
-                                {mult !== 1 ? `Eindbedrag (${mult}×)` : 'Transitievergoeding'}
-                              </p>
-                              <p className={`text-2xl font-bold ${isMax ? 'text-purple-300' : isMin ? 'text-white/60' : 'text-white'}`}>{formatCurrency(eff)}</p>
-                              {mult !== 1 && <p className="text-[10px] text-white/50 mt-0.5">wettelijk: {formatCurrency(s.amount)}</p>}
-                              {isMax && <p className="text-[10px] text-purple-300 mt-0.5">Hoogste</p>}
-                              {isMin && <p className="text-[10px] text-white/40 mt-0.5">Laagste</p>}
-                            </div>
-                            {s.notes && (
-                              <div className="mt-3 pt-3 border-t border-white/10">
-                                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Notitie</p>
-                                <p className="text-xs text-white/70 italic">{s.notes}</p>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {/* Detail-rijen */}
-                    <div className="rounded-xl border border-white/10 overflow-hidden">
-                      {rows.map((r, idx) => (
-                        <div
-                          key={r.label}
-                          className={`grid gap-3 px-4 py-2.5 items-center ${idx % 2 === 0 ? 'bg-white/[0.02]' : ''}`}
-                          style={{ gridTemplateColumns: `200px repeat(${cols}, minmax(0, 1fr))` }}
-                        >
-                          <span className="text-xs text-white/50 font-medium uppercase tracking-wider">{r.label}</span>
-                          {r.values.map((v, i) => (
-                            <span key={i} className="text-sm text-white">{v}</span>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
-            </div>
-          </div>
-        </div>,
-        document.body,
-      )}
 
       {/* What-if modal: TV (basis) vs huidige variant */}
       {showWhatIfModal && result && liveResult && typeof document !== 'undefined' && createPortal(
@@ -2104,10 +1955,19 @@ export default function TransitiePage() {
                     </div>
 
                     {/* Acties */}
-                    <div className="flex items-center justify-end gap-2 pt-2">
+                    <div className="flex items-center justify-end gap-2 pt-2 flex-wrap">
                       <button
-                        onClick={() => { saveVariant(); setShowWhatIfModal(false) }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-sm font-medium transition-colors"
+                        onClick={async () => { await downloadWhatIfWord(); setShowWhatIfModal(false) }}
+                        disabled={whatIfMultiplier === 1 && (!whatIfEndDate || whatIfEndDate === form.endDate)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime/15 hover:bg-workx-lime/25 border border-workx-lime/30 text-workx-lime text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Icons.fileText size={14} />
+                        Download Word
+                      </button>
+                      <button
+                        onClick={async () => { await saveVariant(); setShowWhatIfModal(false) }}
+                        disabled={whatIfMultiplier === 1 && (!whatIfEndDate || whatIfEndDate === form.endDate)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <Icons.save size={14} />
                         Sla variant op
