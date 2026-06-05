@@ -112,6 +112,7 @@ export default function TransitiePage() {
     maxUsed: number
   } | null>(null)
   const [savedCalculations, setSavedCalculations] = useState<SavedCalculation[]>([])
+  const [listSearch, setListSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
 
   // Load saved calculations from API
@@ -582,32 +583,57 @@ export default function TransitiePage() {
       <div className="absolute top-0 right-[10%] w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-40 left-[5%] w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center">
-            <Icons.calculator className="text-purple-400" size={18} />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-white">Transitievergoeding</h1>
-        </div>
-        <p className="text-gray-400 text-sm sm:text-base hidden sm:block">Bereken de wettelijke transitievergoeding voor werknemers</p>
-      </div>
+      {/* Hero — titel + stats + formule */}
+      <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent p-5 sm:p-7">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
-      {/* Info Card */}
-      <div className="card p-5 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-        <div className="relative flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-            <Icons.info className="text-purple-400" size={18} />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/30 to-indigo-500/20 flex items-center justify-center">
+              <Icons.calculator className="text-purple-300" size={22} />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Transitievergoeding</h1>
+              <p className="text-sm text-white/60">Bereken de wettelijke transitievergoeding — privé per medewerker.</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-medium text-white mb-1">Wettelijke formule</h3>
-            <p className="text-sm text-gray-400">
-              De transitievergoeding bedraagt{' '}
-              <span className="text-purple-400 font-medium">1/3 bruto maandsalaris</span> per
-              gewerkt jaar. Maximum is het hogere van{' '}
-              <span className="text-purple-400 font-medium">€ 102.000 (2026)</span> of het
-              jaarsalaris inclusief emolumenten.
+
+          {/* Stats strip — alleen tonen als er berekeningen zijn */}
+          {savedCalculations.length > 0 && (() => {
+            const total = savedCalculations.length
+            const sum = savedCalculations.reduce((s, c) => s + c.amount, 0)
+            const avg = total > 0 ? sum / total : 0
+            const max = savedCalculations.reduce((m, c) => Math.max(m, c.amount), 0)
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Aantal</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">{total}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Totaal</p>
+                  <p className="text-xl sm:text-2xl font-bold text-purple-300">{formatCurrency(sum)}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Gemiddeld</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">{formatCurrency(avg)}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Hoogste</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">{formatCurrency(max)}</p>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Formule */}
+          <div className="mt-5 flex items-start gap-3 p-3 rounded-xl bg-black/20 border border-white/5">
+            <Icons.info className="text-purple-300 flex-shrink-0 mt-0.5" size={14} />
+            <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+              <span className="font-semibold text-white">Wettelijke formule:</span>{' '}
+              <span className="text-purple-300 font-medium">1/3 bruto maandsalaris</span> per gewerkt jaar. Maximum 2026:{' '}
+              <span className="text-purple-300 font-medium">€ 102.000</span> of het jaarsalaris inclusief emolumenten.
             </p>
           </div>
         </div>
@@ -1207,16 +1233,50 @@ export default function TransitiePage() {
       </div>
 
       {/* All saved calculations */}
-      {savedCalculations.length > 0 && (
+      {savedCalculations.length > 0 && (() => {
+        const q = listSearch.trim().toLowerCase()
+        const filteredCalcs = q
+          ? savedCalculations.filter(c =>
+              (c.employeeName || '').toLowerCase().includes(q) ||
+              (c.employerName || '').toLowerCase().includes(q),
+            )
+          : savedCalculations
+        return (
         <div className="card p-4 sm:p-6">
-          <h2 className="font-medium text-white flex items-center gap-2 mb-4">
-            <Icons.history size={16} className="text-gray-400" />
-            Alle opgeslagen berekeningen
-          </h2>
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="font-medium text-white flex items-center gap-2">
+              <Icons.history size={16} className="text-gray-400" />
+              Mijn opgeslagen berekeningen
+              <span className="text-xs text-white/40 font-normal">({filteredCalcs.length}{q && ` van ${savedCalculations.length}`})</span>
+            </h2>
+            <div className="relative w-full sm:w-72">
+              <Icons.search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+              <input
+                type="text"
+                value={listSearch}
+                onChange={(e) => setListSearch(e.target.value)}
+                placeholder="Zoek op werknemer of werkgever…"
+                className="w-full pl-9 pr-8 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none placeholder:text-white/30"
+              />
+              {listSearch && (
+                <button
+                  onClick={() => setListSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-white/80"
+                  title="Wissen"
+                >
+                  <Icons.x size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filteredCalcs.length === 0 && q && (
+            <p className="text-center text-sm text-white/40 italic py-8">Geen berekeningen voor "{listSearch}"</p>
+          )}
 
           {/* Mobile: Cards */}
           <div className="sm:hidden space-y-3">
-            {savedCalculations.map((calc) => (
+            {filteredCalcs.map((calc) => (
               <div
                 key={calc.id}
                 className={`p-4 rounded-xl border transition-colors ${
@@ -1235,7 +1295,7 @@ export default function TransitiePage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-white/50 mb-3">
-                  <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}{!(calc as any).isOwn && ' (gedeeld)'}</span>
+                  <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}</span>
                   <span>{calc.years}j {calc.months}m{calc.days ? ` ${calc.days}d` : ''}</span>
                   <span>{formatCurrency(calc.totalSalary)}/m</span>
                 </div>
@@ -1272,7 +1332,7 @@ export default function TransitiePage() {
                 </tr>
               </thead>
               <tbody>
-                {savedCalculations.map((calc) => (
+                {filteredCalcs.map((calc) => (
                   <tr
                     key={calc.id}
                     className={`border-b border-white/5 hover:bg-white/5 ${
@@ -1281,7 +1341,6 @@ export default function TransitiePage() {
                   >
                     <td className="py-3 px-2 text-gray-400">
                       <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}</span>
-                      {!(calc as any).isOwn && <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/30">gedeeld</span>}
                     </td>
                     <td className="py-3 px-2 text-white">{calc.employerName || '-'}</td>
                     <td className="py-3 px-2 text-white">{calc.employeeName || '-'}</td>
@@ -1318,7 +1377,8 @@ export default function TransitiePage() {
             </table>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* Legal disclaimer */}
       <div className="card p-4 border-white/5">

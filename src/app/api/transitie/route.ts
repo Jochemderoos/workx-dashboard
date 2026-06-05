@@ -11,23 +11,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Strict privacy: alleen eigen berekeningen — andere medewerkers zien
+    // jouw werk niet (en jij niet dat van hen). Casus-naam vaak vertrouwelijk.
     const calculations = await prisma.transitieCalculation.findMany({
-      where: { OR: [{ userId: session.user.id }, { userId: null }] },
-      orderBy: { createdAt: 'desc' }
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'desc' },
     })
-
-    // Filter out calculations hidden by this user + tag with isOwn
-    const tagged = calculations
-      .filter(c => {
-        if (!c.hiddenFor) return true
-        try { return !JSON.parse(c.hiddenFor).includes(session.user.id) } catch { return true }
-      })
-      .map(c => ({
-        ...c,
-        isOwn: c.userId === session.user.id,
-      }))
-
-    return NextResponse.json(tagged)
+    return NextResponse.json(calculations.map(c => ({ ...c, isOwn: true })))
   } catch (error) {
     console.error('Error fetching transitie calculations:', error)
     return NextResponse.json({ error: 'Kon niet ophalen calculations' }, { status: 500 })
