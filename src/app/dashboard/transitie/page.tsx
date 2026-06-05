@@ -1186,7 +1186,7 @@ export default function TransitiePage() {
                 const baseEnd = form.endDate ? new Date(form.endDate) : new Date()
                 const minDate = form.startDate ? new Date(new Date(form.startDate).getTime() + 30 * 86400000) : undefined
                 return (
-                  <div className="card border-amber-500/30 p-5 space-y-4">
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-500/40 p-5 space-y-4">
                     <div className="flex items-start gap-2">
                       <Icons.layers size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
@@ -1230,7 +1230,7 @@ export default function TransitiePage() {
                         step="0.05"
                         value={whatIfMultiplier}
                         onChange={(e) => setWhatIfMultiplier(parseFloat(e.target.value))}
-                        className="w-full accent-amber-400"
+                        className="w-full speel-slider"
                       />
                       <p className="text-[10px] text-white/30 mt-1">Fijn-afstemmen met de slider (0.5×–3×)</p>
                     </div>
@@ -1264,7 +1264,7 @@ export default function TransitiePage() {
                                 setWhatIfEndDate(formatDateForAPI(d))
                               }
                             }}
-                            className="w-full accent-amber-400"
+                            className="w-full speel-slider"
                             disabled={!minDate}
                           />
                           <div className="flex justify-between text-[10px] text-white/30 mt-0.5">

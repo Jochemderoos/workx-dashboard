@@ -4557,6 +4557,38 @@ textarea::-webkit-scrollbar-thumb:hover {
 [data-theme="light"] .text-white\/15 { color: rgba(26, 26, 26, 0.15); }
 [data-theme="light"] .text-white\/10 { color: rgba(26, 26, 26, 0.1); }
 
+/* Speel-paneel slider — expliciete track + thumb voor zichtbaarheid in beide modes */
+.speel-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(245, 158, 11, 0.30);
+  outline: none;
+  cursor: pointer;
+}
+[data-theme="light"] .speel-slider { background: rgba(180, 83, 9, 0.25); }
+.speel-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f59e0b;
+  cursor: pointer;
+  border: 2px solid #fef3c7;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+.speel-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f59e0b;
+  cursor: pointer;
+  border: 2px solid #fef3c7;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
 /* "Dark-island" pattern: een element met data-theme="dark" binnen een light-mode
    pagina moet ALLE light-mode overrides ongedaan maken zodat het zich gedraagt
    alsof het in dark mode rendert. Gebruikt door modals + speel-paneel. */
