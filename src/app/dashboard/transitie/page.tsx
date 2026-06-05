@@ -615,42 +615,71 @@ export default function TransitiePage() {
             </div>
           </div>
 
-          {/* Stats strip — alleen tonen als er berekeningen zijn */}
-          {savedCalculations.length > 0 && (() => {
-            const total = savedCalculations.length
-            const sum = savedCalculations.reduce((s, c) => s + c.amount, 0)
-            const avg = total > 0 ? sum / total : 0
-            const max = savedCalculations.reduce((m, c) => Math.max(m, c.amount), 0)
-            return (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Aantal</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white">{total}</p>
+          {/* Inhoudelijke toelichting — formule + wat telt mee voor bruto loon */}
+          <div className="mt-5 space-y-3">
+            {/* Formule strip */}
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-black/20 border border-purple-500/20">
+              <span className="text-2xl flex-shrink-0">📐</span>
+              <div className="flex-1">
+                <p className="text-[10px] uppercase tracking-wider text-purple-300 font-semibold mb-1">Wettelijke formule (art. 7:673 BW)</p>
+                <p className="text-sm text-white/80 leading-relaxed">
+                  <span className="text-purple-300 font-bold">⅓ bruto maandsalaris</span> per gewerkt dienstjaar, naar rato voor restmaanden/dagen.
+                  Maximum 2026: <span className="text-purple-300 font-bold">€ 102.000</span> of het jaarsalaris inclusief emolumenten — het hoogste van beide.
+                </p>
+              </div>
+            </div>
+
+            {/* Wat telt mee / niet — twee kolommen */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-white/10 bg-white/[0.03]">
+                <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold flex items-center gap-2">
+                  <span>⚖️</span> Wat is "bruto maandsalaris"?
+                  <span className="text-white/30 normal-case tracking-normal font-normal">
+                    — Besluit loonbegrip vergoeding aanzegtermijn en transitievergoeding (Stb. 2014, 538)
+                  </span>
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/10">
+                {/* TELT MEE */}
+                <div className="p-4">
+                  <p className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">✓</span>
+                    Telt mee
+                  </p>
+                  <ul className="space-y-1.5 text-xs text-white/75">
+                    <li className="flex items-start gap-2"><span className="text-emerald-400 mt-0.5">•</span><span><strong className="text-white">Bruto basissalaris</strong> per maand</span></li>
+                    <li className="flex items-start gap-2"><span className="text-emerald-400 mt-0.5">•</span><span><strong className="text-white">Vakantietoeslag</strong> (8% wettelijk minimum, of CAO-percentage) — meegerekend per maand</span></li>
+                    <li className="flex items-start gap-2"><span className="text-emerald-400 mt-0.5">•</span><span><strong className="text-white">Vaste 13e maand</strong> / structurele eindejaarsuitkering (1/12)</span></li>
+                    <li className="flex items-start gap-2"><span className="text-emerald-400 mt-0.5">•</span><span><strong className="text-white">Vaste contractuele toeslagen</strong> (ploegen, persoonlijke toeslag, etc.)</span></li>
+                    <li className="flex items-start gap-2"><span className="text-emerald-400 mt-0.5">•</span><span><strong className="text-white">Overwerk</strong> — gemiddeld over <em>laatste 12 maanden</em>, mits structureel</span></li>
+                    <li className="flex items-start gap-2"><span className="text-emerald-400 mt-0.5">•</span><span><strong className="text-white">Bonus / winstdeling / provisie</strong> — gemiddeld over <em>laatste 36 maanden</em></span></li>
+                  </ul>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Totaal</p>
-                  <p className="text-xl sm:text-2xl font-bold text-purple-300">{formatCurrency(sum)}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Gemiddeld</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white">{formatCurrency(avg)}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Hoogste</p>
-                  <p className="text-xl sm:text-2xl font-bold text-white">{formatCurrency(max)}</p>
+                {/* TELT NIET MEE */}
+                <div className="p-4">
+                  <p className="text-xs font-bold text-red-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">✗</span>
+                    Telt niet mee
+                  </p>
+                  <ul className="space-y-1.5 text-xs text-white/75">
+                    <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">•</span><span><strong className="text-white">Onkostenvergoedingen</strong> (reis-, telefoon-, thuiswerkvergoeding)</span></li>
+                    <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">•</span><span><strong className="text-white">Pensioenpremie werkgever</strong></span></li>
+                    <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">•</span><span><strong className="text-white">Werkgeversbijdrage zorgverzekering</strong> (ZVW)</span></li>
+                    <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">•</span><span><strong className="text-white">Eenmalige uitkeringen</strong> (jubileum, gratificatie, niet-vaste bonus)</span></li>
+                    <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">•</span><span><strong className="text-white">Auto/lease zonder vaste geldwaarde</strong> in arbeidsvoorwaarden</span></li>
+                    <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">•</span><span><strong className="text-white">Opties/aandelen</strong>, tenzij contractueel als vaste beloning aangemerkt</span></li>
+                    <li className="flex items-start gap-2"><span className="text-red-400 mt-0.5">•</span><span><strong className="text-white">Uitbetaling restant vakantiedagen</strong> (separaat)</span></li>
+                  </ul>
                 </div>
               </div>
-            )
-          })()}
-
-          {/* Formule */}
-          <div className="mt-5 flex items-start gap-3 p-3 rounded-xl bg-black/20 border border-white/5">
-            <Icons.info className="text-purple-300 flex-shrink-0 mt-0.5" size={14} />
-            <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
-              <span className="font-semibold text-white">Wettelijke formule:</span>{' '}
-              <span className="text-purple-300 font-medium">1/3 bruto maandsalaris</span> per gewerkt jaar. Maximum 2026:{' '}
-              <span className="text-purple-300 font-medium">€ 102.000</span> of het jaarsalaris inclusief emolumenten.
-            </p>
+              {/* Jurisprudentie-noot */}
+              <div className="px-4 py-3 border-t border-white/10 bg-black/20 text-[11px] text-white/60 leading-relaxed">
+                <span className="font-semibold text-white/80">📚 Let op — jurisprudentie:</span>{' '}
+                Variabele componenten tellen alléén mee als ze <em>loon</em> zijn in de zin van het Besluit, niet als onkosten- of zaakvergoeding. Zie o.a.{' '}
+                <a href="https://uitspraken.rechtspraak.nl/details?id=ECLI:NL:GHAMS:2024:2272" target="_blank" rel="noopener noreferrer" className="text-purple-300 underline hover:text-purple-200">Hof Amsterdam 24 sept 2024, ECLI:NL:GHAMS:2024:2272</a>{' '}
+                voor recente verduidelijking over wat wel/niet als loon kwalificeert.
+              </div>
+            </div>
           </div>
         </div>
       </div>
