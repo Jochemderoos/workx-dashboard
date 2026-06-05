@@ -11,22 +11,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Privacy: eigen berekeningen (met userId) + legacy berekeningen zonder
-    // userId (vóór die kolom bestond — zichtbaar voor iedereen omdat we
-    // niet weten wie de eigenaar was). Nieuwe berekeningen krijgen wél een
-    // userId via POST en blijven dus privé per medewerker.
+    // Strict privacy: alleen eigen berekeningen. Legacy-records zonder userId
+    // zijn via claim-legacy-transitie seed toegewezen aan eigenaren — alles
+    // heeft nu een userId.
     const calculations = await prisma.transitieCalculation.findMany({
-      where: { OR: [{ userId: session.user.id }, { userId: null }] },
+      where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' },
     })
-    // Respecteer hiddenFor (records die deze user expliciet heeft verborgen)
     const visible = calculations.filter(c => {
       if (!c.hiddenFor) return true
       try { return !JSON.parse(c.hiddenFor).includes(session.user.id) } catch { return true }
     })
-    return NextResponse.json(
-      visible.map(c => ({ ...c, isOwn: c.userId === session.user.id })),
-    )
+    return NextResponse.json(visible.map(c => ({ ...c, isOwn: true })))
   } catch (error) {
     console.error('Error fetching transitie calculations:', error)
     return NextResponse.json({ error: 'Kon niet ophalen calculations' }, { status: 500 })
