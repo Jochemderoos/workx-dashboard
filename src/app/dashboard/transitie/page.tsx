@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { createPortal } from 'react-dom'
 // jsPDF wordt dynamic geïmporteerd in de PDF-handler — scheelt ~200KB in initial bundle
 import toast from 'react-hot-toast'
@@ -8,6 +9,7 @@ import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { formatDateForAPI } from '@/lib/date-utils'
 import { renderTransitiePdf } from '@/lib/transitie-pdf'
+import { getPhotoUrl } from '@/lib/team-photos'
 import {
   drawWorkxLogo,
   loadWorkxLogo,
@@ -125,6 +127,20 @@ export default function TransitiePage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showWhatIfModal, setShowWhatIfModal] = useState(false)
 
+  // Tool-gebruik overzicht — alleen voor Jochem
+  const { data: session } = useSession()
+  const isOwnerView = session?.user?.email === 'jochem.deroos@workxadvocaten.nl'
+  interface UsageRow {
+    id: string
+    employerName: string | null
+    employeeName: string
+    createdAt: string
+    multiplier: number | null
+    user: { id: string; name: string | null; email: string | null; avatarUrl: string | null } | null
+  }
+  const [teamUsage, setTeamUsage] = useState<UsageRow[]>([])
+  const [showTeamUsage, setShowTeamUsage] = useState(false)
+
   // Load saved calculations from API
   useEffect(() => {
     fetch('/api/transitie')
@@ -136,6 +152,17 @@ export default function TransitiePage() {
       })
       .catch(err => console.error('Error fetching calculations:', err))
   }, [])
+
+  // Load team-gebruik overzicht — alleen als Jochem ingelogd is
+  useEffect(() => {
+    if (!isOwnerView) return
+    fetch('/api/transitie/usage')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) setTeamUsage(data)
+      })
+      .catch(err => console.error('Error fetching usage:', err))
+  }, [isOwnerView])
 
   // Calculate bonus per month based on type
   const calculateBonusPerMonth = () => {
@@ -563,6 +590,119 @@ export default function TransitiePage() {
       {/* Decorative glows */}
       <div className="absolute top-0 right-[10%] w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-40 left-[5%] w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Tool-gebruik overzicht — alleen voor Jochem zichtbaar.
+          Toont WIE de tool heeft gebruikt voor WELKE zaak. Geen bedragen. */}
+      {isOwnerView && teamUsage.length > 0 && (() => {
+        // Groepeer per user en tel
+        const byUser = new Map<string, { user: UsageRow['user']; count: number; latest: string }>()
+        for (const row of teamUsage) {
+          if (!row.user) continue
+          const ex = byUser.get(row.user.id)
+          if (ex) {
+            ex.count++
+            if (row.createdAt > ex.latest) ex.latest = row.createdAt
+          } else {
+            byUser.set(row.user.id, { user: row.user, count: 1, latest: row.createdAt })
+          }
+        }
+        const summary = Array.from(byUser.values()).sort((a, b) => b.count - a.count)
+        return (
+          <div className="relative rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/8 via-emerald-500/4 to-transparent p-4 sm:p-5">
+            <button
+              onClick={() => setShowTeamUsage(s => !s)}
+              className="w-full flex items-center justify-between text-left group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                  <Icons.eye className="text-emerald-300" size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Tool-gebruik door team</p>
+                  <p className="text-xs text-white/50">
+                    {teamUsage.length} berekeningen door {byUser.size} collega&apos;s · geen bedragen
+                  </p>
+                </div>
+              </div>
+              <Icons.chevronDown
+                size={16}
+                className={`text-white/40 transition-transform ${showTeamUsage ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {showTeamUsage && (
+              <div className="mt-4 space-y-4">
+                {/* Top: avatars + counts */}
+                <div className="flex flex-wrap gap-3">
+                  {summary.map(s => {
+                    const photo = getPhotoUrl(s.user?.name || '', s.user?.avatarUrl)
+                    const initials = (s.user?.name || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                    return (
+                      <div key={s.user!.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                        {photo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={photo} alt={s.user!.name || ''} className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs font-semibold text-emerald-200">
+                            {initials}
+                          </div>
+                        )}
+                        <div className="leading-tight">
+                          <p className="text-sm font-medium text-white">{s.user?.name || '—'}</p>
+                          <p className="text-[11px] text-white/50">{s.count}× · laatst {new Date(s.latest).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Lijst van alle zaken */}
+                <div className="rounded-xl border border-white/10 overflow-hidden">
+                  <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] uppercase tracking-wider text-white/40 font-semibold bg-white/[0.03]">
+                    <div className="col-span-3">Gebruiker</div>
+                    <div className="col-span-3">Werkgever</div>
+                    <div className="col-span-3">Werknemer</div>
+                    <div className="col-span-2">Datum</div>
+                    <div className="col-span-1 text-right">Type</div>
+                  </div>
+                  <div className="divide-y divide-white/5 max-h-72 overflow-y-auto">
+                    {teamUsage.map(row => {
+                      const photo = getPhotoUrl(row.user?.name || '', row.user?.avatarUrl)
+                      const initials = (row.user?.name || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                      const isVariant = (row.multiplier ?? 1) !== 1
+                      return (
+                        <div key={row.id} className="grid grid-cols-12 gap-2 px-4 py-2 items-center text-xs">
+                          <div className="col-span-3 flex items-center gap-2 min-w-0">
+                            {photo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={photo} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-semibold text-white/70 flex-shrink-0">
+                                {initials}
+                              </div>
+                            )}
+                            <span className="text-white/80 truncate">{row.user?.name || '—'}</span>
+                          </div>
+                          <div className="col-span-3 text-white/70 truncate">{row.employerName || '—'}</div>
+                          <div className="col-span-3 text-white/70 truncate">{row.employeeName || '—'}</div>
+                          <div className="col-span-2 text-white/50">{new Date(row.createdAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                          <div className="col-span-1 text-right">
+                            {isVariant ? (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[9px] font-medium border border-amber-500/30">VAR</span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 text-[9px] font-medium border border-purple-500/30">TV</span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Hero — titel + stats + formule */}
       <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent p-5 sm:p-7">
