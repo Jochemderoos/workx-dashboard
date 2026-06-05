@@ -288,7 +288,6 @@ export function renderTransitiePdf(doc: jsPDF, data: SingleData | CompareData) {
   y += 1
   y = drawDivider(doc, y)
   y = drawKvRow(doc, isEN ? 'Total gross per month' : 'Totaal bruto per maand', formatCurrency(result.totalSalary), y, { bold: true })
-  y = drawKvRow(doc, isEN ? 'Annual salary' : 'Jaarsalaris', formatCurrency(result.yearlySalary), y, { bold: true })
 
   if (form.isPensionAge) {
     y += 2
@@ -322,55 +321,94 @@ export function renderTransitiePdf(doc: jsPDF, data: SingleData | CompareData) {
     }
   }
 
-  // Compare mode: twee banden naast elkaar + verschilregel
+  // Compare mode: zacht kader rondom variant-sectie + 2 banden + verschilregel
   if (data.mode === 'compare') {
     const { liveResult, whatIfMultiplier } = data
     const tvAmount = (data.liveResult || data.result).amount
     const variantAmount = liveResult.amount * whatIfMultiplier
     const diff = variantAmount - tvAmount
-
-    y += 6
-    y = drawSectionLabel(doc, isEN ? 'Variant' : 'Variant', y)
-    y = drawKvRow(doc, isEN ? 'End date' : 'Einddatum', formatDate(data.whatIfEndDate || form.endDate), y)
-    y = drawKvRow(doc, isEN ? 'Factor' : 'Factor', `${whatIfMultiplier.toFixed(2)} ×`, y)
+    const effEnd = data.whatIfEndDate || form.endDate
+    const endChanged = effEnd !== form.endDate
+    const variantSubtitle = [
+      `factor ${whatIfMultiplier.toFixed(2)} ×`,
+      endChanged ? `einddatum ${formatDate(effEnd)}` : null,
+    ].filter(Boolean).join('  ·  ')
 
     y += 10
-    const colW = (contentWidth - 6) / 2
-    const leftX = MARGIN
-    const rightX = MARGIN + colW + 6
+    // Zacht kader om variant-sectie — strak passend rond de twee banden + verschil
+    const frameTop = y
+    const labelH = 6
+    const gapAfterLabel = 4
+    const bandH = 22
+    const gapBeforeDiff = 5
+    const diffH = diff !== 0 ? 5 : 0
+    const padTop = 6
+    const padBottom = 6
+    const frameHeight = padTop + labelH + gapAfterLabel + bandH + (diff !== 0 ? gapBeforeDiff + diffH : 0) + padBottom
+
+    setFill(doc, [252, 251, 244])
+    setStroke(doc, [228, 222, 190])
+    doc.setLineWidth(0.3)
+    doc.roundedRect(MARGIN, frameTop, contentWidth, frameHeight, 3, 3, 'FD')
+
+    y = frameTop + padTop + 3
+    // Sectie-label binnen kader
+    setColor(doc, COLOR.textMuted)
+    doc.setFontSize(7.5)
+    doc.setFont('helvetica', 'bold')
+    doc.text((isEN ? 'COMPARISON  ·  VARIANT' : 'VERGELIJKING  ·  VARIANT'), MARGIN + 6, y, { charSpace: 0.6 })
+    y += gapAfterLabel + 2
+
+    const colW = (contentWidth - 16 - 6) / 2
+    const leftX = MARGIN + 8
+    const rightX = leftX + colW + 6
 
     // Linker band: wettelijke TV
     setFill(doc, COLOR.workxYellow)
-    doc.roundedRect(leftX, y, colW, 22, 2, 2, 'F')
-    // Rechter band: variant (iets ander geel-amber)
+    doc.roundedRect(leftX, y, colW, bandH, 2, 2, 'F')
+    // Rechter band: variant (warm amber)
     setFill(doc, [254, 243, 199])
-    doc.roundedRect(rightX, y, colW, 22, 2, 2, 'F')
+    doc.roundedRect(rightX, y, colW, bandH, 2, 2, 'F')
 
-    const baseline = y + 14
     setColor(doc, COLOR.text)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.5)
-    doc.text((isEN ? 'TRANSITIEVERGOEDING' : 'TRANSITIEVERGOEDING'), leftX + 6, y + 7, { charSpace: 0.4 })
-    doc.text(whatIfMultiplier !== 1 ? 'BEËINDIGINGSVERGOEDING' : 'VARIANT', rightX + 6, y + 7, { charSpace: 0.4 })
+    doc.setFontSize(7.5)
+    doc.text('TRANSITIEVERGOEDING', leftX + 6, y + 6, { charSpace: 0.4 })
+    doc.text('BEËINDIGINGSVERGOEDING', rightX + 6, y + 6, { charSpace: 0.4 })
 
-    doc.setFontSize(15)
-    doc.text(formatCurrency(tvAmount), leftX + colW - 6, y + 17, { align: 'right' })
-    doc.text(formatCurrency(variantAmount), rightX + colW - 6, y + 17, { align: 'right' })
+    // Klein "obv variant"-regel onder beëindiging-label
+    setColor(doc, [120, 90, 0])
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(6.5)
+    doc.text(`obv ${variantSubtitle}`, rightX + 6, y + 10)
 
-    y += 22 + 5
+    // Wettelijke TV: kleine ondertitel
+    setColor(doc, [110, 110, 60])
+    doc.setFontSize(6.5)
+    doc.text(isEN ? 'statutory · factor 1 ×' : 'wettelijk · factor 1 ×', leftX + 6, y + 10)
+
+    // Bedragen rechts
+    setColor(doc, COLOR.text)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.text(formatCurrency(tvAmount), leftX + colW - 6, y + 18, { align: 'right' })
+    doc.text(formatCurrency(variantAmount), rightX + colW - 6, y + 18, { align: 'right' })
+
+    y += bandH + gapBeforeDiff
 
     if (diff !== 0) {
-      doc.setFontSize(9.5)
+      doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(diff > 0 ? 21 : 185, diff > 0 ? 128 : 28, diff > 0 ? 61 : 28)
-      doc.text(`${isEN ? 'Difference' : 'Verschil'}: ${diff > 0 ? '+' : ''}${formatCurrency(diff)}`, pageWidth - MARGIN, y, { align: 'right' })
-      y += 4
+      doc.text(`${isEN ? 'Difference' : 'Verschil'}: ${diff > 0 ? '+' : ''}${formatCurrency(diff)}`, rightX + colW - 6, y + 2, { align: 'right' })
     }
 
+    // Voetnoot buiten het kader, klein
+    y = frameTop + frameHeight + 5
     setColor(doc, COLOR.textMid)
-    doc.setFontSize(8)
+    doc.setFontSize(7.5)
     doc.setFont('helvetica', 'italic')
-    doc.text(isEN ? 'TV per Art. 7:673 BW. A factor > 1 results in a settlement payment.' : 'TV conform art. 7:673 BW. Een factor > 1 maakt het een beëindigingsvergoeding.', MARGIN, y + 4)
+    doc.text(isEN ? 'TV per Art. 7:673 BW (1/3 monthly salary per year of service). A factor > 1 results in a settlement payment.' : 'TV conform art. 7:673 BW (1/3 maandsalaris per dienstjaar). Een factor > 1 maakt het een beëindigingsvergoeding.', MARGIN, y)
   }
 
   // Disclaimer + footer pin
