@@ -50,3 +50,4 @@ desktop/node_modules/
 test-results/
 playwright-report/
 .auth/
+backups/
