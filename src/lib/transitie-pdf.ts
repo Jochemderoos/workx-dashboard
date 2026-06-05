@@ -337,14 +337,14 @@ export function renderTransitiePdf(doc: jsPDF, data: SingleData | CompareData) {
     y += 10
     // Zacht kader om variant-sectie — strak passend rond de twee banden + verschil
     const frameTop = y
-    const labelH = 6
-    const gapAfterLabel = 4
+    const labelBlockH = 11 // header (3) + spacing (3) + subtitle (3) + spacing (2)
+    const gapAfterLabel = 3
     const bandH = 22
     const gapBeforeDiff = 5
     const diffH = diff !== 0 ? 5 : 0
     const padTop = 6
     const padBottom = 6
-    const frameHeight = padTop + labelH + gapAfterLabel + bandH + (diff !== 0 ? gapBeforeDiff + diffH : 0) + padBottom
+    const frameHeight = padTop + labelBlockH + gapAfterLabel + bandH + (diff !== 0 ? gapBeforeDiff + diffH : 0) + padBottom
 
     setFill(doc, [252, 251, 244])
     setStroke(doc, [228, 222, 190])
@@ -352,12 +352,16 @@ export function renderTransitiePdf(doc: jsPDF, data: SingleData | CompareData) {
     doc.roundedRect(MARGIN, frameTop, contentWidth, frameHeight, 3, 3, 'FD')
 
     y = frameTop + padTop + 3
-    // Sectie-label binnen kader
+    // Sectie-label binnen kader — twee regels: titel + waar de variant uit bestaat
     setColor(doc, COLOR.textMuted)
     doc.setFontSize(7.5)
     doc.setFont('helvetica', 'bold')
-    doc.text((isEN ? 'VARIANT' : 'VARIANT'), MARGIN + 6, y, { charSpace: 0.6 })
-    y += gapAfterLabel + 2
+    doc.text(isEN ? 'COMPARISON: SEVERANCE PAYMENT AND VARIANT' : 'VERGELIJKING TRANSITIEVERGOEDING EN VARIANT', MARGIN + 6, y, { charSpace: 0.6 })
+    setColor(doc, [120, 90, 0])
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(8)
+    doc.text(`variant: ${variantSubtitle}`, MARGIN + 6, y + 5)
+    y += labelBlockH
 
     const colW = (contentWidth - 16 - 6) / 2
     const leftX = MARGIN + 8
