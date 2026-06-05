@@ -125,27 +125,26 @@ export async function GET() {
         },
       }),
 
-      // 7. All vacation periods (for admins)
-      isAdmin
-        ? prisma.vacationPeriod.findMany({
-            where: { year: currentYear },
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-              createdBy: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
+      // 7. All vacation periods — alle ingelogde gebruikers mogen 'm zien
+      //    voor planning (was eerst isAdmin-gated).
+      prisma.vacationPeriod.findMany({
+        where: { year: currentYear },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
             },
-            orderBy: { startDate: 'asc' },
-          })
-        : [],
+          },
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { startDate: 'asc' },
+      }),
 
       // 8. Current user's vacation periods
       prisma.vacationPeriod.findMany({

@@ -133,6 +133,8 @@ export default function VakantiesPage() {
 
   // Vacation periods state
   const [vacationPeriods, setVacationPeriods] = useState<Record<string, VacationPeriod[]>>({}) // userId -> periods
+  // Alle vakantie-periodes lopende jaar (voor het overzicht onderaan)
+  const [allPeriodsCurrentYear, setAllPeriodsCurrentYear] = useState<VacationPeriod[]>([])
   const [showPeriodForm, setShowPeriodForm] = useState(false)
   const [editingPeriod, setEditingPeriod] = useState<VacationPeriod | null>(null)
   const [periodFormUserId, setPeriodFormUserId] = useState<string>('')
@@ -195,6 +197,9 @@ export default function VakantiesPage() {
         setMyVacationBalance(data.myVacationBalance)
         if (data.myVacationPeriods) {
           setMyVacationPeriods(data.myVacationPeriods)
+        }
+        if (Array.isArray(data.vacationPeriods)) {
+          setAllPeriodsCurrentYear(data.vacationPeriods)
         }
       } else {
         throw new Error('Kon niet ophalen data')
@@ -2598,6 +2603,60 @@ export default function VakantiesPage() {
               </div>
             </div>
           )}
+
+          {/* Onderaan: alle vakantieperiodes huidige jaar — per medewerker */}
+          {allPeriodsCurrentYear.length > 0 && (() => {
+            const yr = new Date().getFullYear()
+            // Groepeer per userId, sorteer binnen op startDate
+            const byUser = new Map<string, { user: { id: string; name: string }; periods: VacationPeriod[] }>()
+            for (const p of allPeriodsCurrentYear) {
+              const u = (p as any).user
+              if (!u) continue
+              const existing = byUser.get(u.id) || { user: u, periods: [] as VacationPeriod[] }
+              existing.periods.push(p)
+              byUser.set(u.id, existing)
+            }
+            const groups = Array.from(byUser.values())
+              .map(g => ({ ...g, totalDays: g.periods.reduce((s, p) => s + (p.days || 0), 0) }))
+              .sort((a, b) => a.user.name.localeCompare(b.user.name))
+            return (
+              <div className="card p-5 mt-8">
+                <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
+                  <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Icons.calendar size={18} className="text-green-400" />
+                    Overzicht vakanties {yr} — alle medewerkers
+                  </h2>
+                  <span className="text-xs text-white/40">{groups.length} medewerkers, {allPeriodsCurrentYear.length} periodes</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {groups.map(g => (
+                    <div key={g.user.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="flex items-baseline justify-between mb-2">
+                        <p className="text-sm font-medium text-white">{g.user.name}</p>
+                        <span className="text-xs text-green-400 font-semibold">{g.totalDays.toFixed(1)} d</span>
+                      </div>
+                      <ul className="space-y-0.5 text-xs text-white/70">
+                        {g.periods
+                          .slice()
+                          .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                          .map(p => {
+                            const start = new Date(p.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                            const end = new Date(p.endDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                            const sameDay = p.startDate === p.endDate
+                            return (
+                              <li key={p.id} className="flex items-center justify-between gap-2">
+                                <span>{sameDay ? start : `${start} – ${end}`}</span>
+                                <span className="text-white/40">{p.days}d</span>
+                              </li>
+                            )
+                          })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
         </>
       )}

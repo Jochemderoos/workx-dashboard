@@ -220,8 +220,31 @@ export default function TeamPage() {
         fetch('/api/financien/employee-compensation'),
         fetch('/api/financien/salary-scales')
       ])
-      if (empRes.ok) setEmployees(await empRes.json())
+      let loadedEmployees: EmployeeData[] = []
+      if (empRes.ok) {
+        loadedEmployees = await empRes.json()
+        setEmployees(loadedEmployees)
+      }
       if (scaleRes.ok) setSalaryScales(await scaleRes.json())
+
+      // Auto-fetch vakantie-periodes voor alle medewerkers (parallel) zodat
+      // 't blok standaard uitgeklapt en gevuld is.
+      if (loadedEmployees.length > 0) {
+        const year = new Date().getFullYear()
+        const periodResults = await Promise.all(
+          loadedEmployees.map(emp =>
+            fetch(`/api/vacation/periods?userId=${emp.id}&year=${year}`)
+              .then(r => r.ok ? r.json() : [])
+              .then(periods => [emp.id, periods] as const)
+              .catch(() => [emp.id, []] as const),
+          ),
+        )
+        setVacationPeriods(prev => {
+          const next = { ...prev }
+          for (const [uid, periods] of periodResults) next[uid] = periods
+          return next
+        })
+      }
     } catch (error) {
       toast.error('Kon team niet laden')
     } finally {
@@ -773,26 +796,15 @@ export default function TeamPage() {
           {/* Vacation Section — voor iedereen zichtbaar voor planning */}
           {employee.vacationBalance && (
             <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
-              <button
-                onClick={() => fetchVacationPeriods(employee.id)}
-                className="w-full text-left cursor-pointer group/vac"
-              >
+              <div className="w-full text-left">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Icons.sun size={14} className="text-green-400" />
                     <span className="text-gray-400 text-sm">Vakantiedagen {currentYear}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {hasParentalLeave && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
-                    )}
-                    <Icons.chevronDown
-                      size={14}
-                      className={`text-gray-500 group-hover/vac:text-green-400 transition-all ${
-                        expandedVacationEmployee === employee.id ? 'rotate-180 text-green-400' : ''
-                      }`}
-                    />
-                  </div>
+                  {hasParentalLeave && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-start">
                   <div>
@@ -812,29 +824,27 @@ export default function TeamPage() {
                     </div>
                   </div>
                 </div>
-              </button>
+              </div>
 
-              {/* Expanded vacation periods */}
-              {expandedVacationEmployee === employee.id && (
-                <div className="mt-3 pt-3 border-t border-white/5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icons.calendar size={12} className="text-green-400" />
-                    <span className="text-xs text-green-400 font-medium">Opgenomen periodes</span>
-                  </div>
-                  {isLoadingVacationPeriods === employee.id ? (
-                    <div className="flex items-center justify-center py-4">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-400" />
-                    </div>
-                  ) : vacationPeriods[employee.id]?.length ? (
-                    <VacationPeriodList
-                      periods={vacationPeriods[employee.id]}
-                      compact
-                    />
-                  ) : (
-                    <p className="text-gray-500 text-xs text-center py-3">Geen periodes ingevoerd</p>
-                  )}
+              {/* Vakantie-periodes — standaard zichtbaar */}
+              <div className="mt-3 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icons.calendar size={12} className="text-green-400" />
+                  <span className="text-xs text-green-400 font-medium">Opgenomen periodes</span>
                 </div>
-              )}
+                {vacationPeriods[employee.id] === undefined ? (
+                  <div className="flex items-center justify-center py-3">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400/60" />
+                  </div>
+                ) : vacationPeriods[employee.id]?.length ? (
+                  <VacationPeriodList
+                    periods={vacationPeriods[employee.id]}
+                    compact
+                  />
+                ) : (
+                  <p className="text-gray-500 text-xs text-center py-2">Geen periodes ingevoerd</p>
+                )}
+              </div>
             </div>
           )}
 
