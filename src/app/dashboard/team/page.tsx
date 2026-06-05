@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
+import YearPicker from '@/components/ui/YearPicker'
 import { getPhotoUrl } from '@/lib/team-photos'
 import VacationPeriodList, { VacationPeriod } from '@/components/vacation/VacationPeriodList'
 
@@ -984,15 +985,14 @@ export default function TeamPage() {
                         </div>
                         <div>
                           <h2 className="font-semibold text-white text-lg">Ziektedagen</h2>
-                          <select
-                            value={selectedYear}
-                            onChange={e => setSelectedYear(parseInt(e.target.value))}
-                            className="mt-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-gray-300 focus:outline-none focus:border-red-500/30"
-                          >
-                            {[2025, 2026, 2027, 2028, 2029, 2030].map(year => (
-                              <option key={year} value={year} className="bg-workx-dark">{year}</option>
-                            ))}
-                          </select>
+                          <div className="mt-1">
+                            <YearPicker
+                              years={[2025, 2026, 2027, 2028, 2029, 2030]}
+                              selected={selectedYear}
+                              onChange={(y) => setSelectedYear(y)}
+                              compact
+                            />
+                          </div>
                         </div>
                       </div>
                       <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
