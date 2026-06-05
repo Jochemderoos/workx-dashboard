@@ -365,11 +365,12 @@ export default function TransitiePage() {
   }
 
   // Slaat what-if variant op en retourneert de aangemaakte calc (of null).
-  // Wordt hergebruikt door saveVariant (UI) én door de Word-download knop.
+  // Belangrijk: `amount` is altijd het WETTELIJKE TV-bedrag (base, niet ×factor).
+  // `multiplier` staat los — effectief bedrag = amount × multiplier (rekening
+  // gehouden bij weergave).
   const persistVariant = async () => {
     if (!result || !liveResult) return null
     const effEnd = whatIfEndDate || form.endDate
-    const variantAmount = Math.round(liveResult.amount * whatIfMultiplier * 100) / 100
     const data = {
       employerName: form.employerName,
       employeeName: form.employeeName,
@@ -391,7 +392,7 @@ export default function TransitiePage() {
       other: parseFloat(form.other) || 0,
       totalSalary: liveResult.totalSalary,
       yearlySalary: liveResult.yearlySalary,
-      amount: variantAmount,
+      amount: liveResult.amount,
       amountBeforeMax: liveResult.amountBeforeMax,
       years: liveResult.years,
       months: liveResult.months,
@@ -608,19 +609,21 @@ export default function TransitiePage() {
       y += 8
     }
 
-    // Disclaimer + footer
-    y += 6
-    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3)
-    doc.line(margin, y, pageWidth - margin, y); y += 5
-    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(130, 130, 130)
+    // Footer + disclaimer gepind aan onderkant
+    const footerBarH = 10
+    const footerY = pageHeight - footerBarH
     const disc = 'Disclaimer: bedragen indicatief. De wettelijke transitievergoeding (art. 7:673 BW) is 1/3 maandsalaris per dienstjaar. Een bedrag boven dit wettelijk minimum heet een beëindigingsvergoeding. Maximum 2026: €102.000 of jaarsalaris indien hoger. Aan deze berekening kunnen geen rechten worden ontleend.'
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(130, 130, 130)
     const discLines = doc.splitTextToSize(disc, contentWidth)
-    doc.text(discLines, margin, y)
+    const discBlockH = discLines.length * 3.2
+    const discY = footerY - discBlockH - 5
+    doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.2)
+    doc.line(margin, discY - 3, pageWidth - margin, discY - 3)
+    doc.text(discLines, margin, discY)
 
-    const footerY = pageHeight - 14
-    doc.setFillColor(80, 80, 80); doc.rect(0, footerY, pageWidth, 12, 'F')
+    doc.setFillColor(60, 60, 60); doc.rect(0, footerY, pageWidth, footerBarH, 'F')
     doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'normal')
-    doc.text('Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl', pageWidth / 2, footerY + 7, { align: 'center' })
+    doc.text('Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl', pageWidth / 2, footerY + 6.5, { align: 'center' })
 
     const blob = doc.output('blob')
     window.open(URL.createObjectURL(blob), '_blank')
@@ -865,48 +868,40 @@ export default function TransitiePage() {
     doc.setFontSize(18)
     doc.text(formatCurrency(result.amount), pageWidth - margin - 10, resultBaseline, { align: 'right' })
 
-    y += boxHeight + 6
+    y += boxHeight + 5
     if (result.maxApplied) {
-      doc.setFontSize(8)
+      doc.setFontSize(7.5)
       doc.setFont('helvetica', 'italic')
       doc.setTextColor(120, 120, 120)
       doc.text(isEN
         ? `Statutory maximum applied: ${formatCurrency(result.maxUsed)} (calculated amount: ${formatCurrency(result.amountBeforeMax)})`
         : `Wettelijk maximum toegepast: ${formatCurrency(result.maxUsed)} (berekend bedrag: ${formatCurrency(result.amountBeforeMax)})`, margin, y)
-      y += 8
     }
 
-    // === DISCLAIMER ===
-    y += 8
-    doc.setDrawColor(200, 200, 200)
-    doc.setLineWidth(0.3)
-    doc.line(margin, y, pageWidth - margin, y)
-    y += 5
+    // === FOOTER + DISCLAIMER: gepind aan onderkant ===
+    const footerBarH = 10
+    const footerY = pageHeight - footerBarH
 
-    doc.setFontSize(7)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(130, 130, 130)
-    const disclaimer = isEN
+    // Disclaimer-tekst zit DIRECT boven de balk; lijn er net boven.
+    const disclaimerText = isEN
       ? `Disclaimer: This calculation is indicative. No rights can be derived from this calculation. The actual severance payment may differ due to collective agreement provisions or special circumstances. Legal basis: Art. 7:673 Dutch Civil Code. Maximum 2024: €94,000 | 2025: €98,000 | 2026: €102,000, or annual salary if higher.`
       : `Disclaimer: Deze berekening is indicatief. Aan deze berekening kunnen geen rechten worden ontleend. De daadwerkelijke transitievergoeding kan afwijken door CAO-bepalingen of bijzondere omstandigheden. Wettelijke grondslag: Art. 7:673 BW. Maximum 2024: €94.000 | 2025: €98.000 | 2026: €102.000, of jaarsalaris indien hoger.`
-    const disclaimerLines = doc.splitTextToSize(disclaimer, contentWidth)
-    doc.text(disclaimerLines, margin, y)
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(130, 130, 130)
+    const discLines = doc.splitTextToSize(disclaimerText, contentWidth)
+    const discLineH = 3.2
+    const discBlockH = discLines.length * discLineH
+    const discY = footerY - discBlockH - 5
 
-    // === CONTACT ===
-    y += disclaimerLines.length * 3.5 + 6
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'italic')
-    doc.setTextColor(100, 100, 100)
-    doc.text(isEN ? 'Questions? Contact one of our employment law specialists.' : 'Vragen? Neem contact op met één van onze arbeidsrecht specialisten.', margin, y)
+    // Subtiele lijn boven disclaimer
+    doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.2)
+    doc.line(margin, discY - 3, pageWidth - margin, discY - 3)
+    doc.text(discLines, margin, discY)
 
-    // === FOOTER ===
-    const footerY = pageHeight - 14
-    doc.setFillColor(80, 80, 80)
-    doc.rect(0, footerY, pageWidth, 12, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(7)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl', pageWidth / 2, footerY + 7, { align: 'center' })
+    // Footer-balk
+    doc.setFillColor(60, 60, 60)
+    doc.rect(0, footerY, pageWidth, footerBarH, 'F')
+    doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'normal')
+    doc.text('Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl', pageWidth / 2, footerY + 6.5, { align: 'center' })
 
     const pdfBlob = doc.output('blob')
     window.open(URL.createObjectURL(pdfBlob), '_blank')
@@ -1559,11 +1554,30 @@ export default function TransitiePage() {
                       </div>
                     </div>
 
-                    {/* Factor-slider */}
+                    {/* Factor — pills + fine-tune slider */}
                     <div>
-                      <div className="flex items-baseline justify-between mb-1.5">
+                      <div className="flex items-baseline justify-between mb-2">
                         <label className="text-xs text-white/70">Factor</label>
                         <span className="text-sm font-semibold text-amber-300 tabular-nums">× {whatIfMultiplier.toFixed(2)}</span>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 mb-2">
+                        {[1, 1.25, 1.5, 1.75, 2, 2.5, 3].map((preset) => {
+                          const active = Math.abs(whatIfMultiplier - preset) < 0.01
+                          return (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setWhatIfMultiplier(preset)}
+                              className={`py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                                active
+                                  ? 'bg-amber-500/25 border-amber-500/60 text-amber-200'
+                                  : 'bg-white/5 border-white/10 text-white/60 hover:border-amber-500/30'
+                              }`}
+                            >
+                              {preset % 1 === 0 ? `${preset}×` : `${preset}×`}
+                            </button>
+                          )
+                        })}
                       </div>
                       <input
                         type="range"
@@ -1574,12 +1588,7 @@ export default function TransitiePage() {
                         onChange={(e) => setWhatIfMultiplier(parseFloat(e.target.value))}
                         className="w-full accent-amber-400"
                       />
-                      <div className="relative h-3 mt-0.5 text-[10px] text-white/30">
-                        <span className="absolute left-0">0.5×</span>
-                        <span className="absolute" style={{ left: '20%', transform: 'translateX(-50%)' }}>1×</span>
-                        <span className="absolute" style={{ left: '60%', transform: 'translateX(-50%)' }}>2×</span>
-                        <span className="absolute right-0">3×</span>
-                      </div>
+                      <p className="text-[10px] text-white/30 mt-1">Fijn-afstemmen met de slider (0.5×–3×)</p>
                     </div>
 
                     {/* Einddatum-slider — ± 24 maanden t.o.v. originele einddatum */}
@@ -1642,7 +1651,7 @@ export default function TransitiePage() {
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-sm font-medium transition-colors"
                           >
                             <Icons.layers size={14} />
-                            Vergelijk TV ↔ variant
+                            Vergelijk &amp; download TV ↔ variant
                           </button>
                           <button
                             onClick={saveVariant}
@@ -1796,20 +1805,21 @@ export default function TransitiePage() {
 
               {/* Actions — Bereken slaat al automatisch op. Hier alleen exports. */}
               <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold pt-1">Download transitievergoeding</p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => downloadPDF('nl')}
                     className="btn-secondary flex-1 flex items-center justify-center gap-2"
                   >
                     <Icons.download size={16} />
-                    PDF (NL)
+                    Transitievergoeding PDF (NL)
                   </button>
                   <button
                     onClick={() => downloadPDF('en')}
                     className="btn-secondary flex-1 flex items-center justify-center gap-2"
                   >
                     <Icons.download size={16} />
-                    PDF (EN)
+                    Transitievergoeding PDF (EN)
                   </button>
                 </div>
                 {editingId && (
@@ -1820,7 +1830,7 @@ export default function TransitiePage() {
                     title="Word — bewerkbaar bestand voor interne notities of basis voor groter advies"
                   >
                     <Icons.fileText size={16} />
-                    Word (bewerkbaar)
+                    Transitievergoeding Word (bewerkbaar)
                   </a>
                 )}
               </div>
@@ -1952,7 +1962,7 @@ export default function TransitiePage() {
                     <p className="text-xs text-white/50">{calc.employerName || '-'}</p>
                   </div>
                   <span className={`text-lg font-semibold ${(calc.multiplier ?? 1) !== 1 ? 'text-amber-300' : 'text-purple-400'}`}>
-                    {formatCurrency(calc.amount)}
+                    {formatCurrency(calc.amount * (calc.multiplier ?? 1))}
                   </span>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-white/50 mb-3">
@@ -2024,7 +2034,7 @@ export default function TransitiePage() {
                       {formatCurrency(calc.totalSalary)}
                     </td>
                     <td className={`py-3 px-2 font-medium text-right ${(calc.multiplier ?? 1) !== 1 ? 'text-amber-300' : 'text-purple-400'}`}>
-                      {formatCurrency(calc.amount)}
+                      {formatCurrency(calc.amount * (calc.multiplier ?? 1))}
                     </td>
                     <td className="py-3 px-2 text-right">
                       <div className="flex gap-2 justify-end">
