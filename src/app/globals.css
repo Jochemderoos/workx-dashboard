@@ -4635,6 +4635,13 @@ textarea::-webkit-scrollbar-thumb:hover {
 [data-theme="light"] .text-gray-200 { color: #555555; }
 [data-theme="light"] .text-gray-300 { color: #666666; }
 [data-theme="light"] .text-gray-400 { color: #777777; }
+/* Form-labels donkerder in light mode — anders lees je 'Werkgever / Werknemer /
+   Datum in dienst' nauwelijks tegen de witte achtergrond. */
+[data-theme="light"] label.text-gray-400,
+[data-theme="light"] label .text-gray-400,
+[data-theme="light"] label.text-white\/60,
+[data-theme="light"] label.text-white\/70,
+[data-theme="light"] label.text-white\/80 { color: #1f2937; font-weight: 600; }
 [data-theme="light"] .text-gray-500 { color: #888888; }
 [data-theme="light"] .text-gray-600 { color: #555555; }
 [data-theme="light"] .text-gray-700 { color: #444444; }
