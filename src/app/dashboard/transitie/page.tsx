@@ -1282,17 +1282,7 @@ export default function TransitiePage() {
                 </p>
               )}
             </div>
-          ) : (
-            <div className="card p-8 text-center sticky top-8">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <Icons.calculator className="text-white/20" size={28} />
-              </div>
-              <h3 className="text-white font-medium mb-2">Klaar om te berekenen</h3>
-              <p className="text-gray-400 text-sm">
-                Vul de gegevens in om de transitievergoeding te berekenen
-              </p>
-            </div>
-          )}
+          ) : null}
 
           {/* Saved calculations for this employee */}
           {form.employeeName && employeeCalculations.length > 0 && (
