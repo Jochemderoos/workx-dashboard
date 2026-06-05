@@ -408,7 +408,7 @@ export function renderTransitiePdf(doc: jsPDF, data: SingleData | CompareData) {
     setColor(doc, COLOR.textMid)
     doc.setFontSize(7.5)
     doc.setFont('helvetica', 'italic')
-    doc.text(isEN ? 'TV per Art. 7:673 BW (1/3 monthly salary per year of service). A factor > 1 results in a settlement payment.' : 'TV conform art. 7:673 BW (1/3 maandsalaris per dienstjaar). Een factor > 1 maakt het een beëindigingsvergoeding.', MARGIN, y)
+    doc.text(isEN ? 'TV per Art. 7:673 BW (1/3 monthly salary per year of service).' : 'TV conform art. 7:673 BW (1/3 maandsalaris per dienstjaar).', MARGIN, y)
   }
 
   // Disclaimer + footer pin
