@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useSession } from 'next-auth/react'
+import YearPicker from '@/components/ui/YearPicker'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import JarRoosterTab from '@/components/opleidingen/JarRoosterTab'
@@ -1064,21 +1065,8 @@ export default function OpleidingenPage() {
         </div>
 
         {/* Year selector */}
-        <div className="flex items-center gap-2">
-          {years.map((year) => (
-            <button
-              key={year}
-              onClick={() => setSelectedYear(year)}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                selectedYear === year
-                  ? 'bg-workx-lime text-workx-dark font-medium'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {year}
-            </button>
-          ))}
-        </div>
+        <YearPicker years={years} selected={selectedYear} onChange={setSelectedYear} />
+
       </div>
 
       {/* Tabs */}

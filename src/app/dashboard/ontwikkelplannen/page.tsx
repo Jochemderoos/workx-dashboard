@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
+import YearPicker from '@/components/ui/YearPicker'
 import { getPhotoUrl } from '@/lib/team-photos'
 
 interface Section {
@@ -466,28 +467,17 @@ export default function OntwikkelplannenPage() {
 
       {/* Year tabs */}
       {selectedEmployee && years.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {years.map((year) => {
-            const isActive = selectedYear === year
+        <YearPicker
+          years={years}
+          selected={selectedYear}
+          onChange={setSelectedYear}
+          badgeFor={(year) => {
             const plan = employeePlans.find(p => p.year === year)
-            return (
-              <button
-                key={year}
-                onClick={() => setSelectedYear(year)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2 ${
-                  isActive
-                    ? 'bg-workx-lime/10 border border-workx-lime/30 text-workx-lime'
-                    : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70'
-                }`}
-              >
-                {year}
-                {plan?.status === 'actief' && (
-                  <span className="w-2 h-2 rounded-full bg-workx-lime animate-pulse" />
-                )}
-              </button>
-            )
-          })}
-        </div>
+            return plan?.status === 'actief'
+              ? <span className="w-1.5 h-1.5 rounded-full bg-black/60 animate-pulse" />
+              : null
+          }}
+        />
       )}
 
       {/* Current plan display */}

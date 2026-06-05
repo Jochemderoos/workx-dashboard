@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import YearPicker from '@/components/ui/YearPicker'
 import { formatDateForAPI } from '@/lib/date-utils'
 import Image from 'next/image'
 import { TEAM_PHOTOS, ADVOCATEN, PARTNERS, getPhotoUrl } from '@/lib/team-photos'
@@ -1066,19 +1067,7 @@ export default function PartnersWerkPage() {
         <div className="space-y-6">
           {/* Year Toggle and Upload Button */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex gap-1 p-1 bg-white/5 rounded-xl">
-              {availableYears.map(year => (
-                <button
-                  key={year}
-                  onClick={() => setSelectedYear(year)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    selectedYear === year ? 'bg-workx-lime text-workx-dark' : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {year}
-                </button>
-              ))}
-            </div>
+            <YearPicker years={[...availableYears]} selected={selectedYear} onChange={setSelectedYear} />
             {selectedYear === new Date().getFullYear() && (
               <Popover.Root open={showHoursUploadModal} onOpenChange={setShowHoursUploadModal}>
                 <Popover.Trigger asChild>

@@ -19,8 +19,13 @@ export async function GET(req: NextRequest) {
       where: { OR: [{ userId: session.user.id }, { userId: null }] },
       orderBy: { createdAt: 'desc' },
     })
+    // Respecteer hiddenFor (records die deze user expliciet heeft verborgen)
+    const visible = calculations.filter(c => {
+      if (!c.hiddenFor) return true
+      try { return !JSON.parse(c.hiddenFor).includes(session.user.id) } catch { return true }
+    })
     return NextResponse.json(
-      calculations.map(c => ({ ...c, isOwn: c.userId === session.user.id })),
+      visible.map(c => ({ ...c, isOwn: c.userId === session.user.id })),
     )
   } catch (error) {
     console.error('Error fetching transitie calculations:', error)
