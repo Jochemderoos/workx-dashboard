@@ -1345,6 +1345,37 @@ export default function TransitiePage() {
           : savedCalculations
         return (
         <div className="card p-4 sm:p-6">
+          {/* Visuele instructie voor vergelijken — zichtbaar zolang minder
+              dan 2 berekeningen zijn aangevinkt */}
+          {savedCalculations.length >= 2 && compareIds.size < 2 && (
+            <div className="mb-5 rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/8 via-indigo-500/5 to-transparent p-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+              <div className="relative flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                  <Icons.layers className="text-purple-300" size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-semibold text-sm mb-1 flex items-center gap-2">
+                    Wist je dat je berekeningen kunt vergelijken?
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold uppercase tracking-wider">Nieuw</span>
+                  </p>
+                  <p className="text-xs text-white/70 leading-relaxed mb-2">
+                    Vink 2 of 3 berekeningen aan (
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded border border-purple-500/50 bg-white/5 align-middle mx-0.5"></span>
+                    ) en klik op <span className="text-purple-300 font-medium">"Vergelijken"</span>. Handig om scenario's met afwijkende startdatum, bonus of vakantiegeld naast elkaar te zien.
+                  </p>
+                  <div className="flex items-center gap-3 text-[10px] text-white/40">
+                    <span>1. Vink aan</span>
+                    <span>→</span>
+                    <span>2. Klik vergelijken</span>
+                    <span>→</span>
+                    <span>3. Download als Word</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
             <h2 className="font-medium text-white flex items-center gap-2">
               <Icons.history size={16} className="text-gray-400" />
@@ -1543,9 +1574,39 @@ export default function TransitiePage() {
                   <p className="text-xs text-white/50">{compareIds.size} naast elkaar</p>
                 </div>
               </div>
-              <button onClick={() => setShowCompareModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white">
-                <Icons.x size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/transitie/compare-export', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: Array.from(compareIds) }),
+                      })
+                      if (!res.ok) throw new Error()
+                      const blob = await res.blob()
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `Vergelijking-transitie-${new Date().toISOString().slice(0, 10)}.docx`
+                      document.body.appendChild(a)
+                      a.click()
+                      a.remove()
+                      URL.revokeObjectURL(url)
+                    } catch {
+                      toast.error('Download mislukt')
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime/15 hover:bg-workx-lime/25 text-workx-lime text-sm font-medium border border-workx-lime/30 transition-colors"
+                  title="Download vergelijking als Word"
+                >
+                  <Icons.fileText size={14} />
+                  Word
+                </button>
+                <button onClick={() => setShowCompareModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white">
+                  <Icons.x size={20} />
+                </button>
+              </div>
             </div>
             <div className="p-5 overflow-y-auto flex-1">
               {(() => {
