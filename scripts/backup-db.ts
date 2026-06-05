@@ -1,79 +1,119 @@
-// Handmatige database-backup van de Workx Dashboard productie-DB.
-// Maakt een gecomprimeerde pg_dump → backups/workx-YYYY-MM-DD-HH-MM-SS.sql.gz.
+// Handmatige database-backup via Prisma — geen pg_dump nodig.
+// Iterates over alle tabellen in het schema, dumpt elke tabel als JSON-array
+// en comprimeert tot één .json.gz bestand.
 //
 // Gebruik:
 //   npx tsx scripts/backup-db.ts
 //
-// Vereist pg_dump in PATH (komt mee met Postgres-installatie of `brew install
-// libpq` / `choco install postgresql`).
+// Output: backups/workx-YYYY-MM-DD-HH-MM-SS.json.gz
 //
-// Aanbevolen: draai dit minimaal wekelijks en kopieer het bestand naar
-// Google Drive / externe locatie voor off-site backup (Supabase eigen
-// retention is 7 dagen op gratis tier).
+// Restore: zie docs/RESTORE.md (scripts/restore-db.ts is nog manueel werk
+// per tabel — voor 'nuclear' restore is Supabase PITR sneller).
 
 import { spawn } from 'child_process'
 import zlib from 'zlib'
 import fs from 'fs'
 import path from 'path'
+import { PrismaClient } from '@prisma/client'
+
+// Lichte env-loader — leest .env / .env.local zonder externe dependency
+function loadEnv(file: string) {
+  try {
+    const content = fs.readFileSync(file, 'utf8')
+    for (const line of content.split(/\r?\n/)) {
+      const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+      if (!m) continue
+      const key = m[1]
+      let val = m[2]
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1)
+      }
+      if (!process.env[key]) process.env[key] = val
+    }
+  } catch {}
+}
+loadEnv(path.join(process.cwd(), '.env.local'))
+loadEnv(path.join(process.cwd(), '.env'))
 
 async function main() {
-  const url = process.env.DATABASE_URL
-  if (!url) {
-    console.error('DATABASE_URL niet gezet in env. Stop.')
+  if (!process.env.DATABASE_URL) {
+    console.error('DATABASE_URL niet gezet. Stop.')
     process.exit(1)
   }
 
+  const prisma = new PrismaClient()
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
   const dir = path.join(process.cwd(), 'backups')
   fs.mkdirSync(dir, { recursive: true })
-  const outFile = path.join(dir, `workx-${stamp}.sql.gz`)
+  const outFile = path.join(dir, `workx-${stamp}.json.gz`)
 
-  console.log('▸ pg_dump start...')
-  console.log(`  bestand: ${outFile}`)
+  console.log(`▸ Backup naar ${outFile}`)
 
-  // Pooler-URL (port 6543) ondersteunt geen pg_dump. Forceer directe connectie
-  // via port 5432 als de URL via supabase pooler loopt.
-  let dumpUrl = url
-  if (url.includes('pooler.supabase.com:6543')) {
-    dumpUrl = url
-      .replace('pooler.supabase.com:6543', 'pooler.supabase.com:5432')
-      .replace('-pooler.', '.')
-    console.log('  (pooler-URL omgezet naar directe connectie voor pg_dump)')
+  // Verzamel alle model-namen uit Prisma client (DMMF metadata)
+  const dmmf = (prisma as any)._runtimeDataModel
+  const modelNames: string[] = Object.keys(dmmf?.models || {})
+  if (modelNames.length === 0) {
+    // Fallback: hardcode lijst (mocht DMMF wegvallen)
+    console.warn('Geen DMMF gevonden — gebruik findAllRecords via Prisma raw query is geen optie.')
+    process.exit(1)
   }
 
-  const args = [
-    '--no-owner',
-    '--clean',
-    '--if-exists',
-    '--quote-all-identifiers',
-    dumpUrl,
-  ]
+  console.log(`  ${modelNames.length} tabellen gevonden`)
 
-  const dump = spawn('pg_dump', args, { stdio: ['ignore', 'pipe', 'pipe'] })
-  const gzip = zlib.createGzip({ level: 9 })
-  const out = fs.createWriteStream(outFile)
-  dump.stdout.pipe(gzip).pipe(out)
+  const backup: { meta: any; data: Record<string, unknown[]> } = {
+    meta: {
+      generatedAt: new Date().toISOString(),
+      modelCount: modelNames.length,
+      schema: 'workx-dashboard',
+    },
+    data: {},
+  }
 
-  let stderrBuf = ''
-  dump.stderr.on('data', (chunk) => { stderrBuf += chunk.toString() })
+  let totalRecords = 0
+  for (const modelName of modelNames) {
+    const camel = modelName[0].toLowerCase() + modelName.slice(1)
+    const delegate = (prisma as any)[camel]
+    if (!delegate?.findMany) {
+      console.warn(`  ⚠ ${modelName}: geen findMany delegate — skip`)
+      continue
+    }
+    try {
+      const records = await delegate.findMany({})
+      backup.data[modelName] = records
+      totalRecords += records.length
+      process.stdout.write(`  · ${modelName}: ${records.length}\n`)
+    } catch (err: any) {
+      console.warn(`  ⚠ ${modelName}: ${err.message?.split('\n')[0]}`)
+    }
+  }
 
-  await new Promise<void>((resolve, reject) => {
-    out.on('finish', () => resolve())
-    out.on('error', reject)
-    dump.on('error', reject)
-    dump.on('exit', (code) => {
-      if (code !== 0) {
-        reject(new Error(`pg_dump exit ${code}: ${stderrBuf}`))
-      }
+  await prisma.$disconnect()
+
+  // Serialize + gzip naar disk
+  const json = JSON.stringify(backup, (_key, value) => {
+    if (typeof value === 'bigint') return value.toString()
+    if (value instanceof Date) return value.toISOString()
+    return value
+  })
+  const buf = await new Promise<Buffer>((resolve, reject) => {
+    zlib.gzip(json, { level: 9 }, (err, result) => {
+      if (err) reject(err)
+      else resolve(result)
     })
   })
+  fs.writeFileSync(outFile, buf)
 
-  const stats = fs.statSync(outFile)
-  const mb = (stats.size / 1024 / 1024).toFixed(2)
-  console.log(`\n✓ Backup klaar (${mb} MB)`)
-  console.log('\nVergeet niet:')
-  console.log('  1. Kopieer naar Google Drive / externe schijf')
-  console.log('  2. Test af en toe een restore (zie docs/RESTORE.md)')
+  const mb = (buf.length / 1024 / 1024).toFixed(2)
+  console.log(`\n✓ Backup klaar`)
+  console.log(`  bestand: ${outFile}`)
+  console.log(`  grootte: ${mb} MB`)
+  console.log(`  records: ${totalRecords.toLocaleString('nl-NL')} over ${Object.keys(backup.data).length} tabellen`)
+  console.log(`\nVergeet niet:`)
+  console.log(`  1. Kopieer naar Google Drive / externe schijf`)
+  console.log(`  2. Supabase Pro heeft 7 dagen PITR — dit is je extra off-site verzekering`)
 }
 
-main().catch(err => { console.error(err.message || err); process.exit(1) })
+main().catch(err => {
+  console.error('FOUT:', err.message || err)
+  process.exit(1)
+})
