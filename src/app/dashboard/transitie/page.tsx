@@ -55,6 +55,7 @@ interface SavedCalculation {
   isPensionAge: boolean
   notes?: string | null
   multiplier?: number | null
+  clientParty?: string | null
 }
 
 interface FormState {
@@ -77,7 +78,7 @@ interface FormState {
   isPensionAge: boolean
   pensionDate: string
   notes: string
-  multiplier: string
+  clientParty: 'werknemer' | 'werkgever' | 'beide' | ''
 }
 
 const initialForm: FormState = {
@@ -100,7 +101,7 @@ const initialForm: FormState = {
   isPensionAge: false,
   pensionDate: '',
   notes: '',
-  multiplier: '1',
+  clientParty: '',
 }
 
 export default function TransitiePage() {
@@ -171,14 +172,26 @@ export default function TransitiePage() {
     return totalBonus / divisor
   }
 
-  const calculate = () => {
-    if (!form.startDate || !form.endDate || !form.salary) {
-      return toast.error('Vul alle verplichte velden in')
-    }
+  // Pure compute: gebruikt form-velden + override einddatum.
+  // Retourneert null bij onvolledige invoer of ongeldige datum.
+  const computeFor = (endDateStr: string): {
+    years: number
+    months: number
+    days: number
+    totalMonths: number
+    amount: number
+    amountBeforeMax: number
+    totalSalary: number
+    yearlySalary: number
+    bonusPerMonth: number
+    maxApplied: boolean
+    maxUsed: number
+  } | null => {
+    if (!form.startDate || !endDateStr || !form.salary) return null
 
     const start = new Date(form.startDate)
-    const end = new Date(form.endDate)
-    if (end <= start) return toast.error('Einddatum moet na startdatum')
+    const end = new Date(endDateStr)
+    if (end <= start) return null
 
     // Calculate total months including partial months (pro rata per dag)
     let fullMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
@@ -247,7 +260,7 @@ export default function TransitiePage() {
       maxApplied = true
     }
 
-    setResult({
+    return {
       years,
       months,
       days: extraDays,
@@ -259,14 +272,47 @@ export default function TransitiePage() {
       bonusPerMonth: Math.round(bonusPerMonth * 100) / 100,
       maxApplied,
       maxUsed: Math.round(maxUsed * 100) / 100,
-    })
-    toast.success('Berekend')
+    }
   }
 
-  const saveCalculation = async () => {
-    if (!result) return
+  // What-if state: factor + einddatum-override voor het speel-paneel rechts.
+  // Worden gereset wanneer er een nieuwe berekening wordt gestart of geladen.
+  const [whatIfMultiplier, setWhatIfMultiplier] = useState<number>(1)
+  const [whatIfEndDate, setWhatIfEndDate] = useState<string>('')
 
-    const calculationData = {
+  // Berekent live bedrag o.b.v. whatIf-overrides — zonder DB-write.
+  const liveResult = (() => {
+    if (!result) return null
+    const effEnd = whatIfEndDate || form.endDate
+    if (effEnd === form.endDate && whatIfMultiplier === 1) return result
+    const base = computeFor(effEnd)
+    return base
+  })()
+
+  const calculate = async () => {
+    if (!form.startDate || !form.endDate || !form.salary) {
+      return toast.error('Vul alle verplichte velden in')
+    }
+
+    const start = new Date(form.startDate)
+    const end = new Date(form.endDate)
+    if (end <= start) return toast.error('Einddatum moet na startdatum')
+
+    const computed = computeFor(form.endDate)
+    if (!computed) return toast.error('Berekening mislukt')
+
+    setResult(computed)
+    setWhatIfMultiplier(1)
+    setWhatIfEndDate(form.endDate)
+
+    // Auto-opslaan zodat de basis-TV direct in de lijst staat
+    await saveBaseCalculation(computed)
+  }
+
+  // Persisteert basis-TV (factor 1, originele einddatum). Wordt aangeroepen
+  // direct na berekenen — pure TV, geen beëindigingsvergoeding.
+  const saveBaseCalculation = async (computed: NonNullable<typeof result>) => {
+    const data = {
       employerName: form.employerName,
       employeeName: form.employeeName,
       startDate: form.startDate,
@@ -285,44 +331,103 @@ export default function TransitiePage() {
       bonusOther: parseFloat(form.bonusOther) || 0,
       overtime: parseFloat(form.overtime) || 0,
       other: parseFloat(form.other) || 0,
-      totalSalary: result.totalSalary,
-      yearlySalary: result.yearlySalary,
-      amount: result.amount,
-      amountBeforeMax: result.amountBeforeMax,
-      years: result.years,
-      months: result.months,
-      days: result.days,
-      totalMonths: result.totalMonths,
+      totalSalary: computed.totalSalary,
+      yearlySalary: computed.yearlySalary,
+      amount: computed.amount,
+      amountBeforeMax: computed.amountBeforeMax,
+      years: computed.years,
+      months: computed.months,
+      days: computed.days,
+      totalMonths: computed.totalMonths,
       isPensionAge: form.isPensionAge,
       notes: form.notes?.trim() || null,
-      multiplier: parseFloat(form.multiplier) || 1,
+      multiplier: 1,
+      clientParty: form.clientParty || null,
     }
-
     try {
       if (editingId) {
         const res = await fetch(`/api/transitie/${editingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(calculationData)
+          body: JSON.stringify(data),
         })
         if (!res.ok) throw new Error('Kon niet bijwerken')
         const updated = await res.json()
         setSavedCalculations(prev => prev.map(c => c.id === editingId ? updated : c))
-        setEditingId(null)
         toast.success('Berekening bijgewerkt')
       } else {
         const res = await fetch('/api/transitie', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(calculationData)
+          body: JSON.stringify(data),
         })
         if (!res.ok) throw new Error('Kon niet opslaan')
         const newCalc = await res.json()
         setSavedCalculations(prev => [newCalc, ...prev])
+        setEditingId(newCalc.id)
         toast.success('Berekening opgeslagen')
       }
-    } catch (error) {
-      console.error('Error saving calculation:', error)
+    } catch (e) {
+      console.error('saveBase failed', e)
+      toast.error('Opslaan mislukt')
+    }
+  }
+
+  // Slaat de huidige what-if variant op (factor + einddatum-override) als
+  // NIEUWE record. Dit is per definitie geen TV maar een beëindigingsvergoeding.
+  const saveVariant = async () => {
+    if (!result || !liveResult) return
+    const isVariant = whatIfMultiplier !== 1 || (whatIfEndDate && whatIfEndDate !== form.endDate)
+    if (!isVariant) {
+      toast.error('Pas eerst factor of einddatum aan om een variant te maken')
+      return
+    }
+    const effEnd = whatIfEndDate || form.endDate
+    const variantAmount = Math.round(liveResult.amount * whatIfMultiplier * 100) / 100
+    const data = {
+      employerName: form.employerName,
+      employeeName: form.employeeName,
+      startDate: form.startDate,
+      endDate: effEnd,
+      salary: parseFloat(form.salary),
+      vacationMoney: form.vacationMoney,
+      vacationPercent: parseFloat(form.vacationPercent),
+      thirteenthMonth: form.thirteenthMonth,
+      bonusType: form.bonusType,
+      bonusFixed: parseFloat(form.bonusFixed) || 0,
+      bonusYears: {
+        year1: parseFloat(form.bonusYear1) || 0,
+        year2: parseFloat(form.bonusYear2) || 0,
+        year3: parseFloat(form.bonusYear3) || 0,
+      },
+      bonusOther: parseFloat(form.bonusOther) || 0,
+      overtime: parseFloat(form.overtime) || 0,
+      other: parseFloat(form.other) || 0,
+      totalSalary: liveResult.totalSalary,
+      yearlySalary: liveResult.yearlySalary,
+      amount: variantAmount,
+      amountBeforeMax: liveResult.amountBeforeMax,
+      years: liveResult.years,
+      months: liveResult.months,
+      days: liveResult.days,
+      totalMonths: liveResult.totalMonths,
+      isPensionAge: form.isPensionAge,
+      notes: form.notes?.trim() || null,
+      multiplier: whatIfMultiplier,
+      clientParty: form.clientParty || null,
+    }
+    try {
+      const res = await fetch('/api/transitie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Kon niet opslaan')
+      const newCalc = await res.json()
+      setSavedCalculations(prev => [newCalc, ...prev])
+      toast.success('Variant opgeslagen')
+    } catch (e) {
+      console.error('saveVariant failed', e)
       toast.error('Opslaan mislukt')
     }
   }
@@ -348,8 +453,10 @@ export default function TransitiePage() {
       isPensionAge: calc.isPensionAge,
       pensionDate: (calc as any).pensionDate || '',
       notes: calc.notes || '',
-      multiplier: (calc.multiplier ?? 1).toString(),
+      clientParty: (calc.clientParty as any) || '',
     })
+    setWhatIfMultiplier(calc.multiplier ?? 1)
+    setWhatIfEndDate(calc.endDate)
     setResult({
       years: calc.years,
       months: calc.months,
@@ -391,6 +498,8 @@ export default function TransitiePage() {
     setForm(initialForm)
     setResult(null)
     setEditingId(null)
+    setWhatIfMultiplier(1)
+    setWhatIfEndDate('')
   }
 
   const formatCurrency = (n: number) =>
@@ -701,6 +810,41 @@ export default function TransitiePage() {
               </span>
             )}
           </h2>
+
+          {/* Wie is de klant? — bepaalt toon en framing van de berekening */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Voor welke partij is deze berekening?</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { key: 'werknemer', label: 'Werknemer' },
+                { key: 'werkgever', label: 'Werkgever' },
+                { key: 'beide', label: 'Beide partijen' },
+              ] as const).map((opt) => {
+                const active = form.clientParty === opt.key
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setForm({ ...form, clientParty: active ? '' : opt.key })}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                      active
+                        ? 'bg-purple-500/20 border-purple-500/40 text-purple-200'
+                        : 'bg-white/5 border-white/10 text-white/70 hover:border-white/20'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+            {form.clientParty && (
+              <p className="text-xs text-white/40 mt-1.5">
+                {form.clientParty === 'werknemer' && 'Berekening wordt opgesteld t.b.v. de werknemer.'}
+                {form.clientParty === 'werkgever' && 'Berekening wordt opgesteld t.b.v. de werkgever.'}
+                {form.clientParty === 'beide' && 'Berekening voor beide partijen — neutrale toon.'}
+              </p>
+            )}
+          </div>
 
           {/* Werkgever / Werknemer */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1131,23 +1275,6 @@ export default function TransitiePage() {
             )}
           </div>
 
-          {/* Factor */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Factor</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                step="0.05"
-                min="0.5"
-                max="5"
-                value={form.multiplier}
-                onChange={(e) => setForm({ ...form, multiplier: e.target.value })}
-                className="w-24 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none tabular-nums"
-              />
-              <span className="text-xs text-white/40">× wettelijke transitievergoeding</span>
-            </div>
-          </div>
-
           {/* Notitie-veld */}
           <div>
             <label className="block text-sm text-gray-400 mb-1.5 flex items-center gap-2">
@@ -1174,7 +1301,7 @@ export default function TransitiePage() {
               className="flex-1 btn-primary flex items-center justify-center gap-2"
             >
               <Icons.calculator size={16} />
-              Bereken transitievergoeding
+              {editingId ? 'Herbereken & bijwerken' : 'Bereken & opslaan'}
             </button>
           </div>
         </div>
@@ -1183,48 +1310,141 @@ export default function TransitiePage() {
         <div className="lg:col-span-2 space-y-6">
           {result ? (
             <div className="card p-6 space-y-6 sticky top-8">
-              {/* Main result */}
+              {/* Main result — wettelijke TV blijft hier altijd puur staan */}
               <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 p-6 text-center">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
                 <div className="relative">
-                  {(() => {
-                    const mult = parseFloat(form.multiplier) || 1
-                    const withMultiplier = result.amount * mult
-                    if (mult === 1) {
-                      return (
-                        <>
-                          <p className="text-sm text-gray-400 mb-2">Transitievergoeding</p>
-                          <p className="text-4xl font-semibold text-purple-400 mb-1">
-                            {formatCurrency(result.amount)}
-                          </p>
-                          {result.maxApplied && (
-                            <p className="text-xs text-orange-400 mt-2">
-                              Maximum toegepast ({formatCurrency(result.maxUsed)})
-                            </p>
-                          )}
-                        </>
-                      )
-                    }
-                    return (
-                      <>
-                        <p className="text-sm text-gray-400 mb-2">Wettelijke vergoeding</p>
-                        <p className="text-xl font-medium text-white/80 mb-1 line-through decoration-white/20">
-                          {formatCurrency(result.amount)}
-                        </p>
-                        <p className="text-xs text-purple-300 mt-2 mb-0.5">× {mult}</p>
-                        <p className="text-4xl font-semibold text-purple-400">
-                          {formatCurrency(withMultiplier)}
-                        </p>
-                        {result.maxApplied && (
-                          <p className="text-xs text-orange-400 mt-2">
-                            Maximum toegepast op wettelijk deel ({formatCurrency(result.maxUsed)})
-                          </p>
-                        )}
-                      </>
-                    )
-                  })()}
+                  <p className="text-[11px] uppercase tracking-wider text-purple-300/80 font-semibold mb-1">Transitievergoeding</p>
+                  <p className="text-xs text-white/40 mb-2">art. 7:673 BW — 1/3 maandsalaris per dienstjaar</p>
+                  <p className="text-4xl font-semibold text-purple-400 mb-1">
+                    {formatCurrency(result.amount)}
+                  </p>
+                  {result.maxApplied && (
+                    <p className="text-xs text-orange-400 mt-2">
+                      Maximum toegepast ({formatCurrency(result.maxUsed)})
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {/* Speel-paneel: factor + einddatum overrides → beëindigingsvergoeding */}
+              {(() => {
+                const isVariant = whatIfMultiplier !== 1 || (whatIfEndDate && whatIfEndDate !== form.endDate)
+                const live = liveResult || result
+                const variantAmount = live.amount * whatIfMultiplier
+                const baseEnd = form.endDate ? new Date(form.endDate) : new Date()
+                const minDate = form.startDate ? new Date(new Date(form.startDate).getTime() + 30 * 86400000) : undefined
+                return (
+                  <div className="rounded-xl bg-gradient-to-br from-amber-500/8 to-orange-500/5 border border-amber-500/20 p-5 space-y-4">
+                    <div className="flex items-start gap-2">
+                      <Icons.sparkles size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-amber-200">Speel met scenario&apos;s</p>
+                        <p className="text-xs text-white/50 leading-snug">
+                          Pas factor of einddatum aan om de impact te zien. TV hierboven blijft altijd het wettelijke bedrag.
+                          Met een factor &gt; 1 wordt het een <strong className="text-amber-300">beëindigingsvergoeding</strong>.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Factor-slider */}
+                    <div>
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <label className="text-xs text-white/70">Factor</label>
+                        <span className="text-sm font-semibold text-amber-300 tabular-nums">× {whatIfMultiplier.toFixed(2)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="3"
+                        step="0.05"
+                        value={whatIfMultiplier}
+                        onChange={(e) => setWhatIfMultiplier(parseFloat(e.target.value))}
+                        className="w-full accent-amber-400"
+                      />
+                      <div className="flex justify-between text-[10px] text-white/30 mt-0.5">
+                        <span>0.5×</span><span>1×</span><span>2×</span><span>3×</span>
+                      </div>
+                    </div>
+
+                    {/* Einddatum-slider — ± 24 maanden t.o.v. originele einddatum */}
+                    {form.endDate && (() => {
+                      const offsetMonths = whatIfEndDate
+                        ? Math.round((new Date(whatIfEndDate).getTime() - baseEnd.getTime()) / (1000 * 60 * 60 * 24 * 30.44))
+                        : 0
+                      return (
+                        <div>
+                          <div className="flex items-baseline justify-between mb-1.5">
+                            <label className="text-xs text-white/70">Einddatum verschuiven</label>
+                            <span className="text-sm font-semibold text-amber-300 tabular-nums">
+                              {offsetMonths === 0 ? 'origineel' : `${offsetMonths > 0 ? '+' : ''}${offsetMonths} mnd`}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min="-24"
+                            max="24"
+                            step="1"
+                            value={offsetMonths}
+                            onChange={(e) => {
+                              const m = parseInt(e.target.value, 10)
+                              if (m === 0) {
+                                setWhatIfEndDate(form.endDate)
+                              } else {
+                                const d = new Date(baseEnd)
+                                d.setMonth(d.getMonth() + m)
+                                setWhatIfEndDate(formatDateForAPI(d))
+                              }
+                            }}
+                            className="w-full accent-amber-400"
+                            disabled={!minDate}
+                          />
+                          <div className="flex justify-between text-[10px] text-white/30 mt-0.5">
+                            <span>-24m</span><span>origineel ({formatDate(form.endDate)})</span><span>+24m</span>
+                          </div>
+                          {whatIfEndDate && whatIfEndDate !== form.endDate && (
+                            <p className="text-[11px] text-white/50 mt-1">
+                              Nieuwe einddatum: <span className="text-amber-300 font-medium">{formatDate(whatIfEndDate)}</span> ·
+                              {' '}{live.years} jr {live.months} mnd dienst
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
+
+                    {/* Beëindigingsvergoeding-card — alleen als er een variant actief is */}
+                    {isVariant ? (
+                      <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 text-center">
+                        <p className="text-[11px] uppercase tracking-wider text-amber-300/80 font-semibold mb-1">Beëindigingsvergoeding</p>
+                        <p className="text-3xl font-semibold text-amber-300 tabular-nums">{formatCurrency(variantAmount)}</p>
+                        <p className="text-[11px] text-white/50 mt-1">
+                          TV {formatCurrency(live.amount)} × factor {whatIfMultiplier.toFixed(2)}
+                          {whatIfEndDate && whatIfEndDate !== form.endDate && ' · aangepaste einddatum'}
+                        </p>
+                        <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                          <button
+                            onClick={saveVariant}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-sm font-medium transition-colors"
+                          >
+                            <Icons.save size={14} />
+                            Variant opslaan
+                          </button>
+                          <a
+                            href="#opgeslagen-berekeningen"
+                            className="text-[11px] text-white/50 hover:text-white/80 underline-offset-2 hover:underline"
+                          >
+                            Vergelijk in lijst hieronder ↓
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-white/40 text-center italic">
+                        Verschuif een slider om een variant te zien.
+                      </p>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Visuele opbouw maandsalaris — donut */}
               {(() => {
@@ -1358,29 +1578,8 @@ export default function TransitiePage() {
                 )}
               </div>
 
-              {/* Actions */}
+              {/* Actions — Bereken slaat al automatisch op. Hier alleen exports. */}
               <div className="space-y-2">
-                <button
-                  onClick={saveCalculation}
-                  className="btn-primary w-full flex items-center justify-center gap-2"
-                >
-                  <Icons.save size={16} />
-                  {editingId ? 'Berekening bijwerken' : 'Berekening opslaan'}
-                </button>
-                {editingId && (
-                  <button
-                    onClick={async () => {
-                      // Vergeet editingId — volgende save maakt nieuw record
-                      setEditingId(null)
-                      setTimeout(() => saveCalculation(), 0)
-                    }}
-                    className="btn-secondary w-full flex items-center justify-center gap-2 text-purple-300 border border-purple-500/30"
-                    title="Slaat huidige inputs op als nieuwe variant (handig om scenario's te vergelijken)"
-                  >
-                    <Icons.layers size={16} />
-                    Sla op als variant
-                  </button>
-                )}
                 <div className="flex gap-2">
                   <button
                     onClick={() => downloadPDF('nl')}
@@ -1469,6 +1668,8 @@ export default function TransitiePage() {
       </div>
 
       {/* All saved calculations */}
+      <div id="opgeslagen-berekeningen" />
+
       {savedCalculations.length > 0 && (() => {
         const q = listSearch.trim().toLowerCase()
         const filteredCalcs = q

@@ -71,8 +71,9 @@ export async function POST(req: NextRequest) {
       row('Overwerk p/j', ordered.map(c => c.overtime ? fmt(c.overtime) : '—')),
       row('Totaal bruto p/m', ordered.map(c => fmt(c.totalSalary)), { bold: true }),
       row('Jaarsalaris', ordered.map(c => fmt(c.yearlySalary)), { bold: true }),
-      row('Wettelijke vergoeding', ordered.map(c => fmt(c.amount))),
+      row('Wettelijke TV', ordered.map(c => fmt(c.amount))),
       row('Factor', ordered.map(c => `${(c as any).multiplier ?? 1}×`)),
+      row('Type', ordered.map(c => ((c as any).multiplier ?? 1) === 1 ? 'Transitievergoeding' : 'Beëindigingsvergoeding')),
       // Highlight-rij voor het eindbedrag (na multiplier)
       new TableRow({
         children: [
@@ -84,6 +85,16 @@ export async function POST(req: NextRequest) {
         ],
       }),
     ]
+
+    // Partij-indicatie (werknemer/werkgever/beide) — alleen als consistent of vermeld per kolom
+    const parties = ordered.map(c => (c as any).clientParty as string | null)
+    const partyLabel = (p: string | null) =>
+      p === 'werknemer' ? 'T.b.v. werknemer' :
+      p === 'werkgever' ? 'T.b.v. werkgever' :
+      p === 'beide' ? 'Beide partijen' : '—'
+    if (parties.some(p => p)) {
+      dataRows.splice(1, 0, row('Opgesteld voor', parties.map(partyLabel)))
+    }
 
     const comparisonTable = new Table({
       rows: dataRows,

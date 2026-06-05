@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         years: body.years,
         months: body.months,
         multiplier: typeof body.multiplier === 'number' ? body.multiplier : null,
+        clientParty: body.clientParty || null,
         notes: body.notes || null,
       }
     })

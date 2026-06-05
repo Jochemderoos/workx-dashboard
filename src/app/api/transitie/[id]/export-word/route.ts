@@ -49,9 +49,20 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     },
   })
 
+  const mult = (calc as any).multiplier ?? 1
+  const isBeeindigingsvergoeding = mult !== 1
+  const docTitle = isBeeindigingsvergoeding ? 'Beëindigingsvergoeding' : 'Transitievergoeding'
+
+  const clientParty = (calc as any).clientParty as string | null
+  const partySubtitle =
+    clientParty === 'werknemer' ? 'Berekening opgesteld ten behoeve van de werknemer' :
+    clientParty === 'werkgever' ? 'Berekening opgesteld ten behoeve van de werkgever' :
+    clientParty === 'beide' ? 'Berekening voor beide partijen' :
+    null
+
   const children: (Paragraph | Table)[] = [
     new Paragraph({
-      text: 'Berekening transitievergoeding',
+      text: `Berekening ${docTitle.toLowerCase()}`,
       heading: HeadingLevel.TITLE,
       alignment: AlignmentType.CENTER,
     }),
@@ -61,8 +72,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         new TextRun({ text: new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), color: '888888' }),
       ],
       alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
+      spacing: { after: partySubtitle ? 120 : 400 },
     }),
+    ...(partySubtitle ? [new Paragraph({
+      children: [new TextRun({ text: partySubtitle, italics: true, color: '666666' })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 },
+    })] : []),
 
     new Paragraph({ text: 'Partijen', heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }),
     tableSimple([

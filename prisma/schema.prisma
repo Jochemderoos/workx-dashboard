@@ -447,6 +447,7 @@ model TransitieCalculation {
   years            Int
   months           Int
   multiplier       Float?
+  clientParty      String?  // 'werknemer' | 'werkgever' | 'beide'
   notes            String?  @db.Text
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

@@ -15,6 +15,9 @@ export async function main(externalPrisma?: PrismaClient) {
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "TransitieCalculation" ADD COLUMN IF NOT EXISTS "multiplier" DOUBLE PRECISION
     `)
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "TransitieCalculation" ADD COLUMN IF NOT EXISTS "clientParty" TEXT
+    `)
     console.log('[add-transitie-notes] kolommen aanwezig')
   } catch (err) {
     console.error('[add-transitie-notes] mislukt (build gaat door):', err)
