@@ -54,6 +54,7 @@ interface SavedCalculation {
   totalMonths?: number
   isPensionAge: boolean
   notes?: string | null
+  multiplier?: number | null
 }
 
 interface FormState {
@@ -76,6 +77,7 @@ interface FormState {
   isPensionAge: boolean
   pensionDate: string
   notes: string
+  multiplier: string
 }
 
 const initialForm: FormState = {
@@ -98,6 +100,7 @@ const initialForm: FormState = {
   isPensionAge: false,
   pensionDate: '',
   notes: '',
+  multiplier: '1',
 }
 
 export default function TransitiePage() {
@@ -292,6 +295,7 @@ export default function TransitiePage() {
       totalMonths: result.totalMonths,
       isPensionAge: form.isPensionAge,
       notes: form.notes?.trim() || null,
+      multiplier: parseFloat(form.multiplier) || 1,
     }
 
     try {
@@ -344,6 +348,7 @@ export default function TransitiePage() {
       isPensionAge: calc.isPensionAge,
       pensionDate: (calc as any).pensionDate || '',
       notes: calc.notes || '',
+      multiplier: (calc.multiplier ?? 1).toString(),
     })
     setResult({
       years: calc.years,
@@ -611,7 +616,7 @@ export default function TransitiePage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white">Transitievergoeding</h1>
-              <p className="text-sm text-white/60">Bereken de wettelijke transitievergoeding — privé per medewerker.</p>
+              <p className="text-sm text-white/60">Bereken de wettelijke transitievergoeding voor één of meerdere scenario's.</p>
             </div>
           </div>
 
@@ -1126,6 +1131,41 @@ export default function TransitiePage() {
             )}
           </div>
 
+          {/* Multiplier — onderhandelings-/scenario-factor */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5 flex items-center gap-2">
+              <Icons.layers size={14} />
+              Vermenigvuldiger / opslag
+              <span className="text-[10px] text-white/40 font-normal">— wettelijke vergoeding × factor (bv. 1,5× bij ernstig verwijtbaar)</span>
+            </label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="number"
+                step="0.05"
+                min="0.5"
+                max="5"
+                value={form.multiplier}
+                onChange={(e) => setForm({ ...form, multiplier: e.target.value })}
+                className="w-24 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none tabular-nums"
+              />
+              <span className="text-sm text-white/40">×</span>
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10">
+                {['1', '1.25', '1.5', '1.75', '2'].map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setForm({ ...form, multiplier: p })}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                      form.multiplier === p ? 'bg-purple-500/30 text-purple-200' : 'text-white/50 hover:text-white/80'
+                    }`}
+                  >
+                    {p}×
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Notitie-veld */}
           <div>
             <label className="block text-sm text-gray-400 mb-1.5 flex items-center gap-2">
@@ -1165,15 +1205,42 @@ export default function TransitiePage() {
               <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 p-6 text-center">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
                 <div className="relative">
-                  <p className="text-sm text-gray-400 mb-2">Transitievergoeding</p>
-                  <p className="text-4xl font-semibold text-purple-400 mb-1">
-                    {formatCurrency(result.amount)}
-                  </p>
-                  {result.maxApplied && (
-                    <p className="text-xs text-orange-400 mt-2">
-                      Maximum toegepast ({formatCurrency(result.maxUsed)})
-                    </p>
-                  )}
+                  {(() => {
+                    const mult = parseFloat(form.multiplier) || 1
+                    const withMultiplier = result.amount * mult
+                    if (mult === 1) {
+                      return (
+                        <>
+                          <p className="text-sm text-gray-400 mb-2">Transitievergoeding</p>
+                          <p className="text-4xl font-semibold text-purple-400 mb-1">
+                            {formatCurrency(result.amount)}
+                          </p>
+                          {result.maxApplied && (
+                            <p className="text-xs text-orange-400 mt-2">
+                              Maximum toegepast ({formatCurrency(result.maxUsed)})
+                            </p>
+                          )}
+                        </>
+                      )
+                    }
+                    return (
+                      <>
+                        <p className="text-sm text-gray-400 mb-2">Wettelijke vergoeding</p>
+                        <p className="text-xl font-medium text-white/80 mb-1 line-through decoration-white/20">
+                          {formatCurrency(result.amount)}
+                        </p>
+                        <p className="text-xs text-purple-300 mt-2 mb-0.5">× {mult}</p>
+                        <p className="text-4xl font-semibold text-purple-400">
+                          {formatCurrency(withMultiplier)}
+                        </p>
+                        {result.maxApplied && (
+                          <p className="text-xs text-orange-400 mt-2">
+                            Maximum toegepast op wettelijk deel ({formatCurrency(result.maxUsed)})
+                          </p>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
 
@@ -1318,6 +1385,20 @@ export default function TransitiePage() {
                   <Icons.save size={16} />
                   {editingId ? 'Berekening bijwerken' : 'Berekening opslaan'}
                 </button>
+                {editingId && (
+                  <button
+                    onClick={async () => {
+                      // Vergeet editingId — volgende save maakt nieuw record
+                      setEditingId(null)
+                      setTimeout(() => saveCalculation(), 0)
+                    }}
+                    className="btn-secondary w-full flex items-center justify-center gap-2 text-purple-300 border border-purple-500/30"
+                    title="Slaat huidige inputs op als nieuwe variant (handig om scenario's te vergelijken)"
+                  >
+                    <Icons.layers size={16} />
+                    Sla op als variant
+                  </button>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={() => downloadPDF('nl')}
@@ -1684,8 +1765,9 @@ export default function TransitiePage() {
                 const selected = savedCalculations.filter(c => compareIds.has(c.id))
                 if (selected.length < 2) return <p className="text-white/50">Selecteer minimaal 2.</p>
                 const cols = selected.length
-                const minAmount = Math.min(...selected.map(s => s.amount))
-                const maxAmount = Math.max(...selected.map(s => s.amount))
+                const effective = (s: SavedCalculation) => s.amount * (s.multiplier ?? 1)
+                const minAmount = Math.min(...selected.map(effective))
+                const maxAmount = Math.max(...selected.map(effective))
                 const rows: { label: string; values: (string | number)[] }[] = [
                   { label: 'Werkgever', values: selected.map(s => s.employerName || '—') },
                   { label: 'Dienstverband', values: selected.map(s => `${s.years}j ${s.months}m${s.days ? ` ${s.days}d` : ''}`) },
@@ -1695,22 +1777,29 @@ export default function TransitiePage() {
                   { label: 'Bonus', values: selected.map(s => s.bonusType === 'fixed' ? formatCurrency(s.bonusFixed) : s.bonusType === 'average' ? `Avg ${formatCurrency((s.bonusYear1 + s.bonusYear2 + s.bonusYear3) / 3)}/j` : '—') },
                   { label: 'Totaal bruto p/m', values: selected.map(s => formatCurrency(s.totalSalary)) },
                   { label: 'Jaarsalaris', values: selected.map(s => formatCurrency(s.yearlySalary)) },
+                  { label: 'Factor', values: selected.map(s => `${s.multiplier ?? 1}×`) },
+                  { label: 'Met factor', values: selected.map(s => formatCurrency(s.amount * (s.multiplier ?? 1))) },
                 ]
                 return (
                   <div className="space-y-4">
                     {/* Naam-kop + bedrag */}
                     <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
                       {selected.map(s => {
-                        const isMax = s.amount === maxAmount && minAmount !== maxAmount
-                        const isMin = s.amount === minAmount && minAmount !== maxAmount
+                        const eff = effective(s)
+                        const mult = s.multiplier ?? 1
+                        const isMax = eff === maxAmount && minAmount !== maxAmount
+                        const isMin = eff === minAmount && minAmount !== maxAmount
                         return (
                           <div key={s.id} className={`rounded-xl p-4 border ${isMax ? 'border-purple-500/40 bg-purple-500/10' : 'border-white/10 bg-white/5'}`}>
                             <p className="text-xs text-white/50 mb-1">{new Date(s.createdAt).toLocaleDateString('nl-NL')}</p>
                             <p className="text-base font-semibold text-white truncate">{s.employeeName || '—'}</p>
                             {s.employerName && <p className="text-xs text-white/50 truncate">{s.employerName}</p>}
                             <div className="mt-3 pt-3 border-t border-white/10">
-                              <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Transitievergoeding</p>
-                              <p className={`text-2xl font-bold ${isMax ? 'text-purple-300' : isMin ? 'text-white/60' : 'text-white'}`}>{formatCurrency(s.amount)}</p>
+                              <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">
+                                {mult !== 1 ? `Eindbedrag (${mult}×)` : 'Transitievergoeding'}
+                              </p>
+                              <p className={`text-2xl font-bold ${isMax ? 'text-purple-300' : isMin ? 'text-white/60' : 'text-white'}`}>{formatCurrency(eff)}</p>
+                              {mult !== 1 && <p className="text-[10px] text-white/50 mt-0.5">wettelijk: {formatCurrency(s.amount)}</p>}
                               {isMax && <p className="text-[10px] text-purple-300 mt-0.5">Hoogste</p>}
                               {isMin && <p className="text-[10px] text-white/40 mt-0.5">Laagste</p>}
                             </div>

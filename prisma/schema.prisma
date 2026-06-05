@@ -446,6 +446,7 @@ model TransitieCalculation {
   amountBeforeMax  Float
   years            Int
   months           Int
+  multiplier       Float?
   notes            String?  @db.Text
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
     // Sorteer in volgorde van ids
     const ordered = ids.map(id => calcs.find(c => c.id === id)).filter(Boolean) as typeof calcs
     const cols = ordered.length
-    const maxAmount = Math.max(...ordered.map(c => c.amount))
+    const effective = (c: typeof ordered[0]) => c.amount * ((c as any).multiplier ?? 1)
+    const maxAmount = Math.max(...ordered.map(effective))
 
     const cell = (text: string, opts: { bold?: boolean; shading?: string; color?: string } = {}) => new TableCell({
       children: [new Paragraph({ children: [new TextRun({ text, bold: opts.bold, color: opts.color })] })],
@@ -70,13 +71,15 @@ export async function POST(req: NextRequest) {
       row('Overwerk p/j', ordered.map(c => c.overtime ? fmt(c.overtime) : '—')),
       row('Totaal bruto p/m', ordered.map(c => fmt(c.totalSalary)), { bold: true }),
       row('Jaarsalaris', ordered.map(c => fmt(c.yearlySalary)), { bold: true }),
-      // Highlight-rij voor de transitievergoeding
+      row('Wettelijke vergoeding', ordered.map(c => fmt(c.amount))),
+      row('Factor', ordered.map(c => `${(c as any).multiplier ?? 1}×`)),
+      // Highlight-rij voor het eindbedrag (na multiplier)
       new TableRow({
         children: [
-          cell('Transitievergoeding', { bold: true, shading: 'EDE9FE' }),
-          ...ordered.map(c => cell(fmt(c.amount), {
+          cell('Eindbedrag', { bold: true, shading: 'EDE9FE' }),
+          ...ordered.map(c => cell(fmt(effective(c)), {
             bold: true,
-            shading: c.amount === maxAmount && ordered.length > 1 ? 'D8B4FE' : 'EDE9FE',
+            shading: effective(c) === maxAmount && ordered.length > 1 ? 'D8B4FE' : 'EDE9FE',
           })),
         ],
       }),

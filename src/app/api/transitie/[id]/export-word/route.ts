@@ -94,7 +94,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     new Paragraph({ text: 'Wettelijke transitievergoeding', heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 100 } }),
     tableSimple([
       ['Vergoeding vóór maximum', fmt(calc.amountBeforeMax)],
-      ['Toegepast maximum', fmt(calc.amount)],
+      ['Toegepast maximum (wettelijk)', fmt(calc.amount)],
+      ...((calc as any).multiplier && (calc as any).multiplier !== 1 ? [
+        ['Factor / opslag', `${(calc as any).multiplier}×`] as [string, string],
+        ['Eindbedrag (na factor)', fmt(calc.amount * (calc as any).multiplier)] as [string, string],
+      ] : []),
     ]),
   ]
 

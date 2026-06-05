@@ -42,6 +42,7 @@ export async function PATCH(
         amountBeforeMax: body.amountBeforeMax || body.amount,
         years: body.years,
         months: body.months,
+        multiplier: typeof body.multiplier === 'number' ? body.multiplier : null,
         notes: body.notes || null,
       }
     })

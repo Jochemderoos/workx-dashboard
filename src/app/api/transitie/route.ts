@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
         amountBeforeMax: body.amountBeforeMax || body.amount,
         years: body.years,
         months: body.months,
+        multiplier: typeof body.multiplier === 'number' ? body.multiplier : null,
         notes: body.notes || null,
       }
     })
