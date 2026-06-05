@@ -1186,7 +1186,7 @@ export default function TransitiePage() {
                 const baseEnd = form.endDate ? new Date(form.endDate) : new Date()
                 const minDate = form.startDate ? new Date(new Date(form.startDate).getTime() + 30 * 86400000) : undefined
                 return (
-                  <div data-theme="dark" className="rounded-xl bg-slate-900 border border-amber-500/30 p-5 space-y-4">
+                  <div className="card border-amber-500/30 p-5 space-y-4">
                     <div className="flex items-start gap-2">
                       <Icons.layers size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
