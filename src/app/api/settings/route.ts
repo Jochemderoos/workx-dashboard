@@ -11,8 +11,12 @@ const DEFAULT_SETTINGS: Record<string, { value: string; label: string }> = {
   }
 }
 
-// GET - Fetch settings (public for reading, but only certain keys)
+// GET - Fetch settings (alleen voor ingelogde users)
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
   try {
     const { searchParams } = new URL(req.url)
     const key = searchParams.get('key')

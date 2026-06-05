@@ -10,6 +10,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
+  // Workloadgegevens bevat per-medewerker billable/worked uren — alleen managers.
+  const me = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  })
+  if (me?.role !== 'PARTNER' && me?.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+  }
+
   const { searchParams } = new URL(req.url)
   const weeks = parseInt(searchParams.get('weeks') || '4', 10)
 

@@ -5,11 +5,19 @@ import { prisma } from '@/lib/prisma'
 
 const EMPTY_12 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-// GET 2026 financial data - toegankelijk voor alle ingelogde gebruikers
+// GET 2026 financial data — alleen PARTNER/ADMIN. Bevat omzet/kosten/uren.
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
+
+  const me = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  })
+  if (me?.role !== 'PARTNER' && me?.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
   }
 
   try {

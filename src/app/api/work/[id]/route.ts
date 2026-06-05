@@ -3,6 +3,23 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Eigenaar = creator van het workitem OF de assignee. Managers (PARTNER/ADMIN)
+// mogen alles. Voor read mag elke ingelogde gebruiker, voor mutate strikt.
+async function ensureCanMutate(workItemId: string, userId: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const me = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
+  const isManager = me?.role === 'PARTNER' || me?.role === 'ADMIN'
+  if (isManager) return { ok: true }
+  const wi = await prisma.workItem.findUnique({
+    where: { id: workItemId },
+    select: { createdById: true, assigneeId: true },
+  })
+  if (!wi) return { ok: false, status: 404, error: 'Niet gevonden' }
+  if (wi.createdById !== userId && wi.assigneeId !== userId) {
+    return { ok: false, status: 403, error: 'Geen toegang' }
+  }
+  return { ok: true }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -16,35 +33,19 @@ export async function GET(
     const workItem = await prisma.workItem.findUnique({
       where: { id: params.id },
       include: {
-        assignee: {
-          select: {
-            id: true,
-            name: true,
-          }
-        },
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-          }
-        }
+        assignee: { select: { id: true, name: true } },
+        createdBy: { select: { id: true, name: true } },
       }
     })
 
     if (!workItem) {
-      return NextResponse.json(
-        { error: 'Work item not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Work item not found' }, { status: 404 })
     }
 
     return NextResponse.json(workItem)
   } catch (error) {
     console.error('Error fetching work item:', error)
-    return NextResponse.json(
-      { error: 'Kon niet ophalen work item' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Kon niet ophalen work item' }, { status: 500 })
   }
 }
 
@@ -57,6 +58,8 @@ export async function PATCH(
     if (!session?.user) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
+    const auth = await ensureCanMutate(params.id, session.user.id)
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const data = await req.json()
 
@@ -75,28 +78,15 @@ export async function PATCH(
         ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
       },
       include: {
-        assignee: {
-          select: {
-            id: true,
-            name: true,
-          }
-        },
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-          }
-        }
+        assignee: { select: { id: true, name: true } },
+        createdBy: { select: { id: true, name: true } },
       }
     })
 
     return NextResponse.json(workItem)
   } catch (error) {
     console.error('Error updating work item:', error)
-    return NextResponse.json(
-      { error: 'Kon niet bijwerken work item' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Kon niet bijwerken work item' }, { status: 500 })
   }
 }
 
@@ -109,17 +99,14 @@ export async function DELETE(
     if (!session?.user) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
+    const auth = await ensureCanMutate(params.id, session.user.id)
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-    await prisma.workItem.delete({
-      where: { id: params.id }
-    })
+    await prisma.workItem.delete({ where: { id: params.id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting work item:', error)
-    return NextResponse.json(
-      { error: 'Kon niet verwijderen work item' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Kon niet verwijderen work item' }, { status: 500 })
   }
 }

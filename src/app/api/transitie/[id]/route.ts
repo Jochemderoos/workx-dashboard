@@ -14,6 +14,16 @@ export async function PATCH(
   }
 
   try {
+    // Owner-check: alleen wijzigen als de calc van deze gebruiker is.
+    const existing = await prisma.transitieCalculation.findUnique({
+      where: { id: params.id },
+      select: { userId: true },
+    })
+    if (!existing) return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
+    if (existing.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    }
+
     const body = await req.json()
 
     const calculation = await prisma.transitieCalculation.update({
