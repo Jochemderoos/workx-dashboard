@@ -44,7 +44,7 @@ interface WerkoverlegDay {
 const TEAM_MEMBERS = [
   'Hele Team',
   'Marnix', 'Jochem', 'Maaike', 'Bas', 'Juliette', 'Hanna',
-  'Justine', 'Marlieke', 'Wies', 'Emma', 'Alain', 'Kay',
+  'Justine', 'Marlieke', 'Wies', 'Emma', 'Kay',
   'Erika', 'Barbara', 'Julia', 'Heleen', 'Lotte'
 ]
 

@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
 
     // Get all users with their work items
     const users = await prisma.user.findMany({
+      where: { isActive: true },
       select: {
         id: true,
         name: true,
