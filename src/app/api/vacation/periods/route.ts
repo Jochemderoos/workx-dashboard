@@ -42,18 +42,9 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('userId') || session.user.id
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
 
-    // Check if user has admin permissions to view other users' periods
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    })
-
-    const isAdmin = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'OFFICE_MANAGER'
-
-    // Non-admins can only view their own periods
-    if (!isAdmin && userId !== session.user.id) {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
-    }
+    // Vakantie-periodes zijn intern team-info — alle ingelogde gebruikers
+    // mogen ze inzien voor planning. Bewerken blijft alleen voor managers
+    // (zie POST/PATCH/DELETE handlers).
 
     const periods = await prisma.vacationPeriod.findMany({
       where: {

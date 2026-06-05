@@ -213,7 +213,7 @@ export default function VerantwoordelijkPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-8 flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center">
             <Icons.users size={20} className="text-workx-lime" />
@@ -227,6 +227,15 @@ export default function VerantwoordelijkPage() {
             </p>
           </div>
         </div>
+        <a
+          href="/api/partner-tasks/export"
+          download
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-workx-lime/10 hover:bg-workx-lime/20 text-workx-lime text-sm font-medium border border-workx-lime/20 transition-colors"
+          title="Download als Word-document"
+        >
+          <Icons.download size={14} />
+          Download als Word
+        </a>
       </div>
 
       {loading ? (

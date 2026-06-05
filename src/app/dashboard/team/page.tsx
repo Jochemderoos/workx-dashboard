@@ -770,12 +770,12 @@ export default function TeamPage() {
             </div>
           )}
 
-          {/* Vacation Section - only when showFullInfo */}
-          {showFullInfo && employee.vacationBalance && (
+          {/* Vacation Section — voor iedereen zichtbaar voor planning */}
+          {employee.vacationBalance && (
             <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
               <button
-                onClick={() => isManager ? fetchVacationPeriods(employee.id) : null}
-                className={`w-full text-left ${isManager ? 'cursor-pointer group/vac' : ''}`}
+                onClick={() => fetchVacationPeriods(employee.id)}
+                className="w-full text-left cursor-pointer group/vac"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -786,14 +786,12 @@ export default function TeamPage() {
                     {hasParentalLeave && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">O.V.</span>
                     )}
-                    {isManager && (
-                      <Icons.chevronDown
-                        size={14}
-                        className={`text-gray-500 group-hover/vac:text-green-400 transition-all ${
-                          expandedVacationEmployee === employee.id ? 'rotate-180 text-green-400' : ''
-                        }`}
-                      />
-                    )}
+                    <Icons.chevronDown
+                      size={14}
+                      className={`text-gray-500 group-hover/vac:text-green-400 transition-all ${
+                        expandedVacationEmployee === employee.id ? 'rotate-180 text-green-400' : ''
+                      }`}
+                    />
                   </div>
                 </div>
                 <div className="flex justify-between items-start">
