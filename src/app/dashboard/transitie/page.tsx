@@ -723,6 +723,48 @@ export default function TransitiePage() {
                 placeholder="Selecteer datum..."
                 minDate={form.startDate ? new Date(form.startDate) : undefined}
               />
+              {/* Opzegtermijn-suggestie obv startDate (wettelijke termijn werkgever) */}
+              {(() => {
+                if (!form.startDate) return null
+                const start = new Date(form.startDate)
+                const today = new Date()
+                if (start >= today) return null
+                const dienstjaren = (today.getTime() - start.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+                let noticeMonths = 1
+                if (dienstjaren >= 15) noticeMonths = 4
+                else if (dienstjaren >= 10) noticeMonths = 3
+                else if (dienstjaren >= 5) noticeMonths = 2
+                // VSO ondertekend in deze maand → opzegging effectief vanaf
+                // 1e van volgende maand, eindigt aan eind van (huidige maand + noticeMonths)
+                const suggested = new Date(today.getFullYear(), today.getMonth() + noticeMonths + 1, 0)
+                const suggestedIso = formatDateForAPI(suggested)
+                const isAlreadySet = form.endDate === suggestedIso
+                return (
+                  <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-2.5">
+                    <div className="flex items-start gap-2">
+                      <Icons.info size={12} className="text-purple-300 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 text-xs">
+                        <p className="text-white/80 leading-tight">
+                          <span className="font-semibold">Suggestie obv opzegtermijn:</span>{' '}
+                          {suggested.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
+                        <p className="text-white/50 mt-0.5 leading-tight">
+                          {noticeMonths} mnd opzegtermijn (~{Math.floor(dienstjaren)} jr dienst), bij VSO-akkoord deze maand, tegen einde maand.
+                        </p>
+                        {!isAlreadySet && (
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, endDate: suggestedIso })}
+                            className="mt-1.5 text-xs text-purple-300 hover:text-purple-200 underline font-medium"
+                          >
+                            Gebruik deze datum
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
 
