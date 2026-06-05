@@ -132,6 +132,7 @@ export default function TransitiePage() {
     })
   }
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showWhatIfModal, setShowWhatIfModal] = useState(false)
 
   // Load saved calculations from API
   useEffect(() => {
@@ -1423,18 +1424,19 @@ export default function TransitiePage() {
                         </p>
                         <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
                           <button
+                            onClick={() => setShowWhatIfModal(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-sm font-medium transition-colors"
+                          >
+                            <Icons.layers size={14} />
+                            Vergelijk TV ↔ variant
+                          </button>
+                          <button
                             onClick={saveVariant}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-sm font-medium transition-colors"
                           >
                             <Icons.save size={14} />
                             Variant opslaan
                           </button>
-                          <a
-                            href="#opgeslagen-berekeningen"
-                            className="text-[11px] text-white/50 hover:text-white/80 underline-offset-2 hover:underline"
-                          >
-                            Vergelijk in lijst hieronder ↓
-                          </a>
                         </div>
                       </div>
                     ) : (
@@ -1668,7 +1670,6 @@ export default function TransitiePage() {
       </div>
 
       {/* All saved calculations */}
-      <div id="opgeslagen-berekeningen" />
 
       {savedCalculations.length > 0 && (() => {
         const q = listSearch.trim().toLowerCase()
@@ -2010,6 +2011,113 @@ export default function TransitiePage() {
                           ))}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {/* What-if modal: TV (basis) vs huidige variant */}
+      {showWhatIfModal && result && liveResult && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowWhatIfModal(false)}
+        >
+          <div
+            className="w-full max-w-4xl bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden"
+            style={{ maxHeight: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <Icons.layers size={20} className="text-purple-300" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Transitievergoeding vs variant</h3>
+                  <p className="text-xs text-white/50">{form.employeeName || 'Berekening'}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowWhatIfModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white">
+                <Icons.x size={20} />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1">
+              {(() => {
+                const tvAmount = result.amount
+                const variantAmount = liveResult.amount * whatIfMultiplier
+                const diff = variantAmount - tvAmount
+                const effEnd = whatIfEndDate || form.endDate
+                const rows: { label: string; tv: string; variant: string }[] = [
+                  { label: 'Type', tv: 'Transitievergoeding', variant: whatIfMultiplier !== 1 ? 'Beëindigingsvergoeding' : 'Transitievergoeding' },
+                  { label: 'Einddatum', tv: formatDate(form.endDate), variant: formatDate(effEnd) },
+                  { label: 'Dienstverband', tv: `${result.years}j ${result.months}m${result.days ? ` ${result.days}d` : ''}`, variant: `${liveResult.years}j ${liveResult.months}m${liveResult.days ? ` ${liveResult.days}d` : ''}` },
+                  { label: 'Basissalaris (p/m)', tv: formatCurrency(parseFloat(form.salary) || 0), variant: formatCurrency(parseFloat(form.salary) || 0) },
+                  { label: 'Jaarsalaris', tv: formatCurrency(result.yearlySalary), variant: formatCurrency(liveResult.yearlySalary) },
+                  { label: 'Factor', tv: '1×', variant: `${whatIfMultiplier.toFixed(2)}×` },
+                ]
+                return (
+                  <div className="space-y-4">
+                    {/* Twee kop-cards naast elkaar */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* TV-card */}
+                      <div className="rounded-xl p-4 border border-purple-500/30 bg-purple-500/10">
+                        <p className="text-[10px] uppercase tracking-wider text-purple-300/80 font-semibold mb-1">Wettelijke TV</p>
+                        <p className="text-xs text-white/50 mb-3">1/3 maandsalaris per dienstjaar</p>
+                        <p className="text-3xl font-bold text-purple-300 tabular-nums">{formatCurrency(tvAmount)}</p>
+                        <p className="text-[11px] text-white/40 mt-1">art. 7:673 BW</p>
+                      </div>
+                      {/* Variant-card */}
+                      <div className={`rounded-xl p-4 border ${whatIfMultiplier !== 1 ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-white/5'}`}>
+                        <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${whatIfMultiplier !== 1 ? 'text-amber-300/80' : 'text-white/50'}`}>
+                          {whatIfMultiplier !== 1 ? 'Beëindigingsvergoeding' : 'Aangepaste TV'}
+                        </p>
+                        <p className="text-xs text-white/50 mb-3">
+                          {whatIfMultiplier !== 1 ? `TV × factor ${whatIfMultiplier.toFixed(2)}` : 'Andere einddatum, factor 1×'}
+                        </p>
+                        <p className={`text-3xl font-bold tabular-nums ${whatIfMultiplier !== 1 ? 'text-amber-300' : 'text-white'}`}>{formatCurrency(variantAmount)}</p>
+                        {diff !== 0 && (
+                          <p className={`text-[11px] mt-1 font-medium ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {diff > 0 ? '+' : ''}{formatCurrency(diff)} vs TV
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detail-rijen */}
+                    <div className="rounded-xl border border-white/10 overflow-hidden">
+                      {rows.map((r, idx) => (
+                        <div
+                          key={r.label}
+                          className={`grid gap-3 px-4 py-2.5 items-center ${idx % 2 === 0 ? 'bg-white/[0.02]' : ''}`}
+                          style={{ gridTemplateColumns: '160px 1fr 1fr' }}
+                        >
+                          <span className="text-xs text-white/50 font-medium uppercase tracking-wider">{r.label}</span>
+                          <span className="text-sm text-white">{r.tv}</span>
+                          <span className={`text-sm ${r.tv !== r.variant ? (whatIfMultiplier !== 1 ? 'text-amber-300 font-medium' : 'text-white font-medium') : 'text-white'}`}>{r.variant}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Acties */}
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        onClick={() => { saveVariant(); setShowWhatIfModal(false) }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-sm font-medium transition-colors"
+                      >
+                        <Icons.save size={14} />
+                        Sla variant op
+                      </button>
+                      <button
+                        onClick={() => setShowWhatIfModal(false)}
+                        className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-sm transition-colors"
+                      >
+                        Sluiten
+                      </button>
                     </div>
                   </div>
                 )
