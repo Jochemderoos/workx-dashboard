@@ -356,7 +356,7 @@ export function renderTransitiePdf(doc: jsPDF, data: SingleData | CompareData) {
     setColor(doc, COLOR.textMuted)
     doc.setFontSize(7.5)
     doc.setFont('helvetica', 'bold')
-    doc.text((isEN ? 'COMPARISON  ·  VARIANT' : 'VERGELIJKING  ·  VARIANT'), MARGIN + 6, y, { charSpace: 0.6 })
+    doc.text((isEN ? 'VARIANT' : 'VARIANT'), MARGIN + 6, y, { charSpace: 0.6 })
     y += gapAfterLabel + 2
 
     const colW = (contentWidth - 16 - 6) / 2
