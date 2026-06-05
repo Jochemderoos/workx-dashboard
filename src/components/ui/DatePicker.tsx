@@ -1,15 +1,17 @@
 'use client'
 
-import { forwardRef } from 'react'
+import { forwardRef, useState, useEffect, useRef } from 'react'
 import ReactDatePicker, { registerLocale } from 'react-datepicker'
 import { nl } from 'date-fns/locale'
 import { Icons } from './Icons'
 
-// Custom header voor de calendar: maand + jaar als Workx-gestylde dropdowns
-// (vervangt de native browser-selects die react-datepicker standaard gebruikt
-// bij showMonthDropdown/showYearDropdown).
+// Custom header voor de calendar — vervangt de standaard react-datepicker
+// header (en de lelijke scroll-jaar-lijst) door:
+//   • klikbare maand-knop → 3×4 grid popover
+//   • klikbare jaar-knop → 3×4 grid popover met decade-navigatie
 const MONTHS_NL = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
   'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December']
+const MONTHS_NL_SHORT = ['Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec']
 
 function WorkxDatePickerHeader({
   date,
@@ -29,13 +31,31 @@ function WorkxDatePickerHeader({
   nextMonthButtonDisabled: boolean
 }) {
   const currentYear = date.getFullYear()
-  // Bereik: 100 jaar terug, 20 jaar vooruit — dekt geboortedatums en AOW.
-  const years: number[] = []
-  for (let y = currentYear + 20; y >= currentYear - 100; y--) years.push(y)
-  const selectClass =
-    'bg-workx-dark text-white text-sm font-medium px-2 py-1 rounded-lg border border-white/10 hover:border-workx-lime/30 focus:border-workx-lime/40 focus:outline-none cursor-pointer'
+  const currentMonth = date.getMonth()
+  const [monthOpen, setMonthOpen] = useState(false)
+  const [yearOpen, setYearOpen] = useState(false)
+  // 12-jaar grid — start bij begin van het decennium (e.g. 2020 voor 2026)
+  const [decadeStart, setDecadeStart] = useState(currentYear - (currentYear % 10))
+  const monthRef = useRef<HTMLDivElement>(null)
+  const yearRef = useRef<HTMLDivElement>(null)
+
+  // Klik buiten popovers → sluiten
+  useEffect(() => {
+    if (!monthOpen && !yearOpen) return
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement
+      if (monthOpen && monthRef.current && !monthRef.current.contains(t)) setMonthOpen(false)
+      if (yearOpen && yearRef.current && !yearRef.current.contains(t)) setYearOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [monthOpen, yearOpen])
+
+  const triggerClass =
+    'flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white text-sm font-semibold px-2.5 py-1 rounded-lg border border-white/10 hover:border-workx-lime/30 transition-colors'
+
   return (
-    <div className="flex items-center justify-between gap-2 px-2 pb-2">
+    <div className="flex items-center justify-between gap-2 px-2 pb-3 relative">
       <button
         type="button"
         onClick={decreaseMonth}
@@ -45,26 +65,94 @@ function WorkxDatePickerHeader({
       >
         <Icons.chevronLeft size={16} />
       </button>
+
       <div className="flex items-center gap-1.5">
-        <select
-          value={date.getMonth()}
-          onChange={(e) => changeMonth(parseInt(e.target.value, 10))}
-          className={selectClass}
-        >
-          {MONTHS_NL.map((label, idx) => (
-            <option key={label} value={idx} className="bg-workx-dark">{label}</option>
-          ))}
-        </select>
-        <select
-          value={currentYear}
-          onChange={(e) => changeYear(parseInt(e.target.value, 10))}
-          className={selectClass}
-        >
-          {years.map(y => (
-            <option key={y} value={y} className="bg-workx-dark">{y}</option>
-          ))}
-        </select>
+        {/* Maand-knop + popover */}
+        <div ref={monthRef} className="relative">
+          <button type="button" onClick={() => { setMonthOpen(!monthOpen); setYearOpen(false) }} className={triggerClass}>
+            {MONTHS_NL[currentMonth]}
+            <Icons.chevronDown size={12} className={`transition-transform ${monthOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {monthOpen && (
+            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 p-2 bg-workx-dark border border-white/10 rounded-xl shadow-2xl">
+              <div className="grid grid-cols-3 gap-1 w-48">
+                {MONTHS_NL_SHORT.map((label, idx) => {
+                  const isActive = idx === currentMonth
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => { changeMonth(idx); setMonthOpen(false) }}
+                      className={`px-2 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        isActive ? 'bg-workx-lime text-black' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Jaar-knop + popover met decade-grid */}
+        <div ref={yearRef} className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setYearOpen(!yearOpen)
+              setMonthOpen(false)
+              setDecadeStart(currentYear - (currentYear % 10))
+            }}
+            className={triggerClass}
+          >
+            {currentYear}
+            <Icons.chevronDown size={12} className={`transition-transform ${yearOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {yearOpen && (
+            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 p-2 bg-workx-dark border border-white/10 rounded-xl shadow-2xl">
+              <div className="flex items-center justify-between gap-1 mb-1.5 px-1">
+                <button
+                  type="button"
+                  onClick={() => setDecadeStart(decadeStart - 10)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-workx-lime hover:bg-white/5"
+                  aria-label="Vorig decennium"
+                >
+                  <Icons.chevronLeft size={14} />
+                </button>
+                <span className="text-xs text-white/60 font-medium">{decadeStart} – {decadeStart + 11}</span>
+                <button
+                  type="button"
+                  onClick={() => setDecadeStart(decadeStart + 10)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-workx-lime hover:bg-white/5"
+                  aria-label="Volgend decennium"
+                >
+                  <Icons.chevronRight size={14} />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-1 w-48">
+                {Array.from({ length: 12 }, (_, i) => decadeStart + i).map(y => {
+                  const isActive = y === currentYear
+                  return (
+                    <button
+                      key={y}
+                      type="button"
+                      onClick={() => { changeYear(y); setYearOpen(false) }}
+                      className={`px-2 py-2 rounded-lg text-sm font-medium tabular-nums transition-colors ${
+                        isActive ? 'bg-workx-lime text-black' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      {y}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
       <button
         type="button"
         onClick={increaseMonth}
