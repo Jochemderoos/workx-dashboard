@@ -428,25 +428,53 @@ export default function TransitiePage() {
     }
   }
 
-  // Download Word-vergelijking TV ↔ variant. Slaat variant eerst op (zodat
-  // beide records bestaan), roept compare-export aan met beide IDs.
+  // Bouwt base+variant payload uit huidige form/result/liveResult. Geen DB-write.
+  const buildWhatIfPayload = () => {
+    if (!result || !liveResult) return null
+    const effEnd = whatIfEndDate || form.endDate
+    return {
+      base: {
+        employerName: form.employerName || null,
+        employeeName: form.employeeName,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        years: result.years,
+        months: result.months,
+        days: result.days,
+        totalSalary: result.totalSalary,
+        yearlySalary: result.yearlySalary,
+        amount: result.amount,
+        multiplier: 1,
+        clientParty: form.clientParty || null,
+      },
+      variant: {
+        employerName: form.employerName || null,
+        employeeName: form.employeeName,
+        startDate: form.startDate,
+        endDate: effEnd,
+        years: liveResult.years,
+        months: liveResult.months,
+        days: liveResult.days,
+        totalSalary: liveResult.totalSalary,
+        yearlySalary: liveResult.yearlySalary,
+        amount: liveResult.amount,
+        multiplier: whatIfMultiplier,
+        clientParty: form.clientParty || null,
+      },
+    }
+  }
+
+  // Download Word-vergelijking TV ↔ variant — slaat NIETS op.
   const downloadWhatIfWord = async () => {
-    if (!editingId) {
-      toast.error('Bereken eerst de TV (auto-opslaan)')
-      return
-    }
     const isVariant = whatIfMultiplier !== 1 || (whatIfEndDate && whatIfEndDate !== form.endDate)
-    if (!isVariant) {
-      toast.error('Pas eerst factor of einddatum aan')
-      return
-    }
+    if (!isVariant) { toast.error('Pas eerst factor of einddatum aan'); return }
+    const payload = buildWhatIfPayload()
+    if (!payload) return
     try {
-      const variant = await persistVariant()
-      if (!variant) throw new Error('variant null')
-      const res = await fetch('/api/transitie/compare-export', {
+      const res = await fetch('/api/transitie/whatif-export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [editingId, variant.id] }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('export failed')
       const blob = await res.blob()
@@ -454,16 +482,148 @@ export default function TransitiePage() {
       const a = document.createElement('a')
       a.href = url
       const slug = (form.employeeName || 'vergelijking').replace(/[^a-z0-9]+/gi, '-').toLowerCase()
-      a.download = `Vergelijking-TV-${slug}-${new Date().toISOString().slice(0, 10)}.docx`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
+      a.download = `Vergelijking-vergoedingen-${slug}-${new Date().toISOString().slice(0, 10)}.docx`
+      document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
-      toast.success('Variant opgeslagen + Word gedownload')
+      toast.success('Word gedownload')
     } catch (e) {
       console.error('downloadWhatIfWord failed', e)
       toast.error('Download mislukt')
     }
+  }
+
+  // Download PDF-vergelijking TV ↔ variant — client-side, slaat NIETS op.
+  const downloadWhatIfPDF = async () => {
+    if (!result || !liveResult) return
+    const isVariant = whatIfMultiplier !== 1 || (whatIfEndDate && whatIfEndDate !== form.endDate)
+    if (!isVariant) { toast.error('Pas eerst factor of einddatum aan'); return }
+    const logoDataUrl = await loadWorkxLogo()
+    const { jsPDF } = await import('jspdf')
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 20
+    const contentWidth = pageWidth - margin * 2
+
+    // Header — zelfde als single PDF
+    drawWorkxLogo(doc, 0, 0, 62, logoDataUrl)
+    const infoX = 68; const infoValueX = 100; let hy = 12
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal')
+    doc.setTextColor(120, 120, 120); doc.text('Aan', infoX, hy)
+    doc.setTextColor(35, 35, 35); doc.text(form.employerName || '—', infoValueX, hy)
+    hy += 6
+    doc.setTextColor(120, 120, 120); doc.text('Datum', infoX, hy)
+    doc.setTextColor(35, 35, 35); doc.text(new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), infoValueX, hy)
+    hy += 6
+    doc.setTextColor(120, 120, 120); doc.text('Betreft', infoX, hy)
+    doc.setTextColor(35, 35, 35); doc.text(form.employeeName || 'Werknemer', infoValueX, hy)
+    const partyLabel = form.clientParty === 'werknemer' ? 'werknemer'
+      : form.clientParty === 'werkgever' ? 'werkgever'
+      : form.clientParty === 'beide' ? 'beide partijen' : null
+    if (partyLabel) {
+      hy += 6
+      doc.setTextColor(120, 120, 120); doc.text('Voor', infoX, hy)
+      doc.setTextColor(35, 35, 35); doc.text(partyLabel, infoValueX, hy)
+    }
+
+    doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3)
+    doc.line(margin, 38, pageWidth - margin, 38)
+    doc.setTextColor(160, 160, 160); doc.setFontSize(7.5); doc.setFont('helvetica', 'italic')
+    doc.text('Gemaakt met de Workx App', margin, 44)
+
+    // Title
+    let y = 58
+    doc.setTextColor(120, 120, 120); doc.setFontSize(9); doc.setFont('helvetica', 'normal')
+    doc.text('VERGELIJKING', margin, y)
+    doc.setTextColor(35, 35, 35); doc.setFontSize(22); doc.setFont('helvetica', 'bold')
+    doc.text('TV TEGENOVER VARIANT', margin, y + 9)
+    doc.setDrawColor(35, 35, 35); doc.setLineWidth(0.6); doc.line(margin, y + 12, margin + 20, y + 12)
+
+    // Twee kolommen met naam-headers
+    y = 90
+    const colW = (contentWidth - 6) / 2
+    const colLeftX = margin
+    const colRightX = margin + colW + 6
+    doc.setFillColor(250, 250, 250)
+    doc.roundedRect(colLeftX, y, colW, 14, 2, 2, 'F')
+    doc.roundedRect(colRightX, y, colW, 14, 2, 2, 'F')
+    doc.setTextColor(100, 100, 100); doc.setFontSize(9); doc.setFont('helvetica', 'normal')
+    doc.text('TRANSITIEVERGOEDING', colLeftX + 4, y + 6)
+    doc.setTextColor(150, 110, 0)
+    doc.text(whatIfMultiplier !== 1 ? 'VARIANT (BEËINDIGINGSVERGOEDING)' : 'VARIANT', colRightX + 4, y + 6)
+    doc.setTextColor(35, 35, 35); doc.setFontSize(9); doc.setFont('helvetica', 'italic')
+    doc.text('art. 7:673 BW · factor 1×', colLeftX + 4, y + 11)
+    doc.text(`factor ${whatIfMultiplier.toFixed(2)}×`, colRightX + 4, y + 11)
+
+    // Detail rows
+    y += 22
+    const tvAmount = result.amount
+    const variantAmount = liveResult.amount * whatIfMultiplier
+    const effEnd = whatIfEndDate || form.endDate
+    const rows: [string, string, string][] = [
+      ['Einddatum', formatDate(form.endDate), formatDate(effEnd)],
+      ['Dienstverband', `${result.years}j ${result.months}m${result.days ? ` ${result.days}d` : ''}`, `${liveResult.years}j ${liveResult.months}m${liveResult.days ? ` ${liveResult.days}d` : ''}`],
+      ['Bruto p/m', formatCurrency(result.totalSalary), formatCurrency(liveResult.totalSalary)],
+      ['Jaarsalaris', formatCurrency(result.yearlySalary), formatCurrency(liveResult.yearlySalary)],
+      ['Wettelijke TV', formatCurrency(result.amount), formatCurrency(liveResult.amount)],
+      ['Factor', '1×', `${whatIfMultiplier.toFixed(2)}×`],
+    ]
+    doc.setFontSize(9)
+    for (let i = 0; i < rows.length; i++) {
+      const [label, tv, vr] = rows[i]
+      if (i % 2 === 0) {
+        doc.setFillColor(248, 248, 248)
+        doc.rect(margin, y - 4, contentWidth, 8, 'F')
+      }
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100)
+      doc.text(label, margin + 4, y)
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(35, 35, 35)
+      doc.text(tv, colLeftX + colW - 4, y, { align: 'right' })
+      doc.text(vr, colRightX + colW - 4, y, { align: 'right' })
+      y += 9
+    }
+
+    // Gele resultaat-banden
+    y += 8
+    const bandH = 22
+    doc.setFillColor(249, 255, 133)
+    doc.roundedRect(colLeftX, y, colW, bandH, 3, 3, 'F')
+    doc.roundedRect(colRightX, y, colW, bandH, 3, 3, 'F')
+    const bandBaseline = y + 14
+    doc.setTextColor(35, 35, 35); doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.text('TRANSITIEVERGOEDING', colLeftX + 4, bandBaseline - 4)
+    doc.text(whatIfMultiplier !== 1 ? 'BEËINDIGINGSVERGOEDING' : 'AANGEPASTE TV', colRightX + 4, bandBaseline - 4)
+    doc.setFontSize(14)
+    doc.text(formatCurrency(tvAmount), colLeftX + colW - 4, bandBaseline + 4, { align: 'right' })
+    doc.text(formatCurrency(variantAmount), colRightX + colW - 4, bandBaseline + 4, { align: 'right' })
+    y += bandH + 6
+
+    // Verschil
+    const diff = variantAmount - tvAmount
+    if (diff !== 0) {
+      doc.setFontSize(10); doc.setFont('helvetica', 'bold')
+      doc.setTextColor(diff > 0 ? 21 : 185, diff > 0 ? 128 : 28, diff > 0 ? 61 : 28)
+      doc.text(`Verschil variant t.o.v. TV: ${diff > 0 ? '+' : ''}${formatCurrency(diff)}`, pageWidth - margin, y, { align: 'right' })
+      y += 8
+    }
+
+    // Disclaimer + footer
+    y += 6
+    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3)
+    doc.line(margin, y, pageWidth - margin, y); y += 5
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(130, 130, 130)
+    const disc = 'Disclaimer: bedragen indicatief. De wettelijke transitievergoeding (art. 7:673 BW) is 1/3 maandsalaris per dienstjaar. Een bedrag boven dit wettelijk minimum heet een beëindigingsvergoeding. Maximum 2026: €102.000 of jaarsalaris indien hoger. Aan deze berekening kunnen geen rechten worden ontleend.'
+    const discLines = doc.splitTextToSize(disc, contentWidth)
+    doc.text(discLines, margin, y)
+
+    const footerY = pageHeight - 14
+    doc.setFillColor(80, 80, 80); doc.rect(0, footerY, pageWidth, 12, 'F')
+    doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'normal')
+    doc.text('Workx advocaten  •  Herengracht 448, 1017 CA Amsterdam  •  +31 (0)20 308 03 20  •  info@workxadvocaten.nl', pageWidth / 2, footerY + 7, { align: 'center' })
+
+    const blob = doc.output('blob')
+    window.open(URL.createObjectURL(blob), '_blank')
   }
 
   const loadCalculation = (calc: SavedCalculation) => {
@@ -559,54 +719,70 @@ export default function TransitiePage() {
     const contentWidth = pageWidth - margin * 2
 
     // === HEADER SECTIE ===
-    // Draw official Workx logo (flush top-left)
-    drawWorkxLogo(doc, 0, 0, 55, logoDataUrl)
+    // Workx-logo iets ruimer dan voorheen voor meer presence
+    drawWorkxLogo(doc, 0, 0, 62, logoDataUrl)
 
-    // Header info rechts van logo
-    const infoX = 60
-    const infoValueX = 95
-    let hy = 10
+    // Header info rechts van logo — uitgelijnd op logo-hoogte
+    const infoX = 68
+    const infoValueX = 100
+    let hy = 12
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(120, 120, 120)
-    doc.text(isEN ? 'To:' : 'Aan:', infoX, hy)
-    doc.setTextColor(40, 40, 40)
-    doc.text(form.employerName || '-', infoValueX, hy)
-    hy += 7
+    doc.text(isEN ? 'To' : 'Aan', infoX, hy)
+    doc.setTextColor(35, 35, 35)
+    doc.text(form.employerName || '—', infoValueX, hy)
+    hy += 6
     doc.setTextColor(120, 120, 120)
-    doc.text(isEN ? 'Date:' : 'Datum:', infoX, hy)
-    doc.setTextColor(40, 40, 40)
+    doc.text(isEN ? 'Date' : 'Datum', infoX, hy)
+    doc.setTextColor(35, 35, 35)
     doc.text(new Date().toLocaleDateString(isEN ? 'en-GB' : 'nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }), infoValueX, hy)
-    hy += 7
+    hy += 6
     doc.setTextColor(120, 120, 120)
-    doc.text(isEN ? 'Re:' : 'Betreft:', infoX, hy)
-    doc.setTextColor(40, 40, 40)
+    doc.text(isEN ? 'Re' : 'Betreft', infoX, hy)
+    doc.setTextColor(35, 35, 35)
     doc.text(form.employeeName || (isEN ? 'Employee' : 'Werknemer'), infoValueX, hy)
-
-    // Tagline
-    doc.setTextColor(160, 160, 160)
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'italic')
-    doc.text(isEN ? 'Generated with the Workx App' : 'Gemaakt met de Workx App', margin, 48)
+    // Optioneel: partij-indicatie
+    const partyLabel = form.clientParty === 'werknemer' ? (isEN ? 'Drafted for employee' : 'Opgesteld voor werknemer')
+      : form.clientParty === 'werkgever' ? (isEN ? 'Drafted for employer' : 'Opgesteld voor werkgever')
+      : form.clientParty === 'beide' ? (isEN ? 'Drafted for both parties' : 'Opgesteld voor beide partijen')
+      : null
+    if (partyLabel) {
+      hy += 6
+      doc.setTextColor(120, 120, 120)
+      doc.text(isEN ? 'For' : 'Voor', infoX, hy)
+      doc.setTextColor(35, 35, 35)
+      doc.text(partyLabel.replace(/^Opgesteld voor |^Drafted for /, ''), infoValueX, hy)
+    }
 
     // Divider lijn
-    doc.setDrawColor(200, 200, 200)
-    doc.setLineWidth(0.4)
-    doc.line(margin, 53, pageWidth - margin, 53)
+    doc.setDrawColor(220, 220, 220)
+    doc.setLineWidth(0.3)
+    doc.line(margin, 38, pageWidth - margin, 38)
+
+    // Tagline onder divider
+    doc.setTextColor(160, 160, 160)
+    doc.setFontSize(7.5)
+    doc.setFont('helvetica', 'italic')
+    doc.text(isEN ? 'Generated with the Workx App' : 'Gemaakt met de Workx App', margin, 44)
 
     // === TITEL SECTIE ===
-    let y = 65
-    doc.setTextColor(100, 100, 100)
-    doc.setFontSize(11)
+    let y = 58
+    doc.setTextColor(120, 120, 120)
+    doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.text(isEN ? 'CALCULATION OF THE' : 'BEREKENING VAN DE', margin, y)
     doc.setTextColor(35, 35, 35)
     doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
-    doc.text(isEN ? 'SEVERANCE PAYMENT' : 'TRANSITIEVERGOEDING', margin, y + 10)
+    doc.text(isEN ? 'SEVERANCE PAYMENT' : 'TRANSITIEVERGOEDING', margin, y + 9)
+    // Subtiele lijn onder titel
+    doc.setDrawColor(35, 35, 35)
+    doc.setLineWidth(0.6)
+    doc.line(margin, y + 12, margin + 20, y + 12)
 
     // === DIENSTVERBAND SECTIE ===
-    y = 95
+    y = 88
     doc.setFillColor(250, 250, 250)
     doc.roundedRect(margin, y - 5, contentWidth, 22, 3, 3, 'F')
 
@@ -674,18 +850,20 @@ export default function TransitiePage() {
     addDataRow(isEN ? 'Reached pension/retirement age' : 'Pensioen-/AOW-leeftijd bereikt', form.isPensionAge ? (isEN ? 'Yes' : 'Ja') : (isEN ? 'No' : 'Nee'))
 
     // === RESULTAAT BOX ===
-    y += 12
-    const boxHeight = 28
+    y += 14
+    const boxHeight = 26
     doc.setFillColor(249, 255, 133) // Workx geel
-    doc.roundedRect(margin, y, contentWidth, boxHeight, 4, 4, 'F')
+    doc.roundedRect(margin, y, contentWidth, boxHeight, 3, 3, 'F')
 
+    // Label + bedrag delen visueel dezelfde baseline (~box center +1)
+    const resultBaseline = y + 16
     doc.setTextColor(35, 35, 35)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
-    doc.text(isEN ? 'Severance payment' : 'Transitievergoeding', margin + 12, y + 12)
+    doc.setFontSize(10.5)
+    doc.text((isEN ? 'Severance payment' : 'Transitievergoeding').toUpperCase(), margin + 10, resultBaseline)
 
     doc.setFontSize(18)
-    doc.text(formatCurrency(result.amount), pageWidth - margin - 12, y + 18, { align: 'right' })
+    doc.text(formatCurrency(result.amount), pageWidth - margin - 10, resultBaseline, { align: 'right' })
 
     y += boxHeight + 6
     if (result.maxApplied) {
@@ -1369,7 +1547,7 @@ export default function TransitiePage() {
                 const baseEnd = form.endDate ? new Date(form.endDate) : new Date()
                 const minDate = form.startDate ? new Date(new Date(form.startDate).getTime() + 30 * 86400000) : undefined
                 return (
-                  <div className="rounded-xl bg-gradient-to-br from-amber-500/8 to-orange-500/5 border border-amber-500/20 p-5 space-y-4">
+                  <div data-theme="dark" className="rounded-xl bg-slate-900 border border-amber-500/30 p-5 space-y-4">
                     <div className="flex items-start gap-2">
                       <Icons.layers size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1">
@@ -1878,6 +2056,7 @@ export default function TransitiePage() {
       {/* What-if modal: TV (basis) vs huidige variant */}
       {showWhatIfModal && result && liveResult && typeof document !== 'undefined' && createPortal(
         <div
+          data-theme="dark"
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowWhatIfModal(false)}
         >
@@ -1892,7 +2071,7 @@ export default function TransitiePage() {
                   <Icons.layers size={20} className="text-purple-300" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Transitievergoeding vs variant</h3>
+                  <h3 className="text-lg font-semibold text-white">TV tegenover variant</h3>
                   <p className="text-xs text-white/50">{form.employeeName || 'Berekening'}</p>
                 </div>
               </div>
