@@ -2139,6 +2139,14 @@ export default function TransitiePage() {
                     {/* Acties */}
                     <div className="flex items-center justify-end gap-2 pt-2 flex-wrap">
                       <button
+                        onClick={async () => { await downloadWhatIfPDF(); setShowWhatIfModal(false) }}
+                        disabled={whatIfMultiplier === 1 && (!whatIfEndDate || whatIfEndDate === form.endDate)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Icons.download size={14} />
+                        Download PDF
+                      </button>
+                      <button
                         onClick={async () => { await downloadWhatIfWord(); setShowWhatIfModal(false) }}
                         disabled={whatIfMultiplier === 1 && (!whatIfEndDate || whatIfEndDate === form.endDate)}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime/15 hover:bg-workx-lime/25 border border-workx-lime/30 text-workx-lime text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
