@@ -41,7 +41,8 @@ export async function PATCH(
         amount: body.amount,
         amountBeforeMax: body.amountBeforeMax || body.amount,
         years: body.years,
-        months: body.months
+        months: body.months,
+        notes: body.notes || null,
       }
     })
 

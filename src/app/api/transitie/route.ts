@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
         amount: body.amount,
         amountBeforeMax: body.amountBeforeMax || body.amount,
         years: body.years,
-        months: body.months
+        months: body.months,
+        notes: body.notes || null,
       }
     })
 

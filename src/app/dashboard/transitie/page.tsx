@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 // jsPDF wordt dynamic geïmporteerd in de PDF-handler — scheelt ~200KB in initial bundle
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -52,6 +53,7 @@ interface SavedCalculation {
   days?: number
   totalMonths?: number
   isPensionAge: boolean
+  notes?: string | null
 }
 
 interface FormState {
@@ -73,6 +75,7 @@ interface FormState {
   other: string
   isPensionAge: boolean
   pensionDate: string
+  notes: string
 }
 
 const initialForm: FormState = {
@@ -94,6 +97,7 @@ const initialForm: FormState = {
   other: '',
   isPensionAge: false,
   pensionDate: '',
+  notes: '',
 }
 
 export default function TransitiePage() {
@@ -113,6 +117,16 @@ export default function TransitiePage() {
   } | null>(null)
   const [savedCalculations, setSavedCalculations] = useState<SavedCalculation[]>([])
   const [listSearch, setListSearch] = useState('')
+  const [compareIds, setCompareIds] = useState<Set<string>>(new Set())
+  const [showCompareModal, setShowCompareModal] = useState(false)
+  const toggleCompare = (id: string) => {
+    setCompareIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else if (next.size < 3) next.add(id) // max 3
+      return next
+    })
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
 
   // Load saved calculations from API
@@ -277,6 +291,7 @@ export default function TransitiePage() {
       days: result.days,
       totalMonths: result.totalMonths,
       isPensionAge: form.isPensionAge,
+      notes: form.notes?.trim() || null,
     }
 
     try {
@@ -328,6 +343,7 @@ export default function TransitiePage() {
       other: calc.other.toString(),
       isPensionAge: calc.isPensionAge,
       pensionDate: (calc as any).pensionDate || '',
+      notes: calc.notes || '',
     })
     setResult({
       years: calc.years,
@@ -1039,6 +1055,21 @@ export default function TransitiePage() {
             )}
           </div>
 
+          {/* Notitie-veld */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1.5 flex items-center gap-2">
+              <Icons.fileText size={14} />
+              Notitie (optioneel)
+            </label>
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              rows={2}
+              placeholder="Bv. scenario A bij bonus van €X, of korte case-context..."
+              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none placeholder:text-white/25 resize-none"
+            />
+          </div>
+
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
             <button onClick={reset} className="btn-secondary flex items-center gap-2">
@@ -1074,6 +1105,76 @@ export default function TransitiePage() {
                   )}
                 </div>
               </div>
+
+              {/* Visuele opbouw maandsalaris — donut */}
+              {(() => {
+                const base = parseFloat(form.salary) || 0
+                const vac = form.vacationMoney ? base * (parseFloat(form.vacationPercent) / 100) : 0
+                const thirteenth = form.thirteenthMonth ? base / 12 : 0
+                const bonus = result.bonusPerMonth || 0
+                const overtime = (parseFloat(form.overtime) || 0) / 12
+                const other = (parseFloat(form.other) || 0) / 12
+                const items = [
+                  { label: 'Basissalaris', value: base, color: '#a78bfa' },
+                  { label: 'Vakantiegeld', value: vac, color: '#34d399' },
+                  { label: '13e maand', value: thirteenth, color: '#fbbf24' },
+                  { label: 'Bonus', value: bonus, color: '#f472b6' },
+                  { label: 'Overwerk', value: overtime, color: '#60a5fa' },
+                  { label: 'Overige', value: other, color: '#a3a3a3' },
+                ].filter(i => i.value > 0)
+                const total = items.reduce((s, i) => s + i.value, 0)
+                if (total === 0 || items.length < 2) return null
+                const radius = 48
+                const circumference = 2 * Math.PI * radius
+                let offset = 0
+                return (
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+                    <p className="text-[10px] uppercase tracking-wider text-white/50 font-semibold mb-3">Opbouw maandsalaris</p>
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-32 h-32 flex-shrink-0">
+                        <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+                          {items.map(it => {
+                            const len = (it.value / total) * circumference
+                            const seg = (
+                              <circle
+                                key={it.label}
+                                cx={60}
+                                cy={60}
+                                r={radius}
+                                fill="transparent"
+                                stroke={it.color}
+                                strokeWidth={14}
+                                strokeDasharray={`${len} ${circumference}`}
+                                strokeDashoffset={-offset}
+                              />
+                            )
+                            offset += len
+                            return seg
+                          })}
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center flex-col">
+                          <p className="text-[9px] text-white/50 uppercase tracking-wider">Bruto p/m</p>
+                          <p className="text-sm font-bold text-white">{formatCurrency(total)}</p>
+                        </div>
+                      </div>
+                      <ul className="flex-1 space-y-1.5 text-xs">
+                        {items.map(it => {
+                          const pct = ((it.value / total) * 100).toFixed(0)
+                          return (
+                            <li key={it.label} className="flex items-center justify-between gap-2">
+                              <span className="flex items-center gap-2 text-white/80">
+                                <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: it.color }} />
+                                {it.label}
+                              </span>
+                              <span className="text-white/50 tabular-nums">{pct}%</span>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Details */}
               <div className="space-y-3">
@@ -1162,6 +1263,17 @@ export default function TransitiePage() {
                     PDF (EN)
                   </button>
                 </div>
+                {editingId && (
+                  <a
+                    href={`/api/transitie/${editingId}/export-word`}
+                    download
+                    className="btn-secondary w-full flex items-center justify-center gap-2"
+                    title="Word — bewerkbaar bestand voor interne notities of basis voor groter advies"
+                  >
+                    <Icons.fileText size={16} />
+                    Word (bewerkbaar)
+                  </a>
+                )}
               </div>
 
               {form.employeeName && (
@@ -1249,7 +1361,25 @@ export default function TransitiePage() {
               Mijn opgeslagen berekeningen
               <span className="text-xs text-white/40 font-normal">({filteredCalcs.length}{q && ` van ${savedCalculations.length}`})</span>
             </h2>
-            <div className="relative w-full sm:w-72">
+            <div className="flex items-center gap-2 flex-wrap">
+              {compareIds.size >= 2 && (
+                <button
+                  onClick={() => setShowCompareModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 text-purple-300 text-sm font-semibold border border-purple-500/40 hover:bg-purple-500/30 transition-colors"
+                >
+                  <Icons.layers size={14} />
+                  Vergelijken ({compareIds.size})
+                </button>
+              )}
+              {compareIds.size > 0 && (
+                <button
+                  onClick={() => setCompareIds(new Set())}
+                  className="text-xs text-white/40 hover:text-white/70 underline"
+                >
+                  Selectie wissen
+                </button>
+              )}
+              <div className="relative w-full sm:w-72">
               <Icons.search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
               <input
                 type="text"
@@ -1267,6 +1397,7 @@ export default function TransitiePage() {
                   <Icons.x size={12} />
                 </button>
               )}
+            </div>
             </div>
           </div>
 
@@ -1301,6 +1432,15 @@ export default function TransitiePage() {
                 </div>
                 <div className="flex gap-3">
                   <button
+                    onClick={() => toggleCompare(calc.id)}
+                    className={`py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
+                      compareIds.has(calc.id) ? 'bg-purple-500/30 text-purple-200 border-purple-500/50' : 'bg-white/5 text-white/60 border-white/10'
+                    }`}
+                    title="Toevoegen aan vergelijking"
+                  >
+                    {compareIds.has(calc.id) ? '✓' : '+'}
+                  </button>
+                  <button
                     onClick={() => loadCalculation(calc)}
                     className="flex-1 py-2 px-3 rounded-lg bg-purple-500/20 text-purple-400 text-sm font-medium"
                   >
@@ -1322,6 +1462,7 @@ export default function TransitiePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
+                  <th className="text-center py-3 px-2 text-gray-400 font-medium w-10" title="Vergelijken"><Icons.layers size={12} /></th>
                   <th className="text-left py-3 px-2 text-gray-400 font-medium">Datum</th>
                   <th className="text-left py-3 px-2 text-gray-400 font-medium">Werkgever</th>
                   <th className="text-left py-3 px-2 text-gray-400 font-medium">Werknemer</th>
@@ -1337,8 +1478,19 @@ export default function TransitiePage() {
                     key={calc.id}
                     className={`border-b border-white/5 hover:bg-white/5 ${
                       editingId === calc.id ? 'bg-purple-500/10' : ''
-                    }`}
+                    } ${compareIds.has(calc.id) ? 'bg-purple-500/5' : ''}`}
                   >
+                    <td className="py-3 px-2 text-center">
+                      <button
+                        onClick={() => toggleCompare(calc.id)}
+                        className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                          compareIds.has(calc.id) ? 'bg-purple-500 border-purple-500' : 'bg-white/5 border-white/20 hover:border-purple-500/50'
+                        }`}
+                        title="Selecteer voor vergelijken"
+                      >
+                        {compareIds.has(calc.id) && <Icons.check size={12} className="text-white" />}
+                      </button>
+                    </td>
                     <td className="py-3 px-2 text-gray-400">
                       <span>{new Date(calc.createdAt).toLocaleDateString('nl-NL')}</span>
                     </td>
@@ -1379,6 +1531,100 @@ export default function TransitiePage() {
         </div>
         )
       })()}
+
+      {/* Vergelijk-modal */}
+      {showCompareModal && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowCompareModal(false)}
+        >
+          <div
+            className="w-full max-w-6xl bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden"
+            style={{ maxHeight: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <Icons.layers size={20} className="text-purple-300" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Berekeningen vergelijken</h3>
+                  <p className="text-xs text-white/50">{compareIds.size} naast elkaar</p>
+                </div>
+              </div>
+              <button onClick={() => setShowCompareModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white">
+                <Icons.x size={20} />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1">
+              {(() => {
+                const selected = savedCalculations.filter(c => compareIds.has(c.id))
+                if (selected.length < 2) return <p className="text-white/50">Selecteer minimaal 2.</p>
+                const cols = selected.length
+                const minAmount = Math.min(...selected.map(s => s.amount))
+                const maxAmount = Math.max(...selected.map(s => s.amount))
+                const rows: { label: string; values: (string | number)[] }[] = [
+                  { label: 'Werkgever', values: selected.map(s => s.employerName || '—') },
+                  { label: 'Dienstverband', values: selected.map(s => `${s.years}j ${s.months}m${s.days ? ` ${s.days}d` : ''}`) },
+                  { label: 'Basissalaris (p/m)', values: selected.map(s => formatCurrency(s.salary)) },
+                  { label: 'Vakantiegeld', values: selected.map(s => s.vacationMoney ? `${s.vacationPercent}%` : '—') },
+                  { label: '13e maand', values: selected.map(s => s.thirteenthMonth ? 'Ja' : '—') },
+                  { label: 'Bonus', values: selected.map(s => s.bonusType === 'fixed' ? formatCurrency(s.bonusFixed) : s.bonusType === 'average' ? `Avg ${formatCurrency((s.bonusYear1 + s.bonusYear2 + s.bonusYear3) / 3)}/j` : '—') },
+                  { label: 'Totaal bruto p/m', values: selected.map(s => formatCurrency(s.totalSalary)) },
+                  { label: 'Jaarsalaris', values: selected.map(s => formatCurrency(s.yearlySalary)) },
+                ]
+                return (
+                  <div className="space-y-4">
+                    {/* Naam-kop + bedrag */}
+                    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+                      {selected.map(s => {
+                        const isMax = s.amount === maxAmount && minAmount !== maxAmount
+                        const isMin = s.amount === minAmount && minAmount !== maxAmount
+                        return (
+                          <div key={s.id} className={`rounded-xl p-4 border ${isMax ? 'border-purple-500/40 bg-purple-500/10' : 'border-white/10 bg-white/5'}`}>
+                            <p className="text-xs text-white/50 mb-1">{new Date(s.createdAt).toLocaleDateString('nl-NL')}</p>
+                            <p className="text-base font-semibold text-white truncate">{s.employeeName || '—'}</p>
+                            {s.employerName && <p className="text-xs text-white/50 truncate">{s.employerName}</p>}
+                            <div className="mt-3 pt-3 border-t border-white/10">
+                              <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Transitievergoeding</p>
+                              <p className={`text-2xl font-bold ${isMax ? 'text-purple-300' : isMin ? 'text-white/60' : 'text-white'}`}>{formatCurrency(s.amount)}</p>
+                              {isMax && <p className="text-[10px] text-purple-300 mt-0.5">Hoogste</p>}
+                              {isMin && <p className="text-[10px] text-white/40 mt-0.5">Laagste</p>}
+                            </div>
+                            {s.notes && (
+                              <div className="mt-3 pt-3 border-t border-white/10">
+                                <p className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1">Notitie</p>
+                                <p className="text-xs text-white/70 italic">{s.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* Detail-rijen */}
+                    <div className="rounded-xl border border-white/10 overflow-hidden">
+                      {rows.map((r, idx) => (
+                        <div
+                          key={r.label}
+                          className={`grid gap-3 px-4 py-2.5 items-center ${idx % 2 === 0 ? 'bg-white/[0.02]' : ''}`}
+                          style={{ gridTemplateColumns: `200px repeat(${cols}, minmax(0, 1fr))` }}
+                        >
+                          <span className="text-xs text-white/50 font-medium uppercase tracking-wider">{r.label}</span>
+                          {r.values.map((v, i) => (
+                            <span key={i} className="text-sm text-white">{v}</span>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
 
       {/* Legal disclaimer */}
       <div className="card p-4 border-white/5">
