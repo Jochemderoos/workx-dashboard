@@ -219,11 +219,14 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword: password.current, newPassword: password.new }),
       })
-      if (!res.ok) throw new Error()
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || `Fout ${res.status}`)
+      }
       toast.success('Wachtwoord gewijzigd')
       setPassword({ current: '', new: '', confirm: '' })
     } catch (e) {
-      toast.error('Kon niet wijzigen')
+      toast.error(e instanceof Error ? e.message : 'Kon wachtwoord niet wijzigen')
     } finally {
       setIsLoading(false)
     }
