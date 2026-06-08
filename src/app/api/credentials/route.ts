@@ -10,16 +10,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    // Alleen PARTNER/ADMIN mogen gedeelde wachtwoorden zien — die kunnen
-    // ook beheren, dus inzicht hoort bij die rollen.
-    const me = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    })
-    if (me?.role !== 'PARTNER' && me?.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
-    }
-
+    // Alle actieve medewerkers hebben toegang tot gedeelde werk-wachtwoorden
+    // (juridische databases, etc.). Beheer (POST/PATCH/DELETE) blijft
+    // beperkt tot PARTNER/ADMIN.
     const credentials = await prisma.sharedCredential.findMany({
       include: { addedBy: { select: { name: true } } },
       orderBy: [{ category: 'asc' }, { service: 'asc' }],
