@@ -139,18 +139,14 @@ export default function WerkverdelingsgesprekkenPage() {
         setWeeks(data.weeks)
         setEmployees(data.employees)
         if (data.weeks.length > 0) {
-          // Active week = huidige werkweek (ma–vr van NU).
-          // Na maandag 10:00 (sluiting 'Mijn werkweek'-venster) springen
-          // we naar de volgende werkweek — dan vullen partners de
-          // gesprekken in voor de week die net is begonnen.
+          // Active week = huidige werkweek (ma–vr van NU). Geen 10:00-jump:
+          // de hele week blijft 'deze week' actief, gebruiker klikt zelf
+          // door naar volgende week wanneer ze die willen invullen.
           const now = new Date()
           const day = now.getDay() // 0=zo, 1=ma, ..., 6=za
           const dayOffset = day === 0 ? -6 : 1 - day // naar maandag
           const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset)
           monday.setHours(0, 0, 0, 0)
-          if (day === 1 && now.getHours() >= 10) {
-            monday.setDate(monday.getDate() + 7)
-          }
           const upperBound = new Date(monday)
           upperBound.setDate(monday.getDate() + 7)
 

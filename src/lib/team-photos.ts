@@ -67,7 +67,6 @@ export const ADVOCATEN = [
   'Marlieke Schipper',
   'Wies van Pesch',
   'Emma van der Vos',
-  'Alain Heunen',
   'Kay Maes',
   'Erika van Zadelhof',
   'Heleen Pesser',
