@@ -37,6 +37,7 @@ import { main as addTransitieNotes } from './add-transitie-notes'
 import { main as addYearPlanTables } from './add-year-plan-tables'
 import { main as addOfficeTasksTables } from './add-office-tasks-tables'
 import { main as addCandidateConnectionsTable } from './add-candidate-connections-table'
+import { main as addDevelopmentPlanItemsTable } from './add-development-plan-items-table'
 import { main as claimLegacyTransitie } from './claim-legacy-transitie'
 
 // Recurring seeds — idempotent en mogelijk nog uitbreidbaar.
@@ -93,6 +94,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-year-plan-tables', run: addYearPlanTables },
   { name: 'add-office-tasks-tables', run: addOfficeTasksTables },
   { name: 'add-candidate-connections-table', run: addCandidateConnectionsTable },
+  { name: 'add-development-plan-items-table', run: addDevelopmentPlanItemsTable },
   { name: 'claim-legacy-transitie', run: claimLegacyTransitie },
   { name: 'seed-partner-tasks', run: seedPartnerTasks },
   { name: 'seed-monthly-costs-2026', run: seedMonthlyCosts2026 },

@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
         user: {
           select: { id: true, name: true, role: true },
         },
+        items: { orderBy: [{ category: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }] },
+        evaluations: { orderBy: { evaluatedAt: 'desc' } },
       },
       orderBy: [{ year: 'desc' }, { createdAt: 'desc' }],
     })

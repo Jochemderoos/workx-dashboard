@@ -889,13 +889,13 @@ export async function GET() {
       // silent
     }
 
-    // Mijn Jaarplan reminder — vanaf 2 juli 2026 voor users zonder items
+    // Ontwikkelplan-reminder — vanaf 2 juli 2026 voor users zonder items
     // (eerste 3 weken loopt via Slack #workx-algemeen).
     try {
       const PHASE_2_START = new Date('2026-07-02T00:00:00Z')
       if (now >= PHASE_2_START) {
         const year = now.getFullYear()
-        const itemCount = await prisma.yearPlanItem.count({
+        const itemCount = await prisma.developmentPlanItem.count({
           where: { plan: { userId, year } },
         })
         if (itemCount === 0) {
@@ -904,18 +904,18 @@ export async function GET() {
           const dayOfWeek = now.getUTCDay()
           if (dayOfWeek === 4 || dayOfWeek === 5) {
             // Wekelijkse key (per ISO-week) zodat dismissal max 1 week werkt
-            const weekKey = `year-plan-reminder-${year}-w${Math.ceil(
+            const weekKey = `dev-plan-reminder-${year}-w${Math.ceil(
               ((now.getTime() - new Date(year, 0, 1).getTime()) / 86400000 + 1) / 7,
             )}`
             if (!dismissedKeys.has(weekKey)) {
               notifications.push({
                 id: weekKey,
-                type: 'year-plan',
-                title: 'Vul je jaarplan in',
-                message: 'Zet je ontwikkeldoelen voor dit jaar op een rij — 4 categorieën, een paar punten elk is genoeg.',
+                type: 'development-plan',
+                title: 'Vul je ontwikkelplan in',
+                message: 'Zet je doelen voor dit jaar op een rij — inhoud (theorie + praktijk), eigen praktijk en zaken, intern.',
                 createdAt: now,
                 read: false,
-                href: '/dashboard/mijn-jaarplan',
+                href: '/dashboard/ontwikkelplannen',
                 priority: 'medium',
               })
             }

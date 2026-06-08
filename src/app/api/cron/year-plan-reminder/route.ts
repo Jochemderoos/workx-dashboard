@@ -1,7 +1,7 @@
-// Cron: wekelijkse Slack-reminder voor Mijn Jaarplan.
+// Cron: wekelijkse Slack-reminder voor Ontwikkelplan (voorheen Jaarplan).
 // Schema: 3 donderdagen in juni 2026 → #workx-algemeen.
 // Vanaf juli verschijnt de reminder als dashboard-notificatie
-// voor users zonder year-plan items (zie /api/notifications/route.ts).
+// voor users zonder ontwikkelplan-items (zie /api/notifications/route.ts).
 
 import { NextRequest, NextResponse } from 'next/server'
 import { sendChannelMessage } from '@/lib/slack'
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ skipped: 'niet in Slack-reminder venster', today, plannedDates: SLACK_DATES })
     }
 
-    const planUrl = `${DASHBOARD_BASE}/dashboard/mijn-jaarplan`
+    const planUrl = `${DASHBOARD_BASE}/dashboard/ontwikkelplannen`
     const remainingDates = SLACK_DATES.filter(d => d > today)
     const isLastSlackRound = remainingDates.length === 0
 
@@ -36,11 +36,11 @@ export async function GET(req: NextRequest) {
           {
             type: 'rich_text_section',
             elements: [
-              { type: 'text', text: 'Mijn Jaarplan 📋 — even invullen\n', style: { bold: true } },
+              { type: 'text', text: 'Mijn Ontwikkelplan 📋 — even invullen\n', style: { bold: true } },
               { type: 'text', text: 'Zet je ontwikkeldoelen voor dit jaar op een rij in 4 categorieën:\n' },
-              { type: 'text', text: '• Juridische theorie · Praktijk · Acquisitie · Intern\n\n' },
-              { type: 'text', text: 'Hoeft niet groots — drie tot vijf concrete punten per categorie is al heel wat. Voortgang vink je later af in dezelfde tool.\n→ ' },
-              { type: 'link', url: planUrl, text: 'Open Mijn Jaarplan' },
+              { type: 'text', text: '• Inhoud theorie · Inhoud praktijk · Eigen praktijk en zaken · Intern\n\n' },
+              { type: 'text', text: 'Hoeft niet groots — drie tot vijf concrete punten per categorie is al heel wat. Voortgang vink je later af in dezelfde tool. Partners voegen evaluaties toe.\n→ ' },
+              { type: 'link', url: planUrl, text: 'Open mijn ontwikkelplan' },
               ...(isLastSlackRound ? [
                 { type: 'text', text: '\n\n' },
                 { type: 'text', text: 'Laatste reminder via Slack — daarna verschijnt het als nudge in het dashboard voor wie het nog niet heeft ingevuld.', style: { italic: true } },
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       },
     ]
 
-    const fallback = `Mijn Jaarplan — vul je ontwikkeldoelen in: ${planUrl}`
+    const fallback = `Mijn Ontwikkelplan — vul je doelen in: ${planUrl}`
     const slackOk = await sendChannelMessage(SLACK_CHANNEL, fallback, blocks as any)
 
     return NextResponse.json({

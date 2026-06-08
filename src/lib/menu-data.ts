@@ -51,8 +51,8 @@ export const teamMenu_Werk: MenuItem[] = [
     description: 'Persoonlijke coaching-budget tracker (€1.500 ex btw / 3 jaar).' },
   { href: '/dashboard/werk/overdracht', icon: Icons.fileText, label: 'Overdracht', iconAnim: 'icon-file-hover',
     description: 'Overdrachtsdocumenten bij vakantie/verlof. Klant-wijzen en lopende zaken.' },
-  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplannen', iconAnim: 'icon-target-hover', hideForExternal: true,
-    description: 'Persoonlijk ontwikkelplan: inhoudelijke kennis, ervaring, ondernemerschap.' },
+  { href: '/dashboard/ontwikkelplannen', icon: Icons.target, label: 'Ontwikkelplan', iconAnim: 'icon-target-hover', hideForExternal: true,
+    description: 'Persoonlijk ontwikkelplan — vul zelf je doelen in voor inhoud (theorie + praktijk), eigen praktijk en zaken, en intern. Partners voegen evaluaties toe.' },
   { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', iconAnim: 'icon-file-hover', hideForExternal: true,
     description: 'Openstaande facturen, aanschrijven-knop, BaseNet-import voor het hele kantoor.' },
   { href: '/dashboard/dd-projecten', icon: Icons.shield, label: 'DD Projecten', iconAnim: 'icon-briefcase-hover', hideForExternal: true,
@@ -70,8 +70,6 @@ export const teamMenu_Tools: MenuItem[] = [
     description: 'Bonusregeling-overzicht: eigen omzet en uitkering per kwartaal.' },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover',
     description: 'Bereken transitievergoeding obv salaris en duur dienstverband.' },
-  { href: '/dashboard/mijn-jaarplan', icon: Icons.target, label: 'Mijn Jaarplan', iconAnim: 'icon-target-hover', hideForExternal: true,
-    description: 'Persoonlijke ontwikkeldoelen voor dit jaar — theorie, praktijk, acquisitie, intern.' },
   { href: '/dashboard/office-tasks', icon: Icons.briefcase, label: 'Office Tasks', iconAnim: 'icon-briefcase-hover', hideForExternal: true,
     description: 'Office-team taken: verantwoordelijkheden, voortgang, afvinken met audit-trail.' },
   { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover', hideForExternal: true,
@@ -110,8 +108,6 @@ export const partnersMenuItems: MenuItem[] = [
     description: 'Wekelijkse 1-op-1 gesprekken partner ↔ medewerker.' },
   { href: '/dashboard/partners/performance', icon: Icons.target, label: 'Performance Management', iconAnim: 'icon-target-hover',
     description: 'Per medewerker observaties noteren — basis voor beoordelingsgesprekken.' },
-  { href: '/dashboard/partners/jaarplannen', icon: Icons.target, label: 'Jaarplannen team', iconAnim: 'icon-target-hover',
-    description: 'Overzicht van persoonlijke ontwikkelplannen — voortgang per medewerker, evaluaties toevoegen.' },
   // Sollicitaties zit nu als tab onder /dashboard/recruitment — geen aparte
   // sidebar-link meer nodig.
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover',

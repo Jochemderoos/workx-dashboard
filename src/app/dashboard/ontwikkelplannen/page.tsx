@@ -1,18 +1,40 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
-import YearPicker from '@/components/ui/YearPicker'
+import DatePicker from '@/components/ui/DatePicker'
+import { formatDateForAPI } from '@/lib/date-utils'
 import { getPhotoUrl } from '@/lib/team-photos'
+import TextReveal from '@/components/ui/TextReveal'
 
-interface Section {
-  number: number
+// ── Types ─────────────────────────────────────────────────────────────────
+
+interface DevelopmentPlanItem {
+  id: string
+  planId: string
+  category: string
   title: string
-  goals: string
-  evaluation: string
+  goals: string | null
+  evaluation: string | null
+  status: 'todo' | 'doing' | 'done'
+  progress: number
+  targetDate: string | null
+  completedAt: string | null
+  position: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface DevelopmentPlanEvaluation {
+  id: string
+  planId: string
+  evaluatorId: string
+  evaluatorName: string
+  notes: string
+  evaluatedAt: string
 }
 
 interface DevelopmentPlan {
@@ -21,7 +43,6 @@ interface DevelopmentPlan {
   employeeName: string
   period: string
   year: number
-  sections: string // JSON string
   status: string
   generalNotes: string | null
   evaluationDate: string | null
@@ -30,796 +51,836 @@ interface DevelopmentPlan {
   createdAt: string
   updatedAt: string
   user: { id: string; name: string; role: string } | null
+  items: DevelopmentPlanItem[]
+  evaluations: DevelopmentPlanEvaluation[]
 }
 
-// Group plans by employee name
-function groupByEmployee(plans: DevelopmentPlan[]): Record<string, DevelopmentPlan[]> {
-  const groups: Record<string, DevelopmentPlan[]> = {}
-  for (const plan of plans) {
-    const key = plan.employeeName
-    if (!groups[key]) groups[key] = []
-    groups[key].push(plan)
-  }
-  // Sort each group by year descending
-  for (const key of Object.keys(groups)) {
-    groups[key].sort((a, b) => b.year - a.year || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }
-  return groups
+// ── Categorieën ────────────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  {
+    key: 'inhoud-theorie',
+    label: 'Inhoud — theorie',
+    icon: 'books' as const,
+    color: 'purple',
+    description: 'Verdieping vakliteratuur, jurisprudentie, congressen, opleidingen.',
+  },
+  {
+    key: 'inhoud-praktijk',
+    label: 'Inhoud — praktijk',
+    icon: 'briefcase' as const,
+    color: 'indigo',
+    description: 'Kennis in praktijk brengen op arbeidsrechtelijke gebieden.',
+  },
+  {
+    key: 'eigen-praktijk',
+    label: 'Eigen praktijk en zaken',
+    icon: 'trendingUp' as const,
+    color: 'emerald',
+    description: 'Eigen klanten, zaken, acquisitie, content, zichtbaarheid.',
+  },
+  {
+    key: 'intern',
+    label: 'Intern',
+    icon: 'users' as const,
+    color: 'amber',
+    description: 'Opleiden junioren, seminars organiseren, bijdrage aan team.',
+  },
+] as const
+
+type CategoryKey = typeof CATEGORIES[number]['key']
+
+const COLOR_CLASSES: Record<string, { border: string; gradient: string; accent: string; accentBg: string; ring: string }> = {
+  purple: { border: 'border-purple-500/30', gradient: 'from-purple-500/8', accent: 'text-purple-300', accentBg: 'bg-purple-500/10', ring: 'accent-purple-400' },
+  indigo: { border: 'border-indigo-500/30', gradient: 'from-indigo-500/8', accent: 'text-indigo-300', accentBg: 'bg-indigo-500/10', ring: 'accent-indigo-400' },
+  emerald: { border: 'border-emerald-500/30', gradient: 'from-emerald-500/8', accent: 'text-emerald-300', accentBg: 'bg-emerald-500/10', ring: 'accent-emerald-400' },
+  amber: { border: 'border-amber-500/30', gradient: 'from-amber-500/8', accent: 'text-amber-300', accentBg: 'bg-amber-500/10', ring: 'accent-amber-400' },
 }
 
-function parseSections(plan: DevelopmentPlan): Section[] {
-  try {
-    return JSON.parse(plan.sections)
-  } catch {
-    return []
-  }
-}
+// ── Auto-textarea ──────────────────────────────────────────────────────────
 
-// Auto-growing textarea component
 function AutoTextarea({
   value,
   onChange,
+  onBlur,
   placeholder,
   className,
+  minRows = 1,
 }: {
   value: string
   onChange: (val: string) => void
+  onBlur?: () => void
   placeholder?: string
   className?: string
+  minRows?: number
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
-
   useEffect(() => {
     if (ref.current) {
       ref.current.style.height = 'auto'
       ref.current.style.height = ref.current.scrollHeight + 'px'
     }
   }, [value])
-
   return (
     <textarea
       ref={ref}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={e => onChange(e.target.value)}
+      onBlur={onBlur}
       placeholder={placeholder}
       className={className}
-      rows={1}
+      rows={minRows}
       style={{ resize: 'none', overflow: 'hidden' }}
     />
   )
 }
 
+// ── Hoofdpagina ────────────────────────────────────────────────────────────
+
 export default function OntwikkelplannenPage() {
   const { data: session } = useSession()
-  const [plans, setPlans] = useState<DevelopmentPlan[]>([])
+  const meId = session?.user?.id
+  const meName = session?.user?.name || ''
+  const isAdmin = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN' || session?.user?.role === 'OFFICE_MANAGER'
+
+  const [allPlans, setAllPlans] = useState<DevelopmentPlan[] | null>(null)
+  const [myPlan, setMyPlan] = useState<DevelopmentPlan | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
-  const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [showImport, setShowImport] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
-  const [showNewPlanForm, setShowNewPlanForm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const isAdmin = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN'
-
-  // Fetch all plans
-  const fetchPlans = useCallback(async () => {
+  // ── Data fetching ──────────────────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    setIsLoading(true)
     try {
-      const res = await fetch('/api/development-plans')
-      if (!res.ok) throw new Error('Fout bij ophalen')
-      const data = await res.json()
-      setPlans(data)
+      if (isAdmin) {
+        const res = await fetch('/api/development-plans')
+        if (!res.ok) throw new Error()
+        const data: DevelopmentPlan[] = await res.json()
+        setAllPlans(data)
+      } else {
+        const res = await fetch(`/api/development-plans/me?year=${selectedYear}`)
+        if (!res.ok) throw new Error()
+        const data: DevelopmentPlan = await res.json()
+        setMyPlan(data)
+      }
     } catch {
-      toast.error('Kon ontwikkelplannen niet laden')
+      toast.error('Kon ontwikkelplan niet laden')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [isAdmin, selectedYear])
 
-  useEffect(() => {
-    fetchPlans()
-  }, [fetchPlans])
+  useEffect(() => { fetchData() }, [fetchData])
 
-  // Auto-select employee for non-admin users
+  // Auto-selecteer eigen naam voor admin als initial state — zodat een partner
+  // ook gewoon z'n eigen plan ziet, en kan switchen.
   useEffect(() => {
-    if (!isAdmin && plans.length > 0 && !selectedEmployee) {
-      // Find the employee name that matches the current user
-      const myPlan = plans.find(p => p.userId === session?.user?.id)
-      if (myPlan) {
-        setSelectedEmployee(myPlan.employeeName)
+    if (isAdmin && allPlans && !selectedEmployee && meName) {
+      // Probeer eerst exacte match op userId
+      const own = allPlans.find(p => p.userId === meId)
+      if (own) {
+        setSelectedEmployee(own.employeeName)
+        setSelectedYear(own.year)
+        return
+      }
+      // Anders: eerste medewerker
+      const names = Array.from(new Set(allPlans.map(p => p.employeeName))).sort()
+      if (names.length > 0) setSelectedEmployee(names[0])
+    }
+  }, [isAdmin, allPlans, selectedEmployee, meName, meId])
+
+  // ── Active plan (de huidig getoonde) ──────────────────────────────────
+  const activePlan: DevelopmentPlan | null = useMemo(() => {
+    if (!isAdmin) return myPlan
+    if (!allPlans || !selectedEmployee) return null
+    return allPlans.find(p => p.employeeName === selectedEmployee && p.year === selectedYear) || null
+  }, [isAdmin, myPlan, allPlans, selectedEmployee, selectedYear])
+
+  // Wie is owner: huidige user, of (voor admins die andermans plan bekijken) andere user
+  const isViewingOwnPlan = activePlan?.userId === meId
+
+  // ── Groeperen / lijsten voor admin-views ──────────────────────────────
+  const employeeNames = useMemo(() => {
+    if (!allPlans) return []
+    return Array.from(new Set(allPlans.map(p => p.employeeName))).sort()
+  }, [allPlans])
+
+  const yearsForEmployee = useMemo(() => {
+    if (!allPlans || !selectedEmployee) return []
+    return Array.from(new Set(allPlans.filter(p => p.employeeName === selectedEmployee).map(p => p.year))).sort((a, b) => b - a)
+  }, [allPlans, selectedEmployee])
+
+  // ── Items per categorie ───────────────────────────────────────────────
+  const itemsByCategory = useMemo(() => {
+    const map: Record<string, DevelopmentPlanItem[]> = {
+      'inhoud-theorie': [],
+      'inhoud-praktijk': [],
+      'eigen-praktijk': [],
+      'intern': [],
+    }
+    if (activePlan) {
+      for (const it of activePlan.items) {
+        if (map[it.category]) map[it.category].push(it)
+        else map['inhoud-theorie'].push(it)
       }
     }
-  }, [plans, isAdmin, session?.user?.id, selectedEmployee])
+    return map
+  }, [activePlan])
 
-  const grouped = groupByEmployee(plans)
-  const employeeNames = Object.keys(grouped).sort()
-
-  // Get plans for selected employee
-  const employeePlans = selectedEmployee ? (grouped[selectedEmployee] || []) : []
-  const years = Array.from(new Set(employeePlans.map(p => p.year))).sort((a, b) => b - a)
-
-  // Auto-select latest year when employee changes
-  useEffect(() => {
-    if (years.length > 0 && (selectedYear === null || !years.includes(selectedYear))) {
-      setSelectedYear(years[0])
+  // ── Mutations ─────────────────────────────────────────────────────────
+  const replaceItem = useCallback((item: DevelopmentPlanItem) => {
+    if (isAdmin) {
+      setAllPlans(prev => prev?.map(p => p.id !== item.planId ? p : { ...p, items: p.items.map(i => i.id === item.id ? item : i) }) || null)
+    } else {
+      setMyPlan(p => p && p.id === item.planId ? { ...p, items: p.items.map(i => i.id === item.id ? item : i) } : p)
     }
-  }, [selectedEmployee, years, selectedYear])
+  }, [isAdmin])
 
-  const currentPlan = employeePlans.find(p => p.year === selectedYear) || null
+  const removeItemLocal = useCallback((planId: string, itemId: string) => {
+    if (isAdmin) {
+      setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, items: p.items.filter(i => i.id !== itemId) }) || null)
+    } else {
+      setMyPlan(p => p && p.id === planId ? { ...p, items: p.items.filter(i => i.id !== itemId) } : p)
+    }
+  }, [isAdmin])
 
-  // Save plan (debounced)
-  const savePlan = useCallback(async (planId: string, data: Record<string, unknown>) => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/development-plans/${planId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        })
-        if (!res.ok) throw new Error()
-      } catch {
-        toast.error('Opslaan mislukt')
+  const appendItem = useCallback((planId: string, item: DevelopmentPlanItem) => {
+    if (isAdmin) {
+      setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, items: [...p.items, item] }) || null)
+    } else {
+      setMyPlan(p => p && p.id === planId ? { ...p, items: [...p.items, item] } : p)
+    }
+  }, [isAdmin])
+
+  const addItem = async (category: CategoryKey, title: string, goals: string, targetDate: string | null) => {
+    if (!activePlan) return
+    if (!title.trim()) return
+    try {
+      const res = await fetch('/api/development-plans/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId: activePlan.id,
+          category,
+          title,
+          goals,
+          targetDate,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      const item: DevelopmentPlanItem = await res.json()
+      appendItem(activePlan.id, item)
+      toast.success('Toegevoegd')
+    } catch {
+      toast.error('Toevoegen mislukt')
+    }
+  }
+
+  const updateItem = async (id: string, patch: Partial<DevelopmentPlanItem>) => {
+    try {
+      const res = await fetch('/api/development-plans/items', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...patch }),
+      })
+      if (!res.ok) throw new Error()
+      const updated: DevelopmentPlanItem = await res.json()
+      replaceItem(updated)
+      return updated
+    } catch {
+      toast.error('Opslaan mislukt')
+    }
+  }
+
+  const deleteItem = async (id: string, planId: string) => {
+    if (!confirm('Dit item verwijderen?')) return
+    try {
+      const res = await fetch(`/api/development-plans/items?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      removeItemLocal(planId, id)
+      toast.success('Verwijderd')
+    } catch {
+      toast.error('Verwijderen mislukt')
+    }
+  }
+
+  // ── Evaluations (admin) ───────────────────────────────────────────────
+  const addEvaluation = async (planId: string, notes: string) => {
+    if (!notes.trim()) return
+    try {
+      const res = await fetch('/api/development-plans/evaluations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId, notes }),
+      })
+      if (!res.ok) throw new Error()
+      const ev: DevelopmentPlanEvaluation = await res.json()
+      if (isAdmin) {
+        setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, evaluations: [ev, ...p.evaluations] }) || null)
+      } else {
+        setMyPlan(p => p && p.id === planId ? { ...p, evaluations: [ev, ...p.evaluations] } : p)
       }
-    }, 800)
-  }, [])
+      toast.success('Evaluatie toegevoegd')
+    } catch {
+      toast.error('Toevoegen mislukt')
+    }
+  }
 
-  // Update section in current plan
-  const updateSection = useCallback((planId: string, sectionIndex: number, field: keyof Section, value: string) => {
-    setPlans(prev => prev.map(p => {
-      if (p.id !== planId) return p
-      const sections = parseSections(p)
-      sections[sectionIndex] = { ...sections[sectionIndex], [field]: value }
-      const updated = { ...p, sections: JSON.stringify(sections) }
-      savePlan(planId, { sections })
-      return updated
-    }))
-  }, [savePlan])
+  const deleteEvaluation = async (planId: string, id: string) => {
+    if (!confirm('Deze evaluatie verwijderen?')) return
+    try {
+      const res = await fetch(`/api/development-plans/evaluations?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      if (isAdmin) {
+        setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, evaluations: p.evaluations.filter(e => e.id !== id) }) || null)
+      } else {
+        setMyPlan(p => p && p.id === planId ? { ...p, evaluations: p.evaluations.filter(e => e.id !== id) } : p)
+      }
+      toast.success('Verwijderd')
+    } catch {
+      toast.error('Verwijderen mislukt')
+    }
+  }
 
-  // Add new section row
-  const addSection = useCallback((planId: string) => {
-    setPlans(prev => prev.map(p => {
-      if (p.id !== planId) return p
-      const sections = parseSections(p)
-      const nextNum = sections.length > 0 ? Math.max(...sections.map(s => s.number)) + 1 : 1
-      sections.push({ number: nextNum, title: '', goals: '', evaluation: '' })
-      const updated = { ...p, sections: JSON.stringify(sections) }
-      savePlan(planId, { sections })
-      return updated
-    }))
-  }, [savePlan])
-
-  // Remove section row
-  const removeSection = useCallback((planId: string, sectionIndex: number) => {
-    setPlans(prev => prev.map(p => {
-      if (p.id !== planId) return p
-      const sections = parseSections(p)
-      sections.splice(sectionIndex, 1)
-      const updated = { ...p, sections: JSON.stringify(sections) }
-      savePlan(planId, { sections })
-      return updated
-    }))
-  }, [savePlan])
-
-  // Update plan meta fields
-  const updatePlanField = useCallback((planId: string, field: string, value: unknown) => {
-    setPlans(prev => prev.map(p => {
-      if (p.id !== planId) return p
-      const updated = { ...p, [field]: value }
-      savePlan(planId, { [field]: value })
-      return updated
-    }))
-  }, [savePlan])
-
-  // Upload DOCX
+  // ── DOCX upload (admin) ──────────────────────────────────────────────
   const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     setIsUploading(true)
     try {
       const formData = new FormData()
       formData.append('file', file)
-
-      const res = await fetch('/api/development-plans/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Upload mislukt')
-      }
-
-      toast.success('Plan geüpload en verwerkt')
-      fetchPlans()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload mislukt')
+      const res = await fetch('/api/development-plans/upload', { method: 'POST', body: formData })
+      if (!res.ok) throw new Error()
+      toast.success('Plan geüpload')
+      fetchData()
+    } catch {
+      toast.error('Upload mislukt')
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
-  }, [fetchPlans])
+  }, [fetchData])
 
-  // Import from local directory
-  const handleImport = useCallback(async () => {
-    setIsImporting(true)
-    try {
-      const res = await fetch('/api/development-plans/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
-
-      if (!res.ok) throw new Error('Import mislukt')
-
-      const data = await res.json()
-      toast.success(data.message)
-      fetchPlans()
-    } catch {
-      toast.error('Import mislukt')
-    } finally {
-      setIsImporting(false)
-    }
-  }, [fetchPlans])
-
-  // Delete plan
-  const handleDelete = useCallback(async (planId: string) => {
-    if (!confirm('Weet je zeker dat je dit plan wilt verwijderen?')) return
-
-    try {
-      const res = await fetch(`/api/development-plans/${planId}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error()
-      toast.success('Plan verwijderd')
-      setPlans(prev => prev.filter(p => p.id !== planId))
-    } catch {
-      toast.error('Verwijderen mislukt')
-    }
-  }, [])
-
-  // Create new empty plan
-  const handleCreatePlan = useCallback(async (employeeName: string, period: string, year: number) => {
-    try {
-      const users = plans.filter(p => p.employeeName === employeeName)
-      const userId = users[0]?.userId || null
-
-      const res = await fetch('/api/development-plans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          employeeName,
-          period,
-          year,
-          sections: [
-            { number: 1, title: 'Inhoud – theorie', goals: '', evaluation: '' },
-            { number: 2, title: 'Inhoud – praktijk', goals: '', evaluation: '' },
-            { number: 3, title: 'Eigen praktijk en zaken', goals: '', evaluation: '' },
-            { number: 4, title: 'Intern', goals: '', evaluation: '' },
-          ],
-          status: 'actief',
-        }),
-      })
-
-      if (!res.ok) throw new Error()
-      toast.success('Nieuw plan aangemaakt')
-      setShowNewPlanForm(false)
-      fetchPlans()
-    } catch {
-      toast.error('Aanmaken mislukt')
-    }
-  }, [plans, fetchPlans])
+  // ── Stats ─────────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const total = activePlan?.items.length || 0
+    const done = activePlan?.items.filter(i => i.status === 'done').length || 0
+    const avg = total > 0
+      ? Math.round((activePlan!.items.reduce((s, i) => s + (i.status === 'done' ? 100 : i.progress), 0)) / total)
+      : 0
+    return { total, done, avg }
+  }, [activePlan])
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-3 text-white/40">
-          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <span>Ontwikkelplannen laden...</span>
-        </div>
+      <div className="max-w-6xl space-y-6 fade-in">
+        <div className="card p-8 text-center text-white/50">Ontwikkelplan laden…</div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-workx-lime/10 border border-workx-lime/20">
-            <Icons.target size={22} className="text-workx-lime" />
+    <div className="max-w-6xl space-y-6 fade-in relative">
+      <div className="absolute top-0 right-[10%] w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent p-5 sm:p-7">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/30 to-indigo-500/20 flex items-center justify-center">
+              <Icons.target className="text-purple-300" size={22} />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-white">
+                <TextReveal>{isAdmin && selectedEmployee && !isViewingOwnPlan ? `Ontwikkelplan ${selectedEmployee.split(' ')[0]} ${selectedYear}` : `Mijn ontwikkelplan ${selectedYear}`}</TextReveal>
+              </h1>
+              <p className="text-sm text-white/60 mt-0.5">Inhoud (theorie + praktijk) · eigen praktijk en zaken · intern</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Ontwikkelplannen</h1>
-            <p className="text-sm text-white/40">
-              {isAdmin
-                ? `${employeeNames.length} medewerkers · ${plans.length} plannen`
-                : 'Jouw ontwikkelplannen'}
-            </p>
+          <div className="flex items-center gap-6 text-right">
+            <div>
+              <p className="text-2xl font-bold text-white tabular-nums">{stats.done}<span className="text-sm text-white/40">/{stats.total}</span></p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">afgerond</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-purple-300 tabular-nums">{stats.avg}<span className="text-sm text-white/40">%</span></p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40">gem. voortgang</p>
+            </div>
           </div>
         </div>
-
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            {plans.length === 0 && (
-              <button
-                onClick={handleImport}
-                disabled={isImporting}
-                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all text-sm flex items-center gap-2 disabled:opacity-50"
-              >
-                {isImporting ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Importeren...
-                  </>
-                ) : (
-                  <>
-                    <Icons.download size={16} />
-                    Importeer DOCX bestanden
-                  </>
-                )}
-              </button>
-            )}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="px-4 py-2 rounded-xl bg-workx-lime/10 border border-workx-lime/20 text-workx-lime hover:bg-workx-lime/20 transition-all text-sm flex items-center gap-2 disabled:opacity-50"
-            >
-              {isUploading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Uploaden...
-                </>
-              ) : (
-                <>
-                  <Icons.upload size={16} />
-                  Upload DOCX
-                </>
-              )}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".docx"
-              onChange={handleUpload}
-              className="hidden"
-            />
-            <button
-              onClick={() => setShowNewPlanForm(true)}
-              className="px-4 py-2 rounded-xl bg-workx-lime/10 border border-workx-lime/20 text-workx-lime hover:bg-workx-lime/20 transition-all text-sm flex items-center gap-2"
-            >
-              <Icons.plus size={16} />
-              Nieuw plan
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Employee selector (admin only) */}
-      {isAdmin && employeeNames.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {employeeNames.map((name) => {
-            const isSelected = selectedEmployee === name
-            const photoUrl = getPhotoUrl(name)
-            const planCount = grouped[name].length
-            const latestYear = grouped[name][0]?.year
-
-            return (
+      {/* Admin: medewerker-selector */}
+      {isAdmin && allPlans && employeeNames.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Team</h2>
+            <div className="flex items-center gap-2">
               <button
-                key={name}
-                onClick={() => {
-                  setSelectedEmployee(name)
-                  setSelectedYear(null)
-                }}
-                className={`relative group p-3 rounded-xl border transition-all text-left ${
-                  isSelected
-                    ? 'bg-workx-lime/10 border-workx-lime/30 shadow-lg shadow-workx-lime/5'
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                }`}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 text-xs flex items-center gap-1.5 disabled:opacity-50"
               >
-                {isSelected && (
-                  <div className="absolute inset-0 bg-workx-lime/5 rounded-xl blur-xl" />
-                )}
-                <div className="relative flex items-center gap-3">
-                  {photoUrl ? (
-                    <Image
-                      src={photoUrl}
-                      alt={name}
-                      width={36}
-                      height={36}
-                      className={`w-9 h-9 rounded-lg object-cover ring-2 ${
-                        isSelected ? 'ring-workx-lime/40' : 'ring-white/10'
-                      }`}
-                    />
+                <Icons.upload size={12} />
+                {isUploading ? 'Uploaden…' : 'DOCX uploaden'}
+              </button>
+              <input ref={fileInputRef} type="file" accept=".docx" onChange={handleUpload} className="hidden" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+            {employeeNames.map(name => {
+              const planCount = allPlans.filter(p => p.employeeName === name).length
+              const selected = selectedEmployee === name
+              const photo = getPhotoUrl(name)
+              return (
+                <button
+                  key={name}
+                  onClick={() => setSelectedEmployee(name)}
+                  className={`flex items-center gap-2 p-2 rounded-xl border transition-all text-left ${
+                    selected
+                      ? 'bg-purple-500/10 border-purple-500/30 shadow-lg shadow-purple-500/5'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                  }`}
+                >
+                  {photo ? (
+                    <Image src={photo} alt={name} width={32} height={32} className={`w-8 h-8 rounded-lg object-cover ring-2 ${selected ? 'ring-purple-500/40' : 'ring-white/10'}`} />
                   ) : (
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold ${
-                      isSelected
-                        ? 'bg-workx-lime/20 text-workx-lime'
-                        : 'bg-white/10 text-white/60'
-                    }`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold ${selected ? 'bg-purple-500/20 text-purple-300' : 'bg-white/10 text-white/60'}`}>
                       {name.charAt(0)}
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className={`text-sm font-medium truncate ${isSelected ? 'text-workx-lime' : 'text-white'}`}>
-                      {name.split(' ')[0]}
-                    </p>
-                    <p className="text-xs text-white/30">
-                      {planCount} {planCount === 1 ? 'plan' : 'plannen'} · {latestYear}
-                    </p>
+                    <p className={`text-xs font-medium truncate ${selected ? 'text-purple-200' : 'text-white'}`}>{name.split(' ')[0]}</p>
+                    <p className="text-[10px] text-white/40">{planCount} {planCount === 1 ? 'plan' : 'plannen'}</p>
                   </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Year tabs */}
-      {selectedEmployee && years.length > 0 && (
-        <YearPicker
-          years={years}
-          selected={selectedYear}
-          onChange={setSelectedYear}
-          badgeFor={(year) => {
-            const plan = employeePlans.find(p => p.year === year)
-            return plan?.status === 'actief'
-              ? <span className="w-1.5 h-1.5 rounded-full bg-black/60 animate-pulse" />
-              : null
-          }}
-        />
-      )}
-
-      {/* Current plan display */}
-      {currentPlan ? (
-        <PlanEditor
-          plan={currentPlan}
-          isAdmin={isAdmin}
-          onUpdateSection={updateSection}
-          onAddSection={addSection}
-          onRemoveSection={removeSection}
-          onUpdateField={updatePlanField}
-          onDelete={handleDelete}
-        />
-      ) : selectedEmployee ? (
-        <div className="rounded-2xl bg-white/5 border border-white/10 p-12 text-center">
-          <Icons.target size={32} className="mx-auto text-white/20 mb-3" />
-          <p className="text-white/40">Geen plan gevonden voor deze periode</p>
-        </div>
-      ) : (
-        <div className="rounded-2xl bg-white/5 border border-white/10 p-12 text-center">
-          <Icons.target size={32} className="mx-auto text-white/20 mb-3" />
-          <p className="text-white/40">
-            {plans.length === 0
-              ? 'Nog geen ontwikkelplannen. Importeer DOCX bestanden om te beginnen.'
-              : 'Selecteer een medewerker om hun ontwikkelplannen te bekijken'}
-          </p>
-        </div>
-      )}
-
-      {/* New plan modal */}
-      {showNewPlanForm && (
-        <NewPlanModal
-          employees={employeeNames}
-          onSubmit={handleCreatePlan}
-          onClose={() => setShowNewPlanForm(false)}
-        />
-      )}
-    </div>
-  )
-}
-
-// Plan editor component
-function PlanEditor({
-  plan,
-  isAdmin,
-  onUpdateSection,
-  onAddSection,
-  onRemoveSection,
-  onUpdateField,
-  onDelete,
-}: {
-  plan: DevelopmentPlan
-  isAdmin: boolean
-  onUpdateSection: (planId: string, idx: number, field: keyof Section, value: string) => void
-  onAddSection: (planId: string) => void
-  onRemoveSection: (planId: string, idx: number) => void
-  onUpdateField: (planId: string, field: string, value: unknown) => void
-  onDelete: (planId: string) => void
-}) {
-  const sections = parseSections(plan)
-
-  return (
-    <div className="space-y-4">
-      {/* Plan header */}
-      <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              {plan.employeeName}
-              {plan.status === 'actief' && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-workx-lime/10 text-workx-lime border border-workx-lime/20">
-                  Actief
-                </span>
-              )}
-              {plan.status === 'afgerond' && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-white/10 text-white/50 border border-white/10">
-                  Afgerond
-                </span>
-              )}
-            </h2>
-            <p className="text-sm text-white/40 mt-0.5">
-              Periode: {plan.period} · {plan.year}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <>
-                <button
-                  onClick={() => onUpdateField(plan.id, 'status', plan.status === 'actief' ? 'afgerond' : 'actief')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    plan.status === 'actief'
-                      ? 'bg-workx-lime/10 text-workx-lime hover:bg-workx-lime/20'
-                      : 'bg-white/5 text-white/50 hover:bg-white/10'
-                  }`}
-                >
-                  {plan.status === 'actief' ? 'Markeer afgerond' : 'Markeer actief'}
                 </button>
+              )
+            })}
+          </div>
+          {/* Jaar-tabs */}
+          {selectedEmployee && yearsForEmployee.length > 1 && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              {yearsForEmployee.map(y => (
                 <button
-                  onClick={() => onDelete(plan.id)}
-                  className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-all"
-                  title="Verwijderen"
+                  key={y}
+                  onClick={() => setSelectedYear(y)}
+                  className={`px-3 py-1 rounded-lg text-xs transition-all ${selectedYear === y ? 'bg-purple-500/15 text-purple-200 border border-purple-500/30' : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'}`}
                 >
-                  <Icons.trash size={16} />
+                  {y}
                 </button>
-              </>
-            )}
-            {plan.documentUrl && (
-              <a
-                href={plan.documentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-white/5 text-white/50 hover:text-white hover:bg-white/10 text-xs transition-all flex items-center gap-1.5"
-              >
-                <Icons.download size={14} />
-                DOCX
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Sections table */}
-        <div className="rounded-xl border border-white/10 overflow-hidden">
-          {/* Table header */}
-          <div className="grid grid-cols-[40px_1fr_2fr_1.5fr] bg-workx-lime/5 border-b border-white/10">
-            <div className="p-3 text-xs font-semibold text-workx-lime/70">#</div>
-            <div className="p-3 text-xs font-semibold text-workx-lime/70">Onderdeel</div>
-            <div className="p-3 text-xs font-semibold text-workx-lime/70">Doelen</div>
-            <div className="p-3 text-xs font-semibold text-workx-lime/70">Evaluatie</div>
-          </div>
-
-          {/* Rows */}
-          {sections.map((section, idx) => (
-            <div
-              key={idx}
-              className="grid grid-cols-[40px_1fr_2fr_1.5fr] border-b border-white/5 last:border-b-0 group hover:bg-white/[0.02] transition-colors"
-            >
-              <div className="p-3 text-sm text-white/40 flex items-start justify-between">
-                <span>{section.number}.</span>
-                {isAdmin && (
-                  <button
-                    onClick={() => onRemoveSection(plan.id, idx)}
-                    className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all"
-                    title="Verwijder rij"
-                  >
-                    <Icons.x size={12} />
-                  </button>
-                )}
-              </div>
-              <div className="p-2">
-                <AutoTextarea
-                  value={section.title}
-                  onChange={(val) => onUpdateSection(plan.id, idx, 'title', val)}
-                  placeholder="Onderdeel..."
-                  className="w-full bg-transparent text-sm text-white/80 placeholder-white/20 focus:outline-none focus:bg-white/5 rounded-lg p-1 transition-colors"
-                />
-              </div>
-              <div className="p-2">
-                <AutoTextarea
-                  value={section.goals}
-                  onChange={(val) => onUpdateSection(plan.id, idx, 'goals', val)}
-                  placeholder="Doelen..."
-                  className="w-full bg-transparent text-sm text-white/70 placeholder-white/20 focus:outline-none focus:bg-white/5 rounded-lg p-1 transition-colors"
-                />
-              </div>
-              <div className="p-2">
-                <AutoTextarea
-                  value={section.evaluation}
-                  onChange={(val) => onUpdateSection(plan.id, idx, 'evaluation', val)}
-                  placeholder="Evaluatie..."
-                  className="w-full bg-transparent text-sm text-white/60 placeholder-white/20 focus:outline-none focus:bg-white/5 rounded-lg p-1 transition-colors italic"
-                />
-              </div>
+              ))}
             </div>
-          ))}
-
-          {/* Add row button */}
-          {isAdmin && (
-            <button
-              onClick={() => onAddSection(plan.id)}
-              className="w-full p-2.5 text-xs text-white/30 hover:text-workx-lime hover:bg-workx-lime/5 transition-all flex items-center justify-center gap-1.5"
-            >
-              <Icons.plus size={14} />
-              Rij toevoegen
-            </button>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Evaluation section */}
-      <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
-        <h3 className="text-sm font-semibold text-white/60 mb-3 flex items-center gap-2">
-          <Icons.fileText size={16} />
-          Evaluatie
-        </h3>
-
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs text-white/30 mb-1">Algemene opmerkingen</label>
-            <AutoTextarea
-              value={plan.generalNotes || ''}
-              onChange={(val) => onUpdateField(plan.id, 'generalNotes', val)}
-              placeholder="Opmerkingen bij dit ontwikkelplan..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white/70 placeholder-white/20 focus:outline-none focus:border-workx-lime/30 transition-colors"
+      {activePlan ? (
+        <>
+          {/* Categorieën */}
+          {CATEGORIES.map(cat => (
+            <CategorySection
+              key={cat.key}
+              cat={cat}
+              items={itemsByCategory[cat.key] || []}
+              canEdit={isViewingOwnPlan || isAdmin}
+              isManager={isAdmin}
+              isOwner={isViewingOwnPlan}
+              onAdd={(title, goals, targetDate) => addItem(cat.key, title, goals, targetDate)}
+              onUpdate={updateItem}
+              onDelete={(id) => deleteItem(id, activePlan.id)}
             />
-          </div>
+          ))}
 
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-xs text-white/30 mb-1">Datum evaluatie</label>
-              <input
-                type="date"
-                value={plan.evaluationDate ? plan.evaluationDate.split('T')[0] : ''}
-                onChange={(e) => onUpdateField(plan.id, 'evaluationDate', e.target.value || null)}
-                className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white/70 focus:outline-none focus:border-workx-lime/30 transition-colors"
-              />
-            </div>
+          {/* Evaluaties */}
+          <EvaluationsSection
+            plan={activePlan}
+            canAdd={isAdmin}
+            currentUserId={meId}
+            onAdd={(notes) => addEvaluation(activePlan.id, notes)}
+            onDelete={(id) => deleteEvaluation(activePlan.id, id)}
+          />
 
-            <div>
-              <label className="block text-xs text-white/30 mb-1">Status</label>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onUpdateField(plan.id, 'status', 'actief')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    plan.status === 'actief'
-                      ? 'bg-workx-lime/10 text-workx-lime border border-workx-lime/20'
-                      : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'
-                  }`}
-                >
-                  In behandeling
-                </button>
-                <button
-                  onClick={() => onUpdateField(plan.id, 'status', 'afgerond')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    plan.status === 'afgerond'
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'
-                  }`}
-                >
-                  Geëvalueerd
-                </button>
-              </div>
+          {/* Document-link (legacy DOCX) */}
+          {activePlan.documentUrl && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 flex items-center gap-2 text-xs text-white/50">
+              <Icons.download size={14} />
+              <span>Oorspronkelijk document:</span>
+              <a href={activePlan.documentUrl} target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:underline">
+                {activePlan.documentName || 'Download DOCX'}
+              </a>
             </div>
-          </div>
+          )}
+        </>
+      ) : (
+        <div className="card p-10 text-center text-white/40">
+          <Icons.target size={32} className="mx-auto mb-3 text-white/20" />
+          <p>Selecteer een medewerker om hun ontwikkelplan te bekijken.</p>
         </div>
-      </div>
+      )}
+
+      {showImport && <div className="hidden" />}
     </div>
   )
 }
 
-// New plan modal
-function NewPlanModal({
-  employees,
-  onSubmit,
-  onClose,
-}: {
-  employees: string[]
-  onSubmit: (name: string, period: string, year: number) => void
-  onClose: () => void
-}) {
-  const [name, setName] = useState(employees[0] || '')
-  const [customName, setCustomName] = useState('')
-  const [period, setPeriod] = useState('')
-  const [year, setYear] = useState(new Date().getFullYear())
+// ── Categorie-sectie met items + nieuw item-form ──────────────────────────
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const finalName = name === '__custom__' ? customName : name
-    if (!finalName || !period) {
-      toast.error('Vul alle velden in')
-      return
-    }
-    onSubmit(finalName, period, year)
+function CategorySection({
+  cat,
+  items,
+  canEdit,
+  isManager,
+  isOwner,
+  onAdd,
+  onUpdate,
+  onDelete,
+}: {
+  cat: typeof CATEGORIES[number]
+  items: DevelopmentPlanItem[]
+  canEdit: boolean
+  isManager: boolean
+  isOwner: boolean
+  onAdd: (title: string, goals: string, targetDate: string | null) => void
+  onUpdate: (id: string, patch: Partial<DevelopmentPlanItem>) => Promise<DevelopmentPlanItem | undefined>
+  onDelete: (id: string) => void
+}) {
+  const colors = COLOR_CLASSES[cat.color] || COLOR_CLASSES.purple
+  const Icon = (Icons as any)[cat.icon]
+  const [newTitle, setNewTitle] = useState('')
+  const [newGoals, setNewGoals] = useState('')
+  const [newDate, setNewDate] = useState<string>('')
+
+  const submit = () => {
+    if (!newTitle.trim()) return
+    onAdd(newTitle, newGoals, newDate || null)
+    setNewTitle('')
+    setNewGoals('')
+    setNewDate('')
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-white mb-4">Nieuw ontwikkelplan</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <section className={`relative rounded-2xl border bg-gradient-to-br to-transparent p-5 ${colors.border} ${colors.gradient}`}>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          {Icon && <Icon className={colors.accent} size={18} />}
           <div>
-            <label className="block text-sm text-white/50 mb-1">Medewerker</label>
-            <select
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-            >
-              {employees.map(n => (
-                <option key={n} value={n} className="bg-[#1a1a2e]">{n}</option>
-              ))}
-              <option value="__custom__" className="bg-[#1a1a2e]">Andere medewerker...</option>
-            </select>
-            {name === '__custom__' && (
-              <input
-                type="text"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                placeholder="Naam medewerker"
-                className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/30"
+            <h2 className="text-lg font-semibold text-white">{cat.label}</h2>
+            <p className="text-xs text-white/50">{cat.description}</p>
+          </div>
+        </div>
+        <span className="text-xs text-white/40">{items.length} {items.length === 1 ? 'item' : 'items'}</span>
+      </div>
+
+      {/* Items */}
+      <div className="space-y-3 mb-4">
+        {items.map(item => (
+          <ItemCard
+            key={item.id}
+            item={item}
+            color={cat.color}
+            canEdit={canEdit}
+            isManager={isManager}
+            isOwner={isOwner}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+
+      {/* Nieuw item — alleen als bekijker mag editen */}
+      {canEdit && (
+        <div className="rounded-xl border border-dashed border-white/15 p-3 space-y-2">
+          <input
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && newTitle.trim() && !newGoals && !newDate) submit() }}
+            placeholder={`Nieuw onderdeel voor "${cat.label}"…`}
+            className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none placeholder:text-white/30"
+          />
+          {newTitle.trim() && (
+            <>
+              <AutoTextarea
+                value={newGoals}
+                onChange={setNewGoals}
+                placeholder="Doelen / wat wil je bereiken? (optioneel)"
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-purple-500/50 focus:outline-none placeholder:text-white/30"
+                minRows={2}
               />
+              <div className="flex items-center gap-2 flex-wrap">
+                <DatePicker
+                  selected={newDate ? new Date(newDate) : null}
+                  onChange={d => setNewDate(d ? formatDateForAPI(d) : '')}
+                  placeholder="Streefdatum (optioneel)"
+                />
+                <button onClick={submit} className="btn-primary text-sm py-1.5 px-3 flex items-center gap-1.5">
+                  <Icons.plus size={12} /> Toevoegen
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+// ── Item card — title + goals + status + progress + targetDate + evaluation
+
+function ItemCard({
+  item,
+  color,
+  canEdit,
+  isManager,
+  isOwner,
+  onUpdate,
+  onDelete,
+}: {
+  item: DevelopmentPlanItem
+  color: string
+  canEdit: boolean
+  isManager: boolean
+  isOwner: boolean
+  onUpdate: (id: string, patch: Partial<DevelopmentPlanItem>) => Promise<DevelopmentPlanItem | undefined>
+  onDelete: (id: string) => void
+}) {
+  const colors = COLOR_CLASSES[color] || COLOR_CLASSES.purple
+  const [title, setTitle] = useState(item.title)
+  const [goals, setGoals] = useState(item.goals || '')
+  const [evaluation, setEvaluation] = useState(item.evaluation || '')
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => { setTitle(item.title); setGoals(item.goals || ''); setEvaluation(item.evaluation || '') }, [item.id])
+
+  const debouncedSave = useRef<NodeJS.Timeout | null>(null)
+  const scheduleSave = (patch: Partial<DevelopmentPlanItem>) => {
+    if (debouncedSave.current) clearTimeout(debouncedSave.current)
+    debouncedSave.current = setTimeout(() => onUpdate(item.id, patch), 700)
+  }
+
+  const cycleStatus = () => {
+    const next = item.status === 'todo' ? 'doing' : item.status === 'doing' ? 'done' : 'doing'
+    onUpdate(item.id, { status: next })
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+      <div className="flex items-start gap-3">
+        {/* Status circle */}
+        <button
+          onClick={cycleStatus}
+          disabled={!canEdit}
+          className={`flex-shrink-0 mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+            item.status === 'done'
+              ? 'bg-emerald-500 border-emerald-500'
+              : item.status === 'doing'
+                ? `${colors.accentBg} border-current ${colors.accent}`
+                : 'border-white/30 hover:border-white/60'
+          } ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
+          title="Klik om status te wisselen"
+        >
+          {item.status === 'done' && <Icons.check size={12} className="text-white" />}
+        </button>
+
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Title */}
+          {canEdit ? (
+            <input
+              value={title}
+              onChange={e => { setTitle(e.target.value); scheduleSave({ title: e.target.value }) }}
+              onBlur={() => { if (title !== item.title) onUpdate(item.id, { title }) }}
+              className={`w-full bg-transparent text-sm font-medium focus:outline-none ${item.status === 'done' ? 'text-white/50 line-through' : 'text-white'}`}
+            />
+          ) : (
+            <p className={`text-sm font-medium ${item.status === 'done' ? 'text-white/50 line-through' : 'text-white'}`}>{item.title}</p>
+          )}
+
+          {/* Goals (expand voor edit; samenvatting als niet uitgeklapt en geen edit) */}
+          {(expanded || !canEdit) && goals && (
+            <p className="text-xs text-white/70 whitespace-pre-wrap">{goals}</p>
+          )}
+          {expanded && canEdit && (
+            <AutoTextarea
+              value={goals}
+              onChange={(v) => { setGoals(v); scheduleSave({ goals: v }) }}
+              placeholder="Doelen…"
+              className="w-full text-xs px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/80 focus:border-purple-500/50 focus:outline-none placeholder:text-white/30"
+              minRows={2}
+            />
+          )}
+          {!expanded && canEdit && !goals && (
+            <button onClick={() => setExpanded(true)} className="text-[11px] text-white/30 hover:text-white/60">+ doelen toevoegen</button>
+          )}
+          {!expanded && canEdit && goals && (
+            <button onClick={() => setExpanded(true)} className="text-[11px] text-white/50 hover:text-white/80 underline-offset-2 hover:underline truncate block">
+              {goals.length > 60 ? goals.slice(0, 60) + '…' : goals}
+            </button>
+          )}
+
+          {/* Meta row */}
+          <div className="flex items-center gap-3 text-[11px] text-white/40 flex-wrap">
+            {item.targetDate && (
+              <span className="flex items-center gap-1">
+                <Icons.calendar size={11} />
+                {new Date(item.targetDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+              </span>
+            )}
+            {item.status === 'done' && item.completedAt && (
+              <span className="text-emerald-400">✓ {new Date(item.completedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</span>
+            )}
+            <span>Status: {item.status === 'todo' ? 'Nog te doen' : item.status === 'doing' ? 'Mee bezig' : 'Afgerond'}</span>
+            {canEdit && (
+              <button onClick={() => setExpanded(e => !e)} className="text-white/30 hover:text-white/70">
+                {expanded ? '− details' : '+ details'}
+              </button>
             )}
           </div>
 
-          <div>
-            <label className="block text-sm text-white/50 mb-1">Periode</label>
-            <input
-              type="text"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              placeholder="bijv. september 2025 – maart 2026"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-workx-lime/30"
-            />
-          </div>
+          {/* Progress slider voor 'doing' */}
+          {item.status === 'doing' && canEdit && (
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={item.progress}
+                onChange={e => onUpdate(item.id, { progress: parseInt(e.target.value, 10) })}
+                className={`flex-1 ${colors.ring}`}
+              />
+              <span className={`text-xs font-medium tabular-nums w-10 text-right ${colors.accent}`}>{item.progress}%</span>
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm text-white/50 mb-1">Jaar</label>
-            <input
-              type="number"
-              value={year}
-              onChange={(e) => setYear(parseInt(e.target.value))}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
-            />
-          </div>
+          {/* Expanded extras: streefdatum editor + evaluatie */}
+          {expanded && canEdit && (
+            <div className="pt-2 border-t border-white/5 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-white/40">Streefdatum:</span>
+                <DatePicker
+                  selected={item.targetDate ? new Date(item.targetDate) : null}
+                  onChange={d => onUpdate(item.id, { targetDate: d ? formatDateForAPI(d) : null })}
+                  placeholder="optioneel"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-white/40 block mb-1 flex items-center gap-1.5">
+                  Evaluatie
+                  {!isOwner && isManager && <span className="text-[9px] uppercase tracking-wider text-amber-300/70">door partner</span>}
+                </label>
+                <AutoTextarea
+                  value={evaluation}
+                  onChange={v => { setEvaluation(v); scheduleSave({ evaluation: v }) }}
+                  placeholder={isOwner ? 'Hoe ging dit onderdeel? Wat heb je geleerd?' : 'Feedback voor medewerker…'}
+                  className="w-full text-xs px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/80 focus:border-purple-500/50 focus:outline-none placeholder:text-white/30 italic"
+                  minRows={2}
+                />
+              </div>
+            </div>
+          )}
 
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 text-sm transition-all"
-            >
+          {/* Read-only evaluatie als niet uitgeklapt */}
+          {!expanded && item.evaluation && (
+            <p className="text-[11px] text-white/50 italic whitespace-pre-wrap pt-1 border-t border-white/5">
+              <span className="text-amber-300/70 not-italic">Evaluatie:</span> {item.evaluation}
+            </p>
+          )}
+        </div>
+
+        {canEdit && (
+          <button
+            onClick={() => onDelete(item.id)}
+            className="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-colors"
+            title="Verwijderen"
+          >
+            <Icons.trash size={12} />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Evaluaties-sectie ─────────────────────────────────────────────────────
+
+function EvaluationsSection({
+  plan,
+  canAdd,
+  currentUserId,
+  onAdd,
+  onDelete,
+}: {
+  plan: DevelopmentPlan
+  canAdd: boolean
+  currentUserId?: string
+  onAdd: (notes: string) => void
+  onDelete: (id: string) => void
+}) {
+  const [newNotes, setNewNotes] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  if (plan.evaluations.length === 0 && !canAdd) return null
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-semibold text-white flex items-center gap-2">
+          <Icons.chat size={16} className="text-white/40" />
+          Algemene evaluaties
+        </h2>
+        {canAdd && !adding && (
+          <button onClick={() => setAdding(true)} className="text-xs px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-200 hover:bg-purple-500/20">
+            + Evaluatie toevoegen
+          </button>
+        )}
+      </div>
+
+      {adding && canAdd && (
+        <div className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-3 mb-3 space-y-2">
+          <AutoTextarea
+            value={newNotes}
+            onChange={setNewNotes}
+            placeholder="Algemene observaties, voortgang, aandachtspunten…"
+            className="w-full text-sm px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:border-purple-500/50 focus:outline-none placeholder:text-white/30"
+            minRows={3}
+          />
+          <div className="flex items-center gap-2 justify-end">
+            <button onClick={() => { setAdding(false); setNewNotes('') }} className="text-xs px-3 py-1.5 rounded-lg bg-white/5 text-white/60 hover:bg-white/10">
               Annuleren
             </button>
             <button
-              type="submit"
-              className="flex-1 px-4 py-2 rounded-xl bg-workx-lime/10 border border-workx-lime/20 text-workx-lime hover:bg-workx-lime/20 text-sm font-medium transition-all"
+              onClick={() => { onAdd(newNotes); setNewNotes(''); setAdding(false) }}
+              disabled={!newNotes.trim()}
+              className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-100 hover:bg-purple-500/30 disabled:opacity-40"
             >
-              Aanmaken
+              Opslaan
             </button>
           </div>
-        </form>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {plan.evaluations.map(ev => (
+          <div key={ev.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 group">
+            <div className="flex items-baseline justify-between mb-1">
+              <p className="text-sm font-medium text-white">{ev.evaluatorName}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-white/40">{new Date(ev.evaluatedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                {ev.evaluatorId === currentUserId && (
+                  <button onClick={() => onDelete(ev.id)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-opacity" title="Verwijderen">
+                    <Icons.trash size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-white/70 whitespace-pre-wrap">{ev.notes}</p>
+          </div>
+        ))}
       </div>
-    </div>
+    </section>
   )
 }

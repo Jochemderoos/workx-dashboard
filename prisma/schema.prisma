@@ -1748,20 +1748,61 @@ model DevelopmentPlan {
   employeeName  String   // Naam medewerker (voor import zonder user match)
   period        String   // Periode tekst (bijv. "september 2025 – verlof")
   year          Int      // Jaar voor tabjes
-  sections      String   @db.Text // JSON array: [{number, title, goals, evaluation}]
+  sections      String   @db.Text // LEGACY: JSON [{number, title, goals, evaluation}] — vervangen door items[]
   status        String   @default("actief") // "actief" | "afgerond"
-  generalNotes  String?  @db.Text // Algemene opmerkingen bij evaluatie
-  evaluationDate DateTime? // Datum evaluatie
+  generalNotes  String?  @db.Text // Algemene opmerkingen bij evaluatie (legacy single-evaluator)
+  evaluationDate DateTime? // Datum evaluatie (legacy)
   documentUrl   String?  // Vercel Blob URL van origineel DOCX
   documentName  String?  // Originele bestandsnaam
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user        User?                       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items       DevelopmentPlanItem[]
+  evaluations DevelopmentPlanEvaluation[]
 
   @@index([userId])
   @@index([employeeName])
   @@index([year])
+}
+
+// Item binnen een ontwikkelplan. Combineert oude "sections"-velden
+// (titel/doelen/evaluatie) met status/voortgang/streefdatum.
+model DevelopmentPlanItem {
+  id          String   @id @default(cuid())
+  planId      String
+  category    String   // 'inhoud-theorie' | 'inhoud-praktijk' | 'eigen-praktijk' | 'intern'
+  title       String
+  goals       String?  @db.Text   // de "Doelen"-tekst
+  evaluation  String?  @db.Text   // per-item evaluatie (door partner of zelf)
+  status      String   @default("todo") // 'todo' | 'doing' | 'done'
+  progress    Int      @default(0)      // 0-100
+  targetDate  DateTime?
+  completedAt DateTime?
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  plan        DevelopmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([category])
+}
+
+// Algemene evaluaties (van partners/Hanna) bij het ontwikkelplan.
+// Vervangt het oude single-shot generalNotes/evaluationDate.
+model DevelopmentPlanEvaluation {
+  id            String   @id @default(cuid())
+  planId        String
+  evaluatorId   String
+  evaluatorName String
+  notes         String   @db.Text
+  evaluatedAt   DateTime @default(now())
+
+  plan          DevelopmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([evaluatorId])
 }
 
 // ==================== BONNETJES & DECLARATIES ====================
