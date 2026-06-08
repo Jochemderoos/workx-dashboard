@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import TextReveal from '@/components/ui/TextReveal'
+import PhotoDropdown from '@/components/ui/PhotoDropdown'
 
 interface Task {
   id: string
@@ -405,26 +406,35 @@ export default function OfficeTasksPage() {
                       ) : (
                         <p className={`text-sm font-medium ${open ? 'text-white' : 'text-white/50 line-through'}`}>{t.title}</p>
                       )}
-                      <div className="flex items-center gap-2 mt-0.5 text-[10px] text-white/40 flex-wrap">
-                        <span>{FREQUENCY_LABELS[t.frequency]}</span>
-                        {!open && t.lastCompletedByName && (
-                          <span className="text-emerald-300">✓ door {t.lastCompletedByName.split(' ')[0]}, {new Date(t.lastCompletedAt!).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</span>
-                        )}
-                      </div>
+                      {!open && t.lastCompletedByName && (
+                        <div className="mt-0.5 text-[10px] text-emerald-300">
+                          ✓ door {t.lastCompletedByName.split(' ')[0]}, {new Date(t.lastCompletedAt!).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Assignee */}
+                    {/* Frequency inline-edit */}
                     <select
-                      value={t.assigneeId || ''}
-                      onChange={async (e) => {
-                        const a = assignees.find(x => x.id === e.target.value)
-                        await updateTask(t.id, { assigneeId: e.target.value || null, assigneeName: a?.name || null })
-                      }}
-                      className="text-xs bg-white/5 border border-white/10 rounded px-2 py-1 text-white/80 focus:border-amber-500/50 focus:outline-none"
+                      value={t.frequency}
+                      onChange={async (e) => updateTask(t.id, { frequency: e.target.value })}
+                      className="text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-white/60 focus:border-amber-500/50 focus:outline-none cursor-pointer"
+                      title="Klik om frequentie te wijzigen"
                     >
-                      <option value="" className="bg-slate-900">— niemand —</option>
-                      {assignees.map(a => <option key={a.id} value={a.id} className="bg-slate-900">{a.name.split(' ')[0]}</option>)}
+                      {Object.entries(FREQUENCY_LABELS).map(([k, label]) => (
+                        <option key={k} value={k} className="bg-slate-900">{label}</option>
+                      ))}
                     </select>
+
+                    {/* Assignee — foto-dropdown */}
+                    <PhotoDropdown
+                      value={t.assigneeId}
+                      options={assignees.map(a => ({ id: a.id, label: a.name, photoUrl: getPhotoUrl(a.name, a.avatarUrl) }))}
+                      onChange={async (newId) => {
+                        const a = assignees.find(x => x.id === newId)
+                        await updateTask(t.id, { assigneeId: newId, assigneeName: a?.name || null })
+                      }}
+                      emptyOption="Niet toegewezen"
+                    />
 
                     {/* Acties */}
                     <div className="flex items-center gap-0.5">

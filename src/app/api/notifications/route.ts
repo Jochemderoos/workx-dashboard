@@ -836,6 +836,59 @@ export async function GET() {
       // silent — tip is informatief, mag never fail
     }
 
+    // Office tasks — open taken die aan mij zijn toegewezen
+    try {
+      const myOfficeTasks = await prisma.officeTask.findMany({
+        where: {
+          assigneeId: userId,
+          isArchived: false,
+        },
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          frequency: true,
+          completedAt: true,
+          lastCompletedAt: true,
+        },
+      })
+      const openTasks = myOfficeTasks.filter(t => {
+        if (t.frequency === 'once') return !t.completedAt
+        if (!t.lastCompletedAt) return true
+        const diffDays = (now.getTime() - new Date(t.lastCompletedAt).getTime()) / 86400000
+        switch (t.frequency) {
+          case 'daily': return diffDays >= 1
+          case 'weekly': return diffDays >= 7
+          case 'biweekly': return diffDays >= 14
+          case 'monthly': return diffDays >= 30
+          case 'quarterly': return diffDays >= 91
+          case 'yearly': return diffDays >= 365
+          default: return true
+        }
+      })
+
+      // Eén samenvattende notification (i.p.v. één per taak — zou de bell vol maken)
+      if (openTasks.length > 0) {
+        const key = `office-tasks-${now.toISOString().slice(0, 10)}`
+        if (!dismissedKeys.has(key)) {
+          notifications.push({
+            id: key,
+            type: 'office-task',
+            title: openTasks.length === 1 ? 'Open office-taak' : `${openTasks.length} open office-taken`,
+            message: openTasks.length === 1
+              ? openTasks[0].title
+              : `Bv. ${openTasks.slice(0, 2).map(t => t.title).join(', ')}${openTasks.length > 2 ? ' …' : ''}`,
+            createdAt: now,
+            read: false,
+            href: '/dashboard/office-tasks',
+            priority: 'medium',
+          })
+        }
+      }
+    } catch {
+      // silent
+    }
+
     // Mijn Jaarplan reminder — vanaf 2 juli 2026 voor users zonder items
     // (eerste 3 weken loopt via Slack #workx-algemeen).
     try {
