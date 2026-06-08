@@ -163,6 +163,7 @@ model User {
 
   // Recruitment (1 entry per medewerker met kandidaten/ambassadeur/ideeën)
   recruitmentEntry         RecruitmentEntry? @relation("RecruitmentEntries")
+  candidateConnections     CandidateConnection[] @relation("CandidateConnections")
 
   @@index([isActive])
   @@index([role])
@@ -2387,4 +2388,24 @@ model OfficeTaskCompletion {
 
   @@index([taskId])
   @@index([completedAt])
+}
+
+// ==================== RECRUITMENT NETWORK CONNECTIONS ====================
+// Stelt meerdere medewerkers in staat zichzelf te koppelen aan een kandidaat
+// die door iemand anders is aangedragen — "ik ken hen ook".
+// Kandidaten worden geïdentificeerd op (name lowercased, type) zodat de
+// koppeling werkt over user-entries heen.
+
+model CandidateConnection {
+  id            String   @id @default(cuid())
+  candidateKey  String   // lowercase trimmed name
+  candidateType String   // 'candidate' | 'ambassador'
+  userId        String
+  user          User     @relation("CandidateConnections", fields: [userId], references: [id], onDelete: Cascade)
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  @@unique([candidateKey, candidateType, userId])
+  @@index([candidateKey, candidateType])
+  @@index([userId])
 }

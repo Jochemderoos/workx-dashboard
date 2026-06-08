@@ -135,6 +135,85 @@ export default function RecruitmentPage() {
   // Of het samenvattings-paneel open is per kandidaat-key
   const [aiOpen, setAiOpen] = useState<Set<string>>(new Set())
 
+  // CandidateConnections — meerdere users kunnen aangeven dat ze een kandidaat ook kennen.
+  // Lokale state spiegelt server zodat toggles direct zichtbaar zijn.
+  const [connections, setConnections] = useState<CandidateConnection[]>([])
+
+  const getConnectionsFor = (name: string, type: string) => {
+    const key = name.trim().toLowerCase()
+    return connections.filter(c => c.candidateKey === key && c.candidateType === type)
+  }
+  const isConnectedToMe = (name: string, type: string) => {
+    if (!rawData?.currentUser) return false
+    return getConnectionsFor(name, type).some(c => c.user.id === rawData.currentUser.id)
+  }
+  // Render-helper voor "Ook in netwerk van"-rij. Gedraagt zich identiek
+  // in beide candidate-overzichten (top-3 & volledige ranking).
+  const renderConnectionsRow = (name: string, type: string) => {
+    const conns = getConnectionsFor(name, type)
+    const me = isConnectedToMe(name, type)
+    return (
+      <div className="flex items-center gap-2 mt-2 flex-wrap">
+        <span className="text-[10px] uppercase tracking-wider text-white/50 font-semibold">Ook in netwerk van</span>
+        {conns.map(conn => {
+          const ph = getPhotoUrl(conn.user.name, conn.user.avatarUrl)
+          return (
+            <div key={conn.id} className="flex items-center gap-1.5 pl-0.5 pr-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25" title={conn.user.name}>
+              {ph ? (
+                <Image src={ph} alt={conn.user.name} width={20} height={20} className="w-5 h-5 rounded-full object-cover" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-[9px] text-emerald-200 font-semibold">
+                  {conn.user.name.charAt(0)}
+                </div>
+              )}
+              <span className="text-[11px] text-emerald-100 font-medium">{conn.user.name.split(' ')[0]}</span>
+            </div>
+          )
+        })}
+        {conns.length === 0 && <span className="text-[11px] text-white/30 italic">nog niemand</span>}
+        <button
+          type="button"
+          onClick={() => toggleConnection(name, type)}
+          className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+            me
+              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/30'
+              : 'bg-white/5 border-white/15 text-white/60 hover:border-emerald-500/40 hover:text-emerald-200'
+          }`}
+        >
+          {me ? '✓ ik ken hen ook' : '+ ik ken hen ook'}
+        </button>
+      </div>
+    )
+  }
+
+  const toggleConnection = async (name: string, type: string) => {
+    if (!rawData?.currentUser) return
+    const connected = isConnectedToMe(name, type)
+    try {
+      if (connected) {
+        const res = await fetch(`/api/recruitment/connections?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}`, { method: 'DELETE' })
+        if (!res.ok) throw new Error()
+        const key = name.trim().toLowerCase()
+        setConnections(cs => cs.filter(c => !(c.candidateKey === key && c.candidateType === type && c.user.id === rawData.currentUser.id)))
+      } else {
+        const res = await fetch('/api/recruitment/connections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ candidateName: name, candidateType: type }),
+        })
+        if (!res.ok) throw new Error()
+        const conn = await res.json()
+        setConnections(cs => {
+          // Vervang eventuele bestaande entry voor zelfde key+user
+          const filtered = cs.filter(c => !(c.candidateKey === conn.candidateKey && c.candidateType === conn.candidateType && c.user.id === conn.user.id))
+          return [...filtered, conn]
+        })
+      }
+    } catch {
+      // silent — toast zou hier kunnen
+    }
+  }
+
   const requestAiSummary = async (candidate: { canonicalId: string; allIds: string[]; name: string; type: string; aiSummary?: string | null }, force = false) => {
     const key = `${candidate.type}|${candidate.name}`
     // Toggle als al geladen, niet aan het laden, en niet force-refresh
@@ -237,6 +316,7 @@ export default function RecruitmentPage() {
       }
       const d: ApiData = await res.json()
       setRawData(d)
+      setConnections(d.connections || [])
       if (d.ownEntry) {
         const cands = d.ownEntry.candidates.filter(c => c.type === 'candidate')
         const ambs = d.ownEntry.candidates.filter(c => c.type === 'ambassador')
@@ -729,6 +809,7 @@ export default function RecruitmentPage() {
                             )
                           })}
                         </div>
+                        {renderConnectionsRow(c.name, c.type)}
                         {(c.approachedBy || c.networkOwner || c.approachNotes) && (
                           <div className="mt-2 pt-2 border-t border-white/5 space-y-1 text-xs text-white/70">
                             {c.approachedBy && <div><span className="text-white/40">Opvolging:</span> {c.approachedBy}</div>}
@@ -1248,6 +1329,7 @@ export default function RecruitmentPage() {
                             )
                           })}
                         </div>
+                        {renderConnectionsRow(c.name, c.type)}
                         {(c.approachedBy || c.networkOwner || c.approachNotes) && (
                           <div className="mt-2 pt-2 border-t border-white/5 space-y-1 text-xs text-white/70">
                             {c.approachedBy && <div><span className="text-white/40">Opvolging:</span> {c.approachedBy}</div>}
