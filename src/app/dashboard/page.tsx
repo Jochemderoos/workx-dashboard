@@ -26,6 +26,7 @@ import OpenInvoicesWidget from '@/components/dashboard/OpenInvoicesWidget'
 import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
 import JarReminderWidget from '@/components/dashboard/JarReminderWidget'
 import DagstartWidget from '@/components/dashboard/DagstartWidget'
+import DevelopmentPlanReviewWidget from '@/components/dashboard/DevelopmentPlanReviewWidget'
 function WorkxLogoSmall() {
   return <WorkxLogo height={56} />
 }
@@ -1730,6 +1731,11 @@ export default function DashboardHome() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ONTWIKKELPLANNEN TE BESPREKEN — alleen managers; component verbergt zichzelf als leeg */}
+      {(currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'OFFICE_MANAGER') && (
+        <DevelopmentPlanReviewWidget />
       )}
 
       {/* PARTNER WERKVERDELINGSGESPREKKEN OVERZICHT - for partners (hide when all completed) */}

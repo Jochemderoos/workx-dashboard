@@ -1754,6 +1754,9 @@ model DevelopmentPlan {
   evaluationDate DateTime? // Datum evaluatie (legacy)
   documentUrl   String?  // Vercel Blob URL van origineel DOCX
   documentName  String?  // Originele bestandsnaam
+  submittedForReviewAt DateTime? // Wanneer medewerker plan "ingeleverd" heeft voor bespreking
+  reviewedAt           DateTime? // Wanneer partner heeft gemarkeerd als besproken (widget verdwijnt dan)
+  reviewedById         String?   // Wie het besproken heeft gemarkeerd
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -48,6 +48,9 @@ interface DevelopmentPlan {
   evaluationDate: string | null
   documentUrl: string | null
   documentName: string | null
+  submittedForReviewAt: string | null
+  reviewedAt: string | null
+  reviewedById: string | null
   createdAt: string
   updatedAt: string
   user: { id: string; name: string; role: string } | null
@@ -346,6 +349,44 @@ export default function OntwikkelplannenPage() {
     }
   }
 
+  // ── Submit "inleveren" / mark-reviewed ───────────────────────────────
+  const updatePlanLocal = useCallback((planId: string, patch: Partial<DevelopmentPlan>) => {
+    if (isAdmin) {
+      setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, ...patch }) || null)
+    } else {
+      setMyPlan(p => p && p.id === planId ? { ...p, ...patch } : p)
+    }
+  }, [isAdmin])
+
+  const submitForReview = async (planId: string) => {
+    if (!confirm('Plan inleveren ter bespreking met partners?\n\nEr wordt een melding naar #MT-Groot gestuurd en het verschijnt als bespreek-widget op het partner-dashboard.')) return
+    try {
+      const res = await fetch(`/api/development-plans/${planId}/submit`, { method: 'POST' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Inleveren mislukt')
+      }
+      updatePlanLocal(planId, { submittedForReviewAt: new Date().toISOString(), reviewedAt: null })
+      toast.success('Ingeleverd — partners zijn ingelicht')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Inleveren mislukt')
+    }
+  }
+
+  const markReviewed = async (planId: string) => {
+    try {
+      const res = await fetch(`/api/development-plans/${planId}/mark-reviewed`, { method: 'POST' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Markeren mislukt')
+      }
+      updatePlanLocal(planId, { reviewedAt: new Date().toISOString(), reviewedById: meId || null })
+      toast.success('Gemarkeerd als besproken')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Markeren mislukt')
+    }
+  }
+
   // ── DOCX upload (admin) ──────────────────────────────────────────────
   const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -481,6 +522,15 @@ export default function OntwikkelplannenPage() {
 
       {activePlan ? (
         <>
+          {/* Status-banner: ingeleverd / besproken / inleveren-knop */}
+          <PlanStatusBanner
+            plan={activePlan}
+            isOwner={isViewingOwnPlan}
+            isManager={isAdmin}
+            onSubmit={() => submitForReview(activePlan.id)}
+            onMarkReviewed={() => markReviewed(activePlan.id)}
+          />
+
           {/* Categorieën */}
           {CATEGORIES.map(cat => (
             <CategorySection
@@ -803,6 +853,105 @@ function ItemCard({
       </div>
     </div>
   )
+}
+
+// ── Status-banner (ingeleverd / besproken / inleveren-knop) ──────────────
+
+function PlanStatusBanner({
+  plan,
+  isOwner,
+  isManager,
+  onSubmit,
+  onMarkReviewed,
+}: {
+  plan: DevelopmentPlan
+  isOwner: boolean
+  isManager: boolean
+  onSubmit: () => void
+  onMarkReviewed: () => void
+}) {
+  const hasItems = plan.items.length > 0
+  const submitted = !!plan.submittedForReviewAt
+  const reviewed = !!plan.reviewedAt
+
+  // Niets te tonen
+  if (!isOwner && !isManager) return null
+  if (!submitted && !isOwner) return null
+
+  if (reviewed) {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+          <Icons.check size={18} className="text-emerald-300" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-emerald-100">Plan is besproken</p>
+          <p className="text-xs text-emerald-200/60">
+            Gemarkeerd op {new Date(plan.reviewedAt!).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+        {isOwner && (
+          <button onClick={onSubmit} className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:bg-white/10">
+            Opnieuw inleveren
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  if (submitted) {
+    return (
+      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-center gap-3 flex-wrap">
+        <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center">
+          <Icons.chat size={18} className="text-amber-300" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-amber-100">
+            {isOwner ? 'Ingeleverd ter bespreking' : `${plan.employeeName.split(' ')[0]} heeft ingeleverd`}
+          </p>
+          <p className="text-xs text-amber-200/60">
+            Op {new Date(plan.submittedForReviewAt!).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}
+            {isOwner ? ' — partners krijgen een bespreek-melding op hun dashboard.' : ' — markeer als besproken zodra het gesprek is geweest.'}
+          </p>
+        </div>
+        {isManager && (
+          <button
+            onClick={onMarkReviewed}
+            className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-100 hover:bg-emerald-500/25 flex items-center gap-1.5"
+          >
+            <Icons.check size={12} /> Markeer als besproken
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // Niet ingeleverd, alleen owner ziet de inlever-knop
+  if (isOwner) {
+    return (
+      <div className="rounded-2xl border border-purple-500/20 bg-white/[0.02] p-4 flex items-center gap-3 flex-wrap">
+        <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
+          <Icons.target size={18} className="text-purple-300" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white">Klaar met invullen?</p>
+          <p className="text-xs text-white/50">
+            Lever in zodat de partners het kunnen bespreken. Je kunt daarna gewoon verder bijwerken — alleen de voortgang verandert.
+          </p>
+        </div>
+        <button
+          onClick={onSubmit}
+          disabled={!hasItems}
+          className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/15 border border-purple-500/40 text-purple-100 hover:bg-purple-500/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+          title={hasItems ? '' : 'Voeg eerst items toe'}
+        >
+          <Icons.send size={12} /> Inleveren bij partners
+        </button>
+      </div>
+    )
+  }
+
+  return null
 }
 
 // ── Evaluaties-sectie ─────────────────────────────────────────────────────

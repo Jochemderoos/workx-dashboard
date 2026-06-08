@@ -889,6 +889,43 @@ export async function GET() {
       // silent
     }
 
+    // Ontwikkelplannen ter bespreking — alleen voor managers.
+    // Verschijnt als één samenvattende notificatie zolang er ingeleverde
+    // niet-besproken plannen zijn. Niet dismissable — verdwijnt zodra alle
+    // plannen besproken zijn (anders zou een gemiste reminder weg zijn).
+    try {
+      if (currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'OFFICE_MANAGER') {
+        const pending = await prisma.developmentPlan.findMany({
+          where: {
+            submittedForReviewAt: { not: null },
+            reviewedAt: null,
+          },
+          select: { id: true, employeeName: true, submittedForReviewAt: true, user: { select: { name: true } } },
+          orderBy: { submittedForReviewAt: 'asc' },
+        })
+        if (pending.length > 0) {
+          const names = pending.map(p => (p.user?.name || p.employeeName).split(' ')[0])
+          const namesLabel = names.length === 1
+            ? names[0]
+            : names.length === 2
+              ? `${names[0]} en ${names[1]}`
+              : `${names.slice(0, 2).join(', ')} +${names.length - 2}`
+          notifications.push({
+            id: `dev-plan-review-${pending.map(p => p.id).join('-')}`,
+            type: 'development-plan-review',
+            title: pending.length === 1 ? 'Ontwikkelplan bespreken' : `${pending.length} ontwikkelplannen bespreken`,
+            message: `${namesLabel} ${pending.length === 1 ? 'heeft' : 'hebben'} hun plan ingeleverd ter bespreking.`,
+            createdAt: pending[0].submittedForReviewAt || now,
+            read: false,
+            href: '/dashboard/ontwikkelplannen',
+            priority: 'medium',
+          })
+        }
+      }
+    } catch {
+      // silent
+    }
+
     // Ontwikkelplan-reminder — vanaf 2 juli 2026 voor users zonder items
     // (eerste 3 weken loopt via Slack #workx-algemeen).
     try {
