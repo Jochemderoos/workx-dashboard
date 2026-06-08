@@ -309,29 +309,27 @@ export default function OfficeTasksPage() {
             className="input-field"
             autoFocus
           />
-          <div className="grid grid-cols-3 gap-2">
-            <select
+          <div className="flex flex-wrap items-center gap-2">
+            <LabelDropdown
+              size="md"
               value={newDraft.category}
-              onChange={e => setNewDraft(s => ({ ...s, category: e.target.value }))}
-              className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-amber-500/50 focus:outline-none"
-            >
-              {CATEGORIES.map(c => <option key={c.key} value={c.key} className="bg-slate-900">{c.label}</option>)}
-            </select>
-            <select
+              options={CATEGORIES.map(c => ({ key: c.key, label: c.label }))}
+              onChange={k => setNewDraft(s => ({ ...s, category: k }))}
+            />
+            <LabelDropdown
+              size="md"
               value={newDraft.frequency}
-              onChange={e => setNewDraft(s => ({ ...s, frequency: e.target.value }))}
-              className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-amber-500/50 focus:outline-none"
-            >
-              {Object.entries(FREQUENCY_LABELS).map(([k, label]) => <option key={k} value={k} className="bg-slate-900">{label}</option>)}
-            </select>
-            <select
-              value={newDraft.assigneeId}
-              onChange={e => setNewDraft(s => ({ ...s, assigneeId: e.target.value }))}
-              className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:border-amber-500/50 focus:outline-none"
-            >
-              <option value="" className="bg-slate-900">— Geen verantwoordelijke —</option>
-              {assignees.map(a => <option key={a.id} value={a.id} className="bg-slate-900">{a.name}</option>)}
-            </select>
+              options={Object.entries(FREQUENCY_LABELS).map(([key, label]) => ({ key, label }))}
+              onChange={k => setNewDraft(s => ({ ...s, frequency: k }))}
+            />
+            <PhotoDropdown
+              size="md"
+              value={newDraft.assigneeId || null}
+              options={assignees.map(a => ({ id: a.id, label: a.name, photoUrl: getPhotoUrl(a.name, a.avatarUrl) }))}
+              onChange={(id) => setNewDraft(s => ({ ...s, assigneeId: id || '' }))}
+              emptyOption="Geen verantwoordelijke"
+              placeholder="Wijs toe…"
+            />
           </div>
           <div className="flex items-center gap-2">
             <button onClick={addTask} className="btn-primary text-sm py-1.5 px-3">Toevoegen</button>
