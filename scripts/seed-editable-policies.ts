@@ -10,8 +10,8 @@ const STAPPENPLAN_PARTNER = {
     {
       id: 1,
       naam: 'Counsel',
-      omzetWorkx: '€ 120.000 – 160.000',
-      omzetEigen: '€ 40.000 – 60.000',
+      omzetWorkx: '€ 150.000 – 195.000',
+      omzetEigen: '€ 50.000 – 75.000',
       inhoud: 'Volledig zelfstandig inhoudelijk adviseren en op hoog niveau in het Engels adviseren.',
       softskills: 'Voldoende zorgvuldig en scherp, tevredenheid klanten.',
       bijdrage: 'Begeleiding en samenwerking van collega\'s naar tevredenheid, toont initiatieven en werkt aan sociale cohesie team Workx.',
@@ -19,8 +19,8 @@ const STAPPENPLAN_PARTNER = {
     {
       id: 2,
       naam: 'Director',
-      omzetWorkx: '€ 120.000 – 160.000',
-      omzetEigen: '€ 70.000 – 100.000',
+      omzetWorkx: '€ 150.000 – 195.000',
+      omzetEigen: '€ 85.000 – 125.000',
       inhoud: 'Zelfstandig reorganisatie kunnen doorvoeren, waaronder adviestraject met de Ondernemingsraad.',
       softskills: 'Kan laten zien dat klanten "reclame" maken voor jezelf en eigen omzet groeit.',
       bijdrage: 'Verantwoordelijk voor volledig en goed werkend know-how systeem en bijdrage aan marketing en acquisitie van kantoor.',
@@ -28,8 +28,8 @@ const STAPPENPLAN_PARTNER = {
     {
       id: 3,
       naam: 'Partner / aandeelhouder',
-      omzetWorkx: '€ 120.000 – 160.000',
-      omzetEigen: '€ 100.000 – 130.000',
+      omzetWorkx: '€ 150.000 – 195.000',
+      omzetEigen: '€ 125.000 – 160.000',
       inhoud: 'In staat om volledig zelfstandig te adviseren over alle aspecten van het arbeidsrecht, zelfstandig due diligence in Engels kunnen doen.',
       softskills: 'Ambassadeur van Workx.',
       bijdrage: 'Functioneert op hetzelfde niveau als de andere partners, evenveel effort in kantoor.',
