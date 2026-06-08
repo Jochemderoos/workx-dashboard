@@ -20,6 +20,16 @@ export async function GET(req: NextRequest) {
   const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()), 10)
 
   try {
+    // Alle actieve teamleden (advocaten + partners + office), excl. ADMIN-only
+    const users = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        role: { in: ['EMPLOYEE', 'PARTNER', 'OFFICE_MANAGER'] },
+      },
+      select: { id: true, name: true, email: true, avatarUrl: true, role: true },
+      orderBy: { name: 'asc' },
+    })
+
     const plans = await prisma.yearPlan.findMany({
       where: { year },
       include: {
@@ -27,17 +37,12 @@ export async function GET(req: NextRequest) {
         evaluations: { orderBy: { evaluatedAt: 'desc' } },
       },
     })
-    const userIds = plans.map(p => p.userId)
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds }, isActive: true },
-      select: { id: true, name: true, email: true, avatarUrl: true, role: true },
-    })
-    const userMap = new Map(users.map(u => [u.id, u]))
+    const planByUser = new Map(plans.map(p => [p.userId, p]))
 
-    const enriched = plans
-      .map(p => ({ ...p, user: userMap.get(p.userId) || null }))
-      .filter(p => p.user) // alleen actieve medewerkers
-      .sort((a, b) => (a.user?.name || '').localeCompare(b.user?.name || ''))
+    const enriched = users.map(u => ({
+      user: u,
+      plan: planByUser.get(u.id) || null,
+    }))
 
     return NextResponse.json(enriched)
   } catch (err) {
