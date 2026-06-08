@@ -97,6 +97,12 @@ export async function GET() {
     })
   }
 
+  // Alle candidate-connections in 1 query — pagina gebruikt 't om netwerk-rijen te tonen
+  const connections = await prisma.candidateConnection.findMany({
+    include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+    orderBy: { createdAt: 'asc' },
+  })
+
   return NextResponse.json({
     currentUser: me,
     revealAt: RECRUITMENT_REVEAL_AT.toISOString(),
@@ -106,6 +112,7 @@ export async function GET() {
     ownEntry,
     allEntries,
     activeUsers,
+    connections,
   })
 }
 

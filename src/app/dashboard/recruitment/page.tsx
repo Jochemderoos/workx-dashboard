@@ -56,6 +56,15 @@ interface EntryWithUser extends Entry {
   user: User
 }
 
+interface CandidateConnection {
+  id: string
+  candidateKey: string
+  candidateType: string
+  notes: string | null
+  createdAt: string
+  user: { id: string; name: string; avatarUrl: string | null }
+}
+
 interface ApiData {
   currentUser: { id: string; name: string; role: string }
   revealAt: string
@@ -65,6 +74,7 @@ interface ApiData {
   ownEntry: Entry | null
   allEntries: EntryWithUser[]
   activeUsers: User[]
+  connections: CandidateConnection[]
 }
 
 // ─── Statics ───────────────────────────────────────────────────────────────

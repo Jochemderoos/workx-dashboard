@@ -6,6 +6,7 @@ import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import TextReveal from '@/components/ui/TextReveal'
 import PhotoDropdown from '@/components/ui/PhotoDropdown'
+import LabelDropdown from '@/components/ui/LabelDropdown'
 
 interface Task {
   id: string
@@ -414,16 +415,11 @@ export default function OfficeTasksPage() {
                     </div>
 
                     {/* Frequency inline-edit */}
-                    <select
+                    <LabelDropdown
                       value={t.frequency}
-                      onChange={async (e) => updateTask(t.id, { frequency: e.target.value })}
-                      className="text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-white/60 focus:border-amber-500/50 focus:outline-none cursor-pointer"
-                      title="Klik om frequentie te wijzigen"
-                    >
-                      {Object.entries(FREQUENCY_LABELS).map(([k, label]) => (
-                        <option key={k} value={k} className="bg-slate-900">{label}</option>
-                      ))}
-                    </select>
+                      options={Object.entries(FREQUENCY_LABELS).map(([key, label]) => ({ key, label }))}
+                      onChange={(k) => updateTask(t.id, { frequency: k })}
+                    />
 
                     {/* Assignee — foto-dropdown */}
                     <PhotoDropdown
