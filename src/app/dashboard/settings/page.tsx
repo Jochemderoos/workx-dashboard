@@ -546,7 +546,7 @@ export default function SettingsPage() {
               {[
                 { icon: Icons.check, text: 'Gebruik een uniek wachtwoord voor dit account', done: true },
                 { icon: Icons.check, text: 'Combineer letters, cijfers en symbolen', done: true },
-                { icon: Icons.x, text: 'Schakel tweefactorauthenticatie in', done: false },
+                { icon: Icons.check, text: 'Wijzig je wachtwoord regelmatig (bijv. elk half jaar)', done: true },
               ].map((tip, i) => (
                 <div key={i} className={`flex items-center gap-3 text-sm ${tip.done ? 'text-green-400' : 'text-gray-400'}`}>
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center ${tip.done ? 'bg-green-500/10' : 'bg-white/5'}`}>
