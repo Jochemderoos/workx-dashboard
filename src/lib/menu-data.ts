@@ -70,6 +70,8 @@ export const teamMenu_Tools: MenuItem[] = [
     description: 'Bonusregeling-overzicht: eigen omzet en uitkering per kwartaal.' },
   { href: '/dashboard/transitie', icon: Icons.calculator, label: 'Transitievergoeding', iconAnim: 'icon-calculator-hover',
     description: 'Bereken transitievergoeding obv salaris en duur dienstverband.' },
+  { href: '/dashboard/mijn-jaarplan', icon: Icons.target, label: 'Mijn Jaarplan', iconAnim: 'icon-target-hover', hideForExternal: true,
+    description: 'Persoonlijke ontwikkeldoelen voor dit jaar — theorie, praktijk, acquisitie, intern.' },
   { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover', hideForExternal: true,
     description: 'Onkostendeclaraties met bonnetjes en goedkeurings-flow.' },
 ]
@@ -106,6 +108,8 @@ export const partnersMenuItems: MenuItem[] = [
     description: 'Wekelijkse 1-op-1 gesprekken partner ↔ medewerker.' },
   { href: '/dashboard/partners/performance', icon: Icons.target, label: 'Performance Management', iconAnim: 'icon-target-hover',
     description: 'Per medewerker observaties noteren — basis voor beoordelingsgesprekken.' },
+  { href: '/dashboard/partners/jaarplannen', icon: Icons.target, label: 'Jaarplannen team', iconAnim: 'icon-target-hover',
+    description: 'Overzicht van persoonlijke ontwikkelplannen — voortgang per medewerker, evaluaties toevoegen.' },
   // Sollicitaties zit nu als tab onder /dashboard/recruitment — geen aparte
   // sidebar-link meer nodig.
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financien', iconAnim: 'icon-piechart-hover',

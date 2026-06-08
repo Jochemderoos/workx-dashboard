@@ -2287,3 +2287,57 @@ model RecruitmentCandidate {
   @@index([entryId])
   @@index([type])
 }
+
+// ==================== MIJN JAARPLAN ====================
+// Persoonlijk ontwikkelingsplan per medewerker per jaar.
+// 4 categorieën (theorie, praktijk, acquisitie, intern) met items per categorie.
+// Partners + Hanna kunnen het inzien en evalueren.
+
+model YearPlan {
+  id          String   @id @default(cuid())
+  userId      String
+  year        Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       YearPlanItem[]
+  evaluations YearPlanEvaluation[]
+
+  @@unique([userId, year])
+  @@index([userId])
+  @@index([year])
+}
+
+model YearPlanItem {
+  id          String   @id @default(cuid())
+  planId      String
+  category    String   // 'theorie' | 'praktijk' | 'acquisitie' | 'intern'
+  title       String
+  description String?  @db.Text
+  status      String   @default("todo") // todo | doing | done
+  progress    Int      @default(0)      // 0-100
+  targetDate  DateTime?
+  completedAt DateTime?
+  position    Int      @default(0)      // sort-order binnen categorie
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  plan        YearPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([category])
+}
+
+model YearPlanEvaluation {
+  id          String   @id @default(cuid())
+  planId      String
+  evaluatorId String   // partner of Hanna
+  evaluatorName String // gedenormaliseerd voor display
+  notes       String   @db.Text
+  evaluatedAt DateTime @default(now())
+
+  plan        YearPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([evaluatorId])
+}
