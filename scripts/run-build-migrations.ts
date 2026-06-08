@@ -35,6 +35,7 @@ import { main as addRecruitmentTables } from './add-recruitment-tables'
 import { main as addWorkxflowCoverFields } from './add-workxflow-cover-fields'
 import { main as addTransitieNotes } from './add-transitie-notes'
 import { main as addYearPlanTables } from './add-year-plan-tables'
+import { main as addOfficeTasksTables } from './add-office-tasks-tables'
 import { main as claimLegacyTransitie } from './claim-legacy-transitie'
 
 // Recurring seeds — idempotent en mogelijk nog uitbreidbaar.
@@ -89,6 +90,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-workxflow-cover-fields', run: addWorkxflowCoverFields },
   { name: 'add-transitie-notes', run: addTransitieNotes },
   { name: 'add-year-plan-tables', run: addYearPlanTables },
+  { name: 'add-office-tasks-tables', run: addOfficeTasksTables },
   { name: 'claim-legacy-transitie', run: claimLegacyTransitie },
   { name: 'seed-partner-tasks', run: seedPartnerTasks },
   { name: 'seed-monthly-costs-2026', run: seedMonthlyCosts2026 },

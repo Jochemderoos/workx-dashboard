@@ -2341,3 +2341,50 @@ model YearPlanEvaluation {
   @@index([planId])
   @@index([evaluatorId])
 }
+
+// ==================== OFFICE TASKS (Hanna's overzicht) ====================
+// Taken voor het office-team (Hanna, Lotte, Bente, Jochem). Recurring of one-off.
+// Wie verantwoordelijk + afvinken met audit-trail.
+
+model OfficeTask {
+  id            String   @id @default(cuid())
+  category      String   // 'administratie' | 'documenten' | 'juridisch' | 'kantoorbeheer' | 'facilitair' | 'communicatie' | 'post' | 'overig'
+  title         String
+  description   String?  @db.Text
+  assigneeId    String?  // primaire verantwoordelijke (nullable als nog niet toegewezen)
+  assigneeName  String?  // gedenormaliseerd
+  frequency     String   @default("once") // 'once' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'
+  isArchived    Boolean  @default(false)
+  position      Int      @default(0)
+  // Voor recurring: wanneer was 'm laatst afgevinkt (resetten bij volgende cyclus)
+  lastCompletedAt   DateTime?
+  lastCompletedById String?
+  lastCompletedByName String?
+  // Voor once: 'm permanent als done markeren
+  completedAt   DateTime?
+  completedById String?
+  completedByName String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  completions   OfficeTaskCompletion[]
+
+  @@index([category])
+  @@index([assigneeId])
+  @@index([frequency])
+}
+
+// Audit-trail: elke keer dat een (recurring) task wordt afgevinkt.
+model OfficeTaskCompletion {
+  id            String   @id @default(cuid())
+  taskId        String
+  completedById String
+  completedByName String
+  completedAt   DateTime @default(now())
+  note          String?
+
+  task          OfficeTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([completedAt])
+}

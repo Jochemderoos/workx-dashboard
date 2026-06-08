@@ -72,6 +72,8 @@ export const teamMenu_Tools: MenuItem[] = [
     description: 'Bereken transitievergoeding obv salaris en duur dienstverband.' },
   { href: '/dashboard/mijn-jaarplan', icon: Icons.target, label: 'Mijn Jaarplan', iconAnim: 'icon-target-hover', hideForExternal: true,
     description: 'Persoonlijke ontwikkeldoelen voor dit jaar — theorie, praktijk, acquisitie, intern.' },
+  { href: '/dashboard/office-tasks', icon: Icons.briefcase, label: 'Office Tasks', iconAnim: 'icon-briefcase-hover', hideForExternal: true,
+    description: 'Office-team taken: verantwoordelijkheden, voortgang, afvinken met audit-trail.' },
   { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', iconAnim: 'icon-euro-hover', hideForExternal: true,
     description: 'Onkostendeclaraties met bonnetjes en goedkeurings-flow.' },
 ]
