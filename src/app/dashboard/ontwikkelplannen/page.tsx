@@ -148,11 +148,13 @@ export default function OntwikkelplannenPage() {
 
   const [allPlans, setAllPlans] = useState<DevelopmentPlan[] | null>(null)
   const [myPlan, setMyPlan] = useState<DevelopmentPlan | null>(null)
+  const [myAllPlans, setMyAllPlans] = useState<DevelopmentPlan[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [showImport, setShowImport] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [viewMode, setViewMode] = useState<'plan' | 'timeline'>('plan')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ── Data fetching ──────────────────────────────────────────────────────
@@ -216,6 +218,29 @@ export default function OntwikkelplannenPage() {
     if (!allPlans || !selectedEmployee) return []
     return Array.from(new Set(allPlans.filter(p => p.employeeName === selectedEmployee).map(p => p.year))).sort((a, b) => b - a)
   }, [allPlans, selectedEmployee])
+
+  // Alle plannen van de geselecteerde medewerker (voor rode-draad-view)
+  const plansForEmployee = useMemo(() => {
+    if (isAdmin && allPlans && selectedEmployee) {
+      return allPlans.filter(p => p.employeeName === selectedEmployee).sort((a, b) => a.year - b.year)
+    }
+    if (!isAdmin) {
+      return myAllPlans || (myPlan ? [myPlan] : [])
+    }
+    return []
+  }, [isAdmin, allPlans, selectedEmployee, myPlan, myAllPlans])
+
+  // Lazy-fetch alle eigen plannen wanneer een medewerker naar timeline switcht
+  useEffect(() => {
+    if (!isAdmin && viewMode === 'timeline' && !myAllPlans) {
+      fetch('/api/development-plans/me?all=true')
+        .then(r => r.ok ? r.json() : null)
+        .then((data) => {
+          if (Array.isArray(data)) setMyAllPlans(data)
+        })
+        .catch(() => { /* silent */ })
+    }
+  }, [isAdmin, viewMode, myAllPlans])
 
   // ── Items per categorie ───────────────────────────────────────────────
   const itemsByCategory = useMemo(() => {
@@ -503,24 +528,40 @@ export default function OntwikkelplannenPage() {
               )
             })}
           </div>
-          {/* Jaar-tabs */}
-          {selectedEmployee && yearsForEmployee.length > 1 && (
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              {yearsForEmployee.map(y => (
-                <button
-                  key={y}
-                  onClick={() => setSelectedYear(y)}
-                  className={`px-3 py-1 rounded-lg text-xs transition-all ${selectedYear === y ? 'bg-purple-500/15 text-purple-200 border border-purple-500/30' : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'}`}
-                >
-                  {y}
-                </button>
-              ))}
+          {/* Jaar-tabs + view-mode toggle */}
+          {selectedEmployee && (
+            <div className="flex items-center justify-between gap-3 mt-3 flex-wrap">
+              {yearsForEmployee.length > 1 && viewMode === 'plan' ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {yearsForEmployee.map(y => (
+                    <button
+                      key={y}
+                      onClick={() => setSelectedYear(y)}
+                      className={`px-3 py-1 rounded-lg text-xs transition-all ${selectedYear === y ? 'bg-purple-500/15 text-purple-200 border border-purple-500/30' : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'}`}
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              ) : <div />}
+              {plansForEmployee.length > 1 && (
+                <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+              )}
             </div>
           )}
         </div>
       )}
 
-      {activePlan ? (
+      {/* Medewerker-view: view-mode toggle (zonder employee-picker) */}
+      {!isAdmin && plansForEmployee.length > 1 && (
+        <div className="flex justify-end">
+          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+        </div>
+      )}
+
+      {viewMode === 'timeline' && plansForEmployee.length > 0 ? (
+        <TimelineView plans={plansForEmployee} />
+      ) : activePlan ? (
         <>
           {/* Status-banner: ingeleverd / besproken / inleveren-knop */}
           <PlanStatusBanner
@@ -836,6 +877,143 @@ function ItemCard({
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── View-mode toggle (plan / rode draad) ─────────────────────────────────
+
+function ViewModeToggle({ mode, onChange }: { mode: 'plan' | 'timeline'; onChange: (m: 'plan' | 'timeline') => void }) {
+  return (
+    <div className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/10">
+      <button
+        onClick={() => onChange('plan')}
+        className={`px-3 py-1 rounded-md text-xs transition-colors flex items-center gap-1.5 ${
+          mode === 'plan' ? 'bg-purple-500/20 text-purple-100' : 'text-white/50 hover:text-white/80'
+        }`}
+      >
+        <Icons.target size={11} /> Plan
+      </button>
+      <button
+        onClick={() => onChange('timeline')}
+        className={`px-3 py-1 rounded-md text-xs transition-colors flex items-center gap-1.5 ${
+          mode === 'timeline' ? 'bg-purple-500/20 text-purple-100' : 'text-white/50 hover:text-white/80'
+        }`}
+      >
+        <Icons.trendingUp size={11} /> Rode draad
+      </button>
+    </div>
+  )
+}
+
+// ── Timeline view — rode draad door de jaren per categorie ───────────────
+
+function TimelineView({ plans }: { plans: DevelopmentPlan[] }) {
+  // Items per categorie, met jaar+periode-context
+  type TimelineItem = {
+    year: number
+    period: string
+    planId: string
+    item: DevelopmentPlanItem
+  }
+
+  const byCategory = useMemo(() => {
+    const map: Record<string, TimelineItem[]> = {
+      'inhoud-theorie': [],
+      'inhoud-praktijk': [],
+      'eigen-praktijk': [],
+      'intern': [],
+    }
+    for (const p of plans) {
+      for (const it of p.items) {
+        const bucket = map[it.category] || map['inhoud-theorie']
+        bucket.push({ year: p.year, period: p.period, planId: p.id, item: it })
+      }
+    }
+    // Sorteer chronologisch (oudste eerst)
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => a.year - b.year || a.period.localeCompare(b.period))
+    }
+    return map
+  }, [plans])
+
+  const totals = useMemo(() => {
+    const total = plans.reduce((sum, p) => sum + p.items.length, 0)
+    const years = Array.from(new Set(plans.map(p => p.year))).sort((a, b) => a - b)
+    return { total, years, minYear: years[0], maxYear: years[years.length - 1] }
+  }, [plans])
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/8 to-transparent p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center flex-shrink-0">
+            <Icons.trendingUp className="text-purple-300" size={18} />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-white">Rode draad door de jaren</h2>
+            <p className="text-xs text-white/60 mt-0.5">
+              {totals.total} onderdelen verspreid over {totals.years.length} {totals.years.length === 1 ? 'jaar' : 'jaren'}
+              {totals.minYear !== totals.maxYear && ` (${totals.minYear} → ${totals.maxYear})`}.
+              Per categorie chronologisch — zie hoe focus en doelen zich ontwikkelen.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {CATEGORIES.map(cat => {
+        const items = byCategory[cat.key] || []
+        if (items.length === 0) return null
+        const colors = COLOR_CLASSES[cat.color] || COLOR_CLASSES.purple
+        const Icon = (Icons as any)[cat.icon]
+        return (
+          <section key={cat.key} className={`relative rounded-2xl border bg-gradient-to-br to-transparent p-5 ${colors.border} ${colors.gradient}`}>
+            <div className="flex items-center gap-3 mb-4">
+              {Icon && <Icon className={colors.accent} size={18} />}
+              <div>
+                <h3 className="text-base font-semibold text-white">{cat.label}</h3>
+                <p className="text-[11px] text-white/50">{items.length} {items.length === 1 ? 'onderdeel' : 'onderdelen'} door de jaren</p>
+              </div>
+            </div>
+
+            {/* Tijdlijn — verticaal lijn-element links + cards per item */}
+            <div className="relative pl-5">
+              <div className="absolute left-1.5 top-2 bottom-2 w-px bg-white/10" />
+              <div className="space-y-3">
+                {items.map((entry, idx) => {
+                  const sameAsPrevYear = idx > 0 && items[idx - 1].year === entry.year
+                  return (
+                    <div key={entry.item.id} className="relative">
+                      <div className={`absolute -left-[19px] top-1.5 w-3 h-3 rounded-full ring-4 ring-workx-dark ${colors.accentBg}`}>
+                        <div className={`w-full h-full rounded-full ${colors.accent.replace('text-', 'bg-').replace('300', '400')}`} />
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                        <div className="flex items-baseline justify-between gap-2 mb-1.5 flex-wrap">
+                          <p className="text-sm font-medium text-white">{entry.item.title}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${colors.accentBg} ${colors.accent} font-semibold tabular-nums whitespace-nowrap`}>
+                            {sameAsPrevYear ? entry.period : entry.year}
+                          </span>
+                        </div>
+                        {!sameAsPrevYear && entry.period && entry.period !== String(entry.year) && (
+                          <p className="text-[10px] text-white/40 mb-1.5">{entry.period}</p>
+                        )}
+                        {entry.item.goals && (
+                          <p className="text-xs text-white/70 whitespace-pre-wrap">{entry.item.goals}</p>
+                        )}
+                        {entry.item.evaluation && (
+                          <p className="text-[11px] text-white/50 italic whitespace-pre-wrap mt-2 pt-2 border-t border-white/5">
+                            <span className="text-amber-300/70 not-italic">Evaluatie:</span> {entry.item.evaluation}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }
