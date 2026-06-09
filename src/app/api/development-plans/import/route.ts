@@ -59,8 +59,11 @@ function extractTextFromDocxXml(xml: string): {
   for (const row of rows) {
     const cells = row.split('|||CELL|||').map(c => c.replace(/\n+/g, '\n').trim())
 
-    // Skip header row (contains "Onderdeel", "Doelen", "Evaluatie")
-    if (cells.some(c => c.includes('Onderdeel') && c.includes('Doelen'))) continue
+    // Skip header rij: cellen bevatten exact "Onderdeel" / "Doelen" / "Evaluatie".
+    // (vroeger werd dit per ongeluk meegeimporteerd omdat de # cel ook een digit had.)
+    const isHeader = (cells[1] || '').trim().toLowerCase() === 'onderdeel'
+      && /^(doelen?)$/i.test((cells[2] || '').trim())
+    if (isHeader) continue
     if (cells.join('').replace(/\s/g, '').length === 0) continue
 
     // Parse row number
@@ -71,6 +74,9 @@ function extractTextFromDocxXml(xml: string): {
     const title = cells[1]?.trim() || ''
     const goals = cells[2]?.trim() || ''
     const evaluation = cells[3]?.trim() || ''
+
+    // Extra guard: skip als de cel-inhoud exact gelijk is aan de kolomkop-tekst
+    if (title.toLowerCase() === 'onderdeel' && goals.toLowerCase() === 'doelen') continue
 
     if (title || goals) {
       sections.push({ number, title, goals, evaluation })

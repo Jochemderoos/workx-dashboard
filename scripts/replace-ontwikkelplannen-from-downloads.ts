@@ -77,7 +77,10 @@ function extractDocx(xml: string): { name: string; period: string; sections: Par
   const rows = processed.split('|||ROW|||').filter(r => r.includes('|||CELL|||'))
   for (const row of rows) {
     const cells = row.split('|||CELL|||').map(c => c.replace(/\n+/g, '\n').trim())
-    if (cells.some(c => c.includes('Onderdeel') && c.includes('Doelen'))) continue
+    // Skip header rij: tweede cel = "Onderdeel", derde = "Doelen"/"Doel".
+    const isHeader = (cells[1] || '').trim().toLowerCase() === 'onderdeel'
+      && /^(doelen?)$/i.test((cells[2] || '').trim())
+    if (isHeader) continue
     if (cells.join('').replace(/\s/g, '').length === 0) continue
     const numMatch = cells[0]?.match(/(\d+)/)
     if (!numMatch) continue
@@ -85,6 +88,8 @@ function extractDocx(xml: string): { name: string; period: string; sections: Par
     const title = cells[1]?.trim() || ''
     const goals = cells[2]?.trim() || ''
     const evaluation = cells[3]?.trim() || ''
+    // Extra guard
+    if (title.toLowerCase() === 'onderdeel' && goals.toLowerCase() === 'doelen') continue
     if (title || goals) sections.push({ number, title, goals, evaluation })
   }
   return { name, period, sections }
