@@ -977,9 +977,12 @@ function TotaaloverzichtWidget({ employeeName, signature }: { employeeName: stri
               <Icons.trendingUp className="text-purple-300" size={18} />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">Totaaloverzicht</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-white">Totaaloverzicht eerdere plannen</h2>
+                <span className="text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded-md bg-purple-500/25 text-purple-100 border border-purple-300/30 uppercase">AI</span>
+              </div>
               <p className="text-xs text-white/50">
-                {data.plans.length === 3 ? 'Laatste 3 plannen' : `${data.plans.length} ${data.plans.length === 1 ? 'plan' : 'plannen'}`} — samenvatting + ontwikkelingslijn
+                Door AI samengevat uit de {data.plans.length === 3 ? 'laatste 3 ontwikkelplannen' : `${data.plans.length} eerdere ${data.plans.length === 1 ? 'plan' : 'plannen'}`} — interpreteer met een korrel zout.
               </p>
             </div>
           </div>
