@@ -202,7 +202,6 @@ export default function OntwikkelplannenPage() {
       const own = allPlans.find(p => p.userId === meId)
       if (own) {
         setSelectedEmployee(own.employeeName)
-        setSelectedYear(own.year)
         return
       }
       // Anders: eerste medewerker
@@ -210,6 +209,20 @@ export default function OntwikkelplannenPage() {
       if (names.length > 0) setSelectedEmployee(names[0])
     }
   }, [isAdmin, allPlans, selectedEmployee, meName, meId])
+
+  // Bij wisseling van medewerker: spring automatisch naar het meest recente
+  // jaar van die medewerker. Zo zien partners direct iets als ze de pagina
+  // openen (zonder eerst op een jaartab te hoeven klikken).
+  useEffect(() => {
+    if (!isAdmin || !selectedEmployee || !allPlans) return
+    const years = allPlans
+      .filter(p => p.employeeName === selectedEmployee)
+      .map(p => p.year)
+    if (years.length === 0) return
+    if (!years.includes(selectedYear)) {
+      setSelectedYear(Math.max(...years))
+    }
+  }, [isAdmin, allPlans, selectedEmployee, selectedYear])
 
   // ── Active plan (de huidig getoonde) ──────────────────────────────────
   const activePlan: DevelopmentPlan | null = useMemo(() => {

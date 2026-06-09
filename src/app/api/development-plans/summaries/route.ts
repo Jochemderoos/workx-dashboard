@@ -130,10 +130,18 @@ export async function GET(req: NextRequest) {
     const apiKey = process.env.ANTHROPIC_API_KEY
     const client = apiKey ? new Anthropic({ apiKey }) : null
 
-    // Genereer summaries (in parallel) waar nodig
+    // Genereer summaries (in parallel) waar nodig.
+    // Invalidatie: regen als items recenter zijn aangepast dan de cache.
     const tasks = plans.map(async (p) => {
       let summary = p.aiSummary || ''
-      if ((!summary || refresh) && client && p.items.length > 0) {
+      const latestItemUpdate = p.items.reduce<Date | null>((acc, it) => {
+        const t = it.updatedAt instanceof Date ? it.updatedAt : new Date(it.updatedAt as unknown as string)
+        if (!acc || t > acc) return t
+        return acc
+      }, null)
+      const cacheStale = p.aiSummaryAt && latestItemUpdate && latestItemUpdate > p.aiSummaryAt
+      const needsRegen = !summary || refresh || cacheStale
+      if (needsRegen && client && p.items.length > 0) {
         try {
           const prompt = buildPlanPrompt(p.period, p.items)
           summary = await generatePlanSummary(client, p.period, prompt)
