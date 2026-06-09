@@ -599,6 +599,34 @@ export default function OntwikkelplannenPage() {
             onDelete={(id) => deleteEvaluation(activePlan.id, id)}
           />
 
+          {/* Prominente "Opslaan en indienen" knop onderaan — alleen voor eigenaar
+              die het plan nog niet ingeleverd heeft. Wijzigingen worden al
+              automatisch opgeslagen; deze knop levert in bij partners. */}
+          {isViewingOwnPlan && !activePlan.submittedForReviewAt && activePlan.items.length > 0 && (
+            <div className="rounded-2xl border border-purple-500/40 bg-gradient-to-br from-purple-500/15 via-indigo-500/8 to-transparent p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/25 flex items-center justify-center flex-shrink-0">
+                    <Icons.send className="text-purple-200" size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">Klaar met je ontwikkelplan?</p>
+                    <p className="text-xs text-white/60 mt-0.5">
+                      Wijzigingen worden automatisch opgeslagen. Met deze knop lever je in bij de partners — ze krijgen een melding op #MT-Groot en op hun dashboard.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => submitForReview(activePlan.id)}
+                  className="px-4 py-2 rounded-xl bg-purple-500/30 border border-purple-300/40 text-purple-50 hover:bg-purple-500/40 transition-colors font-semibold text-sm flex items-center gap-2 shadow-lg shadow-purple-500/10"
+                >
+                  <Icons.send size={14} />
+                  Opslaan en indienen
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Totaaloverzicht — onder het plan; verschijnt zodra deze medewerker ≥2 plannen heeft */}
           {plansForEmployee.length >= 2 && activePlan.employeeName && (
             <TotaaloverzichtWidget
