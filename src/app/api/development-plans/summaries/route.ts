@@ -56,7 +56,14 @@ async function generatePlanSummary(client: Anthropic, period: string, planText: 
     messages: [
       {
         role: 'user',
-        content: `Hieronder staat een persoonlijk ontwikkelplan van een advocaat voor de periode "${period}". Vat in maximaal 2 zinnen (≤35 woorden) samen waar de focus lag. Schrijf in flow-tekst (geen bullets), in het Nederlands, concreet — geen vage termen zoals "ontwikkelen" of "groeien" zonder context. Begin direct met de inhoud, geen inleiding.
+        content: `Vat het ontwikkelplan hieronder samen voor periode "${period}". Maximaal 2 zinnen, ≤35 woorden.
+
+REGELS:
+- Geen voornaamwoorden zoals "hij", "zij", "haar", "zijn".
+- Geen aanduidingen als "de advocaat", "deze persoon", "de medewerker".
+- Begin elke zin met een werkwoord: "Verdiept zich in…", "Werkt aan…", "Bouwt aan…", "Focust op…", "Procedeert in…", "Begeleidt…".
+- Concreet — noem onderwerpen, geen vage termen als "ontwikkelen" of "groeien" zonder context.
+- Schrijf in flow-tekst, geen bullets, in het Nederlands.
 
 ${planText}`
       },
@@ -78,7 +85,12 @@ async function generateEvolutionLine(client: Anthropic, summaries: { year: numbe
     messages: [
       {
         role: 'user',
-        content: `Hieronder staan de samenvattingen van de laatste ${summaries.length} ontwikkelplannen van een advocaat. Beschrijf in één zin (≤25 woorden) hoe de focus zich tussen deze jaren heeft ontwikkeld. Concreet, in flow-tekst. Begin direct met de inhoud.
+        content: `Hieronder de samenvattingen van de laatste ${summaries.length} ontwikkelplannen. Beschrijf in één zin (≤25 woorden) hoe de focus zich tussen deze jaren heeft ontwikkeld.
+
+REGELS:
+- Geen voornaamwoorden ("hij", "zij", "haar", "zijn") of aanduidingen als "de advocaat" / "de medewerker".
+- Begin met een beweging-werkwoord: "Verschuift van…", "Bouwt door op…", "Verbreedt zich richting…", "Concentreert zich op…".
+- Concreet, in flow-tekst.
 
 ${text}`
       },
