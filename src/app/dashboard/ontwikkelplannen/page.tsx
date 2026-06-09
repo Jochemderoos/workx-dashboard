@@ -147,7 +147,6 @@ export default function OntwikkelplannenPage() {
   const isAdmin = session?.user?.role === 'PARTNER' || session?.user?.role === 'ADMIN' || session?.user?.role === 'OFFICE_MANAGER'
 
   const [allPlans, setAllPlans] = useState<DevelopmentPlan[] | null>(null)
-  const [myPlan, setMyPlan] = useState<DevelopmentPlan | null>(null)
   const [myAllPlans, setMyAllPlans] = useState<DevelopmentPlan[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
@@ -166,17 +165,32 @@ export default function OntwikkelplannenPage() {
         const data: DevelopmentPlan[] = await res.json()
         setAllPlans(data)
       } else {
-        const res = await fetch(`/api/development-plans/me?year=${selectedYear}`)
+        // Eerst alle eigen plannen ophalen
+        const res = await fetch('/api/development-plans/me?all=true')
         if (!res.ok) throw new Error()
-        const data: DevelopmentPlan = await res.json()
-        setMyPlan(data)
+        const plans: DevelopmentPlan[] = await res.json()
+        if (Array.isArray(plans) && plans.length > 0) {
+          setMyAllPlans(plans)
+          // Selecteer het meest recente jaar
+          const latest = plans.reduce((acc, p) => p.year > acc.year ? p : acc)
+          setSelectedYear(latest.year)
+        } else {
+          // Nog geen plannen — maak één voor huidig jaar aan
+          const year = new Date().getFullYear()
+          const initRes = await fetch(`/api/development-plans/me?year=${year}`)
+          if (initRes.ok) {
+            const newPlan: DevelopmentPlan = await initRes.json()
+            setMyAllPlans([newPlan])
+            setSelectedYear(newPlan.year)
+          }
+        }
       }
     } catch {
       toast.error('Kon ontwikkelplan niet laden')
     } finally {
       setIsLoading(false)
     }
-  }, [isAdmin, selectedYear])
+  }, [isAdmin])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -199,10 +213,13 @@ export default function OntwikkelplannenPage() {
 
   // ── Active plan (de huidig getoonde) ──────────────────────────────────
   const activePlan: DevelopmentPlan | null = useMemo(() => {
-    if (!isAdmin) return myPlan
+    if (!isAdmin) {
+      if (!myAllPlans || myAllPlans.length === 0) return null
+      return myAllPlans.find(p => p.year === selectedYear) || myAllPlans.reduce((acc, p) => p.year > acc.year ? p : acc)
+    }
     if (!allPlans || !selectedEmployee) return null
     return allPlans.find(p => p.employeeName === selectedEmployee && p.year === selectedYear) || null
-  }, [isAdmin, myPlan, allPlans, selectedEmployee, selectedYear])
+  }, [isAdmin, myAllPlans, allPlans, selectedEmployee, selectedYear])
 
   // Wie is owner: huidige user, of (voor admins die andermans plan bekijken) andere user
   const isViewingOwnPlan = activePlan?.userId === meId
@@ -218,30 +235,18 @@ export default function OntwikkelplannenPage() {
     return Array.from(new Set(allPlans.filter(p => p.employeeName === selectedEmployee).map(p => p.year))).sort((a, b) => b - a)
   }, [allPlans, selectedEmployee])
 
-  // Alle plannen van de geselecteerde medewerker (voor rode-draad-view)
+  // Alle plannen van de geselecteerde medewerker (voor overzicht-widget)
   const plansForEmployee = useMemo(() => {
     if (isAdmin && allPlans && selectedEmployee) {
       return allPlans.filter(p => p.employeeName === selectedEmployee).sort((a, b) => a.year - b.year)
     }
     if (!isAdmin) {
-      return myAllPlans || (myPlan ? [myPlan] : [])
+      return (myAllPlans || []).slice().sort((a, b) => a.year - b.year)
     }
     return []
-  }, [isAdmin, allPlans, selectedEmployee, myPlan, myAllPlans])
+  }, [isAdmin, allPlans, selectedEmployee, myAllPlans])
 
-  // Voor medewerkers: eenmaal alle eigen plannen ophalen voor het
-  // Totaaloverzicht-widget. (Het current-year plan wordt al apart geladen
-  // door fetchData; dit komt daar bovenop.)
-  useEffect(() => {
-    if (!isAdmin && !myAllPlans) {
-      fetch('/api/development-plans/me?all=true')
-        .then(r => r.ok ? r.json() : null)
-        .then((data) => {
-          if (Array.isArray(data)) setMyAllPlans(data)
-        })
-        .catch(() => { /* silent */ })
-    }
-  }, [isAdmin, myAllPlans])
+  // (myAllPlans wordt nu direct geladen in fetchData)
 
   // ── Items per categorie ───────────────────────────────────────────────
   const itemsByCategory = useMemo(() => {
@@ -265,7 +270,7 @@ export default function OntwikkelplannenPage() {
     if (isAdmin) {
       setAllPlans(prev => prev?.map(p => p.id !== item.planId ? p : { ...p, items: p.items.map(i => i.id === item.id ? item : i) }) || null)
     } else {
-      setMyPlan(p => p && p.id === item.planId ? { ...p, items: p.items.map(i => i.id === item.id ? item : i) } : p)
+      setMyAllPlans(prev => prev?.map(p => p.id !== item.planId ? p : { ...p, items: p.items.map(i => i.id === item.id ? item : i) }) || null)
     }
   }, [isAdmin])
 
@@ -273,7 +278,7 @@ export default function OntwikkelplannenPage() {
     if (isAdmin) {
       setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, items: p.items.filter(i => i.id !== itemId) }) || null)
     } else {
-      setMyPlan(p => p && p.id === planId ? { ...p, items: p.items.filter(i => i.id !== itemId) } : p)
+      setMyAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, items: p.items.filter(i => i.id !== itemId) }) || null)
     }
   }, [isAdmin])
 
@@ -281,7 +286,7 @@ export default function OntwikkelplannenPage() {
     if (isAdmin) {
       setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, items: [...p.items, item] }) || null)
     } else {
-      setMyPlan(p => p && p.id === planId ? { ...p, items: [...p.items, item] } : p)
+      setMyAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, items: [...p.items, item] }) || null)
     }
   }, [isAdmin])
 
@@ -351,7 +356,7 @@ export default function OntwikkelplannenPage() {
       if (isAdmin) {
         setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, evaluations: [ev, ...p.evaluations] }) || null)
       } else {
-        setMyPlan(p => p && p.id === planId ? { ...p, evaluations: [ev, ...p.evaluations] } : p)
+        setMyAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, evaluations: [ev, ...p.evaluations] }) || null)
       }
       toast.success('Evaluatie toegevoegd')
     } catch {
@@ -367,7 +372,7 @@ export default function OntwikkelplannenPage() {
       if (isAdmin) {
         setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, evaluations: p.evaluations.filter(e => e.id !== id) }) || null)
       } else {
-        setMyPlan(p => p && p.id === planId ? { ...p, evaluations: p.evaluations.filter(e => e.id !== id) } : p)
+        setMyAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, evaluations: p.evaluations.filter(e => e.id !== id) }) || null)
       }
       toast.success('Verwijderd')
     } catch {
@@ -380,7 +385,7 @@ export default function OntwikkelplannenPage() {
     if (isAdmin) {
       setAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, ...patch }) || null)
     } else {
-      setMyPlan(p => p && p.id === planId ? { ...p, ...patch } : p)
+      setMyAllPlans(prev => prev?.map(p => p.id !== planId ? p : { ...p, ...patch }) || null)
     }
   }, [isAdmin])
 
@@ -546,11 +551,6 @@ export default function OntwikkelplannenPage() {
         </div>
       )}
 
-      {/* Totaaloverzicht — altijd zichtbaar als medewerker ≥2 plannen heeft */}
-      {plansForEmployee.length >= 2 && (
-        <TotaaloverzichtWidget plans={plansForEmployee} />
-      )}
-
       {activePlan ? (
         <>
           {/* Status-banner: ingeleverd / besproken / inleveren-knop */}
@@ -585,6 +585,44 @@ export default function OntwikkelplannenPage() {
             onAdd={(notes) => addEvaluation(activePlan.id, notes)}
             onDelete={(id) => deleteEvaluation(activePlan.id, id)}
           />
+
+          {/* Totaaloverzicht — onder het plan; verschijnt zodra deze medewerker ≥2 plannen heeft */}
+          {plansForEmployee.length >= 2 && activePlan.employeeName && (
+            <TotaaloverzichtWidget
+              employeeName={activePlan.employeeName}
+              signature={`${activePlan.employeeName}-${plansForEmployee.map(p => p.id).join(',')}`}
+            />
+          )}
+
+          {/* Jaar-tabs voor medewerker: oude plannen onderaan.
+              (Voor admins staan ze al bovenaan naast de medewerker-selector.) */}
+          {!isAdmin && plansForEmployee.length >= 2 && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Eerdere plannen</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {plansForEmployee.slice().reverse().map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedYear(p.year)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-2 ${
+                      activePlan.id === p.id
+                        ? 'bg-purple-500/15 text-purple-200 border border-purple-500/30'
+                        : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white'
+                    }`}
+                    title={p.period}
+                  >
+                    <span className="tabular-nums font-semibold">{p.year}</span>
+                    {p.period && p.period !== String(p.year) && (
+                      <span className="text-[10px] opacity-60 max-w-[120px] truncate">{p.period}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Document-link (legacy DOCX) */}
           {activePlan.documentUrl && (
@@ -871,205 +909,136 @@ function ItemCard({
   )
 }
 
-// ── Keyword-extractie voor het Totaaloverzicht ───────────────────────────
+// ── Totaaloverzicht-widget: AI-samenvatting per jaar (laatste 3) ─────────
 
-// Nederlandse stopwoorden + algemene niet-thematische woorden.
-const STOPWORDS = new Set([
-  'de','het','een','en','of','maar','dan','dus','ook','niet','geen','wel','dat','die','dit','deze',
-  'hij','zij','hem','haar','jij','ons','onze','jullie','hun','jouw','mijn','zijn',
-  'is','ben','bent','was','waren','heeft','hebben','had','hadden','kan','kun','kunnen','mag','mogen','mocht','moeten','moet','moest','zou','zullen','zal','wordt','worden','werd',
-  'voor','door','naar','met','om','uit','aan','bij','tot','tussen','tijdens','sinds','volgens','onder','boven','tegen','over','achter','vanaf','vanuit','vandaan','via',
-  'als','toen','daar','hier','waar','wanneer','waarom','welke','wat','wie','hoe','daarna','daarbij','daarom','aldus','zodat','omdat','indien','hoewel','terwijl','aangezien',
-  'echt','vrij','heel','erg','best','beter','beste','goed','prima','nog','meer','minder','genoeg','helemaal','samen','alleen','vooral','graag','toch','redelijk','behoorlijk','inderdaad','zeker','eventueel','mogelijk','echter',
-  'doen','doe','doet','deed','gedaan','maken','maak','maakt','maakte','gemaakt','gaan','ga','gaat','ging','gegaan','komen','kom','komt','kwam','gekomen','staan','sta','staat','stond','gestaan','laten','laat','liet','gelaten','vinden','vind','vindt','vond','gevonden','willen','wil','wilt','wilde','gewild','zijn','geweest','blijven','blijf','blijft','bleef','gebleven','geven','geef','geeft','gaf','gegeven','nemen','neem','neemt','nam','genomen','krijgen','krijg','krijgt','kreeg','gekregen','zien','zie','ziet','zag','gezien','horen','hoor','hoort','hoorde','gehoord','denken','denk','dacht','gedacht','zeggen','zeg','zegt','zei','gezegd','leren','leer','leert','leerde','geleerd','werken','werk','werkt','werkte','gewerkt','spreken','spreek','spreekt','sprak','gesproken','lopen','loop','loopt','liep','gelopen','beginnen','begin','begint','begon','begonnen','blijven','probeer','probeert','probeerde','geprobeerd','houden','houdt','hield','gehouden',
-  'wij','wij','jullie','ze','er','daar','hier',
-  'altijd','soms','vaak','nooit','eens','weer','nu','toen','net','straks','al','reeds','direct','meteen','later','vroeger','laatst','recent','volgend','volgende','komende','vorige','vorig','huidige','huidig',
-  'goed','mooi','top','fijn','lekker','oké','ok','prima','klein','kleine','groot','grote','grote',
-  'jaar','jaren','maand','maanden','week','weken','dag','dagen','keer','keren','beetje','aantal','paar',
-  'punt','punten','ding','dingen','iets','niets','iemand','niemand','iedereen','alles','elk','elke','ander','andere','eigen','laatst','zelfde','dezelfde',
-  'hoeven','hoeft','hoef','geweest','enige','enkel','enkele','beide','beiden',
-])
-
-const COMMON_WORK_NOISE = new Set([
-  // generieke werk/ontwikkelterminologie zonder onderscheidend signaal
-  'doelen','doel','evaluatie','evaluaties','onderdeel','onderdelen','ontwikkeling','ontwikkelplan','ontwikkelplannen','periode','jaar','plan','plannen',
-  'voldoende','goed','prima','positief','negatief',
-  'medewerker','medewerkers','werknemer','team','partner','partners','kantoor',
-  'gaat','goed','prima','genoeg','redelijk','mooi','helemaal',
-])
-
-interface KeywordStat {
-  word: string
-  count: number       // aantal plannen waarin het voorkomt
-  years: number[]     // sorted unique years
-  caps: boolean       // ALL-CAPS / acronym
+interface SummaryPlan {
+  id: string
+  year: number
+  period: string
+  itemCount: number
+  categoryCounts: Record<string, number>
+  summary: string | null
 }
 
-function extractKeywords(plans: DevelopmentPlan[], category: string): KeywordStat[] {
-  const map = new Map<string, { count: number; years: Set<number>; caps: boolean }>()
+function TotaaloverzichtWidget({ employeeName, signature }: { employeeName: string; signature: string }) {
+  const [data, setData] = useState<{ plans: SummaryPlan[]; evolution: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  for (const plan of plans) {
-    const itemsHere = plan.items.filter(i => i.category === category)
-    const text = itemsHere
-      .map(i => `${i.title} ${i.goals || ''} ${i.evaluation || ''}`)
-      .join(' ')
+  const fetchSummaries = useCallback((refresh = false) => {
+    const url = new URL('/api/development-plans/summaries', window.location.origin)
+    if (employeeName) url.searchParams.set('employeeName', employeeName)
+    if (refresh) url.searchParams.set('refresh', 'true')
+    if (refresh) setIsRefreshing(true)
+    else setIsLoading(true)
+    fetch(url.toString())
+      .then(r => r.ok ? r.json() : null)
+      .then((d) => { if (d) setData(d) })
+      .catch(() => { /* silent */ })
+      .finally(() => { setIsLoading(false); setIsRefreshing(false) })
+  }, [employeeName])
 
-    // ALL-CAPS / acronymen (≥2 letters): JAR, OR, SPA, ECLI, …
-    const acronyms = Array.from(text.matchAll(/\b([A-Z]{2,})\b/g)).map(m => m[1])
+  useEffect(() => { fetchSummaries(false) }, [fetchSummaries, signature])
 
-    // Hoofdletter-woorden (eigennamen, plaatsen, specifieke termen): Marnix, Workx, LinkedIn, …
-    // Min 4 letters om "Een" / "Ook" te skippen.
-    const capitalized = Array.from(text.matchAll(/\b([A-Z][a-zA-Zëéüïöäåñ]{3,})\b/g)).map(m => m[1])
-
-    // Lowercase woorden van ≥6 letters (lange woorden hebben meer signaal)
-    const lower = text.toLowerCase().match(/\b([a-zëéüïöäåñ]{6,})\b/g) || []
-
-    const seenInPlan = new Set<string>()
-    const add = (raw: string, isCaps: boolean) => {
-      const key = isCaps ? raw : raw.toLowerCase()
-      if (seenInPlan.has(key.toLowerCase())) return
-      if (STOPWORDS.has(key.toLowerCase())) return
-      if (COMMON_WORK_NOISE.has(key.toLowerCase())) return
-      seenInPlan.add(key.toLowerCase())
-      const entry = map.get(key) || { count: 0, years: new Set<number>(), caps: isCaps }
-      entry.count++
-      entry.years.add(plan.year)
-      if (isCaps) entry.caps = true
-      map.set(key, entry)
-    }
-
-    for (const a of acronyms) add(a, true)
-    for (const c of capitalized) add(c, false)
-    for (const l of lower) add(l, false)
+  if (isLoading && !data) {
+    return (
+      <section className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-transparent p-5">
+        <div className="flex items-center gap-3">
+          <Icons.trendingUp className="text-purple-300 animate-pulse" size={18} />
+          <p className="text-sm text-white/60">Totaaloverzicht genereren…</p>
+        </div>
+      </section>
+    )
   }
 
-  return Array.from(map.entries())
-    .filter(([, v]) => v.count >= 2) // alleen woorden die in ≥2 plannen voorkomen
-    .map(([word, v]) => ({ word, count: v.count, years: Array.from(v.years).sort(), caps: v.caps }))
-    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
-    .slice(0, 18)
-}
-
-// ── Totaaloverzicht-widget ───────────────────────────────────────────────
-
-function TotaaloverzichtWidget({ plans }: { plans: DevelopmentPlan[] }) {
-  const totals = useMemo(() => {
-    const total = plans.reduce((sum, p) => sum + p.items.length, 0)
-    const years = Array.from(new Set(plans.map(p => p.year))).sort((a, b) => a - b)
-    return { total, years, minYear: years[0], maxYear: years[years.length - 1] }
-  }, [plans])
-
-  // Items per jaar (telt alle categorieën samen)
-  const itemsPerYear = useMemo(() => {
-    const map: Record<number, number> = {}
-    for (const p of plans) {
-      map[p.year] = (map[p.year] || 0) + p.items.length
-    }
-    const max = Math.max(1, ...Object.values(map))
-    return totals.years.map(y => ({ year: y, count: map[y] || 0, pct: ((map[y] || 0) / max) * 100 }))
-  }, [plans, totals.years])
-
-  const keywordsByCategory = useMemo(() => {
-    const out: Record<string, KeywordStat[]> = {}
-    for (const cat of CATEGORIES) {
-      out[cat.key] = extractKeywords(plans, cat.key)
-    }
-    return out
-  }, [plans])
-
-  const employeeName = plans[0]?.employeeName || ''
+  if (!data || data.plans.length === 0) return null
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent p-5 sm:p-6">
+    <section className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/8 via-indigo-500/4 to-transparent p-5 sm:p-6">
       <div className="absolute top-0 right-[5%] w-48 h-48 bg-purple-500/8 rounded-full blur-3xl pointer-events-none" />
-
       <div className="relative">
         {/* Header */}
-        <div className="flex items-start gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-            <Icons.trendingUp className="text-purple-300" size={18} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <h2 className="text-base font-semibold text-white">Totaaloverzicht</h2>
-              <span className="text-xs text-white/50">{employeeName.split(' ')[0]} · {plans.length} plannen · {totals.minYear}{totals.maxYear !== totals.minYear ? ` → ${totals.maxYear}` : ''}</span>
+        <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+              <Icons.trendingUp className="text-purple-300" size={18} />
             </div>
-            <p className="text-xs text-white/60 mt-0.5">Terugkerende thema's en focus per categorie door de jaren.</p>
+            <div>
+              <h2 className="text-base font-semibold text-white">Totaaloverzicht</h2>
+              <p className="text-xs text-white/50">
+                {data.plans.length === 3 ? 'Laatste 3 plannen' : `${data.plans.length} ${data.plans.length === 1 ? 'plan' : 'plannen'}`} — samenvatting + ontwikkelingslijn
+              </p>
+            </div>
           </div>
+          <button
+            onClick={() => fetchSummaries(true)}
+            disabled={isRefreshing}
+            className="text-[11px] px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+            title="Samenvattingen opnieuw genereren"
+          >
+            {isRefreshing ? (
+              <span className="w-3 h-3 border-2 border-purple-300/30 border-t-purple-300 rounded-full animate-spin" />
+            ) : (
+              <Icons.target size={10} />
+            )}
+            Verversen
+          </button>
         </div>
 
-        {/* Activiteit per jaar */}
-        {itemsPerYear.length > 1 && (
-          <div className="mb-5">
-            <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Activiteit per jaar</p>
-            <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${itemsPerYear.length}, minmax(0, 1fr))` }}>
-              {itemsPerYear.map(y => (
-                <div key={y.year} className="flex flex-col items-stretch">
-                  <div className="h-16 flex items-end mb-1">
-                    <div
-                      className="w-full rounded-t-md bg-gradient-to-t from-purple-500/40 to-purple-400/60 transition-all"
-                      style={{ height: `${Math.max(6, y.pct)}%` }}
-                    />
-                  </div>
-                  <p className="text-center text-[10px] text-white/50 tabular-nums">{y.year}</p>
-                  <p className="text-center text-[9px] text-white/30 tabular-nums">{y.count}×</p>
-                </div>
-              ))}
-            </div>
+        {/* Plan-kaarten — chronologisch oud → nieuw */}
+        <div className={`grid gap-3 ${data.plans.length === 3 ? 'md:grid-cols-3' : data.plans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+          {data.plans.map((p) => (
+            <SummaryCard key={p.id} plan={p} />
+          ))}
+        </div>
+
+        {/* Ontwikkelingslijn */}
+        {data.evolution && (
+          <div className="mt-4 pt-4 border-t border-white/5">
+            <p className="text-[10px] uppercase tracking-wider text-purple-300/70 mb-1.5">Ontwikkelingslijn</p>
+            <p className="text-sm text-white/80 leading-relaxed">{data.evolution}</p>
           </div>
         )}
-
-        {/* Kernwoorden per categorie */}
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Terugkerende thema's</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {CATEGORIES.map(cat => {
-              const kws = keywordsByCategory[cat.key] || []
-              const colors = COLOR_CLASSES[cat.color] || COLOR_CLASSES.purple
-              const Icon = (Icons as any)[cat.icon]
-              return (
-                <div key={cat.key} className={`rounded-xl border bg-gradient-to-br to-transparent p-3 ${colors.border} ${colors.gradient}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    {Icon && <Icon className={colors.accent} size={14} />}
-                    <h3 className="text-xs font-semibold text-white">{cat.label}</h3>
-                  </div>
-                  {kws.length === 0 ? (
-                    <p className="text-[11px] text-white/30 italic">Geen terugkerende thema's</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {kws.map(kw => {
-                        // Schaal-grootte op basis van count: 2 → klein, 3-4 → midden, 5+ → groot
-                        const isLarge = kw.count >= 5
-                        const isMedium = kw.count >= 3 && kw.count < 5
-                        const sizeCls = isLarge
-                          ? 'text-sm font-semibold px-2.5 py-1'
-                          : isMedium
-                            ? 'text-xs font-medium px-2 py-0.5'
-                            : 'text-[11px] px-2 py-0.5 opacity-70'
-                        const yrLabel = kw.years.length === 1 ? `'${String(kw.years[0]).slice(2)}` : `${kw.years.length}j`
-                        return (
-                          <span
-                            key={kw.word}
-                            className={`inline-flex items-center gap-1 rounded-full border ${sizeCls} ${colors.accentBg} ${colors.accent} border-current/20`}
-                            title={`${kw.count}× in ${kw.years.join(', ')}`}
-                          >
-                            {kw.word}
-                            <span className="opacity-50 text-[9px] tabular-nums">×{kw.count}</span>
-                          </span>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          <p className="text-[10px] text-white/30 mt-3">
-            Thema's die in 2 of meer plannen voorkomen. Grootte = aantal keren teruggekomen. Hover voor jaartallen.
-          </p>
-        </div>
       </div>
     </section>
+  )
+}
+
+function SummaryCard({ plan }: { plan: SummaryPlan }) {
+  // Mini stacked-bar van categorie-verdeling
+  const total = plan.itemCount || 1
+  const segments = CATEGORIES.map(cat => {
+    const count = plan.categoryCounts[cat.key] || 0
+    const colors = COLOR_CLASSES[cat.color] || COLOR_CLASSES.purple
+    const accentBgSolid = colors.accent.replace('text-', 'bg-').replace('300', '500/60')
+    return { key: cat.key, label: cat.label, count, color: accentBgSolid, pct: (count / total) * 100 }
+  }).filter(s => s.count > 0)
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex flex-col">
+      {/* Header: jaar + periode + itemcount */}
+      <div className="flex items-baseline justify-between gap-2 mb-2">
+        <p className="text-sm font-semibold text-white tabular-nums">{plan.year}</p>
+        <span className="text-[10px] text-white/40 tabular-nums">{plan.itemCount} {plan.itemCount === 1 ? 'doel' : 'doelen'}</span>
+      </div>
+      {plan.period && plan.period !== String(plan.year) && (
+        <p className="text-[10px] text-white/40 mb-2 truncate" title={plan.period}>{plan.period}</p>
+      )}
+
+      {/* Mini stacked-bar */}
+      <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden flex mb-2" title={segments.map(s => `${s.label}: ${s.count}`).join(' · ')}>
+        {segments.map(s => (
+          <div key={s.key} className={s.color} style={{ width: `${s.pct}%` }} />
+        ))}
+      </div>
+
+      {/* Samenvatting */}
+      {plan.summary ? (
+        <p className="text-xs text-white/75 leading-relaxed flex-1">{plan.summary}</p>
+      ) : (
+        <p className="text-xs text-white/30 italic flex-1">Geen samenvatting beschikbaar.</p>
+      )}
+    </div>
   )
 }
 

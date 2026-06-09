@@ -1757,6 +1757,8 @@ model DevelopmentPlan {
   submittedForReviewAt DateTime? // Wanneer medewerker plan "ingeleverd" heeft voor bespreking
   reviewedAt           DateTime? // Wanneer partner heeft gemarkeerd als besproken (widget verdwijnt dan)
   reviewedById         String?   // Wie het besproken heeft gemarkeerd
+  aiSummary            String?   @db.Text // Door Claude gegenereerde samenvatting (cache); regen via /api/development-plans/summaries
+  aiSummaryAt          DateTime? // Wanneer de aiSummary gegenereerd is
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

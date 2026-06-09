@@ -39,6 +39,7 @@ import { main as addOfficeTasksTables } from './add-office-tasks-tables'
 import { main as addCandidateConnectionsTable } from './add-candidate-connections-table'
 import { main as addDevelopmentPlanItemsTable } from './add-development-plan-items-table'
 import { main as addDevelopmentPlanReviewColumns } from './add-development-plan-review-columns'
+import { main as addDevelopmentPlanAiSummaryColumns } from './add-development-plan-ai-summary-columns'
 import { main as claimLegacyTransitie } from './claim-legacy-transitie'
 
 // Recurring seeds — idempotent en mogelijk nog uitbreidbaar.
