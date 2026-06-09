@@ -702,7 +702,6 @@ function ItemCard({
   const [title, setTitle] = useState(item.title)
   const [goals, setGoals] = useState(item.goals || '')
   const [evaluation, setEvaluation] = useState(item.evaluation || '')
-  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => { setTitle(item.title); setGoals(item.goals || ''); setEvaluation(item.evaluation || '') }, [item.id])
 
@@ -716,6 +715,10 @@ function ItemCard({
     const next = item.status === 'todo' ? 'doing' : item.status === 'doing' ? 'done' : 'doing'
     onUpdate(item.id, { status: next })
   }
+
+  // Lange tekst → browser-tooltip met volledige inhoud bij hover.
+  const goalsTitleAttr = (item.goals || '').length > 280 ? item.goals || undefined : undefined
+  const evalTitleAttr = (item.evaluation || '').length > 280 ? item.evaluation || undefined : undefined
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
@@ -749,44 +752,39 @@ function ItemCard({
             <p className={`text-sm font-medium ${item.status === 'done' ? 'text-white/50 line-through' : 'text-white'}`}>{item.title}</p>
           )}
 
-          {/* Goals (expand voor edit; samenvatting als niet uitgeklapt en geen edit) */}
-          {(expanded || !canEdit) && goals && (
-            <p className="text-xs text-white/70 whitespace-pre-wrap">{goals}</p>
-          )}
-          {expanded && canEdit && (
+          {/* Doelen — altijd 1x zichtbaar; inline editable of plain text */}
+          {canEdit ? (
             <AutoTextarea
               value={goals}
               onChange={(v) => { setGoals(v); scheduleSave({ goals: v }) }}
               placeholder="Doelen…"
-              className="w-full text-xs px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/80 focus:border-purple-500/50 focus:outline-none placeholder:text-white/30"
+              className="w-full text-xs px-2 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-white/80 focus:border-purple-500/50 focus:bg-white/5 focus:outline-none placeholder:text-white/30 max-h-40 overflow-y-auto"
               minRows={2}
             />
-          )}
-          {!expanded && canEdit && !goals && (
-            <button onClick={() => setExpanded(true)} className="text-[11px] text-white/30 hover:text-white/60">+ doelen toevoegen</button>
-          )}
-          {!expanded && canEdit && goals && (
-            <button onClick={() => setExpanded(true)} className="text-[11px] text-white/50 hover:text-white/80 underline-offset-2 hover:underline truncate block">
-              {goals.length > 60 ? goals.slice(0, 60) + '…' : goals}
-            </button>
-          )}
+          ) : goals ? (
+            <p className="text-xs text-white/70 whitespace-pre-wrap" title={goalsTitleAttr}>{goals}</p>
+          ) : null}
 
-          {/* Meta row */}
+          {/* Meta row — status + streefdatum (inline picker bij edit) */}
           <div className="flex items-center gap-3 text-[11px] text-white/40 flex-wrap">
-            {item.targetDate && (
+            <span>Status: {item.status === 'todo' ? 'Nog te doen' : item.status === 'doing' ? 'Mee bezig' : 'Afgerond'}</span>
+            {canEdit ? (
+              <div className="flex items-center gap-1.5">
+                <Icons.calendar size={11} />
+                <DatePicker
+                  selected={item.targetDate ? new Date(item.targetDate) : null}
+                  onChange={d => onUpdate(item.id, { targetDate: d ? formatDateForAPI(d) : null })}
+                  placeholder="Streefdatum"
+                />
+              </div>
+            ) : item.targetDate ? (
               <span className="flex items-center gap-1">
                 <Icons.calendar size={11} />
                 {new Date(item.targetDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
               </span>
-            )}
+            ) : null}
             {item.status === 'done' && item.completedAt && (
               <span className="text-emerald-400">✓ {new Date(item.completedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</span>
-            )}
-            <span>Status: {item.status === 'todo' ? 'Nog te doen' : item.status === 'doing' ? 'Mee bezig' : 'Afgerond'}</span>
-            {canEdit && (
-              <button onClick={() => setExpanded(e => !e)} className="text-white/30 hover:text-white/70">
-                {expanded ? '− details' : '+ details'}
-              </button>
             )}
           </div>
 
@@ -806,39 +804,26 @@ function ItemCard({
             </div>
           )}
 
-          {/* Expanded extras: streefdatum editor + evaluatie */}
-          {expanded && canEdit && (
-            <div className="pt-2 border-t border-white/5 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-white/40">Streefdatum:</span>
-                <DatePicker
-                  selected={item.targetDate ? new Date(item.targetDate) : null}
-                  onChange={d => onUpdate(item.id, { targetDate: d ? formatDateForAPI(d) : null })}
-                  placeholder="optioneel"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-white/40 block mb-1 flex items-center gap-1.5">
-                  Evaluatie
-                  {!isOwner && isManager && <span className="text-[9px] uppercase tracking-wider text-amber-300/70">door partner</span>}
-                </label>
-                <AutoTextarea
-                  value={evaluation}
-                  onChange={v => { setEvaluation(v); scheduleSave({ evaluation: v }) }}
-                  placeholder={isOwner ? 'Hoe ging dit onderdeel? Wat heb je geleerd?' : 'Feedback voor medewerker…'}
-                  className="w-full text-xs px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/80 focus:border-purple-500/50 focus:outline-none placeholder:text-white/30 italic"
-                  minRows={2}
-                />
-              </div>
+          {/* Evaluatie — altijd 1x zichtbaar */}
+          {canEdit ? (
+            <div className="pt-2 border-t border-white/5">
+              <label className="text-[10px] uppercase tracking-wider text-white/40 mb-1 flex items-center gap-1.5">
+                Evaluatie
+                {!isOwner && isManager && <span className="text-[9px] text-amber-300/70 normal-case tracking-normal">door partner</span>}
+              </label>
+              <AutoTextarea
+                value={evaluation}
+                onChange={v => { setEvaluation(v); scheduleSave({ evaluation: v }) }}
+                placeholder={isOwner ? 'Hoe ging dit onderdeel? Wat heb je geleerd?' : 'Feedback voor medewerker…'}
+                className="w-full text-xs px-2 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-white/80 focus:border-purple-500/50 focus:bg-white/5 focus:outline-none placeholder:text-white/30 italic max-h-40 overflow-y-auto"
+                minRows={2}
+              />
             </div>
-          )}
-
-          {/* Read-only evaluatie als niet uitgeklapt */}
-          {!expanded && item.evaluation && (
-            <p className="text-[11px] text-white/50 italic whitespace-pre-wrap pt-1 border-t border-white/5">
-              <span className="text-amber-300/70 not-italic">Evaluatie:</span> {item.evaluation}
+          ) : evaluation ? (
+            <p className="text-[11px] text-white/50 italic whitespace-pre-wrap pt-1 border-t border-white/5" title={evalTitleAttr}>
+              <span className="text-amber-300/70 not-italic">Evaluatie:</span> {evaluation}
             </p>
-          )}
+          ) : null}
         </div>
 
         {canEdit && (
