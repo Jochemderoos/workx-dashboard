@@ -154,7 +154,6 @@ export default function OntwikkelplannenPage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [showImport, setShowImport] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [viewMode, setViewMode] = useState<'plan' | 'timeline'>('plan')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ── Data fetching ──────────────────────────────────────────────────────
@@ -230,9 +229,11 @@ export default function OntwikkelplannenPage() {
     return []
   }, [isAdmin, allPlans, selectedEmployee, myPlan, myAllPlans])
 
-  // Lazy-fetch alle eigen plannen wanneer een medewerker naar timeline switcht
+  // Voor medewerkers: eenmaal alle eigen plannen ophalen voor het
+  // Totaaloverzicht-widget. (Het current-year plan wordt al apart geladen
+  // door fetchData; dit komt daar bovenop.)
   useEffect(() => {
-    if (!isAdmin && viewMode === 'timeline' && !myAllPlans) {
+    if (!isAdmin && !myAllPlans) {
       fetch('/api/development-plans/me?all=true')
         .then(r => r.ok ? r.json() : null)
         .then((data) => {
@@ -240,7 +241,7 @@ export default function OntwikkelplannenPage() {
         })
         .catch(() => { /* silent */ })
     }
-  }, [isAdmin, viewMode, myAllPlans])
+  }, [isAdmin, myAllPlans])
 
   // ── Items per categorie ───────────────────────────────────────────────
   const itemsByCategory = useMemo(() => {
@@ -528,40 +529,29 @@ export default function OntwikkelplannenPage() {
               )
             })}
           </div>
-          {/* Jaar-tabs + view-mode toggle */}
-          {selectedEmployee && (
-            <div className="flex items-center justify-between gap-3 mt-3 flex-wrap">
-              {yearsForEmployee.length > 1 && viewMode === 'plan' ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {yearsForEmployee.map(y => (
-                    <button
-                      key={y}
-                      onClick={() => setSelectedYear(y)}
-                      className={`px-3 py-1 rounded-lg text-xs transition-all ${selectedYear === y ? 'bg-purple-500/15 text-purple-200 border border-purple-500/30' : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'}`}
-                    >
-                      {y}
-                    </button>
-                  ))}
-                </div>
-              ) : <div />}
-              {plansForEmployee.length > 1 && (
-                <ViewModeToggle mode={viewMode} onChange={setViewMode} />
-              )}
+          {/* Jaar-tabs */}
+          {selectedEmployee && yearsForEmployee.length > 1 && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              {yearsForEmployee.map(y => (
+                <button
+                  key={y}
+                  onClick={() => setSelectedYear(y)}
+                  className={`px-3 py-1 rounded-lg text-xs transition-all ${selectedYear === y ? 'bg-purple-500/15 text-purple-200 border border-purple-500/30' : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'}`}
+                >
+                  {y}
+                </button>
+              ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Medewerker-view: view-mode toggle (zonder employee-picker) */}
-      {!isAdmin && plansForEmployee.length > 1 && (
-        <div className="flex justify-end">
-          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
-        </div>
+      {/* Totaaloverzicht — altijd zichtbaar als medewerker ≥2 plannen heeft */}
+      {plansForEmployee.length >= 2 && (
+        <TotaaloverzichtWidget plans={plansForEmployee} />
       )}
 
-      {viewMode === 'timeline' && plansForEmployee.length > 0 ? (
-        <TimelineView plans={plansForEmployee} />
-      ) : activePlan ? (
+      {activePlan ? (
         <>
           {/* Status-banner: ingeleverd / besproken / inleveren-knop */}
           <PlanStatusBanner
@@ -881,140 +871,205 @@ function ItemCard({
   )
 }
 
-// ── View-mode toggle (plan / rode draad) ─────────────────────────────────
+// ── Keyword-extractie voor het Totaaloverzicht ───────────────────────────
 
-function ViewModeToggle({ mode, onChange }: { mode: 'plan' | 'timeline'; onChange: (m: 'plan' | 'timeline') => void }) {
-  return (
-    <div className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/10">
-      <button
-        onClick={() => onChange('plan')}
-        className={`px-3 py-1 rounded-md text-xs transition-colors flex items-center gap-1.5 ${
-          mode === 'plan' ? 'bg-purple-500/20 text-purple-100' : 'text-white/50 hover:text-white/80'
-        }`}
-      >
-        <Icons.target size={11} /> Plan
-      </button>
-      <button
-        onClick={() => onChange('timeline')}
-        className={`px-3 py-1 rounded-md text-xs transition-colors flex items-center gap-1.5 ${
-          mode === 'timeline' ? 'bg-purple-500/20 text-purple-100' : 'text-white/50 hover:text-white/80'
-        }`}
-      >
-        <Icons.trendingUp size={11} /> Rode draad
-      </button>
-    </div>
-  )
+// Nederlandse stopwoorden + algemene niet-thematische woorden.
+const STOPWORDS = new Set([
+  'de','het','een','en','of','maar','dan','dus','ook','niet','geen','wel','dat','die','dit','deze',
+  'hij','zij','hem','haar','jij','ons','onze','jullie','hun','jouw','mijn','zijn',
+  'is','ben','bent','was','waren','heeft','hebben','had','hadden','kan','kun','kunnen','mag','mogen','mocht','moeten','moet','moest','zou','zullen','zal','wordt','worden','werd',
+  'voor','door','naar','met','om','uit','aan','bij','tot','tussen','tijdens','sinds','volgens','onder','boven','tegen','over','achter','vanaf','vanuit','vandaan','via',
+  'als','toen','daar','hier','waar','wanneer','waarom','welke','wat','wie','hoe','daarna','daarbij','daarom','aldus','zodat','omdat','indien','hoewel','terwijl','aangezien',
+  'echt','vrij','heel','erg','best','beter','beste','goed','prima','nog','meer','minder','genoeg','helemaal','samen','alleen','vooral','graag','toch','redelijk','behoorlijk','inderdaad','zeker','eventueel','mogelijk','echter',
+  'doen','doe','doet','deed','gedaan','maken','maak','maakt','maakte','gemaakt','gaan','ga','gaat','ging','gegaan','komen','kom','komt','kwam','gekomen','staan','sta','staat','stond','gestaan','laten','laat','liet','gelaten','vinden','vind','vindt','vond','gevonden','willen','wil','wilt','wilde','gewild','zijn','geweest','blijven','blijf','blijft','bleef','gebleven','geven','geef','geeft','gaf','gegeven','nemen','neem','neemt','nam','genomen','krijgen','krijg','krijgt','kreeg','gekregen','zien','zie','ziet','zag','gezien','horen','hoor','hoort','hoorde','gehoord','denken','denk','dacht','gedacht','zeggen','zeg','zegt','zei','gezegd','leren','leer','leert','leerde','geleerd','werken','werk','werkt','werkte','gewerkt','spreken','spreek','spreekt','sprak','gesproken','lopen','loop','loopt','liep','gelopen','beginnen','begin','begint','begon','begonnen','blijven','probeer','probeert','probeerde','geprobeerd','houden','houdt','hield','gehouden',
+  'wij','wij','jullie','ze','er','daar','hier',
+  'altijd','soms','vaak','nooit','eens','weer','nu','toen','net','straks','al','reeds','direct','meteen','later','vroeger','laatst','recent','volgend','volgende','komende','vorige','vorig','huidige','huidig',
+  'goed','mooi','top','fijn','lekker','oké','ok','prima','klein','kleine','groot','grote','grote',
+  'jaar','jaren','maand','maanden','week','weken','dag','dagen','keer','keren','beetje','aantal','paar',
+  'punt','punten','ding','dingen','iets','niets','iemand','niemand','iedereen','alles','elk','elke','ander','andere','eigen','laatst','zelfde','dezelfde',
+  'hoeven','hoeft','hoef','geweest','enige','enkel','enkele','beide','beiden',
+])
+
+const COMMON_WORK_NOISE = new Set([
+  // generieke werk/ontwikkelterminologie zonder onderscheidend signaal
+  'doelen','doel','evaluatie','evaluaties','onderdeel','onderdelen','ontwikkeling','ontwikkelplan','ontwikkelplannen','periode','jaar','plan','plannen',
+  'voldoende','goed','prima','positief','negatief',
+  'medewerker','medewerkers','werknemer','team','partner','partners','kantoor',
+  'gaat','goed','prima','genoeg','redelijk','mooi','helemaal',
+])
+
+interface KeywordStat {
+  word: string
+  count: number       // aantal plannen waarin het voorkomt
+  years: number[]     // sorted unique years
+  caps: boolean       // ALL-CAPS / acronym
 }
 
-// ── Timeline view — rode draad door de jaren per categorie ───────────────
+function extractKeywords(plans: DevelopmentPlan[], category: string): KeywordStat[] {
+  const map = new Map<string, { count: number; years: Set<number>; caps: boolean }>()
 
-function TimelineView({ plans }: { plans: DevelopmentPlan[] }) {
-  // Items per categorie, met jaar+periode-context
-  type TimelineItem = {
-    year: number
-    period: string
-    planId: string
-    item: DevelopmentPlanItem
+  for (const plan of plans) {
+    const itemsHere = plan.items.filter(i => i.category === category)
+    const text = itemsHere
+      .map(i => `${i.title} ${i.goals || ''} ${i.evaluation || ''}`)
+      .join(' ')
+
+    // ALL-CAPS / acronymen (≥2 letters): JAR, OR, SPA, ECLI, …
+    const acronyms = Array.from(text.matchAll(/\b([A-Z]{2,})\b/g)).map(m => m[1])
+
+    // Hoofdletter-woorden (eigennamen, plaatsen, specifieke termen): Marnix, Workx, LinkedIn, …
+    // Min 4 letters om "Een" / "Ook" te skippen.
+    const capitalized = Array.from(text.matchAll(/\b([A-Z][a-zA-Zëéüïöäåñ]{3,})\b/g)).map(m => m[1])
+
+    // Lowercase woorden van ≥6 letters (lange woorden hebben meer signaal)
+    const lower = text.toLowerCase().match(/\b([a-zëéüïöäåñ]{6,})\b/g) || []
+
+    const seenInPlan = new Set<string>()
+    const add = (raw: string, isCaps: boolean) => {
+      const key = isCaps ? raw : raw.toLowerCase()
+      if (seenInPlan.has(key.toLowerCase())) return
+      if (STOPWORDS.has(key.toLowerCase())) return
+      if (COMMON_WORK_NOISE.has(key.toLowerCase())) return
+      seenInPlan.add(key.toLowerCase())
+      const entry = map.get(key) || { count: 0, years: new Set<number>(), caps: isCaps }
+      entry.count++
+      entry.years.add(plan.year)
+      if (isCaps) entry.caps = true
+      map.set(key, entry)
+    }
+
+    for (const a of acronyms) add(a, true)
+    for (const c of capitalized) add(c, false)
+    for (const l of lower) add(l, false)
   }
 
-  const byCategory = useMemo(() => {
-    const map: Record<string, TimelineItem[]> = {
-      'inhoud-theorie': [],
-      'inhoud-praktijk': [],
-      'eigen-praktijk': [],
-      'intern': [],
-    }
-    for (const p of plans) {
-      for (const it of p.items) {
-        const bucket = map[it.category] || map['inhoud-theorie']
-        bucket.push({ year: p.year, period: p.period, planId: p.id, item: it })
-      }
-    }
-    // Sorteer chronologisch (oudste eerst)
-    for (const k of Object.keys(map)) {
-      map[k].sort((a, b) => a.year - b.year || a.period.localeCompare(b.period))
-    }
-    return map
-  }, [plans])
+  return Array.from(map.entries())
+    .filter(([, v]) => v.count >= 2) // alleen woorden die in ≥2 plannen voorkomen
+    .map(([word, v]) => ({ word, count: v.count, years: Array.from(v.years).sort(), caps: v.caps }))
+    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+    .slice(0, 18)
+}
 
+// ── Totaaloverzicht-widget ───────────────────────────────────────────────
+
+function TotaaloverzichtWidget({ plans }: { plans: DevelopmentPlan[] }) {
   const totals = useMemo(() => {
     const total = plans.reduce((sum, p) => sum + p.items.length, 0)
     const years = Array.from(new Set(plans.map(p => p.year))).sort((a, b) => a - b)
     return { total, years, minYear: years[0], maxYear: years[years.length - 1] }
   }, [plans])
 
+  // Items per jaar (telt alle categorieën samen)
+  const itemsPerYear = useMemo(() => {
+    const map: Record<number, number> = {}
+    for (const p of plans) {
+      map[p.year] = (map[p.year] || 0) + p.items.length
+    }
+    const max = Math.max(1, ...Object.values(map))
+    return totals.years.map(y => ({ year: y, count: map[y] || 0, pct: ((map[y] || 0) / max) * 100 }))
+  }, [plans, totals.years])
+
+  const keywordsByCategory = useMemo(() => {
+    const out: Record<string, KeywordStat[]> = {}
+    for (const cat of CATEGORIES) {
+      out[cat.key] = extractKeywords(plans, cat.key)
+    }
+    return out
+  }, [plans])
+
+  const employeeName = plans[0]?.employeeName || ''
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/8 to-transparent p-5">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/15 flex items-center justify-center flex-shrink-0">
+    <section className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent p-5 sm:p-6">
+      <div className="absolute top-0 right-[5%] w-48 h-48 bg-purple-500/8 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
             <Icons.trendingUp className="text-purple-300" size={18} />
           </div>
-          <div>
-            <h2 className="text-base font-semibold text-white">Rode draad door de jaren</h2>
-            <p className="text-xs text-white/60 mt-0.5">
-              {totals.total} onderdelen verspreid over {totals.years.length} {totals.years.length === 1 ? 'jaar' : 'jaren'}
-              {totals.minYear !== totals.maxYear && ` (${totals.minYear} → ${totals.maxYear})`}.
-              Per categorie chronologisch — zie hoe focus en doelen zich ontwikkelen.
-            </p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <h2 className="text-base font-semibold text-white">Totaaloverzicht</h2>
+              <span className="text-xs text-white/50">{employeeName.split(' ')[0]} · {plans.length} plannen · {totals.minYear}{totals.maxYear !== totals.minYear ? ` → ${totals.maxYear}` : ''}</span>
+            </div>
+            <p className="text-xs text-white/60 mt-0.5">Terugkerende thema's en focus per categorie door de jaren.</p>
           </div>
         </div>
-      </div>
 
-      {CATEGORIES.map(cat => {
-        const items = byCategory[cat.key] || []
-        if (items.length === 0) return null
-        const colors = COLOR_CLASSES[cat.color] || COLOR_CLASSES.purple
-        const Icon = (Icons as any)[cat.icon]
-        return (
-          <section key={cat.key} className={`relative rounded-2xl border bg-gradient-to-br to-transparent p-5 ${colors.border} ${colors.gradient}`}>
-            <div className="flex items-center gap-3 mb-4">
-              {Icon && <Icon className={colors.accent} size={18} />}
-              <div>
-                <h3 className="text-base font-semibold text-white">{cat.label}</h3>
-                <p className="text-[11px] text-white/50">{items.length} {items.length === 1 ? 'onderdeel' : 'onderdelen'} door de jaren</p>
-              </div>
+        {/* Activiteit per jaar */}
+        {itemsPerYear.length > 1 && (
+          <div className="mb-5">
+            <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Activiteit per jaar</p>
+            <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${itemsPerYear.length}, minmax(0, 1fr))` }}>
+              {itemsPerYear.map(y => (
+                <div key={y.year} className="flex flex-col items-stretch">
+                  <div className="h-16 flex items-end mb-1">
+                    <div
+                      className="w-full rounded-t-md bg-gradient-to-t from-purple-500/40 to-purple-400/60 transition-all"
+                      style={{ height: `${Math.max(6, y.pct)}%` }}
+                    />
+                  </div>
+                  <p className="text-center text-[10px] text-white/50 tabular-nums">{y.year}</p>
+                  <p className="text-center text-[9px] text-white/30 tabular-nums">{y.count}×</p>
+                </div>
+              ))}
             </div>
+          </div>
+        )}
 
-            {/* Tijdlijn — verticaal lijn-element links + cards per item */}
-            <div className="relative pl-5">
-              <div className="absolute left-1.5 top-2 bottom-2 w-px bg-white/10" />
-              <div className="space-y-3">
-                {items.map((entry, idx) => {
-                  const sameAsPrevYear = idx > 0 && items[idx - 1].year === entry.year
-                  return (
-                    <div key={entry.item.id} className="relative">
-                      <div className={`absolute -left-[19px] top-1.5 w-3 h-3 rounded-full ring-4 ring-workx-dark ${colors.accentBg}`}>
-                        <div className={`w-full h-full rounded-full ${colors.accent.replace('text-', 'bg-').replace('300', '400')}`} />
-                      </div>
-                      <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                        <div className="flex items-baseline justify-between gap-2 mb-1.5 flex-wrap">
-                          <p className="text-sm font-medium text-white">{entry.item.title}</p>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${colors.accentBg} ${colors.accent} font-semibold tabular-nums whitespace-nowrap`}>
-                            {sameAsPrevYear ? entry.period : entry.year}
+        {/* Kernwoorden per categorie */}
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2">Terugkerende thema's</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {CATEGORIES.map(cat => {
+              const kws = keywordsByCategory[cat.key] || []
+              const colors = COLOR_CLASSES[cat.color] || COLOR_CLASSES.purple
+              const Icon = (Icons as any)[cat.icon]
+              return (
+                <div key={cat.key} className={`rounded-xl border bg-gradient-to-br to-transparent p-3 ${colors.border} ${colors.gradient}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {Icon && <Icon className={colors.accent} size={14} />}
+                    <h3 className="text-xs font-semibold text-white">{cat.label}</h3>
+                  </div>
+                  {kws.length === 0 ? (
+                    <p className="text-[11px] text-white/30 italic">Geen terugkerende thema's</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {kws.map(kw => {
+                        // Schaal-grootte op basis van count: 2 → klein, 3-4 → midden, 5+ → groot
+                        const isLarge = kw.count >= 5
+                        const isMedium = kw.count >= 3 && kw.count < 5
+                        const sizeCls = isLarge
+                          ? 'text-sm font-semibold px-2.5 py-1'
+                          : isMedium
+                            ? 'text-xs font-medium px-2 py-0.5'
+                            : 'text-[11px] px-2 py-0.5 opacity-70'
+                        const yrLabel = kw.years.length === 1 ? `'${String(kw.years[0]).slice(2)}` : `${kw.years.length}j`
+                        return (
+                          <span
+                            key={kw.word}
+                            className={`inline-flex items-center gap-1 rounded-full border ${sizeCls} ${colors.accentBg} ${colors.accent} border-current/20`}
+                            title={`${kw.count}× in ${kw.years.join(', ')}`}
+                          >
+                            {kw.word}
+                            <span className="opacity-50 text-[9px] tabular-nums">×{kw.count}</span>
                           </span>
-                        </div>
-                        {!sameAsPrevYear && entry.period && entry.period !== String(entry.year) && (
-                          <p className="text-[10px] text-white/40 mb-1.5">{entry.period}</p>
-                        )}
-                        {entry.item.goals && (
-                          <p className="text-xs text-white/70 whitespace-pre-wrap">{entry.item.goals}</p>
-                        )}
-                        {entry.item.evaluation && (
-                          <p className="text-[11px] text-white/50 italic whitespace-pre-wrap mt-2 pt-2 border-t border-white/5">
-                            <span className="text-amber-300/70 not-italic">Evaluatie:</span> {entry.item.evaluation}
-                          </p>
-                        )}
-                      </div>
+                        )
+                      })}
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-          </section>
-        )
-      })}
-    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-white/30 mt-3">
+            Thema's die in 2 of meer plannen voorkomen. Grootte = aantal keren teruggekomen. Hover voor jaartallen.
+          </p>
+        </div>
+      </div>
+    </section>
   )
 }
 
