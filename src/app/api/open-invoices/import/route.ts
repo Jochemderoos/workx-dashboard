@@ -24,7 +24,10 @@ async function requireManager() {
 // en synchroniseert de OpenInvoice-tabel met de PDF-inhoud.
 // Body: { text: string }
 // Volledige replace: facturen die niet in de PDF zitten worden verwijderd
-// (presumed betaald). reminderSentAt blijft behouden voor bestaande facturen.
+// (presumed betaald). Voor facturen die WEL nog in de upload zitten wordt
+// reminderSentAt gereset naar null — de UI rekent erop dat een nieuwe
+// upload de aangeschreven-status laat vervallen zodat advocaten een
+// volgende ronde aanschrijven kunnen.
 export async function POST(req: NextRequest) {
   const guard = await requireManager()
   if (guard.error) return guard.error
@@ -171,6 +174,11 @@ export async function POST(req: NextRequest) {
           totalIncl: d.totalIncl,
           totalBtw: d.totalBtw,
           primaryUserId: d.primaryUserId,
+          // Factuur staat nog steeds open in de nieuwe upload — reset de
+          // "aangeschreven"-status zodat advocaten zien dat er opnieuw actie
+          // nodig kan zijn. UI verwacht dit gedrag expliciet
+          // (zie comment in debiteuren/page.tsx isReminderDue / needsAction).
+          reminderSentAt: null,
         },
       })))
       upserted += chunk.length
