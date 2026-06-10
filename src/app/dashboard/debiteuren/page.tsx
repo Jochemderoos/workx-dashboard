@@ -593,12 +593,22 @@ export default function DebiteurenPage() {
                             {age < 0 ? 'binnen termijn' : age === 0 ? 'vandaag' : `${age} dgn te laat`}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p
-                              className={`text-sm break-words ${!isActive ? 'text-gray-400' : 'text-white'}`}
-                              title={inv.projectName || inv.clientName || ''}
-                            >
-                              {inv.projectName || inv.clientName || `#${inv.invoiceNumber}`}
-                            </p>
+                            <div className="flex items-start gap-2 flex-wrap">
+                              <p
+                                className={`text-sm break-words ${!isActive ? 'text-gray-400' : 'text-white'}`}
+                                title={inv.projectName || inv.clientName || ''}
+                              >
+                                {inv.projectName || inv.clientName || `#${inv.invoiceNumber}`}
+                              </p>
+                              {inv.projectCode && (
+                                <span
+                                  className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-workx-lime/10 text-workx-lime/80 border border-workx-lime/20 mt-0.5 whitespace-nowrap shrink-0"
+                                  title="Project-code uit BaseNet"
+                                >
+                                  {inv.projectCode}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-gray-500 truncate">
                               #{inv.invoiceNumber} · {MONTHS[inv.bookPeriod]} {inv.bookYear}
                               {inv.reminderSentAt && (
@@ -827,9 +837,19 @@ export default function DebiteurenPage() {
                           </span>
                         ) : null}
                       </div>
-                      <p className="text-sm text-white font-medium break-words mt-0.5" title={inv.projectName || ''}>
-                        {inv.projectName || inv.invoiceNumber} {inv.projectCode && <span className="text-[10px] text-gray-500">· {inv.projectCode}</span>}
-                      </p>
+                      <div className="flex items-start gap-2 flex-wrap mt-0.5">
+                        <p className="text-sm text-white font-medium break-words" title={inv.projectName || ''}>
+                          {inv.projectName || inv.invoiceNumber}
+                        </p>
+                        {inv.projectCode && (
+                          <span
+                            className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-workx-lime/10 text-workx-lime/80 border border-workx-lime/20 whitespace-nowrap shrink-0"
+                            title="Project-code uit BaseNet"
+                          >
+                            {inv.projectCode}
+                          </span>
+                        )}
+                      </div>
                       {inv.clientName && <p className="text-xs text-gray-500 break-words" title={inv.clientName}>{inv.clientName}</p>}
                     </div>
 
