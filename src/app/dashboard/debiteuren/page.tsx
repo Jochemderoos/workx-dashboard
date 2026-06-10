@@ -593,7 +593,10 @@ export default function DebiteurenPage() {
                             {age < 0 ? 'binnen termijn' : age === 0 ? 'vandaag' : `${age} dgn te laat`}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm truncate ${!isActive ? 'text-gray-400' : 'text-white'}`}>
+                            <p
+                              className={`text-sm break-words ${!isActive ? 'text-gray-400' : 'text-white'}`}
+                              title={inv.projectName || inv.clientName || ''}
+                            >
                               {inv.projectName || inv.clientName || `#${inv.invoiceNumber}`}
                             </p>
                             <p className="text-[10px] text-gray-500 truncate">
@@ -824,10 +827,10 @@ export default function DebiteurenPage() {
                           </span>
                         ) : null}
                       </div>
-                      <p className="text-sm text-white font-medium truncate mt-0.5">
+                      <p className="text-sm text-white font-medium break-words mt-0.5" title={inv.projectName || ''}>
                         {inv.projectName || inv.invoiceNumber} {inv.projectCode && <span className="text-[10px] text-gray-500">· {inv.projectCode}</span>}
                       </p>
-                      {inv.clientName && <p className="text-xs text-gray-500 truncate">{inv.clientName}</p>}
+                      {inv.clientName && <p className="text-xs text-gray-500 break-words" title={inv.clientName}>{inv.clientName}</p>}
                     </div>
 
                     {/* Primary attorney — klikbaar om te wijzigen (managers) */}
