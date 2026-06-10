@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client'
 
 const SESSIONS_2026: Array<{ month: number; day: number; name: string }> = [
   { month: 2, day: 12, name: 'Wies van Pesch' },
-  { month: 3, day: 5, name: 'Alain Heunen' },
+  { month: 3, day: 5, name: "Alexander Collot d'Escury" },
   { month: 3, day: 26, name: 'Julia Groen' },
   { month: 4, day: 16, name: 'Marnix Ritmeester' },
   { month: 5, day: 7, name: 'Heleen Pesser' },
