@@ -277,8 +277,8 @@ export default function WorkxUitjesPage() {
       {/* JAAROVERZICHT: 12 maanden verticaal met geplande uitjes per maand */}
       <YearOverview outings={outings} />
 
-      {/* Sfeer-strook 1 — 3 horizontale foto's tussen kalender en lijst */}
-      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 3)} />
+      {/* Sfeer-strookje 1 — 2 compacte foto's tussen overzicht en lijst */}
+      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 2)} compact />
 
       {/* Compact overzichtskader met alle aankomende uitjes */}
       {filter === 'upcoming' && outings.length > 0 && (
@@ -329,17 +329,19 @@ export default function WorkxUitjesPage() {
                 onEdit={() => startEdit(o)}
                 onDelete={() => handleDelete(o.id)}
               />
-              {/* Sfeerfoto's verspreid: na elke 2e card een strookje */}
+              {/* Sfeerfoto-banner verspreid: na elke 2e card 1 brede banner */}
               {(idx + 1) % 2 === 0 && idx < outings.length - 1 && (
                 <SfeerStrook
-                  fotos={SFEER_FOTOS.slice(((idx / 2) * 2 + 3) % SFEER_FOTOS.length, ((idx / 2) * 2 + 3) % SFEER_FOTOS.length + 2)}
+                  fotos={[SFEER_FOTOS[(Math.floor(idx / 2) + 2) % SFEER_FOTOS.length]]}
                   compact
                 />
               )}
             </Fragment>
           ))}
-          {/* Afsluit-strookje met de overgebleven foto's */}
-          <SfeerStrook fotos={SFEER_FOTOS.slice(5)} />
+          {/* Subtiele afsluit-banner — 1 foto, niet 6 */}
+          {outings.length >= 1 && (
+            <SfeerStrook fotos={[SFEER_FOTOS[(outings.length + 5) % SFEER_FOTOS.length]]} compact />
+          )}
         </div>
       )}
     </div>
@@ -405,9 +407,9 @@ function OutingCard({
 
   return (
     <div className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${type.bg} to-transparent ${type.ring.replace('ring-', 'border-')} shadow-lg hover:shadow-xl transition-shadow`}>
-      {/* Cover-foto — aspect-ratio fix zodat upload niet uitgerekt wordt.
-          object-cover crop'pet centraal; ratio past op de meeste foto's. */}
-      <div className="relative w-full aspect-[16/9] overflow-hidden bg-workx-dark/40">
+      {/* Cover-foto — fixed hoogte zodat 1-koloms cards niet enorm worden.
+          object-cover + object-center cropt netjes naar het centrum. */}
+      <div className="relative w-full h-32 sm:h-40 overflow-hidden bg-workx-dark/40">
         <img
           src={outing.imageUrl || type.defaultImage}
           alt={outing.title}
@@ -415,7 +417,7 @@ function OutingCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/20 to-transparent pointer-events-none" />
         {/* Emoji-badge in hoek */}
-        <div className="absolute top-3 left-3 w-10 h-10 rounded-full bg-workx-dark/80 backdrop-blur flex items-center justify-center text-xl shadow-lg">
+        <div className="absolute top-3 left-3 w-9 h-9 rounded-full bg-workx-dark/80 backdrop-blur flex items-center justify-center text-lg shadow-lg">
           {type.emoji}
         </div>
       </div>
