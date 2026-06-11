@@ -48,9 +48,26 @@ export default function HomeSearchBar() {
   const inputRef = useRef<HTMLInputElement>(null)
   const aiAbortRef = useRef<AbortController | null>(null)
 
-  // Alleen resultaten tonen bij echte zoekterm — geen suggesties bij focus.
+  // Resultaten tonen bij zoekterm. Bij focus zonder query: tip-state.
   const hits: SearchHit[] = query.trim() ? searchIndex(query, 12) : []
-  const showDropdown = focused && query.trim().length > 0
+  const showDropdown = focused && (query.trim().length > 0 || focused)
+  const showResults = query.trim().length > 0
+  const totalResults = hits.length + aiSuggestions.length
+
+  // Highlight zoektermen in een tekst
+  const highlight = (text: string): React.ReactNode => {
+    if (!query.trim()) return text
+    const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 1)
+    if (tokens.length === 0) return text
+    const pattern = new RegExp(`(${tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi')
+    const parts = text.split(pattern)
+    return parts.map((p, i) => {
+      const isMatch = tokens.some(t => p.toLowerCase() === t)
+      return isMatch ? (
+        <span key={i} className="bg-workx-lime/30 text-workx-lime font-semibold rounded px-0.5">{p}</span>
+      ) : <span key={i}>{p}</span>
+    })
+  }
 
   // AI-fallback bij zwakke / 0 matches
   useEffect(() => {
@@ -222,14 +239,41 @@ export default function HomeSearchBar() {
           eronder doorschijnt. z-[100] om boven elke widget te liggen. */}
       {showDropdown && (
         <div
-          className="absolute left-0 right-0 top-full mt-3 rounded-2xl overflow-hidden z-[100] max-h-[60vh] overflow-y-auto isolate bg-workx-dark dark:bg-workx-dark"
+          className="absolute left-0 right-0 top-full mt-3 rounded-2xl overflow-hidden z-[100] max-h-[60vh] overflow-y-auto isolate bg-workx-dark dark:bg-workx-dark animate-fade-in"
           style={{
             backgroundColor: 'var(--color-bg-dropdown, #1e1e1e)',
             border: '1px solid var(--color-border, rgba(255,255,255,0.1))',
             boxShadow: '0 30px 80px -10px rgba(0,0,0,0.85), 0 10px 30px -5px rgba(0,0,0,0.6)',
           }}
         >
-          {allItems.length === 0 && !aiLoading ? (
+          {!showResults ? (
+            // Tip-state bij focus zonder query
+            <div className="px-5 py-6">
+              <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
+                💡 Probeer iets te zoeken
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {['kantoor', 'IBAN', 'verlof', 'declaratie', 'hanna', 'jaarplan'].map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); setQuery(term); inputRef.current?.focus() }}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
+                    style={{
+                      background: 'var(--color-bg-glass-hover)',
+                      color: 'var(--color-text-primary)',
+                      border: '1px solid var(--color-border)',
+                    }}
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] mt-4" style={{ color: 'var(--color-text-muted)' }}>
+                Zoek door pagina&apos;s, documenten, kantoorgegevens, mensen en meer
+              </p>
+            </div>
+          ) : allItems.length === 0 && !aiLoading ? (
             <div className="px-5 py-8 text-center">
               <Icons.search size={24} className="mx-auto mb-2 opacity-30" style={{ color: 'var(--color-text-tertiary)' }} />
               <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -241,6 +285,13 @@ export default function HomeSearchBar() {
             </div>
           ) : (
             <div className="py-2">
+              {/* Resultaat-count */}
+              {totalResults > 0 && (
+                <div className="px-4 pt-1 pb-2 text-[10px] font-semibold tracking-[0.08em] uppercase select-none"
+                     style={{ color: 'var(--color-text-tertiary)' }}>
+                  {totalResults} {totalResults === 1 ? 'resultaat' : 'resultaten'} gevonden
+                </div>
+              )}
               {hits.map((hit, i) => {
                 const Icon = KIND_ICON[hit.item.kind]
                 const isSelected = i === selectedIndex
@@ -266,7 +317,7 @@ export default function HomeSearchBar() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
-                          {hit.item.label}
+                          {highlight(hit.item.label)}
                         </p>
                         {hit.item.kind !== 'page' && (
                           <span
@@ -282,14 +333,22 @@ export default function HomeSearchBar() {
                       </div>
                       {hit.item.description && (
                         <p className="text-xs truncate mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
-                          {hit.item.description}
+                          {highlight(hit.item.description)}
                         </p>
                       )}
                       {hit.snippet && (
                         <p className="text-xs mt-1 italic line-clamp-2" style={{ color: 'var(--color-text-tertiary)' }}>
-                          {hit.snippet}
+                          {highlight(hit.snippet)}
                         </p>
                       )}
+                    </div>
+                    {/* Arrow rechts — laat zien dat 't klikbaar is */}
+                    <div className="flex-shrink-0 mt-2 transition-all"
+                         style={{
+                           color: isSelected ? 'var(--workx-lime, #f9ff85)' : 'var(--color-text-muted)',
+                           transform: isSelected ? 'translateX(2px)' : 'translateX(0)',
+                         }}>
+                      <Icons.arrowRight size={14} />
                     </div>
                   </button>
                 )
@@ -333,11 +392,18 @@ export default function HomeSearchBar() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
-                            {s.label}
+                            {highlight(s.label)}
                           </p>
                           <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--color-text-tertiary)' }}>
                             {s.reason}
                           </p>
+                        </div>
+                        <div className="flex-shrink-0 mt-2 transition-all"
+                             style={{
+                               color: isSelected ? 'var(--workx-lime, #f9ff85)' : 'var(--color-text-muted)',
+                               transform: isSelected ? 'translateX(2px)' : 'translateX(0)',
+                             }}>
+                          <Icons.arrowRight size={14} />
                         </div>
                       </button>
                     )
