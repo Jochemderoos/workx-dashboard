@@ -1,55 +1,351 @@
 'use client'
 
-// Prominente zoekbalk bovenaan dashboard-home. Klikken / typen / Ctrl+K
-// opent de bestaande CommandPalette met de zoekterm erin geladen.
+// Echte zoekbalk bovenaan dashboard-home: groot, opvallend, direct te
+// typen. Geen tussenstap via een popup — resultaten verschijnen meteen
+// in een dropdown onder het invoerveld. Workx-lime glow rondom maakt 't
+// een eyecatcher in zowel dark als light mode.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Icons } from '@/components/ui/Icons'
+import { searchIndex, type SearchHit } from '@/lib/search-index'
 
-export const SEARCH_OPEN_EVENT = 'workx:open-search'
+const KIND_ICON = {
+  page: Icons.layers,
+  doc: Icons.fileText,
+  factoid: Icons.info ?? Icons.sparkles,
+  action: Icons.sparkles,
+  person: Icons.user,
+} as const
+
+const KIND_LABEL = {
+  page: 'Pagina',
+  doc: 'Document',
+  factoid: 'Gegevens',
+  action: 'Actie',
+  person: 'Persoon',
+} as const
 
 export default function HomeSearchBar() {
-  const [isMac, setIsMac] = useState(false)
+  const router = useRouter()
+  const [query, setQuery] = useState('')
+  const [focused, setFocused] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [aiSuggestions, setAiSuggestions] = useState<{ href: string; label: string; reason: string }[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const aiAbortRef = useRef<AbortController | null>(null)
 
+  // Resultaten via diepe search-index
+  const hits: SearchHit[] = query.trim() ? searchIndex(query, 12) : []
+  const showDropdown = focused && (query.trim().length > 0)
+
+  // AI-fallback bij zwakke / 0 matches
   useEffect(() => {
-    setIsMac(/Mac|iPod|iPhone|iPad/.test(navigator.platform))
+    const trimmed = query.trim()
+    if (trimmed.length < 3) { setAiSuggestions([]); return }
+    const topScore = hits[0]?.score || 0
+    if (topScore >= 60 && hits.length >= 2) { setAiSuggestions([]); return }
+
+    const t = setTimeout(() => {
+      if (aiAbortRef.current) aiAbortRef.current.abort()
+      const ctrl = new AbortController()
+      aiAbortRef.current = ctrl
+      setAiLoading(true)
+      fetch('/api/search/ai-fallback', {
+        method: 'POST',
+        signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: trimmed }),
+      })
+        .then(r => r.ok ? r.json() : { suggestions: [] })
+        .then(d => setAiSuggestions(Array.isArray(d?.suggestions) ? d.suggestions : []))
+        .catch(() => setAiSuggestions([]))
+        .finally(() => setAiLoading(false))
+    }, 600)
+    return () => clearTimeout(t)
+  }, [query, hits])
+
+  // Reset selectie bij nieuwe resultaten
+  useEffect(() => { setSelectedIndex(0) }, [query])
+
+  // Klik buiten = sluiten
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setFocused(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const openSearch = (initial?: string) => {
-    window.dispatchEvent(new CustomEvent(SEARCH_OPEN_EVENT, { detail: initial || '' }))
+  // Ctrl/⌘+K focust de input
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Externe trigger (HomeSearchBar's eigen event blijft werken voor consistentie)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      inputRef.current?.focus()
+      const detail = (e as CustomEvent<string>).detail
+      if (typeof detail === 'string' && detail.length > 0) setQuery(detail)
+    }
+    window.addEventListener('workx:open-search', handler as EventListener)
+    return () => window.removeEventListener('workx:open-search', handler as EventListener)
+  }, [])
+
+  const allItems = [
+    ...hits.map((h) => ({ type: 'hit' as const, hit: h })),
+    ...aiSuggestions.map((s) => ({ type: 'ai' as const, ai: s })),
+  ]
+
+  const go = (href: string) => {
+    setFocused(false)
+    setQuery('')
+    router.push(href)
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex((p) => (p + 1) % Math.max(allItems.length, 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex((p) => (p - 1 + allItems.length) % Math.max(allItems.length, 1))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const t = allItems[selectedIndex]
+      if (t?.type === 'hit') go(t.hit.item.href)
+      else if (t?.type === 'ai') go(t.ai.href)
+    } else if (e.key === 'Escape') {
+      setFocused(false)
+      inputRef.current?.blur()
+    }
   }
 
   return (
-    <div className="w-full">
-      <button
-        type="button"
-        onClick={() => openSearch()}
-        className="
-          group w-full flex items-center gap-3 px-5 py-4 rounded-2xl
-          bg-white/[0.04] hover:bg-white/[0.07]
-          border border-white/[0.08] hover:border-workx-lime/30
-          transition-all duration-200
-          text-left
-          shadow-[0_2px_20px_-5px_rgba(0,0,0,0.3)]
-          hover:shadow-[0_4px_30px_-5px_rgba(249,255,133,0.15)]
-        "
-        aria-label="Open zoekvenster"
+    <div ref={wrapperRef} className="relative w-full">
+      {/* Buiten-glow: workx-lime gloed die in zowel dark als light mode opvalt */}
+      <div
+        className={`absolute -inset-1.5 rounded-3xl bg-workx-lime/30 blur-2xl transition-opacity duration-500 pointer-events-none ${
+          focused ? 'opacity-100' : 'opacity-40'
+        }`}
+        aria-hidden
+      />
+      {/* Secundaire warm-gradient halo bij focus (subtiele rose/amber) */}
+      <div
+        className={`absolute -inset-2 rounded-3xl bg-gradient-to-r from-rose-400/0 via-workx-lime/20 to-amber-300/0 blur-3xl transition-opacity duration-700 pointer-events-none ${
+          focused ? 'opacity-80' : 'opacity-0'
+        }`}
+        aria-hidden
+      />
+
+      {/* De zoekbalk zelf */}
+      <div
+        className={`
+          relative flex items-center gap-3 px-5 py-4 rounded-3xl
+          ring-2 transition-all duration-200
+          ${focused
+            ? 'ring-workx-lime/80 shadow-[0_8px_40px_-5px_rgba(249,255,133,0.5)]'
+            : 'ring-workx-lime/40 shadow-[0_4px_30px_-5px_rgba(249,255,133,0.25)] hover:ring-workx-lime/60'
+          }
+        `}
+        style={{
+          background: 'var(--color-bg-glass)',
+          backdropFilter: 'blur(12px)',
+        }}
       >
-        <div className="w-9 h-9 rounded-xl bg-workx-lime/10 group-hover:bg-workx-lime/20 flex items-center justify-center flex-shrink-0 transition-colors">
-          <Icons.search size={16} className="text-workx-lime" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-white/90 font-medium">
-            Zoek in alles van Workx
-          </p>
-          <p className="text-xs text-white/40 mt-0.5 truncate">
-            Pagina&apos;s, kantoorgegevens, IBAN, hr-docs, mensen…
-          </p>
-        </div>
-        <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.06] border border-white/[0.08] text-[10px] font-mono text-white/40 flex-shrink-0">
-          {isMac ? '⌘' : 'Ctrl'} K
+        <Icons.search size={20} className="text-workx-lime flex-shrink-0" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onKeyDown={onKeyDown}
+          placeholder="Zoek in alles van Workx — pagina's, IBAN, hr-docs, mensen…"
+          className="flex-1 bg-transparent text-base font-medium outline-none placeholder:font-normal"
+          style={{
+            color: 'var(--color-text-primary)',
+          }}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => { setQuery(''); inputRef.current?.focus() }}
+            className="p-1 rounded-full hover:bg-workx-lime/10 transition-colors"
+            aria-label="Wissen"
+            title="Wissen"
+          >
+            <Icons.x size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+          </button>
+        )}
+        <kbd
+          className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono flex-shrink-0"
+          style={{
+            background: 'var(--color-bg-glass-hover)',
+            color: 'var(--color-text-tertiary)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          Ctrl K
         </kbd>
-      </button>
+      </div>
+
+      {/* Resultaten-dropdown */}
+      {showDropdown && (
+        <div
+          className="absolute left-0 right-0 top-full mt-3 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-[60vh] overflow-y-auto"
+          style={{
+            background: 'var(--color-bg-glass)',
+            border: '1px solid var(--color-border)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.5), 0 0 0 1px var(--color-border)',
+          }}
+        >
+          {allItems.length === 0 && !aiLoading ? (
+            <div className="px-5 py-8 text-center">
+              <Icons.search size={24} className="mx-auto mb-2 opacity-30" style={{ color: 'var(--color-text-tertiary)' }} />
+              <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+                Geen resultaten voor &ldquo;{query}&rdquo;
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                Probeer: &ldquo;kantoor&rdquo;, &ldquo;IBAN&rdquo;, &ldquo;verlof&rdquo;, &ldquo;declaratie&rdquo;
+              </p>
+            </div>
+          ) : (
+            <div className="py-2">
+              {hits.map((hit, i) => {
+                const Icon = KIND_ICON[hit.item.kind]
+                const isSelected = i === selectedIndex
+                return (
+                  <button
+                    key={hit.item.id}
+                    onClick={() => go(hit.item.href)}
+                    onMouseEnter={() => setSelectedIndex(i)}
+                    className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors"
+                    style={{
+                      background: isSelected ? 'rgba(249, 255, 133, 0.10)' : 'transparent',
+                    }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{
+                        background: isSelected ? 'rgba(249, 255, 133, 0.18)' : 'var(--color-bg-glass-hover)',
+                        color: isSelected ? 'var(--workx-lime, #f9ff85)' : 'var(--color-text-tertiary)',
+                      }}
+                    >
+                      <Icon size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                          {hit.item.label}
+                        </p>
+                        {hit.item.kind !== 'page' && (
+                          <span
+                            className="px-1.5 py-0.5 text-[9px] font-semibold tracking-wider uppercase rounded flex-shrink-0"
+                            style={{
+                              background: 'var(--color-bg-glass-hover)',
+                              color: 'var(--color-text-tertiary)',
+                            }}
+                          >
+                            {KIND_LABEL[hit.item.kind]}
+                          </span>
+                        )}
+                      </div>
+                      {hit.item.description && (
+                        <p className="text-xs truncate mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                          {hit.item.description}
+                        </p>
+                      )}
+                      {hit.snippet && (
+                        <p className="text-xs mt-1 italic line-clamp-2" style={{ color: 'var(--color-text-tertiary)' }}>
+                          {hit.snippet}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+
+              {/* AI-suggesties */}
+              {(aiLoading || aiSuggestions.length > 0) && (
+                <div className="border-t mt-1 pt-1" style={{ borderColor: 'var(--color-border)' }}>
+                  <div
+                    className="px-4 pt-2 pb-1 text-[10px] font-semibold tracking-[0.08em] uppercase flex items-center gap-1.5"
+                    style={{ color: 'var(--workx-lime, #f9ff85)' }}
+                  >
+                    <Icons.sparkles size={11} />
+                    AI-suggestie
+                    {aiLoading && (
+                      <span className="ml-1 w-2.5 h-2.5 border-[1.5px] rounded-full animate-spin"
+                        style={{ borderColor: 'rgba(249,255,133,0.3)', borderTopColor: 'rgba(249,255,133,0.8)' }} />
+                    )}
+                  </div>
+                  {aiSuggestions.map((s, i) => {
+                    const idx = hits.length + i
+                    const isSelected = idx === selectedIndex
+                    return (
+                      <button
+                        key={`ai:${s.href}`}
+                        onClick={() => go(s.href)}
+                        onMouseEnter={() => setSelectedIndex(idx)}
+                        className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors"
+                        style={{
+                          background: isSelected ? 'rgba(249, 255, 133, 0.10)' : 'transparent',
+                        }}
+                      >
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                          style={{
+                            background: 'rgba(249, 255, 133, 0.12)',
+                            color: 'var(--workx-lime, #f9ff85)',
+                          }}
+                        >
+                          <Icons.sparkles size={14} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                            {s.label}
+                          </p>
+                          <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--color-text-tertiary)' }}>
+                            {s.reason}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div
+                className="px-4 py-2 mt-1 border-t flex items-center justify-between text-[10px]"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
+              >
+                <span>↑↓ navigeren</span>
+                <span>↵ openen</span>
+                <span>esc sluiten</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

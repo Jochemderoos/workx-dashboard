@@ -341,8 +341,11 @@ function TopBarComponent({ user }: TopBarProps) {
         <p className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{user.name?.split(' ')[0]}</p>
       </div>
 
-      {/* Center: Search */}
-      <div className="flex-1 max-w-xl mx-8" ref={searchRef}>
+      {/* Center: lege flex-spacer (oude search verwijderd — zoeken via
+          home-zoekbalk of Ctrl/⌘+K palette) */}
+      <div className="flex-1 max-w-xl mx-8" ref={searchRef}><div /></div>
+      {/* OUDE SEARCH HIERONDER VERWIJDERD ── */}
+      <div className="hidden">
         <div className="relative group">
           <div className="absolute inset-0 bg-workx-lime/10 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
           <Icons.search className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-workx-lime" style={{ color: 'var(--color-text-muted)' }} size={18} />
