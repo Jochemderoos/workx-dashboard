@@ -5,10 +5,21 @@
 // in een dropdown onder het invoerveld. Workx-lime glow rondom maakt 't
 // een eyecatcher in zowel dark als light mode.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icons } from '@/components/ui/Icons'
-import { searchIndex, type SearchHit } from '@/lib/search-index'
+import { buildSearchIndex, searchIndex, type SearchHit } from '@/lib/search-index'
+
+// Vaak-gezochte pages — verschijnen direct bij focus zodat je zonder typen
+// kunt klikken naar iets dat je vaak nodig hebt.
+const DEFAULT_SUGGESTION_HREFS = [
+  '/dashboard/office',
+  '/dashboard/declaraties',
+  '/dashboard/vakanties',
+  '/dashboard/agenda',
+  '/dashboard/hr-docs',
+  '/dashboard/workx-uitjes',
+]
 
 const KIND_ICON = {
   page: Icons.layers,
@@ -37,9 +48,17 @@ export default function HomeSearchBar() {
   const inputRef = useRef<HTMLInputElement>(null)
   const aiAbortRef = useRef<AbortController | null>(null)
 
-  // Resultaten via diepe search-index
-  const hits: SearchHit[] = query.trim() ? searchIndex(query, 12) : []
-  const showDropdown = focused && (query.trim().length > 0)
+  // Resultaten via diepe search-index. Bij focus zonder typen: vaak-gezochte
+  // suggesties zodat je direct ergens heen kunt klikken.
+  const defaultSuggestions: SearchHit[] = useMemo(() => {
+    const idx = buildSearchIndex()
+    return DEFAULT_SUGGESTION_HREFS
+      .map(href => idx.find(i => i.href === href))
+      .filter((i): i is NonNullable<typeof i> => Boolean(i))
+      .map((item) => ({ item, score: 0, matchedField: 'label' as const }))
+  }, [])
+  const hits: SearchHit[] = query.trim() ? searchIndex(query, 12) : defaultSuggestions
+  const showDropdown = focused
 
   // AI-fallback bij zwakke / 0 matches
   useEffect(() => {
@@ -136,17 +155,18 @@ export default function HomeSearchBar() {
 
   return (
     <div ref={wrapperRef} className="relative w-full">
-      {/* Buiten-glow: workx-lime gloed die in zowel dark als light mode opvalt */}
+      {/* Buiten-glow: workx-lime gloed. Bij open dropdown UIT zodat hij niet
+          door de resultaten heen schijnt. */}
       <div
-        className={`absolute -inset-1.5 rounded-3xl bg-workx-lime/30 blur-2xl transition-opacity duration-500 pointer-events-none ${
-          focused ? 'opacity-100' : 'opacity-40'
+        className={`absolute -inset-1 rounded-3xl bg-workx-lime/25 blur-xl transition-opacity duration-500 pointer-events-none ${
+          showDropdown ? 'opacity-0' : focused ? 'opacity-100' : 'opacity-50'
         }`}
         aria-hidden
       />
-      {/* Secundaire warm-gradient halo bij focus (subtiele rose/amber) */}
+      {/* Secundaire warm-gradient halo — ook uit als dropdown open */}
       <div
-        className={`absolute -inset-2 rounded-3xl bg-gradient-to-r from-rose-400/0 via-workx-lime/20 to-amber-300/0 blur-3xl transition-opacity duration-700 pointer-events-none ${
-          focused ? 'opacity-80' : 'opacity-0'
+        className={`absolute -inset-1.5 rounded-3xl bg-gradient-to-r from-rose-400/0 via-workx-lime/15 to-amber-300/0 blur-2xl transition-opacity duration-700 pointer-events-none ${
+          showDropdown ? 'opacity-0' : focused ? 'opacity-70' : 'opacity-0'
         }`}
         aria-hidden
       />
@@ -205,15 +225,16 @@ export default function HomeSearchBar() {
         </kbd>
       </div>
 
-      {/* Resultaten-dropdown — SOLID background zodat tekst leesbaar is en
-          widgets eronder niet doorschijnen */}
+      {/* Resultaten-dropdown — SOLID background. Extra hard met OPAQUE
+          fallback layer en isolation: isolate zodat geen enkele blur of
+          glow van bovenaf doorschijnt. */}
       {showDropdown && (
         <div
-          className="absolute left-0 right-0 top-full mt-3 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-[60vh] overflow-y-auto"
+          className="absolute left-0 right-0 top-full mt-3 rounded-2xl overflow-hidden z-50 max-h-[60vh] overflow-y-auto isolate"
           style={{
             background: 'var(--color-bg-dropdown)',
             border: '1px solid var(--color-border)',
-            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.6), 0 0 0 1px var(--color-border), 0 0 30px -5px rgba(249,255,133,0.2)',
+            boxShadow: '0 30px 80px -10px rgba(0,0,0,0.75), 0 10px 30px -5px rgba(0,0,0,0.5), 0 0 0 1px var(--color-border)',
           }}
         >
           {allItems.length === 0 && !aiLoading ? (
