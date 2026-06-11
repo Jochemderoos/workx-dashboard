@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { title, speaker, date, startTime, endTime, location, description, points } = body
+    const { title, speaker, date, startTime, endTime, location, description, points, category } = body
 
     if (!title || !speaker || !date) {
       return NextResponse.json({ error: 'Title, speaker, and date are required' }, { status: 400 })
@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
         location,
         description,
         points: points || 1,
+        category: category || null,
         createdById: session.user.id,
       },
       include: {
@@ -96,7 +97,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { id, title, speaker, date, startTime, endTime, location, description, points } = body
+    const { id, title, speaker, date, startTime, endTime, location, description, points, category } = body
 
     if (!id || !title || !date) {
       return NextResponse.json({ error: 'ID, titel en datum zijn verplicht' }, { status: 400 })
@@ -113,6 +114,7 @@ export async function PUT(req: NextRequest) {
         location: location || null,
         description: description || null,
         points: points || 1,
+        category: category || null,
       },
       include: {
         createdBy: { select: { id: true, name: true } },

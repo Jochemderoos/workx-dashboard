@@ -26,9 +26,25 @@ interface TrainingSession {
   location: string | null
   description: string | null
   points: number
+  category: TrainingCategory | null
   createdBy: { id: string; name: string }
   attendances?: { id: string; user: { id: string; name: string } }[]
 }
+
+type TrainingCategory = 'WWFT' | 'INTERVISIE' | 'PO_ARBEIDSRECHT' | 'PO_ANDERS'
+
+const CATEGORY_OPTIONS: { key: TrainingCategory; label: string; color: string }[] = [
+  { key: 'WWFT',             label: 'WWFT',            color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+  { key: 'INTERVISIE',       label: 'Intervisie',      color: 'bg-purple-500/15 text-purple-300 border-purple-500/30' },
+  { key: 'PO_ARBEIDSRECHT',  label: 'PO arbeidsrecht', color: 'bg-workx-lime/15 text-workx-lime border-workx-lime/30' },
+  { key: 'PO_ANDERS',        label: 'PO anders',       color: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' },
+]
+
+const CATEGORY_LABEL = (cat: string | null) =>
+  CATEGORY_OPTIONS.find(c => c.key === cat)?.label || ''
+
+const CATEGORY_COLOR = (cat: string | null) =>
+  CATEGORY_OPTIONS.find(c => c.key === cat)?.color || 'bg-white/5 text-white/60 border-white/10'
 
 interface TeamMember {
   id: string
@@ -74,6 +90,7 @@ export default function OpleidingenPage() {
     location: '',
     description: '',
     points: 1,
+    category: null as TrainingCategory | null,
   })
 
   // Certificates state
@@ -116,6 +133,7 @@ export default function OpleidingenPage() {
     location: '',
     description: '',
     points: 1,
+    category: null as TrainingCategory | null,
   })
   // Edit session state
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
@@ -128,6 +146,7 @@ export default function OpleidingenPage() {
     location: '',
     description: '',
     points: 1,
+    category: null as TrainingCategory | null,
   })
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   // Individual overview state
@@ -216,6 +235,7 @@ export default function OpleidingenPage() {
         location: '',
         description: '',
         points: 1,
+        category: null,
       })
       fetchSessions()
     } catch (error) {
@@ -425,7 +445,7 @@ export default function OpleidingenPage() {
 
       toast.success('Bijeenkomst toegevoegd')
       setShowMeetingForm(false)
-      setMeetingForm({ title: '', speaker: '', date: null, startTime: '', endTime: '', location: '', description: '', points: 1 })
+      setMeetingForm({ title: '', speaker: '', date: null, startTime: '', endTime: '', location: '', description: '', points: 1, category: null })
       fetchAttendanceSessions()
     } catch {
       toast.error('Kon bijeenkomst niet toevoegen')
@@ -443,6 +463,7 @@ export default function OpleidingenPage() {
       location: s.location || '',
       description: s.description || '',
       points: s.points,
+      category: s.category,
     })
   }
 
@@ -1231,6 +1252,37 @@ export default function OpleidingenPage() {
               </div>
 
               <div>
+                <label className="block text-sm text-gray-400 mb-2">Type opleiding</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSessionForm({ ...sessionForm, category: null })}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                      sessionForm.category === null
+                        ? 'bg-white/10 border-white/30 text-white'
+                        : 'bg-white/[0.03] border-white/10 text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    geen
+                  </button>
+                  {CATEGORY_OPTIONS.map(opt => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setSessionForm({ ...sessionForm, category: opt.key })}
+                      className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+                        sessionForm.category === opt.key
+                          ? opt.color
+                          : 'bg-white/[0.03] border-white/10 text-white/60 hover:bg-white/10'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm text-gray-400 mb-2">Beschrijving</label>
                 <textarea
                   value={sessionForm.description}
@@ -1299,6 +1351,11 @@ export default function OpleidingenPage() {
                           <span className="px-2 py-0.5 bg-workx-lime/10 text-workx-lime rounded">
                             {session.points} {session.points === 1 ? 'punt' : 'punten'}
                           </span>
+                          {session.category && (
+                            <span className={`px-2 py-0.5 rounded border text-[10px] font-semibold uppercase tracking-wider ${CATEGORY_COLOR(session.category)}`}>
+                              {CATEGORY_LABEL(session.category)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
