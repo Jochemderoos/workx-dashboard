@@ -904,9 +904,9 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
   const tapeColors = ['bg-amber-200/50', 'bg-rose-200/45', 'bg-sky-200/45', 'bg-emerald-200/45']
 
   return (
-    // Full-bleed: breekt uit de pagina-container zodat we de hele viewport-breedte
-    // benutten en het moodboard niet veel rijen onder elkaar wordt.
-    <div className="relative left-1/2 -translate-x-1/2 w-screen overflow-hidden">
+    // Breekt uit max-w-6xl page-container — speels hoekje mag over sidebar piepen,
+    // maar sidebar zelf blijft leesbaar en klikbaar. Negative margin schaalt mee.
+    <div className="-mx-2 sm:-mx-6 lg:-mx-12 xl:-mx-20 2xl:-mx-28">
       <div className="flex flex-wrap items-start justify-center gap-0 py-6 px-2 sm:px-6 lg:px-10">
         {fotos.map((src, i) => {
           const tilt = tilts[i % tilts.length]
