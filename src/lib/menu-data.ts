@@ -106,6 +106,8 @@ export const partnersMenuItems: MenuItem[] = [
     description: 'Partner-overleg notulen per maand met agendapunten en actiepunten.' },
   { href: '/dashboard/partners/werkverdelingsgesprekken', icon: Icons.chat, label: 'Werkverdelingsgesprekken', iconAnim: 'icon-chat-hover',
     description: 'Wekelijkse 1-op-1 gesprekken partner ↔ medewerker.' },
+  { href: '/dashboard/jaaragenda', icon: Icons.calendar, label: 'Jaaragenda', iconAnim: 'icon-calendar-hover',
+    description: 'Workx-brede jaarplanning per maand, kwartaal of tijdlijn — met jaardoelen, thema en mijlpalen.' },
   { href: '/dashboard/partners/performance', icon: Icons.target, label: 'Performance Management', iconAnim: 'icon-target-hover',
     description: 'Per medewerker observaties noteren — basis voor beoordelingsgesprekken.' },
   // Sollicitaties zit nu als tab onder /dashboard/recruitment — geen aparte

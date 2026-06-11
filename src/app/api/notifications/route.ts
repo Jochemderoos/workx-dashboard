@@ -926,6 +926,51 @@ export async function GET() {
       // silent
     }
 
+    // Jaaragenda-reminder — vanaf 1 januari 2027 voor managers
+    // (PARTNER/ADMIN/OFFICE_MANAGER) zolang de jaaragenda voor het
+    // huidige jaar nog onvolledig is (<6 maanden ingevuld). Eens per
+    // week op maandag.
+    try {
+      if (currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'OFFICE_MANAGER') {
+        const PHASE_START = new Date('2027-01-01T00:00:00Z')
+        if (now >= PHASE_START) {
+          const year = now.getFullYear()
+          const agenda = await prisma.yearAgenda.findUnique({ where: { year } })
+          let filledMonths = 0
+          if (agenda) {
+            try {
+              const m = JSON.parse(agenda.months) as Record<string, { focus?: string; plans?: string; milestones?: string }>
+              filledMonths = Object.values(m).filter(d => d?.focus?.trim() || d?.plans?.trim() || d?.milestones?.trim()).length
+            } catch { /* silent */ }
+          }
+          if (filledMonths < 6) {
+            const dayOfWeek = now.getUTCDay()
+            if (dayOfWeek === 1) {
+              const weekKey = `year-agenda-reminder-${year}-w${Math.ceil(
+                ((now.getTime() - new Date(year, 0, 1).getTime()) / 86400000 + 1) / 7,
+              )}`
+              if (!dismissedKeys.has(weekKey)) {
+                notifications.push({
+                  id: weekKey,
+                  type: 'year-agenda',
+                  title: `Jaaragenda ${year} invullen`,
+                  message: filledMonths === 0
+                    ? 'Zet de plannen voor dit jaar op een rij — jaardoelen, focus per maand en mijlpalen.'
+                    : `${filledMonths} van 12 maanden ingevuld. Maak het af.`,
+                  createdAt: now,
+                  read: false,
+                  href: '/dashboard/jaaragenda',
+                  priority: 'medium',
+                })
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // silent
+    }
+
     // Ontwikkelplan-reminder — vanaf 2 juli 2026 voor users zonder items
     // (eerste 3 weken loopt via Slack #workx-algemeen).
     try {

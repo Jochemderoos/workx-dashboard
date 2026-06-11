@@ -65,6 +65,10 @@
     {
       "path": "/api/cron/year-plan-reminder",
       "schedule": "0 7 * * 4"
+    },
+    {
+      "path": "/api/cron/year-agenda-reminder",
+      "schedule": "0 8 * * 1"
     }
   ]
 }

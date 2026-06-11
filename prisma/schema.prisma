@@ -1813,6 +1813,22 @@ model DevelopmentPlanEvaluation {
   @@index([evaluatorId])
 }
 
+// ==================== JAARAGENDA ====================
+// Workx-brede jaaragenda. Een record per jaar. Bevat de strategische
+// jaardoelen (als JSON-array) en per-maand de focus + plannen (JSON-object).
+
+model YearAgenda {
+  id        String   @id @default(cuid())
+  year      Int      @unique
+  goals     String   @db.Text @default("[]")  // JSON: [{ id, title, description, color, sortOrder }]
+  months    String   @db.Text @default("{}")  // JSON: { "1": { focus, plans, milestones }, ... }
+  theme     String?                            // Optioneel jaar-thema/motto
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([year])
+}
+
 // ==================== BONNETJES & DECLARATIES ====================
 
 // Activiteit waaraan bonnetjes gekoppeld worden (bijv. "Hamburg trip", "Kantooruitje")
