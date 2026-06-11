@@ -143,6 +143,10 @@ const daysFromNow = (iso: string) => {
 export default function WorkxUitjesPage() {
   const { data: session } = useSession()
   const meId = session?.user?.id
+  // PARTNER/ADMIN/OFFICE_MANAGER mogen elk uitje aanpassen, niet alleen eigen.
+  const meCanManageAll = ['PARTNER', 'ADMIN', 'OFFICE_MANAGER'].includes(
+    (session?.user?.role || '') as string,
+  )
 
   const [outings, setOutings] = useState<Outing[]>([])
   const [filter, setFilter] = useState<'upcoming' | 'past'>('upcoming')
@@ -181,6 +185,14 @@ export default function WorkxUitjesPage() {
     if (!form.title.trim() || !form.date) {
       toast.error('Titel en datum zijn verplicht')
       return
+    }
+    // Zacht duwtje als er geen foto is — sfeer = opkomst. Bevestigen kan,
+    // dan toont de card een mooie typografische tile met de uitje-tekst.
+    if (!form.imageUrl) {
+      const goOn = window.confirm(
+        'Wil je echt geen foto plakken? Dat verhoogt de sfeer en vergroot de kans op een grote opkomst!',
+      )
+      if (!goOn) return
     }
     const [h, m] = form.time.split(':').map(Number)
     const dt = new Date(form.date)
@@ -380,6 +392,7 @@ export default function WorkxUitjesPage() {
                 key={o.id}
                 outing={o}
                 meId={meId}
+                canManageAll={meCanManageAll}
                 onChange={fetchOutings}
                 onEdit={() => startEdit(o)}
                 onDelete={() => handleDelete(o.id)}
@@ -397,10 +410,11 @@ export default function WorkxUitjesPage() {
 // ── Outing card ───────────────────────────────────────────────────────────
 
 function OutingCard({
-  outing, meId, onChange, onEdit, onDelete,
+  outing, meId, canManageAll = false, onChange, onEdit, onDelete,
 }: {
   outing: Outing
   meId?: string
+  canManageAll?: boolean
   onChange: () => void
   onEdit: () => void
   onDelete: () => void
@@ -408,6 +422,7 @@ function OutingCard({
   const type = TYPE_BY_KEY[outing.type] || TYPE_BY_KEY['overig']
   const myAttendance = outing.attendances.find(a => a.user.id === meId)
   const isOrganizer = outing.organizer.id === meId
+  const canManage = isOrganizer || canManageAll
   const days = daysFromNow(outing.date)
 
   const [busy, setBusy] = useState(false)
@@ -453,19 +468,39 @@ function OutingCard({
 
   return (
     <div className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${type.bg} to-transparent ${type.ring.replace('ring-', 'border-')} shadow-lg hover:shadow-xl transition-shadow`}>
-      {/* Cover-foto — aspect-ratio voorkomt uitrekken op brede schermen.
-          5:2 = compact maar nooit gestretched. */}
-      <div className="relative w-full aspect-[5/2] overflow-hidden bg-workx-dark/40">
-        <img
-          src={outing.imageUrl || type.defaultImage}
-          alt={outing.title}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/20 to-transparent pointer-events-none" />
-        {/* Emoji-badge in hoek */}
-        <div className="absolute top-3 left-3 w-9 h-9 rounded-full bg-workx-dark/80 backdrop-blur flex items-center justify-center text-lg shadow-lg">
-          {type.emoji}
-        </div>
+      {/* Cover — eigen foto óf typografische tile met titel + emoji.
+          Geen automatische fallback-foto's meer (zoals de boot bij PARADE). */}
+      <div className={`relative w-full aspect-[5/2] overflow-hidden bg-workx-dark/40 ${!outing.imageUrl ? `bg-gradient-to-br ${type.bg} via-transparent to-workx-dark` : ''}`}>
+        {outing.imageUrl ? (
+          <>
+            <img
+              src={outing.imageUrl}
+              alt={outing.title}
+              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/20 to-transparent pointer-events-none" />
+          </>
+        ) : (
+          // Geen eigen foto → grote typografische tile, sfeervol per type.
+          <div className="relative w-full h-full flex items-center justify-center px-6">
+            <div className="absolute inset-0 opacity-30 [background:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.15),transparent_50%)] pointer-events-none" />
+            <div className="text-center relative">
+              <div className="text-5xl sm:text-6xl mb-2 drop-shadow-lg">{type.emoji}</div>
+              <h4 className="text-white font-bold uppercase tracking-[0.2em] text-xl sm:text-2xl leading-tight break-words drop-shadow-lg">
+                {outing.title}
+              </h4>
+              <p className={`mt-1 text-xs font-medium uppercase tracking-widest ${type.accent}`}>
+                {type.label}
+              </p>
+            </div>
+          </div>
+        )}
+        {/* Emoji-badge in hoek (alleen als er een foto is — anders dubbelop) */}
+        {outing.imageUrl && (
+          <div className="absolute top-3 left-3 w-9 h-9 rounded-full bg-workx-dark/80 backdrop-blur flex items-center justify-center text-lg shadow-lg">
+            {type.emoji}
+          </div>
+        )}
       </div>
 
       <div className="p-4 sm:p-5">
@@ -483,7 +518,7 @@ function OutingCard({
               </p>
             )}
           </div>
-          {isOrganizer && (
+          {canManage && (
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={onEdit}
@@ -1033,6 +1068,32 @@ function CoverImageUpload({
     }
   }
 
+  // Plak-support: zolang er nog geen cover staat, vangen we Ctrl/Cmd+V op
+  // window-niveau zodat je gewoon een screenshot kunt plakken zonder eerst
+  // ergens te focussen.
+  useEffect(() => {
+    if (currentUrl || uploading) return
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) {
+            e.preventDefault()
+            handleFile(file)
+            return
+          }
+        }
+      }
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+    // handleFile is stable enough — we re-bind alleen op state-veranderingen die echt nodig zijn
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUrl, uploading])
+
   return (
     <div>
       <label className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">Eigen foto (optioneel)</label>
@@ -1049,23 +1110,28 @@ function CoverImageUpload({
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="w-full px-3 py-3 rounded-xl bg-white/5 border-2 border-dashed border-white/15 text-white/60 text-sm hover:bg-white/10 hover:border-rose-300/30 hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {uploading ? (
-            <>
-              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Uploaden…
-            </>
-          ) : (
-            <>
-              <Icons.upload size={14} /> Voeg een foto toe
-            </>
-          )}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="w-full px-3 py-3 rounded-xl bg-white/5 border-2 border-dashed border-white/15 text-white/60 text-sm hover:bg-white/10 hover:border-rose-300/30 hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Uploaden…
+              </>
+            ) : (
+              <>
+                <Icons.upload size={14} /> Klik om te uploaden of plak met <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/80 font-mono text-[10px]">Ctrl+V</kbd>
+              </>
+            )}
+          </button>
+          <p className="text-[11px] text-rose-200/80 mt-2 leading-snug">
+            ✨ Wil je <span className="font-semibold">echt</span> geen foto plakken? Dat verhoogt de sfeer en vergroot de kans op een grote opkomst!
+          </p>
+        </>
       )}
       <input
         ref={inputRef}
