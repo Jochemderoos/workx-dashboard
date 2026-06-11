@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
@@ -274,21 +274,16 @@ export default function WorkxUitjesPage() {
 
       </section>
 
-      {/* SFEER-COLLAGE: alle 11 unieke foto's groot, geen tekst */}
-      <section aria-label="Sfeer-inspiratie" className="rounded-3xl overflow-hidden bg-workx-dark/30 border border-white/5">
-        <div className="columns-2 sm:columns-3 lg:columns-4 gap-2 p-2">
-          {SFEER_FOTOS.map((src, i) => (
-            <div key={src} className="mb-2 break-inside-avoid rounded-2xl overflow-hidden">
-              <img
-                src={src}
-                alt=""
-                loading={i < 4 ? 'eager' : 'lazy'}
-                className="w-full h-auto object-cover hover:scale-[1.02] transition-transform duration-500"
-              />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* KALENDER: 2 maanden vooruit met uitje-pills op de juiste dagen */}
+      <MonthCalendar outings={outings} />
+
+      {/* Sfeer-strook 1 — 3 horizontale foto's tussen kalender en lijst */}
+      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 3)} />
+
+      {/* Compact overzichtskader met alle aankomende uitjes */}
+      {filter === 'upcoming' && outings.length > 0 && (
+        <UpcomingOverview outings={outings} />
+      )}
 
       {/* FORM */}
       {showForm && (
@@ -299,11 +294,6 @@ export default function WorkxUitjesPage() {
           onSubmit={handleSubmit}
           onCancel={() => { setShowForm(false); setEditingId(null); resetForm() }}
         />
-      )}
-
-      {/* Compact overzichtskader met alle aankomende uitjes */}
-      {filter === 'upcoming' && outings.length > 0 && (
-        <UpcomingOverview outings={outings} />
       )}
 
       {/* LIJST */}
@@ -329,17 +319,27 @@ export default function WorkxUitjesPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {outings.map(o => (
-            <OutingCard
-              key={o.id}
-              outing={o}
-              meId={meId}
-              onChange={fetchOutings}
-              onEdit={() => startEdit(o)}
-              onDelete={() => handleDelete(o.id)}
-            />
+        <div className="space-y-4">
+          {outings.map((o, idx) => (
+            <Fragment key={o.id}>
+              <OutingCard
+                outing={o}
+                meId={meId}
+                onChange={fetchOutings}
+                onEdit={() => startEdit(o)}
+                onDelete={() => handleDelete(o.id)}
+              />
+              {/* Sfeerfoto's verspreid: na elke 2e card een strookje */}
+              {(idx + 1) % 2 === 0 && idx < outings.length - 1 && (
+                <SfeerStrook
+                  fotos={SFEER_FOTOS.slice(((idx / 2) * 2 + 3) % SFEER_FOTOS.length, ((idx / 2) * 2 + 3) % SFEER_FOTOS.length + 2)}
+                  compact
+                />
+              )}
+            </Fragment>
           ))}
+          {/* Afsluit-strookje met de overgebleven foto's */}
+          <SfeerStrook fotos={SFEER_FOTOS.slice(5)} />
         </div>
       )}
     </div>
@@ -727,6 +727,161 @@ function OutingForm({
         </button>
       </div>
     </section>
+  )
+}
+
+// ── Maandkalender met uitje-pills ────────────────────────────────────────
+
+function MonthCalendar({ outings }: { outings: Outing[] }) {
+  const [offset, setOffset] = useState(0)
+  const target = useMemo(() => {
+    const d = new Date()
+    d.setDate(1)
+    d.setMonth(d.getMonth() + offset)
+    return d
+  }, [offset])
+
+  const year = target.getFullYear()
+  const month = target.getMonth() // 0-based
+  const monthLabel = target.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
+
+  // ISO-week start: maandag = 0
+  const firstOfMonth = new Date(year, month, 1)
+  const startOffset = (firstOfMonth.getDay() + 6) % 7 // ma=0, di=1 .. zo=6
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  // Groepeer uitjes op YYYY-MM-DD voor snelle lookup
+  const byDay = useMemo(() => {
+    const map = new Map<string, Outing[]>()
+    for (const o of outings) {
+      const d = new Date(o.date)
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(o)
+    }
+    return map
+  }, [outings])
+
+  const cells: { day: number | null }[] = []
+  for (let i = 0; i < startOffset; i++) cells.push({ day: null })
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d })
+  // Rond af op heel veelvoud van 7
+  while (cells.length % 7 !== 0) cells.push({ day: null })
+
+  const todayIso = (() => {
+    const t = new Date()
+    return `${t.getFullYear()}-${t.getMonth()}-${t.getDate()}`
+  })()
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+      <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between gap-3 bg-gradient-to-r from-amber-500/8 to-rose-500/8">
+        <div className="flex items-center gap-2">
+          <Icons.calendar className="text-amber-300" size={16} />
+          <h2 className="text-sm font-semibold text-white capitalize">{monthLabel}</h2>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setOffset(o => o - 1)}
+            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 flex items-center justify-center transition-colors"
+            title="Vorige maand"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => setOffset(0)}
+            disabled={offset === 0}
+            className="px-2.5 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-[11px] flex items-center transition-colors disabled:opacity-40"
+          >
+            vandaag
+          </button>
+          <button
+            onClick={() => setOffset(o => o + 1)}
+            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 flex items-center justify-center transition-colors"
+            title="Volgende maand"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+
+      <div className="p-3 sm:p-4">
+        {/* Dagnamen */}
+        <div className="grid grid-cols-7 gap-1 mb-1.5">
+          {['ma','di','wo','do','vr','za','zo'].map(d => (
+            <div key={d} className="text-center text-[10px] uppercase tracking-wider text-white/40 font-semibold">{d}</div>
+          ))}
+        </div>
+        {/* Cellen */}
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((c, i) => {
+            if (c.day === null) return <div key={i} className="aspect-square sm:aspect-[5/4]" />
+            const key = `${year}-${month}-${c.day}`
+            const dayOutings = byDay.get(key) || []
+            const isToday = key === todayIso
+            const isWeekend = i % 7 >= 5
+            return (
+              <div
+                key={i}
+                className={`aspect-square sm:aspect-[5/4] rounded-lg p-1 sm:p-1.5 flex flex-col gap-0.5 transition-colors ${
+                  isToday
+                    ? 'bg-amber-500/20 border border-amber-300/40'
+                    : dayOutings.length > 0
+                      ? 'bg-rose-500/10 border border-rose-300/30'
+                      : isWeekend
+                        ? 'bg-white/[0.01]'
+                        : 'bg-white/[0.03]'
+                }`}
+              >
+                <p className={`text-[10px] sm:text-xs font-semibold tabular-nums ${isToday ? 'text-amber-200' : 'text-white/60'}`}>
+                  {c.day}
+                </p>
+                {dayOutings.slice(0, 2).map(o => {
+                  const t = TYPE_BY_KEY[o.type] || TYPE_BY_KEY['overig']
+                  return (
+                    <div
+                      key={o.id}
+                      className={`text-[8px] sm:text-[9px] px-1 py-0.5 rounded leading-tight truncate ${t.accent} bg-white/10`}
+                      title={`${o.title} · ${formatTime(o.date)}`}
+                    >
+                      <span className="mr-0.5">{t.emoji}</span>
+                      <span className="hidden sm:inline">{o.title.slice(0, 10)}</span>
+                    </div>
+                  )
+                })}
+                {dayOutings.length > 2 && (
+                  <span className="text-[8px] text-white/50">+{dayOutings.length - 2}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ── Sfeerfoto-strook (horizontale rij om verdeeld te plaatsen) ───────────
+
+function SfeerStrook({ fotos, compact = false }: { fotos: string[]; compact?: boolean }) {
+  if (fotos.length === 0) return null
+  return (
+    <div
+      className={`grid gap-2 rounded-2xl overflow-hidden ${
+        fotos.length === 1 ? 'grid-cols-1' : fotos.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'
+      }`}
+    >
+      {fotos.map((src) => (
+        <div key={src} className={`rounded-2xl overflow-hidden ${compact ? 'h-28 sm:h-32' : 'h-40 sm:h-48'}`}>
+          <img
+            src={src}
+            alt=""
+            loading="lazy"
+            className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-500"
+          />
+        </div>
+      ))}
+    </div>
   )
 }
 
