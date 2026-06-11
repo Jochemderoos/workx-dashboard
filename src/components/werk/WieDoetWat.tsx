@@ -13,6 +13,11 @@ interface TeamMember {
   avatarUrl: string | null
 }
 
+interface Executor {
+  id: string
+  user: { id: string; name: string; avatarUrl: string | null }
+}
+
 interface Responsibility {
   id: string
   task: string
@@ -25,6 +30,7 @@ interface Responsibility {
   partnerTask?: {
     id: string
     chapter: { id: string; name: string; sortOrder: number }
+    executors: Executor[]
   } | null
 }
 
@@ -398,6 +404,7 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
         setDeleteId={setDeleteId}
         setShowDeleteConfirm={setShowDeleteConfirm}
         collapsedChapters={collapsedChapters}
+        onRefetch={fetchData}
         toggleChapter={(id) => setCollapsedChapters(prev => {
           const next = new Set(prev)
           if (next.has(id)) next.delete(id); else next.add(id)
@@ -823,6 +830,18 @@ interface ResponsibilitiesByChapterProps {
   setShowDeleteConfirm: (v: boolean) => void
   collapsedChapters: Set<string>
   toggleChapter: (id: string) => void
+  onRefetch: () => void
+}
+
+// Eén taak met alle eindverantwoordelijken + executors samengevoegd
+interface TaskGroup {
+  partnerTaskId: string | null
+  taskLabel: string
+  endResponsibles: { id: string; name: string; avatarUrl: string | null }[]
+  executors: Executor[]
+  // Voor losse Responsibilities (zonder partnerTask): houd de oorspronkelijke
+  // Responsibility-id zodat edit/delete blijft werken.
+  looseResponsibilityId?: string
 }
 
 function ResponsibilitiesByChapter({
@@ -844,29 +863,53 @@ function ResponsibilitiesByChapter({
   setShowDeleteConfirm,
   collapsedChapters,
   toggleChapter,
+  onRefetch,
 }: ResponsibilitiesByChapterProps) {
-  // Groepeer per chapter (of "Algemeen" voor losse)
+  // Eerst groepen per chapter, daarbinnen per partnerTaskId (zodat
+  // meerdere personen voor dezelfde taak op één rij komen).
   const groups = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; sortOrder: number; items: Responsibility[] }>()
+    const chapterMap = new Map<string, { id: string; name: string; sortOrder: number; tasks: Map<string, TaskGroup> }>()
     const LOOSE_KEY = '__loose__'
+
     for (const r of responsibilities) {
       const chap = r.partnerTask?.chapter
-      const key = chap?.id || LOOSE_KEY
-      if (!map.has(key)) {
-        map.set(key, {
-          id: key,
+      const cKey = chap?.id || LOOSE_KEY
+      if (!chapterMap.has(cKey)) {
+        chapterMap.set(cKey, {
+          id: cKey,
           name: chap?.name || 'Algemeen',
           sortOrder: chap?.sortOrder ?? 9999,
-          items: [],
+          tasks: new Map(),
         })
       }
-      map.get(key)!.items.push(r)
+      const chapterEntry = chapterMap.get(cKey)!
+
+      // Group key: partnerTaskId of een unieke per-Responsibility key
+      const tKey = r.partnerTask?.id || `loose-${r.id}`
+      if (!chapterEntry.tasks.has(tKey)) {
+        chapterEntry.tasks.set(tKey, {
+          partnerTaskId: r.partnerTask?.id || null,
+          taskLabel: r.task,
+          endResponsibles: [],
+          executors: r.partnerTask?.executors || [],
+          looseResponsibilityId: r.partnerTask?.id ? undefined : r.id,
+        })
+      }
+      chapterEntry.tasks.get(tKey)!.endResponsibles.push(r.responsible)
     }
-    return Array.from(map.values()).sort((a, b) => {
-      if (a.id === LOOSE_KEY) return 1
-      if (b.id === LOOSE_KEY) return -1
-      return a.sortOrder - b.sortOrder
-    })
+
+    return Array.from(chapterMap.values())
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        sortOrder: c.sortOrder,
+        tasks: Array.from(c.tasks.values()),
+      }))
+      .sort((a, b) => {
+        if (a.id === LOOSE_KEY) return 1
+        if (b.id === LOOSE_KEY) return -1
+        return a.sortOrder - b.sortOrder
+      })
   }, [responsibilities])
 
   if (responsibilities.length === 0) return null
@@ -889,119 +932,310 @@ function ResponsibilitiesByChapter({
                 <span className="w-1.5 h-1.5 rounded-full bg-workx-lime animate-pulse" />
                 <h3 className="text-sm sm:text-base font-semibold text-white truncate">{group.name}</h3>
                 <span className="text-[10px] uppercase tracking-wider text-white/40 tabular-nums">
-                  {group.items.length}
+                  {group.tasks.length}
                 </span>
               </div>
               <Icons.chevronDown size={14} className={`text-white/40 transition-transform ${collapsed ? '' : 'rotate-180'}`} />
             </button>
 
-            {/* Items */}
             {!collapsed && (
-              <div className="divide-y divide-white/5">
-                {group.items.map(r => (
-                  <div key={r.id} className="group relative hover:bg-white/[0.02] transition-colors">
-                    {editingId === r.id ? (
-                      <div className="p-4 space-y-2.5">
-                        <input
-                          type="text"
-                          value={editTask}
-                          onChange={(e) => setEditTask(e.target.value)}
-                          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/50"
-                          placeholder="Verantwoordelijkheid..."
-                        />
-                        <div className="relative">
-                          <button
-                            onClick={() => setShowEditDropdown(!showEditDropdown)}
-                            className="w-full flex items-center gap-2 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-left hover:border-white/30 transition-colors"
-                          >
-                            {editSelectedMember ? (
-                              <>
-                                {getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl) ? (
-                                  <img loading="lazy" src={getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover" />
-                                ) : (
-                                  <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{editSelectedMember.name.charAt(0)}</div>
-                                )}
-                                <span className="text-sm text-white">{editSelectedMember.name}</span>
-                              </>
-                            ) : (
-                              <span className="text-xs text-gray-500">Kies verantwoordelijke…</span>
-                            )}
-                            <Icons.chevronDown size={12} className="ml-auto text-gray-400" />
-                          </button>
-                          {showEditDropdown && (
-                            <div className="absolute z-50 bottom-full mb-1 w-full bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-[40vh] overflow-y-auto">
-                              {teamMembers.map(m => (
-                                <button
-                                  key={m.id}
-                                  onClick={() => { setEditResponsibleId(m.id); setShowEditDropdown(false) }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/10 transition-colors"
-                                >
-                                  {getPhotoUrl(m.name, m.avatarUrl) ? (
-                                    <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover" />
-                                  ) : (
-                                    <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{m.name.charAt(0)}</div>
-                                  )}
-                                  <span className="text-white text-xs">{m.name}</span>
-                                  {m.id === editResponsibleId && <Icons.check size={12} className="ml-auto text-workx-lime" />}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => handleEdit(r.id)} className="btn-primary text-xs px-3 py-1.5">Opslaan</button>
-                          <button onClick={() => setEditingId(null)} className="btn-secondary text-xs px-3 py-1.5">Annuleren</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-3 sm:p-4 flex items-center gap-3">
-                        {/* Avatar */}
-                        <div className="flex-shrink-0">
-                          {getPhotoUrl(r.responsible.name, r.responsible.avatarUrl) ? (
-                            <img
-                              src={getPhotoUrl(r.responsible.name, r.responsible.avatarUrl)!}
-                              alt={r.responsible.name}
-                              className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10 group-hover:ring-workx-lime/30 transition-all"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center ring-1 ring-white/10 group-hover:ring-workx-lime/30 transition-all">
-                              <span className="text-sm font-bold text-workx-lime">{r.responsible.name.charAt(0)}</span>
-                            </div>
-                          )}
-                        </div>
+              <>
+                {/* Sub-header met legenda */}
+                <div className="px-4 sm:px-5 py-1.5 border-b border-white/5 bg-white/[0.01] flex items-center gap-3 text-[9px] uppercase tracking-wider">
+                  <span className="text-amber-300/70 font-semibold">Eindverantwoordelijk</span>
+                  <span className="text-white/30">·</span>
+                  <span className="text-workx-lime/70 font-semibold">Uitvoering</span>
+                </div>
 
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm sm:text-base text-white font-medium leading-tight">{r.task}</p>
-                          <p className="text-xs text-workx-lime/80 mt-0.5">{r.responsible.name}</p>
-                        </div>
-
-                        {canEdit && (
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                            <button
-                              onClick={() => startEdit(r)}
-                              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                              title="Bewerken"
-                            >
-                              <Icons.edit size={14} />
-                            </button>
-                            <button
-                              onClick={() => { setDeleteId(r.id); setShowDeleteConfirm(true) }}
-                              className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors"
-                              title="Verwijderen"
-                            >
-                              <Icons.trash size={14} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                <div className="divide-y divide-white/5">
+                  {group.tasks.map(t => (
+                    <TaskRow
+                      key={t.partnerTaskId || `loose-${t.looseResponsibilityId}`}
+                      group={t}
+                      canEdit={canEdit}
+                      teamMembers={teamMembers}
+                      editingId={editingId}
+                      editTask={editTask}
+                      editResponsibleId={editResponsibleId}
+                      editSelectedMember={editSelectedMember}
+                      showEditDropdown={showEditDropdown}
+                      setEditTask={setEditTask}
+                      setShowEditDropdown={setShowEditDropdown}
+                      setEditResponsibleId={setEditResponsibleId}
+                      handleEdit={handleEdit}
+                      startEdit={startEdit}
+                      setEditingId={setEditingId}
+                      setDeleteId={setDeleteId}
+                      setShowDeleteConfirm={setShowDeleteConfirm}
+                      onRefetch={onRefetch}
+                      responsibilities={responsibilities}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </section>
         )
       })}
+    </div>
+  )
+}
+
+// ── Eén task-rij: end-responsibles + executors + add-executor dropdown ──
+
+function TaskRow({
+  group, canEdit, teamMembers,
+  editingId, editTask, editResponsibleId, editSelectedMember, showEditDropdown,
+  setEditTask, setShowEditDropdown, setEditResponsibleId,
+  handleEdit, startEdit, setEditingId, setDeleteId, setShowDeleteConfirm,
+  onRefetch, responsibilities,
+}: {
+  group: TaskGroup
+  canEdit: boolean
+  teamMembers: TeamMember[]
+  editingId: string | null
+  editTask: string
+  editResponsibleId: string
+  editSelectedMember: TeamMember | null | undefined
+  showEditDropdown: boolean
+  setEditTask: (v: string) => void
+  setShowEditDropdown: (v: boolean) => void
+  setEditResponsibleId: (v: string) => void
+  handleEdit: (id: string) => void
+  startEdit: (r: Responsibility) => void
+  setEditingId: (v: string | null) => void
+  setDeleteId: (v: string | null) => void
+  setShowDeleteConfirm: (v: boolean) => void
+  onRefetch: () => void
+  responsibilities: Responsibility[]
+}) {
+  const [showExecutorMenu, setShowExecutorMenu] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  // Voor losse responsibilities: vind de echte Responsibility om edit/delete te triggeren
+  const looseResp = group.looseResponsibilityId
+    ? responsibilities.find(r => r.id === group.looseResponsibilityId)
+    : null
+  const isEditing = looseResp && editingId === looseResp.id
+
+  const executorUserIds = new Set(group.executors.map(e => e.user.id))
+  const availableExecutors = teamMembers.filter(m => !executorUserIds.has(m.id))
+
+  const addExecutor = async (userId: string) => {
+    if (!group.partnerTaskId) {
+      toast.error('Kan uitvoerder alleen toevoegen aan gepubliceerde taken')
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/partner-tasks/${group.partnerTaskId}/executors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+      if (!res.ok) throw new Error()
+      setShowExecutorMenu(false)
+      onRefetch()
+    } catch {
+      toast.error('Kon uitvoerder niet toevoegen')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const removeExecutor = async (userId: string) => {
+    if (!group.partnerTaskId) return
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/partner-tasks/${group.partnerTaskId}/executors?userId=${userId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      onRefetch()
+    } catch {
+      toast.error('Kon uitvoerder niet verwijderen')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Inline-edit view (alleen voor losse responsibilities)
+  if (isEditing && looseResp) {
+    return (
+      <div className="p-4 space-y-2.5">
+        <input
+          type="text"
+          value={editTask}
+          onChange={(e) => setEditTask(e.target.value)}
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/50"
+          placeholder="Verantwoordelijkheid..."
+        />
+        <div className="relative">
+          <button
+            onClick={() => setShowEditDropdown(!showEditDropdown)}
+            className="w-full flex items-center gap-2 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-left hover:border-white/30 transition-colors"
+          >
+            {editSelectedMember ? (
+              <>
+                {getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl) ? (
+                  <img loading="lazy" src={getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{editSelectedMember.name.charAt(0)}</div>
+                )}
+                <span className="text-sm text-white">{editSelectedMember.name}</span>
+              </>
+            ) : (
+              <span className="text-xs text-gray-500">Kies verantwoordelijke…</span>
+            )}
+            <Icons.chevronDown size={12} className="ml-auto text-gray-400" />
+          </button>
+          {showEditDropdown && (
+            <div className="absolute z-50 bottom-full mb-1 w-full bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-[40vh] overflow-y-auto">
+              {teamMembers.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => { setEditResponsibleId(m.id); setShowEditDropdown(false) }}
+                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/10 transition-colors"
+                >
+                  {getPhotoUrl(m.name, m.avatarUrl) ? (
+                    <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{m.name.charAt(0)}</div>
+                  )}
+                  <span className="text-white text-xs">{m.name}</span>
+                  {m.id === editResponsibleId && <Icons.check size={12} className="ml-auto text-workx-lime" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => handleEdit(looseResp.id)} className="btn-primary text-xs px-3 py-1.5">Opslaan</button>
+          <button onClick={() => setEditingId(null)} className="btn-secondary text-xs px-3 py-1.5">Annuleren</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="group p-3 sm:p-4 hover:bg-white/[0.02] transition-colors">
+      {/* Taak-titel */}
+      <div className="flex items-start gap-3 mb-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm sm:text-base text-white font-medium leading-tight">{group.taskLabel}</p>
+        </div>
+        {canEdit && looseResp && (
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <button
+              onClick={() => startEdit(looseResp)}
+              className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+              title="Bewerken"
+            >
+              <Icons.edit size={12} />
+            </button>
+            <button
+              onClick={() => { setDeleteId(looseResp.id); setShowDeleteConfirm(true) }}
+              className="p-1 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors"
+              title="Verwijderen"
+            >
+              <Icons.trash size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Avatars: eindverantwoordelijken (amber-ring) en uitvoerders (lime-ring) */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Eindverantwoordelijken */}
+        <div className="flex items-center gap-1.5">
+          <div className="flex -space-x-1.5">
+            {group.endResponsibles.map(p => (
+              <PersonAvatar key={p.id} name={p.name} avatarUrl={p.avatarUrl} ring="amber" />
+            ))}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[9px] uppercase tracking-wider text-amber-300/70 font-semibold leading-tight">Eindverantwoordelijk</span>
+            <span className="text-[11px] text-white/80 leading-tight">
+              {group.endResponsibles.map(p => p.name.split(' ')[0]).join(' · ')}
+            </span>
+          </div>
+        </div>
+
+        {/* Uitvoerders */}
+        {group.executors.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <div className="flex -space-x-1.5">
+              {group.executors.map(ex => (
+                <button
+                  key={ex.id}
+                  onClick={() => removeExecutor(ex.user.id)}
+                  disabled={busy}
+                  className="group/avatar relative"
+                  title={`${ex.user.name} (klik om weg te halen)`}
+                >
+                  <PersonAvatar name={ex.user.name} avatarUrl={ex.user.avatarUrl} ring="lime" />
+                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full text-[8px] text-white items-center justify-center hidden group-hover/avatar:flex">×</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-wider text-workx-lime/70 font-semibold leading-tight">Uitvoering</span>
+              <span className="text-[11px] text-white/80 leading-tight">
+                {group.executors.map(e => e.user.name.split(' ')[0]).join(' · ')}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* + Uitvoerder dropdown (alleen voor gepubliceerde partnerTasks) */}
+        {group.partnerTaskId && (
+          <div className="relative">
+            <button
+              onClick={() => setShowExecutorMenu(v => !v)}
+              disabled={busy || availableExecutors.length === 0}
+              className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-dashed border-white/20 text-white/60 hover:text-white transition-colors disabled:opacity-40 flex items-center gap-1"
+              title="Uitvoerder toevoegen"
+            >
+              <Icons.plus size={10} /> Uitvoerder
+            </button>
+            {showExecutorMenu && availableExecutors.length > 0 && (
+              <div className="absolute z-50 top-full mt-1 left-0 min-w-[200px] bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-[40vh] overflow-y-auto">
+                {availableExecutors.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => addExecutor(m.id)}
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/10 transition-colors text-left"
+                  >
+                    {getPhotoUrl(m.name, m.avatarUrl) ? (
+                      <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{m.name.charAt(0)}</div>
+                    )}
+                    <span className="text-white text-xs">{m.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PersonAvatar({ name, avatarUrl, ring }: { name: string; avatarUrl: string | null; ring: 'amber' | 'lime' }) {
+  const ringColor = ring === 'amber' ? 'ring-amber-300/50' : 'ring-workx-lime/50'
+  const bgColor = ring === 'amber' ? 'bg-amber-300/20 text-amber-200' : 'bg-workx-lime/20 text-workx-lime'
+  const photo = getPhotoUrl(name, avatarUrl)
+  return photo ? (
+    <img
+      loading="lazy"
+      src={photo}
+      alt={name}
+      title={name}
+      className={`w-7 h-7 rounded-full object-cover ring-2 ${ringColor} ring-workx-dark`}
+    />
+  ) : (
+    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ${ringColor} ring-workx-dark ${bgColor}`} title={name}>
+      {name.charAt(0)}
     </div>
   )
 }

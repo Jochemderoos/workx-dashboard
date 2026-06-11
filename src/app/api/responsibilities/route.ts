@@ -25,6 +25,11 @@ export async function GET() {
             select: {
               id: true,
               chapter: { select: { id: true, name: true, sortOrder: true } },
+              executors: {
+                include: {
+                  user: { select: { id: true, name: true, avatarUrl: true } },
+                },
+              },
             },
           },
         },

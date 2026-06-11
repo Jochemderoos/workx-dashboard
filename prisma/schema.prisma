@@ -101,6 +101,7 @@ model User {
   // Verantwoordelijk (partner) — taken die partners onder elkaar verdelen
   partnerTasks            PartnerTask[]           @relation("PartnerTasks")
   partnerTaskAssignments  PartnerTaskAssignment[] @relation("PartnerTaskAssignments")
+  partnerTaskExecutors    PartnerTaskExecutor[]   @relation("PartnerTaskExecutors")
 
   // Persoonlijke todo-lijst
   personalTasks     PersonalTask[]    @relation("PersonalTasks")
@@ -1266,10 +1267,28 @@ model PartnerTask {
   chapter       PartnerTaskChapter      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   responsible   User?                   @relation("PartnerTasks", fields: [responsibleId], references: [id], onDelete: SetNull)
   assignments   PartnerTaskAssignment[]
+  executors     PartnerTaskExecutor[]
   publishedAs   Responsibility[]
 
   @@index([chapterId])
   @@index([responsibleId])
+}
+
+// Uitvoerders: medewerkers uit het team die de taak feitelijk uitvoeren,
+// los van de eindverantwoordelijken (assignments). Wordt toegevoegd op
+// Wie doet Wat door anyone, zichtbaar voor iedereen.
+model PartnerTaskExecutor {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  task      PartnerTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User        @relation("PartnerTaskExecutors", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
 }
 
 // Join-tabel: meerdere personen verantwoordelijk voor één PartnerTask
