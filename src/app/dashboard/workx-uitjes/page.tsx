@@ -277,8 +277,8 @@ export default function WorkxUitjesPage() {
       {/* JAAROVERZICHT: 12 maanden verticaal met geplande uitjes per maand */}
       <YearOverview outings={outings} />
 
-      {/* Sfeer-strookje 1 — 2 compacte foto's tussen overzicht en lijst */}
-      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 2)} compact />
+      {/* Sfeer-grid 1 — 3 foto's tussen jaaroverzicht en 'Komt eraan' */}
+      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 3)} />
 
       {/* Compact overzichtskader met alle aankomende uitjes */}
       {filter === 'upcoming' && outings.length > 0 && (
@@ -320,28 +320,18 @@ export default function WorkxUitjesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {outings.map((o, idx) => (
-            <Fragment key={o.id}>
-              <OutingCard
-                outing={o}
-                meId={meId}
-                onChange={fetchOutings}
-                onEdit={() => startEdit(o)}
-                onDelete={() => handleDelete(o.id)}
-              />
-              {/* Sfeerfoto-banner verspreid: na elke 2e card 1 brede banner */}
-              {(idx + 1) % 2 === 0 && idx < outings.length - 1 && (
-                <SfeerStrook
-                  fotos={[SFEER_FOTOS[(Math.floor(idx / 2) + 2) % SFEER_FOTOS.length]]}
-                  compact
-                />
-              )}
-            </Fragment>
+          {outings.map((o) => (
+            <OutingCard
+              key={o.id}
+              outing={o}
+              meId={meId}
+              onChange={fetchOutings}
+              onEdit={() => startEdit(o)}
+              onDelete={() => handleDelete(o.id)}
+            />
           ))}
-          {/* Subtiele afsluit-banner — 1 foto, niet 6 */}
-          {outings.length >= 1 && (
-            <SfeerStrook fotos={[SFEER_FOTOS[(outings.length + 5) % SFEER_FOTOS.length]]} compact />
-          )}
+          {/* Sfeer-grid 2 — overige 6 foto's onderaan */}
+          <SfeerStrook fotos={SFEER_FOTOS.slice(5)} />
         </div>
       )}
     </div>
@@ -857,26 +847,35 @@ function YearOverview({ outings }: { outings: Outing[] }) {
   )
 }
 
-// ── Sfeerfoto-strook (horizontale rij om verdeeld te plaatsen) ───────────
+// ── Polaroid moodboard: foto's overlappen, getilt, verstrooid ────────────
 
-function SfeerStrook({ fotos, compact = false }: { fotos: string[]; compact?: boolean }) {
+function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
   if (fotos.length === 0) return null
+  const tilts = ['-rotate-6', 'rotate-4', '-rotate-3', 'rotate-7', '-rotate-5', 'rotate-2', '-rotate-2', 'rotate-5', '-rotate-7', 'rotate-3', '-rotate-1']
+  const vOffsets = ['mt-0', 'mt-6 sm:mt-10', 'mt-2 sm:mt-3', 'mt-8 sm:mt-12', 'mt-1', 'mt-4 sm:mt-8', 'mt-3', 'mt-7 sm:mt-9']
+  const tapeColors = ['bg-amber-200/50', 'bg-rose-200/45', 'bg-sky-200/45', 'bg-emerald-200/45']
+
   return (
-    <div
-      className={`grid gap-2 rounded-2xl overflow-hidden ${
-        fotos.length === 1 ? 'grid-cols-1' : fotos.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'
-      }`}
-    >
-      {fotos.map((src) => (
-        <div key={src} className={`rounded-2xl overflow-hidden ${compact ? 'h-28 sm:h-32' : 'h-40 sm:h-48'}`}>
-          <img
-            src={src}
-            alt=""
-            loading="lazy"
-            className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-500"
-          />
-        </div>
-      ))}
+    <div className="flex flex-wrap items-start justify-center gap-0 py-6 px-2 sm:px-4">
+      {fotos.map((src, i) => {
+        const tilt = tilts[i % tilts.length]
+        const vOff = vOffsets[i % vOffsets.length]
+        const tape = tapeColors[i % tapeColors.length]
+        const overlap = i === 0 ? '' : '-ml-4 sm:-ml-8'
+        return (
+          <div
+            key={src + i}
+            style={{ zIndex: 10 + i }}
+            className={`relative w-28 sm:w-36 md:w-40 bg-white p-2 pb-7 sm:pb-8 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-110 hover:z-30 hover:shadow-black/70 transition-all duration-300 cursor-pointer`}
+          >
+            <div className="aspect-square overflow-hidden bg-workx-dark/20">
+              <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+            </div>
+            {/* Plakband bovenaan */}
+            <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-10 h-3.5 ${tape} rounded-sm rotate-2 shadow-sm`} />
+          </div>
+        )
+      })}
     </div>
   )
 }

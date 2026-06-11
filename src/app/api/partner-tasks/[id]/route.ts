@@ -25,7 +25,8 @@ async function syncPublication(taskId: string) {
   })
   if (!task) return
 
-  const taskLabel = `${task.chapter.name} — ${task.task}`
+  // Chapter-naam staat al in het kader-header op Wie doet Wat — geen prefix.
+  const taskLabel = task.task
 
   // Stap 1: verwijder alle bestaande Responsibility-records voor deze PartnerTask
   await prisma.responsibility.deleteMany({ where: { partnerTaskId: task.id } })
