@@ -84,13 +84,33 @@ export default function VerantwoordelijkPage() {
     }
   }
 
+  // Optimistic: pas een chapters-state aan op een specifieke task
+  const patchTaskAssignments = (taskId: string, nextUserIds: string[]) => {
+    setChapters(prev => prev.map(ch => ({
+      ...ch,
+      tasks: ch.tasks.map(t => {
+        if (t.id !== taskId) return t
+        const nextAssignments: Assignment[] = nextUserIds.map(uid => {
+          const existing = t.assignments.find(a => a.userId === uid)
+          if (existing) return existing
+          const m = team.find(mm => mm.id === uid)
+          return { userId: uid, user: { id: uid, name: m?.name || '', avatarUrl: m?.avatarUrl ?? null } }
+        })
+        return { ...t, assignments: nextAssignments }
+      }),
+    })))
+  }
+
   const toggleResponsible = async (task: PartnerTask, userId: string) => {
     const current = task.assignments.map(a => a.userId)
     const next = current.includes(userId) ? current.filter(id => id !== userId) : [...current, userId]
+    // Direct visuele feedback — voorkomt dat de gebruiker denkt dat de klik niets deed
+    patchTaskAssignments(task.id, next)
     await updateTask(task.id, { responsibleIds: next })
   }
 
   const clearResponsibles = async (task: PartnerTask) => {
+    patchTaskAssignments(task.id, [])
     await updateTask(task.id, { responsibleIds: [] })
   }
 
