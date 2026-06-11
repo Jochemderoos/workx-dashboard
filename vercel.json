@@ -69,6 +69,10 @@
     {
       "path": "/api/cron/year-agenda-reminder",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/workx-outings-reminder",
+      "schedule": "0 9 * * *"
     }
   ]
 }

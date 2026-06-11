@@ -86,6 +86,8 @@ model User {
   // Opleidingen
   createdTrainingSessions TrainingSession[]    @relation("CreatedTrainingSessions")
   certificates            Certificate[]        @relation("UserCertificates")
+  organizedOutings        WorkxOuting[]        @relation("OrganizedOutings")
+  outingAttendances       WorkxOutingAttendance[] @relation("UserOutingAttendances")
   trainingAttendances     TrainingAttendance[] @relation("TrainingAttendances")
 
   // Zaken toewijzing
@@ -1811,6 +1813,50 @@ model DevelopmentPlanEvaluation {
 
   @@index([planId])
   @@index([evaluatorId])
+}
+
+// ==================== WORKX UITJES ====================
+// Team-uitjes (borrel, etentje, film, suppen, jeu de boules, opera, etc.).
+// Iedereen kan een uitje voorstellen + zich inschrijven met optioneel
+// "extra mensen" (partner, kinderen). Slack-reminders via cron.
+
+model WorkxOuting {
+  id           String   @id @default(cuid())
+  title        String                       // "Borrel bij Hannekes Boom"
+  type         String                       // 'borrel-kantoor' | 'borrel-elders' | 'etentje' | 'film' | 'suppen' | 'jeu-de-boules' | 'opera' | 'voorstelling' | 'overig'
+  date         DateTime                     // Datum + tijd
+  location     String?                      // Optionele locatie (kan ontbreken bij "TBD")
+  description  String?  @db.Text            // Beschrijving / praktische info
+  organizerId  String                       // User die het organiseert
+  imageUrl     String?                      // Optionele cover-foto (later upload)
+  slackNoticedAt DateTime?                  // Wanneer de 'nieuw uitje'-Slack-melding is gestuurd
+  reminderSentAt String? @db.Text @default("[]") // JSON-array van datum-strings — welke 3 reminders al verstuurd
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organizer    User     @relation("OrganizedOutings", fields: [organizerId], references: [id], onDelete: Cascade)
+  attendances  WorkxOutingAttendance[]
+
+  @@index([date])
+  @@index([organizerId])
+}
+
+model WorkxOutingAttendance {
+  id        String   @id @default(cuid())
+  outingId  String
+  userId    String
+  plusOnes  Int      @default(0)            // Aantal extra mensen die gebruiker meeneemt
+  response  String   @default("in")         // 'in' | 'misschien'
+  note      String?                         // Optioneel: "Kom iets later" etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  outing    WorkxOuting @relation(fields: [outingId], references: [id], onDelete: Cascade)
+  user      User        @relation("UserOutingAttendances", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([outingId, userId])
+  @@index([outingId])
+  @@index([userId])
 }
 
 // ==================== JAARAGENDA ====================
