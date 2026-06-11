@@ -9,54 +9,6 @@ export const KNOWHOW_OFFICEMANAGEMENT: Document = {
   lastUpdated: '2024',
   chapters: [
     {
-      id: 'contactgegevens',
-      title: 'Contactgegevens',
-      icon: '📞',
-      content: `
-        <h3>Belangrijkste telefoonnummers</h3>
-        <div class="grid gap-3 mt-4">
-          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
-            <span class="text-white">Workx Advocaten (kantoor)</span>
-            <span class="text-workx-lime font-mono">020 308 0320</span>
-          </div>
-          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
-            <span class="text-white">BaseNet</span>
-            <span class="text-workx-lime font-mono">020 685 5031</span>
-          </div>
-          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
-            <span class="text-white">Constant IT</span>
-            <span class="text-workx-lime font-mono">020 760 8700</span>
-          </div>
-          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
-            <span class="text-white">De Bary</span>
-            <span class="text-workx-lime font-mono">020 240 3000</span>
-          </div>
-          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
-            <span class="text-white">Doxflow</span>
-            <span class="text-workx-lime font-mono">020 331 7171</span>
-          </div>
-          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
-            <span class="text-white">Fietskoerier</span>
-            <span class="text-workx-lime font-mono">020 612 6700</span>
-          </div>
-          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
-            <span class="text-white">Printer Canon (PCI-Groep)</span>
-            <span class="text-workx-lime font-mono">088 543 08 08</span>
-          </div>
-        </div>
-
-        <h3 class="mt-6">E-mailadressen</h3>
-        <ul class="list-disc list-inside text-white/70 space-y-1 mt-2">
-          <li>BaseNet: servicedesk@basenet.nl</li>
-          <li>Constant IT: support@constant.it</li>
-          <li>De Bary: info@debary.nl</li>
-          <li>Doxflow: david@doxflow.nl / lennon@doxflow.nl</li>
-          <li>Fietskoerier: spoed@fietskoerier.nl</li>
-          <li>Graphic Design (Joeri): joeri@ttwwoo.nl</li>
-        </ul>
-      `,
-    },
-    {
       id: 'kantoorgegevens',
       title: 'Kantoorgegevens',
       icon: '🏢',
@@ -110,6 +62,54 @@ export const KNOWHOW_OFFICEMANAGEMENT: Document = {
             <span class="text-workx-lime font-mono text-right text-sm">Gustav Mahlerlaan 10,<br/>1082 PP Amsterdam</span>
           </div>
         </div>
+      `,
+    },
+    {
+      id: 'contactgegevens',
+      title: 'Contactgegevens',
+      icon: '📞',
+      content: `
+        <h3>Belangrijkste telefoonnummers</h3>
+        <div class="grid gap-3 mt-4">
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Workx Advocaten (kantoor)</span>
+            <span class="text-workx-lime font-mono">020 308 0320</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">BaseNet</span>
+            <span class="text-workx-lime font-mono">020 685 5031</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Constant IT</span>
+            <span class="text-workx-lime font-mono">020 760 8700</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">De Bary</span>
+            <span class="text-workx-lime font-mono">020 240 3000</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Doxflow</span>
+            <span class="text-workx-lime font-mono">020 331 7171</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Fietskoerier</span>
+            <span class="text-workx-lime font-mono">020 612 6700</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Printer Canon (PCI-Groep)</span>
+            <span class="text-workx-lime font-mono">088 543 08 08</span>
+          </div>
+        </div>
+
+        <h3 class="mt-6">E-mailadressen</h3>
+        <ul class="list-disc list-inside text-white/70 space-y-1 mt-2">
+          <li>BaseNet: servicedesk@basenet.nl</li>
+          <li>Constant IT: support@constant.it</li>
+          <li>De Bary: info@debary.nl</li>
+          <li>Doxflow: david@doxflow.nl / lennon@doxflow.nl</li>
+          <li>Fietskoerier: spoed@fietskoerier.nl</li>
+          <li>Graphic Design (Joeri): joeri@ttwwoo.nl</li>
+        </ul>
       `,
     },
     {
