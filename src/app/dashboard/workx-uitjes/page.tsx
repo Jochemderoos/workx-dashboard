@@ -274,8 +274,8 @@ export default function WorkxUitjesPage() {
 
       </section>
 
-      {/* KALENDER: 2 maanden vooruit met uitje-pills op de juiste dagen */}
-      <MonthCalendar outings={outings} />
+      {/* JAAROVERZICHT: 12 maanden verticaal met geplande uitjes per maand */}
+      <YearOverview outings={outings} />
 
       {/* Sfeer-strook 1 — 3 horizontale foto's tussen kalender en lijst */}
       <SfeerStrook fotos={SFEER_FOTOS.slice(0, 3)} />
@@ -405,14 +405,15 @@ function OutingCard({
 
   return (
     <div className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${type.bg} to-transparent ${type.ring.replace('ring-', 'border-')} shadow-lg hover:shadow-xl transition-shadow`}>
-      {/* Cover-foto: eigen upload óf type-default */}
-      <div className="relative w-full h-40 overflow-hidden">
+      {/* Cover-foto — aspect-ratio fix zodat upload niet uitgerekt wordt.
+          object-cover crop'pet centraal; ratio past op de meeste foto's. */}
+      <div className="relative w-full aspect-[16/9] overflow-hidden bg-workx-dark/40">
         <img
           src={outing.imageUrl || type.defaultImage}
           alt={outing.title}
-          className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-500"
+          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/20 to-transparent pointer-events-none" />
         {/* Emoji-badge in hoek */}
         <div className="absolute top-3 left-3 w-10 h-10 rounded-full bg-workx-dark/80 backdrop-blur flex items-center justify-center text-xl shadow-lg">
           {type.emoji}
@@ -730,133 +731,122 @@ function OutingForm({
   )
 }
 
-// ── Maandkalender met uitje-pills ────────────────────────────────────────
+// ── Jaaroverzicht (verticaal JAN-DEC) ────────────────────────────────────
 
-function MonthCalendar({ outings }: { outings: Outing[] }) {
-  const [offset, setOffset] = useState(0)
-  const target = useMemo(() => {
-    const d = new Date()
-    d.setDate(1)
-    d.setMonth(d.getMonth() + offset)
-    return d
-  }, [offset])
+const MONTH_NAMES = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december']
+const MONTH_ABBR  = ['JAN','FEB','MRT','APR','MEI','JUN','JUL','AUG','SEP','OKT','NOV','DEC']
 
-  const year = target.getFullYear()
-  const month = target.getMonth() // 0-based
-  const monthLabel = target.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })
+function YearOverview({ outings }: { outings: Outing[] }) {
+  const [yearOffset, setYearOffset] = useState(0)
+  const targetYear = new Date().getFullYear() + yearOffset
+  const currentMonth = new Date().getMonth()
+  const isCurrentYear = yearOffset === 0
 
-  // ISO-week start: maandag = 0
-  const firstOfMonth = new Date(year, month, 1)
-  const startOffset = (firstOfMonth.getDay() + 6) % 7 // ma=0, di=1 .. zo=6
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-
-  // Groepeer uitjes op YYYY-MM-DD voor snelle lookup
-  const byDay = useMemo(() => {
-    const map = new Map<string, Outing[]>()
+  // Groepeer uitjes per maand (alleen in targetYear)
+  const byMonth = useMemo(() => {
+    const map = new Map<number, Outing[]>()
     for (const o of outings) {
       const d = new Date(o.date)
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-      if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(o)
+      if (d.getFullYear() !== targetYear) continue
+      const m = d.getMonth()
+      if (!map.has(m)) map.set(m, [])
+      map.get(m)!.push(o)
     }
+    // Sorteer per maand op datum
+    map.forEach(list => list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()))
     return map
-  }, [outings])
+  }, [outings, targetYear])
 
-  const cells: { day: number | null }[] = []
-  for (let i = 0; i < startOffset; i++) cells.push({ day: null })
-  for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d })
-  // Rond af op heel veelvoud van 7
-  while (cells.length % 7 !== 0) cells.push({ day: null })
-
-  const todayIso = (() => {
-    const t = new Date()
-    return `${t.getFullYear()}-${t.getMonth()}-${t.getDate()}`
-  })()
+  const totalInYear = Array.from(byMonth.values()).reduce((s, l) => s + l.length, 0)
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
       <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between gap-3 bg-gradient-to-r from-amber-500/8 to-rose-500/8">
         <div className="flex items-center gap-2">
           <Icons.calendar className="text-amber-300" size={16} />
-          <h2 className="text-sm font-semibold text-white capitalize">{monthLabel}</h2>
+          <h2 className="text-sm font-semibold text-white tabular-nums">Jaar {targetYear}</h2>
+          <span className="text-[10px] uppercase tracking-wider text-white/40 tabular-nums">
+            {totalInYear} {totalInYear === 1 ? 'uitje' : 'uitjes'}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setOffset(o => o - 1)}
+            onClick={() => setYearOffset(o => o - 1)}
             className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 flex items-center justify-center transition-colors"
-            title="Vorige maand"
+            title="Vorig jaar"
           >
             ‹
           </button>
           <button
-            onClick={() => setOffset(0)}
-            disabled={offset === 0}
+            onClick={() => setYearOffset(0)}
+            disabled={yearOffset === 0}
             className="px-2.5 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-[11px] flex items-center transition-colors disabled:opacity-40"
           >
-            vandaag
+            nu
           </button>
           <button
-            onClick={() => setOffset(o => o + 1)}
+            onClick={() => setYearOffset(o => o + 1)}
             className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 flex items-center justify-center transition-colors"
-            title="Volgende maand"
+            title="Volgend jaar"
           >
             ›
           </button>
         </div>
       </div>
 
-      <div className="p-3 sm:p-4">
-        {/* Dagnamen */}
-        <div className="grid grid-cols-7 gap-1 mb-1.5">
-          {['ma','di','wo','do','vr','za','zo'].map(d => (
-            <div key={d} className="text-center text-[10px] uppercase tracking-wider text-white/40 font-semibold">{d}</div>
-          ))}
-        </div>
-        {/* Cellen */}
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((c, i) => {
-            if (c.day === null) return <div key={i} className="aspect-square sm:aspect-[5/4]" />
-            const key = `${year}-${month}-${c.day}`
-            const dayOutings = byDay.get(key) || []
-            const isToday = key === todayIso
-            const isWeekend = i % 7 >= 5
-            return (
-              <div
-                key={i}
-                className={`aspect-square sm:aspect-[5/4] rounded-lg p-1 sm:p-1.5 flex flex-col gap-0.5 transition-colors ${
-                  isToday
-                    ? 'bg-amber-500/20 border border-amber-300/40'
-                    : dayOutings.length > 0
-                      ? 'bg-rose-500/10 border border-rose-300/30'
-                      : isWeekend
-                        ? 'bg-white/[0.01]'
-                        : 'bg-white/[0.03]'
-                }`}
-              >
-                <p className={`text-[10px] sm:text-xs font-semibold tabular-nums ${isToday ? 'text-amber-200' : 'text-white/60'}`}>
-                  {c.day}
-                </p>
-                {dayOutings.slice(0, 2).map(o => {
-                  const t = TYPE_BY_KEY[o.type] || TYPE_BY_KEY['overig']
-                  return (
-                    <div
-                      key={o.id}
-                      className={`text-[8px] sm:text-[9px] px-1 py-0.5 rounded leading-tight truncate ${t.accent} bg-white/10`}
-                      title={`${o.title} · ${formatTime(o.date)}`}
-                    >
-                      <span className="mr-0.5">{t.emoji}</span>
-                      <span className="hidden sm:inline">{o.title.slice(0, 10)}</span>
-                    </div>
-                  )
-                })}
-                {dayOutings.length > 2 && (
-                  <span className="text-[8px] text-white/50">+{dayOutings.length - 2}</span>
+      <ul className="divide-y divide-white/5">
+        {MONTH_NAMES.map((_, mIdx) => {
+          const monthOutings = byMonth.get(mIdx) || []
+          const isCurrent = isCurrentYear && mIdx === currentMonth
+          const isPast = isCurrentYear && mIdx < currentMonth
+          return (
+            <li
+              key={mIdx}
+              className={`flex items-stretch gap-3 px-4 sm:px-5 py-2.5 sm:py-3 transition-colors ${
+                isCurrent
+                  ? 'bg-amber-500/8'
+                  : monthOutings.length > 0
+                    ? 'bg-rose-500/5'
+                    : ''
+              }`}
+            >
+              {/* Maand-label */}
+              <div className={`flex-shrink-0 w-10 sm:w-12 flex flex-col items-start justify-center ${isPast ? 'opacity-40' : ''}`}>
+                <span className={`text-[10px] sm:text-xs font-bold tracking-widest tabular-nums ${
+                  isCurrent ? 'text-amber-300' : monthOutings.length > 0 ? 'text-rose-300' : 'text-white/40'
+                }`}>
+                  {MONTH_ABBR[mIdx]}
+                </span>
+              </div>
+
+              {/* Uitjes in deze maand */}
+              <div className="flex-1 min-w-0 flex items-center">
+                {monthOutings.length === 0 ? (
+                  <span className={`text-xs italic ${isPast ? 'text-white/20' : 'text-white/30'}`}>—</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {monthOutings.map(o => {
+                      const t = TYPE_BY_KEY[o.type] || TYPE_BY_KEY['overig']
+                      const dayNum = new Date(o.date).getDate()
+                      return (
+                        <span
+                          key={o.id}
+                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium ${t.accent} bg-white/5 border border-white/10`}
+                          title={`${o.title} · ${formatDateLong(o.date)} · ${formatTime(o.date)}${o.location ? ` · ${o.location}` : ''}`}
+                        >
+                          <span className="text-[10px] tabular-nums text-white/50">{dayNum}</span>
+                          <span>{t.emoji}</span>
+                          <span className="truncate max-w-[180px]">{o.title}</span>
+                        </span>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
-            )
-          })}
-        </div>
-      </div>
+            </li>
+          )
+        })}
+      </ul>
     </section>
   )
 }
@@ -977,8 +967,8 @@ function CoverImageUpload({
     <div>
       <label className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">Eigen foto (optioneel)</label>
       {currentUrl ? (
-        <div className="relative rounded-xl overflow-hidden border border-white/10">
-          <img src={currentUrl} alt="" className="w-full h-40 object-cover" />
+        <div className="relative rounded-xl overflow-hidden border border-white/10 aspect-[16/9] bg-workx-dark/40">
+          <img src={currentUrl} alt="" className="w-full h-full object-cover object-center" />
           <button
             type="button"
             onClick={onClear}
