@@ -48,17 +48,9 @@ export default function HomeSearchBar() {
   const inputRef = useRef<HTMLInputElement>(null)
   const aiAbortRef = useRef<AbortController | null>(null)
 
-  // Resultaten via diepe search-index. Bij focus zonder typen: vaak-gezochte
-  // suggesties zodat je direct ergens heen kunt klikken.
-  const defaultSuggestions: SearchHit[] = useMemo(() => {
-    const idx = buildSearchIndex()
-    return DEFAULT_SUGGESTION_HREFS
-      .map(href => idx.find(i => i.href === href))
-      .filter((i): i is NonNullable<typeof i> => Boolean(i))
-      .map((item) => ({ item, score: 0, matchedField: 'label' as const }))
-  }, [])
-  const hits: SearchHit[] = query.trim() ? searchIndex(query, 12) : defaultSuggestions
-  const showDropdown = focused
+  // Alleen resultaten tonen bij echte zoekterm — geen suggesties bij focus.
+  const hits: SearchHit[] = query.trim() ? searchIndex(query, 12) : []
+  const showDropdown = focused && query.trim().length > 0
 
   // AI-fallback bij zwakke / 0 matches
   useEffect(() => {
@@ -154,7 +146,7 @@ export default function HomeSearchBar() {
   }
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
+    <div ref={wrapperRef} className="relative w-full z-40">
       {/* Buiten-glow: workx-lime gloed. Bij open dropdown UIT zodat hij niet
           door de resultaten heen schijnt. */}
       <div
@@ -225,16 +217,16 @@ export default function HomeSearchBar() {
         </kbd>
       </div>
 
-      {/* Resultaten-dropdown — SOLID background. Extra hard met OPAQUE
-          fallback layer en isolation: isolate zodat geen enkele blur of
-          glow van bovenaf doorschijnt. */}
+      {/* Resultaten-dropdown. Twee-laagse opaque achtergrond: solid kleur via
+          theme-tokens + extra solide hex backstop voor zekerheid dat NIETS
+          eronder doorschijnt. z-[100] om boven elke widget te liggen. */}
       {showDropdown && (
         <div
-          className="absolute left-0 right-0 top-full mt-3 rounded-2xl overflow-hidden z-50 max-h-[60vh] overflow-y-auto isolate"
+          className="absolute left-0 right-0 top-full mt-3 rounded-2xl overflow-hidden z-[100] max-h-[60vh] overflow-y-auto isolate bg-workx-dark dark:bg-workx-dark"
           style={{
-            background: 'var(--color-bg-dropdown)',
-            border: '1px solid var(--color-border)',
-            boxShadow: '0 30px 80px -10px rgba(0,0,0,0.75), 0 10px 30px -5px rgba(0,0,0,0.5), 0 0 0 1px var(--color-border)',
+            backgroundColor: 'var(--color-bg-dropdown, #1e1e1e)',
+            border: '1px solid var(--color-border, rgba(255,255,255,0.1))',
+            boxShadow: '0 30px 80px -10px rgba(0,0,0,0.85), 0 10px 30px -5px rgba(0,0,0,0.6)',
           }}
         >
           {allItems.length === 0 && !aiLoading ? (
