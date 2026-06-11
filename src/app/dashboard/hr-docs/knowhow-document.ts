@@ -57,6 +57,62 @@ export const KNOWHOW_OFFICEMANAGEMENT: Document = {
       `,
     },
     {
+      id: 'kantoorgegevens',
+      title: 'Kantoorgegevens',
+      icon: '🏢',
+      content: `
+        <p class="text-white/70 mb-4">Officiële gegevens van Workx Advocaten B.V. — voor facturen, contracten, KvK-aanvragen en bankzaken.</p>
+
+        <h3>Bedrijfsgegevens</h3>
+        <div class="grid gap-3 mt-4">
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Naam</span>
+            <span class="text-workx-lime font-mono">Workx Advocaten B.V.</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Adres</span>
+            <span class="text-workx-lime font-mono">Herengracht 448</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Postcode &amp; plaats</span>
+            <span class="text-workx-lime font-mono">1017 CA Amsterdam</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">KvK</span>
+            <span class="text-workx-lime font-mono">56660936</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">BTW / VAT</span>
+            <span class="text-workx-lime font-mono">NL852244034B01</span>
+          </div>
+        </div>
+
+        <h3 class="mt-6">Bankgegevens</h3>
+        <div class="grid gap-3 mt-4">
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Bank</span>
+            <span class="text-workx-lime font-mono">ABN AMRO</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">T.n.v.</span>
+            <span class="text-workx-lime font-mono">Workx Advocaten B.V.</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">IBAN</span>
+            <span class="text-workx-lime font-mono">NL86 ABNA 0457 8975 03</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">BIC</span>
+            <span class="text-workx-lime font-mono">ABNANL2A</span>
+          </div>
+          <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center">
+            <span class="text-white">Adres bank</span>
+            <span class="text-workx-lime font-mono text-right text-sm">Gustav Mahlerlaan 10,<br/>1082 PP Amsterdam</span>
+          </div>
+        </div>
+      `,
+    },
+    {
       id: 'inloggegevens',
       title: 'Inloggegevens',
       icon: '🔐',
