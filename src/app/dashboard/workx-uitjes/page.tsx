@@ -904,10 +904,12 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
   const tapeColors = ['bg-amber-200/50', 'bg-rose-200/45', 'bg-sky-200/45', 'bg-emerald-200/45']
 
   return (
-    // Breekt uit max-w-6xl page-container — maar blijft binnen main-area
-    // zodat polaroids niet achter de sidebar verdwijnen. Op brede schermen
-    // (xl/2xl) iets ruimer omdat daar genoeg ruimte naast sidebar is.
-    <div className="-mx-0 sm:-mx-2 lg:-mx-6 xl:-mx-12 2xl:-mx-16">
+    // Breekt uit max-w-6xl page-container, mag subtiel over de sidebar piepen.
+    // z-30 + pointer-events-none zorgen dat polaroids VOOR de sidebar komen,
+    // zonder dat de sidebar klikbaar/leesbaar wordt geblokkeerd: alleen de
+    // polaroids zelf vangen muis (pointer-events-auto hieronder), lege
+    // ruimte tussen polaroids laat clicks/scrolls door naar de sidebar.
+    <div className="relative z-30 -mx-2 sm:-mx-6 lg:-mx-14 xl:-mx-24 2xl:-mx-32 pointer-events-none">
       <div className="flex flex-wrap items-start justify-center gap-0 py-6 px-2 sm:px-6 lg:px-10">
         {fotos.map((src, i) => {
           const tilt = tilts[i % tilts.length]
@@ -920,7 +922,8 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
               style={{ zIndex: 10 + i }}
               // hover:!z-[100] gebruikt !important zodat het inline-style z-index overrulet —
               // anders blijft een vroege polaroid bij hover achter een latere liggen.
-              className={`relative w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:!z-[100] hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
+              // pointer-events-auto: alleen de polaroid zelf vangt muis, niet de wrapper.
+              className={`relative pointer-events-auto w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:!z-[100] hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
             >
               <div className="aspect-square overflow-hidden bg-workx-dark/20">
                 <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
