@@ -50,7 +50,10 @@ export default function HomeSearchBar() {
 
   // Resultaten tonen bij zoekterm. Bij focus zonder query: tip-state.
   const hits: SearchHit[] = query.trim() ? searchIndex(query, 12) : []
-  const showDropdown = focused && (query.trim().length > 0 || focused)
+  // Dropdown zichtbaar zolang de input focus heeft (typen + tussendoor wissen
+  // blijft de dropdown levend). Verlaten via Escape of buiten-klikken zet
+  // focused expliciet op false.
+  const showDropdown = focused
   const showResults = query.trim().length > 0
   const totalResults = hits.length + aiSuggestions.length
 
@@ -180,14 +183,15 @@ export default function HomeSearchBar() {
         aria-hidden
       />
 
-      {/* De zoekbalk zelf */}
+      {/* De zoekbalk zelf — schone container, alleen halo's eromheen geven de
+          gele eyecatcher. Geen ring/border zodat 't niet als 'balk' voelt. */}
       <div
         className={`
           relative flex items-center gap-3 px-5 py-4 rounded-3xl
-          ring-2 transition-all duration-200
+          transition-shadow duration-200
           ${focused
-            ? 'ring-workx-lime/80 shadow-[0_8px_40px_-5px_rgba(249,255,133,0.5)]'
-            : 'ring-workx-lime/40 shadow-[0_4px_30px_-5px_rgba(249,255,133,0.25)] hover:ring-workx-lime/60'
+            ? 'shadow-[0_8px_40px_-5px_rgba(249,255,133,0.5)]'
+            : 'shadow-[0_4px_30px_-5px_rgba(249,255,133,0.25)]'
           }
         `}
         style={{
@@ -203,9 +207,11 @@ export default function HomeSearchBar() {
           onFocus={() => setFocused(true)}
           onKeyDown={onKeyDown}
           placeholder="Zoek hier direct de juiste pagina en informatie"
-          className="flex-1 bg-transparent text-base font-medium outline-none placeholder:font-normal"
+          className="flex-1 bg-transparent text-base font-medium outline-none placeholder:font-normal border-0"
           style={{
             color: 'var(--color-text-primary)',
+            border: 'none',
+            boxShadow: 'none',
           }}
           autoComplete="off"
           autoCorrect="off"
