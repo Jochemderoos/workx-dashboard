@@ -247,7 +247,7 @@ export default function HomeSearchBar() {
                 return (
                   <button
                     key={hit.item.id}
-                    onClick={() => go(hit.item.href)}
+                    onMouseDown={(e) => { e.preventDefault(); go(hit.item.href) }}
                     onMouseEnter={() => setSelectedIndex(i)}
                     className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors"
                     style={{
@@ -315,7 +315,7 @@ export default function HomeSearchBar() {
                     return (
                       <button
                         key={`ai:${s.href}`}
-                        onClick={() => go(s.href)}
+                        onMouseDown={(e) => { e.preventDefault(); go(s.href) }}
                         onMouseEnter={() => setSelectedIndex(idx)}
                         className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors"
                         style={{

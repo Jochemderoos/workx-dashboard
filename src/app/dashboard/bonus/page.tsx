@@ -34,6 +34,9 @@ export default function BonusPage() {
   const [showForm, setShowForm] = useState(false)
   const [showBonusOverview, setShowBonusOverview] = useState(false)
   const [showBonusPreview, setShowBonusPreview] = useState(false)
+  // Y-positie van de muis-klik die de modal opende — modal opent op die hoogte
+  // i.p.v. fixed-centered, zodat 'ie verschijnt waar je klikte.
+  const [modalClickY, setModalClickY] = useState<number | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ invoiceAmount: '', bonusPercentage: '20', invoicePaid: false, bonusPaid: false, invoiceNumber: '', clientName: '' })
 
@@ -268,7 +271,8 @@ export default function BonusPage() {
     } catch { toast.error('Kon status niet wijzigen') }
   }
 
-  const handleEdit = (calc: Calculation) => {
+  const handleEdit = (calc: Calculation, e?: React.MouseEvent) => {
+    if (e) setModalClickY(e.clientY)
     setForm({
       invoiceAmount: calc.invoiceAmount.toString(),
       bonusPercentage: calc.bonusPercentage.toString(),
@@ -576,7 +580,7 @@ export default function BonusPage() {
           {/* Overzicht bonussen knop */}
           {calculations.some(c => (!c.status || c.status === 'DRAFT') && c.invoicePaid) && (
             <button
-              onClick={() => setShowBonusPreview(true)}
+              onClick={(e) => { setModalClickY(e.clientY); setShowBonusPreview(true) }}
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-500/10 border border-green-500/20 rounded-lg sm:rounded-xl text-green-400 hover:bg-green-500/20 transition-all text-xs sm:text-base"
             >
               <Icons.euro size={14} />
@@ -611,7 +615,11 @@ export default function BonusPage() {
         const eligible = calculations.filter(c => (!c.status || c.status === 'DRAFT') && c.invoicePaid)
         const totalBonus = eligible.reduce((s, c) => s + c.bonusAmount, 0)
         return (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowBonusPreview(false)}>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4"
+            style={{ paddingTop: modalClickY ? `${Math.max(20, modalClickY - 80)}px` : '15vh' }}
+            onClick={() => setShowBonusPreview(false)}
+          >
             <div className="w-full max-w-2xl bg-workx-gray border border-white/10 rounded-2xl flex flex-col shadow-2xl" style={{ maxHeight: 'min(600px, calc(100vh - 2rem))' }} onClick={e => e.stopPropagation()}>
               <div className="p-5 border-b shrink-0 flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
                 <div>
@@ -653,7 +661,11 @@ export default function BonusPage() {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => resetForm()}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4"
+          style={{ paddingTop: modalClickY ? `${Math.max(20, modalClickY - 80)}px` : '15vh' }}
+          onClick={() => resetForm()}
+        >
           <div className="w-full max-w-lg bg-workx-gray border border-white/10 rounded-2xl p-6 shadow-2xl overflow-y-auto" style={{ maxHeight: 'min(700px, calc(100vh - 2rem))' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -871,7 +883,7 @@ export default function BonusPage() {
           <h2 className="text-lg font-medium text-white">Eigen omzet</h2>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500">{calculations.filter(c => !c.status || c.status === 'DRAFT').length} facturen</span>
-            <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
+            <button onClick={(e) => { setModalClickY(e.clientY); setShowForm(true) }} className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs">
               <Icons.plus size={14} />
               Nieuwe eigen omzet
             </button>
@@ -891,7 +903,7 @@ export default function BonusPage() {
             <p className="text-gray-400 mb-6 max-w-sm mx-auto">
               Voeg je eerste eigen omzet toe. Zodra de klant betaalt, schuif je de factuur naar betaald en kun je indienen.
             </p>
-            <button onClick={() => setShowForm(true)} className="btn-primary">
+            <button onClick={(e) => { setModalClickY(e.clientY); setShowForm(true) }} className="btn-primary">
               <Icons.plus size={16} className="mr-2" />
               Eerste eigen omzet toevoegen
             </button>
@@ -934,7 +946,7 @@ export default function BonusPage() {
                   <span className={`text-[10px] w-16 ${calc.invoicePaid ? 'text-green-400' : 'text-gray-500'}`}>
                     {calc.invoicePaid ? 'Betaald' : 'Onbetaald'}
                   </span>
-                  <button onClick={() => handleEdit(calc)} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors" title="Bewerken">
+                  <button onClick={(e) => handleEdit(calc, e)} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors" title="Bewerken">
                     <Icons.edit size={14} />
                   </button>
                   <button onClick={() => handleDelete(calc.id)} className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors" title="Verwijderen">

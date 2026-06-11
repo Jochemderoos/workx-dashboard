@@ -948,7 +948,8 @@ export default function AgendaPage() {
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={resetForm} />
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 z-50 flex items-start justify-center p-4 pointer-events-none"
+            style={{ paddingTop: modalClickY ? `${Math.max(20, modalClickY - 80)}px` : '15vh' }}
           >
           <div
             className="w-full max-w-lg bg-workx-gray rounded-2xl p-6 border border-white/10 shadow-2xl max-h-[80vh] overflow-y-auto animate-modal-in pointer-events-auto"
@@ -1178,7 +1179,8 @@ export default function AgendaPage() {
       {/* Day Detail Modal - only for week view (month view uses Popover) */}
       {showDayModal && selectedDate && currentView === 'week' && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4"
+          style={{ paddingTop: modalClickY ? `${Math.max(20, modalClickY - 80)}px` : '15vh' }}
           onClick={() => { setShowDayModal(false); setModalClickY(undefined) }}
         >
           <div

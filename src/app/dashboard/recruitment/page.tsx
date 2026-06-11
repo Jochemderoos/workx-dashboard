@@ -285,6 +285,7 @@ export default function RecruitmentPage() {
     approachNotes: string
   } | null>(null)
   const [savingApproach, setSavingApproach] = useState(false)
+  const [modalClickY, setModalClickY] = useState<number | null>(null)
 
   // Jochem mag een "alsof ik medewerker ben" preview-tab gebruiken
   const isJochem = session?.user?.email === 'jochem.deroos@workxadvocaten.nl'
@@ -886,7 +887,7 @@ export default function RecruitmentPage() {
                           )}
                           {data?.canSeeDetails && (
                             <button
-                              onClick={() => setEditingCandidate({
+                              onClick={(e) => { setModalClickY(e.clientY); setEditingCandidate({
                                 key: `${c.type}|${c.name}`,
                                 ids: c.allIds,
                                 type: c.type,
@@ -900,7 +901,7 @@ export default function RecruitmentPage() {
                                 by: c.approachedBy || '',
                                 networkOwner: c.networkOwner || '',
                                 approachNotes: c.approachNotes || '',
-                              })}
+                              }) }}
                               className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
                             >
                               Bewerken
@@ -1406,7 +1407,7 @@ export default function RecruitmentPage() {
                           )}
                           {data?.canSeeDetails && (
                             <button
-                              onClick={() => setEditingCandidate({
+                              onClick={(e) => { setModalClickY(e.clientY); setEditingCandidate({
                                 key: `${c.type}|${c.name}`,
                                 ids: c.allIds,
                                 type: c.type,
@@ -1420,7 +1421,7 @@ export default function RecruitmentPage() {
                                 by: c.approachedBy || '',
                                 networkOwner: c.networkOwner || '',
                                 approachNotes: c.approachNotes || '',
-                              })}
+                              }) }}
                               className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-xs font-medium border border-white/10 transition-colors"
                             >
                               Bewerken
@@ -1440,7 +1441,8 @@ export default function RecruitmentPage() {
       {/* Approach edit modal — createPortal */}
       {editingCandidate && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4"
+          style={{ paddingTop: modalClickY ? `${Math.max(20, modalClickY - 80)}px` : '15vh' }}
           onClick={() => setEditingCandidate(null)}
         >
           <div
