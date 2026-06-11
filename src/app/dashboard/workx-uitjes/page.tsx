@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
@@ -71,6 +71,21 @@ const TYPES: { key: OutingType; label: string; emoji: string; color: string; bg:
 
 const TYPE_BY_KEY = Object.fromEntries(TYPES.map(t => [t.key, t]))
 
+// Sfeer-collage onder de hero — alle 11 unieke foto's, geen tekst.
+const SFEER_FOTOS = [
+  '/workx-uitjes/bowling.webp',
+  '/workx-uitjes/padel.jpg',
+  '/workx-uitjes/bierfiets.jpg',
+  '/workx-uitjes/rollerdisco.webp',
+  '/workx-uitjes/film.jpg',
+  '/workx-uitjes/theater.jpg',
+  '/workx-uitjes/jeu-de-boules.jpg',
+  '/workx-uitjes/suppen.jpg',
+  '/workx-uitjes/borrel-elders.jpg',
+  '/workx-uitjes/etentje.avif',
+  '/workx-uitjes/boot.jpg',
+]
+
 const formatDateLong = (iso: string) =>
   new Date(iso).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -97,11 +112,12 @@ export default function WorkxUitjesPage() {
 
   const [form, setForm] = useState({
     title: '',
-    type: 'borrel-kantoor' as OutingType,
+    type: 'overig' as OutingType,
     date: null as Date | null,
     time: '17:00',
     location: '',
     description: '',
+    imageUrl: '',
   })
 
   // Fetch
@@ -135,6 +151,7 @@ export default function WorkxUitjesPage() {
       date: dt.toISOString(),
       location: form.location,
       description: form.description,
+      imageUrl: form.imageUrl,
     }
     try {
       const url = editingId ? '/api/workx-outings' : '/api/workx-outings'
@@ -157,7 +174,7 @@ export default function WorkxUitjesPage() {
   }
 
   const resetForm = () => setForm({
-    title: '', type: 'borrel-kantoor', date: null, time: '17:00', location: '', description: '',
+    title: '', type: 'overig', date: null, time: '17:00', location: '', description: '', imageUrl: '',
   })
 
   const startEdit = (o: Outing) => {
@@ -170,6 +187,7 @@ export default function WorkxUitjesPage() {
       time: formatTime(o.date),
       location: o.location || '',
       description: o.description || '',
+      imageUrl: o.imageUrl || '',
     })
   }
 
@@ -254,31 +272,21 @@ export default function WorkxUitjesPage() {
           </div>
         </div>
 
-        {/* Mozaiek-strip: alle sfeerfoto's onder elkaar, scroll horizontaal */}
-        <div className="relative border-t border-white/10 bg-workx-dark/20">
-          <div className="flex gap-1.5 p-1.5 overflow-x-auto scroll-smooth snap-x snap-mandatory">
-            {TYPES.map(t => (
-              <button
-                key={t.key}
-                onClick={() => {
-                  setEditingId(null)
-                  setForm({
-                    title: '', type: t.key, date: null, time: '17:00', location: '', description: '',
-                  })
-                  setShowForm(true)
-                }}
-                className="relative shrink-0 w-32 h-20 rounded-xl overflow-hidden group snap-start"
-                title={`Plan een "${t.label}"`}
-              >
-                <img src={t.defaultImage} alt={t.label} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/40 to-transparent" />
-                <div className="absolute inset-0 flex flex-col items-center justify-end p-1.5">
-                  <span className="text-2xl drop-shadow-lg">{t.emoji}</span>
-                  <span className="text-[10px] font-semibold text-white drop-shadow truncate w-full text-center">{t.label}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+      </section>
+
+      {/* SFEER-COLLAGE: alle 11 unieke foto's groot, geen tekst */}
+      <section aria-label="Sfeer-inspiratie" className="rounded-3xl overflow-hidden bg-workx-dark/30 border border-white/5">
+        <div className="columns-2 sm:columns-3 lg:columns-4 gap-2 p-2">
+          {SFEER_FOTOS.map((src, i) => (
+            <div key={src} className="mb-2 break-inside-avoid rounded-2xl overflow-hidden">
+              <img
+                src={src}
+                alt=""
+                loading={i < 4 ? 'eager' : 'lazy'}
+                className="w-full h-auto object-cover hover:scale-[1.02] transition-transform duration-500"
+              />
+            </div>
+          ))}
         </div>
       </section>
 
@@ -291,6 +299,11 @@ export default function WorkxUitjesPage() {
           onSubmit={handleSubmit}
           onCancel={() => { setShowForm(false); setEditingId(null); resetForm() }}
         />
+      )}
+
+      {/* Compact overzichtskader met alle aankomende uitjes */}
+      {filter === 'upcoming' && outings.length > 0 && (
+        <UpcomingOverview outings={outings} />
       )}
 
       {/* LIJST */}
@@ -619,8 +632,8 @@ function PlusOnesPicker({ value, onSave, onCancel }: { value: number; onSave: (n
 function OutingForm({
   form, setForm, isEdit, onSubmit, onCancel,
 }: {
-  form: { title: string; type: OutingType; date: Date | null; time: string; location: string; description: string }
-  setForm: React.Dispatch<React.SetStateAction<{ title: string; type: OutingType; date: Date | null; time: string; location: string; description: string }>>
+  form: { title: string; type: OutingType; date: Date | null; time: string; location: string; description: string; imageUrl: string }
+  setForm: React.Dispatch<React.SetStateAction<{ title: string; type: OutingType; date: Date | null; time: string; location: string; description: string; imageUrl: string }>>
   isEdit: boolean
   onSubmit: () => void
   onCancel: () => void
@@ -648,37 +661,12 @@ function OutingForm({
         />
       </div>
 
-      {/* Sfeerfoto-grid */}
-      <div>
-        <label className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">Welke sfeer past?</label>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5">
-          {TYPES.map(t => {
-            const selected = form.type === t.key
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setForm(f => ({ ...f, type: t.key }))}
-                className={`relative aspect-[4/3] rounded-xl overflow-hidden group transition-all ${
-                  selected ? `ring-2 ${t.ring} scale-[1.03]` : 'opacity-60 hover:opacity-100 hover:scale-[1.02]'
-                }`}
-              >
-                <img src={t.defaultImage} alt={t.label} className="w-full h-full object-cover" />
-                <div className={`absolute inset-0 bg-gradient-to-t from-workx-dark/90 via-workx-dark/30 to-transparent`} />
-                <div className="absolute inset-0 flex flex-col items-center justify-end p-1.5">
-                  <span className="text-xl drop-shadow-lg">{t.emoji}</span>
-                  <span className="text-[9px] font-semibold text-white drop-shadow text-center leading-tight">{t.label}</span>
-                </div>
-                {selected && (
-                  <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-lg">
-                    <Icons.check size={11} className="text-workx-dark" />
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      {/* Foto-upload (optioneel) */}
+      <CoverImageUpload
+        currentUrl={form.imageUrl}
+        onUploaded={(url) => setForm(f => ({ ...f, imageUrl: url }))}
+        onClear={() => setForm(f => ({ ...f, imageUrl: '' }))}
+      />
 
       {/* Datum + tijd */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -739,5 +727,138 @@ function OutingForm({
         </button>
       </div>
     </section>
+  )
+}
+
+// ── Overzichtskader met alle aankomende uitjes ───────────────────────────
+
+function UpcomingOverview({ outings }: { outings: Outing[] }) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+      <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2 bg-gradient-to-r from-amber-500/8 to-rose-500/8">
+        <Icons.calendar className="text-amber-300" size={16} />
+        <h2 className="text-sm font-semibold text-white">Komt eraan</h2>
+        <span className="text-[10px] uppercase tracking-wider text-white/40 tabular-nums">
+          {outings.length} {outings.length === 1 ? 'uitje' : 'uitjes'}
+        </span>
+      </div>
+      <ul className="divide-y divide-white/5">
+        {outings.map(o => {
+          const type = TYPE_BY_KEY[o.type] || TYPE_BY_KEY['overig']
+          const days = daysFromNow(o.date)
+          const totalAttendees = o.attendances.reduce((s, a) => s + 1 + (a.plusOnes || 0), 0)
+          return (
+            <li key={o.id} className="px-5 py-2.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
+              <span className="text-xl flex-shrink-0">{type.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-white font-medium truncate">{o.title}</p>
+                <p className="text-[11px] text-white/50 truncate">
+                  {formatDateLong(o.date)} · {formatTime(o.date)}
+                  {o.location && ` · ${o.location}`}
+                  {' · '}
+                  <span className="text-white/40">door {o.organizer.name.split(' ')[0]}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0 text-right">
+                {days >= 0 && days <= 30 && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold tabular-nums ${
+                    days <= 2 ? 'bg-amber-500/20 text-amber-300' : 'bg-white/5 text-white/50'
+                  }`}>
+                    {days === 0 ? 'vandaag' : days === 1 ? 'morgen' : `over ${days}d`}
+                  </span>
+                )}
+                <span className="text-[11px] text-white/60 tabular-nums">
+                  {totalAttendees === 0 ? '–' : `${totalAttendees}×`}
+                </span>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+// ── Cover-foto upload (Vercel Blob, client-side) ─────────────────────────
+
+function CoverImageUpload({
+  currentUrl, onUploaded, onClear,
+}: {
+  currentUrl: string
+  onUploaded: (url: string) => void
+  onClear: () => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Alleen afbeeldingen')
+      return
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('Max 8 MB')
+      return
+    }
+    setUploading(true)
+    try {
+      const { upload } = await import('@vercel/blob/client')
+      const blob = await upload(`workx-uitjes/${Date.now()}-${file.name}`, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      })
+      onUploaded(blob.url)
+      toast.success('Foto geüpload')
+    } catch (err) {
+      console.error(err)
+      toast.error('Upload mislukt')
+    } finally {
+      setUploading(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  return (
+    <div>
+      <label className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">Eigen foto (optioneel)</label>
+      {currentUrl ? (
+        <div className="relative rounded-xl overflow-hidden border border-white/10">
+          <img src={currentUrl} alt="" className="w-full h-40 object-cover" />
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-workx-dark/80 backdrop-blur flex items-center justify-center text-white hover:bg-red-500/70 transition-colors"
+            title="Verwijderen"
+          >
+            <Icons.x size={14} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="w-full px-3 py-3 rounded-xl bg-white/5 border-2 border-dashed border-white/15 text-white/60 text-sm hover:bg-white/10 hover:border-rose-300/30 hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {uploading ? (
+            <>
+              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Uploaden…
+            </>
+          ) : (
+            <>
+              <Icons.upload size={14} /> Voeg een foto toe
+            </>
+          )}
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+        className="hidden"
+      />
+    </div>
   )
 }
