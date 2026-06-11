@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   const systemPrompt = [
     'Je bent een zoek-assistent voor het Workx Advocaten dashboard.',
     'Je krijgt een zoekopdracht van een gebruiker en een lijst van alle beschikbare pagina\'s, documenten, gegevens, acties en mensen op het dashboard.',
-    'Antwoord met de 1 tot 3 meest relevante items en geef per item een korte uitleg (max 60 tekens) waarom dat past.',
+    'Antwoord met 3 tot 6 meest relevante items en geef per item een korte uitleg (max 60 tekens) waarom dat past. Wees gul: ook bij typo\'s of vage termen mag je meer suggesties geven zodat de gebruiker echt iets te kiezen heeft.',
     'ALLEEN als er echt iets relevants is. Antwoord met JSON: { "suggestions": [{ "href": "...", "label": "...", "reason": "..." }] }',
     'Geen extra tekst, alleen valid JSON. Als niks relevant is: { "suggestions": [] }.',
   ].join(' ')
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     const validHrefs = new Set(index.map(i => i.href))
     const safe = (parsed.suggestions || [])
       .filter(s => s && typeof s.href === 'string' && validHrefs.has(s.href))
-      .slice(0, 3)
+      .slice(0, 6)
 
     return NextResponse.json({ suggestions: safe })
   } catch (err) {
