@@ -3,7 +3,7 @@ import { Document } from './documents'
 // Knowhow Officemanagement document
 export const KNOWHOW_OFFICEMANAGEMENT: Document = {
   id: 'knowhow-officemanagement',
-  title: 'Knowhow Officemanagement',
+  title: 'Officemanagement',
   description: 'Praktische handleidingen voor kantoorprocessen',
   icon: '📂',
   lastUpdated: '2024',
