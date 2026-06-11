@@ -758,12 +758,6 @@ select.input-field {
   100% { background-position: 200% 0; }
 }
 
-/* Ken Burns voor cinematic slideshow op Workx uitjes — langzame zoom + pan. */
-@keyframes kenBurns {
-  0% { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(1.12) translate(-1.5%, 1.5%); }
-}
-
 .fade-in {
   animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
