@@ -40,6 +40,7 @@ const KIND_ICON = {
   doc: Icons.fileText,
   factoid: Icons.info ?? Icons.sparkles,
   action: Icons.sparkles,
+  person: Icons.user,
 } as const
 
 const KIND_LABEL = {
@@ -47,6 +48,7 @@ const KIND_LABEL = {
   doc: 'Document',
   factoid: 'Gegevens',
   action: 'Actie',
+  person: 'Persoon',
 } as const
 
 // ---------------------------------------------------------------------------
@@ -266,6 +268,19 @@ export default function CommandPalette() {
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
   }, [])
 
+  // ---- External trigger (HomeSearchBar dispatcht 'workx:open-search') ----
+  useEffect(() => {
+    const handleOpenSearch = (e: Event) => {
+      setIsOpen(true)
+      const detail = (e as CustomEvent<string>).detail
+      if (typeof detail === 'string' && detail.length > 0) {
+        setQuery(detail)
+      }
+    }
+    window.addEventListener('workx:open-search', handleOpenSearch as EventListener)
+    return () => window.removeEventListener('workx:open-search', handleOpenSearch as EventListener)
+  }, [])
+
   // ---- Search via index (deep content + synoniemen + ranking) ----
   const searchHits = useMemo<SearchHit[]>(() => {
     if (!query.trim()) {
@@ -280,6 +295,40 @@ export default function CommandPalette() {
     }
     return searchIndex(query, 15)
   }, [query])
+
+  // ---- AI-fallback: alleen aanroepen bij vage / zwakke matches ----
+  const [aiSuggestions, setAiSuggestions] = useState<{ href: string; label: string; reason: string }[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const aiAbortRef = useRef<AbortController | null>(null)
+  useEffect(() => {
+    // Skip als er een goeie match is, of als query te kort
+    const trimmed = query.trim()
+    if (trimmed.length < 3) { setAiSuggestions([]); return }
+    const topScore = searchHits[0]?.score || 0
+    const hasGoodMatch = topScore >= 60 && searchHits.length >= 2
+    if (hasGoodMatch) { setAiSuggestions([]); return }
+
+    // Debounce 600ms
+    const t = setTimeout(() => {
+      if (aiAbortRef.current) aiAbortRef.current.abort()
+      const ctrl = new AbortController()
+      aiAbortRef.current = ctrl
+      setAiLoading(true)
+      fetch('/api/search/ai-fallback', {
+        method: 'POST',
+        signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: trimmed }),
+      })
+        .then(r => r.ok ? r.json() : { suggestions: [] })
+        .then(data => {
+          setAiSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : [])
+        })
+        .catch(() => setAiSuggestions([]))
+        .finally(() => setAiLoading(false))
+    }, 600)
+    return () => clearTimeout(t)
+  }, [query, searchHits])
 
   // ---- Group by section (uit de search-index, niet meer hardcoded) ----
   const groupedHits = useMemo(() => {
@@ -565,7 +614,7 @@ export default function CommandPalette() {
                   className="flex-1 overflow-y-auto overscroll-contain py-1.5"
                   style={{ maxHeight: 'min(420px, 50vh)' }}
                 >
-                  {flatItems.length === 0 ? (
+                  {flatItems.length === 0 && aiSuggestions.length === 0 && !aiLoading ? (
                     <div className="flex flex-col items-center justify-center py-14 px-4">
                       <Icons.search size={28} className="text-white/10 mb-3" />
                       <p className="text-[13px] text-white/30">
@@ -618,6 +667,38 @@ export default function CommandPalette() {
                               </button>
                             )
                           })}
+                        </div>
+                      )}
+
+                      {/* ---- AI-suggesties — verschijnen bij vage queries ---- */}
+                      {query.trim().length >= 3 && (aiLoading || aiSuggestions.length > 0) && (
+                        <div className="border-t border-white/[0.05] mt-2 pt-2">
+                          <div className="px-4 pt-1 pb-1 text-[10px] font-semibold tracking-[0.08em] text-[#f9ff85]/70 uppercase select-none flex items-center gap-1.5">
+                            <Icons.sparkles size={11} className="text-[#f9ff85]/70" />
+                            AI-suggestie
+                            {aiLoading && (
+                              <span className="ml-1 w-2.5 h-2.5 border-[1.5px] border-[#f9ff85]/30 border-t-[#f9ff85]/80 rounded-full animate-spin" />
+                            )}
+                          </div>
+                          {aiSuggestions.map((s) => (
+                            <button
+                              key={`ai:${s.href}`}
+                              onClick={() => { router.push(s.href); setIsOpen(false) }}
+                              className="group w-full flex items-start gap-3 px-4 py-2.5 text-left hover:bg-white/[0.04] transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#f9ff85]/10 text-[#f9ff85]">
+                                <Icons.sparkles size={14} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-medium text-white/85 truncate">
+                                  {s.label}
+                                </p>
+                                <p className="text-[11px] text-white/40 mt-0.5 line-clamp-2">
+                                  {s.reason}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
                         </div>
                       )}
                     </>

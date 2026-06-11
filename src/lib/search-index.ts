@@ -21,10 +21,11 @@ import {
 } from '@/lib/menu-data'
 import { THE_WAY_IT_WORKX } from '@/app/dashboard/hr-docs/documents'
 import { KNOWHOW_OFFICEMANAGEMENT } from '@/app/dashboard/hr-docs/knowhow-document'
+import { PARTNERS, ADVOCATEN, OFFICE_TEAM } from '@/lib/team-photos'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-export type SearchKind = 'page' | 'doc' | 'factoid' | 'action'
+export type SearchKind = 'page' | 'doc' | 'factoid' | 'action' | 'person'
 
 export interface SearchItem {
   id: string
@@ -301,6 +302,118 @@ function flattenMenu(items: MenuItem[], section: string): SearchItem[] {
   return out
 }
 
+function buildPeopleItems(): SearchItem[] {
+  const out: SearchItem[] = []
+
+  // Voornaam → synoniemen (handig voor afkortingen/koosnamen)
+  const synonymsFor = (name: string, role: string): string[] => {
+    const first = name.split(' ')[0].toLowerCase()
+    return [first, name.toLowerCase(), role.toLowerCase()]
+  }
+
+  // Partners
+  for (const name of PARTNERS) {
+    const first = name.split(' ')[0]
+    out.push({
+      id: `person:partner:${name}`,
+      kind: 'person',
+      label: name,
+      description: 'Partner — klik voor zaken, jaarplan en performance',
+      href: `/dashboard/team?focus=${encodeURIComponent(name)}`,
+      synonyms: synonymsFor(name, 'partner'),
+      section: 'Mensen',
+    })
+    // Direct-acties per partner
+    out.push({
+      id: `person:partner-jaarplan:${name}`,
+      kind: 'action',
+      label: `Jaarplan ${first}`,
+      description: `Persoonlijk jaarplan van ${name}`,
+      href: `/dashboard/partners/jaarplannen?partner=${encodeURIComponent(name)}`,
+      synonyms: [`jaarplan ${first}`, `${first.toLowerCase()} ontwikkeling`, `${first.toLowerCase()} doelen`],
+      section: 'Mensen',
+    })
+    out.push({
+      id: `person:partner-coaching:${name}`,
+      kind: 'action',
+      label: `Coaching-budget ${first}`,
+      description: `Coaching-uitgaven en saldo van ${name}`,
+      href: `/dashboard/partners/coaching-budgetten?partner=${encodeURIComponent(name)}`,
+      synonyms: [`coaching ${first}`, `${first.toLowerCase()} budget`, `${first.toLowerCase()} coach`],
+      section: 'Mensen',
+    })
+    out.push({
+      id: `person:partner-werk:${name}`,
+      kind: 'action',
+      label: `Werk van ${first}`,
+      description: `Lopende zaken en taken van ${name}`,
+      href: `/dashboard/partners/werk?partner=${encodeURIComponent(name)}`,
+      synonyms: [`zaken ${first}`, `werk ${first}`, `${first.toLowerCase()} dossiers`],
+      section: 'Mensen',
+    })
+  }
+
+  // Advocaten (incl. externe Lodewijk)
+  for (const name of ADVOCATEN) {
+    const first = name.split(' ')[0]
+    out.push({
+      id: `person:adv:${name}`,
+      kind: 'person',
+      label: name,
+      description: 'Advocaat — klik voor profiel, werkdruk en ontwikkeling',
+      href: `/dashboard/team?focus=${encodeURIComponent(name)}`,
+      synonyms: synonymsFor(name, 'advocaat'),
+      section: 'Mensen',
+    })
+    out.push({
+      id: `person:adv-werkweek:${name}`,
+      kind: 'action',
+      label: `Werkweek ${first}`,
+      description: `Urenoverzicht en werkdruk van ${name}`,
+      href: `/dashboard/mijn-werkweek?user=${encodeURIComponent(name)}`,
+      synonyms: [`uren ${first}`, `werkdruk ${first}`, `${first.toLowerCase()} capaciteit`],
+      section: 'Mensen',
+    })
+    out.push({
+      id: `person:adv-ontwikkel:${name}`,
+      kind: 'action',
+      label: `Ontwikkelplan ${first}`,
+      description: `Ontwikkeling, evaluaties en groei van ${name}`,
+      href: `/dashboard/ontwikkelplannen?user=${encodeURIComponent(name)}`,
+      synonyms: [`ontwikkelplan ${first}`, `evaluatie ${first}`, `${first.toLowerCase()} jaarplan`],
+      section: 'Mensen',
+    })
+  }
+
+  // Office team
+  for (const p of OFFICE_TEAM) {
+    const first = p.name.split(' ')[0]
+    out.push({
+      id: `person:office:${p.name}`,
+      kind: 'person',
+      label: p.name,
+      description: `${p.role} — Office team`,
+      href: `/dashboard/office`,
+      synonyms: synonymsFor(p.name, p.role),
+      section: 'Mensen',
+    })
+    // Voor Bas: JAR-rooster is praktisch
+    if (first === 'Bas') {
+      out.push({
+        id: `person:bas-jar:${p.name}`,
+        kind: 'action',
+        label: `JAR-rooster van Bas`,
+        description: 'Wie/wanneer JAR-bespreking — beheerd door Bas',
+        href: `/dashboard/opleidingen?tab=jar`,
+        synonyms: ['jar rooster bas', 'jar bespreking', 'know how rooster'],
+        section: 'Mensen',
+      })
+    }
+  }
+
+  return out
+}
+
 export function buildSearchIndex(): SearchItem[] {
   if (CACHED_INDEX) return CACHED_INDEX
 
@@ -333,6 +446,9 @@ export function buildSearchIndex(): SearchItem[] {
 
   // 3. Factoids + acties
   out.push(...EXTRA_FACTOIDS)
+
+  // 4. Team-leden + per-persoon acties
+  out.push(...buildPeopleItems())
 
   // Dedupe op id
   const seen = new Set<string>()

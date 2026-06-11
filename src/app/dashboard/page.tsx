@@ -27,6 +27,7 @@ import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
 import JarReminderWidget from '@/components/dashboard/JarReminderWidget'
 import DagstartWidget from '@/components/dashboard/DagstartWidget'
 import DevelopmentPlanReviewWidget from '@/components/dashboard/DevelopmentPlanReviewWidget'
+import HomeSearchBar from '@/components/dashboard/HomeSearchBar'
 function WorkxLogoSmall() {
   return <WorkxLogo height={56} />
 }
@@ -1608,6 +1609,9 @@ export default function DashboardHome() {
           </div>
         </div>
       </div>
+
+      {/* Universele zoekbalk — opent CommandPalette */}
+      <HomeSearchBar />
 
       {/* Dagstart — drie blokken: Wist je dat?, vandaag op kantoor, jarigen */}
       <DagstartWidget />
