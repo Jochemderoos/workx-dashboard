@@ -391,6 +391,9 @@ export default function OfficePage() {
         </span>
       </div>
 
+      {/* Kantoorgegevens — handig voor facturen, contracten, betalingen */}
+      <OfficeDetails />
+
       {/* Phone-edit modal — open voor iedereen die canEdit heeft */}
       {phoneEditFor && canEdit && (
         <PhoneEditModal
@@ -724,5 +727,65 @@ function PhoneEditModal({
         </div>
       </div>
     </div>
+  )
+}
+
+// ───────── Kantoorgegevens ─────────
+// Handig bij facturen, contracten, betalingsverkeer — klik op een waarde
+// kopieert 'm naar klembord.
+
+function OfficeDetails() {
+  const copy = (value: string, label: string) => {
+    navigator.clipboard.writeText(value).then(
+      () => toast.success(`${label} gekopieerd`),
+      () => toast.error('Kon niet kopiëren'),
+    )
+  }
+
+  const Row = ({ label, value, copyLabel }: { label: string; value: string; copyLabel?: string }) => (
+    <button
+      type="button"
+      onClick={() => copy(value, copyLabel || label)}
+      className="group w-full flex items-baseline justify-between gap-4 px-4 py-2.5 -mx-1 rounded-lg hover:bg-white/[0.04] transition-colors text-left"
+    >
+      <span className="text-xs uppercase tracking-wider text-gray-500 shrink-0">{label}</span>
+      <span className="text-sm text-white font-mono tabular-nums truncate">{value}</span>
+    </button>
+  )
+
+  return (
+    <section className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+      <header className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
+        <Icons.briefcase size={16} className="text-workx-lime" />
+        <h2 className="text-sm font-semibold text-white">Kantoorgegevens</h2>
+        <span className="text-xs text-gray-500 ml-auto">klik om te kopiëren</span>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 p-5">
+        {/* Bedrijf */}
+        <div>
+          <h3 className="text-[11px] uppercase tracking-widest text-gray-400 font-semibold mb-2 px-1">Bedrijf</h3>
+          <div className="space-y-0.5">
+            <Row label="Naam" value="Workx Advocaten B.V." />
+            <Row label="Adres" value="Herengracht 448" />
+            <Row label="Postcode" value="1017 CA Amsterdam" />
+            <Row label="KvK" value="56660936" />
+            <Row label="BTW / VAT" value="NL852244034B01" />
+          </div>
+        </div>
+
+        {/* Bankgegevens */}
+        <div>
+          <h3 className="text-[11px] uppercase tracking-widest text-gray-400 font-semibold mb-2 px-1">Bankgegevens</h3>
+          <div className="space-y-0.5">
+            <Row label="Bank" value="ABN AMRO" />
+            <Row label="IBAN" value="NL86ABNA0457897503" />
+            <Row label="BIC" value="ABNANL2A" />
+            <Row label="T.n.v." value="Workx Advocaten B.V." />
+            <Row label="Bank-adres" value="Gustav Mahlerlaan 10, 1082 PP Amsterdam" copyLabel="Bank-adres" />
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
