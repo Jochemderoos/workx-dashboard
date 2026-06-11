@@ -7,8 +7,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
-import { buildSearchIndex, searchIndex, type SearchHit } from '@/lib/search-index'
+import { searchIndex, type SearchHit } from '@/lib/search-index'
 
 // Vaak-gezochte pages — verschijnen direct bij focus zodat je zonder typen
 // kunt klikken naar iets dat je vaak nodig hebt.
@@ -48,13 +49,9 @@ export default function HomeSearchBar() {
   const inputRef = useRef<HTMLInputElement>(null)
   const aiAbortRef = useRef<AbortController | null>(null)
 
-  // Resultaten tonen bij zoekterm. Bij focus zonder query: tip-state.
-  const hits: SearchHit[] = query.trim() ? searchIndex(query, 12) : []
-  // Dropdown zichtbaar zolang de input focus heeft (typen + tussendoor wissen
-  // blijft de dropdown levend). Verlaten via Escape of buiten-klikken zet
-  // focused expliciet op false.
-  const showDropdown = focused
-  const showResults = query.trim().length > 0
+  // Resultaten tonen ALLEEN bij echte zoekterm. Geen tip-state.
+  const hits: SearchHit[] = useMemo(() => query.trim() ? searchIndex(query, 12) : [], [query])
+  const showDropdown = focused && query.trim().length > 0
   const totalResults = hits.length + aiSuggestions.length
 
   // Highlight zoektermen in een tekst
@@ -96,7 +93,8 @@ export default function HomeSearchBar() {
         .finally(() => setAiLoading(false))
     }, 600)
     return () => clearTimeout(t)
-  }, [query, hits])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query])
 
   // Reset selectie bij nieuwe resultaten
   useEffect(() => { setSelectedIndex(0) }, [query])
@@ -167,31 +165,31 @@ export default function HomeSearchBar() {
 
   return (
     <div ref={wrapperRef} className="relative w-full z-40">
-      {/* Buiten-glow: workx-lime gloed. Bij open dropdown UIT zodat hij niet
-          door de resultaten heen schijnt. */}
+      {/* Buiten-glow: sterke workx-lime gloed. Bij open dropdown UIT zodat
+          hij niet door de resultaten heen schijnt. */}
       <div
-        className={`absolute -inset-1 rounded-3xl bg-workx-lime/25 blur-xl transition-opacity duration-500 pointer-events-none ${
-          showDropdown ? 'opacity-0' : focused ? 'opacity-100' : 'opacity-50'
+        className={`absolute -inset-2 rounded-3xl bg-workx-lime/40 blur-2xl transition-opacity duration-500 pointer-events-none ${
+          showDropdown ? 'opacity-0' : focused ? 'opacity-100' : 'opacity-80'
         }`}
         aria-hidden
       />
-      {/* Secundaire warm-gradient halo — ook uit als dropdown open */}
+      {/* Secundaire warm-gradient halo */}
       <div
-        className={`absolute -inset-1.5 rounded-3xl bg-gradient-to-r from-rose-400/0 via-workx-lime/15 to-amber-300/0 blur-2xl transition-opacity duration-700 pointer-events-none ${
-          showDropdown ? 'opacity-0' : focused ? 'opacity-70' : 'opacity-0'
+        className={`absolute -inset-3 rounded-3xl bg-gradient-to-r from-rose-400/10 via-workx-lime/30 to-amber-300/10 blur-3xl transition-opacity duration-700 pointer-events-none ${
+          showDropdown ? 'opacity-0' : focused ? 'opacity-100' : 'opacity-60'
         }`}
         aria-hidden
       />
 
-      {/* De zoekbalk zelf — schone container, alleen halo's eromheen geven de
-          gele eyecatcher. Geen ring/border zodat 't niet als 'balk' voelt. */}
+      {/* De zoekbalk zelf — schone container. Sterke directe lime drop-shadow
+          maakt 'm vanzelf opvallend zonder visible border. */}
       <div
         className={`
           relative flex items-center gap-3 px-5 py-4 rounded-3xl
           transition-shadow duration-200
           ${focused
-            ? 'shadow-[0_8px_40px_-5px_rgba(249,255,133,0.5)]'
-            : 'shadow-[0_4px_30px_-5px_rgba(249,255,133,0.25)]'
+            ? 'shadow-[0_0_60px_-10px_rgba(249,255,133,0.7),0_15px_50px_-10px_rgba(249,255,133,0.5)]'
+            : 'shadow-[0_0_50px_-10px_rgba(249,255,133,0.55),0_10px_40px_-10px_rgba(249,255,133,0.35)]'
           }
         `}
         style={{
@@ -252,34 +250,7 @@ export default function HomeSearchBar() {
             boxShadow: '0 30px 80px -10px rgba(0,0,0,0.85), 0 10px 30px -5px rgba(0,0,0,0.6)',
           }}
         >
-          {!showResults ? (
-            // Tip-state bij focus zonder query
-            <div className="px-5 py-6">
-              <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
-                💡 Probeer iets te zoeken
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {['kantoor', 'IBAN', 'verlof', 'declaratie', 'hanna', 'jaarplan'].map((term) => (
-                  <button
-                    key={term}
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); setQuery(term); inputRef.current?.focus() }}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
-                    style={{
-                      background: 'var(--color-bg-glass-hover)',
-                      color: 'var(--color-text-primary)',
-                      border: '1px solid var(--color-border)',
-                    }}
-                  >
-                    {term}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] mt-4" style={{ color: 'var(--color-text-muted)' }}>
-                Zoek door pagina&apos;s, documenten, kantoorgegevens, mensen en meer
-              </p>
-            </div>
-          ) : allItems.length === 0 && !aiLoading ? (
+          {totalResults === 0 && !aiLoading ? (
             <div className="px-5 py-8 text-center">
               <Icons.search size={24} className="mx-auto mb-2 opacity-30" style={{ color: 'var(--color-text-tertiary)' }} />
               <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -302,9 +273,10 @@ export default function HomeSearchBar() {
                 const Icon = KIND_ICON[hit.item.kind]
                 const isSelected = i === selectedIndex
                 return (
-                  <button
+                  <Link
                     key={hit.item.id}
-                    onMouseDown={(e) => { e.preventDefault(); go(hit.item.href) }}
+                    href={hit.item.href}
+                    onClick={() => { setFocused(false); setQuery('') }}
                     onMouseEnter={() => setSelectedIndex(i)}
                     className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors"
                     style={{
@@ -356,7 +328,7 @@ export default function HomeSearchBar() {
                          }}>
                       <Icons.arrowRight size={14} />
                     </div>
-                  </button>
+                  </Link>
                 )
               })}
 
@@ -378,9 +350,10 @@ export default function HomeSearchBar() {
                     const idx = hits.length + i
                     const isSelected = idx === selectedIndex
                     return (
-                      <button
+                      <Link
                         key={`ai:${s.href}`}
-                        onMouseDown={(e) => { e.preventDefault(); go(s.href) }}
+                        href={s.href}
+                        onClick={() => { setFocused(false); setQuery('') }}
                         onMouseEnter={() => setSelectedIndex(idx)}
                         className="w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors"
                         style={{
@@ -411,7 +384,7 @@ export default function HomeSearchBar() {
                              }}>
                           <Icons.arrowRight size={14} />
                         </div>
-                      </button>
+                      </Link>
                     )
                   })}
                 </div>
