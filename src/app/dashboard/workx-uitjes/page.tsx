@@ -46,16 +46,16 @@ type OutingType =
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const TYPES: { key: OutingType; label: string; emoji: string; color: string; bg: string; ring: string; accent: string }[] = [
-  { key: 'borrel-kantoor', label: 'Borrel op kantoor', emoji: '🍻', color: 'amber',   bg: 'from-amber-500/20 via-yellow-500/10',     ring: 'ring-amber-500/30',   accent: 'text-amber-300' },
-  { key: 'borrel-elders',  label: 'Borrel elders',     emoji: '🍹', color: 'rose',    bg: 'from-rose-500/20 via-pink-500/10',        ring: 'ring-rose-500/30',    accent: 'text-rose-300' },
-  { key: 'etentje',        label: 'Etentje',           emoji: '🍝', color: 'orange',  bg: 'from-orange-500/20 via-red-500/10',       ring: 'ring-orange-500/30',  accent: 'text-orange-300' },
-  { key: 'film',           label: 'Film',              emoji: '🎬', color: 'indigo',  bg: 'from-indigo-500/20 via-violet-500/10',    ring: 'ring-indigo-500/30',  accent: 'text-indigo-300' },
-  { key: 'suppen',         label: 'Suppen',            emoji: '🏄', color: 'cyan',    bg: 'from-cyan-500/20 via-sky-500/10',         ring: 'ring-cyan-500/30',    accent: 'text-cyan-300' },
-  { key: 'jeu-de-boules',  label: 'Jeu de boules',     emoji: '🎯', color: 'emerald', bg: 'from-emerald-500/20 via-green-500/10',    ring: 'ring-emerald-500/30', accent: 'text-emerald-300' },
-  { key: 'opera',          label: 'Opera',             emoji: '🎭', color: 'purple',  bg: 'from-purple-500/20 via-fuchsia-500/10',   ring: 'ring-purple-500/30',  accent: 'text-purple-300' },
-  { key: 'voorstelling',   label: 'Voorstelling',      emoji: '🎤', color: 'fuchsia', bg: 'from-fuchsia-500/20 via-pink-500/10',     ring: 'ring-fuchsia-500/30', accent: 'text-fuchsia-300' },
-  { key: 'overig',         label: 'Overig',            emoji: '✨', color: 'workx-lime', bg: 'from-workx-lime/20 via-yellow-300/10', ring: 'ring-workx-lime/30',  accent: 'text-workx-lime' },
+const TYPES: { key: OutingType; label: string; emoji: string; color: string; bg: string; ring: string; accent: string; defaultImage: string }[] = [
+  { key: 'borrel-kantoor', label: 'Borrel op kantoor', emoji: '🍻', color: 'amber',   bg: 'from-amber-500/20 via-yellow-500/10',     ring: 'ring-amber-500/30',   accent: 'text-amber-300',    defaultImage: '/workx-uitjes/borrel-elders.jpg' },
+  { key: 'borrel-elders',  label: 'Borrel elders',     emoji: '🍹', color: 'rose',    bg: 'from-rose-500/20 via-pink-500/10',        ring: 'ring-rose-500/30',    accent: 'text-rose-300',     defaultImage: '/workx-uitjes/borrel-elders.jpg' },
+  { key: 'etentje',        label: 'Etentje',           emoji: '🍝', color: 'orange',  bg: 'from-orange-500/20 via-red-500/10',       ring: 'ring-orange-500/30',  accent: 'text-orange-300',   defaultImage: '/workx-uitjes/etentje.avif' },
+  { key: 'film',           label: 'Film',              emoji: '🎬', color: 'indigo',  bg: 'from-indigo-500/20 via-violet-500/10',    ring: 'ring-indigo-500/30',  accent: 'text-indigo-300',   defaultImage: '/workx-uitjes/film.jpg' },
+  { key: 'suppen',         label: 'Suppen',            emoji: '🏄', color: 'cyan',    bg: 'from-cyan-500/20 via-sky-500/10',         ring: 'ring-cyan-500/30',    accent: 'text-cyan-300',     defaultImage: '/workx-uitjes/suppen.jpg' },
+  { key: 'jeu-de-boules',  label: 'Jeu de boules',     emoji: '🎯', color: 'emerald', bg: 'from-emerald-500/20 via-green-500/10',    ring: 'ring-emerald-500/30', accent: 'text-emerald-300',  defaultImage: '/workx-uitjes/jeu-de-boules.jpg' },
+  { key: 'opera',          label: 'Opera',             emoji: '🎭', color: 'purple',  bg: 'from-purple-500/20 via-fuchsia-500/10',   ring: 'ring-purple-500/30',  accent: 'text-purple-300',   defaultImage: '/workx-uitjes/theater.jpg' },
+  { key: 'voorstelling',   label: 'Voorstelling',      emoji: '🎤', color: 'fuchsia', bg: 'from-fuchsia-500/20 via-pink-500/10',     ring: 'ring-fuchsia-500/30', accent: 'text-fuchsia-300',  defaultImage: '/workx-uitjes/theater.jpg' },
+  { key: 'overig',         label: 'Overig',            emoji: '✨', color: 'workx-lime', bg: 'from-workx-lime/20 via-yellow-300/10', ring: 'ring-workx-lime/30',  accent: 'text-workx-lime',   defaultImage: '/workx-uitjes/boot.jpg' },
 ]
 
 const TYPE_BY_KEY = Object.fromEntries(TYPES.map(t => [t.key, t]))
@@ -329,19 +329,24 @@ function OutingCard({
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${type.bg} to-transparent ${type.ring.replace('ring-', 'border-')} shadow-lg`}>
-      {/* Optionele cover-foto */}
-      {outing.imageUrl && (
-        <div className="relative w-full h-32 overflow-hidden">
-          <img src={outing.imageUrl} alt={outing.title} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/40 to-transparent" />
+    <div className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${type.bg} to-transparent ${type.ring.replace('ring-', 'border-')} shadow-lg hover:shadow-xl transition-shadow`}>
+      {/* Cover-foto: eigen upload óf type-default */}
+      <div className="relative w-full h-40 overflow-hidden">
+        <img
+          src={outing.imageUrl || type.defaultImage}
+          alt={outing.title}
+          className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/30 to-transparent" />
+        {/* Emoji-badge in hoek */}
+        <div className="absolute top-3 left-3 w-10 h-10 rounded-full bg-workx-dark/80 backdrop-blur flex items-center justify-center text-xl shadow-lg">
+          {type.emoji}
         </div>
-      )}
+      </div>
 
       <div className="p-4 sm:p-5">
-        {/* Header: titel + type-emoji */}
+        {/* Header: titel + type */}
         <div className="flex items-start gap-3 mb-3">
-          <div className={`text-3xl shrink-0 ${type.accent}`}>{type.emoji}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 flex-wrap">
               <h3 className="text-lg font-bold text-white">{outing.title}</h3>
