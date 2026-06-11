@@ -73,6 +73,10 @@
     {
       "path": "/api/cron/workx-outings-reminder",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/workx-outings-nudge",
+      "schedule": "0 10 * * 5"
     }
   ]
 }

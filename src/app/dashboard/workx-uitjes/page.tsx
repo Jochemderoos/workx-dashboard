@@ -209,8 +209,16 @@ export default function WorkxUitjesPage() {
           </button>
         </div>
 
+        {/* Budget-tip */}
+        <div className="mt-4 rounded-xl bg-workx-dark/40 backdrop-blur border border-amber-300/30 px-3 py-2 flex items-center gap-2 text-xs">
+          <span className="text-base">💸</span>
+          <p className="text-amber-100/90">
+            <span className="font-semibold">Stem het budget even af met Hanna</span> voordat je iets vastlegt — dan weet zij ook wat eraan komt.
+          </p>
+        </div>
+
         {/* Filter-pills */}
-        <div className="mt-5 flex items-center gap-2 flex-wrap">
+        <div className="mt-4 flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setFilter('upcoming')}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${

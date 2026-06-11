@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendChannelMessage } from '@/lib/slack'
+import { syncOutingToCalendar, deleteCalendarEventForOuting, syncOutingToYearAgenda, removeOutingFromYearAgenda } from '@/lib/workx-outing-sync'
 
 const DASHBOARD_BASE = (process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app').replace(/\/$/, '')
 const SLACK_CHANNEL = 'workx-algemeen'
@@ -100,6 +101,32 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Auto-sync naar Agenda + Jaaragenda (niet-blokkerend)
+    try {
+      await syncOutingToCalendar({
+        id: outing.id,
+        title: outing.title,
+        type: outing.type,
+        date: outing.date,
+        location: outing.location,
+        description: outing.description,
+        organizerId: outing.organizerId,
+        calendarEventId: null,
+      })
+    } catch (e) {
+      console.error('Auto-sync naar agenda mislukt', e)
+    }
+    try {
+      await syncOutingToYearAgenda({
+        title: outing.title,
+        type: outing.type,
+        date: outing.date,
+        location: outing.location,
+      })
+    } catch (e) {
+      console.error('Auto-sync naar jaaragenda mislukt', e)
+    }
+
     // Slack-melding naar #workx-algemeen
     try {
       const dateLabel = new Date(outing.date).toLocaleDateString('nl-NL', {
@@ -177,6 +204,39 @@ export async function PATCH(req: NextRequest) {
         attendances: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
       },
     })
+
+    // Sync wijzigingen naar Agenda + Jaaragenda
+    try {
+      await syncOutingToCalendar({
+        id: updated.id,
+        title: updated.title,
+        type: updated.type,
+        date: updated.date,
+        location: updated.location,
+        description: updated.description,
+        organizerId: updated.organizerId,
+        calendarEventId: updated.calendarEventId,
+      })
+    } catch (e) {
+      console.error('Auto-sync naar agenda mislukt', e)
+    }
+    try {
+      // Als de datum verschoven is naar een ander jaar/maand: verwijder oude eerst
+      if (existing.date.getFullYear() !== updated.date.getFullYear() ||
+          existing.date.getMonth() !== updated.date.getMonth() ||
+          existing.title !== updated.title) {
+        await removeOutingFromYearAgenda({ title: existing.title, date: existing.date })
+      }
+      await syncOutingToYearAgenda({
+        title: updated.title,
+        type: updated.type,
+        date: updated.date,
+        location: updated.location,
+      }, existing.title !== updated.title ? existing.title : undefined)
+    } catch (e) {
+      console.error('Auto-sync naar jaaragenda mislukt', e)
+    }
+
     return NextResponse.json(updated)
   } catch (err) {
     console.error('workx-outings PATCH failed', err)
@@ -201,6 +261,14 @@ export async function DELETE(req: NextRequest) {
     if (existing.organizerId !== session.user.id && !isManager) {
       return NextResponse.json({ error: 'Alleen organisator of admin' }, { status: 403 })
     }
+    // Clean-up Agenda + Jaaragenda eerst
+    try {
+      await deleteCalendarEventForOuting({ calendarEventId: existing.calendarEventId })
+    } catch (e) { console.error('Calendar cleanup mislukt', e) }
+    try {
+      await removeOutingFromYearAgenda({ title: existing.title, date: existing.date })
+    } catch (e) { console.error('Jaaragenda cleanup mislukt', e) }
+
     await prisma.workxOuting.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (err) {

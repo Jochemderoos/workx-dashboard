@@ -25,6 +25,8 @@ export async function main(externalPrisma?: PrismaClient) {
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `)
+    // Idempotent: kolom toevoegen voor bestaande deploys
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WorkxOuting" ADD COLUMN IF NOT EXISTS "calendarEventId" TEXT`)
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkxOuting_date_idx" ON "WorkxOuting"("date")`)
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkxOuting_organizerId_idx" ON "WorkxOuting"("organizerId")`)
 

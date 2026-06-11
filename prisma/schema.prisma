@@ -1831,6 +1831,7 @@ model WorkxOuting {
   imageUrl     String?                      // Optionele cover-foto (later upload)
   slackNoticedAt DateTime?                  // Wanneer de 'nieuw uitje'-Slack-melding is gestuurd
   reminderSentAt String? @db.Text @default("[]") // JSON-array van datum-strings — welke 3 reminders al verstuurd
+  calendarEventId String?                   // Koppeling met automatisch aangemaakt CalendarEvent
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
