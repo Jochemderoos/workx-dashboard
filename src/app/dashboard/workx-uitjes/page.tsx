@@ -42,20 +42,31 @@ type OutingType =
   | 'jeu-de-boules'
   | 'opera'
   | 'voorstelling'
+  | 'bowling'
+  | 'padel'
+  | 'bierfiets'
+  | 'rollerdisco'
   | 'overig'
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
+// Sfeer-presets: visueel inspiratie + cover-foto per vibe. Geen "categorie"
+// — gewoon een leuke foto die past bij het idee. User kan ook gewoon zelf
+// invullen en de eerste foto kiezen.
 const TYPES: { key: OutingType; label: string; emoji: string; color: string; bg: string; ring: string; accent: string; defaultImage: string }[] = [
   { key: 'borrel-kantoor', label: 'Borrel op kantoor', emoji: '🍻', color: 'amber',   bg: 'from-amber-500/20 via-yellow-500/10',     ring: 'ring-amber-500/30',   accent: 'text-amber-300',    defaultImage: '/workx-uitjes/borrel-elders.jpg' },
-  { key: 'borrel-elders',  label: 'Borrel elders',     emoji: '🍹', color: 'rose',    bg: 'from-rose-500/20 via-pink-500/10',        ring: 'ring-rose-500/30',    accent: 'text-rose-300',     defaultImage: '/workx-uitjes/borrel-elders.jpg' },
+  { key: 'borrel-elders',  label: 'Terras-borrel',     emoji: '🍹', color: 'rose',    bg: 'from-rose-500/20 via-pink-500/10',        ring: 'ring-rose-500/30',    accent: 'text-rose-300',     defaultImage: '/workx-uitjes/borrel-elders.jpg' },
   { key: 'etentje',        label: 'Etentje',           emoji: '🍝', color: 'orange',  bg: 'from-orange-500/20 via-red-500/10',       ring: 'ring-orange-500/30',  accent: 'text-orange-300',   defaultImage: '/workx-uitjes/etentje.avif' },
   { key: 'film',           label: 'Film',              emoji: '🎬', color: 'indigo',  bg: 'from-indigo-500/20 via-violet-500/10',    ring: 'ring-indigo-500/30',  accent: 'text-indigo-300',   defaultImage: '/workx-uitjes/film.jpg' },
   { key: 'suppen',         label: 'Suppen',            emoji: '🏄', color: 'cyan',    bg: 'from-cyan-500/20 via-sky-500/10',         ring: 'ring-cyan-500/30',    accent: 'text-cyan-300',     defaultImage: '/workx-uitjes/suppen.jpg' },
   { key: 'jeu-de-boules',  label: 'Jeu de boules',     emoji: '🎯', color: 'emerald', bg: 'from-emerald-500/20 via-green-500/10',    ring: 'ring-emerald-500/30', accent: 'text-emerald-300',  defaultImage: '/workx-uitjes/jeu-de-boules.jpg' },
   { key: 'opera',          label: 'Opera',             emoji: '🎭', color: 'purple',  bg: 'from-purple-500/20 via-fuchsia-500/10',   ring: 'ring-purple-500/30',  accent: 'text-purple-300',   defaultImage: '/workx-uitjes/theater.jpg' },
   { key: 'voorstelling',   label: 'Voorstelling',      emoji: '🎤', color: 'fuchsia', bg: 'from-fuchsia-500/20 via-pink-500/10',     ring: 'ring-fuchsia-500/30', accent: 'text-fuchsia-300',  defaultImage: '/workx-uitjes/theater.jpg' },
-  { key: 'overig',         label: 'Overig',            emoji: '✨', color: 'workx-lime', bg: 'from-workx-lime/20 via-yellow-300/10', ring: 'ring-workx-lime/30',  accent: 'text-workx-lime',   defaultImage: '/workx-uitjes/boot.jpg' },
+  { key: 'bowling',        label: 'Bowling',           emoji: '🎳', color: 'red',     bg: 'from-red-500/20 via-rose-500/10',         ring: 'ring-red-500/30',     accent: 'text-red-300',      defaultImage: '/workx-uitjes/bowling.webp' },
+  { key: 'padel',          label: 'Padel',             emoji: '🎾', color: 'lime',    bg: 'from-lime-500/20 via-emerald-500/10',     ring: 'ring-lime-500/30',    accent: 'text-lime-300',     defaultImage: '/workx-uitjes/padel.jpg' },
+  { key: 'bierfiets',      label: 'Bierfiets',         emoji: '🍺', color: 'orange',  bg: 'from-orange-500/25 via-amber-500/15',     ring: 'ring-orange-500/40',  accent: 'text-orange-200',   defaultImage: '/workx-uitjes/bierfiets.jpg' },
+  { key: 'rollerdisco',    label: 'Rollerdisco',       emoji: '🛼', color: 'pink',    bg: 'from-pink-500/20 via-fuchsia-500/10',     ring: 'ring-pink-500/30',    accent: 'text-pink-300',     defaultImage: '/workx-uitjes/rollerdisco.webp' },
+  { key: 'overig',         label: 'Iets anders',       emoji: '✨', color: 'workx-lime', bg: 'from-workx-lime/20 via-yellow-300/10', ring: 'ring-workx-lime/30',  accent: 'text-workx-lime',   defaultImage: '/workx-uitjes/boot.jpg' },
 ]
 
 const TYPE_BY_KEY = Object.fromEntries(TYPES.map(t => [t.key, t]))
@@ -187,58 +198,87 @@ export default function WorkxUitjesPage() {
       <div className="absolute top-[30%] left-[5%] w-64 h-64 bg-amber-500/6 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="absolute bottom-0 right-[20%] w-56 h-56 bg-purple-500/8 rounded-full blur-3xl pointer-events-none -z-10" />
 
-      {/* HERO */}
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-rose-500/15 via-amber-500/8 to-purple-500/12 p-6 sm:p-8">
+      {/* HERO met mozaiek-strip */}
+      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-rose-500/15 via-amber-500/8 to-purple-500/12">
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-400/15 rounded-full blur-3xl" />
         <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-rose-400/15 rounded-full blur-3xl" />
-        <div className="relative flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-[10px] uppercase tracking-widest text-rose-300/70 mb-1">Team-uitjes ✨</p>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white">
-              <TextReveal>Workx uitjes</TextReveal>
-            </h1>
-            <p className="text-sm text-white/70 mt-2 max-w-lg">
-              Elke twee maanden iets leuks plannen — borrel, etentje, film, suppen, jeu de boules, opera, voorstelling… verzin maar. Schrijf je in en neem gerust iemand mee.
+        <div className="relative p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-rose-300/70 mb-1">Team-uitjes ✨</p>
+              <h1 className="text-3xl sm:text-4xl font-bold text-white">
+                <TextReveal>Workx uitjes</TextReveal>
+              </h1>
+              <p className="text-sm text-white/80 mt-2 max-w-xl leading-relaxed">
+                Iedere paar maanden iets gezelligs met het team. <span className="text-white font-semibold">Bedenk samen met een kantoorgenoot iets leuks</span> — een borrel, etentje, padel-avond, suppen, bowling, theater, bierfiets… Echt alles mag. Samen organiseren is het leukst.
+              </p>
+            </div>
+            <button
+              onClick={() => { setEditingId(null); resetForm(); setShowForm(true) }}
+              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-rose-500/30 to-amber-500/30 border border-rose-300/40 text-white font-semibold text-sm hover:from-rose-500/40 hover:to-amber-500/40 transition-colors flex items-center gap-2 shadow-lg shadow-rose-500/10"
+            >
+              <Icons.plus size={14} /> Plan iets leuks
+            </button>
+          </div>
+
+          {/* Budget-tip */}
+          <div className="mt-4 rounded-xl bg-workx-dark/40 backdrop-blur border border-amber-300/30 px-3 py-2 flex items-center gap-2 text-xs">
+            <span className="text-base">💸</span>
+            <p className="text-amber-100/90">
+              <span className="font-semibold">Stem het budget even af met Hanna</span> voordat je iets vastlegt — dan weet zij ook wat eraan komt.
             </p>
           </div>
-          <button
-            onClick={() => { setEditingId(null); resetForm(); setShowForm(true) }}
-            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-rose-500/30 to-amber-500/30 border border-rose-300/40 text-white font-semibold text-sm hover:from-rose-500/40 hover:to-amber-500/40 transition-colors flex items-center gap-2 shadow-lg shadow-rose-500/10"
-          >
-            <Icons.plus size={14} /> Uitje plannen
-          </button>
+
+          {/* Filter-pills */}
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setFilter('upcoming')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                filter === 'upcoming'
+                  ? 'bg-white text-workx-dark'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              Aankomend {filter === 'upcoming' && `(${totalUpcoming})`}
+            </button>
+            <button
+              onClick={() => setFilter('past')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                filter === 'past'
+                  ? 'bg-white text-workx-dark'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              Geweest
+            </button>
+          </div>
         </div>
 
-        {/* Budget-tip */}
-        <div className="mt-4 rounded-xl bg-workx-dark/40 backdrop-blur border border-amber-300/30 px-3 py-2 flex items-center gap-2 text-xs">
-          <span className="text-base">💸</span>
-          <p className="text-amber-100/90">
-            <span className="font-semibold">Stem het budget even af met Hanna</span> voordat je iets vastlegt — dan weet zij ook wat eraan komt.
-          </p>
-        </div>
-
-        {/* Filter-pills */}
-        <div className="mt-4 flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setFilter('upcoming')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              filter === 'upcoming'
-                ? 'bg-white text-workx-dark'
-                : 'bg-white/10 text-white/70 hover:bg-white/20'
-            }`}
-          >
-            Aankomend {filter === 'upcoming' && `(${totalUpcoming})`}
-          </button>
-          <button
-            onClick={() => setFilter('past')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              filter === 'past'
-                ? 'bg-white text-workx-dark'
-                : 'bg-white/10 text-white/70 hover:bg-white/20'
-            }`}
-          >
-            Geweest
-          </button>
+        {/* Mozaiek-strip: alle sfeerfoto's onder elkaar, scroll horizontaal */}
+        <div className="relative border-t border-white/10 bg-workx-dark/20">
+          <div className="flex gap-1.5 p-1.5 overflow-x-auto scroll-smooth snap-x snap-mandatory">
+            {TYPES.map(t => (
+              <button
+                key={t.key}
+                onClick={() => {
+                  setEditingId(null)
+                  setForm({
+                    title: '', type: t.key, date: null, time: '17:00', location: '', description: '',
+                  })
+                  setShowForm(true)
+                }}
+                className="relative shrink-0 w-32 h-20 rounded-xl overflow-hidden group snap-start"
+                title={`Plan een "${t.label}"`}
+              >
+                <img src={t.defaultImage} alt={t.label} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                <div className="absolute inset-0 bg-gradient-to-t from-workx-dark via-workx-dark/40 to-transparent" />
+                <div className="absolute inset-0 flex flex-col items-center justify-end p-1.5">
+                  <span className="text-2xl drop-shadow-lg">{t.emoji}</span>
+                  <span className="text-[10px] font-semibold text-white drop-shadow truncate w-full text-center">{t.label}</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -255,11 +295,25 @@ export default function WorkxUitjesPage() {
 
       {/* LIJST */}
       {outings.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center">
-          <div className="text-5xl mb-2">{filter === 'upcoming' ? '🎉' : '📷'}</div>
-          <p className="text-white/60">
-            {filter === 'upcoming' ? 'Nog geen uitjes gepland. Plan er één!' : 'Geen uitjes uit het verleden gevonden.'}
+        <div className="rounded-2xl border-2 border-dashed border-rose-400/30 bg-gradient-to-br from-rose-500/8 via-amber-500/5 to-purple-500/8 p-8 sm:p-10 text-center">
+          <div className="text-6xl mb-3 animate-pulse">{filter === 'upcoming' ? '🎉' : '📷'}</div>
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+            {filter === 'upcoming' ? 'Verzin iets met een collega' : 'Nog geen herinneringen hier'}
+          </h3>
+          <p className="text-sm text-white/70 max-w-md mx-auto mb-4">
+            {filter === 'upcoming'
+              ? 'Pak je favoriete kantoorgenoot, kies hierboven een vibe of bedenk iets compleet anders. Hoe gekker, hoe leuker.'
+              : 'Zodra er uitjes zijn geweest verschijnen ze hier.'
+            }
           </p>
+          {filter === 'upcoming' && (
+            <button
+              onClick={() => { setEditingId(null); resetForm(); setShowForm(true) }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-rose-500/40 to-amber-500/40 border border-rose-300/50 text-white font-semibold text-sm hover:from-rose-500/50 hover:to-amber-500/50 transition-colors shadow-lg shadow-rose-500/20"
+            >
+              <Icons.plus size={14} /> Plan iets leuks
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -353,15 +407,10 @@ function OutingCard({
       </div>
 
       <div className="p-4 sm:p-5">
-        {/* Header: titel + type */}
+        {/* Header: titel */}
         <div className="flex items-start gap-3 mb-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <h3 className="text-lg font-bold text-white">{outing.title}</h3>
-              <span className={`text-[10px] uppercase tracking-wider font-semibold ${type.accent}`}>
-                {type.label}
-              </span>
-            </div>
+            <h3 className="text-lg font-bold text-white">{outing.title}</h3>
             <p className="text-xs text-white/60 mt-0.5 capitalize">
               {formatDateLong(outing.date)} · {formatTime(outing.date)}
               {outing.location && ` · ${outing.location}`}
@@ -587,37 +636,48 @@ function OutingForm({
         </button>
       </div>
 
-      {/* Type-pills */}
-      <div>
-        <label className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">Type</label>
-        <div className="flex flex-wrap gap-1.5">
-          {TYPES.map(t => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setForm(f => ({ ...f, type: t.key }))}
-              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
-                form.type === t.key
-                  ? `${t.accent} bg-white/10 border-current`
-                  : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
-              }`}
-            >
-              <span>{t.emoji}</span> {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Titel */}
       <div>
-        <label className="text-[10px] uppercase tracking-wider text-white/40 mb-1 block">Titel</label>
+        <label className="text-[10px] uppercase tracking-wider text-white/40 mb-1 block">Wat ga je doen?</label>
         <input
           value={form.title}
           onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-          placeholder={`Bijv. "Borrel bij ${TYPE_BY_KEY[form.type]?.label.toLowerCase()}"`}
+          placeholder={`Bijv. "Padel-avond" / "Etentje bij Pollux" / "Bowling"`}
           className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:border-rose-400/50 focus:outline-none placeholder:text-white/30"
           autoFocus
         />
+      </div>
+
+      {/* Sfeerfoto-grid */}
+      <div>
+        <label className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">Welke sfeer past?</label>
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5">
+          {TYPES.map(t => {
+            const selected = form.type === t.key
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, type: t.key }))}
+                className={`relative aspect-[4/3] rounded-xl overflow-hidden group transition-all ${
+                  selected ? `ring-2 ${t.ring} scale-[1.03]` : 'opacity-60 hover:opacity-100 hover:scale-[1.02]'
+                }`}
+              >
+                <img src={t.defaultImage} alt={t.label} className="w-full h-full object-cover" />
+                <div className={`absolute inset-0 bg-gradient-to-t from-workx-dark/90 via-workx-dark/30 to-transparent`} />
+                <div className="absolute inset-0 flex flex-col items-center justify-end p-1.5">
+                  <span className="text-xl drop-shadow-lg">{t.emoji}</span>
+                  <span className="text-[9px] font-semibold text-white drop-shadow text-center leading-tight">{t.label}</span>
+                </div>
+                {selected && (
+                  <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-lg">
+                    <Icons.check size={11} className="text-workx-dark" />
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Datum + tijd */}

@@ -13,7 +13,7 @@ import { syncOutingToCalendar, deleteCalendarEventForOuting, syncOutingToYearAge
 const DASHBOARD_BASE = (process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app').replace(/\/$/, '')
 const SLACK_CHANNEL = 'workx-algemeen'
 
-const OUTING_TYPES = ['borrel-kantoor', 'borrel-elders', 'etentje', 'film', 'suppen', 'jeu-de-boules', 'opera', 'voorstelling', 'overig'] as const
+const OUTING_TYPES = ['borrel-kantoor', 'borrel-elders', 'etentje', 'film', 'suppen', 'jeu-de-boules', 'opera', 'voorstelling', 'bowling', 'padel', 'bierfiets', 'rollerdisco', 'overig'] as const
 
 const TYPE_EMOJI: Record<string, string> = {
   'borrel-kantoor': '🍻',
@@ -24,19 +24,27 @@ const TYPE_EMOJI: Record<string, string> = {
   'jeu-de-boules': '🎯',
   'opera': '🎭',
   'voorstelling': '🎤',
+  'bowling': '🎳',
+  'padel': '🎾',
+  'bierfiets': '🍺',
+  'rollerdisco': '🛼',
   'overig': '✨',
 }
 
 const TYPE_LABEL: Record<string, string> = {
   'borrel-kantoor': 'Borrel op kantoor',
-  'borrel-elders': 'Borrel elders',
+  'borrel-elders': 'Terras-borrel',
   'etentje': 'Etentje',
   'film': 'Film',
   'suppen': 'Suppen',
   'jeu-de-boules': 'Jeu de boules',
   'opera': 'Opera',
   'voorstelling': 'Voorstelling',
-  'overig': 'Overig',
+  'bowling': 'Bowling',
+  'padel': 'Padel',
+  'bierfiets': 'Bierfiets',
+  'rollerdisco': 'Rollerdisco',
+  'overig': 'Iets leuks',
 }
 
 export async function GET(req: NextRequest) {

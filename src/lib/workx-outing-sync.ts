@@ -13,6 +13,10 @@ const TYPE_EMOJI: Record<string, string> = {
   'jeu-de-boules': '🎯',
   'opera': '🎭',
   'voorstelling': '🎤',
+  'bowling': '🎳',
+  'padel': '🎾',
+  'bierfiets': '🍺',
+  'rollerdisco': '🛼',
   'overig': '✨',
 }
 
