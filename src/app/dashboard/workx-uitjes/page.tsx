@@ -76,6 +76,8 @@ const SFEER_FOTOS = [
   '/workx-uitjes/team/PHOTO-2026-05-28-21-49-14.jpg',
   '/workx-uitjes/team/PHOTO-2026-01-24-19-02-46.jpg',
   '/workx-uitjes/team/PHOTO-2025-12-12-18-54-41.jpg',
+  '/workx-uitjes/team/PHOTO-2025-12-12-09-51-59.jpg',
+  '/workx-uitjes/team/PHOTO-2025-12-12-09-51-58.jpg',
   '/workx-uitjes/team/PHOTO-2025-12-12-09-51-57.jpg',
   '/workx-uitjes/team/PHOTO-2025-12-12-09-51-56.jpg',
   '/workx-uitjes/team/PHOTO-2025-09-03-11-39-00.jpg',
@@ -95,6 +97,7 @@ const SFEER_FOTOS = [
   '/workx-uitjes/team/PHOTO-2022-05-13-19-44-21.jpg',
   '/workx-uitjes/team/PHOTO-2022-05-13-15-24-16.jpg',
   '/workx-uitjes/team/PHOTO-2022-04-07-20-20-41.jpg',
+  '/workx-uitjes/team/PHOTO-2020-01-10-17-32-09.jpg',
   '/workx-uitjes/team/PHOTO-2020-01-10-17-21-58.jpg',
   '/workx-uitjes/team/PHOTO-2019-07-18-09-43-34.jpg',
 ]
