@@ -153,6 +153,7 @@ export default function WorkxUitjesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showNoFotoConfirm, setShowNoFotoConfirm] = useState(false)
 
   const [form, setForm] = useState({
     title: '',
@@ -186,14 +187,17 @@ export default function WorkxUitjesPage() {
       toast.error('Titel en datum zijn verplicht')
       return
     }
-    // Zacht duwtje als er geen foto is — sfeer = opkomst. Bevestigen kan,
-    // dan toont de card een mooie typografische tile met de uitje-tekst.
+    // Zacht duwtje als er geen foto is — sfeer = opkomst. De daadwerkelijke
+    // opslag gebeurt in doSubmit() (na confirm of direct als er wel een foto is).
     if (!form.imageUrl) {
-      const goOn = window.confirm(
-        'Wil je echt geen foto plakken? Dat verhoogt de sfeer en vergroot de kans op een grote opkomst!',
-      )
-      if (!goOn) return
+      setShowNoFotoConfirm(true)
+      return
     }
+    await doSubmit()
+  }
+
+  const doSubmit = async () => {
+    if (!form.title.trim() || !form.date) return
     const [h, m] = form.time.split(':').map(Number)
     const dt = new Date(form.date)
     dt.setHours(h || 17, m || 0, 0, 0)
@@ -359,6 +363,41 @@ export default function WorkxUitjesPage() {
             onSubmit={handleSubmit}
             onCancel={() => { setShowForm(false); setEditingId(null); resetForm() }}
           />
+        </div>
+      )}
+
+      {/* Zacht-duwtje-modal bij opslaan zonder foto */}
+      {showNoFotoConfirm && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowNoFotoConfirm(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl border border-rose-300/30 bg-gradient-to-br from-rose-900/40 via-workx-dark to-amber-900/30 p-6 shadow-2xl shadow-rose-500/20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-5xl mb-3 text-center">📸</div>
+            <h3 className="text-xl font-bold text-white text-center mb-2">
+              Echt geen foto?
+            </h3>
+            <p className="text-sm text-white/80 text-center mb-6 leading-relaxed">
+              Een foto <span className="font-semibold text-white">verhoogt de sfeer</span> en vergroot de kans op een grote opkomst! Plak gewoon een screenshot met <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white font-mono text-[10px]">Ctrl+V</kbd>.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row gap-2">
+              <button
+                onClick={() => { setShowNoFotoConfirm(false); doSubmit() }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white text-sm font-medium hover:bg-white/15 transition-colors"
+              >
+                Ga door zonder foto
+              </button>
+              <button
+                onClick={() => setShowNoFotoConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white text-sm font-bold hover:from-rose-400 hover:to-amber-400 transition-colors shadow-lg shadow-rose-500/30"
+              >
+                Toch foto plakken
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
