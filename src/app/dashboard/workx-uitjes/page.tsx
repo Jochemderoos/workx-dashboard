@@ -388,6 +388,13 @@ export default function WorkxUitjesPage() {
           </div>
           {/* Polaroid-moodboard 2 — onderaan, full-width */}
           <SfeerStrook fotos={SFEER_FOTOS.slice(25)} />
+
+          {/* Cinematic slideshow — voelt als een filmpje, met crossfade + Ken Burns.
+              Test-versie: alleen zichtbaar voor Jochem zodat hij eerst kan beoordelen
+              of het mooi/sfeervol genoeg is voor het hele team. */}
+          {session?.user?.email === 'jochem.deroos@workxadvocaten.nl' && (
+            <CinemaReel fotos={SFEER_FOTOS} />
+          )}
         </>
       )}
     </div>
@@ -942,6 +949,132 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
         })}
       </div>
     </div>
+  )
+}
+
+// ── Cinematic slideshow ──────────────────────────────────────────────────
+// Filmische reel: 16:9 frame met crossfade tussen foto's en een subtiel
+// Ken Burns-zoom op de actieve foto. Auto-advance elke ~5s, pauzeert bij
+// hover. Klik = volgende foto. Voelt als een filmpje zonder dat we een
+// echt videobestand hoeven te genereren.
+
+function CinemaReel({ fotos }: { fotos: string[] }) {
+  const [index, setIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [muted, setMuted] = useState(true) // start gemute — browsers blokkeren anders autoplay
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const INTERVAL_MS = 5500
+
+  useEffect(() => {
+    if (paused || fotos.length <= 1) return
+    const id = setInterval(() => {
+      setIndex(i => (i + 1) % fotos.length)
+    }, INTERVAL_MS)
+    return () => clearInterval(id)
+  }, [paused, fotos.length])
+
+  // Sync audio met mute-state
+  useEffect(() => {
+    const a = audioRef.current
+    if (!a) return
+    if (muted) {
+      a.pause()
+    } else {
+      a.volume = 0.35
+      a.play().catch(() => setMuted(true))
+    }
+  }, [muted])
+
+  if (fotos.length === 0) return null
+
+  return (
+    <section className="max-w-6xl mx-auto">
+      {/* Header met label + controls — matched met de rest van de page */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center gap-2">
+          <Icons.sparkles size={16} className="text-rose-300" />
+          <h2 className="text-sm font-semibold text-white">Workx in beeld</h2>
+          <span className="text-xs text-white/40 hidden sm:inline">— sfeerreel</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setMuted(m => !m)}
+            className="text-xs text-white/60 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-1.5"
+            title={muted ? 'Sfeermuziek aan' : 'Sfeermuziek uit'}
+          >
+            <span className="text-base leading-none">{muted ? '🔇' : '🎵'}</span>
+            <span className="hidden sm:inline">{muted ? 'Muziek aan' : 'Muziek uit'}</span>
+          </button>
+          <button
+            onClick={() => setPaused(p => !p)}
+            className="text-xs text-white/60 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-1.5"
+          >
+            {paused ? <Icons.play size={12} /> : <Icons.pause size={12} />}
+            <span className="hidden sm:inline">{paused ? 'Afspelen' : 'Pauzeren'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Reel-frame: 16:9 cinematic, dezelfde card-stijl als de rest van het dashboard */}
+      <div
+        className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/60 ring-1 ring-white/10 cursor-pointer group"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onClick={() => setIndex(i => (i + 1) % fotos.length)}
+      >
+        {fotos.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            loading={i === 0 ? 'eager' : 'lazy'}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1500ms] ease-in-out ${
+              i === index ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{
+              animation: i === index ? `kenBurns ${INTERVAL_MS + 1500}ms ease-out forwards` : 'none',
+            }}
+          />
+        ))}
+
+        {/* Letterbox-vignette voor filmische look */}
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/55 via-transparent to-black/25" />
+
+        {/* Filmische "scope" bars top/bottom (subtiel) */}
+        <div className="absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-black/40 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+
+        {/* Workx-label + teller */}
+        <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between text-white/85 text-[11px] font-medium tracking-widest uppercase pointer-events-none">
+          <span className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded-md border border-white/10">
+            Workx · {new Date().getFullYear()}
+          </span>
+          <span className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded-md border border-white/10 tabular-nums">
+            {String(index + 1).padStart(2, '0')} / {String(fotos.length).padStart(2, '0')}
+          </span>
+        </div>
+
+        {/* Voortgangsbalk in workx-lime */}
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10">
+          <div
+            key={`${index}-${paused}`}
+            className="h-full bg-workx-lime"
+            style={{
+              width: paused ? '0%' : '100%',
+              transition: paused ? 'none' : `width ${INTERVAL_MS}ms linear`,
+            }}
+          />
+        </div>
+
+        {/* Hover-CTA: subtiele hint */}
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm text-white/80 text-[10px] px-2 py-1 rounded-md border border-white/10 pointer-events-none">
+          klik = volgende
+        </div>
+      </div>
+
+      {/* Audio-bron — leg /public/workx-uitjes/music/sfeer.mp3 neer; speelt loop bij muziek-aan */}
+      <audio ref={audioRef} src="/workx-uitjes/music/sfeer.mp3" loop preload="none" />
+    </section>
   )
 }
 
