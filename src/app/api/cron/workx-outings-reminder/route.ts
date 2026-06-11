@@ -34,11 +34,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  // TIJDELIJK UITGEZET op verzoek user.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const SLACK_PROMOTIE_AAN = false
-  if (!SLACK_PROMOTIE_AAN) {
-    return NextResponse.json({ skipped: 'workx-uitjes Slack-promotie staat uit' })
+  // Start-datum: op verzoek user gaan reminders pas vanaf dinsdag 16 juni 2026
+  // in #workx-algemeen. Daarvoor: skip.
+  const SLACK_START = new Date('2026-06-16T00:00:00+02:00')
+  if (Date.now() < SLACK_START.getTime()) {
+    return NextResponse.json({ skipped: 'start vanaf 2026-06-16' })
   }
 
   const now = new Date()
