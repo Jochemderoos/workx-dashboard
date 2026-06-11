@@ -11,7 +11,7 @@ function SidebarExpandButton() {
   return (
     <button
       onClick={() => setCollapsed(false)}
-      className="fixed left-0 top-1/2 -translate-y-1/2 z-30 flex items-center gap-1 pl-1.5 pr-2.5 py-3 rounded-r-xl bg-[var(--color-bg-glass)] border border-l-0 border-[var(--color-border)] text-[var(--color-text-tertiary)] hover:text-workx-lime hover:bg-workx-lime/10 hover:border-workx-lime/20 hover:shadow-[0_0_15px_rgba(249,255,133,0.15)] backdrop-blur-sm transition-all duration-300 group"
+      className="fixed left-0 top-1/2 -translate-y-1/2 z-40 flex items-center gap-1 pl-1.5 pr-2.5 py-3 rounded-r-xl bg-[var(--color-bg-glass)] border border-l-0 border-[var(--color-border)] text-[var(--color-text-tertiary)] hover:text-workx-lime hover:bg-workx-lime/10 hover:border-workx-lime/20 hover:shadow-[0_0_15px_rgba(249,255,133,0.15)] backdrop-blur-sm transition-all duration-300 group"
       title="Sidebar uitklappen"
     >
       <Icons.chevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />

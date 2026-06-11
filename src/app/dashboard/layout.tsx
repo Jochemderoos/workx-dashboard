@@ -74,7 +74,7 @@ export default async function DashboardLayout({
   return (
     <DashboardShell sidebar={<Sidebar user={user} />}>
       <TopBar user={user} />
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 relative z-30">
         <div className="max-w-7xl mx-auto">
           <ZaakNotificationWrapper userRole={user.role}>
             <DashboardClient>
