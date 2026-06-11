@@ -326,7 +326,7 @@ export default function WorkxUitjesPage() {
       <YearOverview outings={outings} />
 
       {/* Polaroid-moodboard 1 — boven 'Komt eraan' */}
-      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 8)} />
+      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 25)} />
 
       {/* Compact overzichtskader met alle aankomende uitjes */}
       {filter === 'upcoming' && outings.length > 0 && (
@@ -379,7 +379,7 @@ export default function WorkxUitjesPage() {
             />
           ))}
           {/* Polaroid-moodboard 2 — onderaan de cards */}
-          <SfeerStrook fotos={SFEER_FOTOS.slice(8)} />
+          <SfeerStrook fotos={SFEER_FOTOS.slice(25)} />
         </div>
       )}
     </div>
@@ -904,26 +904,30 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
   const tapeColors = ['bg-amber-200/50', 'bg-rose-200/45', 'bg-sky-200/45', 'bg-emerald-200/45']
 
   return (
-    <div className="flex flex-wrap items-start justify-center gap-0 py-6 px-2 sm:px-4">
-      {fotos.map((src, i) => {
-        const tilt = tilts[i % tilts.length]
-        const vOff = vOffsets[i % vOffsets.length]
-        const tape = tapeColors[i % tapeColors.length]
-        const overlap = i === 0 ? '' : '-ml-4 sm:-ml-8'
-        return (
-          <div
-            key={src + i}
-            style={{ zIndex: 10 + i }}
-            className={`relative w-36 sm:w-44 md:w-52 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:z-50 hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
-          >
-            <div className="aspect-square overflow-hidden bg-workx-dark/20">
-              <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+    // Full-bleed: breekt uit de pagina-container zodat we de hele viewport-breedte
+    // benutten en het moodboard niet veel rijen onder elkaar wordt.
+    <div className="relative left-1/2 -translate-x-1/2 w-screen overflow-hidden">
+      <div className="flex flex-wrap items-start justify-center gap-0 py-6 px-2 sm:px-6 lg:px-10">
+        {fotos.map((src, i) => {
+          const tilt = tilts[i % tilts.length]
+          const vOff = vOffsets[i % vOffsets.length]
+          const tape = tapeColors[i % tapeColors.length]
+          const overlap = i === 0 ? '' : '-ml-4 sm:-ml-8'
+          return (
+            <div
+              key={src + i}
+              style={{ zIndex: 10 + i }}
+              className={`relative w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:z-50 hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
+            >
+              <div className="aspect-square overflow-hidden bg-workx-dark/20">
+                <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+              </div>
+              {/* Plakband bovenaan */}
+              <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-10 h-3.5 ${tape} rounded-sm rotate-2 shadow-sm`} />
             </div>
-            {/* Plakband bovenaan */}
-            <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-10 h-3.5 ${tape} rounded-sm rotate-2 shadow-sm`} />
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
