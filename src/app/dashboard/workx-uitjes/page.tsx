@@ -917,7 +917,9 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
             <div
               key={src + i}
               style={{ zIndex: 10 + i }}
-              className={`relative w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:z-50 hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
+              // hover:!z-[100] gebruikt !important zodat het inline-style z-index overrulet —
+              // anders blijft een vroege polaroid bij hover achter een latere liggen.
+              className={`relative w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:!z-[100] hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
             >
               <div className="aspect-square overflow-hidden bg-workx-dark/20">
                 <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
