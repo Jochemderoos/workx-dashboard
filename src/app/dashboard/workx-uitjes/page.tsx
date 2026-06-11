@@ -71,19 +71,33 @@ const TYPES: { key: OutingType; label: string; emoji: string; color: string; bg:
 
 const TYPE_BY_KEY = Object.fromEntries(TYPES.map(t => [t.key, t]))
 
-// Sfeer-collage onder de hero — alle 11 unieke foto's, geen tekst.
+// Sfeer-moodboard: échte Workx-team foto's. Polaroid-stijl op de pagina.
 const SFEER_FOTOS = [
-  '/workx-uitjes/bowling.webp',
-  '/workx-uitjes/padel.jpg',
-  '/workx-uitjes/bierfiets.jpg',
-  '/workx-uitjes/rollerdisco.webp',
-  '/workx-uitjes/film.jpg',
-  '/workx-uitjes/theater.jpg',
-  '/workx-uitjes/jeu-de-boules.jpg',
-  '/workx-uitjes/suppen.jpg',
-  '/workx-uitjes/borrel-elders.jpg',
-  '/workx-uitjes/etentje.avif',
-  '/workx-uitjes/boot.jpg',
+  '/workx-uitjes/team/PHOTO-2026-05-28-21-49-14.jpg',
+  '/workx-uitjes/team/PHOTO-2026-01-24-19-02-46.jpg',
+  '/workx-uitjes/team/PHOTO-2025-12-12-18-54-41.jpg',
+  '/workx-uitjes/team/PHOTO-2025-12-12-09-51-57.jpg',
+  '/workx-uitjes/team/PHOTO-2025-12-12-09-51-56.jpg',
+  '/workx-uitjes/team/PHOTO-2025-09-03-11-39-00.jpg',
+  '/workx-uitjes/team/PHOTO-2025-08-31-20-36-00.jpg',
+  '/workx-uitjes/team/PHOTO-2025-08-29-18-40-00.jpg',
+  '/workx-uitjes/team/PHOTO-2025-08-26-16-15-57.jpg',
+  '/workx-uitjes/team/PHOTO-2025-08-07-18-09-42.jpg',
+  '/workx-uitjes/team/PHOTO-2025-08-07-17-45-05.jpg',
+  '/workx-uitjes/team/PHOTO-2024-07-20-00-10-32.jpg',
+  '/workx-uitjes/team/PHOTO-2024-07-19-10-21-51.jpg',
+  '/workx-uitjes/team/PHOTO-2024-02-22-22-55-20.jpg',
+  '/workx-uitjes/team/PHOTO-2023-12-15-15-35-27.jpg',
+  '/workx-uitjes/team/PHOTO-2023-10-01-21-38-35.jpg',
+  '/workx-uitjes/team/PHOTO-2023-07-23-10-55-36.jpg',
+  '/workx-uitjes/team/PHOTO-2023-07-23-10-55-31.jpg',
+  '/workx-uitjes/team/PHOTO-2023-03-31-16-51-02.jpg',
+  '/workx-uitjes/team/PHOTO-2022-07-23-17-12-03.jpg',
+  '/workx-uitjes/team/PHOTO-2022-05-13-19-44-21.jpg',
+  '/workx-uitjes/team/PHOTO-2022-05-13-15-24-16.jpg',
+  '/workx-uitjes/team/PHOTO-2022-04-07-20-20-41.jpg',
+  '/workx-uitjes/team/PHOTO-2020-01-10-17-21-58.jpg',
+  '/workx-uitjes/team/PHOTO-2019-07-18-09-43-34.jpg',
 ]
 
 const formatDateLong = (iso: string) =>
@@ -277,8 +291,8 @@ export default function WorkxUitjesPage() {
       {/* JAAROVERZICHT: 12 maanden verticaal met geplande uitjes per maand */}
       <YearOverview outings={outings} />
 
-      {/* Sfeer-grid 1 — 3 foto's tussen jaaroverzicht en 'Komt eraan' */}
-      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 3)} />
+      {/* Polaroid-moodboard 1 — boven 'Komt eraan' */}
+      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 8)} />
 
       {/* Compact overzichtskader met alle aankomende uitjes */}
       {filter === 'upcoming' && outings.length > 0 && (
@@ -330,8 +344,8 @@ export default function WorkxUitjesPage() {
               onDelete={() => handleDelete(o.id)}
             />
           ))}
-          {/* Sfeer-grid 2 — overige 6 foto's onderaan */}
-          <SfeerStrook fotos={SFEER_FOTOS.slice(5)} />
+          {/* Polaroid-moodboard 2 — onderaan de cards */}
+          <SfeerStrook fotos={SFEER_FOTOS.slice(8)} />
         </div>
       )}
     </div>
@@ -397,9 +411,9 @@ function OutingCard({
 
   return (
     <div className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${type.bg} to-transparent ${type.ring.replace('ring-', 'border-')} shadow-lg hover:shadow-xl transition-shadow`}>
-      {/* Cover-foto — fixed hoogte zodat 1-koloms cards niet enorm worden.
-          object-cover + object-center cropt netjes naar het centrum. */}
-      <div className="relative w-full h-32 sm:h-40 overflow-hidden bg-workx-dark/40">
+      {/* Cover-foto — aspect-ratio voorkomt uitrekken op brede schermen.
+          5:2 = compact maar nooit gestretched. */}
+      <div className="relative w-full aspect-[5/2] overflow-hidden bg-workx-dark/40">
         <img
           src={outing.imageUrl || type.defaultImage}
           alt={outing.title}
@@ -866,7 +880,7 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
           <div
             key={src + i}
             style={{ zIndex: 10 + i }}
-            className={`relative w-28 sm:w-36 md:w-40 bg-white p-2 pb-7 sm:pb-8 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-110 hover:z-30 hover:shadow-black/70 transition-all duration-300 cursor-pointer`}
+            className={`relative w-36 sm:w-44 md:w-52 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-110 hover:z-30 hover:shadow-black/70 transition-all duration-300 cursor-pointer`}
           >
             <div className="aspect-square overflow-hidden bg-workx-dark/20">
               <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />

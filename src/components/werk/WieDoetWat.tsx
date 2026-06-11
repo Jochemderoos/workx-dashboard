@@ -944,7 +944,7 @@ function ResponsibilitiesByChapter({
                 <div className="px-4 sm:px-5 py-1.5 border-b border-white/5 bg-white/[0.01] flex items-center gap-3 text-[9px] uppercase tracking-wider">
                   <span className="text-amber-300/70 font-semibold">Eindverantwoordelijk</span>
                   <span className="text-white/30">·</span>
-                  <span className="text-workx-lime/70 font-semibold">Uitvoering</span>
+                  <span className="text-workx-lime/70 font-semibold">Verantwoordelijk teamlid</span>
                 </div>
 
                 <div className="divide-y divide-white/5">
@@ -1177,7 +1177,7 @@ function TaskRow({
               ))}
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-wider text-workx-lime/70 font-semibold leading-tight">Uitvoering</span>
+              <span className="text-[9px] uppercase tracking-wider text-workx-lime/70 font-semibold leading-tight">Verantwoordelijk teamlid</span>
               <span className="text-[11px] text-white/80 leading-tight">
                 {group.executors.map(e => e.user.name.split(' ')[0]).join(' · ')}
               </span>
@@ -1192,9 +1192,9 @@ function TaskRow({
               onClick={() => setShowExecutorMenu(v => !v)}
               disabled={busy || availableExecutors.length === 0}
               className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-dashed border-white/20 text-white/60 hover:text-white transition-colors disabled:opacity-40 flex items-center gap-1"
-              title="Uitvoerder toevoegen"
+              title="Verantwoordelijk teamlid toevoegen"
             >
-              <Icons.plus size={10} /> Uitvoerder
+              <Icons.plus size={10} /> Teamlid
             </button>
             {showExecutorMenu && availableExecutors.length > 0 && (
               <div className="absolute z-50 top-full mt-1 left-0 min-w-[200px] bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-[40vh] overflow-y-auto">
