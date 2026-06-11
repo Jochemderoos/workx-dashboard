@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
@@ -22,6 +22,10 @@ interface Responsibility {
     name: string
     avatarUrl: string | null
   }
+  partnerTask?: {
+    id: string
+    chapter: { id: string; name: string; sortOrder: number }
+  } | null
 }
 
 interface NewsletterAssignment {
@@ -74,6 +78,10 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
   const [showNlDropdown, setShowNlDropdown] = useState(false)
   const [nlDeleteId, setNlDeleteId] = useState<string | null>(null)
   const [showNlDeleteConfirm, setShowNlDeleteConfirm] = useState(false)
+  const [nlExpanded, setNlExpanded] = useState(false)
+
+  // Welke chapter-kaders open zijn (default: alle open). Ingeklapt = compacte titel.
+  const [collapsedChapters, setCollapsedChapters] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetchData()
@@ -364,132 +372,38 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
         </div>
       </div>
 
-      {/* Responsibilities list */}
-      <div className="space-y-3">
-        {responsibilities.length === 0 && !canEdit && (
-          <div className="card p-12 text-center">
-            <span className="text-4xl mb-4 block">📋</span>
-            <p className="text-gray-400">Nog geen verantwoordelijkheden toegevoegd</p>
-          </div>
-        )}
+      {/* Responsibilities — gegroepeerd per categorie (kaders) */}
+      {responsibilities.length === 0 && !canEdit && (
+        <div className="card p-12 text-center">
+          <span className="text-4xl mb-4 block">📋</span>
+          <p className="text-gray-400">Nog geen verantwoordelijkheden toegevoegd</p>
+        </div>
+      )}
 
-        {responsibilities.map((r) => (
-          <div key={r.id}>
-            <div
-              className="group card relative overflow-hidden transition-all hover:border-white/20"
-            >
-              {/* Subtle glow behind avatar */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-workx-lime/5 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-
-              {editingId === r.id ? (
-                /* Edit mode */
-                <div className="relative p-4 sm:p-5 space-y-3">
-                  <input
-                    type="text"
-                    value={editTask}
-                    onChange={(e) => setEditTask(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/50 focus:ring-1 focus:ring-workx-lime/30"
-                    placeholder="Verantwoordelijkheid..."
-                  />
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowEditDropdown(!showEditDropdown)}
-                      className="w-full flex items-center gap-3 bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-left hover:border-white/30 transition-colors"
-                    >
-                      {editSelectedMember ? (
-                        <>
-                          {getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl) ? (
-                            <img loading="lazy" src={getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl)!} alt="" className="w-7 h-7 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-7 h-7 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{editSelectedMember.name.charAt(0)}</div>
-                          )}
-                          <span className="text-white">{editSelectedMember.name}</span>
-                        </>
-                      ) : (
-                        <span className="text-gray-500">Kies verantwoordelijke...</span>
-                      )}
-                      <Icons.chevronDown size={14} className="ml-auto text-gray-400" />
-                    </button>
-                    {showEditDropdown && (
-                      <div className="absolute z-50 bottom-full mb-1 w-full bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
-                        {teamMembers.map(m => (
-                          <button
-                            key={m.id}
-                            onClick={() => { setEditResponsibleId(m.id); setShowEditDropdown(false) }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition-colors"
-                          >
-                            {getPhotoUrl(m.name, m.avatarUrl) ? (
-                              <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-7 h-7 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-7 h-7 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{m.name.charAt(0)}</div>
-                            )}
-                            <span className="text-white text-sm">{m.name}</span>
-                            {m.id === editResponsibleId && <Icons.check size={14} className="ml-auto text-workx-lime" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEdit(r.id)} className="btn-primary text-sm px-4 py-2">Opslaan</button>
-                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm px-4 py-2">Annuleren</button>
-                  </div>
-                </div>
-              ) : (
-                /* View mode */
-                <div className="relative p-4 sm:p-5 flex items-center gap-4">
-                  {/* Photo */}
-                  <div className="flex-shrink-0">
-                    {getPhotoUrl(r.responsible.name, r.responsible.avatarUrl) ? (
-                      <img
-                        src={getPhotoUrl(r.responsible.name, r.responsible.avatarUrl)!}
-                        alt={r.responsible.name}
-                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-white/10 group-hover:ring-workx-lime/30 transition-all shadow-lg"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center ring-2 ring-white/10 group-hover:ring-workx-lime/30 transition-all">
-                        <span className="text-lg font-bold text-workx-lime">{r.responsible.name.charAt(0)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium text-base sm:text-lg leading-tight">{r.task}</p>
-                    <p className="text-sm text-workx-lime/80 mt-1 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-workx-lime/60" />
-                      {r.responsible.name}
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  {canEdit && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <button
-                        onClick={() => startEdit(r)}
-                        className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                        title="Bewerken"
-                        aria-label="Bewerken"
-                      >
-                        <Icons.edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => { setDeleteId(r.id); setShowDeleteConfirm(true) }}
-                        className="p-2 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors"
-                        title="Verwijderen"
-                        aria-label="Verwijderen"
-                      >
-                        <Icons.trash size={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-          </div>
-        ))}
-      </div>
+      <ResponsibilitiesByChapter
+        responsibilities={responsibilities}
+        canEdit={canEdit}
+        editingId={editingId}
+        editTask={editTask}
+        editResponsibleId={editResponsibleId}
+        editSelectedMember={editSelectedMember}
+        showEditDropdown={showEditDropdown}
+        setEditTask={setEditTask}
+        setShowEditDropdown={setShowEditDropdown}
+        setEditResponsibleId={setEditResponsibleId}
+        teamMembers={teamMembers}
+        handleEdit={handleEdit}
+        startEdit={startEdit}
+        setEditingId={setEditingId}
+        setDeleteId={setDeleteId}
+        setShowDeleteConfirm={setShowDeleteConfirm}
+        collapsedChapters={collapsedChapters}
+        toggleChapter={(id) => setCollapsedChapters(prev => {
+          const next = new Set(prev)
+          if (next.has(id)) next.delete(id); else next.add(id)
+          return next
+        })}
+      />
 
       {/* Newsletter Articles - Standalone Section */}
       <div className="card relative overflow-hidden border-workx-lime/20 shadow-[0_0_30px_rgba(249,255,133,0.15)]">
@@ -498,33 +412,66 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-workx-lime/5 to-transparent rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
         <div className="relative">
-          {/* Header with stats */}
-          <div className="p-6 sm:p-8 border-b border-workx-lime/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center">
-                  <Icons.fileText size={22} className="text-workx-lime" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-white">Nieuwsbrief Artikelen</h3>
-                  <p className="text-sm text-gray-400">Overzicht en planning van alle artikelen</p>
-                </div>
+          {/* Header — klikbaar om uit te klappen */}
+          <button
+            onClick={() => setNlExpanded(v => !v)}
+            className={`w-full p-5 sm:p-6 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors ${nlExpanded ? 'border-b border-workx-lime/10' : ''}`}
+            aria-expanded={nlExpanded}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center flex-shrink-0">
+                <Icons.fileText size={20} className="text-workx-lime" />
               </div>
-              {newsletterAssignments.length > 0 && (
-                <div className="flex gap-4">
+              <div className="text-left min-w-0">
+                <h3 className="text-base sm:text-lg font-semibold text-white">Nieuwsbrief artikelen</h3>
+                <p className="text-xs text-gray-400 truncate">
+                  {newsletterAssignments.length === 0
+                    ? 'Klap uit om planning per medewerker te zien'
+                    : (() => {
+                        const pending = newsletterAssignments.filter(a => a.status === 'PENDING')
+                        const next = pending.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0]
+                        if (!next) return 'Alle artikelen ingeleverd 🎉'
+                        const dl = new Date(next.deadline).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                        return `Volgende: ${next.assignee.name} · ${dl}`
+                      })()
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {newsletterAssignments.length > 0 && !nlExpanded && (
+                <div className="flex gap-3">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-workx-lime">{newsletterAssignments.filter(a => a.status === 'SUBMITTED').length}</p>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Ingeleverd</p>
+                    <p className="text-lg font-bold text-workx-lime tabular-nums">{newsletterAssignments.filter(a => a.status === 'SUBMITTED').length}</p>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Klaar</p>
                   </div>
-                  <div className="w-px bg-white/10" />
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-yellow-400">{newsletterAssignments.filter(a => a.status === 'PENDING').length}</p>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Open</p>
+                    <p className="text-lg font-bold text-yellow-400 tabular-nums">{newsletterAssignments.filter(a => a.status === 'PENDING').length}</p>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Open</p>
                   </div>
                 </div>
               )}
+              <Icons.chevronDown size={18} className={`text-white/40 transition-transform ${nlExpanded ? 'rotate-180' : ''}`} />
             </div>
-          </div>
+          </button>
+
+          {/* Assignments list — alleen tonen bij uitgeklapt */}
+          {nlExpanded && (
+          <>
+          {/* Stats rij bij uitgeklapt */}
+          {newsletterAssignments.length > 0 && (
+            <div className="px-6 sm:px-8 pt-4 flex gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-workx-lime">{newsletterAssignments.filter(a => a.status === 'SUBMITTED').length}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Ingeleverd</p>
+              </div>
+              <div className="w-px bg-white/10" />
+              <div className="text-center">
+                <p className="text-2xl font-bold text-yellow-400">{newsletterAssignments.filter(a => a.status === 'PENDING').length}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Open</p>
+              </div>
+            </div>
+          )}
 
           {/* Assignments list */}
           <div className="p-6 sm:p-8">
@@ -746,6 +693,8 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
       </div>
 
@@ -849,6 +798,210 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
         confirmText="Verwijderen"
         type="danger"
       />
+    </div>
+  )
+}
+
+// ── Groepering per chapter (kaders) ─────────────────────────────────────
+
+interface ResponsibilitiesByChapterProps {
+  responsibilities: Responsibility[]
+  canEdit: boolean
+  editingId: string | null
+  editTask: string
+  editResponsibleId: string
+  editSelectedMember: TeamMember | null | undefined
+  showEditDropdown: boolean
+  setEditTask: (v: string) => void
+  setShowEditDropdown: (v: boolean) => void
+  setEditResponsibleId: (v: string) => void
+  teamMembers: TeamMember[]
+  handleEdit: (id: string) => void
+  startEdit: (r: Responsibility) => void
+  setEditingId: (v: string | null) => void
+  setDeleteId: (v: string | null) => void
+  setShowDeleteConfirm: (v: boolean) => void
+  collapsedChapters: Set<string>
+  toggleChapter: (id: string) => void
+}
+
+function ResponsibilitiesByChapter({
+  responsibilities,
+  canEdit,
+  editingId,
+  editTask,
+  editResponsibleId,
+  editSelectedMember,
+  showEditDropdown,
+  setEditTask,
+  setShowEditDropdown,
+  setEditResponsibleId,
+  teamMembers,
+  handleEdit,
+  startEdit,
+  setEditingId,
+  setDeleteId,
+  setShowDeleteConfirm,
+  collapsedChapters,
+  toggleChapter,
+}: ResponsibilitiesByChapterProps) {
+  // Groepeer per chapter (of "Algemeen" voor losse)
+  const groups = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; sortOrder: number; items: Responsibility[] }>()
+    const LOOSE_KEY = '__loose__'
+    for (const r of responsibilities) {
+      const chap = r.partnerTask?.chapter
+      const key = chap?.id || LOOSE_KEY
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          name: chap?.name || 'Algemeen',
+          sortOrder: chap?.sortOrder ?? 9999,
+          items: [],
+        })
+      }
+      map.get(key)!.items.push(r)
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.id === LOOSE_KEY) return 1
+      if (b.id === LOOSE_KEY) return -1
+      return a.sortOrder - b.sortOrder
+    })
+  }, [responsibilities])
+
+  if (responsibilities.length === 0) return null
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {groups.map(group => {
+        const collapsed = collapsedChapters.has(group.id)
+        return (
+          <section
+            key={group.id}
+            className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden"
+          >
+            {/* Kader-header */}
+            <button
+              onClick={() => toggleChapter(group.id)}
+              className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-3 bg-gradient-to-r from-workx-lime/10 via-workx-lime/5 to-transparent border-b border-workx-lime/15 hover:from-workx-lime/15 hover:via-workx-lime/8 transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-workx-lime animate-pulse" />
+                <h3 className="text-sm sm:text-base font-semibold text-white truncate">{group.name}</h3>
+                <span className="text-[10px] uppercase tracking-wider text-white/40 tabular-nums">
+                  {group.items.length}
+                </span>
+              </div>
+              <Icons.chevronDown size={14} className={`text-white/40 transition-transform ${collapsed ? '' : 'rotate-180'}`} />
+            </button>
+
+            {/* Items */}
+            {!collapsed && (
+              <div className="divide-y divide-white/5">
+                {group.items.map(r => (
+                  <div key={r.id} className="group relative hover:bg-white/[0.02] transition-colors">
+                    {editingId === r.id ? (
+                      <div className="p-4 space-y-2.5">
+                        <input
+                          type="text"
+                          value={editTask}
+                          onChange={(e) => setEditTask(e.target.value)}
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/50"
+                          placeholder="Verantwoordelijkheid..."
+                        />
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowEditDropdown(!showEditDropdown)}
+                            className="w-full flex items-center gap-2 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-left hover:border-white/30 transition-colors"
+                          >
+                            {editSelectedMember ? (
+                              <>
+                                {getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl) ? (
+                                  <img loading="lazy" src={getPhotoUrl(editSelectedMember.name, editSelectedMember.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{editSelectedMember.name.charAt(0)}</div>
+                                )}
+                                <span className="text-sm text-white">{editSelectedMember.name}</span>
+                              </>
+                            ) : (
+                              <span className="text-xs text-gray-500">Kies verantwoordelijke…</span>
+                            )}
+                            <Icons.chevronDown size={12} className="ml-auto text-gray-400" />
+                          </button>
+                          {showEditDropdown && (
+                            <div className="absolute z-50 bottom-full mb-1 w-full bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-[40vh] overflow-y-auto">
+                              {teamMembers.map(m => (
+                                <button
+                                  key={m.id}
+                                  onClick={() => { setEditResponsibleId(m.id); setShowEditDropdown(false) }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/10 transition-colors"
+                                >
+                                  {getPhotoUrl(m.name, m.avatarUrl) ? (
+                                    <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{m.name.charAt(0)}</div>
+                                  )}
+                                  <span className="text-white text-xs">{m.name}</span>
+                                  {m.id === editResponsibleId && <Icons.check size={12} className="ml-auto text-workx-lime" />}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => handleEdit(r.id)} className="btn-primary text-xs px-3 py-1.5">Opslaan</button>
+                          <button onClick={() => setEditingId(null)} className="btn-secondary text-xs px-3 py-1.5">Annuleren</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 sm:p-4 flex items-center gap-3">
+                        {/* Avatar */}
+                        <div className="flex-shrink-0">
+                          {getPhotoUrl(r.responsible.name, r.responsible.avatarUrl) ? (
+                            <img
+                              src={getPhotoUrl(r.responsible.name, r.responsible.avatarUrl)!}
+                              alt={r.responsible.name}
+                              className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10 group-hover:ring-workx-lime/30 transition-all"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-workx-lime/20 to-workx-lime/5 flex items-center justify-center ring-1 ring-white/10 group-hover:ring-workx-lime/30 transition-all">
+                              <span className="text-sm font-bold text-workx-lime">{r.responsible.name.charAt(0)}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm sm:text-base text-white font-medium leading-tight">{r.task}</p>
+                          <p className="text-xs text-workx-lime/80 mt-0.5">{r.responsible.name}</p>
+                        </div>
+
+                        {canEdit && (
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                            <button
+                              onClick={() => startEdit(r)}
+                              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                              title="Bewerken"
+                            >
+                              <Icons.edit size={14} />
+                            </button>
+                            <button
+                              onClick={() => { setDeleteId(r.id); setShowDeleteConfirm(true) }}
+                              className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors"
+                              title="Verwijderen"
+                            >
+                              <Icons.trash size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )
+      })}
     </div>
   )
 }

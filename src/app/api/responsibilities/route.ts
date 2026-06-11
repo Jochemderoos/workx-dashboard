@@ -21,6 +21,12 @@ export async function GET() {
               avatarUrl: true,
             },
           },
+          partnerTask: {
+            select: {
+              id: true,
+              chapter: { select: { id: true, name: true, sortOrder: true } },
+            },
+          },
         },
         orderBy: { sortOrder: 'asc' },
       }),
