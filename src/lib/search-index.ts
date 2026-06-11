@@ -1,0 +1,467 @@
+// Centrale zoek-index voor het dashboard.
+//
+// Doel: één plek waar ALLE doorzoekbare content uit het dashboard bij elkaar
+// komt — sidebar-pagina's, hr-docs-hoofdstukken (volledige tekst), en
+// "factoids" (KvK / IBAN / BTW / belangrijke nummers). Plus een eenvoudige,
+// uitlegbare relevance-engine zonder externe dependencies.
+//
+// Toevoegen?  Heeft een page extra termen die mensen zouden typen? Vul
+// SYNONYMS aan of voeg een entry toe in EXTRA_FACTOIDS. Pages worden
+// automatisch geïndexeerd uit menu-data.
+
+import {
+  teamMenu_Algemeen,
+  teamMenu_Werk,
+  teamMenu_Tools,
+  teamMenu_Docs,
+  partnersMenuItems,
+  extraMenuItems,
+  manageMenuItems,
+  type MenuItem,
+} from '@/lib/menu-data'
+import { THE_WAY_IT_WORKX } from '@/app/dashboard/hr-docs/documents'
+import { KNOWHOW_OFFICEMANAGEMENT } from '@/app/dashboard/hr-docs/knowhow-document'
+
+// ── Types ─────────────────────────────────────────────────────────────────
+
+export type SearchKind = 'page' | 'doc' | 'factoid' | 'action'
+
+export interface SearchItem {
+  id: string
+  kind: SearchKind
+  label: string             // Hoofdtekst (titel)
+  description?: string      // Sub-tekst (één regel context)
+  href: string              // Waar leid de gebruiker naartoe
+  body?: string             // Vollege plain-text content (voor diep zoeken)
+  synonyms?: string[]       // Termen die ook moeten matchen
+  section?: string          // Bv. "Algemeen", "Workx docs", "Office"
+}
+
+export interface SearchHit {
+  item: SearchItem
+  score: number
+  matchedField: 'label' | 'synonym' | 'description' | 'body'
+  snippet?: string          // Stukje content rond de match (voor preview)
+}
+
+// ── Synoniemen ────────────────────────────────────────────────────────────
+// Per page-href een rijke set termen die mensen mogelijk typen.
+// Dit is de plek om snel uit te breiden als iets niet gevonden wordt.
+
+const PAGE_SYNONYMS: Record<string, string[]> = {
+  '/dashboard/office': [
+    'kantoor', 'kantoorgegevens', 'workx advocaten', 'herengracht', 'kvk', 'btw',
+    'iban', 'abn amro', 'bic', 'bankrekening', 'rekeningnummer', 'adres',
+    'postcode', 'hanna', 'lotte', 'bente', 'diyar', 'aanwezigheid', 'remote',
+    'telefoon', 'kantoortelefoon', 'doorschakeling',
+  ],
+  '/dashboard/appjeplekje': [
+    'kantoor', 'werkplek', 'reserveren', 'plek', 'bureau', 'aanwezig', 'bezet',
+    'huis', 'thuis', 'amsterdam', 'herengracht',
+  ],
+  '/dashboard/agenda': [
+    'kalender', 'afspraken', 'meeting', 'events', 'planning', 'zittingen',
+    'mediation', 'wanneer',
+  ],
+  '/dashboard/jaaragenda': [
+    'jaarplanning', 'jaaroverzicht', 'doelen', 'mijlpalen', 'planning',
+  ],
+  '/dashboard/vakanties': [
+    'verlof', 'vrij', 'vakantie', 'afwezig', 'dagen', 'feestdagen',
+    'ouderschapsverlof', 'ziektedagen', 'opname',
+  ],
+  '/dashboard/opleidingen': [
+    'po-punten', 'po', 'cursus', 'training', 'opleiding', 'jar', 'wwft',
+    'certificaten', 'workx-opleiding', 'workx opleiding',
+  ],
+  '/dashboard/bonus': [
+    'bonus', 'omzet', 'provisie', 'geld', 'berekenen', 'incentive',
+  ],
+  '/dashboard/declaraties': [
+    'declaratie', 'declareren', 'onkosten', 'kosten', 'bonnetje', 'reiskosten',
+    'kilometers', 'km', 'vergoeding', 'kilometervergoeding', 'parkeren',
+    'restaurant', 'taxi', 'trein', 'lunch', 'iban',
+  ],
+  '/dashboard/kosten': [
+    'maandlasten', 'vaste kosten', 'huur', 'energie', 'leveranciers',
+    'facturen', 'uitgaven', 'maandkosten',
+  ],
+  '/dashboard/financien': [
+    'omzet', 'jaarcijfers', 'winst', 'resultaat', 'financiele', 'p&l',
+  ],
+  '/dashboard/debiteuren': [
+    'openstaande facturen', 'debiteur', 'crediteur', 'incasso', 'herinneringen',
+    'reminder', 'betalingen',
+  ],
+  '/dashboard/team': [
+    'collega', 'mensen', 'wie', 'profiel', 'team', 'iedereen',
+  ],
+  '/dashboard/werk': [
+    'wie doet wat', 'verantwoordelijkheden', 'taken', 'verdeling', 'nieuwsbrief',
+    'jar bespreking', 'lopende zaken',
+  ],
+  '/dashboard/werk/lopende-zaken': [
+    'zaken', 'dossiers', 'lopende', 'cliënten', 'matters',
+  ],
+  '/dashboard/eigen-taken': [
+    'taak', 'taken', 'to-do', 'todo', 'persoonlijk', 'mijn',
+  ],
+  '/dashboard/mijn-werkweek': [
+    'uren', 'urenregistratie', 'urenoverzicht', 'werkdruk', 'werkdrukmeter',
+    'capaciteit', 'planning',
+  ],
+  '/dashboard/onboarding': [
+    'nieuwe medewerker', 'eerste dag', 'introductie', 'starten', 'inwerken',
+  ],
+  '/dashboard/wachtwoorden': [
+    'inloggen', 'login', 'password', 'basenet', '365', 'office 365', 'systemen',
+    'tweestapsverificatie', '2fa', 'reset',
+  ],
+  '/dashboard/hr-docs': [
+    'handboek', 'personeelshandboek', 'docs', 'workx docs', 'the way it workx',
+    'beleid', 'regelementen', 'arbeidsvoorwaarden',
+  ],
+  '/dashboard/ai': [
+    'claude', 'ai', 'assistent', 'chat', 'jurisprudentie', 'rechtspraak',
+    'modelteksten', 'document genereren',
+  ],
+  '/dashboard/chat': [
+    'team chat', 'praten', 'message', 'bericht', 'whatsapp', 'slack',
+  ],
+  '/dashboard/arbeidsvoorwaarden': [
+    'salaris', 'loon', 'pensioen', 'verzekeringen', 'cao', 'leaseauto',
+    'mobiliteit', 'telefoon',
+  ],
+  '/dashboard/transitie': [
+    'transitievergoeding', 'ontslag', 'beëindiging', 'vso', 'vaststellingsovereenkomst',
+    'tv', 'berekening', 'tv tool',
+  ],
+  '/dashboard/pitch': [
+    'pitch', 'nieuwe klanten', 'sales', 'acquisitie', 'voorstel',
+  ],
+  '/dashboard/workx-uitjes': [
+    'borrel', 'etentje', 'film', 'suppen', 'padel', 'bowling', 'bierfiets',
+    'opera', 'voorstelling', 'theater', 'uitje', 'team-uitje', 'feestje',
+  ],
+  '/dashboard/lustrum': [
+    '15 jaar', 'mallorca', 'vluchten', 'trip', 'jubileum', 'feest',
+  ],
+  '/dashboard/dd-projecten': [
+    'due diligence', 'dd', 'onderzoek', 'overname',
+  ],
+  '/dashboard/bevriende-kantoren': [
+    'andere kantoren', 'samenwerking', 'doorverwijzing', 'collega kantoor',
+  ],
+  '/dashboard/afspiegeling': [
+    'reorganisatie', 'ontslag', 'afspiegelen', 'leeftijdscategorie',
+  ],
+  '/dashboard/recruitment': [
+    'sollicitatie', 'vacature', 'kandidaat', 'cv', 'aannemen',
+  ],
+  '/dashboard/workxflow': [
+    'projecten', 'workflow', 'proces',
+  ],
+  '/dashboard/partners/jaarplannen': [
+    'jaarplan', 'persoonlijk', 'doelen', 'ontwikkeling', 'evaluatie',
+  ],
+  '/dashboard/ontwikkelplannen': [
+    'ontwikkeling', 'jaarplan', 'evaluatie', 'beoordeling', 'groei',
+  ],
+  '/dashboard/office-tasks': [
+    'office taken', 'hanna taken', 'back office',
+  ],
+}
+
+// ── Extra "factoids" — kleine, direct beantwoordbare zoekresultaten ──────
+// Voor dingen die geen pagina zijn maar wel een definitief antwoord hebben.
+
+const EXTRA_FACTOIDS: SearchItem[] = [
+  {
+    id: 'factoid-kvk',
+    kind: 'factoid',
+    label: 'KvK-nummer: 56660936',
+    description: 'Workx Advocaten B.V. — staat ook op Office en in Workx docs',
+    href: '/dashboard/hr-docs?doc=knowhow-officemanagement&chapter=kantoorgegevens',
+    synonyms: ['kvk', 'handelsregister', 'kamer van koophandel', '56660936'],
+    section: 'Officiële gegevens',
+  },
+  {
+    id: 'factoid-btw',
+    kind: 'factoid',
+    label: 'BTW / VAT-nummer: NL852244034B01',
+    description: 'Workx Advocaten B.V.',
+    href: '/dashboard/hr-docs?doc=knowhow-officemanagement&chapter=kantoorgegevens',
+    synonyms: ['btw', 'vat', 'omzetbelasting', 'NL852244034B01'],
+    section: 'Officiële gegevens',
+  },
+  {
+    id: 'factoid-iban',
+    kind: 'factoid',
+    label: 'IBAN: NL86 ABNA 0457 8975 03',
+    description: 'ABN AMRO — t.n.v. Workx Advocaten B.V., BIC ABNANL2A',
+    href: '/dashboard/hr-docs?doc=knowhow-officemanagement&chapter=kantoorgegevens',
+    synonyms: ['iban', 'bankrekening', 'rekeningnummer', 'abn', 'abn amro', 'bic', 'abnanl2a', 'NL86ABNA0457897503'],
+    section: 'Officiële gegevens',
+  },
+  {
+    id: 'factoid-adres',
+    kind: 'factoid',
+    label: 'Adres kantoor: Herengracht 448, 1017 CA Amsterdam',
+    description: 'Workx Advocaten B.V. — hoofdvestiging',
+    href: '/dashboard/hr-docs?doc=knowhow-officemanagement&chapter=kantoorgegevens',
+    synonyms: ['adres', 'herengracht', '1017', 'amsterdam', 'postcode', 'locatie kantoor', 'vestiging'],
+    section: 'Officiële gegevens',
+  },
+  {
+    id: 'factoid-telefoon',
+    kind: 'factoid',
+    label: 'Kantoortelefoon: 020 308 0320',
+    description: 'Workx Advocaten B.V.',
+    href: '/dashboard/hr-docs?doc=knowhow-officemanagement&chapter=contactgegevens',
+    synonyms: ['telefoon', 'telefoonnummer', 'bellen', 'nummer', 'kantoor', '0203080320'],
+    section: 'Officiële gegevens',
+  },
+  // Acties die ook handig zijn als zoekresultaat
+  {
+    id: 'action-declaratie',
+    kind: 'action',
+    label: 'Declaratie indienen',
+    description: 'Onkosten / reiskosten / km-vergoeding indienen',
+    href: '/dashboard/declaraties',
+    synonyms: ['declareren', 'bonnetje', 'kosten', 'onkosten', 'kilometers', 'reiskosten', 'vergoeding'],
+    section: 'Acties',
+  },
+  {
+    id: 'action-vakantie',
+    kind: 'action',
+    label: 'Vakantie aanvragen',
+    description: 'Verlof / vrije dagen / afwezig melden',
+    href: '/dashboard/vakanties',
+    synonyms: ['verlof aanvragen', 'vrij', 'vakantie', 'dagen', 'afwezig', 'opname'],
+    section: 'Acties',
+  },
+  {
+    id: 'action-uitje',
+    kind: 'action',
+    label: 'Workx-uitje plannen',
+    description: 'Borrel, etentje, film, padel — iets leuks met collega\'s',
+    href: '/dashboard/workx-uitjes',
+    synonyms: ['uitje plannen', 'borrel plannen', 'etentje', 'team activiteit', 'organiseren'],
+    section: 'Acties',
+  },
+  {
+    id: 'action-werkplek',
+    kind: 'action',
+    label: 'Werkplek reserveren',
+    description: 'Plek op kantoor reserveren via Appjeplekje',
+    href: '/dashboard/appjeplekje',
+    synonyms: ['plek reserveren', 'werkplek', 'bureau', 'aanwezig', 'naar kantoor'],
+    section: 'Acties',
+  },
+]
+
+// ── HTML → plain text + chunked snippets ──────────────────────────────────
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|h\d|li|div)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n+/g, '\n')
+    .trim()
+}
+
+// ── Index builder ─────────────────────────────────────────────────────────
+
+let CACHED_INDEX: SearchItem[] | null = null
+
+function flattenMenu(items: MenuItem[], section: string): SearchItem[] {
+  const out: SearchItem[] = []
+  for (const it of items) {
+    if (it.href) {
+      out.push({
+        id: `page:${it.href}`,
+        kind: 'page',
+        label: it.label,
+        description: it.description,
+        href: it.href,
+        synonyms: PAGE_SYNONYMS[it.href] || [],
+        section,
+      })
+    }
+    if (it.children?.length) out.push(...flattenMenu(it.children, section))
+  }
+  return out
+}
+
+export function buildSearchIndex(): SearchItem[] {
+  if (CACHED_INDEX) return CACHED_INDEX
+
+  const out: SearchItem[] = []
+
+  // 1. Alle menu-pagina's
+  out.push(...flattenMenu(teamMenu_Algemeen, 'Algemeen'))
+  out.push(...flattenMenu(teamMenu_Werk, 'Werk'))
+  out.push(...flattenMenu(teamMenu_Tools, 'Tools'))
+  out.push(...flattenMenu(teamMenu_Docs, 'Documenten'))
+  out.push(...flattenMenu(partnersMenuItems, 'Partners'))
+  out.push(...flattenMenu(extraMenuItems, 'Extra'))
+  out.push(...flattenMenu(manageMenuItems, 'Beheer'))
+
+  // 2. Alle hr-docs hoofdstukken als losse items met deep-link
+  for (const doc of [THE_WAY_IT_WORKX, KNOWHOW_OFFICEMANAGEMENT]) {
+    for (const ch of doc.chapters) {
+      const body = stripHtml(ch.content || '')
+      out.push({
+        id: `doc:${doc.id}:${ch.id}`,
+        kind: 'doc',
+        label: ch.title,
+        description: `${doc.title} — ${body.split('\n')[0].slice(0, 100)}`,
+        href: `/dashboard/hr-docs?doc=${doc.id}&chapter=${ch.id}`,
+        body,
+        section: doc.title,
+      })
+    }
+  }
+
+  // 3. Factoids + acties
+  out.push(...EXTRA_FACTOIDS)
+
+  // Dedupe op id
+  const seen = new Set<string>()
+  CACHED_INDEX = out.filter(it => (seen.has(it.id) ? false : (seen.add(it.id), true)))
+  return CACHED_INDEX
+}
+
+// ── Tekstnormalisatie ─────────────────────────────────────────────────────
+
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')                     // splits diakrieten
+    .replace(/[̀-ͯ]/g, '')      // verwijder diakrieten
+    .replace(/[^a-z0-9]+/g, ' ')          // alles wat geen letter/cijfer is → spatie
+    .trim()
+}
+
+function tokenize(s: string): string[] {
+  const n = normalize(s)
+  if (!n) return []
+  return n.split(/\s+/).filter(t => t.length > 0)
+}
+
+// ── Score-formule ─────────────────────────────────────────────────────────
+// Per item bekijken we hoe goed elk token uit de query matcht in elk veld.
+// Som de scores op. Multi-word: ELK token moet ergens matchen, anders 0.
+
+interface FieldHit {
+  field: 'label' | 'synonym' | 'description' | 'body'
+  score: number
+  position: number          // waar in het veld zit de match (voor snippets)
+}
+
+function scoreToken(token: string, item: SearchItem): FieldHit | null {
+  const lbl = normalize(item.label)
+  // Exact / prefix / contains op label
+  if (lbl === token) return { field: 'label', score: 100, position: 0 }
+  if (lbl.startsWith(token + ' ') || lbl.startsWith(token)) return { field: 'label', score: 70, position: 0 }
+  if (lbl.split(' ').includes(token)) return { field: 'label', score: 55, position: lbl.indexOf(token) }
+  const lblIdx = lbl.indexOf(token)
+  if (lblIdx >= 0) return { field: 'label', score: 40, position: lblIdx }
+
+  // Synoniemen — gewogen even hoog als label-word zodat 'kantoor' echt
+  // hard binnenkomt op Office.
+  if (item.synonyms?.length) {
+    for (const syn of item.synonyms) {
+      const sn = normalize(syn)
+      if (sn === token) return { field: 'synonym', score: 60, position: 0 }
+      if (sn.startsWith(token)) return { field: 'synonym', score: 45, position: 0 }
+      if (sn.includes(token)) return { field: 'synonym', score: 35, position: sn.indexOf(token) }
+    }
+  }
+
+  // Description
+  if (item.description) {
+    const dn = normalize(item.description)
+    const di = dn.indexOf(token)
+    if (di >= 0) return { field: 'description', score: 20, position: di }
+  }
+
+  // Volledige body (alleen voor docs/factoids met body)
+  if (item.body) {
+    const bn = normalize(item.body)
+    const bi = bn.indexOf(token)
+    if (bi >= 0) return { field: 'body', score: 12, position: bi }
+  }
+
+  return null
+}
+
+// Pak een leesbare snippet rond de eerste body-match
+function extractSnippet(body: string, token: string, maxLen = 120): string | undefined {
+  const bn = normalize(body)
+  const idx = bn.indexOf(token)
+  if (idx < 0) return undefined
+  // Loop terug naar woordstart (op het oorspronkelijke body, niet de genormaliseerde)
+  const start = Math.max(0, idx - 40)
+  const raw = body.slice(start, Math.min(body.length, idx + maxLen))
+  const cleaned = raw.replace(/\s+/g, ' ').trim()
+  return (start > 0 ? '… ' : '') + cleaned + (start + cleaned.length < body.length ? ' …' : '')
+}
+
+// ── Publieke search-functie ───────────────────────────────────────────────
+
+export function searchIndex(query: string, limit = 12): SearchHit[] {
+  const tokens = tokenize(query)
+  if (tokens.length === 0) return []
+
+  const index = buildSearchIndex()
+  const hits: SearchHit[] = []
+
+  for (const item of index) {
+    const perToken: FieldHit[] = []
+    let allMatched = true
+    for (const tk of tokens) {
+      const hit = scoreToken(tk, item)
+      if (!hit) { allMatched = false; break }
+      perToken.push(hit)
+    }
+    if (!allMatched) continue
+
+    const total = perToken.reduce((s, h) => s + h.score, 0)
+    // Beste veld = veld met hoogste score; snippet alleen als beste veld 'body' is
+    const best = perToken.reduce((b, h) => (h.score > b.score ? h : b), perToken[0])
+
+    let snippet: string | undefined
+    if (best.field === 'body' && item.body) {
+      // gebruik het token dat in body matchte
+      const bodyTokens = perToken.filter(h => h.field === 'body')
+      if (bodyTokens.length) {
+        const matchedToken = tokens[perToken.indexOf(bodyTokens[0])]
+        snippet = extractSnippet(item.body, matchedToken)
+      }
+    }
+
+    // Lichte boost voor acties en factoids — die zijn vaak het meest concrete antwoord
+    let totalBoosted = total
+    if (item.kind === 'factoid') totalBoosted += 15
+    if (item.kind === 'action') totalBoosted += 8
+
+    hits.push({ item, score: totalBoosted, matchedField: best.field, snippet })
+  }
+
+  hits.sort((a, b) => b.score - a.score)
+  return hits.slice(0, limit)
+}
+
+// Reset de cache (handig in dev / na content-changes)
+export function resetSearchIndex() {
+  CACHED_INDEX = null
+}

@@ -4,9 +4,11 @@ import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'rea
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icons } from '@/components/ui/Icons'
+import { searchIndex, buildSearchIndex, type SearchHit, type SearchItem } from '@/lib/search-index'
 
 // ---------------------------------------------------------------------------
-// Types
+// Types (legacy — staat hier voor het oude defaults-block alleen; live data
+// komt uit search-index)
 // ---------------------------------------------------------------------------
 
 type CategoryKey = 'navigatie' | 'acties' | 'zoeken'
@@ -20,6 +22,32 @@ interface CommandItem {
   category: CategoryKey
   keywords?: string[]
 }
+
+// ── Vaak-gezocht suggesties bij lege query ────────────────────────────────
+// Pages die mensen vaak nodig hebben — toont meteen iets nuttigs bij open.
+const DEFAULT_SUGGESTIONS = [
+  '/dashboard/office',
+  '/dashboard/declaraties',
+  '/dashboard/vakanties',
+  '/dashboard/agenda',
+  '/dashboard/hr-docs',
+  '/dashboard/workx-uitjes',
+]
+
+// Icon per kind voor visuele snelheid
+const KIND_ICON = {
+  page: Icons.layers,
+  doc: Icons.fileText,
+  factoid: Icons.info ?? Icons.sparkles,
+  action: Icons.sparkles,
+} as const
+
+const KIND_LABEL = {
+  page: 'Pagina',
+  doc: 'Document',
+  factoid: 'Gegevens',
+  action: 'Actie',
+} as const
 
 // ---------------------------------------------------------------------------
 // Data
@@ -238,54 +266,44 @@ export default function CommandPalette() {
     return () => document.removeEventListener('keydown', handleGlobalKeyDown)
   }, [])
 
-  // ---- Filter logic ----
-  const filteredItems = useMemo(() => {
-    if (!query.trim()) return ALL_ITEMS
-
-    const q = query.toLowerCase().trim()
-
-    return ALL_ITEMS.filter((item) => {
-      if (item.label.toLowerCase().includes(q)) return true
-      if (item.description?.toLowerCase().includes(q)) return true
-      if (item.keywords?.some((kw) => kw.toLowerCase().includes(q))) return true
-      return false
-    })
+  // ---- Search via index (deep content + synoniemen + ranking) ----
+  const searchHits = useMemo<SearchHit[]>(() => {
+    if (!query.trim()) {
+      const index = buildSearchIndex()
+      // Toon vaak-gezochte pages als suggesties bij lege query
+      const suggestions: SearchHit[] = []
+      for (const href of DEFAULT_SUGGESTIONS) {
+        const item = index.find(i => i.href === href)
+        if (item) suggestions.push({ item, score: 0, matchedField: 'label' })
+      }
+      return suggestions
+    }
+    return searchIndex(query, 15)
   }, [query])
 
-  // ---- Group by category ----
-  const grouped = useMemo(() => {
-    const map: Record<CategoryKey, CommandItem[]> = {
-      navigatie: [],
-      acties: [],
-      zoeken: [],
+  // ---- Group by section (uit de search-index, niet meer hardcoded) ----
+  const groupedHits = useMemo(() => {
+    const map = new Map<string, SearchHit[]>()
+    const order: string[] = []
+    for (const hit of searchHits) {
+      const sec = hit.item.section || 'Overig'
+      if (!map.has(sec)) { map.set(sec, []); order.push(sec) }
+      map.get(sec)!.push(hit)
     }
+    return { order, map }
+  }, [searchHits])
 
-    filteredItems.forEach((item) => {
-      map[item.category]?.push(item)
-    })
-
-    // If the user has typed a query, duplicate all results into "Zoeken" so
-    // the category header makes sense. But we only use Zoeken when query is active.
-    if (query.trim()) {
-      return { navigatie: [] as CommandItem[], acties: [] as CommandItem[], zoeken: filteredItems }
-    }
-
-    return map
-  }, [filteredItems, query])
-
-  // Flat list for keyboard nav
+  // Flat list for keyboard nav (volgorde gelijk aan render)
   const flatItems = useMemo(() => {
-    const items: CommandItem[] = []
-    for (const cat of CATEGORY_ORDER) {
-      items.push(...grouped[cat])
-    }
+    const items: SearchHit[] = []
+    for (const sec of groupedHits.order) items.push(...(groupedHits.map.get(sec) || []))
     return items
-  }, [grouped])
+  }, [groupedHits])
 
   // ---- Reset on open / query change ----
   useEffect(() => {
     setSelectedIndex(0)
-  }, [filteredItems])
+  }, [searchHits])
 
   useEffect(() => {
     if (isOpen) {
@@ -304,10 +322,10 @@ export default function CommandPalette() {
     el?.scrollIntoView({ block: 'nearest' })
   }, [selectedIndex])
 
-  // ---- Execute ----
-  const execute = useCallback(
-    (item: CommandItem) => {
-      router.push(item.href)
+  // ---- Execute (hit → navigate) ----
+  const executeHit = useCallback(
+    (hit: SearchHit) => {
+      router.push(hit.item.href)
       setIsOpen(false)
     },
     [router],
@@ -330,7 +348,7 @@ export default function CommandPalette() {
         case 'Enter': {
           e.preventDefault()
           const target = flatItems[selectedIndex]
-          if (target) execute(target)
+          if (target) executeHit(target)
           break
         }
         case 'Escape': {
@@ -340,36 +358,37 @@ export default function CommandPalette() {
         }
       }
     },
-    [flatItems, selectedIndex, execute],
+    [flatItems, selectedIndex, executeHit],
   )
 
   // ---- Render helpers ----
   let runningIndex = 0
 
-  function renderCategory(category: CategoryKey) {
-    const items = grouped[category]
-    if (items.length === 0) return null
+  function renderSection(sectionName: string) {
+    const hits = groupedHits.map.get(sectionName) || []
+    if (hits.length === 0) return null
 
     return (
-      <div key={category} className="mb-1">
-        {/* Category header */}
+      <div key={sectionName} className="mb-1">
+        {/* Section header */}
         <div className="px-4 py-2 text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase select-none">
-          {CATEGORY_LABELS[category]}
+          {sectionName}
         </div>
 
-        {items.map((item) => {
+        {hits.map((hit) => {
           const idx = runningIndex++
           const isSelected = idx === selectedIndex
-          const Icon = item.icon
+          const Icon = KIND_ICON[hit.item.kind]
+          const kindLabel = KIND_LABEL[hit.item.kind]
 
           return (
             <button
-              key={item.id}
+              key={hit.item.id}
               data-cmd-index={idx}
-              onClick={() => execute(item)}
+              onClick={() => executeHit(hit)}
               onMouseEnter={() => setSelectedIndex(idx)}
               className={`
-                group w-full flex items-center gap-3 px-4 py-2.5 text-left
+                group w-full flex items-start gap-3 px-4 py-2.5 text-left
                 transition-all duration-100 ease-out
                 ${isSelected ? 'bg-white/[0.06]' : 'bg-transparent hover:bg-white/[0.03]'}
               `}
@@ -377,7 +396,7 @@ export default function CommandPalette() {
               {/* Icon container */}
               <div
                 className={`
-                  w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                  w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5
                   transition-colors duration-100
                   ${isSelected ? 'bg-[#f9ff85]/15 text-[#f9ff85]' : 'bg-white/[0.06] text-white/50'}
                 `}
@@ -387,24 +406,44 @@ export default function CommandPalette() {
 
               {/* Text */}
               <div className="flex-1 min-w-0">
-                <p
-                  className={`
-                    text-[13px] font-medium truncate transition-colors duration-100
-                    ${isSelected ? 'text-white' : 'text-white/80'}
-                  `}
-                >
-                  {highlightMatch(item.label, query)}
-                </p>
-                {item.description && (
-                  <p className="text-[11px] text-white/30 truncate mt-0.5">
-                    {highlightMatch(item.description, query)}
+                <div className="flex items-center gap-2">
+                  <p
+                    className={`
+                      text-[13px] font-medium truncate transition-colors duration-100
+                      ${isSelected ? 'text-white' : 'text-white/85'}
+                    `}
+                  >
+                    {highlightMatch(hit.item.label, query)}
+                  </p>
+                  {/* Kind badge — alleen voor doc/factoid/action zodat pages clean blijven */}
+                  {hit.item.kind !== 'page' && (
+                    <span className="px-1.5 py-0.5 text-[9px] font-semibold tracking-wider uppercase rounded bg-white/[0.06] text-white/40 flex-shrink-0">
+                      {kindLabel}
+                    </span>
+                  )}
+                </div>
+                {hit.item.description && (
+                  <p className="text-[11px] text-white/40 truncate mt-0.5">
+                    {highlightMatch(hit.item.description, query)}
+                  </p>
+                )}
+                {/* Body-snippet bij content-match (alleen voor docs) */}
+                {hit.snippet && (
+                  <p className="text-[11px] text-white/45 mt-1 italic line-clamp-2">
+                    {highlightMatch(hit.snippet, query)}
+                  </p>
+                )}
+                {/* "Waarom?" — alleen tonen bij synoniem-match zodat user leert wat te typen */}
+                {hit.matchedField === 'synonym' && query.trim() && (
+                  <p className="text-[10px] text-[#f9ff85]/50 mt-1">
+                    via synoniem
                   </p>
                 )}
               </div>
 
               {/* Arrow hint on selected */}
               {isSelected && (
-                <div className="flex-shrink-0 text-white/20">
+                <div className="flex-shrink-0 text-white/20 mt-1.5">
                   <Icons.arrowRight size={14} />
                 </div>
               )}
@@ -504,7 +543,7 @@ export default function CommandPalette() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Zoek een pagina, actie..."
+                    placeholder="Zoek in alles — pagina's, kantoorgegevens, hr-docs, IBAN..."
                     className="
                       flex-1 bg-transparent text-[15px] text-white
                       placeholder-white/30 outline-none
@@ -532,17 +571,55 @@ export default function CommandPalette() {
                       <p className="text-[13px] text-white/30">
                         Geen resultaten voor &ldquo;{query}&rdquo;
                       </p>
-                      <p className="text-[11px] text-white/15 mt-1">
-                        Probeer een andere zoekterm
+                      <p className="text-[11px] text-white/15 mt-1 text-center max-w-[260px]">
+                        Probeer een andere term — bv. &ldquo;kantoor&rdquo;, &ldquo;IBAN&rdquo;, &ldquo;verlof&rdquo;, &ldquo;declaratie&rdquo;
                       </p>
                     </div>
                   ) : (
                     <>
+                      {/* Bij lege query: kop boven de suggesties */}
+                      {!query.trim() && (
+                        <div className="px-4 pt-3 pb-1 text-[10px] font-semibold tracking-[0.08em] text-white/30 uppercase select-none">
+                          Vaak gezocht
+                        </div>
+                      )}
                       {/* Reset running index before rendering */}
                       {(() => { runningIndex = 0; return null })()}
-                      {CATEGORY_ORDER.map((cat) => (
-                        <Fragment key={cat}>{renderCategory(cat)}</Fragment>
-                      ))}
+                      {query.trim() ? (
+                        groupedHits.order.map((sec) => (
+                          <Fragment key={sec}>{renderSection(sec)}</Fragment>
+                        ))
+                      ) : (
+                        // Bij lege query: 1 flat list zonder section-headers
+                        <div>
+                          {flatItems.map((hit) => {
+                            const idx = runningIndex++
+                            const isSelected = idx === selectedIndex
+                            const Icon = KIND_ICON[hit.item.kind]
+                            return (
+                              <button
+                                key={hit.item.id}
+                                data-cmd-index={idx}
+                                onClick={() => executeHit(hit)}
+                                onMouseEnter={() => setSelectedIndex(idx)}
+                                className={`group w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all duration-100 ease-out ${isSelected ? 'bg-white/[0.06]' : 'bg-transparent hover:bg-white/[0.03]'}`}
+                              >
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-100 ${isSelected ? 'bg-[#f9ff85]/15 text-[#f9ff85]' : 'bg-white/[0.06] text-white/50'}`}>
+                                  <Icon size={16} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-[13px] font-medium truncate ${isSelected ? 'text-white' : 'text-white/85'}`}>
+                                    {hit.item.label}
+                                  </p>
+                                  {hit.item.description && (
+                                    <p className="text-[11px] text-white/40 truncate mt-0.5">{hit.item.description}</p>
+                                  )}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
