@@ -89,6 +89,15 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
   // Welke chapter-kaders open zijn (default: alle open). Ingeklapt = compacte titel.
   const [collapsedChapters, setCollapsedChapters] = useState<Set<string>>(new Set())
 
+  // JAR-sessies voor de uitklap onder 'JAR bespreking'
+  const [jarSessions, setJarSessions] = useState<Array<{ id: string; date: string; name: string }>>([])
+  useEffect(() => {
+    fetch('/api/jar-sessions?year=' + new Date().getFullYear())
+      .then(r => r.ok ? r.json() : [])
+      .then((d) => Array.isArray(d) ? setJarSessions(d) : setJarSessions([]))
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -413,6 +422,8 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
         setShowDeleteConfirm={setShowDeleteConfirm}
         collapsedChapters={collapsedChapters}
         onRefetch={fetchData}
+        newsletterAssignments={newsletterAssignments}
+        jarSessions={jarSessions}
         toggleChapter={(id) => setCollapsedChapters(prev => {
           const next = new Set(prev)
           if (next.has(id)) next.delete(id); else next.add(id)
@@ -839,6 +850,8 @@ interface ResponsibilitiesByChapterProps {
   collapsedChapters: Set<string>
   toggleChapter: (id: string) => void
   onRefetch: () => void
+  newsletterAssignments: NewsletterAssignment[]
+  jarSessions: Array<{ id: string; date: string; name: string }>
 }
 
 // Eén taak met alle eindverantwoordelijken + executors samengevoegd
@@ -872,6 +885,8 @@ function ResponsibilitiesByChapter({
   collapsedChapters,
   toggleChapter,
   onRefetch,
+  newsletterAssignments,
+  jarSessions,
 }: ResponsibilitiesByChapterProps) {
   // Eerst groepen per chapter, daarbinnen per partnerTaskId (zodat
   // meerdere personen voor dezelfde taak op één rij komen).
@@ -977,6 +992,8 @@ function ResponsibilitiesByChapter({
                       setShowDeleteConfirm={setShowDeleteConfirm}
                       onRefetch={onRefetch}
                       responsibilities={responsibilities}
+                      newsletterAssignments={newsletterAssignments}
+                      jarSessions={jarSessions}
                     />
                   ))}
                 </div>
@@ -996,7 +1013,7 @@ function TaskRow({
   editingId, editTask, editResponsibleId, editSelectedMember, showEditDropdown,
   setEditTask, setShowEditDropdown, setEditResponsibleId,
   handleEdit, startEdit, setEditingId, setDeleteId, setShowDeleteConfirm,
-  onRefetch, responsibilities,
+  onRefetch, responsibilities, newsletterAssignments, jarSessions,
 }: {
   group: TaskGroup
   canEdit: boolean
@@ -1016,9 +1033,18 @@ function TaskRow({
   setShowDeleteConfirm: (v: boolean) => void
   onRefetch: () => void
   responsibilities: Responsibility[]
+  newsletterAssignments: NewsletterAssignment[]
+  jarSessions: Array<{ id: string; date: string; name: string }>
 }) {
   const [showExecutorMenu, setShowExecutorMenu] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  // Detail-data per task-titel
+  const taskTitle = group.taskLabel.toLowerCase()
+  const isNieuwsbrief = taskTitle.includes('nieuwsbrief')
+  const isJar = taskTitle.includes('jar')
+  const hasDetail = (isNieuwsbrief && newsletterAssignments.length > 0) || (isJar && jarSessions.length > 0)
 
   // Voor losse responsibilities: vind de echte Responsibility om edit/delete te triggeren
   const looseResp = group.looseResponsibilityId
@@ -1124,27 +1150,36 @@ function TaskRow({
   }
 
   return (
-    <div className="group p-3 sm:p-4 hover:bg-white/[0.02] transition-colors">
+    <div className="p-3 sm:p-4 hover:bg-white/[0.02] transition-colors">
       {/* Taak-titel */}
-      <div className="flex items-start gap-3 mb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm sm:text-base text-white font-medium leading-tight">{group.taskLabel}</p>
+      <div className="flex items-start gap-2 mb-2">
+        <div className="flex-1 min-w-0 flex items-start gap-2">
+          {hasDetail && (
+            <button
+              onClick={() => setExpanded(v => !v)}
+              className="mt-0.5 p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors flex-shrink-0"
+              title={expanded ? 'Inklappen' : 'Wie wanneer aan de beurt?'}
+            >
+              <Icons.chevronDown size={14} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+          <p className="text-sm sm:text-base text-white font-medium leading-tight pt-0.5">{group.taskLabel}</p>
         </div>
         {canEdit && looseResp && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => startEdit(looseResp)}
-              className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-colors"
               title="Bewerken"
             >
-              <Icons.edit size={12} />
+              <Icons.edit size={13} />
             </button>
             <button
               onClick={() => { setDeleteId(looseResp.id); setShowDeleteConfirm(true) }}
-              className="p-1 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-colors"
               title="Verwijderen"
             >
-              <Icons.trash size={12} />
+              <Icons.trash size={13} />
             </button>
           </div>
         )}
@@ -1232,6 +1267,75 @@ function TaskRow({
           </div>
         )}
       </div>
+
+      {/* Uitklap-detail (Nieuwsbrief / JAR) */}
+      {expanded && hasDetail && (
+        <div className="mt-3 pt-3 border-t border-white/10">
+          {isNieuwsbrief && <NewsletterPlanning assignments={newsletterAssignments} />}
+          {isJar && <JarPlanning sessions={jarSessions} />}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NewsletterPlanning({ assignments }: { assignments: NewsletterAssignment[] }) {
+  const sorted = [...assignments].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wider text-workx-lime/70 font-semibold mb-2">Wie wanneer aan de beurt</p>
+      <ul className="space-y-1.5">
+        {sorted.map(a => {
+          const dl = new Date(a.deadline)
+          const submitted = a.status === 'SUBMITTED'
+          const overdue = !submitted && dl.getTime() < Date.now()
+          return (
+            <li key={a.id} className="flex items-center gap-2 text-xs">
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${submitted ? 'bg-green-400' : overdue ? 'bg-red-400' : 'bg-yellow-400'}`} />
+              {getPhotoUrl(a.assignee.name, a.assignee.avatarUrl) ? (
+                <img src={getPhotoUrl(a.assignee.name, a.assignee.avatarUrl)!} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-workx-lime/20 flex items-center justify-center text-[10px] font-bold text-workx-lime flex-shrink-0">{a.assignee.name.charAt(0)}</div>
+              )}
+              <span className="text-white/90 flex-1 truncate">{a.assignee.name}</span>
+              <span className={`text-[11px] tabular-nums ${submitted ? 'text-green-300/80' : overdue ? 'text-red-300/80' : 'text-white/60'}`}>
+                {dl.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                {submitted && ' ✓'}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function JarPlanning({ sessions }: { sessions: Array<{ id: string; date: string; name: string }> }) {
+  const now = Date.now()
+  const sorted = [...sessions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wider text-workx-lime/70 font-semibold mb-2">Wie wanneer aan de beurt</p>
+      <ul className="space-y-1.5">
+        {sorted.map(s => {
+          const d = new Date(s.date)
+          const past = d.getTime() < now
+          return (
+            <li key={s.id} className="flex items-center gap-2 text-xs">
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${past ? 'bg-white/20' : 'bg-workx-lime'}`} />
+              {getPhotoUrl(s.name, null) ? (
+                <img src={getPhotoUrl(s.name, null)!} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-workx-lime/20 flex items-center justify-center text-[10px] font-bold text-workx-lime flex-shrink-0">{s.name.charAt(0)}</div>
+              )}
+              <span className={`flex-1 truncate ${past ? 'text-white/50 line-through' : 'text-white/90'}`}>{s.name}</span>
+              <span className={`text-[11px] tabular-nums ${past ? 'text-white/30' : 'text-white/60'}`}>
+                {d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
