@@ -796,18 +796,18 @@ function CoverImageUpload({
       toast.error('Alleen afbeeldingen')
       return
     }
-    if (file.size > 8 * 1024 * 1024) {
-      toast.error('Max 8 MB')
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Max 4 MB')
       return
     }
     setUploading(true)
     try {
-      const { upload } = await import('@vercel/blob/client')
-      const blob = await upload(`workx-uitjes/${Date.now()}-${file.name}`, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload',
-      })
-      onUploaded(blob.url)
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/workx-outings/upload-cover', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error()
+      const { url } = await res.json()
+      onUploaded(url)
       toast.success('Foto geüpload')
     } catch (err) {
       console.error(err)
