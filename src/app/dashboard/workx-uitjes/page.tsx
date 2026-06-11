@@ -904,9 +904,10 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
   const tapeColors = ['bg-amber-200/50', 'bg-rose-200/45', 'bg-sky-200/45', 'bg-emerald-200/45']
 
   return (
-    // Breekt uit max-w-6xl page-container — speels hoekje mag over sidebar piepen,
-    // maar sidebar zelf blijft leesbaar en klikbaar. Negative margin schaalt mee.
-    <div className="-mx-2 sm:-mx-6 lg:-mx-12 xl:-mx-20 2xl:-mx-28">
+    // Breekt uit max-w-6xl page-container — maar blijft binnen main-area
+    // zodat polaroids niet achter de sidebar verdwijnen. Op brede schermen
+    // (xl/2xl) iets ruimer omdat daar genoeg ruimte naast sidebar is.
+    <div className="-mx-0 sm:-mx-2 lg:-mx-6 xl:-mx-12 2xl:-mx-16">
       <div className="flex flex-wrap items-start justify-center gap-0 py-6 px-2 sm:px-6 lg:px-10">
         {fotos.map((src, i) => {
           const tilt = tilts[i % tilts.length]
