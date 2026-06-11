@@ -132,16 +132,26 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
     if (session?.user?.id) fetchDeclarations()
   }, [session?.user?.id])
 
-  // Load a declaration into the form
-  const loadDeclaration = (declaration: ExpenseDeclaration) => {
-    setCurrentDeclaration(declaration)
-    setEmployeeName(declaration.employeeName)
-    setBankAccount(declaration.bankAccount)
-    setNote(declaration.note || '')
-    setHoldingName(declaration.holdingName || '')
-    setInvoiceNumber(declaration.invoiceNumber || '')
+  // Load a declaration into the form.
+  // Belangrijk: de list-response (/api/expenses) bevat GEEN attachmentUrl
+  // (base64 is te groot). Daarom hier altijd de volledige decla ophalen,
+  // anders verdwijnen bestaande bijlages bij heropslaan/indienen.
+  const loadDeclaration = async (declaration: ExpenseDeclaration) => {
+    let full: ExpenseDeclaration = declaration
+    try {
+      const res = await fetch(`/api/expenses/${declaration.id}`)
+      if (res.ok) full = await res.json()
+    } catch {
+      // val terug op de meegegeven (list) data — items hebben dan geen attachmentUrl
+    }
+    setCurrentDeclaration(full)
+    setEmployeeName(full.employeeName)
+    setBankAccount(full.bankAccount)
+    setNote(full.note || '')
+    setHoldingName(full.holdingName || '')
+    setInvoiceNumber(full.invoiceNumber || '')
     setItems(
-      declaration.items.map(i => ({
+      full.items.map(i => ({
         ...i,
         date: i.date ? new Date(i.date).toISOString().split('T')[0] : '',
         expenseType: i.expenseType || 'overig',
@@ -149,7 +159,7 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
       }))
     )
     // Set tab based on whether it's a holding declaration
-    if (declaration.holdingName) {
+    if (full.holdingName) {
       setActiveTab('holding')
     }
     setView('form')
@@ -603,6 +613,7 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
       if (!fullRes.ok) throw new Error('Kon declaratie niet ophalen')
       const fullDecl = await fullRes.json()
 
+      let downloaded = 0
       for (const item of fullDecl.items) {
         if (!item.attachmentUrl || !item.attachmentName) continue
         const base64 = item.attachmentUrl.split(',')[1]
@@ -623,10 +634,13 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
-        toast.success(`Bijlage "${item.attachmentName}" gedownload`)
-        return // Download first attachment found
+        downloaded++
       }
-      toast.error('Geen bijlage gevonden')
+      if (downloaded === 0) {
+        toast.error('Geen bijlage gevonden')
+      } else {
+        toast.success(`${downloaded} bijlage${downloaded !== 1 ? 's' : ''} gedownload`)
+      }
     } catch {
       toast.error('Kon bijlage niet downloaden')
     }
