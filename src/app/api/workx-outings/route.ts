@@ -135,8 +135,10 @@ export async function POST(req: NextRequest) {
       console.error('Auto-sync naar jaaragenda mislukt', e)
     }
 
-    // Slack-melding naar #workx-algemeen
-    try {
+    // Slack-melding naar #workx-algemeen — TIJDELIJK UIT op verzoek user.
+    // Zet SLACK_PROMOTIE_AAN = true om weer aan te zetten.
+    const SLACK_PROMOTIE_AAN = false
+    if (SLACK_PROMOTIE_AAN) try {
       const dateLabel = new Date(outing.date).toLocaleDateString('nl-NL', {
         weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
       })

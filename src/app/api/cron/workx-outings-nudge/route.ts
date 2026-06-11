@@ -30,6 +30,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
+  // TIJDELIJK UITGEZET op verzoek user.
+  return NextResponse.json({ skipped: 'workx-uitjes Slack-promotie staat uit' })
+
   const now = new Date()
 
   // Run alleen elke 3 weken: gebruik ISO-week-nummer. Cron draait elke

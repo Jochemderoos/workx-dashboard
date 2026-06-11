@@ -34,6 +34,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
+  // TIJDELIJK UITGEZET op verzoek user.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const SLACK_PROMOTIE_AAN = false
+  if (!SLACK_PROMOTIE_AAN) {
+    return NextResponse.json({ skipped: 'workx-uitjes Slack-promotie staat uit' })
+  }
+
   const now = new Date()
   // Alleen uitjes binnen volgende 21 dagen ophalen
   const horizon = new Date(now.getTime() + 21 * 86400000)
