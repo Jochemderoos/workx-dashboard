@@ -28,7 +28,7 @@ export const TEAM_PHOTOS: Record<string, string> = {
   // Kantoor
   'Hanna Blaauboer': 'https://www.workxadvocaten.nl/wp-content/uploads/2022/01/Hanna.jpg',
   'Lotte van Sint Truiden': '/team/lotte.jpg',
-  'Bente Karels': '/team/bente.jpg',
+  // Bente heeft (nog) geen profielfoto — getoond met initialen-fallback.
   'Diyar Wakkas': '/team/diyar.png',
 }
 
