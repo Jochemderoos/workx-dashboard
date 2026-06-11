@@ -794,59 +794,63 @@ function YearOverview({ outings }: { outings: Outing[] }) {
         </div>
       </div>
 
-      <ul className="divide-y divide-white/5">
+      {/* Grid: 1 kol mobile · 2 kol tablet · 4 kol desktop = 4×3 op breed scherm */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5 p-1.5">
         {MONTH_NAMES.map((_, mIdx) => {
           const monthOutings = byMonth.get(mIdx) || []
           const isCurrent = isCurrentYear && mIdx === currentMonth
           const isPast = isCurrentYear && mIdx < currentMonth
           return (
-            <li
+            <div
               key={mIdx}
-              className={`flex items-stretch gap-3 px-4 sm:px-5 py-2.5 sm:py-3 transition-colors ${
+              className={`rounded-xl p-2.5 sm:p-3 min-h-[80px] flex flex-col gap-1.5 transition-colors ${
                 isCurrent
-                  ? 'bg-amber-500/8'
+                  ? 'bg-amber-500/12 border border-amber-300/30'
                   : monthOutings.length > 0
-                    ? 'bg-rose-500/5'
-                    : ''
+                    ? 'bg-rose-500/8 border border-rose-300/20'
+                    : 'bg-white/[0.02] border border-white/5'
               }`}
             >
               {/* Maand-label */}
-              <div className={`flex-shrink-0 w-10 sm:w-12 flex flex-col items-start justify-center ${isPast ? 'opacity-40' : ''}`}>
-                <span className={`text-[10px] sm:text-xs font-bold tracking-widest tabular-nums ${
+              <div className={`flex items-baseline justify-between gap-2 ${isPast ? 'opacity-50' : ''}`}>
+                <span className={`text-[11px] font-bold tracking-widest ${
                   isCurrent ? 'text-amber-300' : monthOutings.length > 0 ? 'text-rose-300' : 'text-white/40'
                 }`}>
                   {MONTH_ABBR[mIdx]}
                 </span>
-              </div>
-
-              {/* Uitjes in deze maand */}
-              <div className="flex-1 min-w-0 flex items-center">
-                {monthOutings.length === 0 ? (
-                  <span className={`text-xs italic ${isPast ? 'text-white/20' : 'text-white/30'}`}>—</span>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {monthOutings.map(o => {
-                      const t = TYPE_BY_KEY[o.type] || TYPE_BY_KEY['overig']
-                      const dayNum = new Date(o.date).getDate()
-                      return (
-                        <span
-                          key={o.id}
-                          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium ${t.accent} bg-white/5 border border-white/10`}
-                          title={`${o.title} · ${formatDateLong(o.date)} · ${formatTime(o.date)}${o.location ? ` · ${o.location}` : ''}`}
-                        >
-                          <span className="text-[10px] tabular-nums text-white/50">{dayNum}</span>
-                          <span>{t.emoji}</span>
-                          <span className="truncate max-w-[180px]">{o.title}</span>
-                        </span>
-                      )
-                    })}
-                  </div>
+                {monthOutings.length > 0 && (
+                  <span className="text-[9px] text-white/40 tabular-nums">
+                    {monthOutings.length}
+                  </span>
                 )}
               </div>
-            </li>
+
+              {/* Uitjes in deze maand — gestapeld */}
+              {monthOutings.length === 0 ? (
+                <span className={`text-xs italic ${isPast ? 'text-white/15' : 'text-white/25'}`}>—</span>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {monthOutings.map(o => {
+                    const t = TYPE_BY_KEY[o.type] || TYPE_BY_KEY['overig']
+                    const dayNum = new Date(o.date).getDate()
+                    return (
+                      <div
+                        key={o.id}
+                        className={`flex items-center gap-1.5 px-1.5 py-1 rounded-md text-[11px] font-medium ${t.accent} bg-white/5 border border-white/10`}
+                        title={`${o.title} · ${formatDateLong(o.date)} · ${formatTime(o.date)}${o.location ? ` · ${o.location}` : ''}`}
+                      >
+                        <span className="text-[9px] tabular-nums text-white/50 w-3 flex-shrink-0 text-right">{dayNum}</span>
+                        <span className="flex-shrink-0">{t.emoji}</span>
+                        <span className="truncate">{o.title}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )
         })}
-      </ul>
+      </div>
     </section>
   )
 }
