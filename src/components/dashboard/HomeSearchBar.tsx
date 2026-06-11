@@ -162,8 +162,7 @@ export default function HomeSearchBar() {
           }
         `}
         style={{
-          background: 'var(--color-bg-glass)',
-          backdropFilter: 'blur(12px)',
+          background: 'var(--color-bg-dropdown)',
         }}
       >
         <Icons.search size={20} className="text-workx-lime flex-shrink-0" />
@@ -174,7 +173,7 @@ export default function HomeSearchBar() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
           onKeyDown={onKeyDown}
-          placeholder="Zoek in alles van Workx — pagina's, IBAN, hr-docs, mensen…"
+          placeholder="Zoek hier direct de juiste pagina en informatie"
           className="flex-1 bg-transparent text-base font-medium outline-none placeholder:font-normal"
           style={{
             color: 'var(--color-text-primary)',
@@ -206,15 +205,15 @@ export default function HomeSearchBar() {
         </kbd>
       </div>
 
-      {/* Resultaten-dropdown */}
+      {/* Resultaten-dropdown — SOLID background zodat tekst leesbaar is en
+          widgets eronder niet doorschijnen */}
       {showDropdown && (
         <div
           className="absolute left-0 right-0 top-full mt-3 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-[60vh] overflow-y-auto"
           style={{
-            background: 'var(--color-bg-glass)',
+            background: 'var(--color-bg-dropdown)',
             border: '1px solid var(--color-border)',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.5), 0 0 0 1px var(--color-border)',
+            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.6), 0 0 0 1px var(--color-border), 0 0 30px -5px rgba(249,255,133,0.2)',
           }}
         >
           {allItems.length === 0 && !aiLoading ? (
