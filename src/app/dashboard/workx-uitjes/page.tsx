@@ -250,14 +250,14 @@ export default function WorkxUitjesPage() {
   }
 
   return (
-    <div className="max-w-6xl space-y-6 fade-in relative">
+    <div className="max-w-screen-2xl mx-auto space-y-6 fade-in relative">
       {/* Sfeerblobs */}
       <div className="absolute -top-10 right-[5%] w-72 h-72 bg-rose-500/8 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="absolute top-[30%] left-[5%] w-64 h-64 bg-amber-500/6 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="absolute bottom-0 right-[20%] w-56 h-56 bg-purple-500/8 rounded-full blur-3xl pointer-events-none -z-10" />
 
       {/* HERO met mozaiek-strip */}
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-rose-500/15 via-amber-500/8 to-purple-500/12">
+      <section className="max-w-6xl mx-auto relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-rose-500/15 via-amber-500/8 to-purple-500/12">
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-400/15 rounded-full blur-3xl" />
         <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-rose-400/15 rounded-full blur-3xl" />
         <div className="relative p-6 sm:p-8">
@@ -323,30 +323,36 @@ export default function WorkxUitjesPage() {
       </section>
 
       {/* JAAROVERZICHT: 12 maanden verticaal met geplande uitjes per maand */}
-      <YearOverview outings={outings} />
+      <div className="max-w-6xl mx-auto">
+        <YearOverview outings={outings} />
+      </div>
 
-      {/* Polaroid-moodboard 1 — boven 'Komt eraan' */}
+      {/* Polaroid-moodboard 1 — boven 'Komt eraan' (full-width binnen page-container) */}
       <SfeerStrook fotos={SFEER_FOTOS.slice(0, 25)} />
 
       {/* Compact overzichtskader met alle aankomende uitjes */}
       {filter === 'upcoming' && outings.length > 0 && (
-        <UpcomingOverview outings={outings} />
+        <div className="max-w-6xl mx-auto">
+          <UpcomingOverview outings={outings} />
+        </div>
       )}
 
       {/* FORM */}
       {showForm && (
-        <OutingForm
-          form={form}
-          setForm={setForm}
-          isEdit={!!editingId}
-          onSubmit={handleSubmit}
-          onCancel={() => { setShowForm(false); setEditingId(null); resetForm() }}
-        />
+        <div className="max-w-6xl mx-auto">
+          <OutingForm
+            form={form}
+            setForm={setForm}
+            isEdit={!!editingId}
+            onSubmit={handleSubmit}
+            onCancel={() => { setShowForm(false); setEditingId(null); resetForm() }}
+          />
+        </div>
       )}
 
       {/* LIJST */}
       {outings.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-rose-400/30 bg-gradient-to-br from-rose-500/8 via-amber-500/5 to-purple-500/8 p-8 sm:p-10 text-center">
+        <div className="max-w-6xl mx-auto rounded-2xl border-2 border-dashed border-rose-400/30 bg-gradient-to-br from-rose-500/8 via-amber-500/5 to-purple-500/8 p-8 sm:p-10 text-center">
           <div className="text-6xl mb-3 animate-pulse">{filter === 'upcoming' ? '🎉' : '📷'}</div>
           <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
             {filter === 'upcoming' ? 'Verzin iets met een collega' : 'Nog geen herinneringen hier'}
@@ -367,20 +373,22 @@ export default function WorkxUitjesPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {outings.map((o) => (
-            <OutingCard
-              key={o.id}
-              outing={o}
-              meId={meId}
-              onChange={fetchOutings}
-              onEdit={() => startEdit(o)}
-              onDelete={() => handleDelete(o.id)}
-            />
-          ))}
-          {/* Polaroid-moodboard 2 — onderaan de cards */}
+        <>
+          <div className="max-w-6xl mx-auto space-y-4">
+            {outings.map((o) => (
+              <OutingCard
+                key={o.id}
+                outing={o}
+                meId={meId}
+                onChange={fetchOutings}
+                onEdit={() => startEdit(o)}
+                onDelete={() => handleDelete(o.id)}
+              />
+            ))}
+          </div>
+          {/* Polaroid-moodboard 2 — onderaan, full-width */}
           <SfeerStrook fotos={SFEER_FOTOS.slice(25)} />
-        </div>
+        </>
       )}
     </div>
   )
@@ -904,12 +912,11 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
   const tapeColors = ['bg-amber-200/50', 'bg-rose-200/45', 'bg-sky-200/45', 'bg-emerald-200/45']
 
   return (
-    // Breekt uit max-w-6xl page-container, mag subtiel over de sidebar piepen.
-    // z-30 + pointer-events-none zorgen dat polaroids VOOR de sidebar komen,
-    // zonder dat de sidebar klikbaar/leesbaar wordt geblokkeerd: alleen de
-    // polaroids zelf vangen muis (pointer-events-auto hieronder), lege
-    // ruimte tussen polaroids laat clicks/scrolls door naar de sidebar.
-    <div className="relative z-30 -mx-2 sm:-mx-6 lg:-mx-14 xl:-mx-24 2xl:-mx-32 pointer-events-none">
+    // pointer-events-none op wrapper + auto op polaroids: clicks op zwarte
+    // tussenruimte gaan door naar de sidebar zodat die volledig bruikbaar
+    // blijft. Geen negative margins meer — de page-container is nu breed
+    // genoeg zelf (max-w-screen-2xl op page-root).
+    <div className="pointer-events-none">
       <div className="flex flex-wrap items-start justify-center gap-0 py-6 px-2 sm:px-6 lg:px-10">
         {fotos.map((src, i) => {
           const tilt = tilts[i % tilts.length]
