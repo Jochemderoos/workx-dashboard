@@ -921,12 +921,12 @@ function ResponsibilitiesByChapter({
         return (
           <section
             key={group.id}
-            className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden"
+            className="rounded-2xl border border-white/10 bg-white/[0.02]"
           >
             {/* Kader-header */}
             <button
               onClick={() => toggleChapter(group.id)}
-              className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-3 bg-gradient-to-r from-workx-lime/10 via-workx-lime/5 to-transparent border-b border-workx-lime/15 hover:from-workx-lime/15 hover:via-workx-lime/8 transition-colors"
+              className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-3 bg-gradient-to-r from-workx-lime/10 via-workx-lime/5 to-transparent border-b border-workx-lime/15 hover:from-workx-lime/15 hover:via-workx-lime/8 transition-colors rounded-t-2xl"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-workx-lime animate-pulse" />
@@ -1197,22 +1197,29 @@ function TaskRow({
               <Icons.plus size={10} /> Teamlid
             </button>
             {showExecutorMenu && availableExecutors.length > 0 && (
-              <div className="absolute z-50 top-full mt-1 left-0 min-w-[200px] bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-[40vh] overflow-y-auto">
-                {availableExecutors.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => addExecutor(m.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/10 transition-colors text-left"
-                  >
-                    {getPhotoUrl(m.name, m.avatarUrl) ? (
-                      <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime">{m.name.charAt(0)}</div>
-                    )}
-                    <span className="text-white text-xs">{m.name}</span>
-                  </button>
-                ))}
-              </div>
+              <>
+                {/* Klik-buiten overlay zodat dropdown sluit zonder Z-issues */}
+                <div
+                  onClick={() => setShowExecutorMenu(false)}
+                  className="fixed inset-0 z-[100]"
+                />
+                <div className="absolute z-[110] top-full mt-1 left-0 min-w-[220px] max-w-[280px] bg-workx-dark border border-white/20 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                  {availableExecutors.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={(e) => { e.stopPropagation(); addExecutor(m.id) }}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/10 transition-colors text-left"
+                    >
+                      {getPhotoUrl(m.name, m.avatarUrl) ? (
+                        <img loading="lazy" src={getPhotoUrl(m.name, m.avatarUrl)!} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-workx-lime/20 flex items-center justify-center text-xs font-bold text-workx-lime flex-shrink-0">{m.name.charAt(0)}</div>
+                      )}
+                      <span className="text-white text-xs truncate">{m.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
