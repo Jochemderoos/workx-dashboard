@@ -81,7 +81,6 @@ const SFEER_FOTOS = [
   '/workx-uitjes/team/PHOTO-2025-09-03-11-39-00.jpg',
   '/workx-uitjes/team/PHOTO-2025-08-31-20-36-00.jpg',
   '/workx-uitjes/team/PHOTO-2025-08-29-18-40-00.jpg',
-  '/workx-uitjes/team/PHOTO-2025-08-26-16-15-57.jpg',
   '/workx-uitjes/team/PHOTO-2025-08-07-18-09-42.jpg',
   '/workx-uitjes/team/PHOTO-2025-08-07-17-45-05.jpg',
   '/workx-uitjes/team/PHOTO-2024-07-20-00-10-32.jpg',
@@ -235,8 +234,8 @@ export default function WorkxUitjesPage() {
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-400/15 rounded-full blur-3xl" />
         <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-rose-400/15 rounded-full blur-3xl" />
         <div className="relative p-6 sm:p-8">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div className="flex-1 min-w-0">
               <p className="text-[10px] uppercase tracking-widest text-rose-300/70 mb-1">Team-uitjes ✨</p>
               <h1 className="text-3xl sm:text-4xl font-bold text-white">
                 <TextReveal>Workx uitjes</TextReveal>
@@ -245,12 +244,20 @@ export default function WorkxUitjesPage() {
                 Iedere paar maanden iets gezelligs met het team. <span className="text-white font-semibold">Bedenk samen met een kantoorgenoot iets leuks</span> — een borrel, etentje, padel-avond, suppen, bowling, theater, bierfiets… Echt alles mag. Samen organiseren is het leukst.
               </p>
             </div>
-            <button
-              onClick={() => { setEditingId(null); resetForm(); setShowForm(true) }}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-rose-500/30 to-amber-500/30 border border-rose-300/40 text-white font-semibold text-sm hover:from-rose-500/40 hover:to-amber-500/40 transition-colors flex items-center gap-2 shadow-lg shadow-rose-500/10"
-            >
-              <Icons.plus size={14} /> Plan iets leuks
-            </button>
+
+            {/* Spotlight CTA */}
+            <div className="relative">
+              {/* Glow halo achter de knop */}
+              <div className="absolute inset-0 -m-3 bg-gradient-to-br from-rose-400/40 via-amber-400/30 to-purple-400/40 rounded-3xl blur-2xl opacity-70 animate-pulse pointer-events-none" />
+              <button
+                onClick={() => { setEditingId(null); resetForm(); setShowForm(true) }}
+                className="relative group px-6 sm:px-8 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 border-2 border-white/30 text-white font-bold text-base sm:text-lg shadow-2xl shadow-rose-500/40 hover:shadow-rose-500/60 hover:scale-105 transition-all flex items-center gap-3"
+              >
+                <span className="text-2xl group-hover:rotate-12 transition-transform">🎉</span>
+                <span>Plan iets leuks!</span>
+                <Icons.plus size={20} className="group-hover:rotate-90 transition-transform" />
+              </button>
+            </div>
           </div>
 
           {/* Budget-tip */}
@@ -880,7 +887,7 @@ function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
           <div
             key={src + i}
             style={{ zIndex: 10 + i }}
-            className={`relative w-36 sm:w-44 md:w-52 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-110 hover:z-30 hover:shadow-black/70 transition-all duration-300 cursor-pointer`}
+            className={`relative w-36 sm:w-44 md:w-52 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:z-50 hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
           >
             <div className="aspect-square overflow-hidden bg-workx-dark/20">
               <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
