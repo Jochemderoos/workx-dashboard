@@ -378,6 +378,14 @@ export default function WieDoetWat({ canEdit, currentUserId }: WieDoetWatProps) 
         </div>
       </div>
 
+      {/* Persoonlijk overzicht — alleen voor ingelogde user */}
+      {currentUserId && (
+        <MyResponsibilitiesCard
+          responsibilities={responsibilities}
+          currentUserId={currentUserId}
+        />
+      )}
+
       {/* Responsibilities — gegroepeerd per categorie (kaders) */}
       {responsibilities.length === 0 && !canEdit && (
         <div className="card p-12 text-center">
@@ -1244,5 +1252,91 @@ function PersonAvatar({ name, avatarUrl, ring }: { name: string; avatarUrl: stri
     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ${ringColor} ring-workx-dark ${bgColor}`} title={name}>
       {name.charAt(0)}
     </div>
+  )
+}
+
+// ── Mijn verantwoordelijkheden — persoonlijk kader voor logged-in user ──
+
+function MyResponsibilitiesCard({
+  responsibilities,
+  currentUserId,
+}: {
+  responsibilities: Responsibility[]
+  currentUserId: string
+}) {
+  // Verzamel taken waar de huidige user betrokken is (eindverantwoordelijk
+  // óf verantwoordelijk teamlid), gegroepeerd per partnerTask.
+  const myItems = useMemo(() => {
+    type Item = { taskLabel: string; chapterName: string; rol: 'eind' | 'teamlid' }
+    const map = new Map<string, Item>()
+    for (const r of responsibilities) {
+      const chapter = r.partnerTask?.chapter?.name || 'Algemeen'
+      const taskKey = r.partnerTask?.id || `loose-${r.id}`
+
+      // Eindverantwoordelijk
+      if (r.responsible.id === currentUserId) {
+        if (!map.has(taskKey)) {
+          map.set(taskKey, { taskLabel: r.task, chapterName: chapter, rol: 'eind' })
+        }
+      }
+      // Verantwoordelijk teamlid (executor)
+      if (r.partnerTask?.executors?.some(e => e.user.id === currentUserId)) {
+        if (!map.has(taskKey)) {
+          map.set(taskKey, { taskLabel: r.task, chapterName: chapter, rol: 'teamlid' })
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.chapterName !== b.chapterName) return a.chapterName.localeCompare(b.chapterName)
+      return a.taskLabel.localeCompare(b.taskLabel)
+    })
+  }, [responsibilities, currentUserId])
+
+  if (myItems.length === 0) return null
+
+  // Groepeer per chapter binnen het persoonlijk kader
+  const byChapter = new Map<string, typeof myItems>()
+  for (const it of myItems) {
+    if (!byChapter.has(it.chapterName)) byChapter.set(it.chapterName, [])
+    byChapter.get(it.chapterName)!.push(it)
+  }
+
+  return (
+    <section className="rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-500/10 via-workx-lime/5 to-transparent p-5 sm:p-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/30 to-workx-lime/20 flex items-center justify-center">
+          <span className="text-xl">🌟</span>
+        </div>
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-white">Mijn verantwoordelijkheden</h3>
+          <p className="text-xs text-white/60">
+            {myItems.length} {myItems.length === 1 ? 'onderdeel' : 'onderdelen'} waar jij bij betrokken bent
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {Array.from(byChapter.entries()).map(([chapter, items]) => (
+          <div key={chapter} className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
+            <p className="text-[10px] uppercase tracking-wider text-amber-300/80 font-semibold mb-1.5">{chapter}</p>
+            <ul className="space-y-1">
+              {items.map((it, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                    it.rol === 'eind' ? 'bg-amber-300' : 'bg-workx-lime'
+                  }`} />
+                  <span className="text-white/90 truncate flex-1">{it.taskLabel}</span>
+                  <span className={`text-[9px] uppercase tracking-wider font-semibold flex-shrink-0 ${
+                    it.rol === 'eind' ? 'text-amber-300/70' : 'text-workx-lime/70'
+                  }`}>
+                    {it.rol === 'eind' ? 'Eind' : 'Teamlid'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
