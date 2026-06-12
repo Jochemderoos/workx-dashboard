@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
-import { searchIndex, type SearchHit } from '@/lib/search-index'
+import { searchIndex, type SearchHit, type SearchItem } from '@/lib/search-index'
 
 // Vaak-gezochte pages — verschijnen direct bij focus zodat je zonder typen
 // kunt klikken naar iets dat je vaak nodig hebt.
@@ -52,14 +52,25 @@ export default function HomeSearchBar() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [aiSuggestions, setAiSuggestions] = useState<{ href: string; label: string; reason: string }[]>([])
   const [aiLoading, setAiLoading] = useState(false)
+  const [extraItems, setExtraItems] = useState<SearchItem[]>([])
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const aiAbortRef = useRef<AbortController | null>(null)
 
+  // Dynamische DB-items ophalen (bevriende kantoren, evt. meer). Eenmalig.
+  useEffect(() => {
+    let aborted = false
+    fetch('/api/search/extra-items')
+      .then(r => r.ok ? r.json() : { items: [] })
+      .then(d => { if (!aborted && Array.isArray(d?.items)) setExtraItems(d.items) })
+      .catch(() => {})
+    return () => { aborted = true }
+  }, [])
+
   // Resultaten tonen ALLEEN bij echte zoekterm. Geen tip-state.
   const hits: SearchHit[] = useMemo(
-    () => query.trim() ? searchIndex(query, 12, { hideAllPersons }) : [],
-    [query, hideAllPersons],
+    () => query.trim() ? searchIndex(query, 12, { hideAllPersons }, extraItems) : [],
+    [query, hideAllPersons, extraItems],
   )
   const showDropdown = focused && query.trim().length > 0
   const totalResults = hits.length + aiSuggestions.length

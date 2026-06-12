@@ -551,11 +551,16 @@ export interface SearchOptions {
   hideAllPersons?: boolean
 }
 
-export function searchIndex(query: string, limit = 12, options: SearchOptions = {}): SearchHit[] {
+export function searchIndex(
+  query: string,
+  limit = 12,
+  options: SearchOptions = {},
+  extraItems: SearchItem[] = [],
+): SearchHit[] {
   const tokens = tokenize(query)
   if (tokens.length === 0) return []
 
-  const index = buildSearchIndex()
+  const index = [...buildSearchIndex(), ...extraItems]
   const hits: SearchHit[] = []
 
   for (const item of index) {
