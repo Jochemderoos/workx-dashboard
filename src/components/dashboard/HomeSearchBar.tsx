@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Icons } from '@/components/ui/Icons'
 import { searchIndex, type SearchHit } from '@/lib/search-index'
@@ -40,6 +41,12 @@ const KIND_LABEL = {
 
 export default function HomeSearchBar() {
   const router = useRouter()
+  const { data: session } = useSession()
+  // Privacy: alleen managers (PARTNER/ADMIN/OFFICE_MANAGER) zien mensen-items
+  // in zoekresultaten. EMPLOYEE krijgt nooit collega's te zien.
+  const hideAllPersons = !['PARTNER', 'ADMIN', 'OFFICE_MANAGER'].includes(
+    (session?.user?.role || '') as string,
+  )
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -50,7 +57,10 @@ export default function HomeSearchBar() {
   const aiAbortRef = useRef<AbortController | null>(null)
 
   // Resultaten tonen ALLEEN bij echte zoekterm. Geen tip-state.
-  const hits: SearchHit[] = useMemo(() => query.trim() ? searchIndex(query, 12) : [], [query])
+  const hits: SearchHit[] = useMemo(
+    () => query.trim() ? searchIndex(query, 12, { hideAllPersons }) : [],
+    [query, hideAllPersons],
+  )
   const showDropdown = focused && query.trim().length > 0
   const totalResults = hits.length + aiSuggestions.length
 

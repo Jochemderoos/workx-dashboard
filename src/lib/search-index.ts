@@ -36,6 +36,10 @@ export interface SearchItem {
   body?: string             // Vollege plain-text content (voor diep zoeken)
   synonyms?: string[]       // Termen die ook moeten matchen
   section?: string          // Bv. "Algemeen", "Workx docs", "Office"
+  // Voor persoon-items en persoonsacties: de voornaam(en) waar het over gaat.
+  // Als gezet: matcht alleen als de query een van deze namen bevat
+  // (voorkomt dat "ontwikkelplan" alle ontwikkelplan-per-persoon items toont).
+  requiresNameMatch?: string[]
 }
 
 export interface SearchHit {
@@ -310,11 +314,21 @@ function buildPeopleItems(): SearchItem[] {
     const first = name.split(' ')[0].toLowerCase()
     return [first, name.toLowerCase(), role.toLowerCase()]
   }
+  // De voornaam-tokens waar de query op moet matchen om dit item te tonen.
+  const nameTokensFor = (name: string): string[] => {
+    const parts = name.toLowerCase().split(/\s+/).filter(p => p.length > 1)
+    return parts
+  }
+
+  // Helper voor person-items met requiresNameMatch
+  const addPersonItem = (item: Omit<SearchItem, 'requiresNameMatch'>, name: string) => {
+    out.push({ ...item, requiresNameMatch: nameTokensFor(name) })
+  }
 
   // Partners
   for (const name of PARTNERS) {
     const first = name.split(' ')[0]
-    out.push({
+    addPersonItem({
       id: `person:partner:${name}`,
       kind: 'person',
       label: name,
@@ -322,9 +336,8 @@ function buildPeopleItems(): SearchItem[] {
       href: `/dashboard/team?focus=${encodeURIComponent(name)}`,
       synonyms: synonymsFor(name, 'partner'),
       section: 'Mensen',
-    })
-    // Direct-acties per partner
-    out.push({
+    }, name)
+    addPersonItem({
       id: `person:partner-jaarplan:${name}`,
       kind: 'action',
       label: `Jaarplan ${first}`,
@@ -332,8 +345,8 @@ function buildPeopleItems(): SearchItem[] {
       href: `/dashboard/partners/jaarplannen?partner=${encodeURIComponent(name)}`,
       synonyms: [`jaarplan ${first}`, `${first.toLowerCase()} ontwikkeling`, `${first.toLowerCase()} doelen`],
       section: 'Mensen',
-    })
-    out.push({
+    }, name)
+    addPersonItem({
       id: `person:partner-coaching:${name}`,
       kind: 'action',
       label: `Coaching-budget ${first}`,
@@ -341,8 +354,8 @@ function buildPeopleItems(): SearchItem[] {
       href: `/dashboard/partners/coaching-budgetten?partner=${encodeURIComponent(name)}`,
       synonyms: [`coaching ${first}`, `${first.toLowerCase()} budget`, `${first.toLowerCase()} coach`],
       section: 'Mensen',
-    })
-    out.push({
+    }, name)
+    addPersonItem({
       id: `person:partner-werk:${name}`,
       kind: 'action',
       label: `Werk van ${first}`,
@@ -350,13 +363,13 @@ function buildPeopleItems(): SearchItem[] {
       href: `/dashboard/partners/werk?partner=${encodeURIComponent(name)}`,
       synonyms: [`zaken ${first}`, `werk ${first}`, `${first.toLowerCase()} dossiers`],
       section: 'Mensen',
-    })
+    }, name)
   }
 
   // Advocaten (incl. externe Lodewijk)
   for (const name of ADVOCATEN) {
     const first = name.split(' ')[0]
-    out.push({
+    addPersonItem({
       id: `person:adv:${name}`,
       kind: 'person',
       label: name,
@@ -364,8 +377,8 @@ function buildPeopleItems(): SearchItem[] {
       href: `/dashboard/team?focus=${encodeURIComponent(name)}`,
       synonyms: synonymsFor(name, 'advocaat'),
       section: 'Mensen',
-    })
-    out.push({
+    }, name)
+    addPersonItem({
       id: `person:adv-werkweek:${name}`,
       kind: 'action',
       label: `Werkweek ${first}`,
@@ -373,8 +386,8 @@ function buildPeopleItems(): SearchItem[] {
       href: `/dashboard/mijn-werkweek?user=${encodeURIComponent(name)}`,
       synonyms: [`uren ${first}`, `werkdruk ${first}`, `${first.toLowerCase()} capaciteit`],
       section: 'Mensen',
-    })
-    out.push({
+    }, name)
+    addPersonItem({
       id: `person:adv-ontwikkel:${name}`,
       kind: 'action',
       label: `Ontwikkelplan ${first}`,
@@ -382,13 +395,13 @@ function buildPeopleItems(): SearchItem[] {
       href: `/dashboard/ontwikkelplannen?user=${encodeURIComponent(name)}`,
       synonyms: [`ontwikkelplan ${first}`, `evaluatie ${first}`, `${first.toLowerCase()} jaarplan`],
       section: 'Mensen',
-    })
+    }, name)
   }
 
   // Office team
   for (const p of OFFICE_TEAM) {
     const first = p.name.split(' ')[0]
-    out.push({
+    addPersonItem({
       id: `person:office:${p.name}`,
       kind: 'person',
       label: p.name,
@@ -396,10 +409,9 @@ function buildPeopleItems(): SearchItem[] {
       href: `/dashboard/office`,
       synonyms: synonymsFor(p.name, p.role),
       section: 'Mensen',
-    })
-    // Voor Bas: JAR-rooster is praktisch
+    }, p.name)
     if (first === 'Bas') {
-      out.push({
+      addPersonItem({
         id: `person:bas-jar:${p.name}`,
         kind: 'action',
         label: `JAR-rooster van Bas`,
@@ -407,7 +419,7 @@ function buildPeopleItems(): SearchItem[] {
         href: `/dashboard/opleidingen?tab=jar`,
         synonyms: ['jar rooster bas', 'jar bespreking', 'know how rooster'],
         section: 'Mensen',
-      })
+      }, p.name)
     }
   }
 
@@ -534,7 +546,12 @@ function extractSnippet(body: string, token: string, maxLen = 120): string | und
 
 // ── Publieke search-functie ───────────────────────────────────────────────
 
-export function searchIndex(query: string, limit = 12): SearchHit[] {
+export interface SearchOptions {
+  /** Verberg alle mensen-items (voor EMPLOYEE-rol — privacy). */
+  hideAllPersons?: boolean
+}
+
+export function searchIndex(query: string, limit = 12, options: SearchOptions = {}): SearchHit[] {
   const tokens = tokenize(query)
   if (tokens.length === 0) return []
 
@@ -542,6 +559,20 @@ export function searchIndex(query: string, limit = 12): SearchHit[] {
   const hits: SearchHit[] = []
 
   for (const item of index) {
+    // Privacy-filter: bij EMPLOYEE worden mensen-items helemaal niet getoond.
+    const isPersonItem = item.kind === 'person' || item.id.startsWith('person:')
+    if (options.hideAllPersons && isPersonItem) continue
+
+    // requiresNameMatch: persoon-actie items matchen alleen als de query een
+    // van de voornaam-tokens bevat. Voorkomt dat "ontwikkelplan" alle
+    // 'Ontwikkelplan [naam]' items toont.
+    if (item.requiresNameMatch?.length) {
+      const hasNameToken = tokens.some(t =>
+        item.requiresNameMatch!.some(n => n === t || n.startsWith(t) || t.startsWith(n))
+      )
+      if (!hasNameToken) continue
+    }
+
     const perToken: FieldHit[] = []
     let allMatched = true
     for (const tk of tokens) {
