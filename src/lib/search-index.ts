@@ -25,7 +25,7 @@ import { PARTNERS, ADVOCATEN, OFFICE_TEAM } from '@/lib/team-photos'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-export type SearchKind = 'page' | 'doc' | 'factoid' | 'action' | 'person'
+export type SearchKind = 'page' | 'doc' | 'factoid' | 'action' | 'person' | 'detail'
 
 export interface SearchItem {
   id: string
@@ -488,6 +488,11 @@ function tokenize(s: string): string[] {
 // ── Score-formule ─────────────────────────────────────────────────────────
 // Per item bekijken we hoe goed elk token uit de query matcht in elk veld.
 // Som de scores op. Multi-word: ELK token moet ergens matchen, anders 0.
+//
+// Belangrijk: bij een PREFIX-only-match (gebruiker is nog aan het typen)
+// krijgen "brede" items zoals menu-pagina's voorrang boven "specifieke"
+// details zoals individuele hr-docs hoofdstukken, mensen of bevriende
+// kantoren. Pas bij EXACT-MATCH komen de specifieke items vol naar boven.
 
 interface FieldHit {
   field: 'label' | 'synonym' | 'description' | 'body'
@@ -495,23 +500,40 @@ interface FieldHit {
   position: number          // waar in het veld zit de match (voor snippets)
 }
 
+// Gewichten per kind voor PREFIX-/SUBSTRING-only matches (geen exact woord).
+// Hoe hoger, hoe meer prioriteit bij "Va..."-typen.
+const PREFIX_WEIGHT_BY_KIND: Record<SearchKind, number> = {
+  page: 1.0,      // menu-pagina's: volle voorrang bij snel typen
+  factoid: 1.0,   // KvK/IBAN/BTW: óók direct relevant
+  action: 0.7,    // 'Declaratie indienen' etc.
+  doc: 0.45,     // hr-docs hoofdstukken
+  person: 0.5,    // collega's
+  detail: 0.35,   // bevriende kantoren, individuele records — alleen top bij volledige match
+}
+
 function scoreToken(token: string, item: SearchItem): FieldHit | null {
   const lbl = normalize(item.label)
-  // Exact / prefix / contains op label
-  if (lbl === token) return { field: 'label', score: 100, position: 0 }
-  if (lbl.startsWith(token + ' ') || lbl.startsWith(token)) return { field: 'label', score: 70, position: 0 }
-  if (lbl.split(' ').includes(token)) return { field: 'label', score: 55, position: lbl.indexOf(token) }
-  const lblIdx = lbl.indexOf(token)
-  if (lblIdx >= 0) return { field: 'label', score: 40, position: lblIdx }
+  const w = PREFIX_WEIGHT_BY_KIND[item.kind] ?? 0.7
 
-  // Synoniemen — gewogen even hoog als label-word zodat 'kantoor' echt
-  // hard binnenkomt op Office.
+  // Exact label match = altijd 100 (ongeacht kind — wie precies 'Van Loman'
+  // typt, wil dat resultaat bovenaan)
+  if (lbl === token) return { field: 'label', score: 100, position: 0 }
+  // Exact-word match in label-tokens: 'va' === 'van' niet maar 'van' === 'van' wel
+  if (lbl.split(' ').includes(token)) return { field: 'label', score: 80, position: lbl.indexOf(token) }
+  // Prefix-match krijgt kind-gewicht
+  if (lbl.startsWith(token + ' ') || lbl.startsWith(token)) {
+    return { field: 'label', score: Math.round(70 * w), position: 0 }
+  }
+  const lblIdx = lbl.indexOf(token)
+  if (lblIdx >= 0) return { field: 'label', score: Math.round(40 * w), position: lblIdx }
+
+  // Synoniemen
   if (item.synonyms?.length) {
     for (const syn of item.synonyms) {
       const sn = normalize(syn)
       if (sn === token) return { field: 'synonym', score: 60, position: 0 }
-      if (sn.startsWith(token)) return { field: 'synonym', score: 45, position: 0 }
-      if (sn.includes(token)) return { field: 'synonym', score: 35, position: sn.indexOf(token) }
+      if (sn.startsWith(token)) return { field: 'synonym', score: Math.round(45 * w), position: 0 }
+      if (sn.includes(token)) return { field: 'synonym', score: Math.round(35 * w), position: sn.indexOf(token) }
     }
   }
 
@@ -519,14 +541,14 @@ function scoreToken(token: string, item: SearchItem): FieldHit | null {
   if (item.description) {
     const dn = normalize(item.description)
     const di = dn.indexOf(token)
-    if (di >= 0) return { field: 'description', score: 20, position: di }
+    if (di >= 0) return { field: 'description', score: Math.round(20 * w), position: di }
   }
 
-  // Volledige body (alleen voor docs/factoids met body)
+  // Volledige body
   if (item.body) {
     const bn = normalize(item.body)
     const bi = bn.indexOf(token)
-    if (bi >= 0) return { field: 'body', score: 12, position: bi }
+    if (bi >= 0) return { field: 'body', score: Math.round(12 * w), position: bi }
   }
 
   return null

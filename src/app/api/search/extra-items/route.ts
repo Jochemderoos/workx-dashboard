@@ -26,7 +26,7 @@ export async function GET() {
       const bits = [k.plaats, k.contactDaar, k.email, k.telefoon, k.bijzonderheden].filter(Boolean).join(' · ')
       items.push({
         id: `bevriend-kantoor:${k.id}`,
-        kind: 'page',
+        kind: 'detail',
         label: k.naam,
         description: `Bevriend kantoor — ${isIntl ? 'internationaal' : 'NL'} · ${k.category}${bits ? ` · ${bits.slice(0, 80)}` : ''}`,
         href: `/dashboard/bevriende-kantoren?focus=${encodeURIComponent(k.id)}`,

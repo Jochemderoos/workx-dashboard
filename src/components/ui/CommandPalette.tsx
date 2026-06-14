@@ -41,6 +41,7 @@ const KIND_ICON = {
   factoid: Icons.info ?? Icons.sparkles,
   action: Icons.sparkles,
   person: Icons.user,
+  detail: Icons.bookmark ?? Icons.fileText,
 } as const
 
 const KIND_LABEL = {
@@ -49,6 +50,7 @@ const KIND_LABEL = {
   factoid: 'Gegevens',
   action: 'Actie',
   person: 'Persoon',
+  detail: 'Record',
 } as const
 
 // ---------------------------------------------------------------------------
