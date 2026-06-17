@@ -32,6 +32,16 @@ export async function main(externalPrisma?: PrismaClient) {
     await prisma.$executeRawUnsafe(`
       CREATE INDEX IF NOT EXISTS "OfficeRequest_createdAt_idx" ON "OfficeRequest" ("createdAt")
     `)
+    // Office-reactie velden (gemigreerd voor bestaande tabellen)
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "OfficeRequest" ADD COLUMN IF NOT EXISTS "officeReply" TEXT
+    `)
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "OfficeRequest" ADD COLUMN IF NOT EXISTS "officeReplyBy" TEXT
+    `)
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "OfficeRequest" ADD COLUMN IF NOT EXISTS "officeReplyAt" TIMESTAMP(3)
+    `)
   } finally {
     if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }

@@ -940,6 +940,9 @@ interface OfficeRequestItem {
   description: string | null
   assigneeName: string | null
   confidential: boolean
+  officeReply: string | null
+  officeReplyBy: string | null
+  officeReplyAt: string | null
   completedAt: string | null
   completedBy: string | null
   createdAt: string
@@ -1109,6 +1112,8 @@ function RequestCard({
 }) {
   const [busy, setBusy] = useState(false)
   const [showAssignee, setShowAssignee] = useState(false)
+  const [showReplyForm, setShowReplyForm] = useState(false)
+  const [replyDraft, setReplyDraft] = useState(request.officeReply || '')
   const isDone = !!request.completedAt
   const requesterPhoto = getPhotoUrl(request.requester.name, request.requester.avatarUrl)
   const assigneePhoto = request.assigneeName ? getPhotoUrl(request.assigneeName) : null
@@ -1147,6 +1152,22 @@ function RequestCard({
     try {
       const res = await fetch(`/api/office-requests/${request.id}`, { method: 'DELETE' })
       if (res.ok) onChange()
+    } finally { setBusy(false) }
+  }
+
+  const saveReply = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/office-requests/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ officeReply: replyDraft }),
+      })
+      if (res.ok) {
+        toast.success(replyDraft.trim() ? 'Reactie verzonden — aanvrager krijgt melding' : 'Reactie verwijderd')
+        setShowReplyForm(false)
+        onChange()
+      } else toast.error('Kon reactie niet opslaan')
     } finally { setBusy(false) }
   }
 
@@ -1191,6 +1212,59 @@ function RequestCard({
             <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">{request.description}</p>
           )}
 
+          {/* Office-reactie (zichtbaar voor iedereen die het verzoek mag zien) */}
+          {request.officeReply && !showReplyForm && (
+            <div className="mt-3 rounded-lg bg-sky-500/[0.06] border border-sky-500/20 px-3 py-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Icons.chat size={11} className="text-sky-300" />
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-sky-300">
+                  Reactie van {request.officeReplyBy?.split(' ')[0] || 'Office'}
+                </p>
+                {canManage && !isDone && (
+                  <button
+                    onClick={() => { setReplyDraft(request.officeReply || ''); setShowReplyForm(true) }}
+                    className="ml-auto text-[10px] text-sky-300/70 hover:text-sky-200 underline"
+                  >
+                    Wijzig
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-gray-200 whitespace-pre-wrap">{request.officeReply}</p>
+            </div>
+          )}
+
+          {/* Reactie-formulier — alleen Office team, alleen op open verzoeken */}
+          {canManage && !isDone && showReplyForm && (
+            <div className="mt-3 rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-widest font-semibold text-sky-300 mb-1.5">
+                Je reactie naar {request.requester.name.split(' ')[0]}
+              </p>
+              <textarea
+                value={replyDraft}
+                onChange={(e) => setReplyDraft(e.target.value)}
+                rows={3}
+                placeholder={`Bv. 'Helaas niet mogelijk omdat...' of 'Doe ik morgenmiddag, hoor je nog!'`}
+                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-sky-400/30 resize-none"
+                autoFocus
+              />
+              <div className="flex items-center justify-end gap-2 mt-2">
+                <button
+                  onClick={() => { setShowReplyForm(false); setReplyDraft(request.officeReply || '') }}
+                  className="px-3 py-1 rounded-md text-xs text-gray-400 hover:text-white"
+                >
+                  Annuleren
+                </button>
+                <button
+                  onClick={saveReply}
+                  disabled={busy}
+                  className="px-3 py-1 rounded-md text-xs font-medium bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 transition-colors disabled:opacity-50"
+                >
+                  {replyDraft.trim() ? 'Reactie verzenden' : 'Reactie wissen'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Assignee + action row */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {request.assigneeName ? (
@@ -1227,6 +1301,17 @@ function RequestCard({
             )}
 
             <div className="flex-1" />
+
+            {canManage && !isDone && !request.officeReply && !showReplyForm && (
+              <button
+                onClick={() => { setReplyDraft(''); setShowReplyForm(true) }}
+                disabled={busy}
+                className="text-xs text-sky-300 hover:text-sky-200 px-2 py-1 rounded-md bg-sky-500/[0.08] hover:bg-sky-500/[0.15] transition-colors flex items-center gap-1"
+              >
+                <Icons.chat size={12} />
+                Reageer
+              </button>
+            )}
 
             {canManage && (
               <button

@@ -28,6 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const data: Record<string, unknown> = {}
     let justCompleted = false
+    let newOfficeReply: string | null = null
 
     if (typeof body.assigneeName === 'string') {
       if (!canEditOffice(session)) {
@@ -50,6 +51,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
+    if (typeof body.officeReply === 'string') {
+      if (!canEditOffice(session)) {
+        return NextResponse.json({ error: 'Alleen Office-team mag reageren' }, { status: 403 })
+      }
+      const trimmed = body.officeReply.trim()
+      if (trimmed.length === 0) {
+        // Reactie wissen
+        data.officeReply = null
+        data.officeReplyBy = null
+        data.officeReplyAt = null
+      } else {
+        data.officeReply = trimmed
+        data.officeReplyBy = session.user.name || session.user.id
+        data.officeReplyAt = new Date()
+        newOfficeReply = trimmed
+      }
+    }
+
     if (typeof body.confidential === 'boolean') {
       if (!isManager(session.user.role) && existing.requesterId !== session.user.id) {
         return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
@@ -64,6 +83,37 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         requester: { select: { id: true, name: true, avatarUrl: true, role: true } },
       },
     })
+
+    // Slack-DM bij nieuwe reactie naar de aanvrager
+    if (newOfficeReply && existing.requester?.email) {
+      try {
+        const url = `${DASHBOARD_BASE}/dashboard/office?tab=requests`
+        const replyExcerpt = newOfficeReply.length > 200 ? newOfficeReply.slice(0, 200) + '…' : newOfficeReply
+        const blocks = [
+          {
+            type: 'rich_text',
+            elements: [
+              {
+                type: 'rich_text_section',
+                elements: [
+                  { type: 'text', text: '💬 Reactie op je verzoek aan Office\n', style: { bold: true } },
+                  { type: 'text', text: `"${existing.title}"\n\n` },
+                  { type: 'text', text: replyExcerpt, style: { italic: true } },
+                  { type: 'text', text: '\n\n— ' },
+                  { type: 'text', text: (session.user.name || 'Office'), style: { bold: true } },
+                  { type: 'text', text: '\n→ ' },
+                  { type: 'link', url, text: 'Bekijk in dashboard' },
+                ],
+              },
+            ],
+          },
+        ]
+        const fallback = `💬 Reactie op je verzoek "${existing.title}": ${replyExcerpt}. ${url}`
+        await sendDirectMessage(existing.requester.email, fallback, blocks as any)
+      } catch (err) {
+        console.error('Slack-DM bij reactie mislukt (non-blocking):', err)
+      }
+    }
 
     // Slack-DM bij afronden naar de aanvrager
     if (justCompleted && existing.requester?.email) {

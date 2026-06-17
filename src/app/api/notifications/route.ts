@@ -1044,6 +1044,36 @@ export async function GET() {
       // silent
     }
 
+    // Office-reactie op verzoek — toon notificatie voor de aanvrager voor
+    // open verzoeken met een reactie waar ze nog niet op gereageerd hebben.
+    // Verschijnt zolang het verzoek nog open is. Dismissbaar.
+    try {
+      const replies = await prisma.officeRequest.findMany({
+        where: {
+          requesterId: userId,
+          officeReplyAt: { not: null },
+          completedAt: null,
+        },
+        orderBy: { officeReplyAt: 'desc' },
+      })
+      for (const r of replies) {
+        const key = `office-request-reply-${r.id}-${r.officeReplyAt?.toISOString()}`
+        if (dismissedKeys.has(key)) continue
+        notifications.push({
+          id: key,
+          type: 'office-request-reply',
+          title: 'Reactie op je verzoek aan Office',
+          message: `${r.title}: ${r.officeReply?.slice(0, 80)}${(r.officeReply?.length || 0) > 80 ? '…' : ''}`,
+          createdAt: r.officeReplyAt!,
+          read: false,
+          href: '/dashboard/office?tab=requests',
+          priority: 'high',
+        })
+      }
+    } catch {
+      // silent
+    }
+
     // Office-verzoek afgerond — toon notificatie voor de aanvrager.
     // Notification verschijnt zolang het verzoek nog in de lijst staat
     // (afgerond + < 7 dagen oud).

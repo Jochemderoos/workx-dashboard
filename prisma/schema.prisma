@@ -2341,6 +2341,11 @@ model OfficeRequest {
   description   String?   @db.Text
   assigneeName  String?   // volledige naam uit Office team (kan ook leeg)
   confidential  Boolean   @default(false) // alleen Hanna + partners zien
+  // Reactie van Office team (één veld, overschrijfbaar). Bij elke update
+  // krijgt requester Slack-DM + dashboard-melding.
+  officeReply   String?   @db.Text
+  officeReplyBy String?
+  officeReplyAt DateTime?
   completedAt   DateTime?
   completedBy   String?
   createdAt     DateTime  @default(now())
