@@ -1008,6 +1008,42 @@ export async function GET() {
       // silent — reminder mag never fail
     }
 
+    // Nieuwe Office-verzoeken voor Hanna — toon één notificatie per
+    // open verzoek waar nog niemand is toegewezen, ingediend in laatste 48u.
+    try {
+      const myName = (session.user.name || '').toLowerCase()
+      if (myName.startsWith('hanna')) {
+        const twoDaysAgo = new Date(Date.now() - 48 * 3600 * 1000)
+        const newOpen = await prisma.officeRequest.findMany({
+          where: {
+            completedAt: null,
+            assigneeName: null,
+            createdAt: { gte: twoDaysAgo },
+            requesterId: { not: userId },
+          },
+          include: { requester: { select: { name: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        })
+        for (const r of newOpen) {
+          const key = `office-request-new-${r.id}`
+          if (dismissedKeys.has(key)) continue
+          notifications.push({
+            id: key,
+            type: 'office-request-new',
+            title: 'Nieuw verzoek aan Office',
+            message: `${r.requester.name}: "${r.title}"`,
+            createdAt: r.createdAt,
+            read: false,
+            href: '/dashboard/office?tab=requests',
+            priority: 'high',
+          })
+        }
+      }
+    } catch {
+      // silent
+    }
+
     // Office-verzoek afgerond — toon notificatie voor de aanvrager.
     // Notification verschijnt zolang het verzoek nog in de lijst staat
     // (afgerond + < 7 dagen oud).

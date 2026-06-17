@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendDirectMessage } from '@/lib/slack'
+
+const DASHBOARD_BASE = (process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app').replace(/\/$/, '')
 
 function canSeeConfidential(role?: string | null): boolean {
   return role === 'PARTNER' || role === 'ADMIN' || role === 'OFFICE_MANAGER'
@@ -81,6 +84,40 @@ export async function POST(req: NextRequest) {
         requester: { select: { id: true, name: true, avatarUrl: true, role: true } },
       },
     })
+
+    // Slack-DM naar Hanna (tenzij zij zelf de aanvrager is)
+    try {
+      const hanna = await prisma.user.findFirst({
+        where: { name: { contains: 'Hanna', mode: 'insensitive' } },
+        select: { id: true, email: true },
+      })
+      if (hanna?.email && hanna.id !== created.requesterId) {
+        const url = `${DASHBOARD_BASE}/dashboard/office?tab=requests`
+        const blocks = [
+          {
+            type: 'rich_text',
+            elements: [
+              {
+                type: 'rich_text_section',
+                elements: [
+                  { type: 'text', text: '📋 Nieuw verzoek aan Office\n', style: { bold: true } },
+                  { type: 'text', text: `Van ${created.requester.name}: "${created.title}"` },
+                  ...(created.confidential ? [{ type: 'text', text: ' 🔒 vertrouwelijk' }] : []),
+                  { type: 'text', text: '\n\n→ ' },
+                  { type: 'link', url, text: 'Bekijk in dashboard' },
+                ],
+              },
+            ],
+          },
+        ]
+        const fallback = `📋 Nieuw verzoek aan Office van ${created.requester.name}: "${created.title}". ${url}`
+        void sendDirectMessage(hanna.email, fallback, blocks as any).catch(err => {
+          console.error('Slack-DM aan Hanna mislukt (non-blocking):', err)
+        })
+      }
+    } catch (err) {
+      console.error('Hanna-notify mislukt (non-blocking):', err)
+    }
 
     return NextResponse.json(created)
   } catch (err) {
