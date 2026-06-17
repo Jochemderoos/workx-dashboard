@@ -32,14 +32,15 @@ export async function PUT(req: NextRequest) {
     const forwardTo = body.forwardTo == null || body.forwardTo === '' ? null : String(body.forwardTo)
     const coverBy = body.coverBy == null || body.coverBy === '' ? null : String(body.coverBy)
     const note = body.note == null || body.note === '' ? null : String(body.note)
+    const infoboxBy = body.infoboxBy == null || body.infoboxBy === '' ? null : String(body.infoboxBy)
 
     if (!date) return NextResponse.json({ error: 'Ongeldige datum' }, { status: 400 })
     if (!VALID_MODE.has(mode)) return NextResponse.json({ error: 'Ongeldige mode' }, { status: 400 })
 
     const entry = await prisma.officePhoneDay.upsert({
       where: { date },
-      create: { date, mode, forwardTo, coverBy, note },
-      update: { mode, forwardTo, coverBy, note },
+      create: { date, mode, forwardTo, coverBy, note, infoboxBy },
+      update: { mode, forwardTo, coverBy, note, infoboxBy },
     })
 
     return NextResponse.json(entry)

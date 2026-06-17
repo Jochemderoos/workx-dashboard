@@ -44,6 +44,7 @@ import { main as addTrainingCategoryColumns } from './add-training-category-colu
 import { main as addYearAgendaTable } from './add-year-agenda-table'
 import { main as addWorkxOutingsTables } from './add-workx-outings-tables'
 import { main as addPartnerTaskExecutorsTable } from './add-partner-task-executors-table'
+import { main as addOfficePhoneInfobox } from './add-office-phone-infobox'
 import { main as claimLegacyTransitie } from './claim-legacy-transitie'
 
 // Recurring seeds — idempotent en mogelijk nog uitbreidbaar.
@@ -107,6 +108,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-year-agenda-table', run: addYearAgendaTable },
   { name: 'add-workx-outings-tables', run: addWorkxOutingsTables },
   { name: 'add-partner-task-executors-table', run: addPartnerTaskExecutorsTable },
+  { name: 'add-office-phone-infobox', run: addOfficePhoneInfobox },
   { name: 'claim-legacy-transitie', run: claimLegacyTransitie },
   { name: 'seed-partner-tasks', run: seedPartnerTasks },
   { name: 'seed-monthly-costs-2026', run: seedMonthlyCosts2026 },

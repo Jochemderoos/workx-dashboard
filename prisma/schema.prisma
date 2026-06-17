@@ -2328,13 +2328,14 @@ model OfficeAttendanceEntry {
 // mode='FORWARD' → handmatig doorgeschakeld naar `forwardTo`
 // mode='COVER'   → handmatig opgenomen door `coverBy`
 model OfficePhoneDay {
-  id        String   @id @default(cuid())
-  date      DateTime @unique @db.Date
-  mode      String   @default("AUTO")
-  forwardTo String?
-  coverBy   String?
-  note      String?
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  date       DateTime @unique @db.Date
+  mode       String   @default("AUTO")
+  forwardTo  String?
+  coverBy    String?
+  note       String?
+  infoboxBy  String?  // volledige naam van persoon die infobox bijhoudt vandaag
+  updatedAt  DateTime @updatedAt
 }
 
 // Medewerker week-intake — wat hebben ze liggen, beschikbaarheid en bijzonderheden.

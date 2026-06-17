@@ -1008,6 +1008,35 @@ export async function GET() {
       // silent — reminder mag never fail
     }
 
+    // Office infobox reminder — voor de persoon die vandaag is toegewezen
+    // (niet Hanna). Verschijnt tot ze 'm dismissen.
+    try {
+      const todayDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+      const phone = await prisma.officePhoneDay.findUnique({ where: { date: todayDate } })
+      const infoboxName = phone?.infoboxBy?.trim()
+      if (infoboxName && !infoboxName.toLowerCase().startsWith('hanna')) {
+        const myName = (session.user.name || '').trim()
+        if (myName && myName.toLowerCase() === infoboxName.toLowerCase()) {
+          const dateStr = todayDate.toISOString().slice(0, 10)
+          const key = `office-infobox-${dateStr}`
+          if (!dismissedKeys.has(key)) {
+            notifications.push({
+              id: key,
+              type: 'office-infobox',
+              title: 'Houd vandaag de Infobox bij',
+              message: 'Je bent door Hanna ingedeeld om vandaag de infobox bij te houden.',
+              createdAt: now,
+              read: false,
+              href: '/dashboard/office',
+              priority: 'high',
+            })
+          }
+        }
+      }
+    } catch {
+      // silent
+    }
+
     // Sort by createdAt (newest first)
     notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 

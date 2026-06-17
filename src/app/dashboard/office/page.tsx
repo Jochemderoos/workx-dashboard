@@ -5,8 +5,11 @@ import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import TextReveal from '@/components/ui/TextReveal'
-import { getPhotoUrl } from '@/lib/team-photos'
+import { getPhotoUrl, PARTNERS } from '@/lib/team-photos'
 import { OFFICE_PEOPLE, OFFICE_PERSON_KEYS, canEditOffice } from '@/lib/office-team'
+
+// Wie kan infobox bijhouden? Office team + alle Partners.
+const PARTNERS_FOR_INFOBOX = PARTNERS
 
 type Status = 'OFFICE' | 'REMOTE' | 'ABSENT'
 type PhoneMode = 'AUTO' | 'FORWARD' | 'COVER'
@@ -26,6 +29,7 @@ interface PhoneDay {
   forwardTo: string | null
   coverBy: string | null
   note: string | null
+  infoboxBy: string | null
 }
 
 const DAYS_NL = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag']
@@ -613,7 +617,14 @@ function PhoneEditModal({
   const [forwardTo, setForwardTo] = useState(current?.forwardTo || '')
   const [coverBy, setCoverBy] = useState(current?.coverBy || '')
   const [note, setNote] = useState(current?.note || '')
+  const [infoboxBy, setInfoboxBy] = useState<string>(current?.infoboxBy || '')
   const [saving, setSaving] = useState(false)
+
+  // Lijst van team-leden die infobox kunnen bijhouden — Office + Partners
+  const infoboxKandidaten = useMemo(() => {
+    const office = OFFICE_PEOPLE.map(p => p.name)
+    return [...office, ...PARTNERS_FOR_INFOBOX]
+  }, [])
 
   const handleSave = async () => {
     setSaving(true)
@@ -623,6 +634,7 @@ function PhoneEditModal({
         forwardTo: mode === 'FORWARD' ? forwardTo : null,
         coverBy: mode === 'COVER' ? coverBy : null,
         note,
+        infoboxBy: infoboxBy || null,
       })
     } finally {
       setSaving(false)
@@ -709,6 +721,45 @@ function PhoneEditModal({
               placeholder="Bv. 'tot 13u doorgeschakeld'"
               className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
             />
+          </div>
+
+          {/* Infobox bijhouden: wie houdt vandaag de infobox bij?
+              Hanna doet 't normaal, dus 'Niemand' = Hanna (geen melding nodig). */}
+          <div className="pt-2 border-t border-white/5">
+            <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Infobox bijhouden</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setInfoboxBy('')}
+                className={`text-xs px-3 py-2 rounded-lg border text-left transition-colors ${
+                  !infoboxBy
+                    ? 'bg-workx-lime/[0.08] border-workx-lime/40 text-white'
+                    : 'bg-white/[0.02] border-white/10 text-gray-400 hover:bg-white/5'
+                }`}
+              >
+                Hanna (default)
+              </button>
+              {infoboxKandidaten.filter(n => n !== 'Hanna Blaauboer').map(name => {
+                const selected = infoboxBy === name
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setInfoboxBy(name)}
+                    className={`text-xs px-3 py-2 rounded-lg border text-left transition-colors truncate ${
+                      selected
+                        ? 'bg-workx-lime/[0.08] border-workx-lime/40 text-white'
+                        : 'bg-white/[0.02] border-white/10 text-gray-400 hover:bg-white/5'
+                    }`}
+                  >
+                    {name.split(' ')[0]}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+              Gekozen persoon krijgt om 07:00 een Slack-DM en dashboard-melding. Bij Hanna geen melding (zij houdt 'm standaard bij).
+            </p>
           </div>
         </div>
 
