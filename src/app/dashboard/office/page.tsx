@@ -939,6 +939,7 @@ interface OfficeRequestItem {
   title: string
   description: string | null
   assigneeName: string | null
+  category: string | null
   confidential: boolean
   officeReply: string | null
   officeReplyBy: string | null
@@ -949,10 +950,19 @@ interface OfficeRequestItem {
   requester: { id: string; name: string; avatarUrl: string | null; role: string }
 }
 
+interface OfficeRequestCategory {
+  id: string
+  name: string
+  emoji: string | null
+  sortOrder: number
+}
+
 function OfficeRequestsPanel({ currentUser, canManage }: { currentUser: SessionUser; canManage: boolean }) {
   const [requests, setRequests] = useState<OfficeRequestItem[]>([])
+  const [categories, setCategories] = useState<OfficeRequestCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showCategories, setShowCategories] = useState(false)
   const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([])
 
   const isPartner = currentUser.role === 'PARTNER' || currentUser.role === 'ADMIN'
@@ -972,6 +982,17 @@ function OfficeRequestsPanel({ currentUser, canManage }: { currentUser: SessionU
   }, [])
 
   useEffect(() => { fetchRequests() }, [fetchRequests])
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch('/api/office-request-categories')
+      if (res.ok) {
+        const data = await res.json()
+        setCategories(data.categories || [])
+      }
+    } catch { /* silent */ }
+  }, [])
+  useEffect(() => { fetchCategories() }, [fetchCategories])
 
   // Voor Office team: lijst users om namens te kunnen invoeren
   useEffect(() => {
@@ -996,21 +1017,32 @@ function OfficeRequestsPanel({ currentUser, canManage }: { currentUser: SessionU
 
   return (
     <section className="space-y-6">
-      {/* Nieuw verzoek knop */}
-      <div className="flex items-center justify-between">
+      {/* Header met counter + acties */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-lg font-semibold text-white">{open.length} open verzoek{open.length === 1 ? '' : 'en'}</h2>
           {done.length > 0 && (
             <p className="text-xs text-gray-500 mt-0.5">{done.length} afgerond (laatste 7 dagen)</p>
           )}
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime text-workx-dark text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          <Icons.plus size={16} />
-          Nieuw verzoek
-        </button>
+        <div className="flex items-center gap-2">
+          {isOfficeTeam && (
+            <button
+              onClick={() => setShowCategories(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.04] text-gray-300 text-xs font-medium hover:bg-white/[0.08] transition-colors"
+            >
+              <Icons.hash size={13} />
+              Categorieën
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime text-workx-dark text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <Icons.plus size={16} />
+            Nieuw verzoek
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -1046,6 +1078,7 @@ function OfficeRequestsPanel({ currentUser, canManage }: { currentUser: SessionU
                           request={r}
                           canManage={isOfficeTeam}
                           isOwner={r.requester.id === currentUser.id}
+                          categories={categories}
                           onChange={fetchRequests}
                         />
                       ))}
@@ -1058,15 +1091,47 @@ function OfficeRequestsPanel({ currentUser, canManage }: { currentUser: SessionU
                   )}
                 </>
               )}
-              {otherOpen.map(r => (
-                <RequestCard
-                  key={r.id}
-                  request={r}
-                  canManage={isOfficeTeam}
-                  isOwner={r.requester.id === currentUser.id}
-                  onChange={fetchRequests}
-                />
-              ))}
+              {/* Groepeer overige open verzoeken per categorie */}
+              {(() => {
+                const groups = new Map<string, OfficeRequestItem[]>()
+                for (const r of otherOpen) {
+                  const cat = r.category || 'Overig'
+                  if (!groups.has(cat)) groups.set(cat, [])
+                  groups.get(cat)!.push(r)
+                }
+                // Sort categorieën op categorie-sortOrder, dan alfabetisch
+                const sortOrder = new Map(categories.map(c => [c.name, c.sortOrder]))
+                const emojis = new Map(categories.map(c => [c.name, c.emoji]))
+                const sorted = Array.from(groups.entries()).sort((a, b) => {
+                  const sa = sortOrder.get(a[0]) ?? 500
+                  const sb = sortOrder.get(b[0]) ?? 500
+                  return sa - sb || a[0].localeCompare(b[0])
+                })
+                return sorted.map(([catName, items]) => (
+                  <div key={catName} className="space-y-2 mt-4 first:mt-0">
+                    <div className="flex items-center gap-2 px-1">
+                      <span className="text-sm">{emojis.get(catName) || '📌'}</span>
+                      <h4 className="text-xs uppercase tracking-[0.15em] font-semibold text-gray-400">
+                        {catName}
+                      </h4>
+                      <span className="text-[10px] text-gray-500 ml-1">{items.length}</span>
+                      <div className="flex-1 h-px bg-white/5 ml-2" />
+                    </div>
+                    <div className="space-y-3">
+                      {items.map(r => (
+                        <RequestCard
+                          key={r.id}
+                          request={r}
+                          canManage={isOfficeTeam}
+                          isOwner={r.requester.id === currentUser.id}
+                          categories={categories}
+                          onChange={fetchRequests}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              })()}
               {done.length > 0 && (
                 <>
                   <div className="pt-4 mt-4 border-t border-white/10">
@@ -1078,6 +1143,7 @@ function OfficeRequestsPanel({ currentUser, canManage }: { currentUser: SessionU
                       request={r}
                       canManage={isOfficeTeam}
                       isOwner={r.requester.id === currentUser.id}
+                      categories={categories}
                       onChange={fetchRequests}
                     />
                   ))}
@@ -1098,18 +1164,157 @@ function OfficeRequestsPanel({ currentUser, canManage }: { currentUser: SessionU
           onCreated={() => { setShowForm(false); fetchRequests() }}
         />
       )}
+      {showCategories && (
+        <CategoriesModal
+          categories={categories}
+          onClose={() => setShowCategories(false)}
+          onChange={() => { fetchCategories(); fetchRequests() }}
+        />
+      )}
     </section>
   )
 }
 
+function CategoriesModal({
+  categories, onClose, onChange,
+}: {
+  categories: OfficeRequestCategory[]
+  onClose: () => void
+  onChange: () => void
+}) {
+  const [newName, setNewName] = useState('')
+  const [newEmoji, setNewEmoji] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const addCat = async () => {
+    if (!newName.trim()) return
+    setBusy(true)
+    try {
+      const res = await fetch('/api/office-request-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim(), emoji: newEmoji.trim() || undefined }),
+      })
+      if (res.ok) { setNewName(''); setNewEmoji(''); onChange() }
+      else {
+        const d = await res.json().catch(() => null)
+        toast.error(d?.error || 'Kon niet toevoegen')
+      }
+    } finally { setBusy(false) }
+  }
+
+  const deleteCat = async (id: string, name: string) => {
+    if (name === 'Overig') return toast.error('Standaard categorie "Overig" kan niet worden verwijderd')
+    if (!confirm(`Categorie "${name}" verwijderen? Verzoeken in deze categorie gaan naar Overig.`)) return
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/office-request-categories/${id}`, { method: 'DELETE' })
+      if (res.ok) onChange()
+    } finally { setBusy(false) }
+  }
+
+  const renameCat = async (id: string, currentName: string) => {
+    const next = prompt('Nieuwe naam', currentName)
+    if (!next || next === currentName) return
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/office-request-categories/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: next.trim() }),
+      })
+      if (res.ok) onChange()
+      else toast.error('Kon naam niet wijzigen')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-workx-gray rounded-xl border border-white/10 shadow-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-white">Categorieën beheren</h3>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-md hover:bg-white/5">
+            <Icons.x size={18} />
+          </button>
+        </div>
+        <div className="p-5 space-y-2 max-h-[60vh] overflow-y-auto">
+          {categories.map(c => (
+            <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.03] border border-white/5">
+              <span className="text-base w-7 text-center">{c.emoji || '📌'}</span>
+              <span className="flex-1 text-sm text-white">{c.name}</span>
+              <button
+                onClick={() => renameCat(c.id, c.name)}
+                disabled={busy || c.name === 'Overig'}
+                className="text-[11px] text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-white/5 disabled:opacity-30"
+              >
+                Hernoemen
+              </button>
+              <button
+                onClick={() => deleteCat(c.id, c.name)}
+                disabled={busy || c.name === 'Overig'}
+                className="p-1.5 rounded text-gray-500 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-30"
+                title="Verwijderen"
+              >
+                <Icons.trash size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-4 border-t border-white/5 space-y-2">
+          <label className="block text-[10px] uppercase tracking-widest text-gray-500">Nieuwe categorie</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newEmoji}
+              onChange={(e) => setNewEmoji(e.target.value.slice(0, 4))}
+              placeholder="🎨"
+              maxLength={4}
+              className="w-14 bg-white/5 border border-white/10 rounded-md px-2 py-2 text-center text-sm text-white focus:outline-none focus:border-workx-lime/30"
+            />
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Naam"
+              className="flex-1 bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+            />
+            <button
+              onClick={addCat}
+              disabled={busy || !newName.trim()}
+              className="px-3 py-2 rounded-md text-sm font-medium bg-workx-lime text-workx-dark hover:opacity-90 disabled:opacity-40"
+            >
+              Toevoegen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function RequestCard({
-  request, canManage, isOwner, onChange,
+  request, canManage, isOwner, categories, onChange,
 }: {
   request: OfficeRequestItem
   canManage: boolean
   isOwner: boolean
+  categories: OfficeRequestCategory[]
   onChange: () => void
 }) {
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false)
+
+  const setCategory = async (name: string) => {
+    try {
+      const res = await fetch(`/api/office-requests/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: name }),
+      })
+      if (res.ok) { onChange(); setShowCategoryPicker(false) }
+    } catch { toast.error('Kon categorie niet wijzigen') }
+  }
+  const currentCatEmoji = categories.find(c => c.name === request.category)?.emoji
   const [busy, setBusy] = useState(false)
   const [showAssignee, setShowAssignee] = useState(false)
   const [showReplyForm, setShowReplyForm] = useState(false)
@@ -1200,12 +1405,52 @@ function RequestCard({
                 {request.requester.name} · {new Date(request.createdAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
               </p>
             </div>
-            {request.confidential && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded bg-amber-500/10 text-amber-300 flex-shrink-0">
-                <Icons.lock size={10} />
-                Vertrouwelijk
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 flex-shrink-0 relative">
+              {request.category && (
+                <button
+                  onClick={() => canManage && setShowCategoryPicker(v => !v)}
+                  disabled={!canManage}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded bg-white/[0.06] text-gray-300 ${canManage ? 'hover:bg-white/[0.12] cursor-pointer' : 'cursor-default'}`}
+                  title={canManage ? 'Categorie wijzigen' : ''}
+                >
+                  {currentCatEmoji && <span>{currentCatEmoji}</span>}
+                  {request.category}
+                </button>
+              )}
+              {!request.category && canManage && (
+                <button
+                  onClick={() => setShowCategoryPicker(v => !v)}
+                  className="text-[10px] text-gray-500 hover:text-gray-300 px-2 py-0.5 rounded bg-white/[0.03] hover:bg-white/[0.08]"
+                >
+                  + Categorie
+                </button>
+              )}
+              {request.confidential && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded bg-amber-500/10 text-amber-300">
+                  <Icons.lock size={10} />
+                  Vertrouwelijk
+                </span>
+              )}
+              {showCategoryPicker && canManage && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowCategoryPicker(false)} />
+                  <div className="absolute right-0 top-6 z-50 min-w-[200px] rounded-lg bg-workx-dark border border-white/15 shadow-2xl py-1 max-h-64 overflow-y-auto">
+                    {categories.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setCategory(c.name)}
+                        className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-white/[0.06] transition-colors ${
+                          request.category === c.name ? 'text-workx-lime' : 'text-gray-300'
+                        }`}
+                      >
+                        <span>{c.emoji || '📌'}</span>
+                        <span>{c.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {request.description && !isDone && (

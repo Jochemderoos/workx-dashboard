@@ -37,6 +37,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data.assigneeName = body.assigneeName.trim() || null
     }
 
+    if (typeof body.category === 'string') {
+      if (!canEditOffice(session)) {
+        return NextResponse.json({ error: 'Alleen Office-team mag categoriseren' }, { status: 403 })
+      }
+      data.category = body.category.trim() || null
+    }
+
     if (typeof body.completed === 'boolean') {
       if (!canEditOffice(session)) {
         return NextResponse.json({ error: 'Alleen Office-team mag afronden' }, { status: 403 })

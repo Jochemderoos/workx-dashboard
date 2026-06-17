@@ -42,6 +42,39 @@ export async function main(externalPrisma?: PrismaClient) {
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "OfficeRequest" ADD COLUMN IF NOT EXISTS "officeReplyAt" TIMESTAMP(3)
     `)
+    // Categorie-kolom
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "OfficeRequest" ADD COLUMN IF NOT EXISTS "category" TEXT
+    `)
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "OfficeRequest_category_idx" ON "OfficeRequest" ("category")
+    `)
+    // Categorieën-tabel
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "OfficeRequestCategory" (
+        "id" TEXT PRIMARY KEY,
+        "name" TEXT NOT NULL UNIQUE,
+        "emoji" TEXT,
+        "sortOrder" INTEGER NOT NULL DEFAULT 0,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    // Default categorieën (alleen invoegen als de tabel leeg is)
+    const existingCount = await prisma.officeRequestCategory.count().catch(() => 0)
+    if (existingCount === 0) {
+      const defaults = [
+        { name: 'IT', emoji: '💻', sortOrder: 10 },
+        { name: 'Website', emoji: '🌐', sortOrder: 20 },
+        { name: 'Printen', emoji: '🖨️', sortOrder: 30 },
+        { name: 'Marketing', emoji: '📣', sortOrder: 40 },
+        { name: 'Catering', emoji: '🥗', sortOrder: 50 },
+        { name: 'Kantoorbenodigdheden', emoji: '📦', sortOrder: 60 },
+        { name: 'Overig', emoji: '📌', sortOrder: 999 },
+      ]
+      for (const d of defaults) {
+        await prisma.officeRequestCategory.create({ data: d }).catch(() => {})
+      }
+    }
   } finally {
     if (!externalPrisma) await prisma.$disconnect().catch(() => {})
   }

@@ -2340,6 +2340,7 @@ model OfficeRequest {
   title         String
   description   String?   @db.Text
   assigneeName  String?   // volledige naam uit Office team (kan ook leeg)
+  category      String?   // categorie-naam, los gekoppeld zodat rename zonder cascade kan
   confidential  Boolean   @default(false) // alleen Hanna + partners zien
   // Reactie van Office team (één veld, overschrijfbaar). Bij elke update
   // krijgt requester Slack-DM + dashboard-melding.
@@ -2353,6 +2354,17 @@ model OfficeRequest {
 
   @@index([completedAt])
   @@index([createdAt])
+  @@index([category])
+}
+
+// Categorieën voor Office-verzoeken. Hanna beheert deze; AI classificeert
+// nieuwe verzoeken automatisch in een van deze categorieën.
+model OfficeRequestCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  emoji     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 model OfficePhoneDay {

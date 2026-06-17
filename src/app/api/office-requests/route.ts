@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendDirectMessage } from '@/lib/slack'
+import { classifyOfficeRequest } from '@/lib/classify-office-request'
 
 const DASHBOARD_BASE = (process.env.NEXTAUTH_URL || 'https://workx-dashboard.vercel.app').replace(/\/$/, '')
 
@@ -73,12 +74,25 @@ export async function POST(req: NextRequest) {
     const allowConfidential = canSeeConfidential(session.user.role)
     const finalConfidential = confidential && allowConfidential
 
+    // AI-classificatie van de categorie. Faalt stil → 'Overig' of null.
+    let aiCategory: string | null = null
+    try {
+      const cats = await prisma.officeRequestCategory.findMany({
+        select: { name: true },
+        orderBy: [{ sortOrder: 'asc' }],
+      })
+      aiCategory = await classifyOfficeRequest(title, description, cats.map(c => c.name))
+    } catch (err) {
+      console.error('classify failed', err)
+    }
+
     const created = await prisma.officeRequest.create({
       data: {
         requesterId,
         title,
         description: description || null,
         confidential: finalConfidential,
+        category: aiCategory,
       },
       include: {
         requester: { select: { id: true, name: true, avatarUrl: true, role: true } },
