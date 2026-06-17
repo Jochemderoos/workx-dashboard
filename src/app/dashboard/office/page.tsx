@@ -312,6 +312,13 @@ export default function OfficePage() {
             phone={phoneLookup.get(isoDateOnly(today))}
             onOffice={todayOnOffice}
           />
+          {/* Infobox bijhouden vandaag */}
+          <InfoboxRow
+            date={today}
+            phone={phoneLookup.get(isoDateOnly(today))}
+            editMode={canEdit}
+            onEdit={() => setPhoneEditFor(isoDateOnly(today))}
+          />
         </div>
       </section>
 
@@ -410,6 +417,46 @@ export default function OfficePage() {
             setPhoneEditFor(null)
           }}
         />
+      )}
+    </div>
+  )
+}
+
+// ───────── Infobox row in vandaag-paneel ─────────
+
+function InfoboxRow({
+  phone, editMode, onEdit,
+}: {
+  date: Date
+  phone?: PhoneDay
+  editMode: boolean
+  onEdit: () => void
+}) {
+  const name = phone?.infoboxBy?.trim() || ''
+  const isHanna = !name || name.toLowerCase().startsWith('hanna')
+  const display = isHanna ? 'Hanna' : name.split(' ')[0]
+
+  return (
+    <div className="flex items-center gap-4 px-5 py-3">
+      <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+        <Icons.fileText className="text-gray-400" size={18} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white">Infobox bijhouden</p>
+        <p className="text-[11px] text-gray-500">Vandaag</p>
+      </div>
+      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium bg-workx-lime/[0.08] text-workx-lime">
+        <span className="w-1.5 h-1.5 rounded-full bg-workx-lime" />
+        {display}
+      </span>
+      {editMode && (
+        <button
+          onClick={onEdit}
+          className="px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-300 bg-white/5 hover:bg-white/10 transition-colors"
+          title="Aanpassen"
+        >
+          Aanpassen
+        </button>
       )}
     </div>
   )
