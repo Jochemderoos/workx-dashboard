@@ -1008,6 +1008,35 @@ export async function GET() {
       // silent — reminder mag never fail
     }
 
+    // Office-verzoek afgerond — toon notificatie voor de aanvrager.
+    // Notification verschijnt zolang het verzoek nog in de lijst staat
+    // (afgerond + < 7 dagen oud).
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000)
+      const completedRequests = await prisma.officeRequest.findMany({
+        where: {
+          requesterId: userId,
+          completedAt: { gte: sevenDaysAgo, not: null },
+        },
+      })
+      for (const r of completedRequests) {
+        const key = `office-request-done-${r.id}`
+        if (dismissedKeys.has(key)) continue
+        notifications.push({
+          id: key,
+          type: 'office-request',
+          title: 'Verzoek aan Office afgerond ✅',
+          message: r.title,
+          createdAt: r.completedAt!,
+          read: false,
+          href: '/dashboard/office?tab=requests',
+          priority: 'medium',
+        })
+      }
+    } catch {
+      // silent
+    }
+
     // Office infobox reminder — voor de persoon die vandaag is toegewezen
     // (niet Hanna). Verschijnt tot ze 'm dismissen.
     try {

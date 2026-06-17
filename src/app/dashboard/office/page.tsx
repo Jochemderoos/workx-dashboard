@@ -110,6 +110,13 @@ export default function OfficePage() {
   const [loading, setLoading] = useState(true)
   const [weekOffset, setWeekOffset] = useState(0)
   const [phoneEditFor, setPhoneEditFor] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'aanwezigheid' | 'requests'>(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      return sp.get('tab') === 'requests' ? 'requests' : 'aanwezigheid'
+    }
+    return 'aanwezigheid'
+  })
 
   useEffect(() => {
     const load = async () => {
@@ -255,16 +262,51 @@ export default function OfficePage() {
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] font-medium text-gray-500 mb-1">Office</p>
           <h1 className="text-3xl font-semibold text-white tracking-tight">
-            <TextReveal>Aanwezigheid back office</TextReveal>
+            <TextReveal>
+              {activeTab === 'requests' ? 'Verzoeken aan Office' : 'Aanwezigheid back office'}
+            </TextReveal>
           </h1>
           <p className="text-sm text-gray-400 mt-2 max-w-2xl">
-            Wie van Hanna, Lotte, Bente en Diyar is wanneer op kantoor of remote, met de bijbehorende kantoortelefoon-regeling.
+            {activeTab === 'requests'
+              ? 'Eén centrale plek voor alles wat het Office team moet oppakken — geen losse Slack-/mail-/mondelinge stromen meer.'
+              : 'Wie van Hanna, Lotte, Bente en Diyar is wanneer op kantoor of remote, met de bijbehorende kantoortelefoon-regeling.'}
           </p>
         </div>
-        {canEdit && (
+        {canEdit && activeTab === 'aanwezigheid' && (
           <p className="text-xs text-gray-500">Klik op een cel om Kantoor / Remote / Afwezig te kiezen.</p>
         )}
       </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/5 self-start">
+        {([
+          { id: 'aanwezigheid' as const, label: 'Aanwezigheid & Telefoon', icon: Icons.users },
+          { id: 'requests' as const, label: 'Verzoeken aan Office', icon: Icons.fileText },
+        ]).map(t => {
+          const Icon = t.icon
+          const active = activeTab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                active
+                  ? 'bg-workx-lime text-workx-dark shadow'
+                  : 'text-gray-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icon size={15} />
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {activeTab === 'requests' && user && (
+        <OfficeRequestsPanel currentUser={user} canManage={canEdit} />
+      )}
+
+      {activeTab === 'aanwezigheid' && (<>
 
       {/* Vandaag-paneel */}
       <section>
@@ -404,6 +446,8 @@ export default function OfficePage() {
 
       {/* Kantoorgegevens — handig voor facturen, contracten, betalingen */}
       <OfficeDetails />
+
+      </>)}
 
       {/* Phone-edit modal — open voor iedereen die canEdit heeft */}
       {phoneEditFor && canEdit && (
@@ -885,5 +929,452 @@ function OfficeDetails() {
         </div>
       </div>
     </section>
+  )
+}
+
+// ───────── Verzoeken aan Office ─────────
+
+interface OfficeRequestItem {
+  id: string
+  title: string
+  description: string | null
+  assigneeName: string | null
+  confidential: boolean
+  completedAt: string | null
+  completedBy: string | null
+  createdAt: string
+  requester: { id: string; name: string; avatarUrl: string | null; role: string }
+}
+
+function OfficeRequestsPanel({ currentUser, canManage }: { currentUser: SessionUser; canManage: boolean }) {
+  const [requests, setRequests] = useState<OfficeRequestItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [allUsers, setAllUsers] = useState<{ id: string; name: string }[]>([])
+
+  const isPartner = currentUser.role === 'PARTNER' || currentUser.role === 'ADMIN'
+  const isOfficeTeam = canManage // Office team mag toewijzen + afronden + namens iemand
+
+  const fetchRequests = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/office-requests')
+      if (res.ok) {
+        const data = await res.json()
+        setRequests(data.requests || [])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchRequests() }, [fetchRequests])
+
+  // Voor Office team: lijst users om namens te kunnen invoeren
+  useEffect(() => {
+    if (!isOfficeTeam) return
+    fetch('/api/team').then(r => r.ok ? r.json() : []).then(d => {
+      if (Array.isArray(d)) setAllUsers(d.map((u: any) => ({ id: u.id, name: u.name })))
+    }).catch(() => {})
+  }, [isOfficeTeam])
+
+  const open = requests.filter(r => !r.completedAt)
+  const done = requests.filter(r => r.completedAt)
+  // "Aan jou toegewezen" — voor Office team-leden eigen verantwoordelijkheid
+  const isOfficeMember = OFFICE_PEOPLE.some(
+    p => p.name.toLowerCase() === currentUser.name.toLowerCase(),
+  )
+  const myAssigned = isOfficeMember
+    ? open.filter(r => r.assigneeName?.toLowerCase() === currentUser.name.toLowerCase())
+    : []
+  const otherOpen = isOfficeMember
+    ? open.filter(r => r.assigneeName?.toLowerCase() !== currentUser.name.toLowerCase())
+    : open
+
+  return (
+    <section className="space-y-6">
+      {/* Nieuw verzoek knop */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-white">{open.length} open verzoek{open.length === 1 ? '' : 'en'}</h2>
+          {done.length > 0 && (
+            <p className="text-xs text-gray-500 mt-0.5">{done.length} afgerond (laatste 7 dagen)</p>
+          )}
+        </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-workx-lime text-workx-dark text-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          <Icons.plus size={16} />
+          Nieuw verzoek
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-gray-500 text-sm">Laden…</div>
+      ) : (
+        <>
+          {open.length === 0 && done.length === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-white/10 p-12 text-center">
+              <div className="text-5xl mb-3">📭</div>
+              <p className="text-gray-300 font-medium mb-1">Nog geen verzoeken</p>
+              <p className="text-sm text-gray-500">
+                Klik op &quot;Nieuw verzoek&quot; om het eerste verzoek aan Office in te dienen.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Eigen toegewezen verzoeken — prominent voor Office team */}
+              {isOfficeMember && myAssigned.length > 0 && (
+                <>
+                  <div className="rounded-xl border border-workx-lime/30 bg-workx-lime/[0.04] p-4 mb-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-workx-lime/15 flex items-center justify-center">
+                        <Icons.check size={14} className="text-workx-lime" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-white">
+                        Aan jou toegewezen ({myAssigned.length})
+                      </h3>
+                    </div>
+                    <div className="space-y-3">
+                      {myAssigned.map(r => (
+                        <RequestCard
+                          key={r.id}
+                          request={r}
+                          canManage={isOfficeTeam}
+                          isOwner={r.requester.id === currentUser.id}
+                          onChange={fetchRequests}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {otherOpen.length > 0 && (
+                    <p className="text-xs uppercase tracking-[0.2em] font-medium text-gray-500 mt-6 mb-2">
+                      Overige open verzoeken
+                    </p>
+                  )}
+                </>
+              )}
+              {otherOpen.map(r => (
+                <RequestCard
+                  key={r.id}
+                  request={r}
+                  canManage={isOfficeTeam}
+                  isOwner={r.requester.id === currentUser.id}
+                  onChange={fetchRequests}
+                />
+              ))}
+              {done.length > 0 && (
+                <>
+                  <div className="pt-4 mt-4 border-t border-white/10">
+                    <p className="text-xs uppercase tracking-[0.2em] font-medium text-gray-500 mb-3">Afgerond — verdwijnt na 7 dagen</p>
+                  </div>
+                  {done.map(r => (
+                    <RequestCard
+                      key={r.id}
+                      request={r}
+                      canManage={isOfficeTeam}
+                      isOwner={r.requester.id === currentUser.id}
+                      onChange={fetchRequests}
+                    />
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {showForm && (
+        <NewRequestModal
+          isPartner={isPartner}
+          isOfficeTeam={isOfficeTeam}
+          allUsers={allUsers}
+          currentUser={currentUser}
+          onClose={() => setShowForm(false)}
+          onCreated={() => { setShowForm(false); fetchRequests() }}
+        />
+      )}
+    </section>
+  )
+}
+
+function RequestCard({
+  request, canManage, isOwner, onChange,
+}: {
+  request: OfficeRequestItem
+  canManage: boolean
+  isOwner: boolean
+  onChange: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [showAssignee, setShowAssignee] = useState(false)
+  const isDone = !!request.completedAt
+  const requesterPhoto = getPhotoUrl(request.requester.name, request.requester.avatarUrl)
+  const assigneePhoto = request.assigneeName ? getPhotoUrl(request.assigneeName) : null
+
+  const toggleDone = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/office-requests/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !isDone }),
+      })
+      if (res.ok) {
+        toast.success(isDone ? 'Heropend' : 'Afgerond — aanvrager krijgt melding')
+        onChange()
+      } else toast.error('Kon status niet wijzigen')
+    } finally { setBusy(false) }
+  }
+
+  const setAssignee = async (name: string) => {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/office-requests/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assigneeName: name }),
+      })
+      if (res.ok) { onChange(); setShowAssignee(false) }
+      else toast.error('Kon niet toewijzen')
+    } finally { setBusy(false) }
+  }
+
+  const deleteRequest = async () => {
+    if (!confirm('Verzoek verwijderen?')) return
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/office-requests/${request.id}`, { method: 'DELETE' })
+      if (res.ok) onChange()
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div className={`rounded-xl border p-4 transition-all ${
+      isDone
+        ? 'bg-white/[0.02] border-white/5 opacity-60'
+        : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.06]'
+    }`}>
+      <div className="flex items-start gap-3">
+        {/* Requester avatar */}
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+          {requesterPhoto ? (
+            <Image src={requesterPhoto} alt={request.requester.name} width={40} height={40} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-sm font-medium text-gray-300">
+              {request.requester.name.charAt(0)}
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="min-w-0">
+              <h3 className={`text-sm font-semibold ${isDone ? 'text-gray-500 line-through' : 'text-white'}`}>
+                {request.title}
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {request.requester.name} · {new Date(request.createdAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+              </p>
+            </div>
+            {request.confidential && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded bg-amber-500/10 text-amber-300 flex-shrink-0">
+                <Icons.lock size={10} />
+                Vertrouwelijk
+              </span>
+            )}
+          </div>
+
+          {request.description && !isDone && (
+            <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">{request.description}</p>
+          )}
+
+          {/* Assignee + action row */}
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            {request.assigneeName ? (
+              <div className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-300 text-xs">
+                {assigneePhoto && (
+                  <Image src={assigneePhoto} alt={request.assigneeName} width={16} height={16} className="w-4 h-4 rounded-full object-cover" />
+                )}
+                <span>Toegewezen aan {request.assigneeName.split(' ')[0]}</span>
+              </div>
+            ) : (
+              canManage && !isDone && (
+                <button
+                  onClick={() => setShowAssignee(v => !v)}
+                  className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  + Toewijzen
+                </button>
+              )
+            )}
+
+            {showAssignee && canManage && (
+              <div className="w-full flex flex-wrap gap-1.5 mt-1">
+                {OFFICE_PEOPLE.map(p => (
+                  <button
+                    key={p.key}
+                    onClick={() => setAssignee(p.name)}
+                    disabled={busy}
+                    className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-workx-lime/10 hover:text-workx-lime transition-colors text-gray-300"
+                  >
+                    {p.name.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex-1" />
+
+            {canManage && (
+              <button
+                onClick={toggleDone}
+                disabled={busy}
+                className={`text-xs font-medium px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 ${
+                  isDone
+                    ? 'bg-white/5 text-gray-300 hover:bg-white/10'
+                    : 'bg-workx-lime/20 text-workx-lime hover:bg-workx-lime/30'
+                }`}
+              >
+                {isDone ? '↺ Heropenen' : '✓ Afronden'}
+              </button>
+            )}
+            {(canManage || isOwner) && (
+              <button
+                onClick={deleteRequest}
+                disabled={busy}
+                className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Verwijderen"
+              >
+                <Icons.trash size={14} />
+              </button>
+            )}
+          </div>
+
+          {isDone && request.completedAt && (
+            <p className="text-[11px] text-gray-500 mt-2">
+              Afgerond op {new Date(request.completedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+              {request.completedBy ? ` door ${request.completedBy.split(' ')[0]}` : ''}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NewRequestModal({
+  isPartner, isOfficeTeam, allUsers, currentUser, onClose, onCreated,
+}: {
+  isPartner: boolean
+  isOfficeTeam: boolean
+  allUsers: { id: string; name: string }[]
+  currentUser: SessionUser
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [confidential, setConfidential] = useState(false)
+  const [onBehalfOf, setOnBehalfOf] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const submit = async () => {
+    if (!title.trim()) { toast.error('Titel verplicht'); return }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/office-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          confidential: isPartner && confidential,
+          requesterId: isOfficeTeam && onBehalfOf ? onBehalfOf : undefined,
+        }),
+      })
+      if (res.ok) { onCreated(); toast.success('Verzoek aangemaakt') }
+      else toast.error('Kon verzoek niet opslaan')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-workx-gray rounded-xl border border-white/10 shadow-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-white">Nieuw verzoek aan Office</h3>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-md hover:bg-white/5">
+            <Icons.x size={18} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          {isOfficeTeam && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Namens (optioneel)</label>
+              <select
+                value={onBehalfOf}
+                onChange={(e) => setOnBehalfOf(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-workx-lime/30"
+              >
+                <option value="">Mezelf ({currentUser.name})</option>
+                {allUsers.filter(u => u.id !== currentUser.id).map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Wat moet er gebeuren?</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Bv. 'Reservering BBQ voor 12 juni'"
+              className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Toelichting (optioneel)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Extra context, deadline, contactpersoon…"
+              rows={4}
+              className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-workx-lime/30 resize-none"
+            />
+          </div>
+          {isPartner && (
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={confidential}
+                onChange={(e) => setConfidential(e.target.checked)}
+                className="mt-0.5 accent-workx-lime"
+              />
+              <div>
+                <span className="text-sm text-white">Vertrouwelijk</span>
+                <p className="text-[11px] text-gray-500">Alleen Hanna en partners zien dit verzoek.</p>
+              </div>
+            </label>
+          )}
+        </div>
+        <div className="px-5 py-4 border-t border-white/5 flex items-center justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-md text-sm text-gray-400 hover:text-white">
+            Annuleren
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving || !title.trim()}
+            className="px-4 py-2 rounded-md text-sm font-medium bg-workx-lime text-workx-dark hover:opacity-90 transition-opacity disabled:opacity-40"
+          >
+            {saving ? 'Opslaan…' : 'Verzenden'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -85,6 +85,10 @@
     {
       "path": "/api/cron/office-infobox-reminder",
       "schedule": "0 5 * * 1-5"
+    },
+    {
+      "path": "/api/cron/office-requests-cleanup",
+      "schedule": "0 3 * * *"
     }
   ]
 }
