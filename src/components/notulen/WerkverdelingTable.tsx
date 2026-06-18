@@ -5,6 +5,9 @@ import { createPortal } from 'react-dom'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl, PARTNERS, ADVOCATEN } from '@/lib/team-photos'
 
+// Lodewijk van Thiel (externe advocaat) doet niet mee aan de werkverdeling
+const GESPREK_ADVOCATEN = ADVOCATEN.filter((name) => !name.startsWith('Lodewijk'))
+
 interface Distribution {
   id?: string
   partnerName: string
@@ -157,7 +160,9 @@ export default function WerkverdelingTable({ distributions, employees, onUpdate 
 
   // Filter out partners — they conduct the meetings, not attend them
   const partnerNames = new Set(PARTNERS.map(n => n.toLowerCase()))
-  const filteredEmployees = employees.filter(e => !partnerNames.has(e.name.toLowerCase()))
+  const filteredEmployees = employees.filter(
+    e => !partnerNames.has(e.name.toLowerCase()) && !e.name.startsWith('Lodewijk')
+  )
 
   const handleToggleEmployee = (partnerName: string, employee: Employee) => {
     const dist = localDistributions.find(d => d.partnerName === partnerName)
@@ -242,7 +247,7 @@ export default function WerkverdelingTable({ distributions, employees, onUpdate 
       <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
         <p className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-2">Overzicht team</p>
         <div className="flex flex-wrap gap-1.5">
-          {ADVOCATEN.map(name => {
+          {GESPREK_ADVOCATEN.map(name => {
             const photo = getPhotoUrl(name)
             const isAssigned = allAssignedNames.has(name)
             return (

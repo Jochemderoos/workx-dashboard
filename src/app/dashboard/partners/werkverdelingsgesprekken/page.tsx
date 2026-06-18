@@ -9,7 +9,8 @@ import ExpandableText from '@/components/ui/ExpandableText'
 import { ADVOCATEN, PARTNERS, getPhotoUrl } from '@/lib/team-photos'
 
 // Medewerkers die werkverdelingsgesprekken krijgen
-const GESPREK_MEDEWERKERS = ADVOCATEN
+// Lodewijk van Thiel (externe advocaat) doet niet mee aan werkverdelingsgesprekken
+const GESPREK_MEDEWERKERS = ADVOCATEN.filter((name) => !name.startsWith('Lodewijk'))
 
 // Partner-opties die in de partner-dropdown verschijnen voor ad-hoc toewijzing
 const PARTNER_OPTIONS = PARTNERS
