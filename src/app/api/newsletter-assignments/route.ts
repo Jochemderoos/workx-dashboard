@@ -113,11 +113,6 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Gebruiker niet gevonden' }, { status: 404 })
     }
 
-    const hasAccess = await canManageNewsletter(user.id, user.role)
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
-    }
-
     const { id, status } = await req.json()
 
     if (!id || !status) {
@@ -126,6 +121,19 @@ export async function PATCH(req: NextRequest) {
 
     if (!['PENDING', 'SUBMITTED'].includes(status)) {
       return NextResponse.json({ error: 'Ongeldige status' }, { status: 400 })
+    }
+
+    // Beheerders mogen elk artikel bijwerken; de assignee mag de status van
+    // zijn/haar eigen artikel zetten (bijv. zelf op "Ingeleverd" markeren).
+    const existing = await prisma.newsletterAssignment.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Assignment niet gevonden' }, { status: 404 })
+    }
+
+    const isManager = await canManageNewsletter(user.id, user.role)
+    const isAssignee = existing.assigneeId === user.id
+    if (!isManager && !isAssignee) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
     const updated = await prisma.newsletterAssignment.update({

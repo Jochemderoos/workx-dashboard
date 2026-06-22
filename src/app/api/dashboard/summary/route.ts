@@ -259,9 +259,12 @@ export async function GET() {
         where: {
           assigneeId: userId,
           status: 'PENDING',
+          // Eenmaal weggeklikt door de assignee blijft de reminder weg,
+          // ongeacht de deadline.
+          reminderDismissed: false,
           OR: [
             { deadline: { lte: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000) } },
-            { reminderPushedAt: { not: null }, reminderDismissed: false },
+            { reminderPushedAt: { not: null } },
           ],
         },
         include: {
