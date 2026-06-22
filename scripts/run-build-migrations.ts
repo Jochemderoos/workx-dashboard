@@ -43,6 +43,7 @@ import { main as addDevelopmentPlanAiSummaryColumns } from './add-development-pl
 import { main as addTrainingCategoryColumns } from './add-training-category-columns'
 import { main as addYearAgendaTable } from './add-year-agenda-table'
 import { main as addWorkxOutingsTables } from './add-workx-outings-tables'
+import { main as addWorkxSfeerPhotosTable } from './add-workx-sfeer-photos-table'
 import { main as addPartnerTaskExecutorsTable } from './add-partner-task-executors-table'
 import { main as addOfficePhoneInfobox } from './add-office-phone-infobox'
 import { main as addOfficeRequestsTable } from './add-office-requests-table'
@@ -108,6 +109,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-training-category-columns', run: addTrainingCategoryColumns },
   { name: 'add-year-agenda-table', run: addYearAgendaTable },
   { name: 'add-workx-outings-tables', run: addWorkxOutingsTables },
+  { name: 'add-workx-sfeer-photos-table', run: addWorkxSfeerPhotosTable },
   { name: 'add-partner-task-executors-table', run: addPartnerTaskExecutorsTable },
   { name: 'add-office-phone-infobox', run: addOfficePhoneInfobox },
   { name: 'add-office-requests-table', run: addOfficeRequestsTable },

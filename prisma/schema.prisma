@@ -88,6 +88,7 @@ model User {
   certificates            Certificate[]        @relation("UserCertificates")
   organizedOutings        WorkxOuting[]        @relation("OrganizedOutings")
   outingAttendances       WorkxOutingAttendance[] @relation("UserOutingAttendances")
+  sfeerPhotos             WorkxSfeerPhoto[]    @relation("UploadedSfeerPhotos")
   trainingAttendances     TrainingAttendance[] @relation("TrainingAttendances")
 
   // Zaken toewijzing
@@ -1880,6 +1881,22 @@ model WorkxOutingAttendance {
   @@unique([outingId, userId])
   @@index([outingId])
   @@index([userId])
+}
+
+// Door teamleden geüploade sfeer-foto's voor het Polaroid-moodboard op de
+// Workx uitjes pagina. Iedereen mag uploaden; verwijderen mag de uploader
+// zelf of een beheerder (PARTNER/ADMIN/OFFICE_MANAGER).
+model WorkxSfeerPhoto {
+  id            String   @id @default(cuid())
+  url           String                          // Vercel Blob URL
+  caption       String?                         // Optioneel onderschrift
+  uploadedById  String
+  createdAt     DateTime @default(now())
+
+  uploadedBy    User     @relation("UploadedSfeerPhotos", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([uploadedById])
 }
 
 // ==================== JAARAGENDA ====================
