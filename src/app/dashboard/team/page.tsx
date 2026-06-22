@@ -209,11 +209,11 @@ export default function TeamPage() {
     fetchData()
   }, [])
 
+  // Managers halen alle ziektedagen op; medewerkers krijgen (server-side) alleen
+  // hun eigen entries terug — zodat ze het op hun eigen kaart kunnen zien.
   useEffect(() => {
-    if (isManager) {
-      fetchSickDays()
-    }
-  }, [isManager, selectedYear])
+    fetchSickDays()
+  }, [selectedYear])
 
   const fetchData = async () => {
     try {
@@ -624,9 +624,9 @@ export default function TeamPage() {
       onOpenChange={(open) => { if (!open) setShowSickDaysModal(false); else openSickDaysModal(employee) }}
     >
       <Popover.Trigger asChild>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium transition-all flex-shrink-0">
+        <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all">
           <Icons.heart size={14} />
-          <span>Beheren</span>
+          <span>Ziektedagen</span>
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -1097,9 +1097,28 @@ export default function TeamPage() {
             </div>
           )}
 
-          {/* Manager Actions — verlof beheren (ziektedagen staan in het kopje bovenaan de pagina) */}
+          {/* Ziektedagen — zichtbaar voor managers (elke kaart) en voor jezelf (eigen kaart) */}
+          {(isManager || isCurrentUser) && employee.role !== 'PARTNER' && (
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icons.heart size={14} className="text-red-400" />
+                  <span className="text-gray-400 text-sm">Ziektedagen {currentYear}</span>
+                </div>
+                <span className={`text-lg font-semibold ${getSickDays(employee.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                  {getSickDays(employee.id)} {getSickDays(employee.id) === 1 ? 'dag' : 'dagen'}
+                </span>
+              </div>
+              {getSickDays(employee.id) > 5 && (
+                <p className="text-xs text-red-400/60 mt-1">Meer dan 5 ziektedagen dit jaar</p>
+              )}
+            </div>
+          )}
+
+          {/* Manager Actions — ziektedagen & verlof bijhouden (alleen Hanna + partners) */}
           {isManager && employee.role !== 'PARTNER' && (
             <div className="px-4 sm:px-6 py-3 border-t border-white/5 bg-black/10 flex gap-2">
+              {renderSickDaysControl(employee)}
               <Popover.Root
                 open={showParentalModal && parentalMember?.id === employee.id}
                 onOpenChange={(open) => { if (!open) setShowParentalModal(false); else openParentalModal(employee) }}
@@ -1538,49 +1557,6 @@ export default function TeamPage() {
           </div>
         )}
       </div>
-
-      {/* Ziektedagen-overzicht — alleen voor Hanna en de partners */}
-      {isManager && (
-        <section className="rounded-2xl border border-red-500/20 bg-red-500/[0.03] overflow-hidden">
-          <div className="px-4 sm:px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3 flex-wrap bg-gradient-to-r from-red-500/10 to-transparent">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center">
-                <Icons.heart className="text-red-400" size={18} />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-white">Ziektedagen {selectedYear}</h2>
-                <p className="text-xs text-gray-400">Alleen zichtbaar voor Hanna en de partners — bij te houden door hen</p>
-              </div>
-            </div>
-            <YearPicker years={[2025, 2026, 2027, 2028, 2029, 2030]} selected={selectedYear} onChange={(y) => setSelectedYear(y)} compact />
-          </div>
-          <div className="divide-y divide-white/5">
-            {sortedEmployees.filter(e => e.role !== 'PARTNER').map(emp => {
-              const days = getSickDays(emp.id)
-              const photo = getPhotoUrl(emp.name)
-              return (
-                <div key={emp.id} className="px-4 sm:px-5 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
-                  <div className="w-9 h-9 rounded-lg overflow-hidden ring-1 ring-white/10 flex-shrink-0">
-                    {photo ? (
-                      <img loading="lazy" src={photo} alt={emp.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-workx-lime/20 flex items-center justify-center text-workx-lime text-sm font-bold">{emp.name.charAt(0)}</div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">{emp.name}</p>
-                    {days > 5 && <p className="text-[11px] text-red-400/70">Meer dan 5 ziektedagen dit jaar</p>}
-                  </div>
-                  <span className={`text-sm font-semibold tabular-nums ${days > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                    {days} {days === 1 ? 'dag' : 'dagen'}
-                  </span>
-                  {renderSickDaysControl(emp)}
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
 
       {/* Team Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

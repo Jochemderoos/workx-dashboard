@@ -28,10 +28,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Niet ingelogd' }, { status: 401 })
     }
 
-    // Alleen Partners en Admin mogen ziektedagen zien
-    if (session.user.role !== 'PARTNER' && session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
-    }
+    const isManager = session.user.role === 'PARTNER' || session.user.role === 'ADMIN'
 
     const { searchParams } = new URL(request.url)
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
@@ -48,7 +45,10 @@ export async function GET(request: Request) {
       }
     }
 
-    if (userId) {
+    // Managers (Hanna + partners) zien iedereen; medewerkers alleen zichzelf.
+    if (!isManager) {
+      where.userId = session.user.id
+    } else if (userId) {
       where.userId = userId
     }
 
