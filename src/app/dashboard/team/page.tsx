@@ -617,6 +617,170 @@ export default function TeamPage() {
     )
   }
 
+  // Ziektedagen-beheer (Popover) — getoond in het manager-only Ziektedagen-kopje
+  const renderSickDaysControl = (employee: EmployeeData) => (
+    <Popover.Root
+      open={showSickDaysModal && sickDaysMember?.id === employee.id}
+      onOpenChange={(open) => { if (!open) setShowSickDaysModal(false); else openSickDaysModal(employee) }}
+    >
+      <Popover.Trigger asChild>
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium transition-all flex-shrink-0">
+          <Icons.heart size={14} />
+          <span>Beheren</span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
+          sideOffset={8}
+          collisionPadding={16}
+          side="bottom"
+          align="end"
+        >
+          <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <Icons.heart className="text-red-400" size={18} />
+              </div>
+              <div>
+                <h2 className="font-semibold text-white text-lg">Ziektedagen</h2>
+                <div className="mt-1">
+                  <YearPicker
+                    years={[2025, 2026, 2027, 2028, 2029, 2030]}
+                    selected={selectedYear}
+                    onChange={(y) => setSelectedYear(y)}
+                    compact
+                  />
+                </div>
+              </div>
+            </div>
+            <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+              <Icons.x size={18} />
+            </Popover.Close>
+          </div>
+
+          {/* Member info */}
+          <div className="flex items-center justify-between gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+              <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/10">
+                {getPhotoUrl(employee.name) ? (
+                  <img loading="lazy" src={getPhotoUrl(employee.name)!} alt={employee.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-workx-lime to-workx-lime/60 flex items-center justify-center">
+                    <span className="text-workx-dark font-bold">{employee.name.charAt(0)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-white truncate">{employee.name}</p>
+                <p className="text-sm text-gray-400 truncate">{employee.email}</p>
+              </div>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className={`text-2xl font-semibold ${getSickDays(employee.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                {getSickDays(employee.id)}
+              </p>
+              <p className="text-xs text-gray-500">werkdagen</p>
+            </div>
+          </div>
+
+          {/* Existing entries */}
+          {getMemberEntries(employee.id).length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm text-gray-400 mb-3">Geregistreerde periodes</h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {getMemberEntries(employee.id).map(entry => (
+                  <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-red-500/20 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                        <Icons.calendar size={14} className="text-red-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white">
+                          {formatDateNL(entry.startDate)}
+                          {entry.startDate !== entry.endDate && <span className="text-gray-400"> - {formatDateNL(entry.endDate)}</span>}
+                        </p>
+                        {entry.note && <p className="text-xs text-gray-500 mt-0.5">{entry.note}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-red-400 font-medium">{entry.workDays} {entry.workDays === 1 ? 'dag' : 'dagen'}</span>
+                      <button
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        disabled={isDeletingEntry === entry.id}
+                        className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        {isDeletingEntry === entry.id ? (
+                          <span className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin inline-block" />
+                        ) : (
+                          <Icons.trash size={14} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add new entry */}
+          <div className="border-t border-white/5 pt-6">
+            <h3 className="text-sm text-gray-400 mb-4">Nieuwe ziektedag(en) toevoegen</h3>
+
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setEntryMode('single')}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'single' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
+              >
+                Enkele dag
+              </button>
+              <button
+                onClick={() => setEntryMode('period')}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'period' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
+              >
+                Periode
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className={`grid gap-4 ${entryMode === 'period' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">{entryMode === 'single' ? 'Datum' : 'Startdatum'}</label>
+                  <input type="date" value={sickStartDate} onChange={e => setSickStartDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
+                </div>
+                {entryMode === 'period' && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Einddatum</label>
+                    <input type="date" value={sickEndDate} onChange={e => setSickEndDate(e.target.value)} min={sickStartDate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
+                <input type="text" value={sickDaysNote} onChange={e => setSickDaysNote(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 transition-all" placeholder="Bijv. griep, rugklachten..." />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Popover.Close className="flex-1 btn-secondary">Sluiten</Popover.Close>
+              <button
+                onClick={handleSaveSickDays}
+                disabled={isSavingSickDays || !sickStartDate || (entryMode === 'period' && !sickEndDate)}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSavingSickDays ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Icons.plus size={16} />Toevoegen</>}
+              </button>
+            </div>
+          </div>
+          <Popover.Arrow className="fill-workx-gray" />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+
   // Render full employee card (voetbalplaatje style)
   const renderEmployeeCard = (employee: EmployeeData, isCurrentUser: boolean) => {
     const photoUrl = getPhotoUrl(employee.name)
@@ -933,191 +1097,9 @@ export default function TeamPage() {
             </div>
           )}
 
-          {/* Sick Days Section - only for managers and not for Partners */}
-          {isManager && employee.role !== 'PARTNER' && (
-            <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icons.heart size={14} className="text-red-400" />
-                  <span className="text-gray-400 text-sm">Ziektedagen {currentYear}</span>
-                </div>
-                <span className={`text-lg font-semibold ${getSickDays(employee.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                  {getSickDays(employee.id)} dagen
-                </span>
-              </div>
-              {getSickDays(employee.id) > 5 && (
-                <p className="text-xs text-red-400/60 mt-1">
-                  Meer dan 5 ziektedagen dit jaar
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Manager Actions - only show buttons when relevant */}
+          {/* Manager Actions — verlof beheren (ziektedagen staan in het kopje bovenaan de pagina) */}
           {isManager && employee.role !== 'PARTNER' && (
             <div className="px-4 sm:px-6 py-3 border-t border-white/5 bg-black/10 flex gap-2">
-              <Popover.Root
-                open={showSickDaysModal && sickDaysMember?.id === employee.id}
-                onOpenChange={(open) => { if (!open) setShowSickDaysModal(false); else openSickDaysModal(employee) }}
-              >
-                <Popover.Trigger asChild>
-                  <button
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all"
-                  >
-                    <Icons.heart size={14} />
-                    <span>Ziektedagen</span>
-                  </button>
-                </Popover.Trigger>
-                <Popover.Portal>
-                  <Popover.Content
-                    className="w-[90vw] max-w-md bg-workx-gray rounded-2xl border border-white/10 p-6 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
-                    sideOffset={8}
-                    collisionPadding={16}
-                    side="bottom"
-                    align="end"
-                  >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-                          <Icons.heart className="text-red-400" size={18} />
-                        </div>
-                        <div>
-                          <h2 className="font-semibold text-white text-lg">Ziektedagen</h2>
-                          <div className="mt-1">
-                            <YearPicker
-                              years={[2025, 2026, 2027, 2028, 2029, 2030]}
-                              selected={selectedYear}
-                              onChange={(y) => setSelectedYear(y)}
-                              compact
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <Popover.Close className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-                        <Icons.x size={18} />
-                      </Popover.Close>
-                    </div>
-
-                    {/* Member info */}
-                    <div className="flex items-center justify-between gap-4 p-4 mb-6 rounded-xl bg-white/5 border border-white/10">
-                      <div className="flex items-center gap-4 min-w-0 flex-1">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/10">
-                          {getPhotoUrl(employee.name) ? (
-                            <img loading="lazy" src={getPhotoUrl(employee.name)!} alt={employee.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-workx-lime to-workx-lime/60 flex items-center justify-center">
-                              <span className="text-workx-dark font-bold">{employee.name.charAt(0)}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-white truncate">{employee.name}</p>
-                          <p className="text-sm text-gray-400 truncate">{employee.email}</p>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className={`text-2xl font-semibold ${getSickDays(employee.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                          {getSickDays(employee.id)}
-                        </p>
-                        <p className="text-xs text-gray-500">werkdagen</p>
-                      </div>
-                    </div>
-
-                    {/* Existing entries */}
-                    {getMemberEntries(employee.id).length > 0 && (
-                      <div className="mb-6">
-                        <h3 className="text-sm text-gray-400 mb-3">Geregistreerde periodes</h3>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {getMemberEntries(employee.id).map(entry => (
-                            <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-red-500/20 transition-all">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                                  <Icons.calendar size={14} className="text-red-400" />
-                                </div>
-                                <div>
-                                  <p className="text-sm text-white">
-                                    {formatDateNL(entry.startDate)}
-                                    {entry.startDate !== entry.endDate && <span className="text-gray-400"> - {formatDateNL(entry.endDate)}</span>}
-                                  </p>
-                                  {entry.note && <p className="text-xs text-gray-500 mt-0.5">{entry.note}</p>}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-red-400 font-medium">{entry.workDays} {entry.workDays === 1 ? 'dag' : 'dagen'}</span>
-                                <button
-                                  onClick={() => handleDeleteEntry(entry.id)}
-                                  disabled={isDeletingEntry === entry.id}
-                                  className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                >
-                                  {isDeletingEntry === entry.id ? (
-                                    <span className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin inline-block" />
-                                  ) : (
-                                    <Icons.trash size={14} />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Add new entry */}
-                    <div className="border-t border-white/5 pt-6">
-                      <h3 className="text-sm text-gray-400 mb-4">Nieuwe ziektedag(en) toevoegen</h3>
-
-                      <div className="flex gap-2 mb-4">
-                        <button
-                          onClick={() => setEntryMode('single')}
-                          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'single' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
-                        >
-                          Enkele dag
-                        </button>
-                        <button
-                          onClick={() => setEntryMode('period')}
-                          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${entryMode === 'period' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-transparent'}`}
-                        >
-                          Periode
-                        </button>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className={`grid gap-4 ${entryMode === 'period' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                          <div>
-                            <label className="block text-sm text-gray-400 mb-2">{entryMode === 'single' ? 'Datum' : 'Startdatum'}</label>
-                            <input type="date" value={sickStartDate} onChange={e => setSickStartDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
-                          </div>
-                          {entryMode === 'period' && (
-                            <div>
-                              <label className="block text-sm text-gray-400 mb-2">Einddatum</label>
-                              <input type="date" value={sickEndDate} onChange={e => setSickEndDate(e.target.value)} min={sickStartDate} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500/30 transition-all" />
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
-                          <input type="text" value={sickDaysNote} onChange={e => setSickDaysNote(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 transition-all" placeholder="Bijv. griep, rugklachten..." />
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3 mt-6">
-                        <Popover.Close className="flex-1 btn-secondary">Sluiten</Popover.Close>
-                        <button
-                          onClick={handleSaveSickDays}
-                          disabled={isSavingSickDays || !sickStartDate || (entryMode === 'period' && !sickEndDate)}
-                          className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                          {isSavingSickDays ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Icons.plus size={16} />Toevoegen</>}
-                        </button>
-                      </div>
-                    </div>
-                    <Popover.Arrow className="fill-workx-gray" />
-                  </Popover.Content>
-                </Popover.Portal>
-              </Popover.Root>
               <Popover.Root
                 open={showParentalModal && parentalMember?.id === employee.id}
                 onOpenChange={(open) => { if (!open) setShowParentalModal(false); else openParentalModal(employee) }}
@@ -1556,6 +1538,49 @@ export default function TeamPage() {
           </div>
         )}
       </div>
+
+      {/* Ziektedagen-overzicht — alleen voor Hanna en de partners */}
+      {isManager && (
+        <section className="rounded-2xl border border-red-500/20 bg-red-500/[0.03] overflow-hidden">
+          <div className="px-4 sm:px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3 flex-wrap bg-gradient-to-r from-red-500/10 to-transparent">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <Icons.heart className="text-red-400" size={18} />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-white">Ziektedagen {selectedYear}</h2>
+                <p className="text-xs text-gray-400">Alleen zichtbaar voor Hanna en de partners — bij te houden door hen</p>
+              </div>
+            </div>
+            <YearPicker years={[2025, 2026, 2027, 2028, 2029, 2030]} selected={selectedYear} onChange={(y) => setSelectedYear(y)} compact />
+          </div>
+          <div className="divide-y divide-white/5">
+            {sortedEmployees.filter(e => e.role !== 'PARTNER').map(emp => {
+              const days = getSickDays(emp.id)
+              const photo = getPhotoUrl(emp.name)
+              return (
+                <div key={emp.id} className="px-4 sm:px-5 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
+                  <div className="w-9 h-9 rounded-lg overflow-hidden ring-1 ring-white/10 flex-shrink-0">
+                    {photo ? (
+                      <img loading="lazy" src={photo} alt={emp.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-workx-lime/20 flex items-center justify-center text-workx-lime text-sm font-bold">{emp.name.charAt(0)}</div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">{emp.name}</p>
+                    {days > 5 && <p className="text-[11px] text-red-400/70">Meer dan 5 ziektedagen dit jaar</p>}
+                  </div>
+                  <span className={`text-sm font-semibold tabular-nums ${days > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                    {days} {days === 1 ? 'dag' : 'dagen'}
+                  </span>
+                  {renderSickDaysControl(emp)}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Team Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
