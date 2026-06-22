@@ -125,6 +125,7 @@ export default function TeamPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedCard, setExpandedCard] = useState<string | null>(null)
+  const [expandedSickCard, setExpandedSickCard] = useState<string | null>(null)
   const currentYear = new Date().getFullYear()
 
   // Sick days state
@@ -759,8 +760,8 @@ export default function TeamPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Notitie (optioneel)</label>
-                <input type="text" value={sickDaysNote} onChange={e => setSickDaysNote(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 transition-all" placeholder="Bijv. griep, rugklachten..." />
+                <label className="block text-sm text-gray-400 mb-2">Opmerking (optioneel)</label>
+                <input type="text" value={sickDaysNote} onChange={e => setSickDaysNote(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-red-500/30 transition-all" placeholder="Bijv. griep, langdurig, in overleg met..." />
               </div>
             </div>
 
@@ -1097,23 +1098,59 @@ export default function TeamPage() {
             </div>
           )}
 
-          {/* Ziektedagen — zichtbaar voor managers (elke kaart) en voor jezelf (eigen kaart) */}
-          {(isManager || isCurrentUser) && employee.role !== 'PARTNER' && (
-            <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icons.heart size={14} className="text-red-400" />
-                  <span className="text-gray-400 text-sm">Ziektedagen {currentYear}</span>
-                </div>
-                <span className={`text-lg font-semibold ${getSickDays(employee.id) > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                  {getSickDays(employee.id)} {getSickDays(employee.id) === 1 ? 'dag' : 'dagen'}
-                </span>
+          {/* Ziektedagen — managers (elke kaart) + jezelf (eigen kaart).
+              Voor managers uitklapbaar om de geregistreerde periodes + opmerkingen terug te lezen. */}
+          {(isManager || isCurrentUser) && employee.role !== 'PARTNER' && (() => {
+            const sickEntries = getMemberEntries(employee.id)
+            const sickTotal = getSickDays(employee.id)
+            const canExpand = isManager && sickEntries.length > 0
+            const sickExpanded = expandedSickCard === employee.id
+            return (
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => { if (canExpand) setExpandedSickCard(sickExpanded ? null : employee.id) }}
+                  className={`w-full flex items-center justify-between ${canExpand ? 'cursor-pointer' : 'cursor-default'}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icons.heart size={14} className="text-red-400" />
+                    <span className="text-gray-400 text-sm">Ziektedagen {currentYear}</span>
+                    {canExpand && (
+                      <Icons.chevronDown size={14} className={`text-gray-500 transition-transform ${sickExpanded ? 'rotate-180' : ''}`} />
+                    )}
+                  </div>
+                  <span className={`text-lg font-semibold ${sickTotal > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                    {sickTotal} {sickTotal === 1 ? 'dag' : 'dagen'}
+                  </span>
+                </button>
+                {sickTotal > 5 && (
+                  <p className="text-xs text-red-400/60 mt-1">Meer dan 5 ziektedagen dit jaar</p>
+                )}
+                {canExpand && sickExpanded && (
+                  <div className="mt-3 space-y-2">
+                    {sickEntries.map(entry => (
+                      <div key={entry.id} className="p-2.5 rounded-lg bg-white/5 border border-white/5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-white/80">
+                            {formatDateNL(entry.startDate)}
+                            {entry.startDate !== entry.endDate && ` – ${formatDateNL(entry.endDate)}`}
+                          </span>
+                          <span className="text-xs text-red-400 font-medium flex-shrink-0">
+                            {entry.workDays} {entry.workDays === 1 ? 'dag' : 'dagen'}
+                          </span>
+                        </div>
+                        {entry.note ? (
+                          <p className="text-xs text-gray-400 mt-1 whitespace-pre-wrap">{entry.note}</p>
+                        ) : (
+                          <p className="text-xs text-gray-600 italic mt-1">Geen opmerking</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              {getSickDays(employee.id) > 5 && (
-                <p className="text-xs text-red-400/60 mt-1">Meer dan 5 ziektedagen dit jaar</p>
-              )}
-            </div>
-          )}
+            )
+          })()}
 
           {/* Manager Actions — ziektedagen & verlof bijhouden (alleen Hanna + partners) */}
           {isManager && employee.role !== 'PARTNER' && (
