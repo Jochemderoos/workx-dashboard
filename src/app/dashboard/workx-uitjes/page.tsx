@@ -177,6 +177,47 @@ export default function WorkxUitjesPage() {
   }, [])
   useEffect(() => { fetchSfeer() }, [fetchSfeer])
 
+  // Upload-logica voor sfeer-foto's — verschijnen tussen de Polaroids
+  const sfeerInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingSfeer, setUploadingSfeer] = useState(false)
+
+  const uploadSfeerFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files).filter(f => f.type.startsWith('image/'))
+    if (list.length === 0) { toast.error('Alleen afbeeldingen'); return }
+    setUploadingSfeer(true)
+    let ok = 0
+    for (const file of list) {
+      if (file.size > 4 * 1024 * 1024) { toast.error(`${file.name}: max 4 MB`); continue }
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await fetch('/api/workx-outings/sfeer-photos', { method: 'POST', body: fd })
+        if (!res.ok) throw new Error()
+        ok++
+      } catch {
+        toast.error('Upload mislukt')
+      }
+    }
+    setUploadingSfeer(false)
+    if (sfeerInputRef.current) sfeerInputRef.current.value = ''
+    if (ok > 0) {
+      toast.success(ok === 1 ? 'Foto toegevoegd 📸' : `${ok} foto's toegevoegd 📸`)
+      fetchSfeer()
+    }
+  }
+
+  const deleteSfeerPhoto = async (id: string) => {
+    if (!confirm('Deze foto verwijderen?')) return
+    try {
+      const res = await fetch(`/api/workx-outings/sfeer-photos?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      toast.success('Verwijderd')
+      fetchSfeer()
+    } catch {
+      toast.error('Verwijderen mislukt')
+    }
+  }
+
   const [form, setForm] = useState({
     title: '',
     type: 'overig' as OutingType,
@@ -365,18 +406,26 @@ export default function WorkxUitjesPage() {
         <YearOverview outings={outings} />
       </div>
 
-      {/* Teamfoto's — door iedereen te uploaden, verschijnen als Polaroid */}
-      <div className="max-w-6xl mx-auto">
-        <TeamfotoStrook
-          photos={sfeerPhotos}
-          meId={meId}
-          canManageAll={meCanManageAll}
-          onChange={fetchSfeer}
-        />
-      </div>
+      {/* Verborgen file-input voor het uploaden van sfeer-foto's */}
+      <input
+        ref={sfeerInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => { if (e.target.files?.length) uploadSfeerFiles(e.target.files) }}
+      />
 
-      {/* Polaroid-moodboard 1 — boven 'Komt eraan' (full-width binnen page-container) */}
-      <SfeerStrook fotos={SFEER_FOTOS.slice(0, 25)} />
+      {/* Polaroid-moodboard 1 — geüploade foto's + upload-tegel tussen de Polaroids */}
+      <SfeerStrook
+        fotos={SFEER_FOTOS.slice(0, 25)}
+        uploaded={sfeerPhotos}
+        meId={meId}
+        canManageAll={meCanManageAll}
+        onUploadClick={() => sfeerInputRef.current?.click()}
+        onDelete={deleteSfeerPhoto}
+        uploading={uploadingSfeer}
+      />
 
       {/* Compact overzichtskader met alle aankomende uitjes */}
       {filter === 'upcoming' && outings.length > 0 && (
@@ -1011,176 +1060,103 @@ function YearOverview({ outings }: { outings: Outing[] }) {
 
 // ── Polaroid moodboard: foto's overlappen, getilt, verstrooid ────────────
 
-function SfeerStrook({ fotos }: { fotos: string[]; compact?: boolean }) {
-  if (fotos.length === 0) return null
+function SfeerStrook({
+  fotos,
+  uploaded = [],
+  meId,
+  canManageAll = false,
+  onUploadClick,
+  onDelete,
+  uploading = false,
+}: {
+  fotos: string[]
+  uploaded?: SfeerPhoto[]
+  meId?: string
+  canManageAll?: boolean
+  onUploadClick?: () => void
+  onDelete?: (id: string) => void
+  uploading?: boolean
+}) {
+  if (fotos.length === 0 && uploaded.length === 0 && !onUploadClick) return null
   const tilts = ['-rotate-6', 'rotate-4', '-rotate-3', 'rotate-7', '-rotate-5', 'rotate-2', '-rotate-2', 'rotate-5', '-rotate-7', 'rotate-3', '-rotate-1']
   const vOffsets = ['mt-0', 'mt-6 sm:mt-10', 'mt-2 sm:mt-3', 'mt-8 sm:mt-12', 'mt-1', 'mt-4 sm:mt-8', 'mt-3', 'mt-7 sm:mt-9']
   const tapeColors = ['bg-amber-200/50', 'bg-rose-200/45', 'bg-sky-200/45', 'bg-emerald-200/45']
 
+  // Geüploade foto's eerst (na de upload-tegel), daarna de vaste sfeerfoto's.
+  type Item = { kind: 'uploaded'; photo: SfeerPhoto } | { kind: 'static'; src: string }
+  const items: Item[] = [
+    ...uploaded.map((photo): Item => ({ kind: 'uploaded', photo })),
+    ...fotos.map((src): Item => ({ kind: 'static', src })),
+  ]
+  const hasUploadTile = !!onUploadClick
+
   return (
     // pointer-events-none op wrapper + auto op polaroids: clicks op zwarte
-    // tussenruimte gaan door naar de sidebar zodat die volledig bruikbaar
-    // blijft. Geen negative margins meer — de page-container is nu breed
-    // genoeg zelf (max-w-screen-2xl op page-root).
+    // tussenruimte gaan door naar de sidebar zodat die volledig bruikbaar blijft.
     <div className="pointer-events-none">
       <div className="flex flex-wrap items-start justify-center gap-0 py-6 px-2 sm:px-6 lg:px-10">
-        {fotos.map((src, i) => {
-          const tilt = tilts[i % tilts.length]
-          const vOff = vOffsets[i % vOffsets.length]
-          const tape = tapeColors[i % tapeColors.length]
-          const overlap = i === 0 ? '' : '-ml-4 sm:-ml-8'
+        {/* Upload-tegel als eerste Polaroid */}
+        {hasUploadTile && (
+          <button
+            type="button"
+            onClick={onUploadClick}
+            disabled={uploading}
+            style={{ zIndex: 9 }}
+            className="relative pointer-events-auto w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 -rotate-3 hover:rotate-0 hover:scale-105 hover:!z-[100] transition-all duration-300 ease-out cursor-pointer disabled:cursor-wait"
+          >
+            <div className="aspect-square overflow-hidden bg-rose-50 flex flex-col items-center justify-center text-center px-2">
+              {uploading ? (
+                <span className="w-6 h-6 border-2 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Icons.upload className="text-rose-400 mb-2" size={26} />
+                  <span className="text-[11px] font-semibold text-gray-700 leading-tight">Upload je foto van een Workx uitje</span>
+                </>
+              )}
+            </div>
+            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-10 h-3.5 bg-rose-200/60 rounded-sm rotate-2 shadow-sm" />
+          </button>
+        )}
+
+        {items.map((item, i) => {
+          const t = i + (hasUploadTile ? 1 : 0)
+          const tilt = tilts[t % tilts.length]
+          const vOff = vOffsets[t % vOffsets.length]
+          const tape = tapeColors[t % tapeColors.length]
+          const overlap = (hasUploadTile || i > 0) ? '-ml-4 sm:-ml-8' : ''
+          const key = item.kind === 'uploaded' ? `u-${item.photo.id}` : `s-${item.src}-${i}`
+          const src = item.kind === 'uploaded' ? item.photo.url : item.src
           return (
             <div
-              key={src + i}
-              style={{ zIndex: 10 + i }}
-              // hover:!z-[100] gebruikt !important zodat het inline-style z-index overrulet —
-              // anders blijft een vroege polaroid bij hover achter een latere liggen.
-              // pointer-events-auto: alleen de polaroid zelf vangt muis, niet de wrapper.
-              className={`relative pointer-events-auto w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:!z-[100] hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
+              key={key}
+              style={{ zIndex: 10 + t }}
+              className={`group/polaroid relative pointer-events-auto w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-10 sm:pb-12 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[2.2] hover:!z-[100] hover:shadow-2xl hover:shadow-black/80 transition-all duration-700 ease-out cursor-pointer`}
             >
               <div className="aspect-square overflow-hidden bg-workx-dark/20">
                 <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
               </div>
+              {item.kind === 'uploaded' && (
+                <p className="absolute bottom-2 left-0 right-0 text-center text-[10px] text-gray-600 truncate px-2">
+                  {item.photo.caption || `door ${item.photo.uploadedBy.name.split(' ')[0]}`}
+                </p>
+              )}
               {/* Plakband bovenaan */}
               <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-10 h-3.5 ${tape} rounded-sm rotate-2 shadow-sm`} />
+              {item.kind === 'uploaded' && onDelete && (canManageAll || item.photo.uploadedBy.id === meId) && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onDelete(item.photo.id) }}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover/polaroid:opacity-100 hover:bg-red-500 transition-all flex items-center justify-center"
+                  title="Verwijderen"
+                >
+                  <Icons.x size={12} />
+                </button>
+              )}
             </div>
           )
         })}
       </div>
     </div>
-  )
-}
-
-// ── Teamfoto's: door iedereen te uploaden, als Polaroid ───────────────────
-
-function TeamfotoStrook({
-  photos, meId, canManageAll, onChange,
-}: {
-  photos: SfeerPhoto[]
-  meId?: string
-  canManageAll: boolean
-  onChange: () => void
-}) {
-  const [uploading, setUploading] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const uploadFiles = async (files: FileList | File[]) => {
-    const list = Array.from(files).filter(f => f.type.startsWith('image/'))
-    if (list.length === 0) { toast.error('Alleen afbeeldingen'); return }
-    setUploading(true)
-    let ok = 0
-    for (const file of list) {
-      if (file.size > 4 * 1024 * 1024) { toast.error(`${file.name}: max 4 MB`); continue }
-      try {
-        const fd = new FormData()
-        fd.append('file', file)
-        const res = await fetch('/api/workx-outings/sfeer-photos', { method: 'POST', body: fd })
-        if (!res.ok) throw new Error()
-        ok++
-      } catch {
-        toast.error('Upload mislukt')
-      }
-    }
-    setUploading(false)
-    if (inputRef.current) inputRef.current.value = ''
-    if (ok > 0) {
-      toast.success(ok === 1 ? 'Foto toegevoegd 📸' : `${ok} foto's toegevoegd 📸`)
-      onChange()
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Deze foto verwijderen?')) return
-    try {
-      const res = await fetch(`/api/workx-outings/sfeer-photos?id=${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error()
-      toast.success('Verwijderd')
-      onChange()
-    } catch {
-      toast.error('Verwijderen mislukt')
-    }
-  }
-
-  const tilts = ['-rotate-6', 'rotate-4', '-rotate-3', 'rotate-7', '-rotate-5', 'rotate-2', '-rotate-2', 'rotate-5', '-rotate-7', 'rotate-3', '-rotate-1']
-  const vOffsets = ['mt-0', 'mt-6 sm:mt-10', 'mt-2 sm:mt-3', 'mt-8 sm:mt-12', 'mt-1', 'mt-4 sm:mt-8', 'mt-3', 'mt-7 sm:mt-9']
-  const tapeColors = ['bg-amber-200/50', 'bg-rose-200/45', 'bg-sky-200/45', 'bg-emerald-200/45']
-
-  return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <span className="text-2xl">📸</span>
-          <div>
-            <h2 className="text-lg font-bold text-white">Teamfoto&apos;s</h2>
-            <p className="text-xs text-white/50">Voeg je eigen kiekjes toe — ze verschijnen meteen als Polaroid.</p>
-          </div>
-        </div>
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold text-sm shadow-lg shadow-rose-500/30 hover:scale-105 transition-all flex items-center gap-2 disabled:opacity-60"
-        >
-          {uploading ? (
-            <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Uploaden…</>
-          ) : (
-            <><Icons.upload size={16} /> Foto toevoegen</>
-          )}
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => { if (e.target.files?.length) uploadFiles(e.target.files) }}
-        />
-      </div>
-
-      {photos.length === 0 ? (
-        <button
-          onClick={() => inputRef.current?.click()}
-          className="mt-4 w-full rounded-2xl border-2 border-dashed border-white/15 bg-white/[0.02] py-10 text-center hover:border-rose-300/40 hover:bg-white/[0.04] transition-colors"
-        >
-          <div className="text-4xl mb-2">🖼️</div>
-          <p className="text-sm text-white/70 font-medium">Nog geen teamfoto&apos;s — wees de eerste!</p>
-          <p className="text-xs text-white/40 mt-1">Klik om één of meerdere foto&apos;s te uploaden</p>
-        </button>
-      ) : (
-        <div className="flex flex-wrap items-start justify-center gap-0 pt-5">
-          {photos.map((p, i) => {
-            const canDelete = canManageAll || p.uploadedBy.id === meId
-            const tilt = tilts[i % tilts.length]
-            const vOff = vOffsets[i % vOffsets.length]
-            const tape = tapeColors[i % tapeColors.length]
-            const overlap = i === 0 ? '' : '-ml-4 sm:-ml-8'
-            return (
-              <div
-                key={p.id}
-                style={{ zIndex: 10 + i }}
-                className={`group/polaroid relative w-32 sm:w-40 md:w-48 bg-white p-2.5 pb-9 rounded-sm shadow-2xl shadow-black/50 ${tilt} ${vOff} ${overlap} hover:rotate-0 hover:scale-[1.6] hover:!z-[100] hover:shadow-black/80 transition-all duration-500 ease-out`}
-              >
-                <div className="aspect-square overflow-hidden bg-workx-dark/20">
-                  <img src={p.url} alt={p.caption || ''} loading="lazy" className="w-full h-full object-cover" />
-                </div>
-                <p className="absolute bottom-1.5 left-0 right-0 text-center text-[10px] text-gray-600 truncate px-2">
-                  {p.caption || `door ${p.uploadedBy.name.split(' ')[0]}`}
-                </p>
-                <div className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-10 h-3.5 ${tape} rounded-sm rotate-2 shadow-sm`} />
-                {canDelete && (
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover/polaroid:opacity-100 hover:bg-red-500 transition-all flex items-center justify-center"
-                    title="Verwijderen"
-                  >
-                    <Icons.x size={12} />
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </section>
   )
 }
 
