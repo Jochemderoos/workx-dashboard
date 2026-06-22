@@ -12,7 +12,7 @@ interface Contact {
 }
 
 const INTERNE_CONTACTEN: Contact[] = [
-  { emoji: '🛟', role: 'Preventiemedewerker', name: 'Hanna', detail: 'Officemanager — contact externe diensten (ArboDuo), arbeidsomstandighedenbeleid, RI&E, BHV-coördinatie.' },
+  { emoji: '🛟', role: 'Preventiemedewerker', name: 'Hanna', detail: 'Head of Office — contact externe diensten (ArboDuo), arbeidsomstandighedenbeleid, RI&E, BHV-coördinatie.' },
   { emoji: '🤝', role: 'Vertrouwenspersoon (intern)', name: 'Marlieke', detail: 'Voor alles wat je vertrouwelijk wilt bespreken.' },
 ]
 

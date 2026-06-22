@@ -236,7 +236,7 @@ export const THE_WAY_IT_WORKX: Document = {
         <p class="text-white/70 mb-6">Tijdens ziekte betalen we de eerste 12 maanden <strong>100%</strong> van je vaste basissalaris. Daarna is het percentage 70% conform de wettelijke regeling.</p>
 
         <h3>9.5 Winstdeling</h3>
-        <p class="text-white/70 mb-4">We geloven in het belang van onze gezamenlijke inspanningen voor Workx. Daarom willen we je (de advocaten en office manager) graag laten delen in de winst van Workx. Deze jaarlijkse winstdeling bedraagt een bruto uitkering ter waarde van maximaal het dividend op <strong>1% van de aandelen</strong> in Workx, op basis van winst na belastingen, onder de volgende voorwaarden:</p>
+        <p class="text-white/70 mb-4">We geloven in het belang van onze gezamenlijke inspanningen voor Workx. Daarom willen we je (de advocaten en de Head of Office) graag laten delen in de winst van Workx. Deze jaarlijkse winstdeling bedraagt een bruto uitkering ter waarde van maximaal het dividend op <strong>1% van de aandelen</strong> in Workx, op basis van winst na belastingen, onder de volgende voorwaarden:</p>
         <ul class="list-none text-white/70 mb-6 space-y-2">
           <li><strong>(a)</strong> je bent in dienst op het moment dat de winstdeling wordt vastgesteld op basis van de jaarrekening én op het moment dat de betaling zal plaatsvinden. De jaarrekening stelt onze accountant vast. Betaling vindt plaats in de maand direct volgend op de vaststelling van de jaarrekening. Bij voortijdige beëindiging van de arbeidsovereenkomst bestaat geen recht op een (pro rato) uitkering;</li>
           <li><strong>(b)</strong> als je gedurende het kalenderjaar start bij Workx, dan wordt de winstdeling pro rato aangepast op basis van de startdatum;</li>
