@@ -163,10 +163,11 @@ export default function AppjeplekjePage() {
       if (res.ok) {
         const data = await res.json()
         setAttendanceData(data)
-        // Update selected time slot if user is attending
-        if (data.currentUserTimeSlot) {
-          setSelectedTimeSlot(data.currentUserTimeSlot)
-        }
+        // Stem de dagdeel-keuze af op deze dag: ben je al aangemeld, toon dat
+        // dagdeel; zo niet, reset naar "Hele dag". Anders blijft een eerder
+        // gekozen dagdeel (bijv. Middag) plakken en wordt dat per ongeluk voor
+        // elke volgende dag opgeslagen.
+        setSelectedTimeSlot(data.currentUserTimeSlot || 'FULL_DAY')
       } else {
         console.error('API error:', res.status)
         // Set default data
