@@ -1146,7 +1146,7 @@ function SfeerStrook({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onDelete(item.photo.id) }}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white opacity-0 group-hover/polaroid:opacity-100 hover:bg-red-500 transition-all flex items-center justify-center"
+                  className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 text-white opacity-90 hover:opacity-100 hover:bg-red-500 transition-all flex items-center justify-center shadow-md"
                   title="Verwijderen"
                 >
                   <Icons.x size={12} />
