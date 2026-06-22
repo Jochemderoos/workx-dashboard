@@ -80,7 +80,13 @@ export async function GET(request: Request) {
       totalDays
     }))
 
-    return NextResponse.json({ entries, totals })
+    // Opmerkingen zijn intern (Hanna + partners). Medewerkers krijgen hun eigen
+    // ziektedagen wél te zien (aantal/periodes), maar zonder de opmerking.
+    const safeEntries = isManager
+      ? entries
+      : entries.map(({ note, ...rest }) => rest)
+
+    return NextResponse.json({ entries: safeEntries, totals })
   } catch (error) {
     console.error('Error fetching sick days:', error)
     return NextResponse.json({ error: 'Kon ziektedagen niet ophalen' }, { status: 500 })
