@@ -791,6 +791,8 @@ export default function TeamPage() {
 
     const firstName = employee.name.split(' ')[0].toLowerCase()
     const isSupportStaff = firstName === 'hanna' || firstName === 'lotte'
+    // Diyar is t/m 30 juni 2026 werkstudent (EUR 15/uur) en wordt per 1 juli juridisch medewerker (EUR 3.100/mnd)
+    const diyarPreJM = firstName === 'diyar' && new Date() < new Date('2026-07-01')
     const isHourlyWage = employee.compensation?.isHourlyWage || false
     const salaryScale = employee.compensation?.experienceYear !== null && employee.compensation?.experienceYear !== undefined
       ? salaryScales.find(s => s.experienceYear === employee.compensation?.experienceYear)
@@ -846,7 +848,7 @@ export default function TeamPage() {
                   {isCurrentUser && <span className="ml-2 text-xs text-workx-lime">(jij)</span>}
                 </h3>
                 <p className="text-gray-400 text-sm">
-                  {firstName === 'hanna' ? 'Head of Office' : employee.role === 'ADMIN' ? 'Head of Office' : firstName === 'lodewijk' ? 'Externe advocaat' : firstName === 'diyar' ? 'Juridisch medewerker' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role === 'PARTNER' ? 'Partner' : employee.role}
+                  {firstName === 'hanna' ? 'Head of Office' : employee.role === 'ADMIN' ? 'Head of Office' : firstName === 'lodewijk' ? 'Externe advocaat' : firstName === 'diyar' ? (diyarPreJM ? 'Werkstudent' : 'Juridisch medewerker') : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role === 'PARTNER' ? 'Partner' : employee.role}
                 </p>
                 {employee.startDate && (
                   <p className={`${isSupportStaff ? 'text-cyan-400/60' : 'text-workx-lime/60'} text-xs mt-1`}>
@@ -920,11 +922,11 @@ export default function TeamPage() {
                 {/* Row 2: Salary - only for current user or manager */}
                 {showFullInfo && (
                   <div className="pt-4 border-t border-gray-700">
-                    <span className="text-gray-400 text-sm block mb-1">{isHourlyWage ? 'Uurvergoeding' : 'Bruto Salaris'}</span>
+                    <span className="text-gray-400 text-sm block mb-1">{(diyarPreJM || isHourlyWage) ? 'Uurvergoeding' : 'Bruto Salaris'}</span>
                     <span className="text-white font-bold text-xl">
-                      {employee.compensation?.salary ? formatCurrency(employee.compensation.salary) : (salaryScale ? formatCurrency(salaryScale.salary) : '-')}
+                      {diyarPreJM ? '€15' : (employee.compensation?.salary ? formatCurrency(employee.compensation.salary) : (salaryScale ? formatCurrency(salaryScale.salary) : '-'))}
                     </span>
-                    <span className="text-gray-500 text-sm ml-1">{isHourlyWage ? '/uur' : '/mnd'}</span>
+                    <span className="text-gray-500 text-sm ml-1">{(diyarPreJM || isHourlyWage) ? '/uur' : '/mnd'}</span>
                   </div>
                 )}
               </div>
@@ -1114,7 +1116,7 @@ export default function TeamPage() {
                 >
                   <div className="flex items-center gap-2">
                     <Icons.heart size={14} className="text-red-400" />
-                    <span className="text-gray-400 text-sm">Ziektedagen {currentYear}</span>
+                    <span className="text-gray-400 text-sm">Ziektedagen {selectedYear}</span>
                     {canExpand && (
                       <Icons.chevronDown size={14} className={`text-gray-500 transition-transform ${sickExpanded ? 'rotate-180' : ''}`} />
                     )}
