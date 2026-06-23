@@ -135,9 +135,9 @@ export async function POST(req: NextRequest) {
       console.error('Auto-sync naar jaaragenda mislukt', e)
     }
 
-    // Slack-melding naar #workx-algemeen — TIJDELIJK UIT op verzoek user.
-    // Zet SLACK_PROMOTIE_AAN = true om weer aan te zetten.
-    const SLACK_PROMOTIE_AAN = false
+    // Slack-melding naar #workx-algemeen zodra er een uitje is aangemaakt,
+    // met het verzoek om te laten weten of je erbij bent.
+    const SLACK_PROMOTIE_AAN = true
     if (SLACK_PROMOTIE_AAN) try {
       const dateLabel = new Date(outing.date).toLocaleDateString('nl-NL', {
         weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
@@ -155,14 +155,14 @@ export async function POST(req: NextRequest) {
                 { type: 'text', text: `${emoji} Nieuw Workx-uitje: ${outing.title}\n`, style: { bold: true } },
                 { type: 'text', text: `${typeLabel} · ${dateLabel}` },
                 ...(outing.location ? [{ type: 'text', text: ` · ${outing.location}` }] : []),
-                { type: 'text', text: `\nOrganisator: ${outing.organizer.name}\n\n→ ` },
-                { type: 'link', url, text: 'Schrijf je in' },
+                { type: 'text', text: `\nOrganisator: ${outing.organizer.name}\n\nKom je ook? Laat het weten → ` },
+                { type: 'link', url, text: 'Ik ben erbij (of niet)' },
               ],
             },
           ],
         },
       ]
-      const fallback = `${emoji} ${outing.title} — ${dateLabel}. Schrijf je in: ${url}`
+      const fallback = `${emoji} ${outing.title} — ${dateLabel}. Kom je ook? Laat het weten: ${url}`
       await sendChannelMessage(SLACK_CHANNEL, fallback, blocks as any)
       await prisma.workxOuting.update({
         where: { id: outing.id },
