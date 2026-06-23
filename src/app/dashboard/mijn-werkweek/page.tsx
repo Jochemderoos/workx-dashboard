@@ -23,12 +23,6 @@ interface CurrentResponse {
   isOpen: boolean
 }
 
-interface SentUpdate {
-  id: string
-  message: string
-  createdAt: string
-}
-
 function formatLong(iso: string): string {
   return new Date(iso).toLocaleDateString('nl-NL', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -59,7 +53,7 @@ export default function MijnWerkweekPage() {
 
   const [updateMessage, setUpdateMessage] = useState('')
   const [sendingUpdate, setSendingUpdate] = useState(false)
-  const [sentUpdates, setSentUpdates] = useState<SentUpdate[]>([])
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -113,7 +107,7 @@ export default function MijnWerkweekPage() {
   // Automatisch opslaan (debounced) terwijl je typt, zolang het venster open is.
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    if (!data?.isOpen || !work.trim()) return
+    if (!data || !work.trim()) return
     const cur = data.intake
     const changed = !cur
       || work !== (cur.work || '')
@@ -126,17 +120,9 @@ export default function MijnWerkweekPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [work, availability, notes, data])
 
-  // Tussentijdse updates aan de partners (werkt ook buiten het invul-venster)
-  const loadUpdates = useCallback(async () => {
-    try {
-      const r = await fetch('/api/week-intake/update')
-      if (r.ok) setSentUpdates(await r.json())
-    } catch { /* stil */ }
-  }, [])
-  useEffect(() => { loadUpdates() }, [loadUpdates])
-
+  // Wezenlijke wijziging melden aan de partners (werkt ook buiten het invul-venster)
   const sendUpdate = async () => {
-    if (!updateMessage.trim()) { toast.error('Schrijf eerst kort wat er is gewijzigd'); return }
+    if (!updateMessage.trim()) { toast.error('Beschrijf eerst kort wat er is gewijzigd'); return }
     setSendingUpdate(true)
     try {
       const r = await fetch('/api/week-intake/update', {
@@ -146,10 +132,10 @@ export default function MijnWerkweekPage() {
       })
       if (!r.ok) throw new Error()
       setUpdateMessage('')
-      toast.success('Update verstuurd — de partners krijgen een Slack- en dashboard-melding')
-      loadUpdates()
+      setShowUpdateModal(false)
+      toast.success('Wijziging gemeld — de partners krijgen een Slack- en dashboard-melding')
     } catch {
-      toast.error('Kon update niet versturen')
+      toast.error('Kon de melding niet versturen')
     } finally {
       setSendingUpdate(false)
     }
@@ -186,7 +172,7 @@ export default function MijnWerkweekPage() {
         <div>
           <h1 className="text-2xl font-semibold text-white"><TextReveal>Mijn werkweek</TextReveal></h1>
           <p className="text-sm text-gray-400">
-            Vul vóór maandag 10:00 in wat je deze week op je bord hebt. Partners gebruiken dit bij het werkverdelingsgesprek.
+            Houd bij wat je op je bord hebt — je kunt het doorlopend bijwerken. Partners gebruiken dit bij het werkverdelingsgesprek.
           </p>
         </div>
       </div>
@@ -224,12 +210,12 @@ export default function MijnWerkweekPage() {
               </>
             ) : (
               <>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 text-xs font-semibold">
-                  <Icons.lock size={11} />
-                  Gesloten
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 text-gray-300 text-xs font-semibold">
+                  <Icons.edit size={11} />
+                  Altijd bij te werken
                 </span>
                 <p className="text-[11px] text-gray-500 mt-1">
-                  Volgende invul-venster opent {formatDateTime(data.windowOpenAt)}
+                  Volgend invul-venster opent {formatDateTime(data.windowOpenAt)}
                 </p>
               </>
             )}
@@ -247,9 +233,7 @@ export default function MijnWerkweekPage() {
           onChange={setWork}
           rows={4}
           required
-          placeholder="Bv. Procedure X (deadline donderdag), advies Klant Y, twee zittingen…"
-          disabled={!data.isOpen}
-        />
+          placeholder="Bv. Procedure X (deadline donderdag), advies Klant Y, twee zittingen…"        />
 
         <Field
           label="Welke dagen ben je afwezig?"
@@ -258,9 +242,7 @@ export default function MijnWerkweekPage() {
           value={availability}
           onChange={setAvailability}
           rows={2}
-          placeholder="Bv. Woensdag vrij / dinsdagmiddag rechtbank"
-          disabled={!data.isOpen}
-        />
+          placeholder="Bv. Woensdag vrij / dinsdagmiddag rechtbank"        />
 
         <Field
           label="Heb je ruimte voor extra werk? Bijzonderheden?"
@@ -269,9 +251,7 @@ export default function MijnWerkweekPage() {
           value={notes}
           onChange={setNotes}
           rows={3}
-          placeholder="Bv. Zit krap deze week, liever geen nieuwe zaken. Of: kan er nog wat bij."
-          disabled={!data.isOpen}
-        />
+          placeholder="Bv. Zit krap deze week, liever geen nieuwe zaken. Of: kan er nog wat bij."        />
 
         {/* Save button */}
         <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
@@ -286,63 +266,28 @@ export default function MijnWerkweekPage() {
                     ? 'Automatisch opgeslagen'
                     : 'Nog niet ingevuld voor deze week'}
           </p>
-          <button
-            onClick={() => saveIntake()}
-            disabled={!data.isOpen || saving || !work.trim()}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-            style={{ background: 'rgb(249, 255, 133)', color: 'rgb(45, 45, 45)' }}
-          >
-            {saving ? (
-              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <><Icons.save size={14} /> Opslaan</>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Tussentijdse update aan partners — werkt ook buiten het invul-venster */}
-      <div className="card p-6 space-y-4 relative border border-amber-500/20">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 text-base">🔄</div>
-          <div>
-            <p className="text-white font-medium">Situatie veranderd? Stuur een update</p>
-            <p className="text-sm text-gray-400 mt-0.5">
-              Is je werkdruk of beschikbaarheid ná het invullen wezenlijk gewijzigd (bijv. toch geen ruimte meer op woensdag)? Laat het de partners weten — ook tussentijds. Zij krijgen een Slack-bericht in <strong>MT-Groot</strong> én een melding op hun dashboard.
-            </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowUpdateModal(true)}
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 transition-all flex items-center gap-2"
+              title="Melding sturen aan partners bij een wezenlijke wijziging"
+            >
+              🔄 Wijziging melden
+            </button>
+            <button
+              onClick={() => saveIntake()}
+              disabled={saving || !work.trim()}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              style={{ background: 'rgb(249, 255, 133)', color: 'rgb(45, 45, 45)' }}
+            >
+              {saving ? (
+                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <><Icons.save size={14} /> Opslaan</>
+              )}
+            </button>
           </div>
         </div>
-        <textarea
-          value={updateMessage}
-          onChange={(e) => setUpdateMessage(e.target.value)}
-          rows={3}
-          placeholder="Bv. Woensdag toch vol geraakt — donderdag juist ruimte erbij."
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
-        />
-        <div className="flex justify-end">
-          <button
-            onClick={sendUpdate}
-            disabled={sendingUpdate || !updateMessage.trim()}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {sendingUpdate ? (
-              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <><Icons.send size={14} /> Update versturen</>
-            )}
-          </button>
-        </div>
-        {sentUpdates.length > 0 && (
-          <div className="pt-3 border-t border-white/5 space-y-2">
-            <p className="text-xs text-gray-500">Jouw eerdere updates (laatste 3 weken)</p>
-            {sentUpdates.map((u) => (
-              <div key={u.id} className="text-sm bg-white/5 rounded-lg px-3 py-2">
-                <p className="text-gray-200 whitespace-pre-wrap">{u.message}</p>
-                <p className="text-[11px] text-gray-500 mt-1">{formatDateTime(u.createdAt)}</p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Info card */}
@@ -361,6 +306,57 @@ export default function MijnWerkweekPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal: wezenlijke wijziging melden aan partners */}
+      {showUpdateModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => { if (!sendingUpdate) setShowUpdateModal(false) }}
+        >
+          <div
+            className="bg-workx-gray rounded-2xl border border-white/10 w-full max-w-md p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center text-lg flex-shrink-0">🔄</div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Wijziging melden aan partners</h2>
+                <p className="text-sm text-gray-400 mt-0.5">
+                  Beschrijf kort en duidelijk wat er is veranderd, zodat het voor ons helder is. De partners krijgen een Slack-bericht in <strong>MT-Groot</strong> én een melding op hun dashboard.
+                </p>
+              </div>
+            </div>
+            <textarea
+              value={updateMessage}
+              onChange={(e) => setUpdateMessage(e.target.value)}
+              rows={4}
+              autoFocus
+              placeholder="Bv. Woensdag toch volgelopen met een spoedzaak — donderdag juist ruimte erbij."
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowUpdateModal(false)}
+                disabled={sendingUpdate}
+                className="px-4 py-2 rounded-xl text-sm text-gray-300 hover:bg-white/5 transition-all disabled:opacity-40"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={sendUpdate}
+                disabled={sendingUpdate || !updateMessage.trim()}
+                className="px-5 py-2 rounded-xl text-sm font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {sendingUpdate ? (
+                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <><Icons.send size={14} /> Versturen</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

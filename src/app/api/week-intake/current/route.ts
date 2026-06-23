@@ -49,11 +49,10 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
+    // Doorlopend bewerkbaar: het venster bepaalt alleen wélke week je bewerkt
+    // (deze of volgende), niet óf je mag bewerken.
     const now = new Date()
     const target = getTargetWeekStart(now)
-    if (!isWindowOpen(now, target)) {
-      return NextResponse.json({ error: 'Invul-venster is gesloten' }, { status: 409 })
-    }
 
     const body = await req.json()
     const work = typeof body.work === 'string' ? body.work.trim() : ''
