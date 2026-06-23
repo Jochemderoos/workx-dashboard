@@ -912,7 +912,7 @@ export default function TeamPage() {
                   <div className="text-right">
                     <span className="text-gray-400 text-sm block mb-1">Uurtarief</span>
                     <span className="text-workx-lime text-base font-semibold">
-                      {employee.compensation ? `€${employee.compensation.hourlyRate}` : '-'}
+                      {employee.compensation?.hourlyRate ? `€${employee.compensation.hourlyRate}` : '-'}
                     </span>
                   </div>
                 </div>
