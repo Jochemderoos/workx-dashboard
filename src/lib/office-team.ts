@@ -11,7 +11,7 @@ export const OFFICE_PEOPLE: OfficePerson[] = [
   { key: 'hanna', name: 'Hanna Blaauboer', role: 'Head of Office' },
   { key: 'lotte', name: 'Lotte van Sint Truiden', role: 'Office Assistant' },
   { key: 'bente', name: 'Bente Karels', role: 'Office Assistant' },
-  { key: 'diyar', name: 'Diyar Wakkas', role: 'Werkstudent' },
+  { key: 'diyar', name: 'Diyar Wakkas', role: 'Juridisch medewerker' },
 ]
 
 export const OFFICE_PERSON_KEYS = OFFICE_PEOPLE.map(p => p.key)

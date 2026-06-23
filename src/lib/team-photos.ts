@@ -99,5 +99,5 @@ export const OFFICE_TEAM: { name: string; role: string }[] = [
   { name: 'Hanna Blaauboer', role: 'Head of Office' },
   { name: 'Lotte van Sint Truiden', role: 'Office Assistant' },
   { name: 'Bente Karels', role: 'Office Assistant' },
-  { name: 'Diyar Wakkas', role: 'Werkstudent' },
+  { name: 'Diyar Wakkas', role: 'Juridisch medewerker' },
 ]

@@ -846,7 +846,7 @@ export default function TeamPage() {
                   {isCurrentUser && <span className="ml-2 text-xs text-workx-lime">(jij)</span>}
                 </h3>
                 <p className="text-gray-400 text-sm">
-                  {firstName === 'hanna' ? 'Head of Office' : employee.role === 'ADMIN' ? 'Head of Office' : firstName === 'lodewijk' ? 'Externe advocaat' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role === 'PARTNER' ? 'Partner' : employee.role}
+                  {firstName === 'hanna' ? 'Head of Office' : employee.role === 'ADMIN' ? 'Head of Office' : firstName === 'lodewijk' ? 'Externe advocaat' : firstName === 'diyar' ? 'Juridisch medewerker' : employee.role === 'EMPLOYEE' ? 'Advocaat' : employee.role === 'PARTNER' ? 'Partner' : employee.role}
                 </p>
                 {employee.startDate && (
                   <p className={`${isSupportStaff ? 'text-cyan-400/60' : 'text-workx-lime/60'} text-xs mt-1`}>
