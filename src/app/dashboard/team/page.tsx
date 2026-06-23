@@ -1105,7 +1105,8 @@ export default function TeamPage() {
           {(isManager || isCurrentUser) && employee.role !== 'PARTNER' && (() => {
             const sickEntries = getMemberEntries(employee.id)
             const sickTotal = getSickDays(employee.id)
-            const canExpand = isManager && sickEntries.length > 0
+            // Managers kunnen altijd uitklappen (ook bij 0 dagen) om een eerder jaar te bekijken
+            const canExpand = isManager
             const sickExpanded = expandedSickCard === employee.id
             return (
               <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
@@ -1126,11 +1127,23 @@ export default function TeamPage() {
                   </span>
                 </button>
                 {sickTotal > 5 && (
-                  <p className="text-xs text-red-400/60 mt-1">Meer dan 5 ziektedagen dit jaar</p>
+                  <p className="text-xs text-red-400/60 mt-1">Meer dan 5 ziektedagen in {selectedYear}</p>
                 )}
                 {canExpand && sickExpanded && (
                   <div className="mt-3 space-y-2">
-                    {sickEntries.map(entry => (
+                    {/* Jaarknop — bekijk ook eerdere jaren */}
+                    <div className="flex items-center justify-between pb-1">
+                      <span className="text-[11px] uppercase tracking-wider text-gray-500">Bekijk jaar</span>
+                      <YearPicker
+                        years={[2025, 2026, 2027, 2028, 2029, 2030]}
+                        selected={selectedYear}
+                        onChange={(y) => setSelectedYear(y)}
+                        compact
+                      />
+                    </div>
+                    {sickEntries.length === 0 ? (
+                      <p className="text-xs text-gray-500 italic py-1">Geen ziektedagen geregistreerd in {selectedYear}</p>
+                    ) : sickEntries.map(entry => (
                       <div key={entry.id} className="p-2.5 rounded-lg bg-white/5 border border-white/5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs text-white/80">
