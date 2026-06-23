@@ -89,6 +89,7 @@ model User {
   organizedOutings        WorkxOuting[]        @relation("OrganizedOutings")
   outingAttendances       WorkxOutingAttendance[] @relation("UserOutingAttendances")
   sfeerPhotos             WorkxSfeerPhoto[]    @relation("UploadedSfeerPhotos")
+  workDistributionUpdates WorkDistributionUpdate[] @relation("WorkDistributionUpdates")
   trainingAttendances     TrainingAttendance[] @relation("TrainingAttendances")
 
   // Zaken toewijzing
@@ -1880,6 +1881,22 @@ model WorkxOutingAttendance {
 
   @@unique([outingId, userId])
   @@index([outingId])
+  @@index([userId])
+}
+
+// Tussentijdse werkverdeling-updates van medewerkers: als de situatie na het
+// invullen wezenlijk wijzigt (bijv. toch geen ruimte meer op woensdag), stuurt
+// de medewerker een update. Partners krijgen een Slack- + dashboard-melding.
+model WorkDistributionUpdate {
+  id            String   @id @default(cuid())
+  userId        String
+  weekStartDate DateTime @db.Date          // Maandag van de week waar de update over gaat
+  message       String   @db.Text
+  createdAt     DateTime @default(now())
+
+  user          User     @relation("WorkDistributionUpdates", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
   @@index([userId])
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import TextReveal from '@/components/ui/TextReveal'
@@ -21,6 +21,12 @@ interface CurrentResponse {
   windowOpenAt: string
   windowCloseAt: string
   isOpen: boolean
+}
+
+interface SentUpdate {
+  id: string
+  message: string
+  createdAt: string
 }
 
 function formatLong(iso: string): string {
@@ -51,6 +57,10 @@ export default function MijnWerkweekPage() {
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
 
+  const [updateMessage, setUpdateMessage] = useState('')
+  const [sendingUpdate, setSendingUpdate] = useState(false)
+  const [sentUpdates, setSentUpdates] = useState<SentUpdate[]>([])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -70,9 +80,9 @@ export default function MijnWerkweekPage() {
 
   useEffect(() => { load() }, [load])
 
-  const handleSave = async () => {
+  const saveIntake = async (silent = false) => {
     if (!work.trim()) {
-      toast.error('Vul minimaal "wat heb je liggen" in')
+      if (!silent) toast.error('Vul minimaal "wat heb je liggen" in')
       return
     }
     setSaving(true)
@@ -83,7 +93,7 @@ export default function MijnWerkweekPage() {
         body: JSON.stringify({ work, availability, notes }),
       })
       if (res.status === 409) {
-        toast.error('Het invul-venster is gesloten')
+        if (!silent) toast.error('Het invul-venster is gesloten')
         load()
         return
       }
@@ -92,11 +102,56 @@ export default function MijnWerkweekPage() {
       setData(prev => prev ? { ...prev, intake: saved } : prev)
       setSavedAt(Date.now())
       setTimeout(() => setSavedAt(null), 2500)
-      toast.success('Opgeslagen — partners zien je input bij het werkverdelingsgesprek')
+      if (!silent) toast.success('Opgeslagen — partners zien je input bij het werkverdelingsgesprek')
     } catch {
-      toast.error('Kon niet opslaan')
+      if (!silent) toast.error('Kon niet opslaan')
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Automatisch opslaan (debounced) terwijl je typt, zolang het venster open is.
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!data?.isOpen || !work.trim()) return
+    const cur = data.intake
+    const changed = !cur
+      || work !== (cur.work || '')
+      || availability !== (cur.availability || '')
+      || notes !== (cur.notes || '')
+    if (!changed) return
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    autosaveTimer.current = setTimeout(() => { void saveIntake(true) }, 1500)
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [work, availability, notes, data])
+
+  // Tussentijdse updates aan de partners (werkt ook buiten het invul-venster)
+  const loadUpdates = useCallback(async () => {
+    try {
+      const r = await fetch('/api/week-intake/update')
+      if (r.ok) setSentUpdates(await r.json())
+    } catch { /* stil */ }
+  }, [])
+  useEffect(() => { loadUpdates() }, [loadUpdates])
+
+  const sendUpdate = async () => {
+    if (!updateMessage.trim()) { toast.error('Schrijf eerst kort wat er is gewijzigd'); return }
+    setSendingUpdate(true)
+    try {
+      const r = await fetch('/api/week-intake/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: updateMessage }),
+      })
+      if (!r.ok) throw new Error()
+      setUpdateMessage('')
+      toast.success('Update verstuurd — de partners krijgen een Slack- en dashboard-melding')
+      loadUpdates()
+    } catch {
+      toast.error('Kon update niet versturen')
+    } finally {
+      setSendingUpdate(false)
     }
   }
 
@@ -223,14 +278,16 @@ export default function MijnWerkweekPage() {
           <p className="text-xs text-gray-500">
             {savedAt
               ? <span className="text-emerald-400 flex items-center gap-1"><Icons.check size={12} /> Opgeslagen</span>
-              : dirty || hasUnsavedNew
-                ? <span className="text-amber-400">Niet-opgeslagen wijzigingen</span>
-                : data.intake
-                  ? 'Alles up-to-date'
-                  : 'Nog niet ingevuld voor deze week'}
+              : saving
+                ? <span className="text-gray-400">Bezig met opslaan…</span>
+                : dirty || hasUnsavedNew
+                  ? <span className="text-amber-400">Wordt automatisch opgeslagen…</span>
+                  : data.intake
+                    ? 'Automatisch opgeslagen'
+                    : 'Nog niet ingevuld voor deze week'}
           </p>
           <button
-            onClick={handleSave}
+            onClick={() => saveIntake()}
             disabled={!data.isOpen || saving || !work.trim()}
             className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             style={{ background: 'rgb(249, 255, 133)', color: 'rgb(45, 45, 45)' }}
@@ -242,6 +299,50 @@ export default function MijnWerkweekPage() {
             )}
           </button>
         </div>
+      </div>
+
+      {/* Tussentijdse update aan partners — werkt ook buiten het invul-venster */}
+      <div className="card p-6 space-y-4 relative border border-amber-500/20">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 text-base">🔄</div>
+          <div>
+            <p className="text-white font-medium">Situatie veranderd? Stuur een update</p>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Is je werkdruk of beschikbaarheid ná het invullen wezenlijk gewijzigd (bijv. toch geen ruimte meer op woensdag)? Laat het de partners weten — ook tussentijds. Zij krijgen een Slack-bericht in <strong>MT-Groot</strong> én een melding op hun dashboard.
+            </p>
+          </div>
+        </div>
+        <textarea
+          value={updateMessage}
+          onChange={(e) => setUpdateMessage(e.target.value)}
+          rows={3}
+          placeholder="Bv. Woensdag toch vol geraakt — donderdag juist ruimte erbij."
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 transition-all"
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={sendUpdate}
+            disabled={sendingUpdate || !updateMessage.trim()}
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {sendingUpdate ? (
+              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <><Icons.send size={14} /> Update versturen</>
+            )}
+          </button>
+        </div>
+        {sentUpdates.length > 0 && (
+          <div className="pt-3 border-t border-white/5 space-y-2">
+            <p className="text-xs text-gray-500">Jouw eerdere updates (laatste 3 weken)</p>
+            {sentUpdates.map((u) => (
+              <div key={u.id} className="text-sm bg-white/5 rounded-lg px-3 py-2">
+                <p className="text-gray-200 whitespace-pre-wrap">{u.message}</p>
+                <p className="text-[11px] text-gray-500 mt-1">{formatDateTime(u.createdAt)}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Info card */}

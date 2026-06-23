@@ -501,6 +501,34 @@ export async function GET() {
       } catch { /* ignore */ }
     }
 
+    // 15b. Tussentijdse werkverdeling-updates van medewerkers (laatste 7 dagen)
+    //      — voor partners + Hanna, zodat zij de wijziging zelf kunnen registreren.
+    if (currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN') {
+      try {
+        const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        const recentUpdates = await prisma.workDistributionUpdate.findMany({
+          where: { createdAt: { gt: since } },
+          include: { user: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 15,
+        })
+        for (const u of recentUpdates) {
+          const key = `wd-update-${u.id}`
+          if (dismissedKeys.has(key)) continue
+          const who = u.user.name?.split(' ')[0] || 'iemand'
+          notifications.push({
+            id: key,
+            type: 'system',
+            title: 'Werkverdeling-update',
+            message: `${who}: ${u.message.length > 120 ? u.message.slice(0, 120) + '…' : u.message}`,
+            createdAt: u.createdAt,
+            read: false,
+            href: '/dashboard/partners/werkverdelingsgesprekken',
+          })
+        }
+      } catch { /* ignore */ }
+    }
+
     // 14. Werkverdeling invullen — vanaf donderdag 15:00 NL tot maandag 09:00 NL
     //     (wanneer de Slack-reminder fired). Alleen voor EMPLOYEE.
     if (currentUser?.role === 'EMPLOYEE') {
