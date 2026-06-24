@@ -16,12 +16,13 @@ export async function PATCH(
 
     const { itemId } = await params
     const body = await request.json()
-    const { title, notes, sortOrder } = body
+    const { title, notes, sortOrder, attachments } = body
 
     const data: any = {}
     if (title !== undefined) data.title = title
     if (notes !== undefined) data.notes = notes
     if (sortOrder !== undefined) data.sortOrder = sortOrder
+    if (attachments !== undefined) data.attachments = attachments
 
     const item = await prisma.werkoverlegAgendaItem.update({
       where: { id: itemId },

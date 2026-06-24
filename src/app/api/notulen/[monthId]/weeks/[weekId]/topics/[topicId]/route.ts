@@ -17,12 +17,13 @@ export async function PATCH(
     }
 
     const { topicId } = params
-    const { title, remarks, sortOrder } = await req.json()
+    const { title, remarks, sortOrder, attachments } = await req.json()
 
     const updateData: Record<string, unknown> = {}
     if (title !== undefined) updateData.title = title
     if (remarks !== undefined) updateData.remarks = remarks
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder
+    if (attachments !== undefined) updateData.attachments = attachments
 
     const topic = await prisma.meetingTopic.update({
       where: { id: topicId },

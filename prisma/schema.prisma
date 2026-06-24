@@ -1655,6 +1655,7 @@ model MeetingTopic {
   weekId     String
   title      String   // "Uren afgelopen week", "Werkverdeling partners", of custom
   remarks    String?  @db.Text // Opmerkingen
+  attachments String? @db.Text // JSON-array van bijlagen: [{url,name,size}]
   isStandard Boolean  @default(false) // true voor vaste agendapunten
   sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())
@@ -2189,6 +2190,7 @@ model WerkoverlegAgendaItem {
   dayId     String
   title     String
   notes     String?  @db.Text
+  attachments String? @db.Text // JSON-array van bijlagen: [{url,name,size}]
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -45,6 +45,7 @@ import { main as addYearAgendaTable } from './add-year-agenda-table'
 import { main as addWorkxOutingsTables } from './add-workx-outings-tables'
 import { main as addWorkxSfeerPhotosTable } from './add-workx-sfeer-photos-table'
 import { main as addWorkDistributionUpdatesTable } from './add-work-distribution-updates-table'
+import { main as addAgendaAttachmentsColumns } from './add-agenda-attachments-columns'
 import { main as addPartnerTaskExecutorsTable } from './add-partner-task-executors-table'
 import { main as addOfficePhoneInfobox } from './add-office-phone-infobox'
 import { main as addOfficeRequestsTable } from './add-office-requests-table'
@@ -112,6 +113,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-workx-outings-tables', run: addWorkxOutingsTables },
   { name: 'add-workx-sfeer-photos-table', run: addWorkxSfeerPhotosTable },
   { name: 'add-work-distribution-updates-table', run: addWorkDistributionUpdatesTable },
+  { name: 'add-agenda-attachments-columns', run: addAgendaAttachmentsColumns },
   { name: 'add-partner-task-executors-table', run: addPartnerTaskExecutorsTable },
   { name: 'add-office-phone-infobox', run: addOfficePhoneInfobox },
   { name: 'add-office-requests-table', run: addOfficeRequestsTable },

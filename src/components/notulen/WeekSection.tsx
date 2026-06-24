@@ -11,6 +11,7 @@ interface Topic {
   id: string
   title: string
   remarks: string | null
+  attachments?: string | null
   isStandard: boolean
   sortOrder: number
   actions?: Action[]
@@ -68,7 +69,7 @@ export default function WeekSection({
 
   const basePath = `/api/notulen/${monthId}/weeks/${weekId}`
 
-  const handleUpdateTopic = async (topicId: string, data: { title?: string; remarks?: string }) => {
+  const handleUpdateTopic = async (topicId: string, data: { title?: string; remarks?: string; attachments?: string }) => {
     try {
       const res = await fetch(`${basePath}/topics/${topicId}`, {
         method: 'PATCH',

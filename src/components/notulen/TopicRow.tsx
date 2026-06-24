@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import AgendaAttachments, { parseAttachments } from './AgendaAttachments'
 
 interface Action {
   id: string
@@ -16,10 +17,11 @@ interface TopicRowProps {
   id: string
   title: string
   remarks: string | null
+  attachments?: string | null
   isStandard: boolean
   actions: Action[]
   teamMembers: string[]
-  onUpdate: (id: string, data: { title?: string; remarks?: string }) => void
+  onUpdate: (id: string, data: { title?: string; remarks?: string; attachments?: string }) => void
   onDelete: (id: string) => void
   onAddAction: (topicId: string, description: string, responsibleName: string) => void
   onUpdateAction: (actionId: string, data: { description?: string; responsibleName?: string; isCompleted?: boolean }) => void
@@ -28,7 +30,7 @@ interface TopicRowProps {
 }
 
 export default function TopicRow({
-  id, title, remarks, isStandard, actions, teamMembers,
+  id, title, remarks, attachments, isStandard, actions, teamMembers,
   onUpdate, onDelete, onAddAction, onUpdateAction, onDeleteAction, onMoveToNext
 }: TopicRowProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -206,6 +208,12 @@ export default function TopicRow({
           )}
         </div>
       </div>
+
+      {/* Bijlagen bij dit agendapunt */}
+      <AgendaAttachments
+        attachments={parseAttachments(attachments)}
+        onChange={(next) => onUpdate(id, { attachments: JSON.stringify(next) })}
+      />
 
       {/* Actions for this topic */}
       {topicActions.length > 0 && (

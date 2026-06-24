@@ -8,6 +8,7 @@ import { Icons } from '@/components/ui/Icons'
 import TextReveal from '@/components/ui/TextReveal'
 import DatePicker from '@/components/ui/DatePicker'
 import { getPhotoUrl } from '@/lib/team-photos'
+import AgendaAttachments, { parseAttachments } from '@/components/notulen/AgendaAttachments'
 
 // ── Types ──────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ interface AgendaItem {
   dayId: string
   title: string
   notes: string | null
+  attachments?: string | null
   sortOrder: number
 }
 
@@ -397,6 +399,21 @@ export default function WerkoverlegPage() {
     }
   }
 
+  const handleUpdateAgendaAttachments = async (itemId: string, attachments: { url: string; name: string; size?: number }[]) => {
+    if (!selectedDay) return
+    try {
+      const res = await fetch(`/api/werkoverleg/${selectedDay.id}/agenda/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attachments: JSON.stringify(attachments) }),
+      })
+      if (!res.ok) throw new Error()
+      fetchDay(selectedDay.id)
+    } catch {
+      toast.error('Kon bijlage niet opslaan')
+    }
+  }
+
   // ── Actions CRUD ───────────────────────────────────
 
   const handleAddAction = async () => {
@@ -741,6 +758,13 @@ export default function WerkoverlegPage() {
                   </button>
                 </div>
               )}
+              {/* Bijlagen bij dit agendapunt */}
+              <div className="ml-9">
+                <AgendaAttachments
+                  attachments={parseAttachments(item.attachments)}
+                  onChange={(next) => handleUpdateAgendaAttachments(item.id, next)}
+                />
+              </div>
             </div>
           ))}
 
