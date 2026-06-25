@@ -35,6 +35,14 @@
       "schedule": "0 12 * * 1"
     },
     {
+      "path": "/api/cron/werkoverleg-actielijst-reminder",
+      "schedule": "0 11 * * 1"
+    },
+    {
+      "path": "/api/cron/werkoverleg-actielijst-reminder",
+      "schedule": "0 12 * * 1"
+    },
+    {
       "path": "/api/cron/partneroverleg-reminder",
       "schedule": "0 8 * * 5"
     },
