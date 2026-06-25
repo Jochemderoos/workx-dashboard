@@ -12,7 +12,7 @@ import { OFFICE_PEOPLE, OFFICE_PERSON_KEYS, canEditOffice } from '@/lib/office-t
 const PARTNERS_FOR_INFOBOX = PARTNERS
 
 type Status = 'OFFICE' | 'REMOTE' | 'ABSENT'
-type PhoneMode = 'AUTO' | 'FORWARD' | 'COVER'
+type PhoneMode = 'AUTO' | 'FORWARD' | 'COVER' | 'CENTRALE'
 
 interface AttendanceEntry {
   id: string
@@ -541,6 +541,7 @@ function describePhone(phone: PhoneDay | undefined, onOffice: string[]): { label
   const mode: PhoneMode = phone?.mode || 'AUTO'
   if (mode === 'FORWARD' && phone?.forwardTo) return { label: `Doorgeschakeld naar ${phone.forwardTo}`, danger: false }
   if (mode === 'COVER' && phone?.coverBy) return { label: `Opgenomen door ${phone.coverBy}`, danger: false }
+  if (mode === 'CENTRALE') return { label: 'Opgenomen door de Telefooncentrale', danger: false }
   if (mode === 'AUTO' && onOffice.length > 0) return { label: `Opgenomen door ${onOffice.join(', ')}`, danger: false }
   return { label: 'Niemand op kantoor — telefoon niet ingesteld', danger: true }
 }
@@ -665,9 +666,11 @@ function WeekMatrix({
                   ? `→ ${phone.forwardTo}`
                   : phone?.mode === 'COVER' && phone.coverBy
                     ? phone.coverBy
-                    : onOfficeList.length > 0
-                      ? onOfficeList.join(', ')
-                      : 'Niemand'
+                    : phone?.mode === 'CENTRALE'
+                      ? 'Centrale'
+                      : onOfficeList.length > 0
+                        ? onOfficeList.join(', ')
+                        : 'Niemand'
                 return (
                   <td key={d.toISOString()} className={`py-2 px-2 ${isToday ? 'bg-workx-lime/[0.04]' : ''}`}>
                     <button
@@ -752,6 +755,7 @@ function PhoneEditModal({
           <div className="space-y-2">
             {([
               { id: 'AUTO' as PhoneMode, label: 'Automatisch', desc: onOfficeNames.length > 0 ? `Opgenomen door ${onOfficeNames.join(', ')}` : 'Niemand op kantoor — kies een andere optie' },
+              { id: 'CENTRALE' as PhoneMode, label: 'Telefooncentrale', desc: 'Opgenomen door de externe telefooncentrale.' },
               { id: 'COVER' as PhoneMode, label: 'Opgenomen door…', desc: 'Specifieke persoon (override).' },
               { id: 'FORWARD' as PhoneMode, label: 'Doorgeschakeld naar…', desc: 'Nummer of partner (bv. mobiel).' },
             ]).map(o => {

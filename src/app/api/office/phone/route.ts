@@ -1,6 +1,6 @@
 // Kantoortelefoon-regeling per dag (upsert).
 // PUT body: { date, mode, forwardTo?, coverBy?, note? }
-//   mode: 'AUTO' | 'FORWARD' | 'COVER'
+//   mode: 'AUTO' | 'FORWARD' | 'COVER' | 'CENTRALE'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { canEditOffice } from '@/lib/office-team'
 
-const VALID_MODE = new Set(['AUTO', 'FORWARD', 'COVER'])
+const VALID_MODE = new Set(['AUTO', 'FORWARD', 'COVER', 'CENTRALE'])
 
 function dateOnly(s: string): Date | null {
   const d = new Date(s)
