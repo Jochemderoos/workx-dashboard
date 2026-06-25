@@ -61,7 +61,8 @@ export async function POST(
       data: {
         weekId: nextWeek.id,
         title: topic.title,
-        remarks: null,
+        remarks: topic.remarks,        // opmerking gaat mee naar volgende week
+        attachments: topic.attachments, // bijlagen gaan ook mee
         isStandard: false,
         sortOrder: nextSortOrder,
       },
