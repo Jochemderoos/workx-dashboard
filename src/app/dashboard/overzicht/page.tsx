@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { SITE_SECTIONS, type MenuItem } from '@/lib/menu-data'
+import HomeSearchBar from '@/components/dashboard/HomeSearchBar'
 
 export default function OverzichtPage() {
   const { data: session } = useSession()
@@ -13,20 +14,13 @@ export default function OverzichtPage() {
   const isPartnerOrAdmin = role === 'PARTNER' || role === 'ADMIN'
   const isAdmin = role === 'ADMIN'
 
-  const [search, setSearch] = useState('')
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['team']))
-
-  const searchQ = search.trim().toLowerCase()
 
   const filterItem = (item: MenuItem) => {
     if (isExternal && item.hideForExternal) return false
     if (item.partnerOnly && !isPartnerOrAdmin) return false
     if (item.adminOnly && !isAdmin) return false
-    if (!searchQ) return true
-    return (
-      item.label.toLowerCase().includes(searchQ) ||
-      (item.description ? item.description.toLowerCase().includes(searchQ) : false)
-    )
+    return true
   }
 
   const sections = useMemo(() => {
@@ -40,14 +34,13 @@ export default function OverzichtPage() {
         })).filter(sg => sg.items.length > 0),
       }))
       .filter(s => s.subGroups.length > 0)
-  }, [isPartnerOrAdmin, isExternal, searchQ]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPartnerOrAdmin, isExternal, isAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = sections.reduce(
     (sum, s) => sum + s.subGroups.reduce((ssum, sg) => ssum + sg.items.length, 0), 0,
   )
 
-  // Bij actief zoeken: alles automatisch open
-  const effectiveOpen = (sectionId: string) => !!searchQ || openSections.has(sectionId)
+  const effectiveOpen = (sectionId: string) => openSections.has(sectionId)
   const toggleSection = (id: string) => {
     const next = new Set(openSections)
     if (next.has(id)) next.delete(id)
@@ -81,50 +74,17 @@ export default function OverzichtPage() {
                 Overzicht van alles wat erin zit
               </h1>
               <p className="text-sm mt-2 max-w-2xl" style={{ color: 'var(--color-text-secondary)' }}>
-                {totalPages} pagina's verdeeld over {sections.length} secties. Klik op een sectie om uit te klappen, of zoek hieronder direct op naam of beschrijving.
+                {totalPages} pagina's verdeeld over {sections.length} secties. Gebruik de zoekbalk hieronder om direct alles te doorzoeken (zoals op de homepage), of klik op een sectie om te bladeren.
               </p>
             </div>
           </div>
 
-          {/* Search */}
-          <div className="mt-6 relative max-w-xl">
-            <Icons.search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-text-tertiary)' }} />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek pagina (bv. 'bonus', 'agenda', 'opleiding')…"
-              className="w-full rounded-2xl pl-10 pr-10 py-3 text-sm focus:outline-none transition-colors"
-              style={{
-                background: 'var(--color-bg-card)',
-                border: '1px solid rgba(180, 185, 50, 0.3)',
-                color: 'var(--color-text-primary)',
-              }}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                <Icons.x size={14} />
-              </button>
-            )}
+          {/* Globale zoekbalk — zelfde als op de homepage */}
+          <div className="mt-6 max-w-xl">
+            <HomeSearchBar />
           </div>
         </div>
       </section>
-
-      {/* Empty state */}
-      {sections.length === 0 && (
-        <div className="rounded-2xl border p-12 text-center" style={{
-          background: 'var(--color-bg-card)',
-          borderColor: 'var(--color-border-subtle)',
-        }}>
-          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-            Geen pagina's gevonden voor "{search}"
-          </p>
-        </div>
-      )}
 
       {/* Sections */}
       {sections.map((section) => {
@@ -138,8 +98,7 @@ export default function OverzichtPage() {
           >
             <button
               onClick={() => toggleSection(section.id)}
-              disabled={!!searchQ}
-              className="w-full px-6 py-5 flex items-center gap-4 text-left transition-colors disabled:cursor-default"
+              className="w-full px-6 py-5 flex items-center gap-4 text-left transition-colors"
               style={{
                 background: isOpen ? 'rgba(249, 255, 133, 0.10)' : 'transparent',
               }}
