@@ -29,8 +29,16 @@ export async function GET() {
       where: { userId_weekStartDate: { userId: session.user.id, weekStartDate: dateOnly } },
     })
 
+    // Meest recente eerdere lijst (vorige week), zodat de medewerker die kan
+    // teruglezen of laden om verder te gaan.
+    const previousIntake = await prisma.weekIntake.findFirst({
+      where: { userId: session.user.id, weekStartDate: { lt: dateOnly } },
+      orderBy: { weekStartDate: 'desc' },
+    })
+
     return NextResponse.json({
       intake,
+      previousIntake,
       targetWeekStart: target.toISOString(),
       windowOpenAt: getWindowOpenAt(target).toISOString(),
       windowCloseAt: getWindowCloseAt(target).toISOString(),
