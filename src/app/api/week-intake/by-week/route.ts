@@ -28,10 +28,34 @@ export async function GET(req: NextRequest) {
     }
     const dateOnly = toDateOnly(d)
 
-    const intakes = await prisma.weekIntake.findMany({
+    // Lijsten die echt voor deze week zijn ingevuld/bijgewerkt.
+    const current = await prisma.weekIntake.findMany({
       where: { weekStartDate: dateOnly },
       include: { user: { select: { id: true, name: true } } },
     })
+    const currentUserIds = current.map(i => i.userId)
+
+    // Voor medewerkers zonder lijst voor deze week: val terug op hun meest
+    // recente eerdere lijst, gemarkeerd als 'niet bijgewerkt deze week'.
+    const previous = await prisma.weekIntake.findMany({
+      where: {
+        weekStartDate: { lt: dateOnly },
+        ...(currentUserIds.length ? { userId: { notIn: currentUserIds } } : {}),
+      },
+      orderBy: { weekStartDate: 'desc' },
+      include: { user: { select: { id: true, name: true } } },
+    })
+    const seen = new Set<string>()
+    const latestPrev = previous.filter(p => {
+      if (seen.has(p.userId)) return false
+      seen.add(p.userId)
+      return true
+    })
+
+    const intakes = [
+      ...current.map(i => ({ ...i, isCurrent: true })),
+      ...latestPrev.map(i => ({ ...i, isCurrent: false })),
+    ]
 
     return NextResponse.json({ intakes })
   } catch (error) {

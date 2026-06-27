@@ -76,6 +76,7 @@ interface WeekIntake {
   availability: string | null
   notes: string | null
   submittedAt: string | null
+  isCurrent?: boolean // true = bijgewerkt voor deze week; false = overgenomen van eerdere week
   user: { id: string; name: string }
 }
 
@@ -576,18 +577,23 @@ export default function WerkverdelingsgesprekkenPage() {
 
                   {/* Intake van medewerker (read-only) */}
                   {intake ? (
-                    <div className="mb-3 p-3 rounded-lg bg-workx-lime/5 border border-workx-lime/15 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] uppercase tracking-widest font-bold text-workx-lime flex items-center gap-1">
+                    <div className={`mb-3 p-3 rounded-lg border space-y-2 ${intake.isCurrent ? 'bg-workx-lime/5 border-workx-lime/15' : 'bg-amber-500/5 border-amber-500/25'}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`text-[10px] uppercase tracking-widest font-bold flex items-center gap-1 ${intake.isCurrent ? 'text-workx-lime' : 'text-amber-300'}`}>
                           <Icons.fileText size={10} />
-                          Eigen update
+                          {intake.isCurrent ? 'Eigen update' : 'Niet bijgewerkt deze week'}
                         </p>
-                        {intake.submittedAt && (
-                          <span className="text-[10px] text-gray-500">
-                            {new Date(intake.submittedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
-                          </span>
-                        )}
+                        <span className="text-[10px] text-gray-500">
+                          {intake.isCurrent
+                            ? (intake.submittedAt ? `bijgewerkt ${new Date(intake.submittedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}` : '')
+                            : `van ${new Date(intake.weekStartDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}`}
+                        </span>
                       </div>
+                      {!intake.isCurrent && (
+                        <p className="text-[10px] text-amber-300/80 italic leading-snug">
+                          Dit is de lijst van een eerdere week — de medewerker heeft &apos;m nog niet bijgewerkt voor deze week.
+                        </p>
+                      )}
                       <div>
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">📋 Werk</p>
                         <p className="text-xs text-white/90 whitespace-pre-wrap leading-relaxed">{intake.work}</p>
