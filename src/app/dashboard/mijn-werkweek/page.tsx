@@ -63,9 +63,13 @@ export default function MijnWerkweekPage() {
       if (!res.ok) throw new Error()
       const d: CurrentResponse = await res.json()
       setData(d)
-      setWork(d.intake?.work || '')
-      setAvailability(d.intake?.availability || '')
-      setNotes(d.intake?.notes || '')
+      // Standaard blijft je lijst staan: heb je nog geen eigen lijst voor deze
+      // week, dan vullen we 'm vast met die van afgelopen week (met de optie om
+      // 'm leeg te maken voor een schone start).
+      const src = d.intake ?? d.previousIntake
+      setWork(src?.work || '')
+      setAvailability(src?.availability || '')
+      setNotes(src?.notes || '')
     } catch {
       toast.error('Kon je werkweek niet laden')
     } finally {
@@ -105,18 +109,23 @@ export default function MijnWerkweekPage() {
     }
   }
 
-  // Laad de lijst van afgelopen week in het formulier (overschrijft huidige invoer).
-  const loadPrevious = () => {
-    const p = data?.previousIntake
-    if (!p) return
+  // Maak de lijst leeg voor een schone start (verwijdert ook de opgeslagen lijst
+  // van deze week, indien aanwezig).
+  const clearForm = async () => {
     if (
       (work.trim() || availability.trim() || notes.trim()) &&
-      !confirm('Je huidige invoer wordt overschreven met de lijst van afgelopen week. Doorgaan?')
+      !confirm('Lijst leegmaken en met een schone lijst beginnen?')
     ) return
-    setWork(p.work || '')
-    setAvailability(p.availability || '')
-    setNotes(p.notes || '')
-    toast.success('Lijst van afgelopen week geladen — pas aan; het wordt automatisch opgeslagen')
+    setWork('')
+    setAvailability('')
+    setNotes('')
+    if (data?.intake) {
+      try {
+        await fetch('/api/week-intake/current', { method: 'DELETE' })
+        setData(prev => prev ? { ...prev, intake: null } : prev)
+      } catch { /* stil */ }
+    }
+    toast.success('Schone lijst — vul je werkweek opnieuw in')
   }
 
   // Automatisch opslaan (debounced) terwijl je typt, zolang het venster open is.
@@ -124,6 +133,13 @@ export default function MijnWerkweekPage() {
   useEffect(() => {
     if (!data || !work.trim()) return
     const cur = data.intake
+    const prev = data.previousIntake
+    // Ongewijzigde, overgenomen lijst van vorige week: nog niet automatisch
+    // opslaan — zo blijft "Leeg maken" schoon en maken we geen stille kopie.
+    if (!cur && prev
+      && work === (prev.work || '')
+      && availability === (prev.availability || '')
+      && notes === (prev.notes || '')) return
     const changed = !cur
       || work !== (cur.work || '')
       || availability !== (cur.availability || '')
@@ -173,6 +189,14 @@ export default function MijnWerkweekPage() {
     notes !== (data.intake.notes || '')
   )
   const hasUnsavedNew = !data.intake && (work.trim() || availability.trim() || notes.trim())
+
+  // Toont de (ongewijzigde) overgenomen lijst van vorige week — nog niet als
+  // eigen lijst voor deze week opgeslagen.
+  const prevIntake = data.previousIntake
+  const isCarryOver = !data.intake && !!prevIntake
+    && work === (prevIntake.work || '')
+    && availability === (prevIntake.availability || '')
+    && notes === (prevIntake.notes || '')
 
   return (
     <div className="space-y-6 fade-in p-4 sm:p-6 max-w-3xl mx-auto relative">
@@ -238,48 +262,13 @@ export default function MijnWerkweekPage() {
         </div>
       </div>
 
-      {/* Lijst van afgelopen week — teruglezen of laden om verder te gaan */}
-      {data.previousIntake && !data.intake && (
-        <div className="card p-5 relative border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Icons.clock className="text-blue-400" size={16} />
-              </div>
-              <div>
-                <p className="text-white font-medium">Je lijst van afgelopen week</p>
-                <p className="text-sm text-gray-400 mt-0.5">
-                  Ingevuld voor de week van {formatLong(data.previousIntake.weekStartDate)}. Begin met een schone lijst, of laad deze om verder te gaan.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={loadPrevious}
-              className="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 border border-blue-500/30 transition-all flex items-center gap-2 flex-shrink-0"
-            >
-              <Icons.download size={14} /> Laad lijst van afgelopen week
-            </button>
-          </div>
-
-          {/* Preview van de vorige lijst */}
-          <div className="mt-4 rounded-xl bg-white/[0.03] border border-white/5 p-3 space-y-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-0.5">Wat had je liggen</p>
-              <p className="text-sm text-gray-300 whitespace-pre-wrap">{data.previousIntake.work}</p>
-            </div>
-            {data.previousIntake.availability && (
-              <div>
-                <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-0.5">Afwezig</p>
-                <p className="text-sm text-gray-300 whitespace-pre-wrap">{data.previousIntake.availability}</p>
-              </div>
-            )}
-            {data.previousIntake.notes && (
-              <div>
-                <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-0.5">Ruimte / bijzonderheden</p>
-                <p className="text-sm text-gray-300 whitespace-pre-wrap">{data.previousIntake.notes}</p>
-              </div>
-            )}
-          </div>
+      {/* Hint: je lijst van afgelopen week staat alvast ingevuld */}
+      {isCarryOver && (
+        <div className="card p-3 border border-blue-500/20 bg-blue-500/5 flex items-start gap-2 text-sm">
+          <Icons.clock size={15} className="text-blue-400 flex-shrink-0 mt-0.5" />
+          <span className="text-blue-200">
+            Dit is je lijst van <strong>afgelopen week</strong> ({formatLong(prevIntake!.weekStartDate)}) — die staat alvast ingevuld. Pas &apos;m aan, of klik <strong>Leeg maken</strong> voor een schone start.
+          </span>
         </div>
       )}
 
@@ -320,13 +309,22 @@ export default function MijnWerkweekPage() {
               ? <span className="text-emerald-400 flex items-center gap-1"><Icons.check size={12} /> Opgeslagen</span>
               : saving
                 ? <span className="text-gray-400">Bezig met opslaan…</span>
-                : dirty || hasUnsavedNew
-                  ? <span className="text-amber-400">Wordt automatisch opgeslagen…</span>
-                  : data.intake
-                    ? 'Automatisch opgeslagen'
-                    : 'Nog niet ingevuld voor deze week'}
+                : isCarryOver
+                  ? <span className="text-blue-300">Lijst van afgelopen week — pas aan of bevestig met Opslaan</span>
+                  : dirty || hasUnsavedNew
+                    ? <span className="text-amber-400">Wordt automatisch opgeslagen…</span>
+                    : data.intake
+                      ? 'Automatisch opgeslagen'
+                      : 'Nog niet ingevuld voor deze week'}
           </p>
           <div className="flex items-center gap-2">
+            <button
+              onClick={clearForm}
+              className="px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-1.5"
+              title="Begin met een lege lijst"
+            >
+              <Icons.trash size={14} /> Leeg maken
+            </button>
             <button
               onClick={() => setShowUpdateModal(true)}
               className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30 transition-all flex items-center gap-2"

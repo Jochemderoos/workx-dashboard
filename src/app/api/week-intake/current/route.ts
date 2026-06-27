@@ -97,3 +97,22 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
+
+// DELETE — maak de lijst van de huidige target-week leeg (schone start).
+export async function DELETE() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
+  try {
+    const target = getTargetWeekStart(new Date())
+    const dateOnly = toDateOnly(target)
+    await prisma.weekIntake.deleteMany({
+      where: { userId: session.user.id, weekStartDate: dateOnly },
+    })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error clearing week intake:', error)
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  }
+}
