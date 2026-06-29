@@ -166,7 +166,7 @@ test.describe('Print & PDF Functionaliteit', () => {
 
     // In print modus: .no-print elementen moeten verborgen zijn
     const noPrintElements = await page.evaluate(() => {
-      const els = document.querySelectorAll('.no-print')
+      const els = Array.from(document.querySelectorAll('.no-print'))
       let hiddenCount = 0
       for (const el of els) {
         const style = window.getComputedStyle(el)
@@ -182,7 +182,7 @@ test.describe('Print & PDF Functionaliteit', () => {
 
     // Card elementen moeten geen box-shadow hebben in print
     const cardsHaveShadow = await page.evaluate(() => {
-      const cards = document.querySelectorAll('[class*="card"]')
+      const cards = Array.from(document.querySelectorAll('[class*="card"]'))
       for (const card of cards) {
         const style = window.getComputedStyle(card)
         if (style.boxShadow && style.boxShadow !== 'none') return true
@@ -238,7 +238,7 @@ test.describe('Print & PDF Functionaliteit', () => {
 
     // Geen afgekapte content (overflow hidden in print)
     const hasHiddenOverflow = await page.evaluate(() => {
-      const cards = document.querySelectorAll('[class*="card"], [class*="member"]')
+      const cards = Array.from(document.querySelectorAll('[class*="card"], [class*="member"]'))
       for (const card of cards) {
         const style = window.getComputedStyle(card)
         if (style.overflow === 'hidden' && card.scrollHeight > card.clientHeight) {
