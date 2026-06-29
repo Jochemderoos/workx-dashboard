@@ -109,8 +109,6 @@ Vermeld bron-URLs aan het einde als markdown-links (bv. [Workx bio](https://...)
     return NextResponse.json({ summary, cached: false })
   } catch (error) {
     console.error('[recruitment/ai-summary] mislukt:', error)
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'AI-samenvatting mislukt',
-    }, { status: 500 })
+    return NextResponse.json({ error: 'AI-samenvatting mislukt' }, { status: 500 })
   }
 }

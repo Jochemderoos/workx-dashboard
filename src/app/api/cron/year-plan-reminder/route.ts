@@ -63,8 +63,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('year-plan-reminder cron failed:', error)
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Server fout',
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }

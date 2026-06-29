@@ -265,7 +265,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error generating pitch PDF:', error)
     return NextResponse.json(
-      { error: 'Failed to generate pitch PDF', details: String(error) },
+      { error: 'Failed to generate pitch PDF' },
       { status: 500 }
     )
   }

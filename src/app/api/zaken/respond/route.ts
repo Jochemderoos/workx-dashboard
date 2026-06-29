@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error responding to zaak:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to respond' },
+      { error: 'Failed to respond' },
       { status: 500 }
     )
   }

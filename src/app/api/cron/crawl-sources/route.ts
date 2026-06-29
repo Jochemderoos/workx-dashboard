@@ -195,7 +195,8 @@ export async function GET(req: NextRequest) {
       log,
     })
   } catch (error) {
-    addLog(`FATAL: ${error instanceof Error ? error.message : 'Onbekende fout'}`)
+    console.error('[cron/crawl-sources] FATAL:', error)
+    addLog('FATAL: cron job mislukt')
     return NextResponse.json({ error: 'Cron job mislukt', log }, { status: 500 })
   }
 }

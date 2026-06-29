@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('ConvertAPI error response:', errorText)
-      return NextResponse.json({ error: 'Conversie mislukt', details: errorText }, { status: 500 })
+      return NextResponse.json({ error: 'Conversie mislukt' }, { status: 500 })
     }
 
     const result = await response.json()
@@ -141,6 +141,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Geen PDF ontvangen' }, { status: 500 })
   } catch (error) {
     console.error('Conversion error:', error)
-    return NextResponse.json({ error: 'Conversie mislukt', details: String(error) }, { status: 500 })
+    return NextResponse.json({ error: 'Conversie mislukt' }, { status: 500 })
   }
 }

@@ -524,9 +524,8 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Error processing workload upload:', error)
-    const message = error instanceof Error ? error.message : 'Fout bij verwerken van bestand'
     return NextResponse.json(
-      { error: message },
+      { error: 'Fout bij verwerken van bestand' },
       { status: 500 }
     )
   }

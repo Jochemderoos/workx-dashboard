@@ -307,7 +307,7 @@ export async function POST(req: NextRequest) {
         }
       } catch (error) {
         console.error('Browser agent error:', error)
-        send('error', 'Agent fout: ' + (error instanceof Error ? error.message : 'Onbekende fout'))
+        send('error', 'Agent fout: er is iets misgegaan. Probeer het opnieuw.')
       }
 
       controller.close()

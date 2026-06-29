@@ -56,8 +56,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, results })
   } catch (error) {
     console.error('[transitie/claim-legacy] mislukt:', error)
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Server error',
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }

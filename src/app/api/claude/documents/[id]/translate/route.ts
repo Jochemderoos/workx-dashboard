@@ -285,7 +285,6 @@ ${textContent}`
     return NextResponse.json({ translation, fileName: outputName })
   } catch (error) {
     console.error('[translate] Error:', error)
-    const message = error instanceof Error ? error.message : 'Onbekende fout bij vertaling'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: 'Vertaling mislukt' }, { status: 500 })
   }
 }

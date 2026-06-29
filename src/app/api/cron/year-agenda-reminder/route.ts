@@ -60,8 +60,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, slack: slackOk, today, weekIdx, isLast })
   } catch (error) {
     console.error('year-agenda-reminder cron failed:', error)
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Server fout',
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }

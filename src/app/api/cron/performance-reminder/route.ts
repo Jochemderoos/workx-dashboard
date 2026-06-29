@@ -59,8 +59,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, slack: slackOk, week })
   } catch (error) {
     console.error('Error in performance-reminder cron:', error)
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Server fout',
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Server fout' }, { status: 500 })
   }
 }
