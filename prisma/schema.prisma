@@ -40,6 +40,8 @@ model User {
   isActive       Boolean   @default(true) // Voor medewerkers die uit dienst zijn
   lastPasswordChangeAt    DateTime? // Audit: wanneer wachtwoord laatst gewijzigd
   lastPasswordChangedById String?   // Audit: User.id van wie het wijzigde (= self bij self-reset)
+  lastLoginAt    DateTime? // Gebruiks-tracking: laatste login
+  loginCount     Int       @default(0) // Gebruiks-tracking: totaal aantal logins
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1230,7 +1232,7 @@ model MonthlyCost {
   updatedAt   DateTime @updatedAt
 
   @@index([year, month])
-  @@index([externalRef])
+  @@unique([externalRef]) // voorkomt dubbele MT940-imports op DB-niveau (NULLs blijven toegestaan)
   @@index([rawKey])
   @@index([category])
 }

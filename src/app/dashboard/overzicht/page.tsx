@@ -13,6 +13,7 @@ export default function OverzichtPage() {
   const isExternal = role === 'EXTERNAL'
   const isPartnerOrAdmin = role === 'PARTNER' || role === 'ADMIN'
   const isAdmin = role === 'ADMIN'
+  const isOwner = (session?.user?.email || '').toLowerCase() === 'jochem.deroos@workxadvocaten.nl'
 
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['team']))
 
@@ -20,6 +21,7 @@ export default function OverzichtPage() {
     if (isExternal && item.hideForExternal) return false
     if (item.partnerOnly && !isPartnerOrAdmin) return false
     if (item.adminOnly && !isAdmin) return false
+    if (item.ownerOnly && !isOwner) return false
     return true
   }
 
@@ -34,7 +36,7 @@ export default function OverzichtPage() {
         })).filter(sg => sg.items.length > 0),
       }))
       .filter(s => s.subGroups.length > 0)
-  }, [isPartnerOrAdmin, isExternal, isAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPartnerOrAdmin, isExternal, isAdmin, isOwner]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPages = sections.reduce(
     (sum, s) => sum + s.subGroups.reduce((ssum, sg) => ssum + sg.items.length, 0), 0,

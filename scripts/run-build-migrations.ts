@@ -46,6 +46,8 @@ import { main as addWorkxOutingsTables } from './add-workx-outings-tables'
 import { main as addWorkxSfeerPhotosTable } from './add-workx-sfeer-photos-table'
 import { main as addWorkDistributionUpdatesTable } from './add-work-distribution-updates-table'
 import { main as addAgendaAttachmentsColumns } from './add-agenda-attachments-columns'
+import { main as addMonthlyCostExternalRefUnique } from './add-monthly-cost-externalref-unique'
+import { main as addUserLoginTracking } from './add-user-login-tracking'
 import { main as addPartnerTaskExecutorsTable } from './add-partner-task-executors-table'
 import { main as addOfficePhoneInfobox } from './add-office-phone-infobox'
 import { main as addOfficeRequestsTable } from './add-office-requests-table'
@@ -114,6 +116,8 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-workx-sfeer-photos-table', run: addWorkxSfeerPhotosTable },
   { name: 'add-work-distribution-updates-table', run: addWorkDistributionUpdatesTable },
   { name: 'add-agenda-attachments-columns', run: addAgendaAttachmentsColumns },
+  { name: 'add-monthly-cost-externalref-unique', run: addMonthlyCostExternalRefUnique },
+  { name: 'add-user-login-tracking', run: addUserLoginTracking },
   { name: 'add-partner-task-executors-table', run: addPartnerTaskExecutorsTable },
   { name: 'add-office-phone-infobox', run: addOfficePhoneInfobox },
   { name: 'add-office-requests-table', run: addOfficeRequestsTable },
@@ -141,6 +145,7 @@ async function main() {
   console.log(`[run-build-migrations] start (${TASKS.length} taken, gedeelde Prisma-client)`)
 
   const prisma = new PrismaClient()
+  const failures: string[] = []
   try {
     for (const task of TASKS) {
       const start = Date.now()
@@ -149,7 +154,8 @@ async function main() {
         const dur = ((Date.now() - start) / 1000).toFixed(1)
         console.log(`  ✓ ${task.name} (${dur}s)`)
       } catch (err) {
-        console.error(`  ✗ ${task.name} mislukt (build gaat door):`, err)
+        console.error(`  ✗ ${task.name} MISLUKT:`, err)
+        failures.push(task.name)
       }
     }
   } finally {
@@ -158,6 +164,16 @@ async function main() {
 
   const total = ((Date.now() - t0) / 1000).toFixed(1)
   console.log(`[run-build-migrations] klaar in ${total}s`)
+
+  // Faal de build expliciet als een migratie/seed mislukt is, zodat
+  // schema-problemen niet pas in productie zichtbaar worden.
+  if (failures.length > 0) {
+    console.error(`[run-build-migrations] ${failures.length} taak/taken mislukt: ${failures.join(', ')} — build wordt afgebroken.`)
+    process.exit(1)
+  }
 }
 
-main()
+main().catch((err) => {
+  console.error('[run-build-migrations] fataal:', err)
+  process.exit(1)
+})

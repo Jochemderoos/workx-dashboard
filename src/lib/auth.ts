@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
+import { logAuditAction } from './audit-log'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -31,6 +32,23 @@ export const authOptions: NextAuthOptions = {
 
         if (!isPasswordValid) {
           throw new Error('Onjuist wachtwoord')
+        }
+
+        // Gebruiks-tracking: login bijhouden (mag login nooit doen falen).
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date(), loginCount: { increment: 1 } },
+          })
+          await logAuditAction({
+            userId: user.id,
+            action: 'LOGIN',
+            entityType: 'User',
+            entityId: user.id,
+            description: 'Ingelogd op het dashboard',
+          })
+        } catch (e) {
+          console.error('Login-tracking mislukt:', e)
         }
 
         return {

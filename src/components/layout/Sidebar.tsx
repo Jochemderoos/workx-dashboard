@@ -102,12 +102,14 @@ function SidebarComponent({ user }: SidebarProps) {
   const isExternal = user.role === 'EXTERNAL'
   const isPartnerOrAdmin = user.role === 'PARTNER' || user.role === 'ADMIN'
   const isAdmin = user.role === 'ADMIN'
+  const isOwner = (user.email || '').toLowerCase() === 'jochem.deroos@workxadvocaten.nl'
   // Toon item: niet hideForExternal voor EXTERNAL, niet partnerOnly voor non-partners,
-  // niet adminOnly voor non-admin
-  const visibleForUser = (i: { hideForExternal?: boolean; partnerOnly?: boolean; adminOnly?: boolean }) =>
+  // niet adminOnly voor non-admin, niet ownerOnly voor niet-eigenaar
+  const visibleForUser = (i: { hideForExternal?: boolean; partnerOnly?: boolean; adminOnly?: boolean; ownerOnly?: boolean }) =>
     !(isExternal && i.hideForExternal)
     && !(i.partnerOnly && !isPartnerOrAdmin)
     && !(i.adminOnly && !isAdmin)
+    && !(i.ownerOnly && !isOwner)
   const filterQ = filter.trim().toLowerCase()
   const matches = (label: string) => !filterQ || label.toLowerCase().includes(filterQ)
   const filterItems = <T extends { label: string }>(items: T[]) => filterQ ? items.filter(i => matches(i.label)) : items

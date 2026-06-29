@@ -15,6 +15,7 @@ export interface MenuItem {
   hideForExternal?: boolean
   partnerOnly?: boolean // alleen PARTNER/ADMIN — verbergt voor EMPLOYEE in overzicht & sidebar
   adminOnly?: boolean // alleen ADMIN — verbergt voor iedereen behalve ADMIN
+  ownerOnly?: boolean // alleen de eigenaar (Jochem) — verbergt voor iedereen anders
   description?: string // Toegelicht voor het overzicht
   children?: MenuItem[] // sub-items voor uitklap in sidebar
 }
@@ -144,6 +145,8 @@ export const manageMenuItems: MenuItem[] = [
     description: 'Check Slack-token, channel-lidmaatschap en handmatig cron-jobs triggeren.' },
   { href: '/dashboard/settings', icon: Icons.settings, label: 'Instellingen', iconAnim: 'icon-settings-hover',
     description: 'Persoonlijke instellingen en accountbeheer.' },
+  { href: '/dashboard/gebruik', icon: Icons.chart, label: 'Gebruik', iconAnim: 'icon-chart-hover', ownerOnly: true,
+    description: 'Login-statistieken van het dashboard — alleen voor de beheerder.' },
 ]
 
 // ─── EXPORT: alle hrefs voor active-state matching ──────────────────────────
