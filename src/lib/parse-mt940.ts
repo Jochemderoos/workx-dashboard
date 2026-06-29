@@ -99,14 +99,14 @@ function shouldSkipDebet(desc: string): boolean {
 // Detecteer in de omschrijving:
 //   UWV (zwangerschapsverlof, bijschrijving) → negatieve correctie op WGL
 //   ASR (verzuimverzekering, bijschrijving)  → idem
-//   ZZP (externe advocaten, debet: Nectaro/Lodewijk + Lauwmans Legal)
+//   ZZP (externe advocaten, debet: Nectaro/Lodewijk + Louwmans Legal)
 // Bright Pensioen wordt geskipt (zit al in werkgeverslasten via loonstrook).
 // Tentoo is payrolling-administratie → gewone overige kost (21% BTW).
 function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | 'BALANS' | null {
   const lower = desc.toLowerCase()
   if (/\buwv\b/.test(lower) || /\bwazo\b/.test(lower)) return 'UWV'
   if (/\basr\b/.test(lower) || /verzuimverzekering/.test(lower)) return 'ASR'
-  if (/\bnectaro\b/.test(lower) || /\blodewijk\b/.test(lower) || /\blauwmans\b/.test(lower)) return 'ZZP'
+  if (/\bnectaro\b/.test(lower) || /\blodewijk\b/.test(lower) || /\bl[ao]uwmans\b/.test(lower)) return 'ZZP'
   if (/waarborgsom|borgsom|deposito|vooruitbetaling/.test(lower)) return 'BALANS'
   return null
 }

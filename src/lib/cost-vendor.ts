@@ -82,7 +82,7 @@ const VENDOR_ALIASES: Array<[RegExp, string]> = [
   [/de lage landen/, 'De Lage Landen Vendorlease'],
   [/marleenkookt/, 'Marleenkookt'],
   [/nectaro/, 'Nectaro (Lodewijk)'],
-  [/lauwmans/, 'Lauwmans Legal'],
+  [/l[ao]uwmans/, 'Louwmans Legal'],
   [/buffet van odette/, 'Buffet van Odette'],
   [/\bns reizigers\b|\bns groep\b|\bns reisb/, 'NS'],
   [/mediationgenootschap/, 'Mediationgenootschap'],
@@ -208,7 +208,7 @@ const CATEGORY_RULES: Array<[RegExp, string]> = [
   // Cadeaus & relatiegeschenken (incl. medewerker-cadeaus)
   [/cadeau|topgeschenken|brownie box|marie-stella-maris|rituals|five city spa|nijntje|boekenbon|hema/i, 'Cadeaus & relatiegeschenken'],
   // Externe advocaten / doorbelaste advocatenkosten
-  [/stadhouders|citius|pallas|youman fisher|legal mike|legal planet|the data lawyers|hj advocaten|van benthem|van loman|nectaro|lauwmans|avocare|bram willems/i, 'Externe advocaten'],
+  [/stadhouders|citius|pallas|youman fisher|legal mike|legal planet|the data lawyers|hj advocaten|van benthem|van loman|nectaro|l[ao]uwmans|avocare|bram willems/i, 'Externe advocaten'],
   // Lidmaatschap / beroepsverenigingen
   [/orde van advocaten|nederlandse orde|amsterdamse orde|jonge balie|vereniging voor arbeidsrecht|chambers|stichting idfa|dutch arbitration|mediationgenootschap|alo \(partners|stichting opleiding|stichting spuistraat/i, 'Lidmaatschap & beroep'],
   // Opleiding & cursus
