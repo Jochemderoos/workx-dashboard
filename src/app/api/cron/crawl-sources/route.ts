@@ -37,7 +37,7 @@ Let extra op NIEUWE rechtspraak en recente ontwikkelingen.`
 export async function GET(req: NextRequest) {
   // Verify cron secret (Vercel sends this header)
   const authHeader = req.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

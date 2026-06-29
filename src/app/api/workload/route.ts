@@ -43,6 +43,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
+    // Werkdruk van collega's is alleen voor partners/admin (zoals invullen).
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    })
+    if (!me || (me.role !== 'PARTNER' && me.role !== 'ADMIN')) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    }
+
     // Run migration on first access
     await migrateWorkloadNames()
 

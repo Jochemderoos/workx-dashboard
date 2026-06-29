@@ -17,9 +17,10 @@ const path = require('path')
 const prisma = new PrismaClient()
 const USER_ID = 'cml1u6k0700034ehqar3klcr5' // Jochem de Roos
 
+// Inloggegevens komen uit env — NIET hardcoden in de repo.
 const CREDENTIALS = JSON.stringify({
-  email: 'jochem.deroos@workxadvocaten.nl',
-  password: 'Amsterdam24!'
+  email: process.env.SEED_SOURCE_EMAIL || 'jochem.deroos@workxadvocaten.nl',
+  password: process.env.SEED_SOURCE_PASSWORD || 'CHANGE_ME'
 })
 
 async function extractPdfText(filePath) {

@@ -18,7 +18,7 @@ async function main() {
       service: 'Wifi kantoor',
       category: 'ICT',
       username: 'Netwerk: 4042',
-      password: 'w0rkX@020',
+      password: process.env.SEED_WIFI_PASSWORD || 'Vraag aan Hanna',
       notes: 'Kantoor WiFi netwerk',
     },
     {

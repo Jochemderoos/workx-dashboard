@@ -33,6 +33,12 @@ export async function GET(
       return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
     }
 
+    // Alleen de eigenaar of een PARTNER/ADMIN mag een overdracht inzien.
+    const isManager = ['PARTNER', 'ADMIN'].includes((session.user.role || '') as string)
+    if (handover.userId !== session.user.id && !isManager) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    }
+
     return NextResponse.json(handover)
   } catch (error) {
     console.error('Error fetching handover:', error)
@@ -56,6 +62,14 @@ export async function PUT(
 
     const { id } = await params
     const { periodStart, periodEnd, note, generalWaarnemers, cases } = await req.json()
+
+    // Alleen de eigenaar of een PARTNER/ADMIN mag een overdracht wijzigen.
+    const existing = await prisma.handover.findUnique({ where: { id }, select: { userId: true } })
+    if (!existing) return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
+    const isManager = ['PARTNER', 'ADMIN'].includes((session.user.role || '') as string)
+    if (existing.userId !== session.user.id && !isManager) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    }
 
     // Delete existing cases and recreate
     await prisma.handoverCase.deleteMany({ where: { handoverId: id } })
@@ -110,6 +124,14 @@ export async function DELETE(
     }
 
     const { id } = await params
+
+    // Alleen de eigenaar of een PARTNER/ADMIN mag een overdracht verwijderen.
+    const existing = await prisma.handover.findUnique({ where: { id }, select: { userId: true } })
+    if (!existing) return NextResponse.json({ error: 'Niet gevonden' }, { status: 404 })
+    const isManager = ['PARTNER', 'ADMIN'].includes((session.user.role || '') as string)
+    if (existing.userId !== session.user.id && !isManager) {
+      return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+    }
 
     await prisma.handover.delete({ where: { id } })
 
