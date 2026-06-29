@@ -201,6 +201,11 @@ export default function FinancienPage() {
               // geen operationele kosten; horen op de balans, niet in W&V.
               continue
             }
+            if (it.category === 'DOORBELAST') {
+              // Aan klant doorbelaste kosten (bv. griffierechten) — wel betaald,
+              // maar recht­streeks doorbelast; geen netto operationele kost.
+              continue
+            }
             if (it.category === 'UWV') {
               if (!uwv[it.year]) uwv[it.year] = Array(12).fill(0)
               uwv[it.year][it.month - 1] += Math.abs(it.amount)

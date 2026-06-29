@@ -70,7 +70,7 @@ export default function KostenPage() {
       // BALANS = vooruitbetalingen / waarborgsommen — geen operationele kosten,
       // horen op de balans en niet in maandtotaal.
       const filterRows = (rows: Cost[]) => rows.filter(c =>
-        c.category !== 'UWV' && c.category !== 'ASR' && c.category !== 'BALANS'
+        c.category !== 'UWV' && c.category !== 'ASR' && c.category !== 'BALANS' && c.category !== 'DOORBELAST'
       )
       if (r1.ok) setCosts(filterRows(await r1.json()))
       if (r2.ok) setCostsOther(filterRows(await r2.json()))

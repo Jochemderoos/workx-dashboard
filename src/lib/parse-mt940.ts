@@ -10,7 +10,7 @@ export interface MT940Transaction {
   description: string // genormaliseerde vendornaam (zelfde stijl als handmatige posten)
   rawKey: string      // stabiele counterparty-fingerprint (voor leer-aliassen)
   externalRef: string // hash voor duplicaat-detectie
-  category?: 'UWV' | 'ASR' | 'ZZP' | 'MGMT' | 'BALANS' // UWV/ASR = retours, ZZP = externe advocaten, MGMT = management fee partners (incl BTW), BALANS = waarborgsommen / vooruitbetalingen / deposito's (geen kost)
+  category?: 'UWV' | 'ASR' | 'ZZP' | 'MGMT' | 'BALANS' | 'DOORBELAST' // UWV/ASR = retours, ZZP = externe advocaten, MGMT = management fee partners (incl BTW), BALANS = waarborgsommen / vooruitbetalingen / deposito's (geen kost), DOORBELAST = aan klant doorbelaste kosten zoals griffierechten (geen netto kost)
 }
 
 // De vijf partner-holdings van Workx. Naar dezelfde holding gaan zowel
@@ -74,6 +74,8 @@ const WORKX_TEAM_LASTNAMES: RegExp[] = [
   /\bsint[-\s]?truiden\b/i,        // 'Van Sint Truiden' (variant)
   /\bloomans\b/i,                  // Lauren Loomans (vanaf sep 2025)
   /\bportman\b/i,                  // Bente Portman
+  /\bcollot\b/i,                   // Alexander Collot d'Escury (salaris, zit in werkgeverslasten)
+  /\bwakkas\b/i,                   // Diyar Wakkas (salaris, zit in werkgeverslasten)
 ]
 
 function isWorkxTeam(desc: string): boolean {
@@ -102,11 +104,13 @@ function shouldSkipDebet(desc: string): boolean {
 //   ZZP (externe advocaten, debet: Nectaro/Lodewijk + Louwmans Legal)
 // Bright Pensioen wordt geskipt (zit al in werkgeverslasten via loonstrook).
 // Tentoo is payrolling-administratie → gewone overige kost (21% BTW).
-function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | 'BALANS' | null {
+function detectCategory(desc: string): 'UWV' | 'ASR' | 'ZZP' | 'BALANS' | 'DOORBELAST' | null {
   const lower = desc.toLowerCase()
   if (/\buwv\b/.test(lower) || /\bwazo\b/.test(lower)) return 'UWV'
   if (/\basr\b/.test(lower) || /verzuimverzekering/.test(lower)) return 'ASR'
   if (/\bnectaro\b/.test(lower) || /\blodewijk\b/.test(lower) || /\bl[ao]uwmans\b/.test(lower)) return 'ZZP'
+  // Griffierechten e.d. — wel betaald, maar doorbelast aan de klant (geen netto kost)
+  if (/ministerie\s+van\s+(veiligheid\s+en\s+)?justitie/.test(lower)) return 'DOORBELAST'
   if (/waarborgsom|borgsom|deposito|vooruitbetaling/.test(lower)) return 'BALANS'
   return null
 }
@@ -144,11 +148,14 @@ export function parseMT940(content: string): MT940Transaction[] {
 
         // Partner-holdings: classificeer op basis van omschrijving
         const partner = detectPartner(currentTx.desc)
-        let category: 'MGMT' | 'ZZP' | 'BALANS' | undefined
+        let category: 'MGMT' | 'ZZP' | 'BALANS' | 'DOORBELAST' | undefined
         let finalDesc = vendorName
         if (detected === 'BALANS') {
           // Waarborgsom / vooruitbetaling / deposito — balanspost, geen kost.
           category = 'BALANS'
+        } else if (detected === 'DOORBELAST') {
+          // Griffierechten e.d. — doorbelast aan de klant, geen netto kost.
+          category = 'DOORBELAST'
         } else if (partner) {
           const cls = classifyPartnerPayment(currentTx.desc, partner)
           if (cls === 'SKIP') { currentTx = null; inDesc = false; return }
