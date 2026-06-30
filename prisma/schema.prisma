@@ -91,6 +91,7 @@ model User {
   organizedOutings        WorkxOuting[]        @relation("OrganizedOutings")
   outingAttendances       WorkxOutingAttendance[] @relation("UserOutingAttendances")
   sfeerPhotos             WorkxSfeerPhoto[]    @relation("UploadedSfeerPhotos")
+  stockPhotos             StockPhoto[]         @relation("UploadedStockPhotos")
   workDistributionUpdates WorkDistributionUpdate[] @relation("WorkDistributionUpdates")
   trainingAttendances     TrainingAttendance[] @relation("TrainingAttendances")
 
@@ -1914,6 +1915,23 @@ model WorkxSfeerPhoto {
   createdAt     DateTime @default(now())
 
   uploadedBy    User     @relation("UploadedSfeerPhotos", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([uploadedById])
+}
+
+// Stock-foto's: professionele kantoorfoto's die het hele team mag downloaden
+// en gebruiken voor nieuwsbrieven, pitches, social, etc.
+model StockPhoto {
+  id            String   @id @default(cuid())
+  url           String                          // Vercel Blob URL (volledige resolutie)
+  title         String?                         // Optionele titel/omschrijving
+  category      String?                         // Optionele categorie (bv. "Kantoor", "Detail")
+  sortOrder     Int      @default(0)            // Handmatige volgorde (lager = eerder)
+  uploadedById  String
+  createdAt     DateTime @default(now())
+
+  uploadedBy    User     @relation("UploadedStockPhotos", fields: [uploadedById], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([uploadedById])

@@ -96,6 +96,8 @@ export const teamMenu_Docs: MenuItem[] = [
     description: 'Lijst nationale en internationale bevriende advocatenkantoren met contactinfo.' },
   { href: '/dashboard/team', icon: Icons.users, label: 'Team', iconAnim: 'icon-users-hover',
     description: 'Alle Workx-collega\'s met foto, contactgegevens en rol.' },
+  { href: '/dashboard/stock-fotos', icon: Icons.image, label: 'Stock Foto\'s', iconAnim: 'icon-image-hover',
+    description: 'Professionele kantoorfoto\'s om vrij te downloaden en te gebruiken voor nieuwsbrief, pitch of social.' },
 ]
 
 // ─── PARTNER — alleen voor PARTNER en ADMIN ─────────────────────────────────
