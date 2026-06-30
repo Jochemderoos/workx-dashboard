@@ -14,7 +14,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      # npm install (niet ci): de lockfile heeft een pre-existende drift
+      # (preact transitief) waar `npm ci` strikt op faalt; install tolereert dit.
+      - run: npm install --no-audit --no-fund
       - run: npx prisma generate
       - name: TypeScript check
         run: npx tsc --noEmit

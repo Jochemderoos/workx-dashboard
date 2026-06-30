@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
+import { uploadToBlob } from '@/lib/blob-upload'
 
 interface StockPhoto {
   id: string
@@ -36,6 +37,7 @@ export default function StockFotosPage() {
 
   // upload-state
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [meta, setMeta] = useState<{ title: string; category: string }>({ title: '', category: '' })
@@ -79,15 +81,26 @@ export default function StockFotosPage() {
     setUploadError(null)
     setUploading(true)
     try {
-      for (const file of Array.from(files)) {
-        const fd = new FormData()
-        fd.append('file', file)
-        if (meta.title) fd.append('title', meta.title)
-        if (meta.category) fd.append('category', meta.category)
-        const res = await fetch('/api/stock-photos', { method: 'POST', body: fd })
+      const list = Array.from(files)
+      for (let i = 0; i < list.length; i++) {
+        const file = list[i]
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`"${file.name}" is geen afbeelding`)
+        }
+        setUploadProgress(`Uploaden ${i + 1} van ${list.length}…`)
+        // Stap 1: rechtstreeks naar Blob (volledige kwaliteit, tot 50MB).
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 40)
+        const { url } = await uploadToBlob(`stock-fotos/${Date.now()}-${i}-${safe}.${ext}`, file)
+        // Stap 2: metadata registreren.
+        const res = await fetch('/api/stock-photos', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ url, title: meta.title || null, category: meta.category || null }),
+        })
         if (!res.ok) {
           const e = await res.json().catch(() => ({}))
-          throw new Error(e.error || 'Upload mislukt')
+          throw new Error(e.error || 'Opslaan mislukt')
         }
       }
       setMeta({ title: '', category: '' })
@@ -96,6 +109,7 @@ export default function StockFotosPage() {
       setUploadError(e?.message || 'Upload mislukt')
     } finally {
       setUploading(false)
+      setUploadProgress(null)
     }
   }
 
@@ -128,7 +142,7 @@ export default function StockFotosPage() {
             disabled={uploading}
             className="btn-primary flex items-center gap-2 shrink-0 disabled:opacity-50"
           >
-            <Icons.upload size={16} /> {uploading ? 'Uploaden…' : 'Foto toevoegen'}
+            <Icons.upload size={16} /> {uploading ? (uploadProgress || 'Uploaden…') : 'Foto toevoegen'}
           </button>
         )}
       </div>
@@ -169,7 +183,7 @@ export default function StockFotosPage() {
             </button>
           </div>
           <p className="text-[11px] text-gray-500 mt-2">
-            Sleep hier afbeeldingen naartoe of klik op "Bestand kiezen". Je kunt meerdere foto's tegelijk uploaden (max. 15 MB per foto). Titel/categorie gelden voor deze upload.
+            Sleep hier afbeeldingen naartoe of klik op "Bestand kiezen". Je kunt meerdere foto's tegelijk uploaden (max. 50 MB per foto, volledige kwaliteit blijft behouden — geen compressie). Titel/categorie gelden voor deze upload.
           </p>
           {uploadError && <p className="text-xs text-red-400 mt-2">{uploadError}</p>}
           <input

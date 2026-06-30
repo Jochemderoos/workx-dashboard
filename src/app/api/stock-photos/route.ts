@@ -8,7 +8,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { put } from '@vercel/blob'
 
 export const runtime = 'nodejs'
 
@@ -27,6 +26,9 @@ export async function GET() {
   return NextResponse.json(photos)
 }
 
+// De foto wordt door de client rechtstreeks naar Vercel Blob geüpload
+// (via /api/upload — tot 50MB, geen compressie, volledige kwaliteit blijft
+// behouden). Hier registreren we alleen de metadata (url/titel/categorie).
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
@@ -37,32 +39,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File | null
-    const title = (formData.get('title') as string | null)?.trim() || null
-    const category = (formData.get('category') as string | null)?.trim() || null
+    const body = await req.json()
+    const url = typeof body.url === 'string' ? body.url.trim() : ''
+    const title = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : null
+    const category = typeof body.category === 'string' && body.category.trim() ? body.category.trim() : null
 
-    if (!file) return NextResponse.json({ error: 'Geen bestand' }, { status: 400 })
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'Alleen afbeeldingen' }, { status: 400 })
-    }
-    if (file.size > 15 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Maximaal 15 MB' }, { status: 400 })
-    }
-
-    const ext = file.name.split('.').pop() || 'jpg'
-    const filename = `stock-fotos/${Date.now()}-${session.user.id.slice(0, 6)}.${ext}`
-    const blob = await put(filename, file, { access: 'public', addRandomSuffix: true })
+    if (!url) return NextResponse.json({ error: 'Geen url' }, { status: 400 })
 
     const photo = await prisma.stockPhoto.create({
-      data: { url: blob.url, title, category, uploadedById: session.user.id },
+      data: { url, title, category, uploadedById: session.user.id },
       include: { uploadedBy: { select: { id: true, name: true } } },
     })
 
     return NextResponse.json(photo)
   } catch (err) {
-    console.error('stock-photos upload failed', err)
-    return NextResponse.json({ error: 'Upload mislukt' }, { status: 500 })
+    console.error('stock-photos create failed', err)
+    return NextResponse.json({ error: 'Opslaan mislukt' }, { status: 500 })
   }
 }
 
