@@ -17,7 +17,8 @@ interface StockPhoto {
   uploadedBy: { id: string; name: string } | null
 }
 
-const MANAGER_ROLES = ['PARTNER', 'ADMIN', 'OFFICE_MANAGER']
+// Alleen partners en Hanna (ADMIN) mogen stock-foto's beheren.
+const MANAGER_ROLES = ['PARTNER', 'ADMIN']
 
 function slugify(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')

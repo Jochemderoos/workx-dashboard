@@ -11,7 +11,8 @@ import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 
-const MANAGER_ROLES = ['PARTNER', 'ADMIN', 'OFFICE_MANAGER']
+// Alleen partners en Hanna (ADMIN) mogen stock-foto's toevoegen/verwijderen.
+const MANAGER_ROLES = ['PARTNER', 'ADMIN']
 
 export async function GET() {
   const session = await getServerSession(authOptions)

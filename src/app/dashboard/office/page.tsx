@@ -364,6 +364,40 @@ export default function OfficePage() {
         </div>
       </section>
 
+      {/* Telefoon doorschakelen — instructiekaart */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Icons.phone className="text-workx-lime" size={18} />
+          <h2 className="text-sm font-medium text-white">Telefoon doorschakelen</h2>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3 mb-4">
+          <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3 flex items-center gap-3">
+            <span className="font-mono text-base font-semibold text-workx-lime">*748</span>
+            <span className="text-xs text-gray-300">Doorschakelen naar <strong className="font-medium text-white">Hanna</strong> (mobiel)</span>
+          </div>
+          <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3 flex items-center gap-3">
+            <span className="font-mono text-base font-semibold text-workx-lime">*741</span>
+            <span className="text-xs text-gray-300">Doorschakelen naar de <strong className="font-medium text-white">Telefoonservice</strong></span>
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 p-3">
+            <p className="text-xs font-medium text-emerald-300 mb-1">Doorschakelen starten</p>
+            <p className="text-xs text-gray-300 leading-relaxed">
+              Neem de hoorn op, toets <span className="font-mono text-white">*&lt;nummer&gt;</span> in en wacht tot je hoort:{' '}
+              <em className="text-gray-200">“call forwarding activated”</em>. Hang op.
+            </p>
+          </div>
+          <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3">
+            <p className="text-xs font-medium text-gray-200 mb-1">Doorschakelen stoppen</p>
+            <p className="text-xs text-gray-300 leading-relaxed">
+              Toets <span className="font-mono text-white">&lt;nummer&gt;</span> in en wacht tot je hoort:{' '}
+              <em className="text-gray-200">“call forwarding ended”</em>. Hang op.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Week-navigatie */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
