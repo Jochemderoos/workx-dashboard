@@ -1390,6 +1390,13 @@ export default function LustrumPage() {
               )}
             </div>
 
+            {/* Uitleg organiseren — voor iedereen duidelijk */}
+            <div className="mb-6 rounded-xl bg-violet-500/10 border border-violet-500/20 px-4 py-3">
+              <p className="text-sm text-violet-100/90 leading-relaxed">
+                <span className="font-semibold text-white">Help je mee organiseren?</span> Klik bij een onderdeel op <span className="font-medium text-white">"Ik wil dit organiseren"</span>. Je mag je overal voor aanmelden — ook als er al iemand staat, meerdere mensen per onderdeel kan gewoon. Geef vóór maandag 6 juli je voorkeur door; Hanna verdeelt daarna en houdt zoveel mogelijk rekening met ieders voorkeur.
+              </p>
+            </div>
+
             {/* Days timeline */}
             <div className="space-y-4 sm:space-y-5">
               {TRIP_DAYS.map((day) => {
