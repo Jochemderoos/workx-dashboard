@@ -1301,9 +1301,8 @@ export default function LustrumPage() {
 
       </div>
 
-      {/* Day Program — FOMO design, alleen voor partners + Hanna */}
-      {userCanEdit && (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/15 via-fuchsia-500/8 to-orange-500/15 border border-violet-500/20 p-5 sm:p-8">
+      {/* Day Program — zichtbaar voor iedereen; bewerken alleen partners/Hanna */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/15 via-fuchsia-500/8 to-orange-500/15 border border-violet-500/20 p-5 sm:p-8">
           <div className="absolute top-0 right-0 w-72 h-72 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
@@ -1577,7 +1576,6 @@ export default function LustrumPage() {
             </div>
           </div>
         </div>
-      )}
 
       {/* Ideas Box - Centered Call to Action */}
       <div className="max-w-2xl mx-auto">
