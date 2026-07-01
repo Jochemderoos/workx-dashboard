@@ -1590,21 +1590,18 @@ export default function LustrumPage() {
               })}
             </div>
 
-            {/* Extra — organiseer-taak voor het hele weekend */}
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
-              <div className="relative">
-                <img src="/lustrum/spelletjes-collage.jpg" alt="Spelletjes — kaartspellen, bordspellen, pub quiz, beerpong" loading="lazy" className="w-full h-40 sm:h-48 object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <div className="absolute bottom-3 left-4 right-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🎲</span>
-                    <h3 className="text-base font-semibold text-white">Spelletjes voor het hele weekend</h3>
-                  </div>
-                  <p className="text-xs text-white/70">Kaartspellen, bordspellen, een pub quiz, beerpong… wie bedenkt de spellen?</p>
+            {/* Extra — organiseer-taak voor het hele weekend (zelfde vorm als de rest) */}
+            <div className="mt-4 sm:mt-5 group/item rounded-xl bg-white/5 border border-white/5 p-3 sm:p-4">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="relative w-32 h-32 sm:w-52 sm:h-52 rounded-xl overflow-hidden flex-shrink-0 shadow-lg ring-1 ring-white/10">
+                  <img src="/lustrum/spelletjes-collage.jpg" alt="Spelletjes — kaartspellen, bordspellen, pub quiz, beerpong" loading="lazy" className="block w-full h-full object-cover" />
                 </div>
-              </div>
-              <div className="p-4">
-                {renderOrgTasks([{ key: 'spelletjes-weekend', label: 'Spelletjes bedenken' }])}
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block">Hele weekend</span>
+                  <h4 className="text-sm sm:text-base font-semibold text-white mt-0.5">Spelletjes voor het hele weekend</h4>
+                  <p className="text-xs sm:text-sm text-white/60 mt-1">Kaartspellen, bordspellen, een pub quiz, beerpong… wie bedenkt de spellen?</p>
+                  {renderOrgTasks([{ key: 'spelletjes-weekend', label: 'Wil organiseren' }])}
+                </div>
               </div>
             </div>
           </div>
