@@ -413,26 +413,29 @@ export default function LustrumPage() {
   // - ontbijt/vertrek/vlucht en reeds toegewezen onderdelen: geen
   // - de wandeling (donderdag): keuze tussen wandeling OF lunch/beachclub
   // - overige: één taak (het onderdeel zelf)
-  const tasksForItem = (item: ProgramItem): { key: string; label: string }[] => {
+  const tasksForItem = (item: ProgramItem): { key: string; label: string; note?: string }[] => {
     if (/breakfast|ontbijt|vertrek|vlucht/i.test(item.title)) return []
     if ((item.responsible || []).length > 0) return []
     if (/wandel/i.test(item.title)) {
-      return [
-        { key: item.id, label: 'Wandeling' },
-        { key: 'donderdag-lunch-beachclub', label: 'Lunch / beachclub' },
-      ]
+      return [{
+        key: item.id,
+        label: 'Wil organiseren',
+        note: 'Eén organisator voor de hele donderdag: de wandeling, een lunchtent onderweg én de beachclub bij Port de Sóller.',
+      }]
     }
     return [{ key: item.id, label: 'Wil organiseren' }]
   }
 
   // Rendert het "wil organiseren"-blok voor één of meerdere taken.
-  const renderOrgTasks = (tasks: { key: string; label: string }[]) => (
-    <div className="mt-3 pt-3 border-t border-white/5 space-y-2" onClick={(e) => e.stopPropagation()}>
+  const renderOrgTasks = (tasks: { key: string; label: string; note?: string }[]) => (
+    <div className="mt-3 pt-3 border-t border-white/5 space-y-3" onClick={(e) => e.stopPropagation()}>
       {tasks.map(t => {
         const prefs = prefMap[t.key] || []
         const mine = !!currentUser && prefs.some(p => p.userId === currentUser.id)
         return (
-          <div key={t.key} className="flex items-center justify-between gap-2 flex-wrap">
+          <div key={t.key}>
+          {t.note && <p className="text-xs text-white/60 mb-1.5 leading-relaxed">{t.note}</p>}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
               <span className="text-[11px] uppercase tracking-wider text-white/40">{t.label}</span>
               {prefs.length > 0 ? (
@@ -463,6 +466,7 @@ export default function LustrumPage() {
             >
               {mine ? (<><Icons.check size={13} /> Aangemeld</>) : (<><Icons.plus size={13} /> Ik wil dit organiseren</>)}
             </button>
+          </div>
           </div>
         )
       })}
@@ -1580,12 +1584,21 @@ export default function LustrumPage() {
             </div>
 
             {/* Extra — organiseer-taak voor het hele weekend */}
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg">🎲</span>
-                <h3 className="text-sm font-semibold text-white">Voor het hele weekend</h3>
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+              <div className="relative">
+                <img src="/lustrum/spelletjes-collage.jpg" alt="Spelletjes — kaartspellen, bordspellen, pub quiz, beerpong" loading="lazy" className="w-full h-40 sm:h-48 object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                <div className="absolute bottom-3 left-4 right-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🎲</span>
+                    <h3 className="text-base font-semibold text-white">Spelletjes voor het hele weekend</h3>
+                  </div>
+                  <p className="text-xs text-white/70">Kaartspellen, bordspellen, een pub quiz, beerpong… wie bedenkt de spellen?</p>
+                </div>
               </div>
-              {renderOrgTasks([{ key: 'spelletjes-weekend', label: 'Spelletjes bedenken' }])}
+              <div className="p-4">
+                {renderOrgTasks([{ key: 'spelletjes-weekend', label: 'Spelletjes bedenken' }])}
+              </div>
             </div>
           </div>
         </div>
