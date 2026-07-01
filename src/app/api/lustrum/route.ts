@@ -43,7 +43,12 @@ export async function GET() {
       preferences: prefsByProgram.get(item.id) || [],
     }))
 
+    // Volledige voorkeur-map op sleutel (programId óf synthetische taak-sleutel),
+    // zodat losse organiseer-taken (bv. lunch/beachclub, spelletjes) ook werken.
+    const preferencesByKey = Object.fromEntries(prefsByProgram)
+
     return NextResponse.json({
+      preferences: preferencesByKey,
       flight: flight ? {
         outbound: {
           date: flight.outboundDate,
