@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
 import dynamic from 'next/dynamic'
 const EasterEggs = dynamic(() => import('@/components/ui/EasterEggs'), { ssr: false })
+const PageTracker = dynamic(() => import('@/components/layout/PageTracker'), { ssr: false })
 import DashboardClient from '@/components/layout/DashboardClient'
 import DashboardShell from '@/components/layout/DashboardShell'
 import ZaakNotificationWrapper from '@/components/zaken/ZaakNotificationWrapper'
@@ -83,6 +84,9 @@ export default async function DashboardLayout({
           </ZaakNotificationWrapper>
         </div>
       </main>
+
+      {/* Anonieme pagina-tracking voor gebruiks-analytics */}
+      <PageTracker />
 
       {/* Silicon Valley Easter Eggs - Konami code: ↑↑↓↓←→←→BA */}
       <EasterEggs />

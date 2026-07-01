@@ -1951,6 +1951,19 @@ model StockPhoto {
   @@index([uploadedById])
 }
 
+// Pagina-bezoeken voor gebruiks-analytics (alleen aggregaat/anoniem getoond).
+// userId wordt bewaard om unieke-bezoeker-aantallen te kunnen berekenen, maar
+// wordt NOOIT met naam getoond. Regels ouder dan 90 dagen worden opgeruimd.
+model PageView {
+  id        String   @id @default(cuid())
+  path      String   // genormaliseerd pad, bv. /dashboard/lustrum
+  userId    String   // voor unieke tellingen; niet herleidbaar getoond
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+}
+
 // ==================== JAARAGENDA ====================
 // Workx-brede jaaragenda. Een record per jaar. Bevat de strategische
 // jaardoelen (als JSON-array) en per-maand de focus + plannen (JSON-object).
