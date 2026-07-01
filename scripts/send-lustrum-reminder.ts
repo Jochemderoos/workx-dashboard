@@ -38,7 +38,7 @@ async function main() {
   } while (!channelId && cursor)
   if (!channelId) throw new Error(`Kanaal #${CHANNEL} niet gevonden`)
 
-  const imgPath = path.join(process.cwd(), 'scripts', 'assets', 'lustrum-programma-2026.jpg')
+  const imgPath = path.join(process.cwd(), 'public', 'lustrum-programma-2026.jpg')
   const file = fs.readFileSync(imgPath)
   const res: any = await slack.files.uploadV2({
     channel_id: channelId,
