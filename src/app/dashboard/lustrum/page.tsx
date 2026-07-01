@@ -1377,6 +1377,10 @@ export default function LustrumPage() {
                           const isExpanded = expandedItemIds.has(item.id)
                           const prefs = item.preferences || []
                           const prefersThis = !!currentUser && prefs.some(p => p.userId === currentUser.id)
+                          // Voorkeur-optie tonen? Niet bij ontbijt (hoeft niemand te
+                          // organiseren) en niet als er al iemand is toegewezen.
+                          const noOrganizerNeeded = /breakfast|ontbijt/i.test(item.title)
+                          const showPreferenceOption = !noOrganizerNeeded && item.responsible.length === 0
                           return (
                             <div
                               key={item.id}
@@ -1438,6 +1442,7 @@ export default function LustrumPage() {
                                   )}
 
                                   {/* Voorkeuren — wie wil dit onderdeel organiseren */}
+                                  {showPreferenceOption && (
                                   <div className="mt-3 pt-3 border-t border-white/5" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex items-center justify-between gap-2 flex-wrap">
                                       <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -1480,6 +1485,7 @@ export default function LustrumPage() {
                                       </button>
                                     </div>
                                   </div>
+                                  )}
 
                                   {/* Uitklapbare sub-opties (bv. vrije dag) */}
                                   {extras && (
