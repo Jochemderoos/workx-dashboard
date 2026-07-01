@@ -1379,7 +1379,7 @@ export default function LustrumPage() {
                           const prefersThis = !!currentUser && prefs.some(p => p.userId === currentUser.id)
                           // Voorkeur-optie tonen? Niet bij ontbijt (hoeft niemand te
                           // organiseren) en niet als er al iemand is toegewezen.
-                          const noOrganizerNeeded = /breakfast|ontbijt/i.test(item.title)
+                          const noOrganizerNeeded = /breakfast|ontbijt|vertrek|vlucht/i.test(item.title)
                           const showPreferenceOption = !noOrganizerNeeded && item.responsible.length === 0
                           return (
                             <div
