@@ -49,6 +49,7 @@ import { main as addAgendaAttachmentsColumns } from './add-agenda-attachments-co
 import { main as addMonthlyCostExternalRefUnique } from './add-monthly-cost-externalref-unique'
 import { main as addUserLoginTracking } from './add-user-login-tracking'
 import { main as addStockPhotosTable } from './add-stock-photos-table'
+import { main as addLustrumProgramPreferences } from './add-lustrum-program-preferences'
 import { main as addPartnerTaskExecutorsTable } from './add-partner-task-executors-table'
 import { main as addOfficePhoneInfobox } from './add-office-phone-infobox'
 import { main as addOfficeRequestsTable } from './add-office-requests-table'
@@ -121,6 +122,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-monthly-cost-externalref-unique', run: addMonthlyCostExternalRefUnique },
   { name: 'add-user-login-tracking', run: addUserLoginTracking },
   { name: 'add-stock-photos-table', run: addStockPhotosTable },
+  { name: 'add-lustrum-program-preferences', run: addLustrumProgramPreferences },
   { name: 'add-partner-task-executors-table', run: addPartnerTaskExecutorsTable },
   { name: 'add-office-phone-infobox', run: addOfficePhoneInfobox },
   { name: 'add-office-requests-table', run: addOfficeRequestsTable },

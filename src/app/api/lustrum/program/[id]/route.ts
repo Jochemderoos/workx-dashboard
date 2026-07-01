@@ -68,6 +68,8 @@ export async function DELETE(
 
     const { id } = params
 
+    // Ruim ook de voorkeuren van teamleden voor dit onderdeel op.
+    await prisma.lustrumProgramPreference.deleteMany({ where: { programId: id } })
     await prisma.lustrumProgram.delete({
       where: { id },
     })

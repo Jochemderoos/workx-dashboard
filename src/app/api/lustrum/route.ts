@@ -24,10 +24,23 @@ export async function GET() {
       ],
     })
 
-    // Parse de responsible JSON string naar array
+    // Voorkeuren van teamleden (wie wil wat organiseren) per onderdeel
+    const preferences = await prisma.lustrumProgramPreference.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: { programId: true, userId: true, name: true },
+    })
+    const prefsByProgram = new Map<string, { userId: string; name: string }[]>()
+    for (const p of preferences) {
+      const list = prefsByProgram.get(p.programId) || []
+      list.push({ userId: p.userId, name: p.name })
+      prefsByProgram.set(p.programId, list)
+    }
+
+    // Parse de responsible JSON string naar array + voeg voorkeuren toe
     const programWithParsedResponsible = program.map(item => ({
       ...item,
       responsible: JSON.parse(item.responsible),
+      preferences: prefsByProgram.get(item.id) || [],
     }))
 
     return NextResponse.json({

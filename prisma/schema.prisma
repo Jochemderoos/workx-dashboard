@@ -603,6 +603,20 @@ model LustrumProgram {
   updatedAt   DateTime @updatedAt
 }
 
+// Voorkeur van een teamlid om een programma-onderdeel te helpen organiseren.
+// Hanna/partners verdelen daarna de onderdelen (via LustrumProgram.responsible)
+// en houden waar mogelijk rekening met deze voorkeuren.
+model LustrumProgramPreference {
+  id        String   @id @default(cuid())
+  programId String
+  userId    String
+  name      String   // naam-snapshot voor weergave
+  createdAt DateTime @default(now())
+
+  @@unique([programId, userId])
+  @@index([programId])
+}
+
 // Inpaklijst per gebruiker
 model LustrumPacklist {
   id          String   @id @default(cuid())

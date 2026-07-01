@@ -71,6 +71,7 @@ interface ProgramItem {
   title: string
   description: string
   responsible: string[]
+  preferences?: { userId: string; name: string }[]
 }
 
 // Team member type
@@ -179,6 +180,7 @@ export default function LustrumPage() {
   const [expandedItemIds, setExpandedItemIds] = useState<Set<string>>(new Set())
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [userCanEdit, setUserCanEdit] = useState(false)
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string } | null>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [isSavingPacklist, setIsSavingPacklist] = useState(false)
 
@@ -363,7 +365,7 @@ export default function LustrumPage() {
     fetchLustrumData()
   }, [])
 
-  // Check if user can edit (PARTNER or ADMIN)
+  // Check if user can edit (PARTNER or ADMIN) + onthoud wie de gebruiker is
   useEffect(() => {
     const checkUserRole = async () => {
       try {
@@ -371,6 +373,7 @@ export default function LustrumPage() {
         if (res.ok) {
           const data = await res.json()
           setUserCanEdit(data.role === 'PARTNER' || data.role === 'ADMIN')
+          setCurrentUser({ id: data.id, name: data.name })
         }
       } catch (error) {
         console.error('Error checking user role:', error)
@@ -378,6 +381,41 @@ export default function LustrumPage() {
     }
     checkUserRole()
   }, [])
+
+  // Voorkeur (de)selecteren om een programma-onderdeel te helpen organiseren
+  const togglePreference = async (itemId: string) => {
+    if (!currentUser) return
+    // optimistisch bijwerken
+    setProgramItems(prev => prev.map(it => {
+      if (it.id !== itemId) return it
+      const prefs = it.preferences || []
+      const mine = prefs.some(p => p.userId === currentUser.id)
+      return {
+        ...it,
+        preferences: mine
+          ? prefs.filter(p => p.userId !== currentUser.id)
+          : [...prefs, { userId: currentUser.id, name: currentUser.name }],
+      }
+    }))
+    try {
+      const res = await fetch(`/api/lustrum/program/${itemId}/preference`, { method: 'POST' })
+      if (!res.ok) throw new Error('mislukt')
+    } catch {
+      toast.error('Kon voorkeur niet opslaan')
+      // herstel bij fout
+      setProgramItems(prev => prev.map(it => {
+        if (it.id !== itemId) return it
+        const prefs = it.preferences || []
+        const mine = prefs.some(p => p.userId === currentUser.id)
+        return {
+          ...it,
+          preferences: mine
+            ? prefs.filter(p => p.userId !== currentUser.id)
+            : [...prefs, { userId: currentUser.id, name: currentUser.name }],
+        }
+      }))
+    }
+  }
 
   // Save flight info via API
   const saveFlightInfo = async () => {
@@ -1286,13 +1324,15 @@ export default function LustrumPage() {
                   Sun, sea, vino en gezelligheid. Mis dit niet — dit wordt dé week van het jaar.
                 </p>
               </div>
-              <button
-                onClick={() => openProgramEditor()}
-                className="self-start sm:self-end inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium hover:from-violet-600 hover:to-fuchsia-600 transition-all shadow-lg shadow-violet-500/30 hover:scale-[1.03]"
-              >
-                <Icons.plus size={16} />
-                Activiteit toevoegen
-              </button>
+              {userCanEdit && (
+                <button
+                  onClick={() => openProgramEditor()}
+                  className="self-start sm:self-end inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium hover:from-violet-600 hover:to-fuchsia-600 transition-all shadow-lg shadow-violet-500/30 hover:scale-[1.03]"
+                >
+                  <Icons.plus size={16} />
+                  Activiteit toevoegen
+                </button>
+              )}
             </div>
 
             {/* Days timeline */}
@@ -1335,11 +1375,13 @@ export default function LustrumPage() {
                           const photo = getActivityPhoto(item.title, item.date)
                           const extras = getActivityExtras(item.title)
                           const isExpanded = expandedItemIds.has(item.id)
+                          const prefs = item.preferences || []
+                          const prefersThis = !!currentUser && prefs.some(p => p.userId === currentUser.id)
                           return (
                             <div
                               key={item.id}
-                              onClick={() => openProgramEditor(item)}
-                              className="group/item cursor-pointer rounded-xl bg-white/5 hover:bg-white/[0.08] border border-white/5 hover:border-white/15 p-3 sm:p-4 transition-all"
+                              onClick={userCanEdit ? () => openProgramEditor(item) : undefined}
+                              className={`group/item rounded-xl bg-white/5 hover:bg-white/[0.08] border border-white/5 hover:border-white/15 p-3 sm:p-4 transition-all ${userCanEdit ? 'cursor-pointer' : ''}`}
                             >
                               <div className="flex items-start gap-3 sm:gap-4">
                                 {/* Photo-thumb (klein) of period-icon-kolom */}
@@ -1395,6 +1437,50 @@ export default function LustrumPage() {
                                     </div>
                                   )}
 
+                                  {/* Voorkeuren — wie wil dit onderdeel organiseren */}
+                                  <div className="mt-3 pt-3 border-t border-white/5" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                        <span className="text-[10px] uppercase tracking-wider text-white/40">Wil organiseren</span>
+                                        {prefs.length > 0 ? (
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            {prefs.map((p) => {
+                                              const pp = getPhotoUrl(p.name)
+                                              return (
+                                                <div key={p.userId} className="flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full bg-violet-500/15">
+                                                  {pp ? (
+                                                    <img src={pp} alt={p.name} className="w-5 h-5 rounded-full object-cover" />
+                                                  ) : (
+                                                    <div className="w-5 h-5 rounded-full bg-violet-500/30 flex items-center justify-center text-[10px] text-white/70">
+                                                      {p.name.charAt(0)}
+                                                    </div>
+                                                  )}
+                                                  <span className="text-xs text-white/80">{p.name.split(' ')[0]}</span>
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        ) : (
+                                          <span className="text-xs text-white/30">Nog niemand</span>
+                                        )}
+                                      </div>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); togglePreference(item.id) }}
+                                        className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                          prefersThis
+                                            ? 'bg-violet-500/25 text-violet-100 hover:bg-violet-500/35'
+                                            : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
+                                        }`}
+                                      >
+                                        {prefersThis ? (
+                                          <><Icons.check size={13} /> Aangemeld</>
+                                        ) : (
+                                          <><Icons.plus size={13} /> Ik wil dit organiseren</>
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+
                                   {/* Uitklapbare sub-opties (bv. vrije dag) */}
                                   {extras && (
                                     <div className="mt-3">
@@ -1441,28 +1527,30 @@ export default function LustrumPage() {
                                   )}
                                 </div>
 
-                                <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); openProgramEditor(item) }}
-                                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                                    title="Wijzigen"
-                                  >
-                                    <Icons.edit size={14} />
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm(`'${item.title}' verwijderen?`)) deleteProgramItem(item.id) }}
-                                    className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                                    title="Verwijderen"
-                                  >
-                                    <Icons.x size={14} />
-                                  </button>
-                                </div>
+                                {userCanEdit && (
+                                  <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1 flex-shrink-0">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); openProgramEditor(item) }}
+                                      className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                      title="Wijzigen"
+                                    >
+                                      <Icons.edit size={14} />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); if (confirm(`'${item.title}' verwijderen?`)) deleteProgramItem(item.id) }}
+                                      className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                      title="Verwijderen"
+                                    >
+                                      <Icons.x size={14} />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )
                         })}
                       </div>
-                    ) : (
+                    ) : userCanEdit ? (
                       <button
                         onClick={() => {
                           setEditingProgramId(null)
@@ -1474,6 +1562,8 @@ export default function LustrumPage() {
                       >
                         + Activiteit toevoegen voor deze dag
                       </button>
+                    ) : (
+                      <p className="m-4 p-4 text-center text-white/30 text-sm">Nog geen activiteiten gepland voor deze dag.</p>
                     )}
                   </div>
                 )
