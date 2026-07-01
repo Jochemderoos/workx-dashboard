@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getAnnouncementIcon } from '@/lib/announcement-icon'
 import { getTipOfTheDay, tipKeyForDay } from '@/lib/wist-je-dat-tips'
+import { weekStartISO, isWeekday } from '@/lib/infobox-week'
 
 // GET - Fetch notifications for current user
 export async function GET() {
@@ -25,6 +26,26 @@ export async function GET() {
 
     // Build notifications from various sources
     const notifications: any[] = []
+
+    // 0. Infobox-dienst: dagelijkse herinnering voor wie deze week de infobox
+    // checkt (alleen werkdagen). Dagsleutel zodat 'ie elke dag terugkomt.
+    if (isWeekday(now)) {
+      const infobox = await prisma.infoboxWeek.findUnique({ where: { weekStart: weekStartISO(now) } }).catch(() => null)
+      if (infobox?.assigneeId === userId) {
+        const dayKey = `infobox-${now.toISOString().slice(0, 10)}`
+        if (!dismissedKeys.has(dayKey)) {
+          notifications.push({
+            id: dayKey,
+            type: 'infobox',
+            title: 'Infobox checken',
+            message: 'Jij checkt deze week de infobox. Vergeet het vandaag niet even te doen.',
+            createdAt: now,
+            read: false,
+            href: '/dashboard/office',
+          })
+        }
+      }
+    }
 
     // 1. Pending zaak assignments (for the current user)
     const pendingZaken = await prisma.zaakAssignment.findMany({

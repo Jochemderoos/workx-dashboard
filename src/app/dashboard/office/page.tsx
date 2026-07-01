@@ -8,8 +8,6 @@ import TextReveal from '@/components/ui/TextReveal'
 import { getPhotoUrl, PARTNERS } from '@/lib/team-photos'
 import { OFFICE_PEOPLE, OFFICE_PERSON_KEYS, canEditOffice } from '@/lib/office-team'
 
-// Wie kan infobox bijhouden? Office team + alle Partners.
-const PARTNERS_FOR_INFOBOX = PARTNERS
 
 type Status = 'OFFICE' | 'REMOTE' | 'ABSENT'
 type PhoneMode = 'AUTO' | 'FORWARD' | 'COVER' | 'CENTRALE'
@@ -354,13 +352,6 @@ export default function OfficePage() {
             phone={phoneLookup.get(isoDateOnly(today))}
             onOffice={todayOnOffice}
           />
-          {/* Infobox bijhouden vandaag */}
-          <InfoboxRow
-            date={today}
-            phone={phoneLookup.get(isoDateOnly(today))}
-            editMode={canEdit}
-            onEdit={() => setPhoneEditFor(isoDateOnly(today))}
-          />
         </div>
       </section>
 
@@ -500,45 +491,6 @@ export default function OfficePage() {
   )
 }
 
-// ───────── Infobox row in vandaag-paneel ─────────
-
-function InfoboxRow({
-  phone, editMode, onEdit,
-}: {
-  date: Date
-  phone?: PhoneDay
-  editMode: boolean
-  onEdit: () => void
-}) {
-  const name = phone?.infoboxBy?.trim() || ''
-  const isHanna = !name || name.toLowerCase().startsWith('hanna')
-  const display = isHanna ? 'Hanna' : name.split(' ')[0]
-
-  return (
-    <div className="flex items-center gap-4 px-5 py-3">
-      <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-        <Icons.fileText className="text-gray-400" size={18} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white">Infobox bijhouden</p>
-        <p className="text-[11px] text-gray-500">Vandaag</p>
-      </div>
-      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium bg-workx-lime/[0.08] text-workx-lime">
-        <span className="w-1.5 h-1.5 rounded-full bg-workx-lime" />
-        {display}
-      </span>
-      {editMode && (
-        <button
-          onClick={onEdit}
-          className="px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-300 bg-white/5 hover:bg-white/10 transition-colors"
-          title="Aanpassen"
-        >
-          Aanpassen
-        </button>
-      )}
-    </div>
-  )
-}
 
 // ───────── Phone row in vandaag-paneel ─────────
 
@@ -745,14 +697,7 @@ function PhoneEditModal({
   const [forwardTo, setForwardTo] = useState(current?.forwardTo || '')
   const [coverBy, setCoverBy] = useState(current?.coverBy || '')
   const [note, setNote] = useState(current?.note || '')
-  const [infoboxBy, setInfoboxBy] = useState<string>(current?.infoboxBy || '')
   const [saving, setSaving] = useState(false)
-
-  // Lijst van team-leden die infobox kunnen bijhouden — Office + Partners
-  const infoboxKandidaten = useMemo(() => {
-    const office = OFFICE_PEOPLE.map(p => p.name)
-    return [...office, ...PARTNERS_FOR_INFOBOX]
-  }, [])
 
   const handleSave = async () => {
     setSaving(true)
@@ -762,7 +707,6 @@ function PhoneEditModal({
         forwardTo: mode === 'FORWARD' ? forwardTo : null,
         coverBy: mode === 'COVER' ? coverBy : null,
         note,
-        infoboxBy: infoboxBy || null,
       })
     } finally {
       setSaving(false)
@@ -852,44 +796,6 @@ function PhoneEditModal({
             />
           </div>
 
-          {/* Infobox bijhouden: wie houdt vandaag de infobox bij?
-              Hanna doet 't normaal, dus 'Niemand' = Hanna (geen melding nodig). */}
-          <div className="pt-2 border-t border-white/5">
-            <label className="block text-xs text-gray-500 mb-1.5 uppercase tracking-widest">Infobox bijhouden</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setInfoboxBy('')}
-                className={`text-xs px-3 py-2 rounded-lg border text-left transition-colors ${
-                  !infoboxBy
-                    ? 'bg-workx-lime/[0.08] border-workx-lime/40 text-white'
-                    : 'bg-white/[0.02] border-white/10 text-gray-400 hover:bg-white/5'
-                }`}
-              >
-                Hanna (default)
-              </button>
-              {infoboxKandidaten.filter(n => n !== 'Hanna Blaauboer').map(name => {
-                const selected = infoboxBy === name
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => setInfoboxBy(name)}
-                    className={`text-xs px-3 py-2 rounded-lg border text-left transition-colors truncate ${
-                      selected
-                        ? 'bg-workx-lime/[0.08] border-workx-lime/40 text-white'
-                        : 'bg-white/[0.02] border-white/10 text-gray-400 hover:bg-white/5'
-                    }`}
-                  >
-                    {name.split(' ')[0]}
-                  </button>
-                )
-              })}
-            </div>
-            <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
-              Gekozen persoon krijgt om 07:00 een Slack-DM en dashboard-melding. Bij Hanna geen melding (zij houdt 'm standaard bij).
-            </p>
-          </div>
         </div>
 
         <div className="px-5 py-4 border-t border-white/5 flex items-center justify-end gap-2">

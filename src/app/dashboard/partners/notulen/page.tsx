@@ -7,6 +7,7 @@ import WeekSection from '@/components/notulen/WeekSection'
 import ResponsibilityOverview from '@/components/notulen/ResponsibilityOverview'
 import TextReveal from '@/components/ui/TextReveal'
 import DatePicker from '@/components/ui/DatePicker'
+import InfoboxWeekCard from '@/components/dashboard/InfoboxWeekCard'
 
 interface Topic {
   id: string
@@ -458,6 +459,9 @@ export default function NotulenPage() {
           )}
         </div>
       </div>
+
+      {/* Vast agendapunt: infobox-checker van de week */}
+      <InfoboxWeekCard />
 
       {/* Month Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">

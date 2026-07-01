@@ -26,6 +26,7 @@ import OpenInvoicesWidget from '@/components/dashboard/OpenInvoicesWidget'
 import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
 import JarReminderWidget from '@/components/dashboard/JarReminderWidget'
 import DagstartWidget from '@/components/dashboard/DagstartWidget'
+import InfoboxDutyWidget from '@/components/dashboard/InfoboxDutyWidget'
 import DevelopmentPlanReviewWidget from '@/components/dashboard/DevelopmentPlanReviewWidget'
 import HomeSearchBar from '@/components/dashboard/HomeSearchBar'
 function WorkxLogoSmall() {
@@ -1612,6 +1613,9 @@ export default function DashboardHome() {
 
       {/* Universele zoekbalk — opent CommandPalette */}
       <HomeSearchBar />
+
+      {/* Infobox-dienst van de week */}
+      <InfoboxDutyWidget />
 
       {/* Dagstart — drie blokken: Wist je dat?, vandaag op kantoor, jarigen */}
       <DagstartWidget />
