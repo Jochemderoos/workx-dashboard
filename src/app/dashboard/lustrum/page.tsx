@@ -183,6 +183,9 @@ export default function LustrumPage() {
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string } | null>(null)
   // Voorkeuren per sleutel (programId óf synthetische taak-sleutel)
   const [prefMap, setPrefMap] = useState<Record<string, { userId: string; name: string }[]>>({})
+  // Toewijzingen voor losse taken (bv. spelletjes) — door Hanna bepaald
+  const [extraAssign, setExtraAssign] = useState<Record<string, string[]>>({})
+  const [assignPanelKey, setAssignPanelKey] = useState<string | null>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [isSavingPacklist, setIsSavingPacklist] = useState(false)
 
@@ -358,6 +361,7 @@ export default function LustrumPage() {
             setProgramItems(data.program)
           }
           setPrefMap(data.preferences || {})
+          setExtraAssign(data.extraTasks || {})
         }
       } catch (error) {
         console.error('Error loading lustrum data:', error)
@@ -472,6 +476,45 @@ export default function LustrumPage() {
       })}
     </div>
   )
+
+  // Hanna wijst verantwoordelijke(n) toe voor een losse taak (bv. spelletjes)
+  const saveExtraTask = async (key: string, names: string[]) => {
+    setExtraAssign(prev => ({ ...prev, [key]: names }))
+    try {
+      const res = await fetch('/api/lustrum/extra-task', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key, responsible: names }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      toast.error('Kon toewijzing niet opslaan')
+    }
+  }
+
+  // Toewijs-paneel (alleen voor partners/Hanna) voor een losse taak
+  const renderAssignPanel = (key: string) => {
+    const current = extraAssign[key] || []
+    return (
+      <div className="mt-2 rounded-lg border border-white/10 bg-black/20 p-3" onClick={(e) => e.stopPropagation()}>
+        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-2">Wie organiseert / is verantwoordelijk?</p>
+        <div className="flex flex-wrap gap-1.5">
+          {teamMembers.map(m => {
+            const on = current.includes(m.name)
+            return (
+              <button
+                key={m.id}
+                onClick={() => saveExtraTask(key, on ? current.filter(n => n !== m.name) : [...current, m.name])}
+                className={`px-2.5 py-1 rounded-full text-xs transition-colors ${on ? 'bg-violet-500/30 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}
+              >
+                {m.name.split(' ')[0]}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   // Save flight info via API
   const saveFlightInfo = async () => {
@@ -1610,7 +1653,47 @@ export default function LustrumPage() {
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block">Hele weekend</span>
                   <h4 className="text-sm sm:text-base font-semibold text-white mt-0.5">Spelletjes voor het hele weekend</h4>
                   <p className="text-xs sm:text-sm text-white/60 mt-1">Kaartspellen, bordspellen, een pub quiz, beerpong… wie bedenkt de spellen?</p>
-                  {renderOrgTasks([{ key: 'spelletjes-weekend', label: 'Wil organiseren' }])}
+                  {(() => {
+                    const key = 'spelletjes-weekend'
+                    const resp = extraAssign[key] || []
+                    if (resp.length > 0) {
+                      // Toegewezen door Hanna → toon team (aanmelden niet meer nodig)
+                      return (
+                        <div className="mt-3 pt-3 border-t border-white/5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] uppercase tracking-wider text-white/40">Door</span>
+                            {resp.map(name => {
+                              const pp = getPhotoUrl(name)
+                              return (
+                                <div key={name} className="flex items-center gap-1.5 pl-0.5 pr-2 py-0.5 rounded-full bg-white/10">
+                                  {pp ? <img src={pp} alt={name} className="w-5 h-5 rounded-full object-cover" /> : <div className="w-5 h-5 rounded-full bg-violet-500/30 flex items-center justify-center text-[10px] text-white/70">{name.charAt(0)}</div>}
+                                  <span className="text-xs text-white/80">{name.split(' ')[0]}</span>
+                                </div>
+                              )
+                            })}
+                            {userCanEdit && (
+                              <button onClick={() => setAssignPanelKey(assignPanelKey === key ? null : key)} className="text-[11px] text-white/50 hover:text-white underline underline-offset-2">wijzig</button>
+                            )}
+                          </div>
+                          {userCanEdit && assignPanelKey === key && renderAssignPanel(key)}
+                        </div>
+                      )
+                    }
+                    // Nog niet toegewezen → aanmelden + (voor Hanna) team toewijzen
+                    return (
+                      <>
+                        {renderOrgTasks([{ key, label: 'Wil organiseren' }])}
+                        {userCanEdit && (
+                          <div className="mt-2">
+                            <button onClick={() => setAssignPanelKey(assignPanelKey === key ? null : key)} className="text-xs text-violet-300 hover:text-violet-200">
+                              {assignPanelKey === key ? 'Sluiten' : 'Team toewijzen →'}
+                            </button>
+                            {assignPanelKey === key && renderAssignPanel(key)}
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
             </div>

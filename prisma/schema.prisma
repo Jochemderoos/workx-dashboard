@@ -617,6 +617,15 @@ model LustrumProgramPreference {
   @@index([programId])
 }
 
+// Toewijzing (verantwoordelijke(n)) voor losse organiseer-taken die geen
+// programma-onderdeel zijn, bv. 'spelletjes-weekend'. Hanna vult dit in.
+model LustrumExtraTask {
+  key         String   @id          // taak-sleutel, bv. 'spelletjes-weekend'
+  responsible String   @default("[]") // JSON array van namen
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
 // Inpaklijst per gebruiker
 model LustrumPacklist {
   id          String   @id @default(cuid())

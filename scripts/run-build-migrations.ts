@@ -52,6 +52,7 @@ import { main as addStockPhotosTable } from './add-stock-photos-table'
 import { main as addLustrumProgramPreferences } from './add-lustrum-program-preferences'
 import { main as addPageViewsTable } from './add-page-views-table'
 import { main as addInfoboxWeekTable } from './add-infobox-week-table'
+import { main as addLustrumExtraTasksTable } from './add-lustrum-extra-tasks-table'
 import { main as addPartnerTaskExecutorsTable } from './add-partner-task-executors-table'
 import { main as addOfficePhoneInfobox } from './add-office-phone-infobox'
 import { main as addOfficeRequestsTable } from './add-office-requests-table'
@@ -127,6 +128,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-lustrum-program-preferences', run: addLustrumProgramPreferences },
   { name: 'add-page-views-table', run: addPageViewsTable },
   { name: 'add-infobox-week-table', run: addInfoboxWeekTable },
+  { name: 'add-lustrum-extra-tasks-table', run: addLustrumExtraTasksTable },
   { name: 'add-partner-task-executors-table', run: addPartnerTaskExecutorsTable },
   { name: 'add-office-phone-infobox', run: addOfficePhoneInfobox },
   { name: 'add-office-requests-table', run: addOfficeRequestsTable },

@@ -47,8 +47,16 @@ export async function GET() {
     // zodat losse organiseer-taken (bv. lunch/beachclub, spelletjes) ook werken.
     const preferencesByKey = Object.fromEntries(prefsByProgram)
 
+    // Toewijzingen voor losse taken (bv. spelletjes) — door Hanna bepaald.
+    const extra = await prisma.lustrumExtraTask.findMany({ select: { key: true, responsible: true } })
+    const extraTasks: Record<string, string[]> = {}
+    for (const e of extra) {
+      try { extraTasks[e.key] = JSON.parse(e.responsible) } catch { extraTasks[e.key] = [] }
+    }
+
     return NextResponse.json({
       preferences: preferencesByKey,
+      extraTasks,
       flight: flight ? {
         outbound: {
           date: flight.outboundDate,
