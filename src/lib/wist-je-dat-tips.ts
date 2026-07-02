@@ -210,7 +210,7 @@ export const PARTNER_TIPS: DashboardTip[] = [
   },
   {
     page: 'Sollicitaties',
-    href: '/dashboard/partners/sollicitaties',
+    href: '/dashboard/recruitment/sollicitaties',
     title: '💡 Wist je dat? — Sollicitaties',
     message: 'Beheer sollicitanten, upload CV\'s, plan gesprekken en houd het sollicitatiebeleid up-to-date.',
   },

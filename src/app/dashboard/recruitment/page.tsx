@@ -560,7 +560,7 @@ export default function RecruitmentPage() {
           </button>
           {isManager && (
             <button
-              onClick={() => router.push('/dashboard/partners/sollicitaties')}
+              onClick={() => router.push('/dashboard/recruitment/sollicitaties')}
               className="px-4 py-1.5 rounded-lg text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
             >
               Sollicitaties
