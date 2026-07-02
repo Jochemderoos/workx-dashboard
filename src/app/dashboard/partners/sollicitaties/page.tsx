@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
+import LabelDropdown from '@/components/ui/LabelDropdown'
 import { getPhotoUrl, ALL_TEAM_MEMBERS } from '@/lib/team-photos'
 import { uploadToBlob } from '@/lib/blob-upload'
 import SollicitatiebeleidSection from '@/components/sollicitaties/SollicitatiebeleidSection'
@@ -746,13 +747,35 @@ function ApplicantDetail({ applicant, onRefresh }: { applicant: Applicant; onRef
   const [notities, setNotities] = useState(applicant.notities || '')
   const [savingNotes, setSavingNotes] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [naam, setNaam] = useState(applicant.naam)
+  const [editingName, setEditingName] = useState(false)
 
   // Reset when applicant changes
   useEffect(() => {
     setStatus(applicant.status)
     setNotities(applicant.notities || '')
+    setNaam(applicant.naam)
+    setEditingName(false)
     setActiveTab('profiel')
-  }, [applicant.id, applicant.status, applicant.notities])
+  }, [applicant.id, applicant.status, applicant.notities, applicant.naam])
+
+  const handleSaveName = async () => {
+    const trimmed = naam.trim()
+    setEditingName(false)
+    if (!trimmed || trimmed === applicant.naam) { setNaam(applicant.naam); return }
+    try {
+      await fetch(`/api/sollicitaties/${applicant.id}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ naam: trimmed }),
+      })
+      toast.success('Naam bijgewerkt')
+      onRefresh()
+    } catch {
+      toast.error('Kon naam niet bijwerken')
+      setNaam(applicant.naam)
+    }
+  }
 
   const handleStatusChange = async (newStatus: string) => {
     setStatus(newStatus)
@@ -817,7 +840,25 @@ function ApplicantDetail({ applicant, onRefresh }: { applicant: Applicant; onRef
             </div>
           )}
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-white">{applicant.naam}</h2>
+            {editingName ? (
+              <input
+                value={naam}
+                onChange={e => setNaam(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') { setNaam(applicant.naam); setEditingName(false) } }}
+                autoFocus
+                className="text-lg font-bold text-white bg-white/5 border border-workx-lime/30 rounded-lg px-2 py-1 focus:outline-none w-full max-w-xs"
+              />
+            ) : (
+              <h2
+                className="text-lg font-bold text-white inline-flex items-center gap-1.5 cursor-text group/name"
+                onClick={() => setEditingName(true)}
+                title="Klik om de naam te bewerken"
+              >
+                {applicant.naam}
+                <Icons.edit size={13} className="text-white/30 opacity-0 group-hover/name:opacity-100 transition-opacity" />
+              </h2>
+            )}
             <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-white/40">
               {applicant.email && (
                 <span className="flex items-center gap-1">
@@ -840,16 +881,17 @@ function ApplicantDetail({ applicant, onRefresh }: { applicant: Applicant; onRef
             )}
           </div>
           <div className="flex items-center gap-2">
-            <select
+            <LabelDropdown
               value={status}
-              onChange={e => handleStatusChange(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-workx-lime/30 cursor-pointer"
-            >
-              <option value="nieuw">Nieuw</option>
-              <option value="in_gesprek">In gesprek</option>
-              <option value="aangenomen">Aangenomen</option>
-              <option value="afgewezen">Afgewezen</option>
-            </select>
+              onChange={handleStatusChange}
+              size="md"
+              options={[
+                { key: 'nieuw', label: 'Nieuw' },
+                { key: 'in_gesprek', label: 'In gesprek' },
+                { key: 'aangenomen', label: 'Aangenomen' },
+                { key: 'afgewezen', label: 'Afgewezen' },
+              ]}
+            />
             <button
               onClick={handleDelete}
               disabled={deleting}
