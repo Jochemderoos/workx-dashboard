@@ -1357,6 +1357,16 @@ export default function LustrumPage() {
 
       </div>
 
+      {/* Ansichtkaart "Liefs uit Mallorca!" */}
+      <div className="rounded-3xl overflow-hidden ring-1 ring-white/10 shadow-xl">
+        <img
+          src="/lustrum-programma-2026.jpg"
+          alt="Liefs uit Mallorca! — Workx Lustrum programma"
+          loading="lazy"
+          className="block w-full h-auto"
+        />
+      </div>
+
       {/* Day Program — zichtbaar voor iedereen; bewerken alleen partners/Hanna */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/15 via-fuchsia-500/8 to-orange-500/15 border border-violet-500/20 p-5 sm:p-8">
           <div className="absolute top-0 right-0 w-72 h-72 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
