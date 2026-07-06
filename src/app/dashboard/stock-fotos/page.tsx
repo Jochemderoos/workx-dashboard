@@ -4,6 +4,7 @@
 // voor nieuwsbrieven, pitches, social, etc. Beheerders kunnen foto's toevoegen.
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { uploadToBlob } from '@/lib/blob-upload'
@@ -28,13 +29,27 @@ function slugify(s: string): string {
 export default function StockFotosPage() {
   const { data: session } = useSession()
   const role = (session?.user as { role?: string })?.role || ''
-  const userId = (session?.user as { id?: string })?.id
-  const isManager = MANAGER_ROLES.includes(role)
+  // Alleen partners en Hanna (ADMIN) mogen verwijderen.
+  const canDelete = MANAGER_ROLES.includes(role)
+  const isManager = canDelete
 
   const [photos, setPhotos] = useState<StockPhoto[]>([])
   const [loading, setLoading] = useState(true)
   const [lightbox, setLightbox] = useState<StockPhoto | null>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  // Popup: sluiten met Escape + achtergrond niet laten scrollen
+  useEffect(() => {
+    if (!lightbox) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(null) }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [lightbox])
 
   // upload-state
   const [uploading, setUploading] = useState(false)
@@ -122,8 +137,6 @@ export default function StockFotosPage() {
       setLightbox(l => (l?.id === photo.id ? null : l))
     }
   }
-
-  const canManage = (photo: StockPhoto) => isManager || photo.uploadedBy?.id === userId
 
   return (
     <div className="space-y-6 fade-in">
@@ -232,7 +245,7 @@ export default function StockFotosPage() {
                   {photo.category && <p className="text-white/70 text-[11px] truncate">{photo.category}</p>}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {canManage(photo) && (
+                  {canDelete && (
                     <button
                       onClick={e => { e.stopPropagation(); remove(photo) }}
                       title="Verwijderen"
@@ -256,10 +269,10 @@ export default function StockFotosPage() {
         </div>
       )}
 
-      {/* Lightbox */}
-      {lightbox && (
+      {/* Lightbox — via portal naar body zodat 'ie altijd goed op het scherm zit */}
+      {mounted && lightbox && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 fade-in"
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 fade-in"
           onClick={() => setLightbox(null)}
         >
           <button
@@ -290,9 +303,18 @@ export default function StockFotosPage() {
               >
                 <Icons.download size={16} /> {downloading === lightbox.id ? 'Downloaden…' : 'Download foto'}
               </button>
+              {canDelete && (
+                <button
+                  onClick={() => remove(lightbox)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25 transition-colors"
+                >
+                  <Icons.trash size={16} /> Verwijderen
+                </button>
+              )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

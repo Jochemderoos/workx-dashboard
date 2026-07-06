@@ -72,9 +72,9 @@ export async function DELETE(req: NextRequest) {
   const photo = await prisma.stockPhoto.findUnique({ where: { id } })
   if (!photo) return NextResponse.json({ error: 'Foto niet gevonden' }, { status: 404 })
 
-  const isOwner = photo.uploadedById === session.user.id
+  // Alleen partners en Hanna (ADMIN) mogen verwijderen.
   const isManager = MANAGER_ROLES.includes((session.user.role || '') as string)
-  if (!isOwner && !isManager) {
+  if (!isManager) {
     return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
   }
 
