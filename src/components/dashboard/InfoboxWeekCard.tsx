@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { Icons } from '@/components/ui/Icons'
+import LabelDropdown from '@/components/ui/LabelDropdown'
 import toast from 'react-hot-toast'
 
 interface Person { id: string; name: string }
@@ -46,7 +47,7 @@ export default function InfoboxWeekCard() {
   }
 
   return (
-    <div className="card p-5">
+    <div className="card p-5 border border-amber-500/25">
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
           <Icons.mail className="text-amber-400" size={18} />
@@ -59,20 +60,17 @@ export default function InfoboxWeekCard() {
           </p>
 
           <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-400">Deze week:</span>
             {loading ? (
               <span className="text-sm text-gray-500">Laden…</span>
             ) : (
-              <select
+              <LabelDropdown
                 value={assigneeId}
-                onChange={e => save(e.target.value)}
-                disabled={saving}
-                className="input-field text-sm max-w-xs"
-              >
-                <option value="">— Niemand toegewezen —</option>
-                {eligible.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                onChange={save}
+                size="md"
+                tone="amber"
+                options={[{ key: '', label: '— Niemand toegewezen —' }, ...eligible.map(p => ({ key: p.id, label: p.name }))]}
+              />
             )}
             {saving && <span className="text-xs text-gray-500">Opslaan…</span>}
           </div>
