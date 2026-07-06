@@ -249,8 +249,7 @@ function SidebarComponent({ user }: SidebarProps) {
           const werk = filterItems(teamMenu_Werk.filter(i => visibleForUser(i)))
           const tools = filterItems(teamMenu_Tools.filter(i => visibleForUser(i)))
           const docs = filterItems(teamMenu_Docs.filter(i => visibleForUser(i)))
-          const showLodewijk = isExternal && (!filterQ || matches('Werk Lodewijk'))
-          const hasAny = algemeen.length || partner.length || werk.length || tools.length || docs.length || showLodewijk
+          const hasAny = algemeen.length || partner.length || werk.length || tools.length || docs.length
           if (!hasAny) return null
           return (
             <div>
@@ -258,11 +257,6 @@ function SidebarComponent({ user }: SidebarProps) {
               {algemeen.length > 0 && (
                 <div className="space-y-1">
                   {algemeen.map((item) => <NavLink key={item.href} {...item} />)}
-                </div>
-              )}
-              {showLodewijk && (
-                <div className="space-y-1 mt-1">
-                  <NavLink href="/dashboard/partners/werk-lodewijk" icon={Icons.briefcase} label="Werk Lodewijk" iconAnim="icon-briefcase-hover" />
                 </div>
               )}
               {partner.length > 0 && (

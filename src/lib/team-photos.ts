@@ -73,7 +73,9 @@ export const ADVOCATEN = [
   'Barbara Rip',
   'Julia Groen',
   'Alexander Collot d\'Escury',
-  'Lodewijk van Thiel',
+  // Lodewijk van Thiel — niet meer werkzaam bij Workx; uit team/dropdowns
+  // gehaald. Zijn foto blijft in TEAM_PHOTOS voor historische weergave
+  // (gemaakte uren, zaken).
 ]
 
 // Alle teamleden

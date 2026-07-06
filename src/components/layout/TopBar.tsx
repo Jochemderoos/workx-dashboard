@@ -48,7 +48,6 @@ const navigationItems = [
   { href: '/dashboard/werkoverleg', icon: Icons.presentation, label: 'Werkoverleg', keywords: ['werkoverleg', 'vergadering', 'overleg', 'agenda', 'actiepunten', 'voorzitter'] },
   { href: '/dashboard/partners/werk', icon: Icons.briefcase, label: 'Werk (Partners)', keywords: ['werkdruk', 'toewijzing', 'uren', 'urenoverzicht', 'zaken'], roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/partners/notulen', icon: Icons.fileText, label: 'Notulen', keywords: ['notulen', 'vergadering', 'overleg', 'maandag', 'actiepunten', 'agenda'], roles: ['PARTNER', 'ADMIN'] },
-  { href: '/dashboard/partners/werk-lodewijk', icon: Icons.briefcase, label: 'Werk Lodewijk', keywords: ['lodewijk', 'extern', 'advocaat', 'van thiel', 'zaken'], roles: ['PARTNER', 'ADMIN', 'EXTERNAL'] },
   { href: '/dashboard/recruitment/sollicitaties', icon: Icons.userPlus, label: 'Sollicitaties', keywords: ['sollicitatie', 'sollicitant', 'cv', 'vacature', 'werving'], roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/financien', icon: Icons.pieChart, label: 'Financiën', keywords: ['geld', 'salaris', 'budget', 'kosten'], roles: ['PARTNER', 'ADMIN'] },
   { href: '/dashboard/bonus', icon: Icons.euro, label: 'Bonus Calculator', keywords: ['bonus', 'berekenen', 'omzet', 'provisie'], roles: ['EMPLOYEE', 'PARTNER', 'ADMIN'] },

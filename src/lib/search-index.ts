@@ -366,7 +366,7 @@ function buildPeopleItems(): SearchItem[] {
     }, name)
   }
 
-  // Advocaten (incl. externe Lodewijk)
+  // Advocaten
   for (const name of ADVOCATEN) {
     const first = name.split(' ')[0]
     addPersonItem({
