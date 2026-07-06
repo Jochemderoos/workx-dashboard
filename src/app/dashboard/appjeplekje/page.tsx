@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
+import MeetingRoomPanel from '@/components/dashboard/MeetingRoomPanel'
 
 interface Attendee {
   id: string
@@ -796,6 +797,9 @@ export default function AppjeplekjePage() {
           </div>
         </div>
       </div>
+
+      {/* Vergaderruimte reserveren voor de gekozen dag */}
+      <MeetingRoomPanel date={selectedDate} />
     </div>
   )
 }

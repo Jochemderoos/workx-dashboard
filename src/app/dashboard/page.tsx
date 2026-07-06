@@ -27,6 +27,7 @@ import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
 import JarReminderWidget from '@/components/dashboard/JarReminderWidget'
 import DagstartWidget from '@/components/dashboard/DagstartWidget'
 import InfoboxDutyWidget from '@/components/dashboard/InfoboxDutyWidget'
+import MeetingRoomWidget from '@/components/dashboard/MeetingRoomWidget'
 import DevelopmentPlanReviewWidget from '@/components/dashboard/DevelopmentPlanReviewWidget'
 import HomeSearchBar from '@/components/dashboard/HomeSearchBar'
 function WorkxLogoSmall() {
@@ -1616,6 +1617,9 @@ export default function DashboardHome() {
 
       {/* Infobox-dienst van de week */}
       <InfoboxDutyWidget />
+
+      {/* Vergaderruimte — bezet/vrij vandaag */}
+      <MeetingRoomWidget />
 
       {/* Dagstart — drie blokken: Wist je dat?, vandaag op kantoor, jarigen */}
       <DagstartWidget />

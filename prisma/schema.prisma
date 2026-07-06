@@ -718,6 +718,20 @@ model OfficeAttendance {
   @@index([date])
 }
 
+// Reservering van de vergaderruimte (via Appjeplekje). Per dag, van–tot.
+model MeetingRoomBooking {
+  id        String   @id @default(cuid())
+  date      String   // YYYY-MM-DD
+  startTime String   // HH:MM
+  endTime   String   // HH:MM
+  title     String?  // optioneel onderwerp
+  userId    String
+  userName  String   // naam-snapshot voor weergave
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
 // ==================== OPLEIDINGEN ====================
 
 // Workx Opleiding sessies - sprekers, data, onderwerpen
