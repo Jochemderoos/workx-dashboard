@@ -7,7 +7,15 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import LabelDropdown from '@/components/ui/LabelDropdown'
 import toast from 'react-hot-toast'
+
+// Tijdopties (07:00–21:00, elke 30 min) voor de nette dropdowns
+const TIME_OPTIONS = Array.from({ length: (21 - 7) * 2 + 1 }, (_, i) => {
+  const m = 7 * 60 + i * 30
+  const t = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+  return { key: t, label: t }
+})
 
 interface Booking {
   id: string
@@ -95,11 +103,11 @@ export default function MeetingRoomPanel({ date, onChange }: { date: string; onC
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <label className="block text-[11px] text-gray-400 mb-1">Van</label>
-              <input type="time" value={start} onChange={e => setStart(e.target.value)} className="input-field text-sm w-28" />
+              <LabelDropdown value={start} onChange={setStart} size="md" options={TIME_OPTIONS} />
             </div>
             <div>
               <label className="block text-[11px] text-gray-400 mb-1">Tot</label>
-              <input type="time" value={end} onChange={e => setEnd(e.target.value)} className="input-field text-sm w-28" />
+              <LabelDropdown value={end} onChange={setEnd} size="md" options={TIME_OPTIONS} />
             </div>
             <div className="flex-1 min-w-[8rem]">
               <label className="block text-[11px] text-gray-400 mb-1">Onderwerp (optioneel)</label>
