@@ -727,6 +727,7 @@ model MeetingRoomBooking {
   title     String?  // optioneel onderwerp
   userId    String
   userName  String   // naam-snapshot voor weergave
+  calendarEventId String? // gekoppeld Agenda-event
   createdAt DateTime @default(now())
 
   @@index([date])

@@ -11,6 +11,21 @@ import { prisma } from '@/lib/prisma'
 
 const isTime = (s: unknown): s is string => typeof s === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(s)
 
+// Zet 'YYYY-MM-DD' + 'HH:MM' (Amsterdam-wandkloktijd) om naar het juiste UTC-moment.
+function amsterdamToUtc(dateStr: string, hhmm: string): Date {
+  const [Y, M, D] = dateStr.split('-').map(Number)
+  const [h, mi] = hhmm.split(':').map(Number)
+  const wall = Date.UTC(Y, M - 1, D, h, mi)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Amsterdam', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date(wall))
+  const g = (t: string) => Number(parts.find(p => p.type === t)?.value)
+  const localAsUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'))
+  const offset = localAsUtc - wall
+  return new Date(wall - offset)
+}
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
@@ -65,8 +80,28 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Koppel-event in de Agenda aanmaken (zodat het ook daar zichtbaar is).
+  let calendarEventId: string | null = null
+  try {
+    const event = await prisma.calendarEvent.create({
+      data: {
+        title: `Vergaderruimte${title ? ` — ${title}` : ''}`,
+        description: `Reservering vergaderruimte door ${session.user.name || 'onbekend'}`,
+        startTime: amsterdamToUtc(date, startTime),
+        endTime: amsterdamToUtc(date, endTime),
+        location: 'Vergaderruimte',
+        color: '#fb7185', // rose — valt op in de agenda
+        category: 'MEETING_ROOM',
+        createdById: session.user.id,
+      },
+    })
+    calendarEventId = event.id
+  } catch (e) {
+    console.error('Kon agenda-event niet aanmaken voor vergaderruimte:', e)
+  }
+
   const booking = await prisma.meetingRoomBooking.create({
-    data: { date, startTime, endTime, title, userId: session.user.id, userName: session.user.name || 'Onbekend' },
+    data: { date, startTime, endTime, title, userId: session.user.id, userName: session.user.name || 'Onbekend', calendarEventId },
   })
   return NextResponse.json(booking)
 }
@@ -88,6 +123,10 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
   }
 
+  // Ook het gekoppelde agenda-event opruimen
+  if (booking.calendarEventId) {
+    await prisma.calendarEvent.delete({ where: { id: booking.calendarEventId } }).catch(() => {})
+  }
   await prisma.meetingRoomBooking.delete({ where: { id } })
   return NextResponse.json({ success: true })
 }

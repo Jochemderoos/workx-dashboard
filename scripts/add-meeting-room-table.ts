@@ -23,6 +23,7 @@ export async function main(externalPrisma?: PrismaClient) {
       )
     `)
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MeetingRoomBooking_date_idx" ON "MeetingRoomBooking"("date")`)
+    await prisma.$executeRawUnsafe(`ALTER TABLE "MeetingRoomBooking" ADD COLUMN IF NOT EXISTS "calendarEventId" TEXT`)
     console.log('[add-meeting-room-table] klaar')
   } finally {
     if (!externalPrisma) await prisma.$disconnect().catch(() => {})

@@ -19,7 +19,7 @@ interface Booking {
   userName: string
 }
 
-export default function MeetingRoomPanel({ date }: { date: string }) {
+export default function MeetingRoomPanel({ date, onChange }: { date: string; onChange?: () => void }) {
   const { data: session } = useSession()
   const uid = (session?.user as { id?: string })?.id
   const role = (session?.user as { role?: string })?.role || ''
@@ -56,7 +56,7 @@ export default function MeetingRoomPanel({ date }: { date: string }) {
       if (!res.ok) { toast.error(data.error || 'Kon niet reserveren'); return }
       toast.success('Vergaderruimte gereserveerd')
       setTitle(''); setShowForm(false)
-      load()
+      load(); onChange?.()
     } finally {
       setSaving(false)
     }
@@ -65,7 +65,7 @@ export default function MeetingRoomPanel({ date }: { date: string }) {
   const remove = async (b: Booking) => {
     if (!confirm(`Reservering ${b.startTime}–${b.endTime} verwijderen?`)) return
     const res = await fetch(`/api/meeting-room?id=${b.id}`, { method: 'DELETE' })
-    if (res.ok) setBookings(prev => prev.filter(x => x.id !== b.id))
+    if (res.ok) { setBookings(prev => prev.filter(x => x.id !== b.id)); onChange?.() }
     else toast.error('Kon niet verwijderen')
   }
 

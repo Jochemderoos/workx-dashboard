@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
@@ -70,6 +70,8 @@ export default function AppjeplekjePage() {
 
   // Month attendance data for calendar glow + photos
   const [monthAttendance, setMonthAttendance] = useState<Record<string, { userId: string; name: string; avatarUrl: string | null; timeSlot: string }[]>>({})
+  // Dagen met een vergaderruimte-reservering (voor markering in de kalender)
+  const [roomDates, setRoomDates] = useState<Set<string>>(new Set())
   const [calendarCurrentUserId, setCalendarCurrentUserId] = useState<string | null>(null)
 
   // Fetch month attendance when calendar month changes
@@ -90,6 +92,23 @@ export default function AppjeplekjePage() {
     }
     fetchMonthAttendance()
   }, [currentMonth, attendanceData]) // Re-fetch when attendance changes
+
+  // Vergaderruimte-reserveringen van de maand ophalen (voor de dag-markering)
+  const fetchMonthRoom = useCallback(async () => {
+    const year = currentMonth.getFullYear()
+    const month = currentMonth.getMonth()
+    const startDate = getLocalDateString(new Date(year, month, 1))
+    const endDate = getLocalDateString(new Date(year, month + 1, 0))
+    try {
+      const res = await fetch(`/api/meeting-room?startDate=${startDate}&endDate=${endDate}`)
+      if (res.ok) {
+        const data = await res.json()
+        setRoomDates(new Set(Object.keys(data.byDate || {})))
+      }
+    } catch { /* ignore */ }
+  }, [currentMonth])
+
+  useEffect(() => { fetchMonthRoom() }, [fetchMonthRoom])
 
   // Haal data op voor geselecteerde datum
   useEffect(() => {
@@ -553,6 +572,13 @@ export default function AppjeplekjePage() {
                     `}
                   >
                     <span>{dayInfo.date.getDate()}</span>
+                    {/* Vergaderruimte gereserveerd op deze dag */}
+                    {roomDates.has(dateStr) && dayInfo.isCurrentMonth && (
+                      <span
+                        className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${isSelectedDay ? 'bg-rose-600' : 'bg-rose-400'}`}
+                        title="Vergaderruimte gereserveerd"
+                      />
+                    )}
                     {/* Attendance photo dots */}
                     {hasAttendees && (
                       <div className="flex -space-x-1 mt-0.5">
@@ -610,6 +636,10 @@ export default function AppjeplekjePage() {
               <span className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded bg-workx-lime"></div>
                 Geselecteerd
+              </span>
+              <span className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
+                Vergaderruimte
               </span>
             </div>
           </div>
@@ -799,7 +829,7 @@ export default function AppjeplekjePage() {
       </div>
 
       {/* Vergaderruimte reserveren voor de gekozen dag */}
-      <MeetingRoomPanel date={selectedDate} />
+      <MeetingRoomPanel date={selectedDate} onChange={fetchMonthRoom} />
     </div>
   )
 }
