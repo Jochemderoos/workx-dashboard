@@ -29,6 +29,8 @@ export const teamMenu_Algemeen: MenuItem[] = [
     description: 'Sitemap: alle pagina\'s in het dashboard met beschrijving, klik-door naar elke pagina.' },
   { href: '/dashboard/lustrum', icon: Icons.palmTree, label: 'Lustrum Mallorca', iconAnim: 'icon-party-hover', badge: '15 jaar!',
     description: 'Programma, vluchtgegevens, paklijst en aftelteller voor de Mallorca-trip.' },
+  { href: '/dashboard/workx-film', icon: Icons.play, label: 'Workx film', iconAnim: 'icon-play-hover', badge: 'Tijdelijk',
+    description: 'Bekijk de nieuwe Werken bij Workx-film en geef je input voor de editor.' },
   { href: '/dashboard/workx-uitjes', icon: Icons.party, label: 'Workx uitjes', iconAnim: 'icon-party-hover',
     description: 'Team-uitjes plannen en je inschrijven: borrels, etentjes, films, suppen en meer. Eens in de 2 maanden iets leuks.' },
   { href: '/dashboard/appjeplekje', icon: Icons.mapPin, label: 'Appjeplekje', iconAnim: 'icon-mappin-hover',

@@ -718,6 +718,17 @@ model OfficeAttendance {
   @@index([date])
 }
 
+// Input/feedback op de Workx-film (tijdelijke pagina). Iedereen mag reageren.
+model FilmFeedback {
+  id        String   @id @default(cuid())
+  userId    String
+  userName  String   // naam-snapshot voor weergave
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 // Reservering van de vergaderruimte (via Appjeplekje). Per dag, van–tot.
 model MeetingRoomBooking {
   id        String   @id @default(cuid())
