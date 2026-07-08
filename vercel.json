@@ -3,6 +3,10 @@
   "framework": "nextjs",
   "crons": [
     {
+      "path": "/api/cron/tuesday-mt-reminders",
+      "schedule": "0 7 * * 2"
+    },
+    {
       "path": "/api/cron/lustrum-reminder",
       "schedule": "30 8 6 7 *"
     },
