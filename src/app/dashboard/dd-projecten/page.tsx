@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import { DD_CLIENTS, matchDDClient, hasDDKeyword, ddKeywords, keywordsOverlap } from '@/lib/dd-match'
 import toast from 'react-hot-toast'
 
 interface Member {
@@ -48,37 +49,36 @@ interface DDEstimate {
   extraMembers: string | null
   removedMembers: string | null
   hidden: boolean
+  grandfathered: boolean
+  completed: boolean
+  activated: boolean
 }
 
 interface DDCase {
   projectName: string
   fullProjectName: string
+  client: string
   totalHours: number
   hours7d: number
   memberNames: string[] // Only names, no hours
   linkedProject?: Project
   expectedHours?: number
+  activated: boolean
 }
 
-const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law', 'Strauswolfs', 'Cleber']
-
-// Map variations in project names to canonical client names
-const CLIENT_ALIASES: Record<string, string> = {
-  'debreij': 'De Breij',
-  'de breij': 'De Breij',
-  'stek': 'Stek',
-  'jb law': 'JB Law',
-  'strauswolfs': 'Strauswolfs',
-  'strasuwolfs': 'Strauswolfs',
-  'cleber': 'Cleber',
-}
-
-function matchDDClient(projectName: string): string | undefined {
-  const lower = projectName.toLowerCase()
-  for (const [alias, client] of Object.entries(CLIENT_ALIASES)) {
-    if (lower.includes(alias)) return client
-  }
-  return undefined
+// Bepaalt of een via uren gedetecteerde zaak in het overzicht hoort.
+// Prioriteit: definitief verwijderd → nooit; gekoppeld aan een handmatig
+// project (bewust aangemaakt) → altijd; grandfathered (bestond al) → altijd;
+// anders alleen mét trefwoord in de naam (nieuwe zaken).
+function isCaseVisible(
+  fullName: string,
+  est: { hidden: boolean; grandfathered: boolean } | undefined,
+  hasLink: boolean,
+): boolean {
+  if (est?.hidden) return false
+  if (hasLink) return true
+  if (est?.grandfathered) return true
+  return hasDDKeyword(fullName)
 }
 
 const CLIENT_COLORS: Record<string, { dot: string; text: string; bg: string; border: string }> = {
@@ -168,35 +168,48 @@ export default function DDProjectenPage() {
   useEffect(() => { fetchAll() }, [fetchAll])
 
   // ─── Process workload data into DD structures ───
-  const { clientGroups, stats, unmatchedManualProjects, teamProjects } = useMemo(() => {
+  const { clientGroups, completedCases, stats, unmatchedManualProjects, teamProjects } = useMemo(() => {
     const now = new Date()
     const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    // Group workload entries by projectName, filter for DD clients
+    // Kernwoorden per actief handmatig project, voor koppeling op naam.
+    const activeProjectKw = projects
+      .filter(p => p.status !== 'afgerond')
+      .map(p => ({ p, kw: ddKeywords(p.name) }))
+
+    // Group workload entries by projectName. Een urenregel telt mee als DD-zaak
+    // wanneer (a) de naam een clientnaam bevat, óf (b) de naam matcht op
+    // kernwoord met een handmatig aangemaakt project (bijv. "Iron", "Crest").
     const projectMap = new Map<string, {
       client: string
       members: Set<string>
       totalHours: number
       hours7d: number
+      linkProjectId?: string
     }>()
 
     for (const entry of workloadData) {
-      const client = matchDDClient(entry.projectName)
-      if (!client) continue
       const hours = entry.workedHours || entry.billableHours || 0
       if (hours <= 0) continue
 
+      let client = matchDDClient(entry.projectName)
+      const nameKw = ddKeywords(entry.projectName)
+      const link = activeProjectKw.find(x => keywordsOverlap(x.kw, nameKw))
+      if (!client && link) client = link.p.client // detectie via handmatig project
+      if (!client) continue
+
       if (!projectMap.has(entry.projectName)) {
-        projectMap.set(entry.projectName, { client, members: new Set(), totalHours: 0, hours7d: 0 })
+        projectMap.set(entry.projectName, { client, members: new Set(), totalHours: 0, hours7d: 0, linkProjectId: link?.p.id })
       }
       const proj = projectMap.get(entry.projectName)!
+      if (!proj.linkProjectId && link) proj.linkProjectId = link.p.id
       proj.totalHours += hours
       if (entry.date >= d7) proj.hours7d += hours
       proj.members.add(entry.personName)
     }
 
-    // Build estimate lookup (expectedHours + extraMembers + removedMembers)
-    const estimateMap = new Map<string, { expectedHours: number; extraMembers: string[]; removedMembers: string[]; hidden: boolean }>()
+    // Build estimate lookup (expectedHours + extraMembers + removedMembers + lifecycle)
+    const estimateMap = new Map<string, { expectedHours: number; extraMembers: string[]; removedMembers: string[]; hidden: boolean; grandfathered: boolean; completed: boolean; activated: boolean }>()
     for (const est of estimates) {
       let extra: string[] = []
       let removed: string[] = []
@@ -206,37 +219,32 @@ export default function DDProjectenPage() {
       if (est.removedMembers) {
         try { removed = JSON.parse(est.removedMembers) } catch { /* ignore */ }
       }
-      estimateMap.set(est.projectName, { expectedHours: est.expectedHours, extraMembers: extra, removedMembers: removed, hidden: est.hidden || false })
+      estimateMap.set(est.projectName, { expectedHours: est.expectedHours, extraMembers: extra, removedMembers: removed, hidden: est.hidden || false, grandfathered: est.grandfathered || false, completed: est.completed || false, activated: est.activated || false })
     }
 
-    // Build cases per client + link manual DDProjects (skip hidden)
+    // Build cases per client. Gekoppelde handmatige projecten → matched
+    // (dus weg uit "op te starten"). Afgeronde zaken → aparte lijst.
     const groups = new Map<string, DDCase[]>()
+    const completedCases: DDCase[] = []
     const matchedProjectIds = new Set<string>()
     const hiddenProjects = new Set<string>()
+    const activeCaseNames = new Map<string, string>() // fullName → client (zichtbare, actieve zaken)
 
     for (const [fullName, data] of Array.from(projectMap.entries())) {
-      // Skip hidden projects
-      const estCheck = estimateMap.get(fullName)
-      if (estCheck?.hidden) { hiddenProjects.add(fullName); continue }
+      // Koppeling op naam (kernwoord) — bepaald in de detectie-loop.
+      const linkedProject = data.linkProjectId ? projects.find(p => p.id === data.linkProjectId) : undefined
+      if (linkedProject) matchedProjectIds.add(linkedProject.id)
+
+      const est = estimateMap.get(fullName)
+      // Definitief verwijderd, óf nieuwe zaak zonder DD/VDD/Due Diligence in de
+      // naam en zonder koppeling → niet tonen (bestaande/handmatige blijven staan).
+      if (!isCaseVisible(fullName, est, !!linkedProject)) { hiddenProjects.add(fullName); continue }
+
       const cleanName = fullName.includes('/') ? fullName.split('/').slice(1).join('/').trim() : fullName
       const workloadMembers = Array.from(data.members)
       const totalHours = Math.round(data.totalHours * 10) / 10
       const hours7d = Math.round(data.hours7d * 10) / 10
 
-      let linkedProject: Project | undefined
-      for (const p of projects) {
-        if (p.status === 'afgerond') continue
-        const matchesName = fullName.toLowerCase().includes(p.name.toLowerCase()) ||
-          p.name.toLowerCase().includes(cleanName.toLowerCase())
-        const matchesClient = fullName.toLowerCase().includes(p.client.toLowerCase())
-        if (matchesName || matchesClient) {
-          linkedProject = p
-          matchedProjectIds.add(p.id)
-          break
-        }
-      }
-
-      const est = estimateMap.get(fullName)
       const expectedHours = linkedProject?.expectedHours ?? est?.expectedHours ?? undefined
       // Merge workload members + manually added, minus manually removed
       const extraMembers = est?.extraMembers || []
@@ -244,14 +252,19 @@ export default function DDProjectenPage() {
       const memberNames = [...workloadMembers, ...extraMembers.filter(n => !workloadMembers.includes(n))]
         .filter(n => !removedMembers.includes(n))
 
+      const ddCase: DDCase = { projectName: cleanName, fullProjectName: fullName, client: data.client, totalHours, hours7d, memberNames, linkedProject, expectedHours, activated: est?.activated || false }
+
+      if (est?.completed) { completedCases.push(ddCase); hiddenProjects.add(fullName); continue }
       if (!groups.has(data.client)) groups.set(data.client, [])
-      groups.get(data.client)!.push({ projectName: cleanName, fullProjectName: fullName, totalHours, hours7d, memberNames, linkedProject, expectedHours })
+      groups.get(data.client)!.push(ddCase)
+      activeCaseNames.set(fullName, data.client)
     }
 
-    // Sort cases: most recently active first
+    // Sort: geactiveerd/actief eerst, dan op recente uren
     for (const cases of Array.from(groups.values())) {
       cases.sort((a, b) => b.hours7d - a.hours7d || b.totalHours - a.totalHours)
     }
+    completedCases.sort((a, b) => b.totalHours - a.totalHours)
 
     // Stats
     let totalHours = 0
@@ -273,11 +286,11 @@ export default function DDProjectenPage() {
     const d10 = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     const teamProjectsMap = new Map<string, { projectName: string; client: string; hours: number }[]>()
     for (const entry of workloadData) {
-      const client = matchDDClient(entry.projectName)
+      // Alleen zichtbare, actieve zaken (zelfde detectie/zichtbaarheid als hierboven).
+      const client = activeCaseNames.get(entry.projectName)
       if (!client) continue
       const hours = entry.workedHours || entry.billableHours || 0
       if (hours <= 0 || entry.date < d10) continue
-      if (hiddenProjects.has(entry.projectName)) continue // Skip hidden projects
       const cleanName = entry.projectName.includes('/') ? entry.projectName.split('/').slice(1).join('/').trim() : entry.projectName
       if (!teamProjectsMap.has(entry.personName)) teamProjectsMap.set(entry.personName, [])
       const existing = teamProjectsMap.get(entry.personName)!.find(p => p.projectName === cleanName)
@@ -295,6 +308,7 @@ export default function DDProjectenPage() {
 
     return {
       clientGroups: groups,
+      completedCases,
       stats: { totalHours: Math.round(totalHours * 10) / 10, totalHours7d: Math.round(totalHours7d * 10) / 10, totalCases, teamCount: allMembers.size },
       unmatchedManualProjects: unmatched,
       teamProjects: teamProjectsMap,
@@ -385,13 +399,62 @@ export default function DDProjectenPage() {
       setEstimates(prev => {
         const existing = prev.find(e => e.projectName === projectName)
         if (existing) return prev.map(e => e.projectName === projectName ? { ...e, expectedHours: hours } : e)
-        return [...prev, { id: '', projectName, expectedHours: hours, extraMembers: null, removedMembers: null, hidden: false }]
+        return [...prev, { id: '', projectName, expectedHours: hours, extraMembers: null, removedMembers: null, hidden: false, grandfathered: false, completed: false, activated: false }]
       })
       setEditingEstimate(null)
       toast.success('Verwachte uren opgeslagen')
     } catch {
       toast.error('Kon verwachte uren niet opslaan')
     }
+  }
+
+  // Generieke estimate-patch (afronden/activeren/heropenen). Werkt lokale state bij.
+  const patchEstimate = async (projectName: string, patch: Record<string, unknown>, successMsg?: string) => {
+    try {
+      const res = await fetch('/api/dd-projecten/estimates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectName, ...patch }),
+      })
+      if (!res.ok) throw new Error()
+      const updated = await res.json()
+      setEstimates(prev => {
+        const exists = prev.find(e => e.projectName === projectName)
+        if (exists) return prev.map(e => e.projectName === projectName ? updated : e)
+        return [...prev, updated]
+      })
+      if (successMsg) toast.success(successMsg)
+    } catch {
+      toast.error('Kon zaak niet bijwerken')
+    }
+  }
+
+  const completeCase = (c: DDCase) => {
+    if (!confirm(`"${c.projectName}" afronden? De zaak gaat naar Afgerond (je kunt 'm later heropenen).`)) return
+    patchEstimate(c.fullProjectName, { completed: true, activated: false }, 'Zaak afgerond')
+  }
+
+  const reopenCase = (fullProjectName: string) => {
+    patchEstimate(fullProjectName, { completed: false }, 'Zaak heropend')
+  }
+
+  const activateCase = (c: DDCase) => {
+    patchEstimate(c.fullProjectName, { activated: true }, 'Zaak geactiveerd')
+  }
+
+  // Bewerken van een lopende zaak: gekoppeld project → bewerken; anders een
+  // handmatig project aanmaken (voorgevuld), dat vervolgens automatisch koppelt.
+  const editCase = (c: DDCase) => {
+    if (c.linkedProject) { startEdit(c.linkedProject); return }
+    setEditingProject(null)
+    setForm({
+      name: c.projectName,
+      client: DD_CLIENTS.includes(c.client) ? c.client : DD_CLIENTS[0],
+      description: '',
+      memberIds: teamMembers.filter(u => c.memberNames.includes(u.name)).map(u => u.id),
+      expectedHours: c.expectedHours ? String(c.expectedHours) : '',
+    })
+    setShowForm(true)
   }
 
   const toggleExtraMember = async (projectName: string, memberName: string, currentMembers: string[]) => {
@@ -445,8 +508,8 @@ export default function DDProjectenPage() {
     }
   }
 
-  const hideProject = async (fullProjectName: string) => {
-    if (!confirm('Dit project verbergen? Het komt niet meer terug, ook niet na nieuwe Excel uploads.')) return
+  const deleteFromOverview = async (fullProjectName: string) => {
+    if (!confirm('Deze zaak definitief uit het overzicht verwijderen?\n\nOok als er later nog uren op worden geschreven, komt-ie niet meer terug. Gebruik dit voor zaken die hier niet thuishoren (geen DD/VDD/Due Diligence).')) return
     try {
       const res = await fetch('/api/dd-projecten/estimates', {
         method: 'PUT',
@@ -460,10 +523,10 @@ export default function DDProjectenPage() {
           if (exists) return prev.map(e => e.projectName === fullProjectName ? updated : e)
           return [...prev, updated]
         })
-        toast.success('Project verborgen')
+        toast.success('Zaak definitief verwijderd uit overzicht')
       }
     } catch {
-      toast.error('Kon project niet verbergen')
+      toast.error('Kon zaak niet verwijderen')
     }
   }
 
@@ -515,6 +578,14 @@ export default function DDProjectenPage() {
       </div>
 
       {activeTab === 'projecten' ? (<>
+      {/* Naamgeving-uitleg */}
+      <div className="flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}>
+        <Icons.info size={15} className="text-workx-lime shrink-0 mt-0.5" />
+        <span>
+          Nieuwe DD-zaken verschijnen hier alleen als de zaaknaam <strong>DD</strong>, <strong>VDD</strong> of <strong>Due Diligence</strong> bevat. Zaken die er niet thuishoren kun je met <span className="text-red-400 font-medium">Verwijder</span> definitief weghalen — ook als er later uren op komen, blijven ze weg.
+        </span>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-xl border p-4 transition-colors" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
@@ -741,19 +812,20 @@ export default function DDProjectenPage() {
         )}
       </div>
 
-      {/* ─── Per-client sections ─── */}
-      {DD_CLIENTS.filter(c => clientGroups.has(c)).map(client => {
+      {/* ─── Per-client sections ─── (vaste 5 eerst, daarna eventuele overige) */}
+      {[...DD_CLIENTS.filter(c => clientGroups.has(c)), ...Array.from(clientGroups.keys()).filter(c => !DD_CLIENTS.includes(c))].map(client => {
         const cases = clientGroups.get(client)!
         const clientTotalHours = Math.round(cases.reduce((s, c) => s + c.totalHours, 0) * 10) / 10
         const cc = CLIENT_COLORS[client] || CLIENT_COLORS['De Breij']
 
         // Find max 7d hours across ALL clients for relative bar sizing
-        const allCases = DD_CLIENTS.filter(c => clientGroups.has(c)).flatMap(c => clientGroups.get(c)!)
+        const allCases = Array.from(clientGroups.values()).flat()
         const max7dHours = Math.max(...allCases.map(c => c.hours7d), 1)
 
         // Split cases by recency
-        const recent7d = cases.filter(c => c.hours7d > 0)
-        const older = cases.filter(c => c.hours7d === 0)
+        // Geactiveerde zaken tellen als actief, ook zonder uren afgelopen 7 dagen.
+        const recent7d = cases.filter(c => c.hours7d > 0 || c.activated)
+        const older = cases.filter(c => c.hours7d === 0 && !c.activated)
 
         const renderCase = (c: DDCase, i: number, dimmed?: boolean) => {
           const activityBar = max7dHours > 0 ? (c.hours7d / max7dHours) * 100 : 0
@@ -774,14 +846,27 @@ export default function DDProjectenPage() {
                       <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold tabular-nums ${cc.bg} ${cc.text}`}>{c.hours7d}u 7d</span>
                     )}
                     <span className="text-xs font-mono tabular-nums font-semibold" style={{ color: 'var(--color-text-primary)' }}>{c.totalHours}u</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); hideProject(c.fullProjectName) }}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all text-[10px] font-medium"
-                      title="Project verbergen (komt niet meer terug)"
-                    >
-                      <Icons.x size={10} />
-                      Verberg
-                    </button>
+                    <div className="flex items-center gap-0.5">
+                      {dimmed && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); activateCase(c) }}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-workx-lime/15 text-workx-lime hover:bg-workx-lime/25 transition-all text-[10px] font-medium mr-1"
+                          title="Weer als actieve zaak tonen"
+                        >
+                          <Icons.play size={10} />
+                          Activeren
+                        </button>
+                      )}
+                      <button onClick={(e) => { e.stopPropagation(); editCase(c) }} className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: 'var(--color-text-tertiary)' }} title="Bewerken">
+                        <Icons.edit size={13} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); completeCase(c) }} className="p-1.5 rounded-lg transition-colors hover:bg-emerald-500/10 text-emerald-400/70 hover:text-emerald-400" title="Afronden">
+                        <Icons.check size={14} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); deleteFromOverview(c.fullProjectName) }} className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" title="Definitief verwijderen (komt niet terug, ook niet na nieuwe uren)">
+                        <Icons.trash size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -945,7 +1030,7 @@ export default function DDProjectenPage() {
       )}
 
       {/* ─── Afgeronde projecten ─── */}
-      {completedProjects.length > 0 && (
+      {(completedProjects.length > 0 || completedCases.length > 0) && (
         <div className="space-y-2">
           <button
             onClick={() => setExpandedKey(expandedKey === 'completed-section' ? null : 'completed-section')}
@@ -953,10 +1038,37 @@ export default function DDProjectenPage() {
             style={{ color: 'var(--color-text-tertiary)' }}
           >
             <Icons.chevronRight size={14} className={`transition-transform ${expandedKey === 'completed-section' ? 'rotate-90' : ''}`} />
-            Afgerond ({completedProjects.length})
+            Afgerond ({completedProjects.length + completedCases.length})
           </button>
           {expandedKey === 'completed-section' && (
             <div className="space-y-2 opacity-60">
+              {completedCases.map(c => {
+                const cc = CLIENT_COLORS[c.client] || CLIENT_COLORS['De Breij']
+                return (
+                  <div key={c.fullProjectName} className="rounded-xl border group" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                    <div className="flex items-center gap-4 p-4">
+                      <div className={`w-8 h-8 rounded-lg ${cc.bg} flex items-center justify-center`}>
+                        <Icons.check size={14} className="text-emerald-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium line-through truncate" style={{ color: 'var(--color-text-tertiary)' }}>{c.projectName}</h3>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                          <span className={cc.text}>{c.client}</span>
+                          <span>{c.totalHours}u totaal</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => reopenCase(c.fullProjectName)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-text-tertiary)' }} title="Heropen">
+                          <Icons.arrowRight size={14} />
+                        </button>
+                        <button onClick={() => deleteFromOverview(c.fullProjectName)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors" title="Definitief verwijderen">
+                          <Icons.trash size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
               {completedProjects.map(project => {
                 const cc = CLIENT_COLORS[project.client] || CLIENT_COLORS['De Breij']
                 return (

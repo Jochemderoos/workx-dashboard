@@ -2365,7 +2365,10 @@ model DDProjectEstimate {
   expectedHours   Float    @default(0)
   extraMembers    String?  @db.Text // JSON array of manually added member names
   removedMembers  String?  @db.Text // JSON array of manually removed member names (hides workload members)
-  hidden          Boolean  @default(false) // Verborgen project (niet tonen, ook niet na nieuwe Excel)
+  hidden          Boolean  @default(false) // Definitief verwijderd uit overzicht (ook niet na nieuwe Excel)
+  grandfathered   Boolean  @default(false) // Bestond al bij invoering keyword-filter → tonen zonder DD/VDD/Due Diligence in naam
+  completed       Boolean  @default(false) // Afgerond (uit lopend overzicht, staat bij Afgerond, heropenen kan)
+  activated       Boolean  @default(false) // Handmatig geactiveerd: toon bij actieve zaken ook al zijn er 7 dagen geen uren
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

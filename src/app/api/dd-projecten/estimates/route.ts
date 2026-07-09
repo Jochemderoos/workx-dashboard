@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { projectName, expectedHours, extraMembers, removedMembers, hidden } = await req.json()
+  const { projectName, expectedHours, extraMembers, removedMembers, hidden, completed, activated } = await req.json()
   if (!projectName) {
     return NextResponse.json({ error: 'projectName is verplicht' }, { status: 400 })
   }
@@ -32,6 +32,8 @@ export async function PUT(req: NextRequest) {
   if (extraMembers !== undefined) data.extraMembers = JSON.stringify(extraMembers)
   if (removedMembers !== undefined) data.removedMembers = JSON.stringify(removedMembers)
   if (hidden !== undefined) data.hidden = hidden
+  if (completed !== undefined) data.completed = completed
+  if (activated !== undefined) data.activated = activated
 
   const estimate = await prisma.dDProjectEstimate.upsert({
     where: { projectName },
@@ -41,6 +43,8 @@ export async function PUT(req: NextRequest) {
       extraMembers: extraMembers ? JSON.stringify(extraMembers) : null,
       removedMembers: removedMembers ? JSON.stringify(removedMembers) : null,
       hidden: hidden || false,
+      completed: completed || false,
+      activated: activated || false,
     },
     update: data,
   })

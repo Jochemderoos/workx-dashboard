@@ -59,6 +59,7 @@ import { main as addPartnerTaskExecutorsTable } from './add-partner-task-executo
 import { main as addOfficePhoneInfobox } from './add-office-phone-infobox'
 import { main as addOfficeRequestsTable } from './add-office-requests-table'
 import { main as claimLegacyTransitie } from './claim-legacy-transitie'
+import { main as addDdGrandfatheredColumn } from './add-dd-grandfathered-column'
 
 // Recurring seeds — idempotent en mogelijk nog uitbreidbaar.
 import { main as seedPartnerTasks } from './seed-partner-tasks'
@@ -74,6 +75,7 @@ import { main as seedRecruitmentHistorical } from './seed-recruitment-historical
 import { main as seedLaetitia } from './seed-laetitia'
 import { main as seedStockPhotos } from './seed-stock-photos'
 import { main as seedStockPhotosOffice2026 } from './seed-stock-photos-office-2026'
+import { main as seedDdGrandfathered } from './seed-dd-grandfathered'
 
 // Eenmalige migrations + dated seeds zijn bewust niet meer geïmporteerd.
 // Indien een fresh-DB nodig is, draai ze handmatig (`npx tsx scripts/X.ts`):
@@ -138,6 +140,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-office-phone-infobox', run: addOfficePhoneInfobox },
   { name: 'add-office-requests-table', run: addOfficeRequestsTable },
   { name: 'claim-legacy-transitie', run: claimLegacyTransitie },
+  { name: 'add-dd-grandfathered-column', run: addDdGrandfatheredColumn },
   { name: 'seed-partner-tasks', run: seedPartnerTasks },
   { name: 'seed-monthly-costs-2026', run: seedMonthlyCosts2026 },
   { name: 'seed-monthly-costs-2026-mt940', run: seedMonthlyCosts2026Mt940 },
@@ -151,6 +154,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'seed-laetitia', run: seedLaetitia },
   { name: 'seed-stock-photos', run: seedStockPhotos },
   { name: 'seed-stock-photos-office-2026', run: seedStockPhotosOffice2026 },
+  { name: 'seed-dd-grandfathered', run: seedDdGrandfathered },
 ]
 
 async function main() {
