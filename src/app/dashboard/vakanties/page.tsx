@@ -416,6 +416,28 @@ export default function VakantiesPage() {
     setShowForm(true)
   }
 
+  // Snel een geregistreerde vakantie aanmerken als onbetaald verlof (of terug).
+  // Alleen voor aanvragen (niet voor partner-periodes).
+  const toggleVacationType = async (vacation: { id: string; type?: string; source?: string }) => {
+    if (vacation.source === 'period') return
+    const newType = vacation.type === 'onbetaald' ? 'vakantie' : 'onbetaald'
+    try {
+      const res = await fetch(`/api/vacation/requests/${vacation.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: newType }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Kon type niet wijzigen')
+      }
+      toast.success(newType === 'onbetaald' ? 'Aangemerkt als onbetaald verlof' : 'Terug naar vakantie')
+      fetchData()
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
+
   // Balance management
   const handleEditBalance = async (balance: VacationBalance) => {
     setSelectedBalanceUserId(balance.userId)
@@ -1885,18 +1907,64 @@ export default function VakantiesPage() {
                                   </div>
                                 ) : (
                                   <>
-                                    <VacationPeriodList
-                                      periods={vacationPeriods[balance.userId] || []}
-                                      onEdit={handleEditPeriod}
-                                      onDelete={handleDeletePeriod}
-                                    />
-                                    <button
-                                      onClick={() => handleAddPeriod(balance.userId)}
-                                      className="w-full mt-4 btn-primary flex items-center justify-center gap-2"
-                                    >
-                                      <Icons.plus size={16} />
-                                      Periode toevoegen
-                                    </button>
+                                    {/* Geregistreerde vakanties — hier kun je ze als onbetaald verlof aanmerken */}
+                                    {(() => {
+                                      const items = allPeriodsCurrentYear
+                                        .filter(p => (p as any).userId === balance.userId)
+                                        .slice()
+                                        .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                                      if (items.length === 0) {
+                                        return <p className="text-sm text-gray-500 py-2">Geen vakanties dit jaar.</p>
+                                      }
+                                      return (
+                                        <div className="space-y-1">
+                                          {items.map(p => {
+                                            const item = p as any
+                                            const start = new Date(p.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                                            const end = new Date(p.endDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
+                                            const sameDay = p.startDate === p.endDate
+                                            const onbetaald = item.type === 'onbetaald'
+                                            return (
+                                              <div key={p.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg hover:bg-white/5">
+                                                <div className="min-w-0">
+                                                  <span className={`text-sm ${onbetaald ? 'text-sky-400' : 'text-white/80'}`}>{sameDay ? start : `${start} – ${end}`}</span>
+                                                  <span className="text-xs text-white/40 ml-2">{p.days}d</span>
+                                                </div>
+                                                {item.source === 'period' ? (
+                                                  <span className="text-[11px] text-purple-400 whitespace-nowrap">partner-periode</span>
+                                                ) : (
+                                                  <button
+                                                    onClick={() => toggleVacationType(item)}
+                                                    className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-colors whitespace-nowrap ${onbetaald ? 'text-sky-400 border-sky-500/40 bg-sky-500/10' : 'text-gray-400 border-white/10 hover:border-white/20'}`}
+                                                    title={onbetaald ? 'Terugzetten naar vakantie (telt weer van saldo af)' : 'Aanmerken als onbetaald verlof (telt niet van saldo af)'}
+                                                  >
+                                                    {onbetaald ? '✓ Onbetaald' : 'Onbetaald?'}
+                                                  </button>
+                                                )}
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      )
+                                    })()}
+                                    {isPartnerUser && (
+                                      <>
+                                        <div className="mt-4 pt-3 border-t border-white/10">
+                                          <VacationPeriodList
+                                            periods={vacationPeriods[balance.userId] || []}
+                                            onEdit={handleEditPeriod}
+                                            onDelete={handleDeletePeriod}
+                                          />
+                                          <button
+                                            onClick={() => handleAddPeriod(balance.userId)}
+                                            className="w-full mt-4 btn-primary flex items-center justify-center gap-2"
+                                          >
+                                            <Icons.plus size={16} />
+                                            Periode toevoegen
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
                                   </>
                                 )}
                                 <Popover.Arrow className="fill-workx-gray" />
@@ -2698,7 +2766,11 @@ export default function VakantiesPage() {
               byUser.set(u.id, existing)
             }
             const groups = Array.from(byUser.values())
-              .map(g => ({ ...g, totalDays: g.periods.reduce((s, p) => s + (p.days || 0), 0) }))
+              .map(g => ({
+                ...g,
+                vakantieDays: g.periods.filter(p => (p as any).type !== 'onbetaald').reduce((s, p) => s + (p.days || 0), 0),
+                onbetaaldDays: g.periods.filter(p => (p as any).type === 'onbetaald').reduce((s, p) => s + (p.days || 0), 0),
+              }))
               .sort((a, b) => a.user.name.localeCompare(b.user.name))
             return (
               <div className="card p-5 mt-8">
@@ -2712,9 +2784,12 @@ export default function VakantiesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {groups.map(g => (
                     <div key={g.user.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="flex items-baseline justify-between mb-2">
+                      <div className="flex items-baseline justify-between mb-2 gap-2">
                         <p className="text-sm font-medium text-white">{g.user.name}</p>
-                        <span className="text-xs text-green-400 font-semibold">{g.totalDays.toFixed(1)} d</span>
+                        <span className="text-xs font-semibold whitespace-nowrap">
+                          <span className="text-green-400">{g.vakantieDays.toFixed(1)} d</span>
+                          {g.onbetaaldDays > 0 && <span className="text-sky-400"> + {g.onbetaaldDays.toFixed(1)} d onbetaald</span>}
+                        </span>
                       </div>
                       <ul className="space-y-0.5 text-xs text-white/70">
                         {g.periods
@@ -2724,9 +2799,13 @@ export default function VakantiesPage() {
                             const start = new Date(p.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
                             const end = new Date(p.endDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
                             const sameDay = p.startDate === p.endDate
+                            const onbetaald = (p as any).type === 'onbetaald'
                             return (
                               <li key={p.id} className="flex items-center justify-between gap-2">
-                                <span>{sameDay ? start : `${start} – ${end}`}</span>
+                                <span className={onbetaald ? 'text-sky-400' : ''}>
+                                  {sameDay ? start : `${start} – ${end}`}
+                                  {onbetaald && <span className="ml-1 text-[10px] text-sky-400/80">onbetaald</span>}
+                                </span>
                                 <span className="text-white/40">{p.days}d</span>
                               </li>
                             )
