@@ -301,8 +301,9 @@ model VacationBalance {
   overgedragenVorigJaar Float    @default(0)  // Overgedragen van vorig jaar
   opbouwLopendJaar      Float    @default(25) // Opbouw dit jaar (standaard 25)
   bijgekocht            Float    @default(0)  // Extra gekochte dagen
-  opgenomenLopendJaar   Float    @default(0)  // Opgenomen dit jaar
-  note                  String?              // Extra informatie
+  opgenomenLopendJaar   Float    @default(0)  // (Legacy) opgeslagen opgenomen — niet meer leidend; opgenomen wordt afgeleid uit goedgekeurde aanvragen
+  opgenomenOverride     Float?               // Noodgeval: handmatige override door Hanna. Als gezet, telt deze i.p.v. de automatische som.
+  note                  String?              // Extra informatie / opmerkingen
   updatedById           String?              // Wie heeft dit laatst aangepast (Hanna/Partner)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -389,6 +390,7 @@ model VacationRequest {
   endDate     DateTime
   days        Float         // Aantal dagen
   reason      String?
+  type        String   @default("vakantie") // "vakantie" (telt van saldo af) of "onbetaald" (telt niet mee)
   status      String   @default("PENDING")
   approvedBy  String?
   createdAt   DateTime @default(now())

@@ -27,6 +27,9 @@ interface VacationRequest {
   days: number
   reason: string | null
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  type?: 'vakantie' | 'onbetaald'
+  source?: 'request' | 'period' // combined-lijst: waar komt deze vandaan
+  note?: string | null
   user: {
     id: string
     name: string
@@ -40,6 +43,9 @@ interface VacationBalance {
   opbouwLopendJaar: number
   bijgekocht: number
   opgenomenLopendJaar: number
+  opgenomenAuto?: number // automatisch afgeleid uit de kalender
+  opgenomenOverride?: number | null // handmatige noodgeval-override door Hanna
+  onbetaaldDagen?: number // onbetaald verlof (telt niet in saldo)
   note?: string
   isPartner?: boolean
 }
@@ -165,6 +171,7 @@ export default function VakantiesPage() {
     opbouwLopendJaar: 25,
     bijgekocht: 0,
     opgenomenLopendJaar: 0,
+    note: '',
   })
 
   // Vacation form state
@@ -173,6 +180,7 @@ export default function VakantiesPage() {
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [reason, setReason] = useState('')
   const [isHalfDay, setIsHalfDay] = useState(false)
+  const [vacationType, setVacationType] = useState<'vakantie' | 'onbetaald'>('vakantie')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
   const [showParentalMemberDropdown, setShowParentalMemberDropdown] = useState(false)
@@ -261,6 +269,7 @@ export default function VakantiesPage() {
     setEndDate(null)
     setReason('')
     setIsHalfDay(false)
+    setVacationType('vakantie')
     setEditingId(null)
     setShowForm(false)
     setShowTeamDropdown(false)
@@ -287,7 +296,7 @@ export default function VakantiesPage() {
         const res = await fetch(`/api/vacation/requests/${editingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startDate: startDateStr, endDate: endDateStr, reason, isHalfDay }),
+          body: JSON.stringify({ startDate: startDateStr, endDate: endDateStr, reason, isHalfDay, type: vacationType }),
         })
         if (!res.ok) {
           const data = await res.json()
@@ -305,6 +314,7 @@ export default function VakantiesPage() {
             reason,
             userId: targetUserId,
             isHalfDay,
+            type: vacationType,
           }),
         })
         if (!res.ok) {
@@ -367,10 +377,14 @@ export default function VakantiesPage() {
     return days
   }, [vacReqStartDate, vacReqEndDate, isHalfDay])
 
-  // Delete vacation
+  // Delete vacation — bron bepaalt het endpoint (aanvraag of partner-periode)
   const handleDelete = async (id: string) => {
+    const item = vacations.find(v => v.id === id)
+    const url = item?.source === 'period'
+      ? `/api/vacation/periods?id=${id}`
+      : `/api/vacation/requests/${id}`
     try {
-      const res = await fetch(`/api/vacation/requests/${id}`, {
+      const res = await fetch(url, {
         method: 'DELETE',
       })
       if (!res.ok) {
@@ -384,12 +398,18 @@ export default function VakantiesPage() {
     }
   }
 
-  // Edit vacation
+  // Edit vacation — partner-periode via het periode-formulier, rest als aanvraag
   const handleEdit = (vacation: VacationRequest) => {
+    if (vacation.source === 'period') {
+      setEditingPeriod(vacation as unknown as VacationPeriod)
+      setShowPeriodForm(true)
+      return
+    }
     setSelectedUserId(vacation.userId)
     setStartDate(new Date(vacation.startDate))
     setEndDate(new Date(vacation.endDate))
     setReason(vacation.reason || '')
+    setVacationType(vacation.type === 'onbetaald' ? 'onbetaald' : 'vakantie')
     setEditingId(vacation.id)
     setShowForm(true)
   }
@@ -402,6 +422,7 @@ export default function VakantiesPage() {
       opbouwLopendJaar: balance.opbouwLopendJaar,
       bijgekocht: balance.bijgekocht || 0,
       opgenomenLopendJaar: balance.opgenomenLopendJaar,
+      note: balance.note || '',
     })
     setEditingBalance(balance.personName)
     // Fetch vacation periods for this user
@@ -413,13 +434,24 @@ export default function VakantiesPage() {
   const handleSaveBalance = async () => {
     if (!selectedBalanceUserId) return
 
+    // Opgenomen is normaal automatisch (opgenomenAuto). Wijkt Hanna's ingevoerde
+    // waarde daarvan af, dan zetten we een noodgeval-override; is-ie gelijk aan
+    // de automatische som, dan wissen we de override (= weer automatisch).
+    const bal = vacationBalances.find(b => b.userId === selectedBalanceUserId)
+    const auto = bal?.opgenomenAuto ?? balanceForm.opgenomenLopendJaar
+    const opgenomenOverride = Math.abs(balanceForm.opgenomenLopendJaar - auto) < 0.001 ? null : balanceForm.opgenomenLopendJaar
+
     try {
       const res = await fetch('/api/vacation/balances', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: selectedBalanceUserId,
-          ...balanceForm,
+          overgedragenVorigJaar: balanceForm.overgedragenVorigJaar,
+          opbouwLopendJaar: balanceForm.opbouwLopendJaar,
+          bijgekocht: balanceForm.bijgekocht,
+          opgenomenOverride,
+          note: balanceForm.note,
         }),
       })
       if (!res.ok) {
@@ -1041,6 +1073,29 @@ export default function VakantiesPage() {
           </div>
         </div>
 
+        {/* Type: vakantie of onbetaald verlof */}
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">Type</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setVacationType('vakantie')}
+              className={`p-3 rounded-xl border text-sm font-medium transition-colors ${vacationType === 'vakantie' ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'}`}
+            >
+              Vakantie
+              <span className="block text-[11px] font-normal opacity-70">Gaat van saldo af</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setVacationType('onbetaald')}
+              className={`p-3 rounded-xl border text-sm font-medium transition-colors ${vacationType === 'onbetaald' ? 'bg-sky-500/10 border-sky-500/40 text-sky-300' : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'}`}
+            >
+              Onbetaald verlof
+              <span className="block text-[11px] font-normal opacity-70">Telt niet mee in saldo</span>
+            </button>
+          </div>
+        </div>
+
         {/* Halve dag optie — alleen als start === eind */}
         {startDate && endDate && startDate.toDateString() === endDate.toDateString() && (
           <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${isHalfDay ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
@@ -1568,7 +1623,7 @@ export default function VakantiesPage() {
                               />
                             </div>
                             <div>
-                              <label className="block text-xs text-gray-400 mb-1">Opgenomen</label>
+                              <label className="block text-xs text-gray-400 mb-1">Opgenomen <span className="text-gray-600">(auto)</span></label>
                               <input
                                 type="number"
                                 step="0.5"
@@ -1582,6 +1637,23 @@ export default function VakantiesPage() {
                               <div className="px-3 py-2 bg-workx-lime/10 border border-workx-lime/20 rounded-xl text-workx-lime font-semibold text-sm">
                                 {(balanceForm.overgedragenVorigJaar + balanceForm.opbouwLopendJaar + balanceForm.bijgekocht - balanceForm.opgenomenLopendJaar).toFixed(1)} d
                               </div>
+                            </div>
+                          </div>
+
+                          {/* Opmerking + uitleg opgenomen */}
+                          <div className="mt-3 space-y-2">
+                            <p className="text-[11px] text-gray-500">
+                              &ldquo;Opgenomen&rdquo; wordt automatisch berekend uit de goedgekeurde vakanties in de kalender. Pas het alleen aan als noodgeval-correctie; zet het weer gelijk aan de automatische waarde om het automatisch te laten meelopen.
+                            </p>
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Opmerking</label>
+                              <textarea
+                                value={balanceForm.note}
+                                onChange={e => setBalanceForm({ ...balanceForm, note: e.target.value })}
+                                rows={2}
+                                placeholder="Bijv. 13,5 over van 2025. Totaal 38,5 dagen."
+                                className="input-field text-sm py-2 resize-none w-full"
+                              />
                             </div>
                           </div>
 
@@ -2810,7 +2882,9 @@ export default function VakantiesPage() {
                             <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
                               {vacation.user.name}
                             </span>
-                            <p className="text-xs text-gray-500 mt-0.5">Vakantie</p>
+                            <p className={`text-xs mt-0.5 ${vacation.type === 'onbetaald' ? 'text-sky-400' : 'text-gray-500'}`}>
+                              {vacation.type === 'onbetaald' ? 'Onbetaald verlof' : 'Vakantie'}
+                            </p>
                           </div>
                         </div>
                         {(isAdmin || vacation.userId === session?.user?.id) && (

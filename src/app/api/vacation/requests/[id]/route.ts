@@ -41,7 +41,7 @@ export async function PATCH(
     const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
 
     const body = await req.json()
-    const { status, startDate, endDate, reason, rejectionReason, isHalfDay } = body
+    const { status, startDate, endDate, reason, rejectionReason, isHalfDay, type } = body
 
     const request = await prisma.vacationRequest.findUnique({
       where: { id: params.id }
@@ -196,6 +196,7 @@ export async function PATCH(
     if (startDate) updateData.startDate = parseLocalDate(startDate)
     if (endDate) updateData.endDate = parseLocalDate(endDate)
     if (reason !== undefined) updateData.reason = reason
+    if (type === 'vakantie' || type === 'onbetaald') updateData.type = type
 
     // Recalculate days if dates changed
     if (startDate || endDate) {

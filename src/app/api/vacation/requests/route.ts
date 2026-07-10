@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const { startDate, endDate, days, reason, userId: requestedUserId, isHalfDay } = await req.json()
+    const { startDate, endDate, days, reason, userId: requestedUserId, isHalfDay, type: rawType } = await req.json()
+    const type = rawType === 'onbetaald' ? 'onbetaald' : 'vakantie'
 
     if (!startDate || !endDate) {
       return NextResponse.json(
@@ -181,6 +182,7 @@ export async function POST(req: NextRequest) {
         endDate: end,
         days: calculatedDays,
         reason,
+        type,
         status,
         approvedBy,
       },
@@ -198,7 +200,7 @@ export async function POST(req: NextRequest) {
     // Verlof-types (zwangerschapsverlof etc.) tellen NIET als vakantiedagen
     if (status === 'APPROVED') {
       const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
-      const isVerlof = verlofTypes.some(t => (reason || '').toLowerCase().includes(t))
+      const isVerlof = type === 'onbetaald' || verlofTypes.some(t => (reason || '').toLowerCase().includes(t))
       if (!isVerlof) {
         const requestYear = start.getFullYear()
         await prisma.vacationBalance.updateMany({

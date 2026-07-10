@@ -95,27 +95,37 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
     }
 
-    const { userId, overgedragenVorigJaar, opbouwLopendJaar, bijgekocht, opgenomenLopendJaar } = await req.json()
+    const { userId, overgedragenVorigJaar, opbouwLopendJaar, bijgekocht, opgenomenLopendJaar, opgenomenOverride, note } = await req.json()
     const currentYear = new Date().getFullYear()
+
+    // opgenomen wordt automatisch afgeleid uit de goedgekeurde aanvragen; Hanna
+    // kan in noodgevallen een handmatige override zetten (leeg/null = automatisch).
+    const overrideValue = opgenomenOverride === undefined
+      ? undefined
+      : (opgenomenOverride === null || opgenomenOverride === '' ? null : Number(opgenomenOverride))
 
     // Upsert the vacation balance using userId (unique per user)
     const balance = await prisma.vacationBalance.upsert({
       where: { userId },
       update: {
         year: currentYear,
-        overgedragenVorigJaar,
-        opbouwLopendJaar,
-        bijgekocht,
-        opgenomenLopendJaar,
+        ...(overgedragenVorigJaar !== undefined ? { overgedragenVorigJaar } : {}),
+        ...(opbouwLopendJaar !== undefined ? { opbouwLopendJaar } : {}),
+        ...(bijgekocht !== undefined ? { bijgekocht } : {}),
+        ...(opgenomenLopendJaar !== undefined ? { opgenomenLopendJaar } : {}),
+        ...(overrideValue !== undefined ? { opgenomenOverride: overrideValue } : {}),
+        ...(note !== undefined ? { note } : {}),
         updatedById: session.user.id,
       },
       create: {
         userId,
         year: currentYear,
-        overgedragenVorigJaar,
-        opbouwLopendJaar,
+        overgedragenVorigJaar: overgedragenVorigJaar ?? 0,
+        opbouwLopendJaar: opbouwLopendJaar ?? 25,
         bijgekocht: bijgekocht || 0,
-        opgenomenLopendJaar,
+        opgenomenLopendJaar: opgenomenLopendJaar ?? 0,
+        opgenomenOverride: overrideValue ?? null,
+        note: note ?? null,
         updatedById: session.user.id,
       }
     })
