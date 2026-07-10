@@ -136,6 +136,8 @@ export default function VakantiesPage() {
 
   // Check if current user is admin/partner
   const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'PARTNER' || session?.user?.role === 'OFFICE_MANAGER'
+  // Alleen partners mogen vakantieperiodes (agenda/overzicht) invoeren
+  const isPartnerUser = session?.user?.role === 'PARTNER'
 
   // Vacation periods state
   const [vacationPeriods, setVacationPeriods] = useState<Record<string, VacationPeriod[]>>({}) // userId -> periods
@@ -1664,6 +1666,7 @@ export default function VakantiesPage() {
                                 <Icons.calendar className="text-green-400" size={16} />
                                 <h4 className="font-medium text-white text-sm">Vakantieperiodes</h4>
                               </div>
+                              {isPartnerUser && (
                               <button
                                 onClick={() => {
                                   setPeriodFormUserId(selectedBalanceUserId)
@@ -1675,6 +1678,7 @@ export default function VakantiesPage() {
                                 <Icons.plus size={12} />
                                 Periode
                               </button>
+                              )}
                             </div>
 
                             {showPeriodForm && periodFormUserId === selectedBalanceUserId ? (
@@ -1819,6 +1823,11 @@ export default function VakantiesPage() {
                                 <Icons.chevronDown size={14} className="text-gray-500 ml-1" />
                               </button>
                             </Popover.Trigger>
+                            {(balance.onbetaaldDagen ?? 0) > 0 && (
+                              <span className="ml-2 text-xs text-sky-400 whitespace-nowrap" title="Onbetaald verlof — telt niet mee in het saldo">
+                                +{balance.onbetaaldDagen} d onbetaald
+                              </span>
+                            )}
                             <Popover.Portal>
                               <Popover.Content
                                 className="w-[90vw] max-w-lg bg-workx-gray rounded-2xl border border-white/10 p-5 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"

@@ -92,10 +92,11 @@ export async function POST(req: NextRequest) {
       select: { role: true },
     })
 
-    const isAdmin = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'OFFICE_MANAGER'
-
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Forbidden - only admins can create periods' }, { status: 403 })
+    // Vakantieperiodes zijn puur voor de agenda/het overzicht en zijn bedoeld
+    // voor partners (die geen verlofsaldo hebben). Medewerkers gaan via een
+    // goedgekeurde aanvraag — die komt automatisch in kalender + saldo.
+    if (currentUser?.role !== 'PARTNER') {
+      return NextResponse.json({ error: 'Alleen partners kunnen een vakantieperiode invoeren. Medewerkers gaan via een verlofaanvraag.' }, { status: 403 })
     }
 
     if (!userId || !startDate || !endDate) {

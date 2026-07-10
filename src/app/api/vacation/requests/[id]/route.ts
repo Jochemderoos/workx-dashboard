@@ -73,6 +73,11 @@ export async function PATCH(
       if (!isAdmin) {
         return NextResponse.json({ error: 'Alleen beheerders kunnen aanvragen goedkeuren' }, { status: 403 })
       }
+      // Je eigen verlofaanvraag mag je niet zelf goedkeuren; dat doet een partner
+      // (Hanna keurt de aanvragen van medewerkers goed, partners die van Hanna).
+      if (request.userId === session.user.id && currentUser?.role !== 'PARTNER') {
+        return NextResponse.json({ error: 'Je eigen verlofaanvraag moet door een partner worden goedgekeurd' }, { status: 403 })
+      }
 
       const wasApproved = request.status === 'APPROVED'
 

@@ -171,9 +171,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Auto-approve when created by admin/partner
-    const status = isAdmin ? 'APPROVED' : 'PENDING'
-    const approvedBy = isAdmin ? session.user.id : null
+    // Auto-goedkeuren alleen als een PARTNER het doet, of als een admin het
+    // vóór iemand anders invoert. Een admin/office-manager die het voor zichzelf
+    // aanvraagt (bijv. Hanna) moet door een partner worden goedgekeurd.
+    const isPartner = currentUser?.role === 'PARTNER'
+    const isSelf = targetUserId === session.user.id
+    const autoApprove = isPartner || (isAdmin && !isSelf)
+    const status = autoApprove ? 'APPROVED' : 'PENDING'
+    const approvedBy = autoApprove ? session.user.id : null
 
     const request = await prisma.vacationRequest.create({
       data: {
@@ -226,7 +231,7 @@ export async function POST(req: NextRequest) {
 
       // Find all admins, partners and office managers to notify
       const admins = await prisma.user.findMany({
-        where: { role: { in: ['ADMIN', 'PARTNER', 'OFFICE_MANAGER'] }, isActive: true },
+        where: { role: { in: ['ADMIN', 'PARTNER', 'OFFICE_MANAGER'] }, isActive: true, id: { not: session.user.id } },
         select: { id: true, email: true, name: true }
       })
 
