@@ -80,6 +80,8 @@ export async function GET() {
         role: user.role,
         startDate: user.startDate,
         department: user.department,
+        // Woonadres alleen voor eigen profiel of managers (privacy)
+        adres: canSeeSensitiveInfo ? (user as { adres?: string | null }).adres ?? null : null,
         compensation: user.compensation ? {
           experienceYear: user.compensation.experienceYear,
           hourlyRate: user.compensation.hourlyRate,

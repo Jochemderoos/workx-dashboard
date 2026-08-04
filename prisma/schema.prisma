@@ -32,6 +32,7 @@ model User {
   avatarUrl      String?
   department     String?
   phoneNumber    String?
+  adres          String?   // Woonadres (straat + huisnr, postcode, plaats) — Team-overzicht
   birthDate      String?   // Verjaardag in MM-DD format
   startDate      DateTime? // Datum in dienst (voor transitievergoeding etc)
   contractEvaluations String? // JSON: array van ISO-dates voor contract-evaluatie reminders

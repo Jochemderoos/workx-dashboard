@@ -53,6 +53,7 @@ interface EmployeeData {
   startDate: string | null
   department: string | null
   phoneNumber: string | null
+  adres: string | null
   compensation: {
     experienceYear: number | null
     hourlyRate: number
@@ -872,6 +873,18 @@ export default function TeamPage() {
                   >
                     <Icons.mail size={11} />
                     <span className="truncate">{employee.email}</span>
+                  </a>
+                )}
+                {employee.adres && (
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(employee.adres)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-400 hover:text-workx-lime text-xs mt-0.5 flex items-start gap-1 transition-colors w-fit"
+                    title="Open in Google Maps"
+                  >
+                    <Icons.mapPin size={11} className="mt-0.5 flex-shrink-0" />
+                    <span className="whitespace-pre-line leading-snug">{employee.adres}</span>
                   </a>
                 )}
               </div>
