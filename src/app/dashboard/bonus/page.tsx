@@ -27,7 +27,7 @@ interface Calculation {
 export default function BonusPage() {
   const [calculations, setCalculations] = useState<Calculation[]>([])
   const [adminCalculations, setAdminCalculations] = useState<Calculation[]>([])
-  const [activeTab, setActiveTab] = useState<'mijn' | 'ingediend' | 'overzicht'>('mijn')
+  const [activeTab, setActiveTab] = useState<'mijn' | 'ingediend' | 'overzicht' | 'historie'>('mijn')
   const [ingediendGroupBy, setIngediendGroupBy] = useState<'period' | 'client'>('period')
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -56,7 +56,7 @@ export default function BonusPage() {
 
   // Fetch admin overview when tab changes
   useEffect(() => {
-    if (activeTab === 'overzicht' && isAdmin) {
+    if ((activeTab === 'overzicht' || activeTab === 'historie') && isAdmin) {
       fetchAdminCalculations()
     }
   }, [activeTab, isAdmin])
@@ -570,9 +570,14 @@ export default function BonusPage() {
               )}
             </button>
             {isAdmin && (
-              <button onClick={() => setActiveTab('overzicht')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'overzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
-                Overzicht (alle medewerkers)
-              </button>
+              <>
+                <button onClick={() => setActiveTab('overzicht')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'overzicht' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
+                  Overzicht (alle medewerkers)
+                </button>
+                <button onClick={() => setActiveTab('historie')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'historie' ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
+                  Historie (uitbetaald)
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -1104,14 +1109,16 @@ export default function BonusPage() {
 
       {/* Admin Overzicht */}
       {activeTab === 'overzicht' && isAdmin && (() => {
-        // Groepeer per medewerker
-        const byEmployee = adminCalculations.reduce((acc, calc) => {
+        // Alleen openstaande (ingediende) bonussen — uitbetaalde staan onder Historie
+        const openCalcs = adminCalculations.filter(c => c.status === 'SUBMITTED')
+        const byEmployee = openCalcs.reduce((acc, calc) => {
           const name = calc.user?.name || 'Onbekend'
           if (!acc[name]) acc[name] = []
           acc[name].push(calc)
           return acc
         }, {} as Record<string, Calculation[]>)
-        const grandTotal = adminCalculations.filter(c => c.status === 'SUBMITTED').reduce((s, c) => s + c.bonusAmount, 0)
+        const grandTotal = openCalcs.reduce((s, c) => s + c.bonusAmount, 0)
+        const employeeCount = Object.keys(byEmployee).length
 
         return (
           <div className="space-y-6">
@@ -1123,19 +1130,19 @@ export default function BonusPage() {
                     <p className="text-sm text-gray-400">Totaal uit te betalen</p>
                     <p className="text-3xl font-bold text-workx-lime">{formatCurrency(grandTotal)}</p>
                   </div>
-                  <p className="text-sm text-gray-500">{adminCalculations.filter(c => c.status === 'SUBMITTED').length} bonussen van {Object.keys(byEmployee).filter(name => byEmployee[name].some(c => c.status === 'SUBMITTED')).length} medewerker{Object.keys(byEmployee).filter(name => byEmployee[name].some(c => c.status === 'SUBMITTED')).length !== 1 ? 's' : ''}</p>
+                  <p className="text-sm text-gray-500">{openCalcs.length} bonussen van {employeeCount} medewerker{employeeCount !== 1 ? 's' : ''}</p>
                 </div>
               </div>
             )}
 
-            {adminCalculations.length === 0 ? (
+            {openCalcs.length === 0 ? (
               <div className="card p-16 text-center">
-                <p className="text-sm text-gray-400">Geen ingediende bonussen</p>
+                <p className="text-sm text-gray-400">Geen openstaande bonussen</p>
+                <p className="text-xs text-gray-500 mt-1">Uitbetaalde bonussen vind je onder &ldquo;Historie&rdquo;.</p>
               </div>
             ) : (
               Object.entries(byEmployee).sort(([a], [b]) => a.localeCompare(b)).map(([name, calcs]) => {
                 const employeeTotal = calcs.reduce((s, c) => s + c.bonusAmount, 0)
-                const unpaid = calcs.filter(c => c.status === 'SUBMITTED')
                 return (
                   <div key={name} className="card p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -1145,31 +1152,22 @@ export default function BonusPage() {
                         </div>
                         <div>
                           <h3 className="font-medium text-white">{name}</h3>
-                          <p className="text-xs text-gray-500">{calcs.length} bonussen · {unpaid.length} openstaand</p>
+                          <p className="text-xs text-gray-500">{calcs.length} openstaand</p>
                         </div>
                       </div>
                       <div className="text-right flex items-center gap-3">
-                        <div>
-                          <p className="text-xl font-bold text-green-400">{formatCurrency(employeeTotal)}</p>
-                          {unpaid.length > 0 && (
-                            <p className="text-xs text-blue-400">{unpaid.length} bonussen</p>
-                          )}
-                        </div>
-                        {unpaid.length > 0 ? (
-                          <button
-                            onClick={() => markAllPaidForEmployee(calcs)}
-                            className="px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors text-sm font-medium"
-                          >
-                            Uitbetalen
-                          </button>
-                        ) : (
-                          <span className="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400/60 text-sm">Uitbetaald</span>
-                        )}
+                        <p className="text-xl font-bold text-green-400">{formatCurrency(employeeTotal)}</p>
+                        <button
+                          onClick={() => markAllPaidForEmployee(calcs)}
+                          className="px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors text-sm font-medium"
+                        >
+                          Uitbetalen
+                        </button>
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       {calcs.map(calc => (
-                        <div key={calc.id} className={`rounded-lg border p-2.5 flex items-center justify-between ${calc.status === 'PAID' ? 'opacity-40' : ''}`} style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                        <div key={calc.id} className="rounded-lg border p-2.5 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
                           <div className="flex items-center gap-3 text-sm">
                             <span className="font-medium text-white">{formatCurrency(calc.bonusAmount)}</span>
                             {calc.clientName && <span className="text-xs text-gray-400">{calc.clientName}</span>}
@@ -1177,9 +1175,78 @@ export default function BonusPage() {
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             <span>{formatCurrency(calc.invoiceAmount)} × {calc.bonusPercentage}%</span>
-                            <span className={`px-1.5 py-0.5 rounded-full ${calc.status === 'PAID' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/15 text-blue-400'}`}>
-                              {calc.status === 'PAID' ? 'Betaald' : 'Ingediend'}
-                            </span>
+                            <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400">Ingediend</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )
+      })()}
+
+      {activeTab === 'historie' && isAdmin && (() => {
+        // Uitbetaalde bonussen — historie
+        const paidCalcs = adminCalculations.filter(c => c.status === 'PAID')
+        const byEmployee = paidCalcs.reduce((acc, calc) => {
+          const name = calc.user?.name || 'Onbekend'
+          if (!acc[name]) acc[name] = []
+          acc[name].push(calc)
+          return acc
+        }, {} as Record<string, Calculation[]>)
+        const grandTotal = paidCalcs.reduce((s, c) => s + c.bonusAmount, 0)
+        const employeeCount = Object.keys(byEmployee).length
+
+        return (
+          <div className="space-y-6">
+            {grandTotal > 0 && (
+              <div className="card p-6 border-emerald-500/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-400">Totaal uitbetaald</p>
+                    <p className="text-3xl font-bold text-emerald-400">{formatCurrency(grandTotal)}</p>
+                  </div>
+                  <p className="text-sm text-gray-500">{paidCalcs.length} bonussen · {employeeCount} medewerker{employeeCount !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+            )}
+
+            {paidCalcs.length === 0 ? (
+              <div className="card p-16 text-center">
+                <p className="text-sm text-gray-400">Nog geen uitbetaalde bonussen</p>
+              </div>
+            ) : (
+              Object.entries(byEmployee).sort(([a], [b]) => a.localeCompare(b)).map(([name, calcs]) => {
+                const employeeTotal = calcs.reduce((s, c) => s + c.bonusAmount, 0)
+                return (
+                  <div key={name} className="card p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                          <span className="text-emerald-400 font-bold text-sm">{name.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-white">{name}</h3>
+                          <p className="text-xs text-gray-500">{calcs.length} uitbetaald</p>
+                        </div>
+                      </div>
+                      <p className="text-xl font-bold text-emerald-400">{formatCurrency(employeeTotal)}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {calcs.map(calc => (
+                        <div key={calc.id} className="rounded-lg border p-2.5 flex items-center justify-between" style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="font-medium text-white">{formatCurrency(calc.bonusAmount)}</span>
+                            {calc.clientName && <span className="text-xs text-gray-400">{calc.clientName}</span>}
+                            {calc.invoiceNumber && <span className="text-xs text-gray-500">#{calc.invoiceNumber}</span>}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{formatCurrency(calc.invoiceAmount)} × {calc.bonusPercentage}%</span>
+                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">Betaald</span>
+                            <button onClick={() => toggleAdminPaid(calc.id, calc.status)} className="px-1.5 py-0.5 rounded-full hover:bg-white/10 hover:text-white transition-colors" title="Terugzetten naar ingediend">Terugdraaien</button>
                           </div>
                         </div>
                       ))}
