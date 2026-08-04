@@ -2716,3 +2716,26 @@ model CandidateConnection {
   @@index([candidateKey, candidateType])
   @@index([userId])
 }
+
+// ==================== MAILCHIMP CONTACTLIJST ====================
+// Iedereen kan contactpersonen aandragen die aan de Mailchimp-lijst moeten
+// worden toegevoegd. Office (Hanna/Lotte/Bente = ADMIN) vinkt af zodra iemand
+// echt in Mailchimp staat; die verdwijnt dan uit de open lijst.
+model MailchimpContact {
+  id               String    @id @default(cuid())
+  name             String
+  email            String
+  phone            String?
+  company          String?
+  addedById        String
+  addedByName      String
+  addedToMailchimp Boolean   @default(false)
+  processedById    String?
+  processedByName  String?
+  processedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([addedToMailchimp])
+  @@index([createdAt])
+}

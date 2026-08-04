@@ -37,6 +37,8 @@ export const teamMenu_Algemeen: MenuItem[] = [
     description: 'Reserveer je werkplek op kantoor. Zie wie er vandaag is.' },
   { href: '/dashboard/office', icon: Icons.building, label: 'Office', iconAnim: 'icon-briefcase-hover',
     description: 'Aanwezigheid back office (Hanna, Lotte, Bente, Diyar) + kantoortelefoon-regeling per dag.' },
+  { href: '/dashboard/mailchimp', icon: Icons.mail, label: 'Mailchimp-lijst', iconAnim: 'icon-briefcase-hover',
+    description: 'Draag contactpersonen aan voor onze Mailchimp-lijst. Office vinkt af zodra ze zijn toegevoegd.' },
   { href: '/dashboard/agenda', icon: Icons.calendar, label: 'Agenda', iconAnim: 'icon-calendar-hover',
     description: 'Gezamenlijke agenda voor afspraken, events en kantoor-dagen.' },
   { href: '/dashboard/vakanties', icon: Icons.sun, label: 'Vakanties & Verlof', iconAnim: 'icon-sun-hover', hideForExternal: true,

@@ -61,6 +61,7 @@ import { main as addOfficeRequestsTable } from './add-office-requests-table'
 import { main as claimLegacyTransitie } from './claim-legacy-transitie'
 import { main as addDdGrandfatheredColumn } from './add-dd-grandfathered-column'
 import { main as addVacationTypeOverrideColumns } from './add-vacation-type-override-columns'
+import { main as addMailchimpContactsTable } from './add-mailchimp-contacts-table'
 
 // Recurring seeds — idempotent en mogelijk nog uitbreidbaar.
 import { main as seedPartnerTasks } from './seed-partner-tasks'
@@ -143,6 +144,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'claim-legacy-transitie', run: claimLegacyTransitie },
   { name: 'add-dd-grandfathered-column', run: addDdGrandfatheredColumn },
   { name: 'add-vacation-type-override-columns', run: addVacationTypeOverrideColumns },
+  { name: 'add-mailchimp-contacts-table', run: addMailchimpContactsTable },
   { name: 'seed-partner-tasks', run: seedPartnerTasks },
   { name: 'seed-monthly-costs-2026', run: seedMonthlyCosts2026 },
   { name: 'seed-monthly-costs-2026-mt940', run: seedMonthlyCosts2026Mt940 },

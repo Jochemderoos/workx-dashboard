@@ -47,6 +47,26 @@ export async function GET() {
       }
     }
 
+    // 0b. Maandelijkse Mailchimp-lijst reminder — eerste week van de maand,
+    // voor iedereen. Maandsleutel zodat 'ie na wegklikken pas volgende maand terugkomt.
+    {
+      const amsDay = parseInt(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam', day: '2-digit' }).format(now), 10)
+      if (amsDay <= 7) {
+        const monthKey = `mailchimp-${new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit' }).format(now)}`
+        if (!dismissedKeys.has(monthKey)) {
+          notifications.push({
+            id: monthKey,
+            type: 'mailchimp',
+            title: 'Mailchimp-lijst bijwerken',
+            message: 'Nieuwe maand: voeg contactpersonen toe die aan onze Mailchimp-lijst moeten (naam, e-mail, telefoon, bedrijf).',
+            createdAt: now,
+            read: false,
+            href: '/dashboard/mailchimp',
+          })
+        }
+      }
+    }
+
     // 1. Pending zaak assignments (for the current user)
     const pendingZaken = await prisma.zaakAssignment.findMany({
       where: {
