@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { calculateWorkdays } from '@/lib/vacation-utils'
+import { normalizeVerlofType } from '@/lib/verlof-types'
 import { sendPushNotification } from '@/lib/push-notifications'
 import { sendDirectMessage } from '@/lib/slack'
 
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { startDate, endDate, days, reason, userId: requestedUserId, isHalfDay, type: rawType } = await req.json()
-    const type = rawType === 'onbetaald' ? 'onbetaald' : 'vakantie'
+    const type = normalizeVerlofType(rawType)
 
     if (!startDate || !endDate) {
       return NextResponse.json(
@@ -204,8 +205,9 @@ export async function POST(req: NextRequest) {
     // If auto-approved, update vacation balance
     // Verlof-types (zwangerschapsverlof etc.) tellen NIET als vakantiedagen
     if (status === 'APPROVED') {
+      // Alleen 'vakantie' telt van het saldo af; alle andere types zijn verlof.
       const verlofTypes = ['zwangerschapsverlof', 'ouderschapsverlof', 'bevallingsverlof', 'geboorteverlof']
-      const isVerlof = type === 'onbetaald' || verlofTypes.some(t => (reason || '').toLowerCase().includes(t))
+      const isVerlof = type !== 'vakantie' || verlofTypes.some(t => (reason || '').toLowerCase().includes(t))
       if (!isVerlof) {
         const requestYear = start.getFullYear()
         await prisma.vacationBalance.updateMany({

@@ -14,6 +14,8 @@ import { werkdagenToString, parseWerkdagen, DEFAULT_WERKDAGEN, calculateWorkdays
 import { SCHOOL_HOLIDAYS, COLORS, getColorForUser, type SchoolHoliday } from '@/lib/config'
 import { formatDateForAPI } from '@/lib/date-utils'
 import { getPhotoUrl } from '@/lib/team-photos'
+import LabelDropdown from '@/components/ui/LabelDropdown'
+import { VERLOF_TYPES, verlofDef, normalizeVerlofType, type VerlofType } from '@/lib/verlof-types'
 import SpotlightCard from '@/components/ui/SpotlightCard'
 import AnimatedNumber from '@/components/ui/AnimatedNumber'
 import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
@@ -27,7 +29,7 @@ interface VacationRequest {
   days: number
   reason: string | null
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
-  type?: 'vakantie' | 'onbetaald'
+  type?: VerlofType
   source?: 'request' | 'period' // combined-lijst: waar komt deze vandaan
   note?: string | null
   user: {
@@ -46,6 +48,7 @@ interface VacationBalance {
   opgenomenAuto?: number // automatisch afgeleid uit de kalender
   opgenomenOverride?: number | null // handmatige noodgeval-override door Hanna
   onbetaaldDagen?: number // onbetaald verlof (telt niet in saldo)
+  verlof?: Record<string, number> // per verlof-type de opgenomen dagen (niet-vakantie)
   note?: string
   isPartner?: boolean
 }
@@ -182,7 +185,7 @@ export default function VakantiesPage() {
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [reason, setReason] = useState('')
   const [isHalfDay, setIsHalfDay] = useState(false)
-  const [vacationType, setVacationType] = useState<'vakantie' | 'onbetaald'>('vakantie')
+  const [vacationType, setVacationType] = useState<VerlofType>('vakantie')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
   const [showParentalMemberDropdown, setShowParentalMemberDropdown] = useState(false)
@@ -411,16 +414,15 @@ export default function VakantiesPage() {
     setStartDate(new Date(vacation.startDate))
     setEndDate(new Date(vacation.endDate))
     setReason(vacation.reason || '')
-    setVacationType(vacation.type === 'onbetaald' ? 'onbetaald' : 'vakantie')
+    setVacationType(normalizeVerlofType(vacation.type))
     setEditingId(vacation.id)
     setShowForm(true)
   }
 
-  // Snel een geregistreerde vakantie aanmerken als onbetaald verlof (of terug).
-  // Alleen voor aanvragen (niet voor partner-periodes).
-  const toggleVacationType = async (vacation: { id: string; type?: string; source?: string }) => {
+  // Het type van een geregistreerde vakantie/verlof wijzigen (bijv. vakantie →
+  // zwangerschapsverlof). Alleen voor aanvragen (niet voor partner-periodes).
+  const setVacationTypeFor = async (vacation: { id: string; source?: string }, newType: VerlofType) => {
     if (vacation.source === 'period') return
-    const newType = vacation.type === 'onbetaald' ? 'vakantie' : 'onbetaald'
     try {
       const res = await fetch(`/api/vacation/requests/${vacation.id}`, {
         method: 'PATCH',
@@ -431,7 +433,7 @@ export default function VakantiesPage() {
         const data = await res.json()
         throw new Error(data.error || 'Kon type niet wijzigen')
       }
-      toast.success(newType === 'onbetaald' ? 'Aangemerkt als onbetaald verlof' : 'Terug naar vakantie')
+      toast.success(`Aangemerkt als ${verlofDef(newType).label.toLowerCase()}`)
       fetchData()
     } catch (error: any) {
       toast.error(error.message)
@@ -1097,27 +1099,20 @@ export default function VakantiesPage() {
           </div>
         </div>
 
-        {/* Type: vakantie of onbetaald verlof */}
+        {/* Type: vakantie / onbetaald / zwangerschaps- of ouderschapsverlof */}
         <div>
           <label className="block text-sm text-gray-400 mb-2">Type</label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setVacationType('vakantie')}
-              className={`p-3 rounded-xl border text-sm font-medium transition-colors ${vacationType === 'vakantie' ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'}`}
-            >
-              Vakantie
-              <span className="block text-[11px] font-normal opacity-70">Gaat van saldo af</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setVacationType('onbetaald')}
-              className={`p-3 rounded-xl border text-sm font-medium transition-colors ${vacationType === 'onbetaald' ? 'bg-sky-500/10 border-sky-500/40 text-sky-300' : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'}`}
-            >
-              Onbetaald verlof
-              <span className="block text-[11px] font-normal opacity-70">Telt niet mee in saldo</span>
-            </button>
-          </div>
+          <LabelDropdown
+            value={vacationType}
+            options={VERLOF_TYPES.map(t => ({ key: t.key, label: t.label }))}
+            onChange={(k) => setVacationType(normalizeVerlofType(k))}
+            size="md"
+          />
+          <p className="text-[11px] text-gray-500 mt-1">
+            {verlofDef(vacationType).countsAgainstSaldo
+              ? 'Gaat van het vakantiesaldo af.'
+              : 'Verlof — telt niet mee in het vakantiesaldo, wordt apart bijgehouden.'}
+          </p>
         </div>
 
         {/* Halve dag optie — alleen als start === eind */}
@@ -1845,11 +1840,11 @@ export default function VakantiesPage() {
                                 <Icons.chevronDown size={14} className="text-gray-500 ml-1" />
                               </button>
                             </Popover.Trigger>
-                            {(balance.onbetaaldDagen ?? 0) > 0 && (
-                              <span className="ml-2 text-xs text-sky-400 whitespace-nowrap" title="Onbetaald verlof — telt niet mee in het saldo">
-                                +{balance.onbetaaldDagen} d onbetaald
+                            {VERLOF_TYPES.filter(t => !t.countsAgainstSaldo && (balance.verlof?.[t.key] ?? 0) > 0).map(t => (
+                              <span key={t.key} className={`ml-2 text-xs ${t.text} whitespace-nowrap`} title={`${t.label} — telt niet mee in het saldo`}>
+                                +{balance.verlof![t.key]} d {t.short.toLowerCase()}
                               </span>
-                            )}
+                            ))}
                             <Popover.Portal>
                               <Popover.Content
                                 className="w-[90vw] max-w-lg bg-workx-gray rounded-2xl border border-white/10 p-5 shadow-2xl max-h-[80vh] overflow-y-auto z-50 animate-modal-in"
@@ -1923,23 +1918,22 @@ export default function VakantiesPage() {
                                             const start = new Date(p.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
                                             const end = new Date(p.endDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
                                             const sameDay = p.startDate === p.endDate
-                                            const onbetaald = item.type === 'onbetaald'
+                                            const def = verlofDef(item.type)
                                             return (
                                               <div key={p.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg hover:bg-white/5">
                                                 <div className="min-w-0">
-                                                  <span className={`text-sm ${onbetaald ? 'text-sky-400' : 'text-white/80'}`}>{sameDay ? start : `${start} – ${end}`}</span>
+                                                  <span className={`text-sm ${def.countsAgainstSaldo ? 'text-white/80' : def.text}`}>{sameDay ? start : `${start} – ${end}`}</span>
                                                   <span className="text-xs text-white/40 ml-2">{p.days}d</span>
                                                 </div>
                                                 {item.source === 'period' ? (
                                                   <span className="text-[11px] text-purple-400 whitespace-nowrap">partner-periode</span>
                                                 ) : (
-                                                  <button
-                                                    onClick={() => toggleVacationType(item)}
-                                                    className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-colors whitespace-nowrap ${onbetaald ? 'text-sky-400 border-sky-500/40 bg-sky-500/10' : 'text-gray-400 border-white/10 hover:border-white/20'}`}
-                                                    title={onbetaald ? 'Terugzetten naar vakantie (telt weer van saldo af)' : 'Aanmerken als onbetaald verlof (telt niet van saldo af)'}
-                                                  >
-                                                    {onbetaald ? '✓ Onbetaald' : 'Onbetaald?'}
-                                                  </button>
+                                                  <LabelDropdown
+                                                    value={normalizeVerlofType(item.type)}
+                                                    options={VERLOF_TYPES.map(t => ({ key: t.key, label: t.label }))}
+                                                    onChange={(k) => setVacationTypeFor(item, normalizeVerlofType(k))}
+                                                    size="sm"
+                                                  />
                                                 )}
                                               </div>
                                             )
@@ -2766,11 +2760,15 @@ export default function VakantiesPage() {
               byUser.set(u.id, existing)
             }
             const groups = Array.from(byUser.values())
-              .map(g => ({
-                ...g,
-                vakantieDays: g.periods.filter(p => (p as any).type !== 'onbetaald').reduce((s, p) => s + (p.days || 0), 0),
-                onbetaaldDays: g.periods.filter(p => (p as any).type === 'onbetaald').reduce((s, p) => s + (p.days || 0), 0),
-              }))
+              .map(g => {
+                const vakantieDays = g.periods.filter(p => normalizeVerlofType((p as any).type) === 'vakantie').reduce((s, p) => s + (p.days || 0), 0)
+                const verlof: Record<string, number> = {}
+                for (const p of g.periods) {
+                  const t = normalizeVerlofType((p as any).type)
+                  if (t !== 'vakantie') verlof[t] = Math.round(((verlof[t] || 0) + (p.days || 0)) * 10) / 10
+                }
+                return { ...g, vakantieDays, verlof }
+              })
               .sort((a, b) => a.user.name.localeCompare(b.user.name))
             return (
               <div className="card p-5 mt-8">
@@ -2786,9 +2784,11 @@ export default function VakantiesPage() {
                     <div key={g.user.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                       <div className="flex items-baseline justify-between mb-2 gap-2">
                         <p className="text-sm font-medium text-white">{g.user.name}</p>
-                        <span className="text-xs font-semibold whitespace-nowrap">
+                        <span className="text-xs font-semibold text-right">
                           <span className="text-green-400">{g.vakantieDays.toFixed(1)} d</span>
-                          {g.onbetaaldDays > 0 && <span className="text-sky-400"> + {g.onbetaaldDays.toFixed(1)} d onbetaald</span>}
+                          {VERLOF_TYPES.filter(t => !t.countsAgainstSaldo && (g.verlof[t.key] ?? 0) > 0).map(t => (
+                            <span key={t.key} className={t.text}> + {g.verlof[t.key].toFixed(1)} d {t.short.toLowerCase()}</span>
+                          ))}
                         </span>
                       </div>
                       <ul className="space-y-0.5 text-xs text-white/70">
@@ -2799,12 +2799,12 @@ export default function VakantiesPage() {
                             const start = new Date(p.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
                             const end = new Date(p.endDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
                             const sameDay = p.startDate === p.endDate
-                            const onbetaald = (p as any).type === 'onbetaald'
+                            const def = verlofDef((p as any).type)
                             return (
                               <li key={p.id} className="flex items-center justify-between gap-2">
-                                <span className={onbetaald ? 'text-sky-400' : ''}>
+                                <span className={def.countsAgainstSaldo ? '' : def.text}>
                                   {sameDay ? start : `${start} – ${end}`}
-                                  {onbetaald && <span className="ml-1 text-[10px] text-sky-400/80">onbetaald</span>}
+                                  {!def.countsAgainstSaldo && <span className={`ml-1 text-[10px] ${def.text}`}>{def.short.toLowerCase()}</span>}
                                 </span>
                                 <span className="text-white/40">{p.days}d</span>
                               </li>
@@ -2970,8 +2970,8 @@ export default function VakantiesPage() {
                             <span className="text-sm font-medium text-white group-hover:text-workx-lime transition-colors">
                               {vacation.user.name}
                             </span>
-                            <p className={`text-xs mt-0.5 ${vacation.type === 'onbetaald' ? 'text-sky-400' : 'text-gray-500'}`}>
-                              {vacation.type === 'onbetaald' ? 'Onbetaald verlof' : 'Vakantie'}
+                            <p className={`text-xs mt-0.5 ${verlofDef(vacation.type).countsAgainstSaldo ? 'text-gray-500' : verlofDef(vacation.type).text}`}>
+                              {verlofDef(vacation.type).label}
                             </p>
                           </div>
                         </div>

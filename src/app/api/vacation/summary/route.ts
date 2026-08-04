@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getDefaultVacationDays } from '@/lib/config'
+import { normalizeVerlofType } from '@/lib/verlof-types'
 
 // Transform DB parental leave (uren/dagen) to frontend format (weken)
 function transformParentalLeaveForFrontend(leave: any) {
@@ -208,13 +209,22 @@ export async function GET() {
 
     const combined = [...requestItems, ...periodItems]
 
-    // Opgenomen per persoon = som van 'vakantie'-dagen (onbetaald telt niet mee).
+    // Opgenomen (saldo) = som van 'vakantie'-dagen. Alle andere types zijn
+    // verlof dat apart geteld wordt en NIET van het vakantiesaldo afgaat.
+    const round1 = (n: number) => Math.round(n * 10) / 10
     const takenByUser = new Map<string, number>()
-    const onbetaaldByUser = new Map<string, number>()
+    const verlofByUser = new Map<string, Record<string, number>>() // userId -> { type: dagen }
     for (const c of combined) {
-      const map = c.type === 'onbetaald' ? onbetaaldByUser : takenByUser
-      map.set(c.userId, Math.round(((map.get(c.userId) || 0) + c.days) * 10) / 10)
+      const t = normalizeVerlofType(c.type)
+      if (t === 'vakantie') {
+        takenByUser.set(c.userId, round1((takenByUser.get(c.userId) || 0) + c.days))
+      } else {
+        const rec = verlofByUser.get(c.userId) || {}
+        rec[t] = round1((rec[t] || 0) + c.days)
+        verlofByUser.set(c.userId, rec)
+      }
     }
+    const verlofOf = (uid: string): Record<string, number> => verlofByUser.get(uid) || {}
 
     // Format vacation balances — opgenomen automatisch afgeleid, tenzij Hanna
     // een noodgeval-override heeft gezet (opgenomenOverride).
@@ -230,7 +240,8 @@ export async function GET() {
         opgenomenLopendJaar: opgenomen,
         opgenomenAuto: derived,
         opgenomenOverride: b.opgenomenOverride ?? null,
-        onbetaaldDagen: onbetaaldByUser.get(b.userId) || 0,
+        onbetaaldDagen: verlofOf(b.userId).onbetaald || 0,
+        verlof: verlofOf(b.userId),
         note: b.note,
         isPartner: b.user?.role === 'PARTNER',
       }
@@ -248,7 +259,8 @@ export async function GET() {
           opbouwLopendJaar: myVacationBalance.opbouwLopendJaar,
           bijgekocht: myVacationBalance.bijgekocht,
           opgenomenLopendJaar: (myVacationBalance as any).opgenomenOverride ?? myDerived,
-          onbetaaldDagen: onbetaaldByUser.get(userId) || 0,
+          onbetaaldDagen: verlofOf(userId).onbetaald || 0,
+          verlof: verlofOf(userId),
           totaalDagen:
             myVacationBalance.overgedragenVorigJaar +
             myVacationBalance.opbouwLopendJaar +
@@ -266,7 +278,8 @@ export async function GET() {
           opbouwLopendJaar: defaultOpbouw,
           bijgekocht: 0,
           opgenomenLopendJaar: myDerived,
-          onbetaaldDagen: onbetaaldByUser.get(userId) || 0,
+          onbetaaldDagen: verlofOf(userId).onbetaald || 0,
+          verlof: verlofOf(userId),
           totaalDagen: defaultOpbouw,
           resterend: defaultOpbouw - myDerived,
           isPartner,

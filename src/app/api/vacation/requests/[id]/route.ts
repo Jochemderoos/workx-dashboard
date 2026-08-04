@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { calculateWorkdays } from '@/lib/vacation-utils'
+import { normalizeVerlofType } from '@/lib/verlof-types'
 import { sendPushNotification } from '@/lib/push-notifications'
 import { sendDirectMessage } from '@/lib/slack'
 
@@ -201,7 +202,7 @@ export async function PATCH(
     if (startDate) updateData.startDate = parseLocalDate(startDate)
     if (endDate) updateData.endDate = parseLocalDate(endDate)
     if (reason !== undefined) updateData.reason = reason
-    if (type === 'vakantie' || type === 'onbetaald') updateData.type = type
+    if (type !== undefined) updateData.type = normalizeVerlofType(type)
 
     // Recalculate days if dates changed
     if (startDate || endDate) {

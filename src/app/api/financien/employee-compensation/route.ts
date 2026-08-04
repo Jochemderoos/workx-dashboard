@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
+import { normalizeVerlofType } from '@/lib/verlof-types'
 
 // GET - Voor iedereen, maar niet-managers zien alleen hun eigen data
 export async function GET() {
@@ -51,6 +52,22 @@ export async function GET() {
     // Haal salarisschalen op voor dynamisch salaris
     const salaryScales = await prisma.salaryScale.findMany()
 
+    // Verlof-dagen per persoon per type, afgeleid uit goedgekeurde aanvragen
+    // dit jaar (zwangerschap/ouderschap tellen niet van het vakantiesaldo af,
+    // maar worden hier apart opgeteld — voedt de Team-tellers automatisch).
+    const yr = new Date().getFullYear()
+    const verlofRequests = await prisma.vacationRequest.findMany({
+      where: { status: 'APPROVED', startDate: { gte: new Date(`${yr}-01-01`), lt: new Date(`${yr + 1}-01-01`) } },
+      select: { userId: true, days: true, type: true },
+    })
+    const verlofByUser: Record<string, Record<string, number>> = {}
+    for (const r of verlofRequests) {
+      const t = normalizeVerlofType(r.type)
+      if (t === 'vakantie') continue
+      const rec = verlofByUser[r.userId] || (verlofByUser[r.userId] = {})
+      rec[t] = Math.round(((rec[t] || 0) + r.days) * 10) / 10
+    }
+
     // Bereken bonus totalen per medewerker
     const employeeData = users.map(user => {
       const isOwnProfile = user.id === currentUser.id
@@ -95,7 +112,8 @@ export async function GET() {
         bonusPending: canSeeSensitiveInfo ? bonusPending : 0,
         bonusTotal: canSeeSensitiveInfo ? bonusPaid + bonusPending : 0,
         vacationBalance: canSeeSensitiveInfo ? user.vacationBalance : null,
-        parentalLeaves: canSeeSensitiveInfo ? user.parentalLeaves : []
+        parentalLeaves: canSeeSensitiveInfo ? user.parentalLeaves : [],
+        verlof: canSeeSensitiveInfo ? (verlofByUser[user.id] || {}) : {}
       }
 
       return baseData

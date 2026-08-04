@@ -7,6 +7,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import YearPicker from '@/components/ui/YearPicker'
 import { getPhotoUrl } from '@/lib/team-photos'
+import { VERLOF_TYPES } from '@/lib/verlof-types'
 import VacationPeriodList, { VacationPeriod } from '@/components/vacation/VacationPeriodList'
 
 interface ParentalLeave {
@@ -66,6 +67,7 @@ interface EmployeeData {
   bonusTotal: number
   vacationBalance: VacationBalance | null
   parentalLeaves: ParentalLeave[]
+  verlof?: Record<string, number> // per verlof-type de opgenomen dagen dit jaar (uit de kalender)
 }
 
 interface SickDayEntry {
@@ -1025,6 +1027,36 @@ export default function TeamPage() {
                 ) : (
                   <p className="text-gray-500 text-xs text-center py-2">Geen periodes ingevoerd</p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Verlof-tellers uit de kalender (zwangerschap/ouderschap) — automatisch */}
+          {Object.keys(employee.verlof || {}).length > 0 && (
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-700">
+              <div className="flex items-center gap-2 mb-3">
+                <Icons.users size={14} className="text-purple-400" />
+                <span className="text-gray-400 text-sm">Verlof {currentYear}</span>
+                <span className="text-[10px] text-gray-600">uit kalender</span>
+              </div>
+              <div className="space-y-2.5">
+                {VERLOF_TYPES.filter(t => !t.countsAgainstSaldo && ((employee.verlof?.[t.key] ?? 0) > 0)).map(t => {
+                  const used = employee.verlof![t.key]
+                  const pct = t.totalDays ? Math.min(100, (used / t.totalDays) * 100) : null
+                  return (
+                    <div key={t.key}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className={t.text}>{t.label}</span>
+                        <span className="text-white/60">{used}{t.totalDays ? ` / ${t.totalDays}` : ''} {t.totalDays ? 'dagen' : 'dagen'}</span>
+                      </div>
+                      {pct !== null && (
+                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div className={`h-full ${t.bar}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
