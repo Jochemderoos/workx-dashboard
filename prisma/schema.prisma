@@ -2728,6 +2728,10 @@ model MailchimpContact {
   email            String
   phone            String?
   company          String?
+  taal             String?   // "NL" | "EN" (voor de tag in Mailchimp)
+  seminar          Boolean   @default(false) // seminar-uitnodiging ja/nee
+  unsubscribed     Boolean   @default(false) // uitgeschreven (cleaned) — niet opnieuw toevoegen
+  source           String    @default("dashboard") // "dashboard" | "mailchimp" (geïmporteerd)
   addedById        String
   addedByName      String
   addedToMailchimp Boolean   @default(false)
@@ -2738,5 +2742,6 @@ model MailchimpContact {
   updatedAt        DateTime  @updatedAt
 
   @@index([addedToMailchimp])
+  @@index([unsubscribed])
   @@index([createdAt])
 }

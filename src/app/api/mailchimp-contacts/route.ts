@@ -31,9 +31,27 @@ export async function POST(req: NextRequest) {
   const email = typeof body.email === 'string' ? body.email.trim() : ''
   const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
   const company = typeof body.company === 'string' ? body.company.trim() : ''
+  const taal = body.taal === 'NL' || body.taal === 'EN' ? body.taal : null
+  const seminar = !!body.seminar
 
   if (!name) return NextResponse.json({ error: 'Naam is verplicht' }, { status: 400 })
   if (!email || !email.includes('@')) return NextResponse.json({ error: 'Geldig e-mailadres is verplicht' }, { status: 400 })
+
+  // Waarschuw als het contact al bestaat (bijv. al in Mailchimp of al aangedragen).
+  const existing = await prisma.mailchimpContact.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+    select: { id: true, name: true, addedToMailchimp: true, unsubscribed: true },
+  })
+  if (existing) {
+    return NextResponse.json({
+      error: existing.unsubscribed
+        ? `${existing.name} heeft zich uitgeschreven — niet opnieuw toevoegen.`
+        : existing.addedToMailchimp
+          ? `${existing.name} staat al in de Mailchimp-lijst.`
+          : `${existing.name} is al aangedragen en staat op "nieuw".`,
+      duplicate: true,
+    }, { status: 409 })
+  }
 
   const created = await prisma.mailchimpContact.create({
     data: {
@@ -41,6 +59,8 @@ export async function POST(req: NextRequest) {
       email,
       phone: phone || null,
       company: company || null,
+      taal,
+      seminar,
       addedById: session.user.id,
       addedByName: session.user.name || 'Onbekend',
     },

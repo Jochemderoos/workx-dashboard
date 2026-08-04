@@ -62,6 +62,7 @@ import { main as claimLegacyTransitie } from './claim-legacy-transitie'
 import { main as addDdGrandfatheredColumn } from './add-dd-grandfathered-column'
 import { main as addVacationTypeOverrideColumns } from './add-vacation-type-override-columns'
 import { main as addMailchimpContactsTable } from './add-mailchimp-contacts-table'
+import { main as addMailchimpContactColumns } from './add-mailchimp-contact-columns'
 import { main as addUserAdresColumn } from './add-user-adres-column'
 
 // Recurring seeds — idempotent en mogelijk nog uitbreidbaar.
@@ -146,6 +147,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-dd-grandfathered-column', run: addDdGrandfatheredColumn },
   { name: 'add-vacation-type-override-columns', run: addVacationTypeOverrideColumns },
   { name: 'add-mailchimp-contacts-table', run: addMailchimpContactsTable },
+  { name: 'add-mailchimp-contact-columns', run: addMailchimpContactColumns },
   { name: 'add-user-adres-column', run: addUserAdresColumn },
   { name: 'seed-partner-tasks', run: seedPartnerTasks },
   { name: 'seed-monthly-costs-2026', run: seedMonthlyCosts2026 },
