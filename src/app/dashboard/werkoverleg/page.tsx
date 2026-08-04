@@ -288,17 +288,6 @@ export default function WerkoverlegPage() {
   const canGoBack = startIndex > 0
   const canGoForward = weekOffset > 0
 
-  // ── Check if next week exists ──────────────────────
-
-  const hasNextWeek = (): boolean => {
-    if (!selectedDay) return false
-    const currentDate = new Date(selectedDay.meetingDate)
-    const nextTuesday = getNextTuesday(currentDate)
-    return allDays.some(d => {
-      const dd = new Date(d.meetingDate)
-      return Math.abs(dd.getTime() - nextTuesday.getTime()) < 24 * 60 * 60 * 1000
-    })
-  }
 
   // ── Chairperson selection → create next week ──────
 
@@ -325,6 +314,57 @@ export default function WerkoverlegPage() {
       await fetchDays()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Kon voorzitter niet instellen')
+    }
+  }
+
+  // ── Voorzitter voor de komende 2 werkoverleggen kiezen ──
+  // De huidige voorzitter wijst tijdens het overleg aan wie de komende twee
+  // werkoverleggen voorzit. Bestaande (vooruit geplande) dagen worden bijgewerkt;
+  // ontbrekende dagen worden aangemaakt.
+  const getUpcomingDays = (): WerkoverlegDay[] => {
+    if (!selectedDay) return []
+    const cur = new Date(selectedDay.meetingDate).getTime()
+    return allDays
+      .filter(d => new Date(d.meetingDate).getTime() > cur)
+      .sort((a, b) => new Date(a.meetingDate).getTime() - new Date(b.meetingDate).getTime())
+  }
+  const getNextDay = (): WerkoverlegDay | null => getUpcomingDays()[0] || null
+  const shortMeetingDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Amsterdam' })
+
+  const handleSetNextChair = async (name: string) => {
+    if (!selectedDay) return
+    try {
+      const targets: WerkoverlegDay[] = getUpcomingDays().slice(0, 2)
+      let lastDate = targets.length > 0
+        ? new Date(targets[targets.length - 1].meetingDate)
+        : new Date(selectedDay.meetingDate)
+      // Ontbrekende van de 2 eerstvolgende dagen aanmaken (mét voorzitter).
+      while (targets.length < 2) {
+        const d = getNextTuesday(lastDate)
+        const res = await fetch('/api/werkoverleg', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meetingDate: d.toISOString(), chairperson: name }),
+        })
+        if (!res.ok) throw new Error()
+        targets.push(await res.json())
+        lastDate = d
+      }
+      // Voorzitter zetten op de bestaande dagen die 'm nog niet hebben.
+      for (const t of targets) {
+        if (t.chairperson === name) continue
+        const res = await fetch(`/api/werkoverleg/${t.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chairperson: name }),
+        })
+        if (!res.ok) throw new Error()
+      }
+      await fetchDays()
+      toast.success(`${name} is voorzitter — ${targets.map(t => shortMeetingDate(t.meetingDate)).join(' & ')}`)
+    } catch {
+      toast.error('Kon voorzitter niet instellen')
     }
   }
 
@@ -633,35 +673,6 @@ export default function WerkoverlegPage() {
               />
             )}
           </div>
-
-          {/* Next week chairperson button */}
-          {!hasNextWeek() && (
-            <>
-              <button
-                ref={chairSelectRef}
-                onClick={() => setShowChairSelect(!showChairSelect)}
-                className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm transition-all hover:border-workx-lime/30 h-full"
-                style={{ background: 'var(--color-bg-card)', border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)' }}
-              >
-                <div className="w-10 h-10 rounded-xl bg-workx-lime/10 flex items-center justify-center flex-shrink-0">
-                  <Icons.plus size={18} className="text-workx-lime" />
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Volgende week</p>
-                  <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Kies voorzitter</p>
-                </div>
-              </button>
-              {showChairSelect && (
-                <PersonDropdown
-                  anchorRef={chairSelectRef}
-                  members={CHAIRPERSON_MEMBERS}
-                  selected={null}
-                  onSelect={(name) => { handleSelectChairperson(name); setShowChairSelect(false) }}
-                  onClose={() => setShowChairSelect(false)}
-                />
-              )}
-            </>
-          )}
         </div>
       )}
 
@@ -758,6 +769,47 @@ export default function WerkoverlegPage() {
                   </button>
                 </div>
               )}
+              {/* Voorzitter kiezen — direct bij het agendapunt. Eén keuze dekt de
+                  komende 2 werkoverleggen; komt daarna pas 2 weken later terug. */}
+              {/voorzitter/i.test(item.title) && (() => {
+                const next = getNextDay()
+                const nextChair = next?.chairperson || null
+                return (
+                  <div className="ml-9 mt-2">
+                    {nextChair ? (
+                      <div className="flex items-center gap-2 flex-wrap text-sm">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-workx-lime/10 text-workx-lime font-medium">
+                          {getPhotoUrl(nextChair) && <img src={getPhotoUrl(nextChair)!} alt="" className="w-5 h-5 rounded object-cover" />}
+                          {nextChair}
+                        </span>
+                        <span style={{ color: 'var(--color-text-tertiary)' }}>
+                          is voorzitter{next ? ` — vanaf ${shortMeetingDate(next.meetingDate)}` : ''}
+                        </span>
+                        <button ref={chairSelectRef} onClick={() => setShowChairSelect(!showChairSelect)} className="text-xs underline" style={{ color: 'var(--color-text-muted)' }}>wijzig</button>
+                      </div>
+                    ) : (
+                      <button
+                        ref={chairSelectRef}
+                        onClick={() => setShowChairSelect(!showChairSelect)}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all hover:border-workx-lime/40"
+                        style={{ border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)' }}
+                      >
+                        <Icons.plus size={14} className="text-workx-lime" />
+                        Kies voorzitter voor de komende 2 werkoverleggen
+                      </button>
+                    )}
+                    {showChairSelect && (
+                      <PersonDropdown
+                        anchorRef={chairSelectRef}
+                        members={CHAIRPERSON_MEMBERS}
+                        selected={nextChair}
+                        onSelect={(name) => { handleSetNextChair(name); setShowChairSelect(false) }}
+                        onClose={() => setShowChairSelect(false)}
+                      />
+                    )}
+                  </div>
+                )
+              })()}
               {/* Bijlagen bij dit agendapunt */}
               <div className="ml-9">
                 <AgendaAttachments

@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         chairperson: chairperson || null,
         agendaItems: {
           create: [
-            { title: 'Wie kan er voorzitter zijn volgende week?', sortOrder: 1 },
+            { title: 'Wie wordt voorzitter (komende 2 werkoverleggen)?', sortOrder: 1 },
             { title: 'Wie maakt de actielijst?', sortOrder: 2 },
             { title: 'Actielijst vorige week', sortOrder: 3 },
             { title: 'Terugkoppeling partneroverleg', sortOrder: 4 },
