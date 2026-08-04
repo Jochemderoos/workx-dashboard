@@ -147,10 +147,10 @@ export async function GET() {
       select: { role: true, name: true },
     })
 
-    // 3b. Recent debiteuren/kosten uploads — alleen voor Jochem / Hanna / Lotte,
+    // 3b. Recent debiteuren/kosten uploads — alleen voor Jochem / Hanna / Lotte / Bente,
     // en niet voor de uploader zelf.
     const firstName = currentUser?.name?.split(' ')[0] || ''
-    if (['Jochem', 'Hanna', 'Lotte'].includes(firstName)) {
+    if (['Jochem', 'Hanna', 'Lotte', 'Bente'].includes(firstName)) {
       const recentImports = await prisma.importEvent.findMany({
         where: {
           createdAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
@@ -704,6 +704,7 @@ export async function GET() {
       const UPLOAD_REMINDER_NAMES = new Set([
         'Hanna Blaauboer',
         'Lotte van Sint Truiden',
+        'Bente Karels',
         'Jochem de Roos',
       ])
       if (currentUser?.name && UPLOAD_REMINDER_NAMES.has(currentUser.name)) {

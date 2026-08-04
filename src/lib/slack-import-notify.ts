@@ -1,6 +1,6 @@
 // Dashboard-melding bij debiteuren- of kosten-upload.
 // Schrijft een ImportEvent-record dat door /api/notifications wordt opgepikt
-// en in de bell-icon van Jochem/Hanna/Lotte verschijnt.
+// en in de bell-icon van Jochem/Hanna/Lotte/Bente verschijnt.
 
 import { prisma } from './prisma'
 

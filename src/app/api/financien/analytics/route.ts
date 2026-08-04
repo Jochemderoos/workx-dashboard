@@ -54,7 +54,7 @@ export async function GET() {
         where: { year: currentYear }
       }),
       prisma.user.findMany({
-        where: { isActive: true, role: { notIn: ['PARTNER', 'ADMIN'] }, NOT: { name: { contains: 'Lotte' } } },
+        where: { isActive: true, role: { notIn: ['PARTNER', 'ADMIN'] }, NOT: { OR: [{ name: { contains: 'Lotte' } }, { name: { contains: 'Bente' } }] } },
         include: { compensation: true }
       }),
       prisma.salaryScale.findMany(),

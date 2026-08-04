@@ -9,6 +9,7 @@ import { Icons } from '@/components/ui/Icons'
 const UPLOAD_REMINDER_USERS = new Set([
   'Hanna Blaauboer',
   'Lotte van Sint Truiden',
+  'Bente Karels',
   'Jochem de Roos',
 ])
 
@@ -122,7 +123,7 @@ export default function UploadReminderWidget() {
       </div>
 
       <p className="mt-3 text-[10px] text-gray-500 italic">
-        Reminder voor Hanna, Lotte en Jochem. Upload de BaseNet-PDF (en optioneel het Word-overzicht) via de debiteuren-pagina.
+        Reminder voor Hanna, Lotte, Bente en Jochem. Upload de BaseNet-PDF (en optioneel het Word-overzicht) via de debiteuren-pagina.
       </p>
     </div>
   )

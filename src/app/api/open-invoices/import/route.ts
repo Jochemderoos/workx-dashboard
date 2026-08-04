@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
     })
     removed = toRemoveResult.count
 
-    // Slack DM naar Jochem / Hanna / Lotte (uploader uitgesloten) — niet-blokkerend
+    // Melding naar Jochem / Hanna / Lotte / Bente (uploader uitgesloten) — niet-blokkerend
     const uploader = await prisma.user.findUnique({
       where: { id: guard.session!.user.id },
       select: { id: true, name: true },

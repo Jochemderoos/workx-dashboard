@@ -27,7 +27,10 @@ export async function GET() {
       where: {
         isActive: true,
         NOT: {
-          name: { contains: 'Lotte' } // Filter Lotte eruit
+          OR: [
+            { name: { contains: 'Lotte' } },
+            { name: { contains: 'Bente' } },
+          ], // Lotte en Bente (office) eruit filteren
         }
       },
       include: {
