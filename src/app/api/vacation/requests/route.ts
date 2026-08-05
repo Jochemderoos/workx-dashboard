@@ -112,8 +112,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
     }
 
-    const { startDate, endDate, days, reason, userId: requestedUserId, isHalfDay, type: rawType } = await req.json()
+    const { startDate, endDate, days, reason, userId: requestedUserId, isHalfDay, type: rawType, childNumber: rawChild } = await req.json()
     const type = normalizeVerlofType(rawType)
+    const childNumber = (type === 'ouderschap_betaald' || type === 'ouderschap_onbetaald') ? (rawChild === 2 ? 2 : 1) : null
 
     if (!startDate || !endDate) {
       return NextResponse.json(
@@ -189,6 +190,7 @@ export async function POST(req: NextRequest) {
         days: calculatedDays,
         reason,
         type,
+        childNumber,
         status,
         approvedBy,
       },

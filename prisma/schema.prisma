@@ -392,6 +392,7 @@ model VacationRequest {
   days        Float         // Aantal dagen
   reason      String?
   type        String   @default("vakantie") // "vakantie" (telt van saldo af) of "onbetaald" (telt niet mee)
+  childNumber Int?     // 1 of 2 — voor ouderschapsverlof (elk kind eigen recht)
   status      String   @default("PENDING")
   approvedBy  String?
   createdAt   DateTime @default(now())
@@ -403,6 +404,27 @@ model VacationRequest {
   @@index([status])
   @@index([status, endDate])
   @@index([startDate, endDate])
+}
+
+// Terugkerende vaste vrije (verlof)dag, bijv. "elke maandag onbetaald
+// ouderschapsverlof vanaf 6 juli". Wordt NIET als losse dagen opgeslagen (zou
+// de kalender vervuilen) maar als regel; occurrences worden afgeleid en tellen
+// mee in de verlof-teller + tonen subtiel op de kalender.
+model RecurringLeave {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String    // verlof-type (bijv. ouderschap_onbetaald)
+  weekday     Int       // 1=ma, 2=di, 3=wo, 4=do, 5=vr (JS getDay)
+  dayValue    Float     @default(1) // dagen per keer (bijv. 0.5)
+  childNumber Int?      // 1 of 2 — voor ouderschapsverlof
+  startDate   DateTime
+  endDate     DateTime?
+  note        String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 // ==================== WORK ITEMS ====================

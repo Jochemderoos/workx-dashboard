@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { normalizeVerlofType } from '@/lib/verlof-types'
+import { verlofKey, recurringTakenThisYear } from '@/lib/recurring-leave'
 
 // GET - Voor iedereen, maar niet-managers zien alleen hun eigen data
 export async function GET() {
@@ -58,14 +59,26 @@ export async function GET() {
     const yr = new Date().getFullYear()
     const verlofRequests = await prisma.vacationRequest.findMany({
       where: { status: 'APPROVED', startDate: { gte: new Date(`${yr}-01-01`), lt: new Date(`${yr + 1}-01-01`) } },
-      select: { userId: true, days: true, type: true },
+      select: { userId: true, days: true, type: true, childNumber: true },
     })
     const verlofByUser: Record<string, Record<string, number>> = {}
+    const addVerlof = (uid: string, key: string, days: number) => {
+      const rec = verlofByUser[uid] || (verlofByUser[uid] = {})
+      rec[key] = Math.round(((rec[key] || 0) + days) * 10) / 10
+    }
     for (const r of verlofRequests) {
       const t = normalizeVerlofType(r.type)
       if (t === 'vakantie') continue
-      const rec = verlofByUser[r.userId] || (verlofByUser[r.userId] = {})
-      rec[t] = Math.round(((rec[t] || 0) + r.days) * 10) / 10
+      addVerlof(r.userId, verlofKey(t, r.childNumber), r.days)
+    }
+    // Terugkerende vaste verlofdagen dit jaar t/m vandaag.
+    const recurringRules = await prisma.recurringLeave.findMany()
+    const nowD = new Date()
+    for (const r of recurringRules) {
+      const t = normalizeVerlofType(r.type)
+      if (t === 'vakantie') continue
+      const taken = recurringTakenThisYear(r as { type: string; weekday: number; dayValue: number; childNumber?: number | null; startDate: Date; endDate: Date | null }, yr, nowD)
+      if (taken > 0) addVerlof(r.userId, verlofKey(t, r.childNumber), taken)
     }
 
     // Opgenomen vakantiedagen — zelfde afleiding als /api/vacation/summary,

@@ -1040,23 +1040,35 @@ export default function TeamPage() {
                 <span className="text-[10px] text-gray-600">uit kalender</span>
               </div>
               <div className="space-y-2.5">
-                {VERLOF_TYPES.filter(t => !t.countsAgainstSaldo && ((employee.verlof?.[t.key] ?? 0) > 0)).map(t => {
-                  const used = employee.verlof![t.key]
-                  const pct = t.totalDays ? Math.min(100, (used / t.totalDays) * 100) : null
-                  return (
-                    <div key={t.key}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className={t.text}>{t.label}</span>
-                        <span className="text-white/60">{used}{t.totalDays ? ` / ${t.totalDays}` : ''} {t.totalDays ? 'dagen' : 'dagen'}</span>
-                      </div>
-                      {pct !== null && (
-                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div className={`h-full ${t.bar}`} style={{ width: `${pct}%` }} />
+                {(() => {
+                  const v = employee.verlof || {}
+                  const order: string[] = VERLOF_TYPES.map(t => t.key)
+                  const entries = Object.keys(v).filter(k => (v[k] ?? 0) > 0).map(k => {
+                    const [baseKey, child] = k.split('#')
+                    const def = VERLOF_TYPES.find(t => t.key === baseKey)
+                    if (!def || def.countsAgainstSaldo) return null
+                    return { key: k, used: v[k], total: def.totalDays, text: def.text, bar: def.bar,
+                      label: child ? `${def.label} — ${child}e kind` : def.label,
+                      sort: order.indexOf(baseKey) * 10 + Number(child || 0) }
+                  }).filter(Boolean) as { key: string; used: number; total: number | null; text: string; bar: string; label: string; sort: number }[]
+                  entries.sort((a, b) => a.sort - b.sort)
+                  return entries.map(e => {
+                    const pct = e.total ? Math.min(100, (e.used / e.total) * 100) : null
+                    return (
+                      <div key={e.key}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className={e.text}>{e.label}</span>
+                          <span className="text-white/60">{e.used}{e.total ? ` / ${e.total}` : ''} dagen</span>
                         </div>
-                      )}
-                    </div>
-                  )
-                })}
+                        {pct !== null && (
+                          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className={`h-full ${e.bar}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </div>
           )}

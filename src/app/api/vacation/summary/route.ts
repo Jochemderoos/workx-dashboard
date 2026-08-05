@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getDefaultVacationDays } from '@/lib/config'
 import { normalizeVerlofType } from '@/lib/verlof-types'
+import { verlofKey, recurringTakenThisYear } from '@/lib/recurring-leave'
 
 // Transform DB parental leave (uren/dagen) to frontend format (weken)
 function transformParentalLeaveForFrontend(leave: any) {
@@ -184,6 +185,7 @@ export async function GET() {
       reason: r.reason ?? null,
       note: r.reason ?? null,
       type: r.type || 'vakantie',
+      childNumber: r.childNumber ?? null,
       status: 'APPROVED' as const,
       werkdagen: '1,2,3,4,5',
       createdBy: null,
@@ -202,6 +204,7 @@ export async function GET() {
         reason: p.note ?? null,
         note: p.note ?? null,
         type: 'vakantie' as const,
+        childNumber: null as number | null,
         status: 'APPROVED' as const,
         werkdagen: p.werkdagen,
         createdBy: p.createdBy ?? null,
@@ -213,18 +216,41 @@ export async function GET() {
     // verlof dat apart geteld wordt en NIET van het vakantiesaldo afgaat.
     const round1 = (n: number) => Math.round(n * 10) / 10
     const takenByUser = new Map<string, number>()
-    const verlofByUser = new Map<string, Record<string, number>>() // userId -> { type: dagen }
+    const verlofByUser = new Map<string, Record<string, number>>() // userId -> { verlofKey: dagen }
+    const addVerlof = (uid: string, key: string, days: number) => {
+      const rec = verlofByUser.get(uid) || {}
+      rec[key] = round1((rec[key] || 0) + days)
+      verlofByUser.set(uid, rec)
+    }
     for (const c of combined) {
       const t = normalizeVerlofType(c.type)
       if (t === 'vakantie') {
         takenByUser.set(c.userId, round1((takenByUser.get(c.userId) || 0) + c.days))
       } else {
-        const rec = verlofByUser.get(c.userId) || {}
-        rec[t] = round1((rec[t] || 0) + c.days)
-        verlofByUser.set(c.userId, rec)
+        addVerlof(c.userId, verlofKey(t, c.childNumber), c.days)
+      }
+    }
+
+    // Terugkerende vaste verlofdagen — occurrences dit jaar t/m vandaag meetellen.
+    const recurringRules = await prisma.recurringLeave.findMany()
+    const nowD = new Date()
+    for (const r of recurringRules) {
+      const t = normalizeVerlofType(r.type)
+      const taken = recurringTakenThisYear(r as any, currentYear, nowD)
+      if (taken > 0) {
+        if (t === 'vakantie') takenByUser.set(r.userId, round1((takenByUser.get(r.userId) || 0) + taken))
+        else addVerlof(r.userId, verlofKey(t, r.childNumber), taken)
       }
     }
     const verlofOf = (uid: string): Record<string, number> => verlofByUser.get(uid) || {}
+
+    // Regels voor de subtiele kalender-markering (met naam erbij).
+    const nameById = new Map((teamMembers as any[]).map(m => [m.id, m.name]))
+    const recurringForCalendar = recurringRules.map(r => ({
+      id: r.id, userId: r.userId, userName: nameById.get(r.userId) || '',
+      type: r.type, weekday: r.weekday, childNumber: r.childNumber,
+      startDate: r.startDate, endDate: r.endDate, dayValue: r.dayValue,
+    }))
 
     // Format vacation balances — opgenomen automatisch afgeleid, tenzij Hanna
     // een noodgeval-override heeft gezet (opgenomenOverride).
@@ -298,6 +324,7 @@ export async function GET() {
       myVacationBalance: isPartner ? null : myVacationBalanceFormatted,
       vacationPeriods: combined,
       myVacationPeriods: myCombined,
+      recurringLeaves: recurringForCalendar,
       currentUser,
       isAdmin,
       fetchedAt: new Date().toISOString(),

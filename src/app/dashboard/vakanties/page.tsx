@@ -16,6 +16,19 @@ import { formatDateForAPI } from '@/lib/date-utils'
 import { getPhotoUrl } from '@/lib/team-photos'
 import LabelDropdown from '@/components/ui/LabelDropdown'
 import { VERLOF_TYPES, verlofDef, normalizeVerlofType, type VerlofType } from '@/lib/verlof-types'
+import { recurringOnDate } from '@/lib/recurring-leave'
+
+interface RecurringLeaveItem {
+  id: string
+  userId: string
+  userName: string
+  type: string
+  weekday: number
+  childNumber: number | null
+  startDate: string
+  endDate: string | null
+  dayValue: number
+}
 import SpotlightCard from '@/components/ui/SpotlightCard'
 import AnimatedNumber from '@/components/ui/AnimatedNumber'
 import ScrollReveal, { ScrollRevealItem } from '@/components/ui/ScrollReveal'
@@ -186,9 +199,14 @@ export default function VakantiesPage() {
   const [reason, setReason] = useState('')
   const [isHalfDay, setIsHalfDay] = useState(false)
   const [vacationType, setVacationType] = useState<VerlofType>('vakantie')
+  const [childNumber, setChildNumber] = useState<1 | 2>(1)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showTeamDropdown, setShowTeamDropdown] = useState(false)
   const [showParentalMemberDropdown, setShowParentalMemberDropdown] = useState(false)
+
+  // Vaste terugkerende verlofdagen (regels)
+  const [recurringLeaves, setRecurringLeaves] = useState<RecurringLeaveItem[]>([])
+  const [recurringForm, setRecurringForm] = useState<{ userId: string; type: VerlofType; weekday: number; childNumber: 1 | 2; startDate: Date | null }>({ userId: '', type: 'ouderschap_onbetaald', weekday: 1, childNumber: 1, startDate: null })
 
   // Fetch all data from bundled API on mount
   useEffect(() => {
@@ -203,6 +221,7 @@ export default function VakantiesPage() {
       if (res.ok) {
         const data = await res.json()
         setVacations(data.vacations || [])
+        setRecurringLeaves(data.recurringLeaves || [])
         setTeamMembers(data.teamMembers || [])
         setVacationBalances(data.vacationBalances || [])
         setAllParentalLeaves(data.allParentalLeaves || [])
@@ -275,6 +294,7 @@ export default function VakantiesPage() {
     setReason('')
     setIsHalfDay(false)
     setVacationType('vakantie')
+    setChildNumber(1)
     setEditingId(null)
     setShowForm(false)
     setShowTeamDropdown(false)
@@ -301,7 +321,7 @@ export default function VakantiesPage() {
         const res = await fetch(`/api/vacation/requests/${editingId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startDate: startDateStr, endDate: endDateStr, reason, isHalfDay, type: vacationType }),
+          body: JSON.stringify({ startDate: startDateStr, endDate: endDateStr, reason, isHalfDay, type: vacationType, childNumber }),
         })
         if (!res.ok) {
           const data = await res.json()
@@ -320,6 +340,7 @@ export default function VakantiesPage() {
             userId: targetUserId,
             isHalfDay,
             type: vacationType,
+            childNumber,
           }),
         })
         if (!res.ok) {
@@ -415,6 +436,7 @@ export default function VakantiesPage() {
     setEndDate(new Date(vacation.endDate))
     setReason(vacation.reason || '')
     setVacationType(normalizeVerlofType(vacation.type))
+    setChildNumber((vacation as { childNumber?: number | null }).childNumber === 2 ? 2 : 1)
     setEditingId(vacation.id)
     setShowForm(true)
   }
@@ -740,6 +762,25 @@ export default function VakantiesPage() {
 
   const getVacationsForDate = (date: Date) =>
     vacations.filter(v => v.status === 'APPROVED' && isDateInRange(date, v.startDate, v.endDate))
+
+  // Vaste terugkerende verlofdagen die op deze datum vallen (subtiele markering).
+  const getRecurringForDate = (date: Date) =>
+    recurringLeaves.filter(r => recurringOnDate({ ...r, startDate: r.startDate, endDate: r.endDate }, date))
+
+  const addRecurring = async () => {
+    if (!recurringForm.userId || !recurringForm.startDate) { toast.error('Kies medewerker en startdatum'); return }
+    const res = await fetch('/api/recurring-leave', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...recurringForm, startDate: formatDateForAPI(recurringForm.startDate) }),
+    })
+    if (res.ok) { toast.success('Vaste vrije dag toegevoegd'); setRecurringForm(f => ({ ...f, userId: '', startDate: null })); fetchData() }
+    else { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Kon niet toevoegen') }
+  }
+  const deleteRecurring = async (id: string) => {
+    if (!confirm('Deze vaste vrije dag verwijderen?')) return
+    const res = await fetch(`/api/recurring-leave?id=${id}`, { method: 'DELETE' })
+    if (res.ok) fetchData(); else toast.error('Kon niet verwijderen')
+  }
 
   const isToday = (date: Date) => date.toDateString() === new Date().toDateString()
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
@@ -1115,6 +1156,25 @@ export default function VakantiesPage() {
           </p>
         </div>
 
+        {/* Kind — bij ouderschapsverlof (elk kind eigen recht) */}
+        {(vacationType === 'ouderschap_betaald' || vacationType === 'ouderschap_onbetaald') && (
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Voor welk kind?</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[1, 2].map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setChildNumber(n as 1 | 2)}
+                  className={`p-3 rounded-xl border text-sm font-medium transition-colors ${childNumber === n ? 'bg-purple-500/10 border-purple-500/40 text-purple-300' : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'}`}
+                >
+                  {n}e kind
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Halve dag optie — alleen als start === eind */}
         {startDate && endDate && startDate.toDateString() === endDate.toDateString() && (
           <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${isHalfDay ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
@@ -1328,6 +1388,63 @@ export default function VakantiesPage() {
       {/* BEHEER MODE - Admin interface */}
       {pageMode === 'beheer' && isAdmin && (
         <div className="space-y-6">
+          {/* Vaste vrije dagen (terugkerend verlof) */}
+          <div className="card p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Icons.calendar size={16} className="text-purple-400" />
+              <h3 className="font-medium text-white text-sm">Vaste vrije dagen (terugkerend verlof)</h3>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">Bijv. &ldquo;elke maandag onbetaald ouderschapsverlof vanaf 6 juli&rdquo;. Telt automatisch mee in de verlof-teller en staat subtiel op de kalender — niet als losse dagen.</p>
+
+            {recurringLeaves.length > 0 && (
+              <div className="space-y-1.5 mb-4">
+                {recurringLeaves.map(r => {
+                  const def = verlofDef(r.type)
+                  const wd = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'][r.weekday]
+                  return (
+                    <div key={r.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg bg-white/5">
+                      <div className="text-sm min-w-0 truncate">
+                        <span className="text-white">{r.userName}</span>
+                        <span className="text-gray-400"> — elke {wd}, </span>
+                        <span className={def.text}>{def.label}{r.childNumber ? ` (${r.childNumber}e kind)` : ''}</span>
+                        <span className="text-gray-500"> vanaf {new Date(r.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</span>
+                      </div>
+                      <button onClick={() => deleteRecurring(r.id)} className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 shrink-0" title="Verwijderen"><Icons.trash size={14} /></button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Medewerker</label>
+                <LabelDropdown value={recurringForm.userId} options={[{ key: '', label: 'Kies…' }, ...teamMembers.map(m => ({ key: m.id, label: m.name }))]} onChange={k => setRecurringForm({ ...recurringForm, userId: k })} size="md" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Type verlof</label>
+                <LabelDropdown value={recurringForm.type} options={VERLOF_TYPES.filter(t => !t.countsAgainstSaldo).map(t => ({ key: t.key, label: t.label }))} onChange={k => setRecurringForm({ ...recurringForm, type: normalizeVerlofType(k) })} size="md" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Vaste dag</label>
+                <LabelDropdown value={String(recurringForm.weekday)} options={[{ key: '1', label: 'Maandag' }, { key: '2', label: 'Dinsdag' }, { key: '3', label: 'Woensdag' }, { key: '4', label: 'Donderdag' }, { key: '5', label: 'Vrijdag' }]} onChange={k => setRecurringForm({ ...recurringForm, weekday: Number(k) })} size="md" />
+              </div>
+              {(recurringForm.type === 'ouderschap_betaald' || recurringForm.type === 'ouderschap_onbetaald') && (
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Kind</label>
+                  <LabelDropdown value={String(recurringForm.childNumber)} options={[{ key: '1', label: '1e kind' }, { key: '2', label: '2e kind' }]} onChange={k => setRecurringForm({ ...recurringForm, childNumber: Number(k) === 2 ? 2 : 1 })} size="md" />
+                </div>
+              )}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Vanaf</label>
+                <DatePicker selected={recurringForm.startDate} onChange={d => setRecurringForm({ ...recurringForm, startDate: d })} placeholder="Startdatum…" />
+              </div>
+            </div>
+            <div className="flex justify-end mt-3">
+              <button onClick={addRecurring} className="btn-primary text-sm flex items-center gap-2"><Icons.plus size={15} /> Vaste dag toevoegen</button>
+            </div>
+          </div>
+
           {/* Stats cards */}
           <ScrollReveal staggerChildren={0.1}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2735,6 +2852,20 @@ export default function VakantiesPage() {
                                 style={{ backgroundColor: color + '20', color }}
                               >
                                 {v.user.name.split(' ')[0]}
+                              </div>
+                            )
+                          })}
+                          {getRecurringForDate(day.date).map(r => {
+                            const def = verlofDef(r.type)
+                            return (
+                              <div
+                                key={r.id}
+                                className={`text-[10px] px-1.5 py-0.5 rounded truncate border border-dashed flex items-center gap-1 ${def.text}`}
+                                style={{ borderColor: 'currentColor' }}
+                                title={`${def.label} (vaste vrije dag${r.childNumber ? ` — ${r.childNumber}e kind` : ''})`}
+                              >
+                                <span>{r.userName.split(' ')[0]}</span>
+                                <span className="opacity-60">· {def.short}</span>
                               </div>
                             )
                           })}

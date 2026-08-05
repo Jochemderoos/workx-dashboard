@@ -42,7 +42,7 @@ export async function PATCH(
     const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'PARTNER' || currentUser?.role === 'OFFICE_MANAGER'
 
     const body = await req.json()
-    const { status, startDate, endDate, reason, rejectionReason, isHalfDay, type } = body
+    const { status, startDate, endDate, reason, rejectionReason, isHalfDay, type, childNumber } = body
 
     const request = await prisma.vacationRequest.findUnique({
       where: { id: params.id }
@@ -203,6 +203,13 @@ export async function PATCH(
     if (endDate) updateData.endDate = parseLocalDate(endDate)
     if (reason !== undefined) updateData.reason = reason
     if (type !== undefined) updateData.type = normalizeVerlofType(type)
+    // Kindnummer alleen bij ouderschapsverlof; anders wissen.
+    {
+      const effType = type !== undefined ? normalizeVerlofType(type) : undefined
+      const isOuder = effType === 'ouderschap_betaald' || effType === 'ouderschap_onbetaald'
+      if (childNumber !== undefined) updateData.childNumber = isOuder || effType === undefined ? (childNumber === 2 ? 2 : 1) : null
+      else if (effType !== undefined && !isOuder) updateData.childNumber = null
+    }
 
     // Recalculate days if dates changed
     if (startDate || endDate) {
