@@ -68,6 +68,22 @@ export async function GET() {
       rec[t] = Math.round(((rec[t] || 0) + r.days) * 10) / 10
     }
 
+    // Opgenomen vakantiedagen — zelfde afleiding als /api/vacation/summary,
+    // zodat Team en het vakantieschema gelijk lopen: override ?? som van
+    // goedgekeurde 'vakantie'-aanvragen + partner-periodes (ontdubbeld op overlap).
+    const [approvedReqs, periodsThisYear] = await Promise.all([
+      prisma.vacationRequest.findMany({ where: { status: 'APPROVED' }, select: { userId: true, startDate: true, endDate: true, days: true, type: true } }),
+      prisma.vacationPeriod.findMany({ where: { year: yr }, select: { userId: true, startDate: true, endDate: true, days: true } }),
+    ])
+    const overlaps = (aS: Date, aE: Date, bS: Date, bE: Date) => aS <= bE && bS <= aE
+    const takenByUser: Record<string, number> = {}
+    const addTaken = (uid: string, d: number) => { takenByUser[uid] = Math.round(((takenByUser[uid] || 0) + d) * 10) / 10 }
+    for (const r of approvedReqs) if (normalizeVerlofType(r.type) === 'vakantie') addTaken(r.userId, r.days)
+    for (const p of periodsThisYear) {
+      if (approvedReqs.some(r => r.userId === p.userId && overlaps(p.startDate, p.endDate, r.startDate, r.endDate))) continue
+      addTaken(p.userId, p.days)
+    }
+
     // Bereken bonus totalen per medewerker
     const employeeData = users.map(user => {
       const isOwnProfile = user.id === currentUser.id
@@ -111,7 +127,9 @@ export async function GET() {
         bonusPaid: canSeeSensitiveInfo ? bonusPaid : 0,
         bonusPending: canSeeSensitiveInfo ? bonusPending : 0,
         bonusTotal: canSeeSensitiveInfo ? bonusPaid + bonusPending : 0,
-        vacationBalance: canSeeSensitiveInfo ? user.vacationBalance : null,
+        vacationBalance: canSeeSensitiveInfo && user.vacationBalance
+          ? { ...user.vacationBalance, opgenomenLopendJaar: (user.vacationBalance as { opgenomenOverride?: number | null }).opgenomenOverride ?? (takenByUser[user.id] || 0) }
+          : null,
         parentalLeaves: canSeeSensitiveInfo ? user.parentalLeaves : [],
         verlof: canSeeSensitiveInfo ? (verlofByUser[user.id] || {}) : {}
       }
