@@ -24,6 +24,7 @@ import WorkxLogo from '@/components/ui/WorkxLogo'
 import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget'
 import OpenInvoicesWidget from '@/components/dashboard/OpenInvoicesWidget'
 import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
+import OfficePinnedWidgets from '@/components/dashboard/OfficePinnedWidgets'
 import JarReminderWidget from '@/components/dashboard/JarReminderWidget'
 import DagstartWidget from '@/components/dashboard/DagstartWidget'
 import InfoboxDutyWidget from '@/components/dashboard/InfoboxDutyWidget'
@@ -1611,6 +1612,9 @@ export default function DashboardHome() {
           </div>
         </div>
       </div>
+
+      {/* Office-kernvakjes — gepind bovenaan voor het office-team (Hanna/Lotte/Bente) */}
+      {currentUser?.role === 'ADMIN' && <OfficePinnedWidgets />}
 
       {/* Universele zoekbalk — opent CommandPalette */}
       <HomeSearchBar />

@@ -990,8 +990,8 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
                 </div>
               )}
 
-              {/* Personal Info */}
-              <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4">
+              {/* Personal Info — factuurnummer wordt automatisch toegekend bij indienen (WX-JJJJ-NNN) */}
+              <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Naam medewerker</label>
                   <input
@@ -1010,16 +1010,6 @@ export default function ExpenseDeclarationForm({ onClose, inline = false }: Expe
                     onChange={(e) => setBankAccount(e.target.value)}
                     className="input-field w-full font-mono text-sm"
                     placeholder="NL00 BANK 0000 0000 00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Factuurnummer (optioneel)</label>
-                  <input
-                    type="text"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    className="input-field w-full"
-                    placeholder="Bijv. 512"
                   />
                 </div>
               </div>
