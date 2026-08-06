@@ -31,12 +31,13 @@ export default function OfficePinnedWidgets() {
     { href: '/dashboard/declaraties', icon: Icons.euro, label: 'Declaraties', sub: openDecl === null ? 'laden…' : openDecl > 0 ? `${openDecl} open` : 'niets open', badge: openDecl || null, color: 'text-workx-lime bg-workx-lime/10' },
     { href: '/dashboard/debiteuren', icon: Icons.fileText, label: 'Debiteuren', sub: 'bijwerken', badge: null as number | null, color: 'text-orange-400 bg-orange-500/10' },
     { href: '/dashboard/mailchimp', icon: Icons.mail, label: 'Mailchimp', sub: newMc === null ? 'laden…' : newMc > 0 ? `${newMc} nieuw` : 'niets nieuw', badge: newMc || null, color: 'text-purple-400 bg-purple-500/10' },
+    { href: '/dashboard/opleidingen', icon: Icons.graduationCap, label: 'Opleidingen', sub: 'cursussen & JAR', badge: null as number | null, color: 'text-pink-400 bg-pink-500/10' },
   ]
 
   return (
     <div>
       <p className="text-[11px] uppercase tracking-wider text-white/40 mb-2 font-medium">Office — snel overzicht</p>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {tiles.map(t => {
           const Icon = t.icon
           return (
