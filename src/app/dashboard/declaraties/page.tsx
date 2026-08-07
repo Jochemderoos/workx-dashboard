@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import ExpenseDeclarationForm from '@/components/expenses/ExpenseDeclarationForm'
 import { buildExpensePDF } from '@/lib/expense-pdf'
+import { canManageExpenses } from '@/lib/office-team'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount)
@@ -346,8 +347,8 @@ function DeclarationOverview() {
 
 export default function DeclaratiesPage() {
   const { data: session } = useSession()
-  const userRole = (session?.user as { role?: string })?.role || 'EMPLOYEE'
-  const isManagerRole = userRole === 'ADMIN' || userRole === 'PARTNER'
+  // Partners/admins én het back-office finance-team (Hanna, Lotte, Bente) zien het Overzicht.
+  const isManagerRole = canManageExpenses(session?.user)
 
   const [activeTab, setActiveTab] = useState<'eigen' | 'overzicht'>('eigen')
 

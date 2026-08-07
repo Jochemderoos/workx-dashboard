@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { canManageExpenses } from '@/lib/office-team'
 
 // GET - Fetch single expense declaration
 export async function GET(
@@ -30,9 +31,9 @@ export async function GET(
     // Check access
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true },
+      select: { role: true, name: true },
     })
-    const isManager = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
+    const isManager = canManageExpenses(currentUser)
 
     if (declaration.userId !== session.user.id && !isManager) {
       return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
@@ -66,9 +67,9 @@ export async function PUT(
 
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true },
+      select: { role: true, name: true },
     })
-    const isManager = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
+    const isManager = canManageExpenses(currentUser)
 
     // Only owner can edit DRAFT, managers can approve/reject
     if (declaration.userId !== session.user.id && !isManager) {
@@ -221,9 +222,9 @@ export async function DELETE(
 
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true },
+      select: { role: true, name: true },
     })
-    const isManager = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
+    const isManager = canManageExpenses(currentUser)
 
     // Managers can delete any declaration, owners can delete their own
     if (!isManager && declaration.userId !== session.user.id) {

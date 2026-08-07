@@ -26,3 +26,21 @@ export function canEditOffice(session: { user?: { name?: string | null; role?: s
   const name = session.user.name?.toLowerCase() || ''
   return OFFICE_PEOPLE.some(p => p.name.toLowerCase() === name)
 }
+
+// Wie mag ALLE declaraties zien én beheren (het Overzicht: markeren als betaald,
+// PDF/bijlage downloaden, verwijderen)? Naast ADMIN/PARTNER ook het back-office
+// finance-team (Hanna, Lotte, Bente) op naam-match — zij verwerken declaraties
+// namens iedereen. Diyar (juridisch medewerker) valt hier bewust buiten.
+// Let op: privacygevoelig (IBAN's + bedragen van alle collega's).
+export const EXPENSE_MANAGER_KEYS = ['hanna', 'lotte', 'bente'] as const
+
+const EXPENSE_MANAGER_NAMES = OFFICE_PEOPLE
+  .filter(p => (EXPENSE_MANAGER_KEYS as readonly string[]).includes(p.key))
+  .map(p => p.name.toLowerCase())
+
+export function canManageExpenses(user: { name?: string | null; role?: string | null } | null | undefined): boolean {
+  if (!user) return false
+  if (user.role === 'ADMIN' || user.role === 'PARTNER') return true
+  const name = user.name?.trim().toLowerCase() || ''
+  return EXPENSE_MANAGER_NAMES.includes(name)
+}

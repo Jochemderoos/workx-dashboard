@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { canManageExpenses } from '@/lib/office-team'
 
 // GET - Fetch expense declarations for current user (or all for admin/partner)
 export async function GET(req: NextRequest) {
@@ -13,10 +14,10 @@ export async function GET(req: NextRequest) {
 
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true },
+      select: { role: true, name: true },
     })
 
-    const isManager = currentUser?.role === 'PARTNER' || currentUser?.role === 'ADMIN'
+    const isManager = canManageExpenses(currentUser)
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
