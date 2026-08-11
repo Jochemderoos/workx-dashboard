@@ -44,3 +44,13 @@ export function canManageExpenses(user: { name?: string | null; role?: string | 
   const name = user.name?.trim().toLowerCase() || ''
   return EXPENSE_MANAGER_NAMES.includes(name)
 }
+
+// De centrale debiteuren-afhandeling van corporate kantoren (Stek e.d.) ligt
+// bij het office finance-team (Hanna, Lotte, Bente). Zíj zien die facturen wél
+// als actief werk (aanschrijven). Partners bewust NIET — die houden zo focus op
+// de overige facturen. Dus: alleen naam-match op het office finance-team,
+// géén ADMIN/PARTNER-verbreding.
+export function isCentralDebtorHandler(user: { name?: string | null } | null | undefined): boolean {
+  const name = user?.name?.trim().toLowerCase() || ''
+  return EXPENSE_MANAGER_NAMES.includes(name)
+}

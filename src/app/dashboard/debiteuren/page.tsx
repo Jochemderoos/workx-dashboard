@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import { isCentralDebtorHandler } from '@/lib/office-team'
 
 interface InvoiceLine {
   id: string
@@ -101,9 +102,16 @@ function isReminderDue(reminderSentAt: string | null): boolean {
 // In de eerste 14 dagen ligt het bij de admin → factuur staat grijs.
 // Na klik op 'Aangeschreven' → ook grijs. Bij nieuwe upload reset de
 // server reminderSentAt → factuur staat weer "aan".
+// Rauwe "moet aangeschreven worden" (te laat + nog niet aangeschreven), zónder
+// de corporate-uitzondering. Gebruikt voor de centrale afhandelaars, die
+// corporate kantoren juist wél zelf aanschrijven.
+function isOverdueActionable(invoice: { dueDate: string | null; bookYear: number; bookPeriod: number; reminderSentAt: string | null }): boolean {
+  return daysOverdue(invoice) >= ACTION_THRESHOLD_DAYS && !invoice.reminderSentAt
+}
+
 function needsAction(invoice: { dueDate: string | null; bookYear: number; bookPeriod: number; reminderSentAt: string | null; clientName: string | null; projectName: string | null }): boolean {
   if (isCentrallyHandled(invoice)) return false
-  return daysOverdue(invoice) >= ACTION_THRESHOLD_DAYS && !invoice.reminderSentAt
+  return isOverdueActionable(invoice)
 }
 
 export default function DebiteurenPage() {
@@ -111,6 +119,9 @@ export default function DebiteurenPage() {
   const currentUserId = session?.user?.id
   const role = (session?.user as { role?: string })?.role
   const isManager = role === 'PARTNER' || role === 'ADMIN'
+  // Office finance-team (Hanna, Lotte, Bente) regelt corporate kantoren centraal
+  // en ziet die facturen daarom als actief werk (aanschrijven). Partners niet.
+  const isCentralHandler = isCentralDebtorHandler(session?.user)
 
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
@@ -190,6 +201,12 @@ export default function DebiteurenPage() {
   const actionableInvoices = useMemo(
     () => overdueInvoices.filter(i => !isCentrallyHandled(i)),
     [overdueInvoices]
+  )
+  // Aantal corporate facturen dat centraal aangeschreven moet worden — voor de
+  // opvallende kader-melding bij het office-team.
+  const totalCentralAction = useMemo(
+    () => centralInvoices.filter(isOverdueActionable).length,
+    [centralInvoices]
   )
 
   // Voor het filter-overzicht: lijst van advocaten die als primair gekoppeld zijn
@@ -930,22 +947,49 @@ export default function DebiteurenPage() {
             )}
           </div>
 
-          {/* Centraal geregeld — corporate kantoren. Geen actie voor de advocaat:
-              deze lopen via het onderlinge kanaal. Apart, grijs en ingeklapt. */}
+          {/* Centraal geregeld — corporate kantoren. Voor advocaten/partners:
+              geen actie (lopen via onderling kanaal). Voor het office finance-team
+              (Hanna/Lotte/Bente) juist hún werk: zij schrijven deze centraal aan. */}
           {centralInvoices.length > 0 && (
-            <div className="mt-8">
-              <div className="flex items-center gap-2 mb-3">
-                <Icons.info size={14} className="text-gray-500 shrink-0" />
-                <h2 className="text-sm font-semibold text-gray-400">Centraal geregeld</h2>
-                <span className="text-[11px] text-gray-600">
-                  Corporate kantoren · lopen via het onderlinge kanaal — niet zelf aanschrijven
-                </span>
-              </div>
-              <div className="space-y-2 opacity-70">
+            <div className={`mt-8 ${
+              isCentralHandler
+                ? 'bg-gradient-to-br from-workx-lime/10 via-workx-lime/5 to-transparent border-2 border-workx-lime/40 rounded-2xl p-5'
+                : ''
+            }`}>
+              {isCentralHandler ? (
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-xl bg-workx-lime/20 flex items-center justify-center shrink-0">
+                    <Icons.alertTriangle size={18} className="text-workx-lime" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
+                      Centraal geregeld — jullie taak
+                      {totalCentralAction > 0 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 font-medium">
+                          {totalCentralAction} aanschrijven
+                        </span>
+                      )}
+                    </h2>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      Office regelt de corporate kantoren (Stek e.d.) centraal — schrijf de te late facturen hieronder zelf aan.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-3">
+                  <Icons.info size={14} className="text-gray-500 shrink-0" />
+                  <h2 className="text-sm font-semibold text-gray-400">Centraal geregeld</h2>
+                  <span className="text-[11px] text-gray-600">
+                    Corporate kantoren · lopen via het onderlinge kanaal — niet zelf aanschrijven
+                  </span>
+                </div>
+              )}
+              <div className={`space-y-2 ${isCentralHandler ? '' : 'opacity-70'}`}>
                 {centralGroups.map(group => {
                   const expanded = expandedGroups.has(group.key)
                   const sum = group.invoices.reduce((s, i) => s + i.totalIncl, 0)
                   const overdueCount = group.invoices.filter(i => daysOverdue(i) > 0).length
+                  const actionCount = group.invoices.filter(isOverdueActionable).length
                   const dates = group.invoices
                     .map(i => i.dueDate || i.issueDate)
                     .filter((d): d is string => !!d)
@@ -958,18 +1002,29 @@ export default function DebiteurenPage() {
                       ? fmtShort(dates[0])
                       : `${fmtShort(dates[0])} — ${fmtShort(dates[dates.length - 1])}`
                   return (
-                    <div key={group.key} className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                    <div key={group.key} className={`rounded-2xl border bg-white/[0.02] overflow-hidden ${
+                      isCentralHandler && actionCount > 0 ? 'border-orange-500/30' : 'border-white/10'
+                    }`}>
                       <button
                         onClick={() => toggleGroup(group.key)}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left"
-                        title={`${group.label} — centraal geregeld, niet zelf aanschrijven`}
+                        title={isCentralHandler ? `${group.label} — centraal aanschrijven` : `${group.label} — centraal geregeld, niet zelf aanschrijven`}
                       >
                         <Icons.chevronRight size={14} className={`text-gray-500 transition-transform shrink-0 ${expanded ? 'rotate-90' : ''}`} />
-                        <div className="w-9 h-9 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center font-bold text-sm shrink-0">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
+                          isCentralHandler ? 'bg-workx-lime/10 text-workx-lime' : 'bg-white/5 text-gray-400'
+                        }`}>
                           {group.label.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-300">{group.label}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className={`text-sm font-medium ${isCentralHandler ? 'text-white' : 'text-gray-300'}`}>{group.label}</p>
+                            {isCentralHandler && actionCount > 0 && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-medium">
+                                {actionCount} AANSCHRIJVEN
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] text-gray-500">
                             {group.invoices.length} openstaand · {overdueCount} te laat
                             {period && <> · {period}</>}
@@ -983,20 +1038,47 @@ export default function DebiteurenPage() {
                             .sort((a, b) => daysOverdue(b) - daysOverdue(a))
                             .map(inv => {
                               const age = daysOverdue(inv)
+                              const active = isCentralHandler && isOverdueActionable(inv)
                               return (
-                                <div key={inv.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/[0.02]">
-                                  <span className="text-[10px] font-medium tabular-nums w-20 shrink-0 text-gray-500">
+                                <div key={inv.id} className={`flex items-center gap-3 px-3 py-2 rounded-xl bg-white/[0.02] ${
+                                  isCentralHandler && !active ? 'opacity-60' : ''
+                                }`}>
+                                  <span className={`text-[10px] font-medium tabular-nums w-20 shrink-0 ${active ? 'text-orange-300' : 'text-gray-500'}`}>
                                     {age <= 0 ? 'binnen termijn' : `${age} dgn te laat`}
                                   </span>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-gray-300 break-words" title={inv.projectName || inv.clientName || ''}>
+                                    <p className={`text-sm break-words ${isCentralHandler && active ? 'text-white' : 'text-gray-300'}`} title={inv.projectName || inv.clientName || ''}>
                                       {inv.projectName || inv.clientName || `#${inv.invoiceNumber}`}
                                     </p>
                                     <p className="text-[10px] text-gray-500 truncate">
                                       #{inv.invoiceNumber} · {MONTHS[inv.bookPeriod]} {inv.bookYear}
+                                      {inv.reminderSentAt && (
+                                        <span className="ml-2 text-gray-600">
+                                          · aangeschreven {new Date(inv.reminderSentAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                      )}
                                     </p>
                                   </div>
                                   <span className="text-sm font-medium tabular-nums text-gray-400 shrink-0">{formatEUR(inv.totalIncl)}</span>
+                                  {isCentralHandler && (
+                                    active ? (
+                                      <button
+                                        onClick={() => markReminded(inv.id)}
+                                        className="px-2.5 py-1 rounded-lg bg-orange-500/20 text-orange-300 text-[11px] font-medium hover:bg-orange-500/30 transition-colors shrink-0"
+                                        title="Markeer als aangeschreven — blijft uit tot volgende PDF-upload"
+                                      >
+                                        Aanschrijven
+                                      </button>
+                                    ) : inv.reminderSentAt ? (
+                                      <button
+                                        onClick={() => resetReminder(inv.id)}
+                                        className="px-2.5 py-1 rounded-lg bg-white/5 text-gray-400 text-[11px] font-medium hover:bg-orange-500/15 hover:text-orange-300 transition-colors shrink-0"
+                                        title="Klik om reminder weer aan te zetten"
+                                      >
+                                        ✓ Aangeschreven
+                                      </button>
+                                    ) : null
+                                  )}
                                   {isManager && (
                                     <button
                                       onClick={async () => { if (confirm('Factuur op betaald zetten? Wordt uit het overzicht verwijderd.')) await removeInvoice(inv.id) }}
