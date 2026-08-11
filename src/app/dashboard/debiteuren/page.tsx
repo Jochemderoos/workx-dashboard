@@ -53,6 +53,13 @@ function firmKeyFor(inv: { clientName: string | null; projectName: string | null
   return null
 }
 
+// Corporate kantoren worden centraal afgehandeld (onderling kanaal) — de
+// advocaten hoeven deze facturen niet zelf aan te schrijven. Ze worden apart
+// getoond en tellen NIET mee als actiepunt / "reminder nodig".
+function isCentrallyHandled(inv: { clientName: string | null; projectName: string | null }): boolean {
+  return firmKeyFor(inv) !== null
+}
+
 // Vanaf hoeveel dagen na de vervaltermijn de advocaat aan zet is.
 // Daarvoor (dag 0-14) ligt het bij de admin (zie proces-timeline bovenaan).
 const ACTION_THRESHOLD_DAYS = 15
@@ -94,7 +101,8 @@ function isReminderDue(reminderSentAt: string | null): boolean {
 // In de eerste 14 dagen ligt het bij de admin → factuur staat grijs.
 // Na klik op 'Aangeschreven' → ook grijs. Bij nieuwe upload reset de
 // server reminderSentAt → factuur staat weer "aan".
-function needsAction(invoice: { dueDate: string | null; bookYear: number; bookPeriod: number; reminderSentAt: string | null }): boolean {
+function needsAction(invoice: { dueDate: string | null; bookYear: number; bookPeriod: number; reminderSentAt: string | null; clientName: string | null; projectName: string | null }): boolean {
+  if (isCentrallyHandled(invoice)) return false
   return daysOverdue(invoice) >= ACTION_THRESHOLD_DAYS && !invoice.reminderSentAt
 }
 
@@ -118,33 +126,6 @@ export default function DebiteurenPage() {
   const [assignMenuId, setAssignMenuId] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
-  // Externe kantoren waarvoor we facturen samen-vouwen — voorkomt dat
-  // bv. 20 Stek-zaken het overzicht vervuilen. Aanschrijven is bij deze
-  // partijen niet relevant (loopt via onderling kanaal).
-  const COLLAPSIBLE_CLIENTS: { id: string; label: string; patterns: RegExp[] }[] = [
-    { id: 'stek', label: 'Stek Advocaten', patterns: [
-      /\bstek\b/i,
-      /stek[\s-]*advocaten/i,
-    ] },
-    { id: 'debrij', label: 'DeBrij', patterns: [
-      /\bde\s*brij\b/i,
-      /\bdebrij\b/i,
-    ] },
-    { id: 'jblaw', label: 'JB Law', patterns: [
-      /\bjb[\s-]*law\b/i,
-      /\bjblaw\b/i,
-    ] },
-    { id: 'vcl', label: 'Van Campen Liem', patterns: [
-      /van\s*campen\s*liem/i,
-      /\bcampen\s*liem\b/i,
-      /\bvancampenliem\b/i,
-      /\bvcl\b/i,
-    ] },
-  ]
-  const matchCollapsible = (inv: { clientName?: string | null; projectName?: string | null }) => {
-    const hay = `${inv.clientName || ''} ${inv.projectName || ''}`
-    return COLLAPSIBLE_CLIENTS.find(c => c.patterns.some(p => p.test(hay))) || null
-  }
   const toggleGroup = (id: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev)
@@ -199,10 +180,22 @@ export default function DebiteurenPage() {
     [invoices]
   )
 
+  // Corporate kantoren (centraal geregeld) los van de rest. Alleen
+  // `actionableInvoices` telt mee in de actie-views, filters en tellingen;
+  // `centralInvoices` krijgt onderaan een eigen, grijze sectie.
+  const centralInvoices = useMemo(
+    () => overdueInvoices.filter(isCentrallyHandled),
+    [overdueInvoices]
+  )
+  const actionableInvoices = useMemo(
+    () => overdueInvoices.filter(i => !isCentrallyHandled(i)),
+    [overdueInvoices]
+  )
+
   // Voor het filter-overzicht: lijst van advocaten die als primair gekoppeld zijn
   const attorneys = useMemo(() => {
     const map = new Map<string, { id: string; name: string; avatarUrl: string | null; count: number; total: number }>()
-    for (const inv of overdueInvoices) {
+    for (const inv of actionableInvoices) {
       if (!inv.primaryUser) continue
       const u = inv.primaryUser
       const entry = map.get(u.id) || { id: u.id, name: u.name, avatarUrl: u.avatarUrl, count: 0, total: 0 }
@@ -211,39 +204,29 @@ export default function DebiteurenPage() {
       map.set(u.id, entry)
     }
     return Array.from(map.values()).sort((a, b) => b.total - a.total)
-  }, [overdueInvoices])
+  }, [actionableInvoices])
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return overdueInvoices
-    if (filter === 'mine') return overdueInvoices.filter(i => i.primaryUserId === currentUserId)
-    if (filter === 'unassigned') return overdueInvoices.filter(i => !i.primaryUserId)
-    return overdueInvoices.filter(i => i.primaryUserId === filter)
-  }, [overdueInvoices, filter, currentUserId])
+    if (filter === 'all') return actionableInvoices
+    if (filter === 'mine') return actionableInvoices.filter(i => i.primaryUserId === currentUserId)
+    if (filter === 'unassigned') return actionableInvoices.filter(i => !i.primaryUserId)
+    return actionableInvoices.filter(i => i.primaryUserId === filter)
+  }, [actionableInvoices, filter, currentUserId])
 
-  // Splits `filtered` in firm-groepen (≥2 facturen per kantoor) + losse facturen.
-  // De volgorde van de groepen volgt CORPORATE_FIRMS en komt boven de losse lijst.
-  const grouped = useMemo(() => {
+  // Corporate kantoren gegroepeerd voor de aparte "Centraal geregeld"-sectie.
+  const centralGroups = useMemo(() => {
     const byKey = new Map<string, Invoice[]>()
-    const loose: Invoice[] = []
-    for (const inv of filtered) {
-      const key = firmKeyFor(inv)
-      if (!key) { loose.push(inv); continue }
+    for (const inv of centralInvoices) {
+      const key = firmKeyFor(inv)!
       const arr = byKey.get(key) || []
       arr.push(inv)
       byKey.set(key, arr)
     }
-    const firmGroups: Array<{ key: string; label: string; invoices: Invoice[] }> = []
-    for (const firm of CORPORATE_FIRMS) {
-      const list = byKey.get(firm.key) || []
-      if (list.length >= 2) {
-        firmGroups.push({ key: firm.key, label: firm.label, invoices: list })
-      } else {
-        // <2 → toon individueel als losse factuur
-        loose.push(...list)
-      }
-    }
-    return { firmGroups, loose }
-  }, [filtered])
+    // Volgorde volgt CORPORATE_FIRMS
+    return CORPORATE_FIRMS
+      .map(f => ({ key: f.key, label: f.label, invoices: byKey.get(f.key) || [] }))
+      .filter(g => g.invoices.length > 0)
+  }, [centralInvoices])
 
   const totals = useMemo(() => {
     const total = filtered.reduce((s, i) => s + i.totalIncl, 0)
@@ -526,7 +509,9 @@ export default function DebiteurenPage() {
         <>
           {/* Mijn debiteuren — persoonlijk overzicht voor ingelogde gebruiker */}
           {(() => {
-            const mine = overdueInvoices.filter(i => i.primaryUserId === currentUserId)
+            // Corporate kantoren tellen hier niet mee — die staan in de aparte
+            // "Centraal geregeld"-sectie en vragen geen actie van de advocaat.
+            const mine = actionableInvoices.filter(i => i.primaryUserId === currentUserId)
             if (mine.length === 0) return null
             // Sorteer oudste eerst
             const sorted = [...mine].sort((a, b) => daysOverdue(b) - daysOverdue(a))
@@ -577,7 +562,8 @@ export default function DebiteurenPage() {
                   ))}
                 </div>
 
-                {/* Lijst — oudste eerst, met collapsing voor Stek/DeBrij/JB Law/Van Campen Liem */}
+                {/* Lijst — oudste eerst. Corporate kantoren staan apart in de
+                    "Centraal geregeld"-sectie en zitten hier niet meer tussen. */}
                 {(() => {
                   const renderInvRow = (inv: Invoice) => {
                     const age = daysOverdue(inv)
@@ -662,68 +648,9 @@ export default function DebiteurenPage() {
                     )
                   }
 
-                  // Splits in: reguliere + groepen voor specifieke externe kantoren
-                  const groupedMap = new Map<string, Invoice[]>()
-                  COLLAPSIBLE_CLIENTS.forEach(c => groupedMap.set(c.id, []))
-                  const ungrouped: Invoice[] = []
-                  for (const inv of sorted) {
-                    const m = matchCollapsible(inv)
-                    if (m) groupedMap.get(m.id)!.push(inv)
-                    else ungrouped.push(inv)
-                  }
-
                   return (
                     <div className="space-y-1.5">
-                      {ungrouped.map(renderInvRow)}
-                      {COLLAPSIBLE_CLIENTS.map(c => {
-                        const items = groupedMap.get(c.id) || []
-                        if (items.length === 0) return null
-                        const expanded = expandedGroups.has(c.id)
-                        const sum = items.reduce((s, i) => s + i.totalIncl, 0)
-                        const overdueItems = items.filter(i => daysOverdue(i) > 0)
-                        // Periode: oudste t/m nieuwste due-date (val. terug op issueDate)
-                        const dates = items
-                          .map(i => i.dueDate || i.issueDate)
-                          .filter((d): d is string => !!d)
-                          .map(d => new Date(d))
-                          .sort((a, b) => a.getTime() - b.getTime())
-                        const fmtShort = (d: Date) =>
-                          d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: '2-digit' })
-                        const period = dates.length > 0
-                          ? dates.length === 1
-                            ? fmtShort(dates[0])
-                            : `${fmtShort(dates[0])} — ${fmtShort(dates[dates.length - 1])}`
-                          : null
-                        return (
-                          <div key={c.id} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
-                            <button
-                              onClick={() => toggleGroup(c.id)}
-                              className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/[0.03] transition-colors text-left"
-                              title={`${c.label} — niet zelf aanschrijven`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <Icons.chevronRight
-                                  size={14}
-                                  className={`text-gray-400 transition-transform shrink-0 ${expanded ? 'rotate-90' : ''}`}
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-white">{c.label}</p>
-                                  <p className="text-[10px] text-gray-500">
-                                    {overdueItems.length} te laat van {items.length} openstaand
-                                    {period && <> · {period}</>}
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="text-sm tabular-nums text-gray-400 shrink-0">{formatEUR(sum)}</span>
-                            </button>
-                            {expanded && (
-                              <div className="space-y-1.5 px-2 pb-2 pt-1">
-                                {items.map(renderInvRow)}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
+                      {sorted.map(renderInvRow)}
                     </div>
                   )
                 })()}
@@ -767,7 +694,7 @@ export default function DebiteurenPage() {
                 filter === 'all' ? 'bg-workx-lime text-workx-dark' : 'bg-white/5 text-gray-400 hover:bg-white/10'
               }`}
             >
-              Alle ({overdueInvoices.length})
+              Alle ({actionableInvoices.length})
             </button>
             <button
               onClick={() => setFilter('unassigned')}
@@ -996,66 +923,100 @@ export default function DebiteurenPage() {
               )
               }
 
-              return (
-                <>
-                  {/* Gegroepeerde corporate kantoren — samengevouwen totdat je klikt */}
-                  {grouped.firmGroups.map(group => {
-                    const ages = group.invoices.map(daysOverdue)
-                    const minAge = Math.min(...ages)
-                    const maxAge = Math.max(...ages)
-                    const totalAmount = group.invoices.reduce((s, i) => s + i.totalIncl, 0)
-                    const actionCount = group.invoices.filter(needsAction).length
-                    const ageLabel = minAge === maxAge ? `${minAge} dgn te laat` : `${minAge}–${maxAge} dgn te laat`
-                    const ageColor = maxAge > 180 ? 'text-red-400' : maxAge > 90 ? 'text-orange-400' : 'text-yellow-400'
-                    return (
-                      <details
-                        key={`group-${group.key}`}
-                        className={`bg-white/[0.03] border rounded-2xl overflow-hidden group ${
-                          actionCount > 0 ? 'border-orange-500/30' : 'border-white/10'
-                        }`}
-                      >
-                        <summary className="p-4 cursor-pointer hover:bg-white/[0.02] transition-colors select-none flex items-center gap-3 list-none">
-                          <span className="group-open:rotate-90 transition-transform inline-block text-gray-500">›</span>
-                          <div className="w-9 h-9 rounded-xl bg-workx-lime/10 text-workx-lime flex items-center justify-center font-bold text-sm shrink-0">
-                            {group.label.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-semibold text-white">{group.label}</span>
-                              <span className="text-[11px] text-gray-500">
-                                {group.invoices.length} facturen
-                              </span>
-                              <span className="text-[10px] text-gray-600">·</span>
-                              <span className={`text-[11px] ${ageColor}`}>{ageLabel}</span>
-                              {actionCount > 0 && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-medium">
-                                  {actionCount} AANSCHRIJVEN
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-gray-500 mt-0.5">Klik om individuele facturen te zien</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-base font-bold text-workx-lime tabular-nums">{formatEUR(totalAmount)}</p>
-                            <p className="text-[10px] text-gray-500">totaal openstaand</p>
-                          </div>
-                        </summary>
-                        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-white/5">
-                          {group.invoices.map(renderInvoiceCard)}
-                        </div>
-                      </details>
-                    )
-                  })}
-
-                  {/* Losse facturen — alles wat niet onder een corporate kantoor valt */}
-                  {grouped.loose.map(renderInvoiceCard)}
-                </>
-              )
+              return <>{filtered.map(renderInvoiceCard)}</>
             })()}
             {filtered.length === 0 && (
               <div className="text-center py-12 text-sm text-gray-500">Geen facturen in dit filter.</div>
             )}
           </div>
+
+          {/* Centraal geregeld — corporate kantoren. Geen actie voor de advocaat:
+              deze lopen via het onderlinge kanaal. Apart, grijs en ingeklapt. */}
+          {centralInvoices.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Icons.info size={14} className="text-gray-500 shrink-0" />
+                <h2 className="text-sm font-semibold text-gray-400">Centraal geregeld</h2>
+                <span className="text-[11px] text-gray-600">
+                  Corporate kantoren · lopen via het onderlinge kanaal — niet zelf aanschrijven
+                </span>
+              </div>
+              <div className="space-y-2 opacity-70">
+                {centralGroups.map(group => {
+                  const expanded = expandedGroups.has(group.key)
+                  const sum = group.invoices.reduce((s, i) => s + i.totalIncl, 0)
+                  const overdueCount = group.invoices.filter(i => daysOverdue(i) > 0).length
+                  const dates = group.invoices
+                    .map(i => i.dueDate || i.issueDate)
+                    .filter((d): d is string => !!d)
+                    .map(d => new Date(d))
+                    .sort((a, b) => a.getTime() - b.getTime())
+                  const fmtShort = (d: Date) => d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: '2-digit' })
+                  const period = dates.length === 0
+                    ? null
+                    : dates.length === 1
+                      ? fmtShort(dates[0])
+                      : `${fmtShort(dates[0])} — ${fmtShort(dates[dates.length - 1])}`
+                  return (
+                    <div key={group.key} className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                      <button
+                        onClick={() => toggleGroup(group.key)}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors text-left"
+                        title={`${group.label} — centraal geregeld, niet zelf aanschrijven`}
+                      >
+                        <Icons.chevronRight size={14} className={`text-gray-500 transition-transform shrink-0 ${expanded ? 'rotate-90' : ''}`} />
+                        <div className="w-9 h-9 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center font-bold text-sm shrink-0">
+                          {group.label.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-300">{group.label}</p>
+                          <p className="text-[11px] text-gray-500">
+                            {group.invoices.length} openstaand · {overdueCount} te laat
+                            {period && <> · {period}</>}
+                          </p>
+                        </div>
+                        <span className="text-sm font-medium tabular-nums text-gray-400 shrink-0">{formatEUR(sum)}</span>
+                      </button>
+                      {expanded && (
+                        <div className="px-3 pb-3 pt-1 space-y-1.5 border-t border-white/5">
+                          {[...group.invoices]
+                            .sort((a, b) => daysOverdue(b) - daysOverdue(a))
+                            .map(inv => {
+                              const age = daysOverdue(inv)
+                              return (
+                                <div key={inv.id} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/[0.02]">
+                                  <span className="text-[10px] font-medium tabular-nums w-20 shrink-0 text-gray-500">
+                                    {age <= 0 ? 'binnen termijn' : `${age} dgn te laat`}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-gray-300 break-words" title={inv.projectName || inv.clientName || ''}>
+                                      {inv.projectName || inv.clientName || `#${inv.invoiceNumber}`}
+                                    </p>
+                                    <p className="text-[10px] text-gray-500 truncate">
+                                      #{inv.invoiceNumber} · {MONTHS[inv.bookPeriod]} {inv.bookYear}
+                                    </p>
+                                  </div>
+                                  <span className="text-sm font-medium tabular-nums text-gray-400 shrink-0">{formatEUR(inv.totalIncl)}</span>
+                                  {isManager && (
+                                    <button
+                                      onClick={async () => { if (confirm('Factuur op betaald zetten? Wordt uit het overzicht verwijderd.')) await removeInvoice(inv.id) }}
+                                      className="px-2.5 py-1 rounded-lg bg-green-500/15 text-green-300 text-[11px] font-medium hover:bg-green-500/25 transition-colors shrink-0"
+                                      title="Markeer als betaald — verwijdert uit overzicht"
+                                    >
+                                      Betaald
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 
