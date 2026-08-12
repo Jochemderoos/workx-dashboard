@@ -194,9 +194,9 @@ export default function AppjeplekjePage() {
         setAttendanceData({
           date,
           attendees: [],
-          totalWorkplaces: 11,
+          totalWorkplaces: 13,
           occupiedWorkplaces: 0,
-          availableWorkplaces: 11,
+          availableWorkplaces: 13,
           isCurrentUserAttending: false,
           currentUserTimeSlot: null,
           currentUserId: '',

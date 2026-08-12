@@ -9,7 +9,7 @@
 
 export const OFFICE_CONFIG = {
   /** Total number of workplaces in the office */
-  TOTAL_WORKPLACES: 11,
+  TOTAL_WORKPLACES: 13,
 
   /** Office location for weather widget */
   DEFAULT_LOCATION: {
