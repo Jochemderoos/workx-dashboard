@@ -13,7 +13,15 @@ export async function GET() {
   try {
     const userId = session.user.id
     const userName = (session.user as { name?: string }).name || ''
+    const role = (session.user as { role?: string }).role || ''
     const firstName = userName.split(' ')[0].trim().toLowerCase()
+
+    // Partneroverleg-actiepunten zijn vertrouwelijk. Ze mogen ALLEEN zichtbaar
+    // zijn voor partners/admins en Hanna (Head of Office) — ook hier in de
+    // eigen-takenlijst. Andere medewerkers (incl. office zoals Lotte/Bente)
+    // krijgen ze niet, ook niet als hun naam als verantwoordelijke is ingevuld.
+    const canSeeMeetingActions =
+      role === 'PARTNER' || role === 'ADMIN' || firstName === 'hanna'
 
     const personalTasks = await prisma.personalTask.findMany({
       where: { userId },
@@ -36,7 +44,7 @@ export async function GET() {
       meetingMonthId: string
       meetingDateLabel: string
     }> = []
-    if (firstName) {
+    if (firstName && canSeeMeetingActions) {
       try {
         const actions = await prisma.meetingAction.findMany({
           where: { isCompleted: false },

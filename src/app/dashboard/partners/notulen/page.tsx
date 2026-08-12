@@ -68,10 +68,13 @@ interface SearchResult {
   monthId: string
 }
 
+// Kiesbare verantwoordelijken voor partneroverleg-actiepunten. Office (Lotte,
+// Bente) staat hier bewust NIET in — partneroverleg is vertrouwelijk en beperkt
+// tot partners + Hanna. Zie ook de afscherming in /api/personal-tasks.
 const TEAM_MEMBERS_NOTULEN = [
   'Marnix', 'Jochem', 'Maaike', 'Bas', 'Juliette', 'Hanna',
   'Justine', 'Marlieke', 'Wies', 'Emma', 'Kay',
-  'Erika', 'Barbara', 'Julia', 'Heleen', 'Lotte'
+  'Erika', 'Barbara', 'Julia', 'Heleen'
 ]
 
 export default function NotulenPage() {
