@@ -73,6 +73,19 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = user.role
+      } else if (token.id) {
+        // Ververs de rol bij elke request live uit de database, zodat een
+        // rolwijziging (bijv. ADMIN → OFFICE_MANAGER) direct doorwerkt zonder
+        // dat de gebruiker opnieuw hoeft in te loggen.
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true },
+          })
+          if (dbUser) token.role = dbUser.role
+        } catch {
+          // DB even niet bereikbaar — behoud de bestaande rol in het token
+        }
       }
       return token
     },
