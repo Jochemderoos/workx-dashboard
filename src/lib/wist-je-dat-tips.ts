@@ -19,6 +19,12 @@ export function daysSinceEpoch(now: Date = new Date()): number {
 // Tips beschikbaar voor iedereen
 export const GENERAL_TIPS: DashboardTip[] = [
   {
+    page: 'Homepage',
+    href: '/dashboard',
+    title: '💡 Wist je dat? — Je eigen homepage',
+    message: 'Klik bovenaan op "Homepage aanpassen" om zelf te kiezen welke onderdelen je bovenaan of als snelkoppeling ziet — en sleep de rijen in je eigen volgorde.',
+  },
+  {
     page: 'Overzicht',
     href: '/dashboard/overzicht',
     title: '💡 Wist je dat? — Site-overzicht',
