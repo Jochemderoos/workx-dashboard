@@ -307,6 +307,31 @@ export const KNOWHOW_OFFICEMANAGEMENT: Document = {
           <li>Drie streepjes → Voorbeeld Email → Verstuur</li>
           <li>Drie streepjes → Verwerk en print (= DEFINITIEF!)</li>
         </ol>
+
+        <h3 class="mt-6">Factuur tenaamstellingen — tips &amp; tricks</h3>
+        <p class="text-white/70 mb-3">Speelt bij de situatie dat een van onze advocaten een <strong>werknemer</strong> bijstaat, maar de <strong>werkgever</strong> uiteindelijk onze factuur voldoet. Check dus altijd goed wie de werkgever en wie de werknemer is.</p>
+        <div class="bg-white/5 rounded-lg p-4 mb-4">
+          <p class="text-white font-semibold mb-2">Fixed fee → let op de urenspecificatie</p>
+          <p class="text-white/70 mb-2">Bij een fixed fee wijkt het aantal uren in de specificatie af van het factuurbedrag. Ga daar nauwkeurig mee om:</p>
+          <ul class="list-disc list-inside text-white/70 space-y-1">
+            <li>Geschreven uren <strong>lager</strong> dan de fixed fee (bedrag naar boven afgerond) → altijd <strong>zónder</strong> specificatie naar de werkgever</li>
+            <li>Fixed fee naar beneden afgerond o.b.v. de daadwerkelijk geschreven uren → mág <strong>mét</strong> specificatie</li>
+          </ul>
+          <p class="text-white/60 text-sm mt-2">Vraag in beide gevallen altijd bij de advocaat na of het met of zonder specificatie mag.</p>
+        </div>
+        <div class="bg-white/5 rounded-lg p-4">
+          <p class="text-white font-semibold mb-2">Tenaamstelling &amp; btw</p>
+          <p class="text-white/70">Factuur op naam van de <strong>werknemer</strong>, óf op naam van de <strong>werkgever</strong> mét de zin: <em>"Diensten verricht voor …, btw niet aftrekbaar"</em>. Anders betaalt de werkgever indirect geen btw, terwijl het feitelijk om de werknemer gaat.</p>
+        </div>
+
+        <h3 class="mt-6">Tenaamstelling aanpassen na facturatie</h3>
+        <p class="text-white/70 mb-2">Krijg je na facturatie het verzoek de tenaamstelling aan te passen:</p>
+        <ol class="list-decimal list-inside text-white/70 space-y-1">
+          <li>Download de factuur als Word-bestand</li>
+          <li>Pas de tenaamstelling handmatig aan</li>
+          <li>Sla op als PDF in Downloads</li>
+          <li>Stuur terug naar de aanvrager</li>
+        </ol>
       `,
     },
     {
@@ -338,6 +363,21 @@ export const KNOWHOW_OFFICEMANAGEMENT: Document = {
 
         <h3>Nieuwe leverancier</h3>
         <p class="text-white/70">Als Trifact een leverancier niet herkent: maak deze eerst aan in Exact, dan in Trifact op "Stamgegevens bijwerken" klikken.</p>
+      `,
+    },
+    {
+      id: 'declaraties-verwerken',
+      title: 'Declaraties verwerken',
+      icon: '🧾',
+      content: `
+        <p class="text-white/70 mb-4">Iedereen kan voorgeschoten bedragen declareren via het dashboard onder <strong>Declaraties</strong> (naam, IBAN en kostenpost — <strong>Auto</strong> = alleen kilometervergoeding, <strong>Overig</strong> = al het andere). Er horen altijd bijlagen (bonnetjes/facturen) bij; die zijn belangrijk voor de administratie.</p>
+        <h3>Verwerken door Office</h3>
+        <ol class="list-decimal list-inside text-white/70 space-y-2">
+          <li>Office krijgt een melding zodra er een declaratie openstaat.</li>
+          <li>Verwerk de declaratie met de bijlagen in <strong>Trifact</strong>.</li>
+          <li>Betaal het bedrag uit.</li>
+          <li>Markeer de declaratie daarna als <strong>betaald</strong> in het dashboard.</li>
+        </ol>
       `,
     },
     {
@@ -475,6 +515,20 @@ export const KNOWHOW_OFFICEMANAGEMENT: Document = {
               <p class="text-white/50 text-sm">Badge: beheer@obidos.nl / Sleutel: Luk's Schoenmakerij</p>
             </div>
           </div>
+          <div class="flex items-start gap-3 p-3 bg-white/5 rounded-lg">
+            <input type="checkbox" disabled class="mt-1" />
+            <div>
+              <p class="text-white font-medium">Persoonlijke bak klaarzetten met naam erop</p>
+              <p class="text-white/50 text-sm">Workx-boekje, pen en sleutels erin</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 p-3 bg-white/5 rounded-lg">
+            <input type="checkbox" disabled class="mt-1" />
+            <div>
+              <p class="text-white font-medium">Postvakje bestellen bij Viking met naam erop</p>
+              <p class="text-white/50 text-sm">Op de juiste plek in het postrek</p>
+            </div>
+          </div>
         </div>
       `,
     },
@@ -526,6 +580,22 @@ export const KNOWHOW_OFFICEMANAGEMENT: Document = {
             </div>
           </div>
         </div>
+      `,
+    },
+    {
+      id: 'mailchimp-lijst',
+      title: 'Mailchimp-lijst',
+      icon: '📧',
+      content: `
+        <p class="text-white/70 mb-4">Onder het kopje <strong>Mailchimp-lijst</strong> in het dashboard kun je opzoeken of iemand al in de lijst staat, of een nieuwe contactpersoon toevoegen.</p>
+        <h3>Nieuwe contactpersoon toevoegen</h3>
+        <ul class="list-disc list-inside text-white/70 space-y-1 mb-4">
+          <li>Naam en e-mailadres</li>
+          <li>Optioneel: bedrijf en telefoonnummer</li>
+          <li>Taalvoorkeur</li>
+          <li>Of diegene voor het seminar uitgenodigd moet worden</li>
+        </ul>
+        <p class="text-white/70">Office krijgt een melding bij nieuwe contactpersonen die nog handmatig in Mailchimp verwerkt moeten worden.</p>
       `,
     },
     {
