@@ -79,6 +79,7 @@ export const INTERNATIONAL: KantoorSeed[] = [
   { category: 'Hongarije', naam: 'Kapi Legal', adres: 'Árpád fejedelem útja 26-28', plaats: 'Budapest', email: 'office@kapilegal.hu', telefoon: '+36 30 244 9968', contactDaar: 'Anikó Kapi (AIJA) — kapi.aniko@kapilegal.hu', contactWorkx: 'Juliette', sortOrder: 0 },
   // Italië
   { category: 'Italië', naam: 'Lexellent', adres: 'Via Borghetto 3, 20121', plaats: 'Milano', telefoon: '+39 02 87 25 171', contactDaar: 'Mr. Sergio Barozzi (Founding partner) — sergiobarozzi@lexellent.it, +39 335 83 99 786; Mrs. Sofia Bargellini (Lawyer) — SofiaBargellini@lexellent.it', sortOrder: 0 },
+  { category: 'Italië', naam: 'Target Law', plaats: 'Milano', email: 'luigipaolo.marino@targetlaw.it', telefoon: '+39 02 72008247', contactDaar: 'Luigipaolo Marino (Associate)', bijzonderheden: 'Litigation & arbitration (civil/commercial). Website: targetlaw.it', sortOrder: 1 },
   // Spanje
   { category: 'Spanje', naam: 'Ecija Abogados', adres: 'Avda. Diagonal, 458, 8ª planta, 08006', plaats: 'Barcelona', email: 'info@ecija.com', telefoon: '+34 933 808 255', contactDaar: 'Mr. Alfonso Maria Autuori (Lawyer) — aautuori@ecijalegal.com; Mrs. Stella Raventós Calvo (Tax partner) — sraventos@ecijalegal.com', sortOrder: 0 },
   { category: 'Spanje', naam: 'Cuatrecasas', adres: 'Calle Almagro 9', plaats: 'Madrid', email: 'madrid@cuatrecasas.com', telefoon: '+34 91 524 71 00', contactDaar: 'Alvaro Fernandez (AIJA)', contactWorkx: 'Juliette', sortOrder: 1 },
