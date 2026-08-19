@@ -9,6 +9,7 @@
 // window-event.
 
 import { useEffect, useState, useCallback, type DragEvent } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -178,10 +179,10 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
         </p>
         <button
           onClick={openEditor}
-          className="flex items-center gap-1.5 text-[11px] text-white/50 hover:text-workx-lime transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-workx-lime/10 text-workx-lime text-xs font-medium border border-workx-lime/30 hover:bg-workx-lime/20 transition-colors"
         >
-          <Icons.settings size={13} />
-          Aanpassen
+          <Icons.settings size={14} />
+          Homepage aanpassen
         </button>
       </div>
 
@@ -203,7 +204,7 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
         </button>
       )}
 
-      {editing && (
+      {editing && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setEditing(false)}>
           <div className="w-full max-w-lg bg-workx-dark border border-white/10 rounded-2xl shadow-2xl my-8" onClick={e => e.stopPropagation()}>
             <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
@@ -252,7 +253,8 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
