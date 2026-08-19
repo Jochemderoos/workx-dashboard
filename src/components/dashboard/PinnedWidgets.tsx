@@ -16,8 +16,9 @@ import { Icons } from '@/components/ui/Icons'
 import { PINNABLE_WIDGETS, PINNABLE_BY_KEY } from '@/lib/pinnable-widgets'
 
 type Placement = 'top' | 'below'
+type CellState = 'off' | Placement
 interface Pin { widgetKey: string; placement: Placement; sortOrder: number }
-type Draft = Record<string, 'off' | Placement>
+interface EditItem { key: string; placement: CellState }
 
 const UPDATED_EVENT = 'dashboard-pins-updated'
 
@@ -31,7 +32,7 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
   const [openDecl, setOpenDecl] = useState<number | null>(null)
   const [newMc, setNewMc] = useState<number | null>(null)
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState<Draft>({})
+  const [draftItems, setDraftItems] = useState<EditItem[]>([])
   const [saving, setSaving] = useState(false)
   const [dragKey, setDragKey] = useState<string | null>(null)
 
@@ -72,17 +73,26 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
   }, [])
 
   const openEditor = () => {
-    const d: Draft = {}
-    for (const p of pins || []) if (PINNABLE_BY_KEY[p.widgetKey]) d[p.widgetKey] = p.placement
-    setDraft(d)
+    const pinned = (pins || []).filter(p => PINNABLE_BY_KEY[p.widgetKey])
+    const top = pinned.filter(p => p.placement === 'top').sort((a, b) => a.sortOrder - b.sortOrder)
+    const below = pinned.filter(p => p.placement === 'below').sort((a, b) => a.sortOrder - b.sortOrder)
+    const used = new Set([...top, ...below].map(p => p.widgetKey))
+    setDraftItems([
+      ...top.map(p => ({ key: p.widgetKey, placement: 'top' as CellState })),
+      ...below.map(p => ({ key: p.widgetKey, placement: 'below' as CellState })),
+      ...PINNABLE_WIDGETS.filter(w => !used.has(w.key)).map(w => ({ key: w.key, placement: 'off' as CellState })),
+    ])
     setEditing(true)
   }
 
   const savePins = async () => {
     setSaving(true)
-    const next: Pin[] = PINNABLE_WIDGETS
-      .filter(w => draft[w.key] && draft[w.key] !== 'off')
-      .map((w, i) => ({ widgetKey: w.key, placement: draft[w.key] as Placement, sortOrder: i }))
+    const topItems = draftItems.filter(i => i.placement === 'top')
+    const belowItems = draftItems.filter(i => i.placement === 'below')
+    const next: Pin[] = [
+      ...topItems.map((i, idx) => ({ widgetKey: i.key, placement: 'top' as Placement, sortOrder: idx })),
+      ...belowItems.map((i, idx) => ({ widgetKey: i.key, placement: 'below' as Placement, sortOrder: idx })),
+    ]
     try {
       const res = await fetch('/api/dashboard-pins', {
         method: 'PUT',
@@ -101,45 +111,29 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
     }
   }
 
-  // Sleep-herordenen binnen deze zone; volgorde direct opslaan.
-  const handleDrop = async (targetKey: string) => {
-    const current = pins || []
+  // Aanpas-scherm: plaatsing zetten + rijen herordenen (sleep).
+  const setPlacement = (key: string, placement: CellState) =>
+    setDraftItems(prev => prev.map(i => (i.key === key ? { ...i, placement } : i)))
+
+  const reorderRows = (targetKey: string) => {
     if (!dragKey || dragKey === targetKey) { setDragKey(null); return }
-    const zoneItems = current
-      .filter(p => p.placement === zone && PINNABLE_BY_KEY[p.widgetKey])
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-    const from = zoneItems.findIndex(p => p.widgetKey === dragKey)
-    const to = zoneItems.findIndex(p => p.widgetKey === targetKey)
+    setDraftItems(prev => {
+      const from = prev.findIndex(i => i.key === dragKey)
+      const to = prev.findIndex(i => i.key === targetKey)
+      if (from < 0 || to < 0) return prev
+      const arr = [...prev]
+      const [moved] = arr.splice(from, 1)
+      arr.splice(to, 0, moved)
+      return arr
+    })
     setDragKey(null)
-    if (from < 0 || to < 0) return
-    const reordered = [...zoneItems]
-    const [moved] = reordered.splice(from, 1)
-    reordered.splice(to, 0, moved)
-    const orderMap = new Map(reordered.map((p, i) => [p.widgetKey, i] as const))
-    const updated = current.map(p =>
-      p.placement === zone && orderMap.has(p.widgetKey) ? { ...p, sortOrder: orderMap.get(p.widgetKey)! } : p
-    )
-    setPins(updated)
-    try {
-      const res = await fetch('/api/dashboard-pins', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pins: updated.map(p => ({ widgetKey: p.widgetKey, placement: p.placement, sortOrder: p.sortOrder })) }),
-      })
-      if (!res.ok) throw new Error()
-      window.dispatchEvent(new Event(UPDATED_EVENT))
-    } catch {
-      toast.error('Kon volgorde niet opslaan')
-      load()
-    }
   }
 
-  const dragProps = (key: string) => ({
+  const rowDrag = (key: string) => ({
     draggable: true,
-    dragging: dragKey === key,
     onDragStart: (e: DragEvent) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', key); setDragKey(key) },
     onDragOver: (e: DragEvent) => e.preventDefault(),
-    onDrop: (e: DragEvent) => { e.preventDefault(); handleDrop(key) },
+    onDrop: (e: DragEvent) => { e.preventDefault(); reorderRows(key) },
     onDragEnd: () => setDragKey(null),
   })
 
@@ -163,7 +157,7 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
           {zonePins.map(p => {
             const w = PINNABLE_BY_KEY[p.widgetKey]
             const { sub, badge } = subFor(w)
-            return <Tile key={w.key} w={w} sub={sub} badge={badge} {...dragProps(w.key)} />
+            return <Tile key={w.key} w={w} sub={sub} badge={badge} />
           })}
         </div>
       </div>
@@ -191,7 +185,7 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
           {zonePins.map(p => {
             const w = PINNABLE_BY_KEY[p.widgetKey]
             const { sub, badge } = subFor(w)
-            return <Tile key={w.key} w={w} sub={sub} badge={badge} {...dragProps(w.key)} />
+            return <Tile key={w.key} w={w} sub={sub} badge={badge} />
           })}
         </div>
       ) : (
@@ -210,17 +204,23 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
             <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-white">Homepage samenstellen</h2>
-                <p className="text-xs text-white/50 mt-0.5">Kies wat je op je homepage wilt en waar.</p>
+                <p className="text-xs text-white/50 mt-0.5">Kies wat je wilt en waar — sleep om de volgorde te bepalen.</p>
               </div>
               <button onClick={() => setEditing(false)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/10">
                 <Icons.x size={18} />
               </button>
             </div>
             <div className="p-3 sm:p-4 max-h-[60vh] overflow-y-auto space-y-1.5">
-              {PINNABLE_WIDGETS.map(w => {
-                const state = draft[w.key] || 'off'
+              {draftItems.map(item => {
+                const w = PINNABLE_BY_KEY[item.key]
+                if (!w) return null
                 return (
-                  <div key={w.key} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03]">
+                  <div
+                    key={item.key}
+                    {...rowDrag(item.key)}
+                    className={`flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] cursor-grab active:cursor-grabbing ${dragKey === item.key ? 'opacity-40 ring-1 ring-workx-lime/40' : ''}`}
+                  >
+                    <Icons.gripVertical size={16} className="text-white/30 flex-shrink-0" />
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${w.color}`}>
                       <IconFor name={w.icon} size={16} />
                     </div>
@@ -232,9 +232,9 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
                       {([['off', 'Uit'], ['top', 'Bovenaan'], ['below', 'Niet bovenaan']] as const).map(([val, lbl]) => (
                         <button
                           key={val}
-                          onClick={() => setDraft(prev => ({ ...prev, [w.key]: val }))}
+                          onClick={() => setPlacement(item.key, val)}
                           className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
-                            state === val ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white'
+                            item.placement === val ? 'bg-workx-lime text-workx-dark' : 'text-white/50 hover:text-white'
                           }`}
                         >
                           {lbl}
@@ -260,27 +260,15 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
   )
 }
 
-function Tile({ w, sub, badge, draggable, dragging, onDragStart, onDragOver, onDrop, onDragEnd }: {
+function Tile({ w, sub, badge }: {
   w: (typeof PINNABLE_WIDGETS)[number]
   sub: string
   badge: number | null
-  draggable?: boolean
-  dragging?: boolean
-  onDragStart?: (e: DragEvent) => void
-  onDragOver?: (e: DragEvent) => void
-  onDrop?: (e: DragEvent) => void
-  onDragEnd?: () => void
 }) {
   return (
     <Link
       href={w.href}
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
-      title={draggable ? 'Sleep om de volgorde aan te passen' : undefined}
-      className={`card p-4 flex items-center gap-3 hover:border-white/20 transition-colors group ${draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${dragging ? 'opacity-40 ring-1 ring-workx-lime/40' : ''}`}>
+      className="card p-4 flex items-center gap-3 hover:border-white/20 transition-colors group">
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${w.color}`}>
         <IconFor name={w.icon} size={18} />
       </div>
