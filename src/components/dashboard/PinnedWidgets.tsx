@@ -8,7 +8,7 @@
 // zone="below" (snelkoppelingen lager). Bij opslaan verversen beide via een
 // window-event.
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, type DragEvent } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
@@ -32,6 +32,7 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Draft>({})
   const [saving, setSaving] = useState(false)
+  const [dragKey, setDragKey] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -99,6 +100,48 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
     }
   }
 
+  // Sleep-herordenen binnen deze zone; volgorde direct opslaan.
+  const handleDrop = async (targetKey: string) => {
+    const current = pins || []
+    if (!dragKey || dragKey === targetKey) { setDragKey(null); return }
+    const zoneItems = current
+      .filter(p => p.placement === zone && PINNABLE_BY_KEY[p.widgetKey])
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+    const from = zoneItems.findIndex(p => p.widgetKey === dragKey)
+    const to = zoneItems.findIndex(p => p.widgetKey === targetKey)
+    setDragKey(null)
+    if (from < 0 || to < 0) return
+    const reordered = [...zoneItems]
+    const [moved] = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved)
+    const orderMap = new Map(reordered.map((p, i) => [p.widgetKey, i] as const))
+    const updated = current.map(p =>
+      p.placement === zone && orderMap.has(p.widgetKey) ? { ...p, sortOrder: orderMap.get(p.widgetKey)! } : p
+    )
+    setPins(updated)
+    try {
+      const res = await fetch('/api/dashboard-pins', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pins: updated.map(p => ({ widgetKey: p.widgetKey, placement: p.placement, sortOrder: p.sortOrder })) }),
+      })
+      if (!res.ok) throw new Error()
+      window.dispatchEvent(new Event(UPDATED_EVENT))
+    } catch {
+      toast.error('Kon volgorde niet opslaan')
+      load()
+    }
+  }
+
+  const dragProps = (key: string) => ({
+    draggable: true,
+    dragging: dragKey === key,
+    onDragStart: (e: DragEvent) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', key); setDragKey(key) },
+    onDragOver: (e: DragEvent) => e.preventDefault(),
+    onDrop: (e: DragEvent) => { e.preventDefault(); handleDrop(key) },
+    onDragEnd: () => setDragKey(null),
+  })
+
   const subFor = (w: (typeof PINNABLE_WIDGETS)[number]): { sub: string; badge: number | null } => {
     if (w.badge === 'declaraties') return { sub: openDecl === null ? 'laden…' : openDecl > 0 ? `${openDecl} open` : 'niets open', badge: openDecl || null }
     if (w.badge === 'mailchimp') return { sub: newMc === null ? 'laden…' : newMc > 0 ? `${newMc} nieuw` : 'niets nieuw', badge: newMc || null }
@@ -119,7 +162,7 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
           {zonePins.map(p => {
             const w = PINNABLE_BY_KEY[p.widgetKey]
             const { sub, badge } = subFor(w)
-            return <Tile key={w.key} w={w} sub={sub} badge={badge} />
+            return <Tile key={w.key} w={w} sub={sub} badge={badge} {...dragProps(w.key)} />
           })}
         </div>
       </div>
@@ -147,7 +190,7 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
           {zonePins.map(p => {
             const w = PINNABLE_BY_KEY[p.widgetKey]
             const { sub, badge } = subFor(w)
-            return <Tile key={w.key} w={w} sub={sub} badge={badge} />
+            return <Tile key={w.key} w={w} sub={sub} badge={badge} {...dragProps(w.key)} />
           })}
         </div>
       ) : (
@@ -215,9 +258,27 @@ export default function PinnedWidgets({ zone }: { zone: Placement }) {
   )
 }
 
-function Tile({ w, sub, badge }: { w: (typeof PINNABLE_WIDGETS)[number]; sub: string; badge: number | null }) {
+function Tile({ w, sub, badge, draggable, dragging, onDragStart, onDragOver, onDrop, onDragEnd }: {
+  w: (typeof PINNABLE_WIDGETS)[number]
+  sub: string
+  badge: number | null
+  draggable?: boolean
+  dragging?: boolean
+  onDragStart?: (e: DragEvent) => void
+  onDragOver?: (e: DragEvent) => void
+  onDrop?: (e: DragEvent) => void
+  onDragEnd?: () => void
+}) {
   return (
-    <Link href={w.href} className="card p-4 flex items-center gap-3 hover:border-white/20 transition-colors group">
+    <Link
+      href={w.href}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      title={draggable ? 'Sleep om de volgorde aan te passen' : undefined}
+      className={`card p-4 flex items-center gap-3 hover:border-white/20 transition-colors group ${draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${dragging ? 'opacity-40 ring-1 ring-workx-lime/40' : ''}`}>
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${w.color}`}>
         <IconFor name={w.icon} size={18} />
       </div>
