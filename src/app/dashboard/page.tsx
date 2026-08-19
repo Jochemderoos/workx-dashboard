@@ -1613,8 +1613,8 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Office-kernvakjes — gepind bovenaan voor het office-team (Hanna/Lotte/Bente) */}
-      {currentUser?.role === 'ADMIN' && <OfficePinnedWidgets />}
+      {/* Office-kernvakjes — gepind bovenaan voor het office-team (Hanna = ADMIN, Lotte/Bente = OFFICE_MANAGER) */}
+      {(currentUser?.role === 'ADMIN' || currentUser?.role === 'OFFICE_MANAGER') && <OfficePinnedWidgets />}
 
       {/* Universele zoekbalk — opent CommandPalette */}
       <HomeSearchBar />

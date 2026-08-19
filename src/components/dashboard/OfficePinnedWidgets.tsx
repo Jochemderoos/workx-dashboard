@@ -1,8 +1,9 @@
 'use client'
 
 // Gepinde office-kernvakjes bovenaan het dashboard voor het office-team
-// (Hanna/Lotte/Bente = ADMIN): snelle herinnering + toegang tot de dingen die
-// verspreid staan (aanwezigheid, open declaraties, debiteuren, mailchimp).
+// (Hanna = ADMIN, Lotte/Bente = OFFICE_MANAGER): snelle herinnering + toegang
+// tot de dingen die verspreid staan (aanwezigheid, open declaraties,
+// debiteuren, JAR/opleidingen, mailchimp).
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
