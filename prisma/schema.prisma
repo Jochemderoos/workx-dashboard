@@ -590,6 +590,23 @@ model MonthlyHours {
   @@unique([employeeName, year, month])
 }
 
+// Persoonlijke dashboard-pins: welke onderwerpen een gebruiker bovenaan of als
+// snelkoppeling op de homepage wil. Een sentinel-rij (widgetKey '__customized__',
+// placement 'none') markeert dat de gebruiker bewust heeft aangepast — dan
+// worden geen rol-defaults meer getoond, ook niet als de lijst leeg is.
+model DashboardPin {
+  id        String   @id @default(cuid())
+  userId    String
+  widgetKey String
+  placement String   @default("top") // 'top' | 'below' | 'none'
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, widgetKey])
+  @@index([userId])
+}
+
 // ==================== LUSTRUM 2026 ====================
 
 // Vluchtgegevens voor de Mallorca trip

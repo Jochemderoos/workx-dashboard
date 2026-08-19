@@ -22,6 +22,7 @@ import { main as addVendorAliasLearning } from './add-vendor-alias-learning'
 import { main as addPersonalTasksTable } from './add-personal-tasks-table'
 import { main as addOpenInvoicesTables } from './add-open-invoices-tables'
 import { main as addOpenInvoiceDates } from './add-open-invoice-dates'
+import { main as addDashboardPinsTable } from './add-dashboard-pins-table'
 import { main as addBevriendeKantorenTable } from './add-bevriende-kantoren-table'
 import { main as addEditablePolicyTable } from './add-editable-policy-table'
 import { main as addOnboardingTables } from './add-onboarding-tables'
@@ -109,6 +110,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-open-invoices-tables', run: addOpenInvoicesTables },
   { name: 'add-open-invoice-dates', run: addOpenInvoiceDates },
   { name: 'add-bevriende-kantoren-table', run: addBevriendeKantorenTable },
+  { name: 'add-dashboard-pins-table', run: addDashboardPinsTable },
   { name: 'add-editable-policy-table', run: addEditablePolicyTable },
   { name: 'add-onboarding-tables', run: addOnboardingTables },
   { name: 'add-jar-table', run: addJarTable },

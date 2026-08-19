@@ -24,7 +24,7 @@ import WorkxLogo from '@/components/ui/WorkxLogo'
 import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget'
 import OpenInvoicesWidget from '@/components/dashboard/OpenInvoicesWidget'
 import UploadReminderWidget from '@/components/dashboard/UploadReminderWidget'
-import OfficePinnedWidgets from '@/components/dashboard/OfficePinnedWidgets'
+import PinnedWidgets from '@/components/dashboard/PinnedWidgets'
 import JarReminderWidget from '@/components/dashboard/JarReminderWidget'
 import DagstartWidget from '@/components/dashboard/DagstartWidget'
 import InfoboxDutyWidget from '@/components/dashboard/InfoboxDutyWidget'
@@ -1613,8 +1613,9 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Office-kernvakjes — gepind bovenaan voor het office-team (Hanna = ADMIN, Lotte/Bente = OFFICE_MANAGER) */}
-      {(currentUser?.role === 'ADMIN' || currentUser?.role === 'OFFICE_MANAGER') && <OfficePinnedWidgets />}
+      {/* Persoonlijke kernvakjes — bovenaan gepind. Iedereen kan zelf aanpassen;
+          office-team (Hanna/Lotte/Bente) start met de office-kernvakjes. */}
+      <PinnedWidgets zone="top" />
 
       {/* Universele zoekbalk — opent CommandPalette */}
       <HomeSearchBar />
@@ -3389,6 +3390,9 @@ export default function DashboardHome() {
           </div>
         </Link>
       </div>
+
+      {/* Persoonlijke snelkoppelingen — gepind maar niet bovenaan */}
+      <PinnedWidgets zone="below" />
 
       {/* Quick Actions */}
       <ScrollReveal direction="up" distance={30} duration={0.5}>
