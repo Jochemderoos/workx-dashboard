@@ -53,6 +53,8 @@ interface EmployeeData {
   role: string
   startDate: string | null
   department: string | null
+  contractType?: string | null
+  contractEndDate?: string | null
   phoneNumber: string | null
   adres: string | null
   compensation: {
@@ -858,6 +860,12 @@ export default function TeamPage() {
                     In dienst: {formatDateNL(employee.startDate)}
                     {yearsAtWorkx !== null && yearsAtWorkx > 0 && ` (${yearsAtWorkx} jaar)`}
                   </p>
+                )}
+                {employee.contractType === 'bepaalde_tijd' && (
+                  <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[11px] font-medium">
+                    <Icons.calendar size={11} />
+                    Bepaalde tijd{employee.contractEndDate ? ` · tot ${formatDateNL(employee.contractEndDate)}` : ''}
+                  </span>
                 )}
                 {employee.phoneNumber && (
                   <a

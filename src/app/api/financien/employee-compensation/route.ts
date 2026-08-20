@@ -31,8 +31,7 @@ export async function GET() {
         NOT: {
           OR: [
             { name: { contains: 'Lotte' } },
-            { name: { contains: 'Bente' } },
-          ], // Lotte en Bente (office) eruit filteren
+          ], // Lotte (office) eruit filteren; Bente wordt wel in Team getoond
         }
       },
       include: {
@@ -126,6 +125,9 @@ export async function GET() {
         role: user.role,
         startDate: user.startDate,
         department: user.department,
+        // Contractvorm alleen voor managers (Hanna + partners)
+        contractType: isManager ? user.contractType ?? null : null,
+        contractEndDate: isManager ? user.contractEndDate ?? null : null,
         // Woonadres alleen voor eigen profiel of managers (privacy)
         adres: canSeeSensitiveInfo ? (user as { adres?: string | null }).adres ?? null : null,
         compensation: user.compensation ? {
