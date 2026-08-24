@@ -42,6 +42,11 @@ function addDays(iso: string, n: number): string {
   return d.toISOString()
 }
 
+// De server trimt waarden (en maakt leeg → null). Vergelijk client-side dus óók
+// getrimd, anders lijkt een lijst na opslaan "gewijzigd" en blijft autosave in
+// een lus opslaan bij een spatie/enter aan het eind.
+const norm = (s: string | null | undefined) => (s || '').trim()
+
 export default function MijnWerkweekPage() {
   const [data, setData] = useState<CurrentResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -137,13 +142,13 @@ export default function MijnWerkweekPage() {
     // Ongewijzigde, overgenomen lijst van vorige week: nog niet automatisch
     // opslaan — zo blijft "Leeg maken" schoon en maken we geen stille kopie.
     if (!cur && prev
-      && work === (prev.work || '')
-      && availability === (prev.availability || '')
-      && notes === (prev.notes || '')) return
+      && norm(work) === norm(prev.work)
+      && norm(availability) === norm(prev.availability)
+      && norm(notes) === norm(prev.notes)) return
     const changed = !cur
-      || work !== (cur.work || '')
-      || availability !== (cur.availability || '')
-      || notes !== (cur.notes || '')
+      || norm(work) !== norm(cur.work)
+      || norm(availability) !== norm(cur.availability)
+      || norm(notes) !== norm(cur.notes)
     if (!changed) return
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     autosaveTimer.current = setTimeout(() => { void saveIntake(true) }, 1500)
@@ -184,9 +189,9 @@ export default function MijnWerkweekPage() {
   }
 
   const dirty = !!data.intake && (
-    work !== (data.intake.work || '') ||
-    availability !== (data.intake.availability || '') ||
-    notes !== (data.intake.notes || '')
+    norm(work) !== norm(data.intake.work) ||
+    norm(availability) !== norm(data.intake.availability) ||
+    norm(notes) !== norm(data.intake.notes)
   )
   const hasUnsavedNew = !data.intake && (work.trim() || availability.trim() || notes.trim())
 
@@ -194,9 +199,9 @@ export default function MijnWerkweekPage() {
   // eigen lijst voor deze week opgeslagen.
   const prevIntake = data.previousIntake
   const isCarryOver = !data.intake && !!prevIntake
-    && work === (prevIntake.work || '')
-    && availability === (prevIntake.availability || '')
-    && notes === (prevIntake.notes || '')
+    && norm(work) === norm(prevIntake.work)
+    && norm(availability) === norm(prevIntake.availability)
+    && norm(notes) === norm(prevIntake.notes)
 
   return (
     <div className="space-y-6 fade-in p-4 sm:p-6 max-w-3xl mx-auto relative">
