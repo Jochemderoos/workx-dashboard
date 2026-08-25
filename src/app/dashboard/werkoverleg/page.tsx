@@ -50,7 +50,12 @@ const TEAM_MEMBERS = [
   'Erika', 'Barbara', 'Julia', 'Heleen', 'Lotte'
 ]
 
-const CHAIRPERSON_MEMBERS = TEAM_MEMBERS.filter(m => m !== 'Hele Team')
+// Voorzitterslijst: het team (zonder 'Hele Team') plus Bente en Diyar, die wel
+// voorzitter kunnen zijn maar niet in TEAM_MEMBERS staan.
+const CHAIRPERSON_MEMBERS = [
+  ...TEAM_MEMBERS.filter(m => m !== 'Hele Team'),
+  'Bente', 'Diyar',
+]
 
 // ── Helpers ────────────────────────────────────────────
 
