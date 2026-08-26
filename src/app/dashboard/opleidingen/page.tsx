@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import YearPicker from '@/components/ui/YearPicker'
 import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
-import JarRoosterTab from '@/components/opleidingen/JarRoosterTab'
+import RoosterTab from '@/components/opleidingen/RoosterTab'
 import DatePicker from '@/components/ui/DatePicker'
 import { formatDateForAPI } from '@/lib/date-utils'
 import SpotlightCard from '@/components/ui/SpotlightCard'
@@ -74,7 +74,7 @@ interface PointsSummary {
 
 export default function OpleidingenPage() {
   const { data: session } = useSession()
-  const [activeTab, setActiveTab] = useState<'workx' | 'certificaten' | 'presentielijsten' | 'jar'>('workx')
+  const [activeTab, setActiveTab] = useState<'workx' | 'certificaten' | 'presentielijsten' | 'jar' | 'vaan'>('workx')
   const [isLoading, setIsLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
@@ -1144,10 +1144,24 @@ export default function OpleidingenPage() {
             JAR Rooster
           </div>
         </button>
+        <button
+          onClick={() => setActiveTab('vaan')}
+          className={`px-4 py-2 rounded-t-lg transition-colors ${
+            activeTab === 'vaan'
+              ? 'bg-workx-lime text-workx-dark font-medium'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Icons.calendar size={16} />
+            VAAN Updates
+          </div>
+        </button>
       </div>
 
-      {/* JAR Rooster TAB */}
-      {activeTab === 'jar' && <JarRoosterTab year={selectedYear} />}
+      {/* Rooster-tabs (JAR + VAAN) */}
+      {activeTab === 'jar' && <RoosterTab type="JAR" year={selectedYear} />}
+      {activeTab === 'vaan' && <RoosterTab type="VAAN" />}
 
       {/* WORKX OPLEIDING TAB */}
       {activeTab === 'workx' && (

@@ -28,6 +28,7 @@ import { main as addBevriendeKantorenTable } from './add-bevriende-kantoren-tabl
 import { main as addEditablePolicyTable } from './add-editable-policy-table'
 import { main as addOnboardingTables } from './add-onboarding-tables'
 import { main as addJarTable } from './add-jar-table'
+import { main as addJarSessionType } from './add-jar-session-type'
 import { main as addCoachingBudgetTable } from './add-coaching-budget-table'
 import { main as addPerformanceNotesTable } from './add-performance-notes-table'
 import { main as addOfficeAttendanceTables } from './add-office-attendance-tables'
@@ -116,6 +117,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-editable-policy-table', run: addEditablePolicyTable },
   { name: 'add-onboarding-tables', run: addOnboardingTables },
   { name: 'add-jar-table', run: addJarTable },
+  { name: 'add-jar-session-type', run: addJarSessionType },
   { name: 'add-coaching-budget-table', run: addCoachingBudgetTable },
   { name: 'add-performance-notes-table', run: addPerformanceNotesTable },
   { name: 'add-office-attendance-tables', run: addOfficeAttendanceTables },

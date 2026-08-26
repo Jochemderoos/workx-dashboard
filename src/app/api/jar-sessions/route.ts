@@ -9,7 +9,13 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url)
     const yearParam = url.searchParams.get('year')
-    const where = yearParam ? { year: parseInt(yearParam, 10) } : {}
+    // type: 'JAR' (default) of 'VAAN'. Het VAAN-rooster loopt van september
+    // tot september, dus dat vraagt zonder year-filter het hele seizoen op.
+    const typeParam = url.searchParams.get('type') || 'JAR'
+    const where = {
+      type: typeParam,
+      ...(yearParam ? { year: parseInt(yearParam, 10) } : {}),
+    }
     const sessions = await prisma.jarSession.findMany({
       where,
       orderBy: { date: 'asc' },
@@ -39,6 +45,7 @@ export async function POST(req: NextRequest) {
         date,
         name: String(body.name).trim(),
         year: date.getFullYear(),
+        type: body.type === 'VAAN' ? 'VAAN' : 'JAR',
         notes: body.notes ? String(body.notes) : null,
       },
     })

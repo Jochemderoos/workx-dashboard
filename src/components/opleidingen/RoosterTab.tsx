@@ -3,14 +3,15 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
-import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
+import LabelDropdown from '@/components/ui/LabelDropdown'
 
-interface JarSession {
+interface RoosterSession {
   id: string
   date: string
   name: string
   year: number
+  type?: string
   notes: string | null
 }
 
@@ -20,23 +21,61 @@ interface TeamMember {
   isActive?: boolean
 }
 
-interface JarRoosterTabProps {
-  year: number
+export type RoosterType = 'JAR' | 'VAAN'
+
+interface RoosterConfig {
+  emoji: string
+  kicker: string        // klein kopje boven de titel
+  title: string
+  subtitle: string
+  beurtLabel: string    // "Jouw volgende ..."
+  bespreking: string    // "Eerstvolgende ..."
+  tip: string
 }
 
-export default function JarRoosterTab({ year }: JarRoosterTabProps) {
+const CONFIG: Record<RoosterType, RoosterConfig> = {
+  JAR: {
+    emoji: '⚖️',
+    kicker: 'JAR Rooster',
+    title: 'Jurisprudentie Arbeidsrecht',
+    subtitle: 'Elke 3 weken op donderdag, 16:00–17:15. Klik op een naam om te wijzigen of te ruilen.',
+    beurtLabel: 'Jouw volgende JAR-beurt',
+    bespreking: 'Eerstvolgende JAR-bespreking',
+    tip: '💡 Tip: klik op een naam om snel te wijzigen, of gebruik "Ruil met…" om met een collega van beurt te ruilen. Iedereen krijgt 14 dagen voor zijn/haar JAR-beurt een belletje-melding.',
+  },
+  VAAN: {
+    emoji: '📚',
+    kicker: 'VAAN AR-updates',
+    title: 'VAAN Arbeidsrecht-updates',
+    subtitle: 'Elke 3 weken op dinsdag tijdens de lunch, 12:00–13:00. Klik op een naam om te wijzigen of te ruilen.',
+    beurtLabel: 'Jouw volgende VAAN-update',
+    bespreking: 'Eerstvolgende VAAN-update',
+    tip: '💡 Tip: klik op een naam om snel te wijzigen, of gebruik "Ruil met…" om met een collega van beurt te ruilen. Aanwezigheid houd je bij op het tabblad Presentielijsten.',
+  },
+}
+
+interface RoosterTabProps {
+  type: RoosterType
+  /** Alleen dit kalenderjaar tonen. Weglaten = het hele rooster (VAAN loopt
+   *  van september tot september en valt dus niet in één kalenderjaar). */
+  year?: number
+}
+
+export default function RoosterTab({ type, year }: RoosterTabProps) {
+  const cfg = CONFIG[type]
   const { data: session } = useSession()
   const userName = session?.user?.name || ''
 
-  const [sessions, setSessions] = useState<JarSession[]>([])
+  const [sessions, setSessions] = useState<RoosterSession[]>([])
   const [team, setTeam] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
   const [editingNameId, setEditingNameId] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
+      const query = year ? `?type=${type}&year=${year}` : `?type=${type}`
       const [sRes, tRes] = await Promise.all([
-        fetch(`/api/jar-sessions?year=${year}`),
+        fetch(`/api/jar-sessions${query}`),
         fetch('/api/team'),
       ])
       if (sRes.ok) setSessions(await sRes.json())
@@ -49,7 +88,7 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
     } finally {
       setLoading(false)
     }
-  }, [year])
+  }, [type, year])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -83,6 +122,17 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
     })
   }, [enriched, userName])
 
+  // Periode-label: één jaartal als het rooster binnen een kalenderjaar valt,
+  // anders "2026/2027" voor een seizoen dat de jaargrens over gaat.
+  const periodeLabel = useMemo(() => {
+    if (year) return String(year)
+    if (sessions.length === 0) return ''
+    const jaren = sessions.map(s => new Date(s.date).getFullYear())
+    const min = Math.min(...jaren)
+    const max = Math.max(...jaren)
+    return min === max ? String(min) : `${min}/${max}`
+  }, [sessions, year])
+
   const updateName = async (id: string, newName: string) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, name: newName } : s))
     setEditingNameId(null)
@@ -99,7 +149,7 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
     }
   }
 
-  const swap = async (sessionA: JarSession, swapWithName: string) => {
+  const swap = async (sessionA: RoosterSession, swapWithName: string) => {
     if (!confirm(`'${sessionA.name}' ruilen met '${swapWithName}'?\n\nDan presenteert ${swapWithName} op ${new Date(sessionA.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}, en ${sessionA.name} neemt de eerstvolgende beurt van ${swapWithName} over.`)) return
     // Vind sessie waar swapWithName presenteert (eerstvolgende)
     const futureSwap = enriched.find(s => {
@@ -108,7 +158,7 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
       return s.name.split(' ')[0].toLowerCase() === swapWithName.split(' ')[0].toLowerCase()
     })
     if (!futureSwap) {
-      toast.error(`Kan geen toekomstige sessie van ${swapWithName} vinden — gebruik 'bewerken' op de andere sessie zelf.`)
+      toast.error(`Kan geen toekomstige beurt van ${swapWithName} vinden — gebruik 'bewerken' op de andere sessie zelf.`)
       return
     }
     // Wissel
@@ -154,17 +204,17 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
             background: 'rgba(249, 255, 133, 0.35)',
             border: '1px solid rgba(180, 185, 50, 0.4)',
           }}>
-            ⚖️
+            {cfg.emoji}
           </div>
           <div className="flex-1 min-w-[260px]">
             <p className="text-[11px] uppercase tracking-widest font-bold mb-1" style={{ color: 'rgb(140, 150, 30)' }}>
-              JAR Rooster · {year}
+              {cfg.kicker}{periodeLabel ? ` · ${periodeLabel}` : ''}
             </p>
             <h2 className="text-3xl font-bold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
-              Jurisprudentie Arbeidsrecht
+              {cfg.title}
             </h2>
             <p className="text-sm mt-2 max-w-2xl" style={{ color: 'var(--color-text-secondary)' }}>
-              Elke 3 weken op donderdag, 16:00–17:15. Klik op een naam om te wijzigen of te ruilen.
+              {cfg.subtitle}
             </p>
           </div>
         </div>
@@ -185,7 +235,7 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
             <p className="text-[11px] uppercase tracking-widest font-bold mb-0.5" style={{
               color: userNextSession.diffDays <= 14 ? 'rgb(239, 68, 68)' : 'rgb(140, 150, 30)',
             }}>
-              Jouw volgende JAR-beurt
+              {cfg.beurtLabel}
             </p>
             <h3 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
               {new Date(userNextSession.date).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -209,7 +259,7 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
             <div className="text-3xl shrink-0">📅</div>
             <div className="flex-1">
               <p className="text-[11px] uppercase tracking-widest font-bold mb-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
-                Eerstvolgende JAR-bespreking
+                {cfg.bespreking}
               </p>
               <h3 className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
                 <span style={{ color: 'rgb(140, 150, 30)' }}>{nextSession.name}</span>
@@ -235,13 +285,18 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
           borderBottom: '1px solid var(--color-border-subtle)',
         }}>
           <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: 'rgb(140, 150, 30)' }}>
-            Rooster {year}
+            Rooster {periodeLabel}
           </h3>
           <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
             {sessions.length} sessies
           </span>
         </div>
 
+        {enriched.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+            Nog geen rooster ingevuld.
+          </p>
+        ) : (
         <ul className="divide-y" style={{ borderColor: 'var(--color-border-subtle)' }}>
           {enriched.map(s => {
             const isPast = s.diffDays < 0
@@ -280,19 +335,18 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
                 {/* Naam / dropdown */}
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
-                    <select
-                      autoFocus
+                    <LabelDropdown
                       value={s.name}
-                      onChange={(e) => updateName(s.id, e.target.value)}
-                      onBlur={() => setEditingNameId(null)}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none"
-                      style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)' }}
-                    >
-                      <option value={s.name}>{s.name}</option>
-                      {team.filter(m => m.name !== s.name).map(m => (
-                        <option key={m.id} value={m.name}>{m.name}</option>
-                      ))}
-                    </select>
+                      options={[
+                        { key: s.name, label: s.name },
+                        ...team.filter(m => m.name !== s.name).map(m => ({ key: m.name, label: m.name })),
+                      ]}
+                      onChange={(newName) => {
+                        if (newName && newName !== s.name) updateName(s.id, newName)
+                        else setEditingNameId(null)
+                      }}
+                      size="md"
+                    />
                   ) : (
                     <button
                       onClick={() => setEditingNameId(s.id)}
@@ -332,34 +386,26 @@ export default function JarRoosterTab({ year }: JarRoosterTabProps) {
 
                 {/* Quick-swap dropdown */}
                 {!isPast && !isEditing && (
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <select
-                      defaultValue=""
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          swap(s, e.target.value)
-                          e.target.value = ''
-                        }
-                      }}
-                      className="text-xs rounded-lg px-2 py-1 focus:outline-none"
-                      style={{ background: 'var(--color-bg-glass)', border: '1px solid var(--color-border-subtle)', color: 'var(--color-text-secondary)' }}
-                      title="Ruil met andere collega"
-                    >
-                      <option value="">Ruil met…</option>
-                      {team.filter(m => m.name !== s.name).map(m => (
-                        <option key={m.id} value={m.name}>{m.name}</option>
-                      ))}
-                    </select>
+                  <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <LabelDropdown
+                      value=""
+                      options={[
+                        { key: '', label: 'Ruil met…' },
+                        ...team.filter(m => m.name !== s.name).map(m => ({ key: m.name, label: m.name })),
+                      ]}
+                      onChange={(name) => { if (name) swap(s, name) }}
+                    />
                   </div>
                 )}
               </li>
             )
           })}
         </ul>
+        )}
       </div>
 
       <p className="text-[11px] italic" style={{ color: 'var(--color-text-tertiary)' }}>
-        💡 Tip: klik op een naam om snel te wijzigen, of gebruik de "Ruil met…" dropdown om met een collega van beurt te ruilen. Iedereen krijgt 14 dagen voor zijn/haar JAR-beurt een belletje-melding.
+        {cfg.tip}
       </p>
     </div>
   )

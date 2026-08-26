@@ -1411,15 +1411,17 @@ model PartnerTaskAssignment {
 // Eens in de drie weken, donderdag 16.00–17.15.
 model JarSession {
   id        String   @id @default(cuid())
-  date      DateTime // datum van de JAR-bespreking
+  date      DateTime // datum van de bespreking
   name      String   // naam van degene die voorbereidt
   year      Int      // jaar — voor snelle filtering
+  type      String   @default("JAR") // 'JAR' | 'VAAN' (VAAN AR-updates)
   notes     String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([year, date])
-  @@unique([year, date])
+  @@index([type, date])
+  @@unique([year, date, type])
 }
 
 // ==================== ONBOARDING CHECKLIST ====================
