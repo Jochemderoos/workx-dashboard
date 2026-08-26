@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
+import { parseBedrag } from '@/lib/parse-bedrag'
 
 interface Calculation {
   id: string
@@ -29,6 +30,9 @@ export default function BonusPage() {
   const [adminCalculations, setAdminCalculations] = useState<Calculation[]>([])
   const [activeTab, setActiveTab] = useState<'mijn' | 'ingediend' | 'overzicht' | 'historie'>('mijn')
   const [ingediendGroupBy, setIngediendGroupBy] = useState<'period' | 'client'>('period')
+  // Zoeken op factuurnummer of klantnaam binnen de ingediende bonussen —
+  // om te checken of een factuur al eerder is ingevoerd.
+  const [ingediendZoek, setIngediendZoek] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -40,7 +44,9 @@ export default function BonusPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ invoiceAmount: '', bonusPercentage: '20', invoicePaid: false, bonusPaid: false, invoiceNumber: '', clientName: '' })
 
-  const calculatedBonus = form.invoiceAmount ? parseFloat(form.invoiceAmount) * (parseFloat(form.bonusPercentage) / 100) : 0
+  const ingevoerdBedrag = parseBedrag(form.invoiceAmount)
+  const ingevoerdPercentage = parseBedrag(form.bonusPercentage)
+  const calculatedBonus = Number.isNaN(ingevoerdBedrag) || Number.isNaN(ingevoerdPercentage) ? 0 : ingevoerdBedrag * (ingevoerdPercentage / 100)
 
   // Check admin role
   useEffect(() => {
@@ -180,8 +186,10 @@ export default function BonusPage() {
     e.preventDefault()
     if (!form.invoiceAmount) return toast.error('Vul het factuurbedrag in')
 
-    const invoiceAmount = parseFloat(form.invoiceAmount)
-    const bonusPercentage = parseFloat(form.bonusPercentage)
+    const invoiceAmount = parseBedrag(form.invoiceAmount)
+    const bonusPercentage = parseBedrag(form.bonusPercentage)
+    if (Number.isNaN(invoiceAmount)) return toast.error(`Kan '${form.invoiceAmount}' niet als bedrag lezen`)
+    if (Number.isNaN(bonusPercentage)) return toast.error('Vul een geldig percentage in')
 
     try {
       if (editingId) {
@@ -689,9 +697,12 @@ export default function BonusPage() {
                 <label className="block text-sm text-gray-400 mb-2">Factuurbedrag (excl. BTW) *</label>
                 <div className="relative">
                   <Icons.euro className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                  {/* Bewust een tekstveld: een number-input weigert geplakte
+                      bedragen als "2.000,50" en las "2.000" als 2 euro.
+                      parseBedrag leest beide notaties. */}
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={form.invoiceAmount}
                     onChange={(e) => setForm({ ...form, invoiceAmount: e.target.value })}
                     className="input-field pl-11"
@@ -699,16 +710,23 @@ export default function BonusPage() {
                     autoFocus
                   />
                 </div>
+                {/* Laat direct zien hoe het bedrag gelezen is, zodat een
+                    verkeerd geplakt bedrag meteen opvalt. */}
+                {form.invoiceAmount.trim() !== '' && (
+                  Number.isNaN(ingevoerdBedrag) ? (
+                    <p className="text-xs text-red-400 mt-1.5">Dit lezen we niet als een bedrag</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1.5">= {formatCurrency(ingevoerdBedrag)}</p>
+                  )
+                )}
               </div>
 
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Bonus percentage</label>
                 <div className="relative">
                   <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
+                    type="text"
+                    inputMode="decimal"
                     value={form.bonusPercentage}
                     onChange={(e) => setForm({ ...form, bonusPercentage: e.target.value })}
                     className="input-field pr-10"
@@ -754,14 +772,14 @@ export default function BonusPage() {
                 {form.invoicePaid && <Icons.check size={18} className="ml-auto text-green-400" />}
               </label>
 
-              {form.invoiceAmount && parseFloat(form.invoiceAmount) > 0 && (
+              {ingevoerdBedrag > 0 && (
                 <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-workx-lime/10 to-workx-lime/5 border border-workx-lime/20 p-5">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-workx-lime/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
                   <div className="relative">
                     <p className="text-sm text-gray-400 mb-1">Berekende bonus</p>
                     <p className="text-3xl font-semibold text-workx-lime">{formatCurrency(calculatedBonus)}</p>
                     <p className="text-xs text-gray-400 mt-2">
-                      {formatCurrency(parseFloat(form.invoiceAmount))} × {form.bonusPercentage}%
+                      {formatCurrency(ingevoerdBedrag)} × {ingevoerdPercentage}%
                     </p>
                   </div>
                 </div>
@@ -967,7 +985,14 @@ export default function BonusPage() {
 
       {/* === TAB: Ingediende bonussen === */}
       {activeTab === 'ingediend' && (() => {
-        const submitted = calculations.filter(c => c.status === 'SUBMITTED' || c.status === 'PAID')
+        const alleIngediend = calculations.filter(c => c.status === 'SUBMITTED' || c.status === 'PAID')
+        const zoekterm = ingediendZoek.trim().toLowerCase()
+        const submitted = zoekterm
+          ? alleIngediend.filter(c =>
+              (c.invoiceNumber || '').toLowerCase().includes(zoekterm) ||
+              (c.clientName || '').toLowerCase().includes(zoekterm)
+            )
+          : alleIngediend
 
         // Groep-keuze: per kwartaal of per klant
         const groupKey = (calc: Calculation) => {
@@ -1040,9 +1065,41 @@ export default function BonusPage() {
                   </div>
                 </div>
               )}
+              {alleIngediend.length > 0 && (
+                <div className="relative mt-3">
+                  <Icons.search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={15} />
+                  <input
+                    type="text"
+                    value={ingediendZoek}
+                    onChange={(e) => setIngediendZoek(e.target.value)}
+                    className="input-field pl-10 pr-10 text-sm"
+                    placeholder="Zoek op factuurnummer of klant…"
+                  />
+                  {ingediendZoek && (
+                    <button
+                      type="button"
+                      onClick={() => setIngediendZoek('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white rounded"
+                      title="Zoekopdracht wissen"
+                    >
+                      <Icons.x size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+              {zoekterm && (
+                <p className="relative mt-2 text-xs" style={{ color: submitted.length === 0 ? 'rgb(248, 113, 113)' : 'var(--color-text-tertiary)' }}>
+                  {submitted.length === 0
+                    ? `Geen ingediende bonus gevonden voor "${ingediendZoek.trim()}" — deze factuur is dus nog niet ingediend.`
+                    : `${submitted.length} van ${alleIngediend.length} bonussen komen overeen met "${ingediendZoek.trim()}".`}
+                </p>
+              )}
             </div>
 
             {submitted.length === 0 ? (
+              // Alleen de lege staat tonen als er écht niets is; bij een
+              // zoekopdracht zonder treffers staat de uitleg al boven het veld.
+              zoekterm ? null : (
               <div className="card p-16 text-center">
                 <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
                   <Icons.send className="text-gray-600" size={32} />
@@ -1052,6 +1109,7 @@ export default function BonusPage() {
                   Zodra je betaalde facturen indient, verschijnen ze hier met een overzicht per kwartaal.
                 </p>
               </div>
+              )
             ) : (
               sortedGroups.map(([groupName, calcs]) => {
                 const groupTotal = calcs.reduce((s, c) => s + c.bonusAmount, 0)
