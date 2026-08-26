@@ -39,9 +39,15 @@ const getLocalDateString = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
-// Op weekend → selecteer eerstvolgende maandag
+// Welke dag staat voorgeselecteerd als je de pagina opent.
+// Vanaf 13:00 meldt in de praktijk bijna niemand zich nog aan voor de dag
+// zelf, dus dan springt de selectie door naar de volgende werkdag.
+// In het weekend altijd de eerstvolgende maandag.
+const AANMELD_OMSLAGUUR = 13
+
 const getNextWorkday = () => {
   const date = new Date()
+  if (date.getHours() >= AANMELD_OMSLAGUUR) date.setDate(date.getDate() + 1)
   const day = date.getDay()
   if (day === 6) date.setDate(date.getDate() + 2)      // Zaterdag → maandag
   else if (day === 0) date.setDate(date.getDate() + 1)  // Zondag → maandag
