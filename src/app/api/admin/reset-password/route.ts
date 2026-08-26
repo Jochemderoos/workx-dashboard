@@ -38,9 +38,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 10) {
       return NextResponse.json(
-        { error: 'Wachtwoord moet minimaal 6 tekens bevatten' },
+        { error: 'Wachtwoord moet minimaal 10 tekens bevatten' },
         { status: 400 }
       )
     }

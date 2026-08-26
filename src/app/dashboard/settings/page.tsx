@@ -101,8 +101,8 @@ export default function SettingsPage() {
     if (!newUser.email || !newUser.name || !newUser.password) {
       return toast.error('Vul alle verplichte velden in')
     }
-    if (newUser.password.length < 6) {
-      return toast.error('Wachtwoord moet minimaal 6 tekens zijn')
+    if (newUser.password.length < 10) {
+      return toast.error('Wachtwoord moet minimaal 10 tekens zijn')
     }
 
     setCreateLoading(true)
@@ -128,8 +128,8 @@ export default function SettingsPage() {
 
   const resetPassword = async () => {
     if (!selectedUser || !newPassword) return
-    if (newPassword.length < 6) {
-      return toast.error('Wachtwoord moet minimaal 6 tekens zijn')
+    if (newPassword.length < 10) {
+      return toast.error('Wachtwoord moet minimaal 10 tekens zijn')
     }
 
     setCreateLoading(true)
@@ -210,7 +210,7 @@ export default function SettingsPage() {
   const updatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password.new !== password.confirm) return toast.error('Wachtwoorden komen niet overeen')
-    if (password.new.length < 6) return toast.error('Minimaal 6 tekens')
+    if (password.new.length < 10) return toast.error('Minimaal 10 tekens')
 
     setIsLoading(true)
     try {
@@ -508,7 +508,7 @@ export default function SettingsPage() {
                   placeholder="••••••••"
                 />
               </div>
-              <p className="text-xs text-white/30 mt-1.5">Minimaal 6 tekens</p>
+              <p className="text-xs text-white/30 mt-1.5">Minimaal 10 tekens</p>
             </div>
 
             <div>
@@ -686,7 +686,7 @@ export default function SettingsPage() {
                               value={newUser.password}
                               onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                               className="input-field pl-11"
-                              placeholder="Minimaal 6 tekens"
+                              placeholder="Minimaal 10 tekens"
                               required
                             />
                           </div>
@@ -837,7 +837,7 @@ export default function SettingsPage() {
                                       value={newPassword}
                                       onChange={(e) => setNewPassword(e.target.value)}
                                       className="input-field pl-11"
-                                      placeholder="Minimaal 6 tekens"
+                                      placeholder="Minimaal 10 tekens"
                                     />
                                   </div>
                                 </div>
@@ -850,7 +850,7 @@ export default function SettingsPage() {
                                   </Popover.Close>
                                   <button
                                     onClick={resetPassword}
-                                    disabled={createLoading || newPassword.length < 6}
+                                    disabled={createLoading || newPassword.length < 10}
                                     className="flex-1 px-4 py-2.5 rounded-xl font-medium bg-orange-500 hover:bg-orange-600 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                   >
                                     {createLoading ? (

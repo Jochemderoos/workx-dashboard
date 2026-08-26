@@ -39,9 +39,9 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 10) {
       return NextResponse.json(
-        { error: 'Nieuw wachtwoord moet minimaal 6 tekens zijn' },
+        { error: 'Nieuw wachtwoord moet minimaal 10 tekens zijn' },
         { status: 400 }
       )
     }

@@ -20,7 +20,10 @@ export default withAuth(
       authorized: ({ token, req }: { token: unknown; req: NextRequest }) => {
         const ua = req.headers.get('user-agent') || ''
         if (BOT_PATTERN.test(ua)) return true
-        return !!token
+        // Niet alleen "is er een token", maar ook "hoort er nog een gebruiker
+        // bij": de jwt-callback maakt het token leeg zodra een account
+        // gedeactiveerd of verwijderd is.
+        return !!(token as { id?: string } | null)?.id
       },
     },
     pages: {

@@ -18,32 +18,18 @@ function WorkxLogoBox() {
 
 export default function LoginPage() {
   const router = useRouter()
-  const [isLogin, setIsLogin] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' })
+  const [formData, setFormData] = useState({ email: '', password: '' })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
-      if (isLogin) {
-        const result = await signIn('credentials', { email: formData.email, password: formData.password, redirect: false })
-        if (result?.error) { toast.error(result.error) }
-        else { toast.success('Welkom terug'); router.push('/dashboard') }
-      } else {
-        const res = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Registratie mislukt')
-        toast.success('Account aangemaakt')
-        setIsLogin(true)
-        setFormData({ ...formData, password: '' })
-      }
+      const result = await signIn('credentials', { email: formData.email, password: formData.password, redirect: false })
+      if (result?.error) { toast.error(result.error) }
+      else { toast.success('Welkom terug'); router.push('/dashboard') }
     } catch (error: any) {
       toast.error(error.message)
     } finally {
@@ -80,23 +66,6 @@ export default function LoginPage() {
         {/* Form Card */}
         <form onSubmit={handleSubmit} className="card p-6 space-y-5 relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-workx-lime/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
-          {!isLogin && (
-            <div>
-              <label className="block text-sm text-white/60 mb-2">Naam</label>
-              <div className="input-with-icon">
-                <Icons.user className="input-icon" size={16} />
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="input-field"
-                  placeholder="Je naam"
-                  required={!isLogin}
-                />
-              </div>
-            </div>
-          )}
 
           <div>
             <label className="block text-sm text-white/60 mb-2">Email</label>
@@ -144,32 +113,25 @@ export default function LoginPage() {
               <span className="w-4 h-4 border-2 border-workx-dark border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                {isLogin ? 'Inloggen' : 'Account aanmaken'}
+                Inloggen
                 <Icons.arrowRight size={16} />
               </>
             )}
           </button>
 
-          {isLogin && (
-            <button
-              type="button"
-              onClick={() => setShowForgotPassword(true)}
-              className="w-full text-center text-sm text-white/40 hover:text-workx-lime transition-colors"
-            >
-              Wachtwoord vergeten?
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            className="w-full text-center text-sm text-white/40 hover:text-workx-lime transition-colors"
+          >
+            Wachtwoord vergeten?
+          </button>
         </form>
 
-        {/* Toggle */}
+        {/* Accounts worden aangemaakt door Hanna of een partner (Instellingen →
+            Gebruikers); zelf registreren kan niet. */}
         <p className="text-center mt-6 text-sm text-white/40">
-          {isLogin ? 'Nog geen account? ' : 'Al een account? '}
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-workx-lime hover:underline"
-          >
-            {isLogin ? 'Registreren' : 'Inloggen'}
-          </button>
+          Nog geen account? Vraag het aan Hanna.
         </p>
 
       {/* Forgot Password Modal */}

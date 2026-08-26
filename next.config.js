@@ -43,6 +43,11 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Browser onthoudt een jaar lang dat dit domein alleen via https mag —
+          // voorkomt dat een eerste request over http onderschept wordt.
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          // Niets op het dashboard gebruikt camera/microfoon/locatie.
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
           {
             key: 'Content-Security-Policy',
             value: [
@@ -57,6 +62,10 @@ const nextConfig = {
               "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",
+              // Formulieren (o.a. het inlogformulier) mogen alleen naar het
+              // eigen domein posten, en de site mag niet in een iframe elders.
+              "form-action 'self'",
+              "frame-ancestors 'self'",
             ].join('; '),
           },
         ],
