@@ -334,9 +334,29 @@ export function createDisclaimer(doc: jsPDF, text: string, y: number) {
   return y + lines.length * 4 + 5
 }
 
-// Format currency
+/**
+ * Bedragen voor in een PDF: "EUR 9.897,62" in plaats van "€ 9.897,62".
+ *
+ * jsPDF gebruikt de ingebouwde Helvetica, en daar zit geen echt euroteken in.
+ * PDF-lezers (met name op iOS) pakken er dan een ander lettertype bij voor dat
+ * ene teken, waardoor het fors groter uitvalt dan de rest van de regel. De
+ * Engelse notatie van Intl zet er bovendien geen spatie tussen, zodat het
+ * teken tegen het bedrag aan plakt. Met de lettercode is het overal goed.
+ *
+ * Alleen voor PDF's — op het scherm blijft gewoon € staan, want de browser
+ * heeft wél een lettertype met een euroteken.
+ */
+export function formatCurrencyForPdf(n: number, isEN = false): string {
+  const getal = new Intl.NumberFormat(isEN ? 'en-GB' : 'nl-NL', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)
+  return `EUR ${getal}`
+}
+
+// Format currency — deze helper is bedoeld voor PDF's, dus zonder euroteken.
 export function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
+  return formatCurrencyForPdf(n)
 }
 
 // Format date

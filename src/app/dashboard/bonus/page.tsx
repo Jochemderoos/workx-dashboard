@@ -8,6 +8,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { Icons } from '@/components/ui/Icons'
 import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
 import { parseBedrag } from '@/lib/parse-bedrag'
+import { formatCurrencyForPdf as formatCurrencyPdf } from '@/lib/pdf'
 
 interface Calculation {
   id: string
@@ -374,7 +375,7 @@ export default function BonusPage() {
       y += 10
     }
 
-    addRow('Factuurbedrag (excl. BTW)', formatCurrency(calc.invoiceAmount))
+    addRow('Factuurbedrag (excl. BTW)', formatCurrencyPdf(calc.invoiceAmount))
     addRow('Bonus percentage', `${calc.bonusPercentage}%`)
     y += 5
 
@@ -390,13 +391,13 @@ export default function BonusPage() {
     doc.setFontSize(11)
     doc.text('Berekende Bonus', 25, y + 12)
     doc.setFontSize(18)
-    doc.text(formatCurrency(calc.bonusAmount), 25, y + 24)
+    doc.text(formatCurrencyPdf(calc.bonusAmount), 25, y + 24)
 
     // Calculation note
     doc.setTextColor(80, 80, 80)
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
-    doc.text(`${formatCurrency(calc.invoiceAmount)} × ${calc.bonusPercentage}%`, pageWidth - 25, y + 18, { align: 'right' })
+    doc.text(`${formatCurrencyPdf(calc.invoiceAmount)} × ${calc.bonusPercentage}%`, pageWidth - 25, y + 18, { align: 'right' })
 
     // Footer
     const footerY = doc.internal.pageSize.getHeight() - 15
@@ -471,7 +472,7 @@ export default function BonusPage() {
     doc.text(`${bonusesToPay.length} bonussen klaar voor uitbetaling`, 25, 73)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(14)
-    doc.text(formatCurrency(totalBonus), pageWidth - 25, 76, { align: 'right' })
+    doc.text(formatCurrencyPdf(totalBonus), pageWidth - 25, 76, { align: 'right' })
 
     // Table header
     let y = 95
@@ -505,10 +506,10 @@ export default function BonusPage() {
       doc.setFontSize(9)
       doc.text(calc.clientName || '-', 20, y)
       doc.text(calc.invoiceNumber || '-', 70, y)
-      doc.text(formatCurrency(calc.invoiceAmount), 110, y)
+      doc.text(formatCurrencyPdf(calc.invoiceAmount), 110, y)
       doc.text(`${calc.bonusPercentage}%`, 145, y)
       doc.setFont('helvetica', 'bold')
-      doc.text(formatCurrency(calc.bonusAmount), pageWidth - 20, y, { align: 'right' })
+      doc.text(formatCurrencyPdf(calc.bonusAmount), pageWidth - 20, y, { align: 'right' })
       doc.setFont('helvetica', 'normal')
       y += 10
     })

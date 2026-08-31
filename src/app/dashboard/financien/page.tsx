@@ -6,7 +6,7 @@ import { Icons } from '@/components/ui/Icons'
 import InzichtenTab from '@/components/financien/InzichtenTab'
 import JaarTab from '@/components/financien/JaarTab'
 // jsPDF wordt dynamic geïmporteerd in de PDF-handler — scheelt ~200KB in initial bundle
-import { drawWorkxLogo, loadWorkxLogo } from '@/lib/pdf'
+import { drawWorkxLogo, loadWorkxLogo, formatCurrencyForPdf as formatCurrencyPdf } from '@/lib/pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
 import { amountExVat } from '@/lib/cost-vat'
 
@@ -741,21 +741,21 @@ export default function FinancienPage() {
 
     // Werkgeverslasten
     doc.text('Werkgeverslasten', col1, y)
-    doc.text(formatCurrency(calculations.totals.werkgeverslasten[pdfPrevYear]), col2, y, { align: 'right' })
-    doc.text(formatCurrency(calculations.totals.werkgeverslasten[pdfCurYear]), col3, y, { align: 'right' })
+    doc.text(formatCurrencyPdf(calculations.totals.werkgeverslasten[pdfPrevYear]), col2, y, { align: 'right' })
+    doc.text(formatCurrencyPdf(calculations.totals.werkgeverslasten[pdfCurYear]), col3, y, { align: 'right' })
     const wlDiff = calculations.totals.werkgeverslasten[pdfCurYear] - calculations.totals.werkgeverslasten[pdfPrevYear]
     doc.setTextColor(wlDiff < 0 ? 0 : 200, wlDiff < 0 ? 150 : 50, 50)
-    doc.text(formatCurrency(wlDiff), col4, y, { align: 'right' })
+    doc.text(formatCurrencyPdf(wlDiff), col4, y, { align: 'right' })
     doc.setTextColor(50, 50, 50)
     y += 8
 
     // Omzet
     doc.text('Omzet', col1, y)
-    doc.text(formatCurrency(calculations.totals.omzet[pdfPrevYear]), col2, y, { align: 'right' })
-    doc.text(formatCurrency(calculations.totals.omzet[pdfCurYear]), col3, y, { align: 'right' })
+    doc.text(formatCurrencyPdf(calculations.totals.omzet[pdfPrevYear]), col2, y, { align: 'right' })
+    doc.text(formatCurrencyPdf(calculations.totals.omzet[pdfCurYear]), col3, y, { align: 'right' })
     const omzetDiff = calculations.totals.omzet[pdfCurYear] - calculations.totals.omzet[pdfPrevYear]
     doc.setTextColor(omzetDiff > 0 ? 0 : 200, omzetDiff > 0 ? 150 : 50, 50)
-    doc.text(formatCurrency(omzetDiff), col4, y, { align: 'right' })
+    doc.text(formatCurrencyPdf(omzetDiff), col4, y, { align: 'right' })
     doc.setTextColor(50, 50, 50)
     y += 8
 
@@ -775,10 +775,10 @@ export default function FinancienPage() {
     doc.rect(15, y - 5, pageWidth - 30, 12, 'F')
     doc.setTextColor(30, 30, 30)
     doc.text('Saldo', col1, y + 3)
-    doc.text(formatCurrency(calculations.saldoTotals[pdfPrevYear]), col2, y + 3, { align: 'right' })
-    doc.text(formatCurrency(calculations.saldoTotals[pdfCurYear]), col3, y + 3, { align: 'right' })
+    doc.text(formatCurrencyPdf(calculations.saldoTotals[pdfPrevYear]), col2, y + 3, { align: 'right' })
+    doc.text(formatCurrencyPdf(calculations.saldoTotals[pdfCurYear]), col3, y + 3, { align: 'right' })
     const saldoDiff = calculations.saldoTotals[pdfCurYear] - calculations.saldoTotals[pdfPrevYear]
-    doc.text(formatCurrency(saldoDiff), col4, y + 3, { align: 'right' })
+    doc.text(formatCurrencyPdf(saldoDiff), col4, y + 3, { align: 'right' })
     y += 25
 
     // ===================== GRAPHS SECTION =====================
@@ -872,10 +872,10 @@ export default function FinancienPage() {
       budgets.forEach(budget => {
         const remaining = budget.budget - budget.spent
         doc.text(budget.name, col1, y)
-        doc.text(formatCurrency(budget.budget), col2, y, { align: 'right' })
-        doc.text(formatCurrency(budget.spent), col3, y, { align: 'right' })
+        doc.text(formatCurrencyPdf(budget.budget), col2, y, { align: 'right' })
+        doc.text(formatCurrencyPdf(budget.spent), col3, y, { align: 'right' })
         doc.setTextColor(remaining >= 0 ? 0 : 200, remaining >= 0 ? 150 : 50, 50)
-        doc.text(formatCurrency(remaining), col4, y, { align: 'right' })
+        doc.text(formatCurrencyPdf(remaining), col4, y, { align: 'right' })
         doc.setTextColor(50, 50, 50)
         y += 8
       })
@@ -889,10 +889,10 @@ export default function FinancienPage() {
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(9)
       doc.text('Totaal', col1, y)
-      doc.text(formatCurrency(totalBudget), col2, y, { align: 'right' })
-      doc.text(formatCurrency(totalSpent), col3, y, { align: 'right' })
+      doc.text(formatCurrencyPdf(totalBudget), col2, y, { align: 'right' })
+      doc.text(formatCurrencyPdf(totalSpent), col3, y, { align: 'right' })
       doc.setTextColor(totalRemaining >= 0 ? 0 : 200, totalRemaining >= 0 ? 150 : 50, 50)
-      doc.text(formatCurrency(totalRemaining), col4, y, { align: 'right' })
+      doc.text(formatCurrencyPdf(totalRemaining), col4, y, { align: 'right' })
     }
 
     // Footer

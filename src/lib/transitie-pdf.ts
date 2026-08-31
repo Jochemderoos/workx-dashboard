@@ -17,24 +17,9 @@ const COLOR = {
 
 const MARGIN = 22
 
-/**
- * Bedragen voor in de PDF: "EUR 9.897,62" in plaats van "€ 9.897,62".
- *
- * jsPDF gebruikt de ingebouwde Helvetica, en daar zit geen echt euroteken in.
- * PDF-lezers (met name op iOS) pakken er dan een ander lettertype bij voor dat
- * ene teken, waardoor het fors groter uitvalt dan de rest. De Engelse notatie
- * zet er bovendien helemaal geen spatie tussen, zodat het teken tegen het
- * bedrag aan plakte. Met de lettercode is het op elk apparaat goed.
- *
- * Alleen voor de PDF — op het scherm blijft gewoon € staan.
- */
-export function formatCurrencyForPdf(n: number, isEN: boolean): string {
-  const getal = new Intl.NumberFormat(isEN ? 'en-GB' : 'nl-NL', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n)
-  return `EUR ${getal}`
-}
+// Bedragen zonder euroteken — zie de toelichting bij formatCurrencyForPdf
+// in ./pdf. Hier alleen doorgegeven zodat bestaande imports blijven werken.
+export { formatCurrencyForPdf } from './pdf'
 
 export interface SingleData {
   mode: 'single'

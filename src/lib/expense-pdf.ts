@@ -1,6 +1,6 @@
 // jsPDF wordt dynamic geïmporteerd binnen buildExpensePDF — scheelt ~200KB in initial bundle
 import type { jsPDF } from 'jspdf'
-import { loadWorkxLogo, drawWorkxLogo } from '@/lib/pdf'
+import { loadWorkxLogo, drawWorkxLogo, formatCurrencyForPdf } from '@/lib/pdf'
 import { PDFDocument, rgb } from 'pdf-lib'
 
 export interface ExpensePDFItem {
@@ -34,8 +34,9 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+// Zonder euroteken — zie de toelichting bij formatCurrencyForPdf in ./pdf.
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount)
+  return formatCurrencyForPdf(amount)
 }
 
 /**
