@@ -122,8 +122,14 @@ export async function PATCH(req: NextRequest) {
     const isManager = isManagerRole(me.role)
     if (!owns && !isManager) return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
 
-    // Evaluation-veld mag alleen door manager-rol of eigenaar
-    // (eigenaar mag zelfreflectie schrijven, manager mag formele evaluatie schrijven)
+    // "evaluation" is de zelfevaluatie van de medewerker; de partner heeft een
+    // eigen veld. Alleen een manager-rol mag daarin schrijven, en we leggen
+    // vast wie het schreef zodat de herkomst zichtbaar blijft.
+    if (body.partnerEvaluation !== undefined && !isManager) {
+      return NextResponse.json({ error: 'Alleen partners kunnen partner-input invullen' }, { status: 403 })
+    }
+    const partnerTekst = body.partnerEvaluation?.trim() || null
+
     const status = body.status as 'todo' | 'doing' | 'done' | undefined
     const progress = typeof body.progress === 'number' ? Math.max(0, Math.min(100, Math.round(body.progress))) : undefined
 
@@ -133,6 +139,13 @@ export async function PATCH(req: NextRequest) {
         ...(body.title !== undefined && { title: body.title.trim() }),
         ...(body.goals !== undefined && { goals: body.goals?.trim() || null }),
         ...(body.evaluation !== undefined && { evaluation: body.evaluation?.trim() || null }),
+        ...(body.partnerEvaluation !== undefined && {
+          partnerEvaluation: partnerTekst,
+          // Naam en datum alleen bijhouden zolang er tekst staat; leeggemaakt
+          // veld laat geen spookondertekening achter.
+          partnerEvaluationBy: partnerTekst ? me.name : null,
+          partnerEvaluationAt: partnerTekst ? new Date() : null,
+        }),
         ...(status && { status }),
         ...(progress !== undefined && { progress }),
         ...(body.targetDate !== undefined && { targetDate: body.targetDate ? new Date(body.targetDate) : null }),

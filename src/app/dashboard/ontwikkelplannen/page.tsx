@@ -19,6 +19,9 @@ interface DevelopmentPlanItem {
   title: string
   goals: string | null
   evaluation: string | null
+  partnerEvaluation: string | null
+  partnerEvaluationBy: string | null
+  partnerEvaluationAt: string | null
   status: 'todo' | 'doing' | 'done'
   progress: number
   targetDate: string | null
@@ -812,8 +815,9 @@ function ItemCard({
   const [title, setTitle] = useState(item.title)
   const [goals, setGoals] = useState(item.goals || '')
   const [evaluation, setEvaluation] = useState(item.evaluation || '')
+  const [partnerEvaluation, setPartnerEvaluation] = useState(item.partnerEvaluation || '')
 
-  useEffect(() => { setTitle(item.title); setGoals(item.goals || ''); setEvaluation(item.evaluation || '') }, [item.id])
+  useEffect(() => { setTitle(item.title); setGoals(item.goals || ''); setEvaluation(item.evaluation || ''); setPartnerEvaluation(item.partnerEvaluation || '') }, [item.id])
 
   const debouncedSave = useRef<NodeJS.Timeout | null>(null)
   const scheduleSave = (patch: Partial<DevelopmentPlanItem>) => {
@@ -914,25 +918,62 @@ function ItemCard({
             </div>
           )}
 
-          {/* Evaluatie — altijd 1x zichtbaar */}
+          {/* Evaluatie van de medewerker zelf */}
           {canEdit ? (
             <div className="pt-2 border-t border-white/5">
               <label className="text-[10px] uppercase tracking-wider text-white/40 mb-1 flex items-center gap-1.5">
-                Evaluatie
-                {!isOwner && isManager && <span className="text-[9px] text-amber-300/70 normal-case tracking-normal">door partner</span>}
+                Evaluatie medewerker
               </label>
               <AutoTextarea
                 value={evaluation}
                 onChange={v => { setEvaluation(v); scheduleSave({ evaluation: v }) }}
-                placeholder={isOwner ? 'Hoe ging dit onderdeel? Wat heb je geleerd?' : 'Feedback voor medewerker…'}
+                placeholder={isOwner ? 'Hoe ging dit onderdeel? Wat heb je geleerd?' : 'Nog niets ingevuld door de medewerker…'}
                 className="w-full text-xs px-2 py-1.5 rounded-lg bg-white/[0.03] border border-white/10 text-white/80 focus:border-purple-500/50 focus:bg-white/5 focus:outline-none placeholder:text-white/30 italic max-h-40 overflow-y-auto"
                 minRows={2}
               />
             </div>
           ) : evaluation ? (
             <p className="text-[11px] text-white/50 italic whitespace-pre-wrap pt-1 border-t border-white/5" title={evalTitleAttr}>
-              <span className="text-amber-300/70 not-italic">Evaluatie:</span> {evaluation}
+              <span className="text-white/40 not-italic">Evaluatie medewerker:</span> {evaluation}
             </p>
+          ) : null}
+
+          {/* Input van de partner — apart veld, zodat de herkomst duidelijk is.
+              Alleen partners kunnen hier typen; de medewerker leest mee. */}
+          {isManager ? (
+            <div className="pt-2 border-t border-amber-300/10">
+              <label className="text-[10px] uppercase tracking-wider text-amber-300/70 mb-1 flex items-center gap-1.5 flex-wrap">
+                Input partner
+                {item.partnerEvaluationBy && (
+                  <span className="text-[9px] text-white/30 normal-case tracking-normal">
+                    {item.partnerEvaluationBy}
+                    {item.partnerEvaluationAt && ` · ${new Date(item.partnerEvaluationAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                  </span>
+                )}
+              </label>
+              <AutoTextarea
+                value={partnerEvaluation}
+                onChange={v => { setPartnerEvaluation(v); scheduleSave({ partnerEvaluation: v }) }}
+                placeholder="Feedback vanuit de partner…"
+                className="w-full text-xs px-2 py-1.5 rounded-lg bg-amber-300/[0.04] border border-amber-300/20 text-white/80 focus:border-amber-300/50 focus:bg-amber-300/[0.07] focus:outline-none placeholder:text-white/30 italic max-h-40 overflow-y-auto"
+                minRows={2}
+              />
+            </div>
+          ) : item.partnerEvaluation ? (
+            <div className="pt-2 border-t border-amber-300/10">
+              <p className="text-[10px] uppercase tracking-wider text-amber-300/70 mb-1 flex items-center gap-1.5 flex-wrap">
+                Input partner
+                {item.partnerEvaluationBy && (
+                  <span className="text-[9px] text-white/30 normal-case tracking-normal">
+                    {item.partnerEvaluationBy}
+                    {item.partnerEvaluationAt && ` · ${new Date(item.partnerEvaluationAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                  </span>
+                )}
+              </p>
+              <p className="text-[11px] text-white/70 italic whitespace-pre-wrap" title={(item.partnerEvaluation || '').length > 280 ? item.partnerEvaluation || undefined : undefined}>
+                {item.partnerEvaluation}
+              </p>
+            </div>
           ) : null}
         </div>
 

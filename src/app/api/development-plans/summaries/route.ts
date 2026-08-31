@@ -25,13 +25,14 @@ interface PlanPayload {
   summary: string | null
 }
 
-function buildPlanPrompt(period: string, items: Array<{ category: string; title: string; goals: string | null; evaluation: string | null }>): string {
+function buildPlanPrompt(period: string, items: Array<{ category: string; title: string; goals: string | null; evaluation: string | null; partnerEvaluation?: string | null }>): string {
   const byCat: Record<string, string[]> = {}
   for (const it of items) {
     const parts: string[] = []
     if (it.title && it.title.toLowerCase() !== 'onderdeel') parts.push(it.title)
     if (it.goals) parts.push(`Doelen: ${it.goals}`)
-    if (it.evaluation) parts.push(`Evaluatie: ${it.evaluation}`)
+    if (it.evaluation) parts.push(`Evaluatie medewerker: ${it.evaluation}`)
+    if (it.partnerEvaluation) parts.push(`Input partner: ${it.partnerEvaluation}`)
     if (parts.length === 0) continue
     if (!byCat[it.category]) byCat[it.category] = []
     byCat[it.category].push(parts.join('\n'))

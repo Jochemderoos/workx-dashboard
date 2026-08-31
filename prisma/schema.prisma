@@ -1907,7 +1907,13 @@ model DevelopmentPlanItem {
   category    String   // 'inhoud-theorie' | 'inhoud-praktijk' | 'eigen-praktijk' | 'intern'
   title       String
   goals       String?  @db.Text   // de "Doelen"-tekst
-  evaluation  String?  @db.Text   // per-item evaluatie (door partner of zelf)
+  evaluation  String?  @db.Text   // zelfevaluatie van de medewerker
+  // Aparte input van de partner, zodat zichtbaar is wat van de medewerker
+  // komt en wat van de partner. Alleen PARTNER/ADMIN/OFFICE_MANAGER schrijft
+  // hierin; de medewerker leest mee.
+  partnerEvaluation     String?   @db.Text
+  partnerEvaluationBy   String?   // naam van de partner die het schreef
+  partnerEvaluationAt   DateTime? // wanneer het voor het laatst bijgewerkt is
   status      String   @default("todo") // 'todo' | 'doing' | 'done'
   progress    Int      @default(0)      // 0-100
   targetDate  DateTime?
