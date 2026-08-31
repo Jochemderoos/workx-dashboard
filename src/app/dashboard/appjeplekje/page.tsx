@@ -5,6 +5,7 @@ import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
 import MeetingRoomPanel from '@/components/dashboard/MeetingRoomPanel'
+import { AANMELD_OMSLAGUUR } from '@/lib/aanmeld-dag'
 
 interface Attendee {
   id: string
@@ -43,8 +44,6 @@ const getLocalDateString = (date: Date) => {
 // Vanaf 13:00 meldt in de praktijk bijna niemand zich nog aan voor de dag
 // zelf, dus dan springt de selectie door naar de volgende werkdag.
 // In het weekend altijd de eerstvolgende maandag.
-const AANMELD_OMSLAGUUR = 13
-
 const getNextWorkday = () => {
   const date = new Date()
   if (date.getHours() >= AANMELD_OMSLAGUUR) date.setDate(date.getDate() + 1)

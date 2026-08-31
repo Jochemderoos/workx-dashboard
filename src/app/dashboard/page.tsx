@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { TEAM_PHOTOS, ALL_TEAM_MEMBERS, getPhotoUrl } from '@/lib/team-photos'
 import { LUSTRUM_CONFIG, MALLORCA_FACTS, getCountdown } from '@/lib/lustrum-data'
 import { formatDateForAPI, parseDateFromAPI } from '@/lib/date-utils'
+import { standaardWidgetDag } from '@/lib/aanmeld-dag'
 import toast from 'react-hot-toast'
 import SpotlightCard from '@/components/ui/SpotlightCard'
 import AnimatedNumber from '@/components/ui/AnimatedNumber'
@@ -343,8 +344,36 @@ const AppjeplekjeWidget = memo(function AppjeplekjeWidget({
   onToggleToday: () => void
   onToggleTomorrow: () => void
 }) {
-  const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>('today')
+  // Vanaf 13:00 staat "morgen" voor, want dan meldt bijna niemand zich nog aan
+  // voor de dag zelf. In het weekend niet, want dan wijst het eerste tabje al
+  // naar de eerstvolgende maandag.
+  const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>(standaardWidgetDag)
   const [dateLabels, setDateLabels] = useState({ today: '', tomorrow: '' })
+
+  // Heeft de gebruiker zelf een tabje aangeklikt? Dan die keuze respecteren.
+  const zelfGekozenTab = useRef(false)
+  const kiesTab = useCallback((dag: 'today' | 'tomorrow') => {
+    zelfGekozenTab.current = true
+    setSelectedDay(dag)
+  }, [])
+
+  // Het dashboard blijft op de telefoon dagenlang openstaan; zonder dit zou de
+  // keuze van vanochtend blijven staan als je 's middags terugkomt.
+  useEffect(() => {
+    const herbereken = () => {
+      if (document.visibilityState !== 'visible') return
+      if (zelfGekozenTab.current) return
+      setSelectedDay(standaardWidgetDag())
+    }
+    document.addEventListener('visibilitychange', herbereken)
+    window.addEventListener('focus', herbereken)
+    window.addEventListener('pageshow', herbereken)
+    return () => {
+      document.removeEventListener('visibilitychange', herbereken)
+      window.removeEventListener('focus', herbereken)
+      window.removeEventListener('pageshow', herbereken)
+    }
+  }, [])
 
   // Determine if today is a weekend — show day names instead of "Vandaag"/"Morgen"
   const [isWeekend, setIsWeekend] = useState(false)
@@ -473,7 +502,7 @@ const AppjeplekjeWidget = memo(function AppjeplekjeWidget({
         {/* Day selector tabs */}
         <div className="flex gap-1 mb-3 p-1 bg-white/5 rounded-lg">
           <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedDay('today') }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); kiesTab('today') }}
             className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
               selectedDay === 'today'
                 ? 'bg-cyan-500 text-white'
@@ -483,7 +512,7 @@ const AppjeplekjeWidget = memo(function AppjeplekjeWidget({
             {dayNames.today}
           </button>
           <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedDay('tomorrow') }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); kiesTab('tomorrow') }}
             className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
               selectedDay === 'tomorrow'
                 ? 'bg-cyan-500 text-white'
