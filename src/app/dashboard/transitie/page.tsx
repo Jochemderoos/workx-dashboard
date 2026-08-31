@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import { Icons } from '@/components/ui/Icons'
 import DatePicker from '@/components/ui/DatePicker'
 import { formatDateForAPI } from '@/lib/date-utils'
-import { renderTransitiePdf } from '@/lib/transitie-pdf'
+import { renderTransitiePdf, formatCurrencyForPdf } from '@/lib/transitie-pdf'
 import { getPhotoUrl } from '@/lib/team-photos'
 import {
   drawWorkxLogo,
@@ -475,7 +475,7 @@ export default function TransitiePage() {
       whatIfEndDate,
       logoDataUrl,
       formatDate,
-      formatCurrency,
+      formatCurrency: (n: number) => formatCurrencyForPdf(n, false),
     })
     const blob = doc.output('blob')
     window.open(URL.createObjectURL(blob), '_blank')
@@ -554,10 +554,6 @@ export default function TransitiePage() {
   const formatCurrency = (n: number) =>
     new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
 
-  // Engelse notatie: komma als duizendtal-, punt als decimaalteken (€1,234.56)
-  const formatCurrencyEN = (n: number) =>
-    new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR' }).format(n)
-
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -580,7 +576,7 @@ export default function TransitiePage() {
       result,
       logoDataUrl,
       formatDate: isEN ? formatDateEN : formatDate,
-      formatCurrency: isEN ? formatCurrencyEN : formatCurrency,
+      formatCurrency: (n: number) => formatCurrencyForPdf(n, isEN),
       mode: 'single',
     })
     const pdfBlob = doc.output('blob')

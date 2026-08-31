@@ -17,6 +17,25 @@ const COLOR = {
 
 const MARGIN = 22
 
+/**
+ * Bedragen voor in de PDF: "EUR 9.897,62" in plaats van "€ 9.897,62".
+ *
+ * jsPDF gebruikt de ingebouwde Helvetica, en daar zit geen echt euroteken in.
+ * PDF-lezers (met name op iOS) pakken er dan een ander lettertype bij voor dat
+ * ene teken, waardoor het fors groter uitvalt dan de rest. De Engelse notatie
+ * zet er bovendien helemaal geen spatie tussen, zodat het teken tegen het
+ * bedrag aan plakte. Met de lettercode is het op elk apparaat goed.
+ *
+ * Alleen voor de PDF — op het scherm blijft gewoon € staan.
+ */
+export function formatCurrencyForPdf(n: number, isEN: boolean): string {
+  const getal = new Intl.NumberFormat(isEN ? 'en-GB' : 'nl-NL', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)
+  return `EUR ${getal}`
+}
+
 export interface SingleData {
   mode: 'single'
   isEN: boolean
@@ -417,7 +436,7 @@ export function renderTransitiePdf(doc: jsPDF, data: SingleData | CompareData) {
 
   // Disclaimer + footer pin
   const disclaimer = isEN
-    ? `Disclaimer: This calculation is indicative. No rights can be derived from it. The actual amount may differ due to collective agreement provisions or special circumstances. Statutory maximum 2026: € 102,000 or annual salary if higher.`
-    : `Disclaimer: deze berekening is indicatief. Aan deze berekening kunnen geen rechten worden ontleend. Het daadwerkelijke bedrag kan afwijken door CAO-bepalingen of bijzondere omstandigheden. Wettelijk maximum 2026: € 102.000 of jaarsalaris indien hoger.`
+    ? `Disclaimer: This calculation is indicative. No rights can be derived from it. The actual amount may differ due to collective agreement provisions or special circumstances. Statutory maximum 2026: EUR 102,000 or annual salary if higher.`
+    : `Disclaimer: deze berekening is indicatief. Aan deze berekening kunnen geen rechten worden ontleend. Het daadwerkelijke bedrag kan afwijken door CAO-bepalingen of bijzondere omstandigheden. Wettelijk maximum 2026: EUR 102.000 of jaarsalaris indien hoger.`
   drawFooter(doc, disclaimer)
 }
