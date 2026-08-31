@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
 import toast from 'react-hot-toast'
@@ -64,6 +64,15 @@ interface WeekDayData {
 
 export default function AppjeplekjePage() {
   const [selectedDate, setSelectedDate] = useState(getNextWorkday())
+  // Heeft de gebruiker zelf een dag aangeklikt? Dan die keuze niet overschrijven.
+  const zelfGekozenDag = useRef(false)
+  // Welke kalenderdag was het toen de pagina voor het laatst bijwerkte.
+  const laatsteDag = useRef(getLocalDateString(new Date()))
+  const kiesDag = useCallback((datum: string) => {
+    zelfGekozenDag.current = true
+    setSelectedDate(datum)
+  }, [])
+
   const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isToggling, setIsToggling] = useState(false)
@@ -79,6 +88,42 @@ export default function AppjeplekjePage() {
   // Dagen met een vergaderruimte-reservering (voor markering in de kalender)
   const [roomDates, setRoomDates] = useState<Set<string>>(new Set())
   const [calendarCurrentUserId, setCalendarCurrentUserId] = useState<string | null>(null)
+
+  // De voorgeselecteerde dag opnieuw bepalen zodra je terugkomt in de app.
+  // Nodig omdat de pagina op iOS blijft staan als je 'm naar de achtergrond
+  // doet: open je Appjeplekje 's ochtends en kom je na 13:00 terug, dan stond
+  // anders nog steeds de ochtendberekening in beeld — en dus vandaag in plaats
+  // van morgen. Een dag die je zelf hebt aangeklikt blijft staan, tenzij die
+  // inmiddels in het verleden ligt.
+  useEffect(() => {
+    const herbereken = () => {
+      if (document.visibilityState !== 'visible') return
+      const nieuweStandaard = getNextWorkday()
+      const vandaag = getLocalDateString(new Date())
+
+      // Is het inmiddels een andere dag? Dan klopt ook het weekoverzicht niet
+      // meer. Alleen dán opnieuw ophalen — anders zou elke tabwissel vijf
+      // verzoeken afvuren.
+      if (laatsteDag.current !== vandaag) {
+        laatsteDag.current = vandaag
+        fetchWeekOverview()
+      }
+
+      setSelectedDate(huidige => {
+        if (zelfGekozenDag.current && huidige >= vandaag) return huidige
+        zelfGekozenDag.current = false
+        return huidige === nieuweStandaard ? huidige : nieuweStandaard
+      })
+    }
+    document.addEventListener('visibilitychange', herbereken)
+    window.addEventListener('focus', herbereken)
+    window.addEventListener('pageshow', herbereken)
+    return () => {
+      document.removeEventListener('visibilitychange', herbereken)
+      window.removeEventListener('focus', herbereken)
+      window.removeEventListener('pageshow', herbereken)
+    }
+  }, [])
 
   // Fetch month attendance when calendar month changes
   useEffect(() => {
@@ -432,7 +477,7 @@ export default function AppjeplekjePage() {
               return (
               <div
                 key={day.date}
-                onClick={() => setSelectedDate(day.date)}
+                onClick={() => kiesDag(day.date)}
                 className={`p-3 rounded-xl transition-all cursor-pointer ${
                   isPastDay ? 'hidden sm:block' : '' // Verberg verleden dagen op mobiel
                 } ${
@@ -560,7 +605,7 @@ export default function AppjeplekjePage() {
                     key={index}
                     onClick={() => {
                       if (!weekend && !past) {
-                        setSelectedDate(dateStr)
+                        kiesDag(dateStr)
                       }
                     }}
                     disabled={weekend || past}
