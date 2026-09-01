@@ -538,6 +538,7 @@ export default function OverdrachtPage() {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const recognitionRef = useRef<any>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch user + handovers + team
   useEffect(() => {
@@ -844,6 +845,55 @@ export default function OverdrachtPage() {
       }
     } catch {
       setToastMessage('Fout bij verwerken spraak')
+      setTimeout(() => setToastMessage(null), 3000)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // Word/Excel-overdracht inlezen. Het resultaat komt als concept in de lijst
+  // te staan — pas na "Opslaan" is het definitief, zodat je altijd eerst
+  // controleert wat er uit het document is gehaald.
+  const uploadDocument = async (bestand: File) => {
+    if (!activeTab) return
+    setIsProcessing(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', bestand)
+      formData.append('teamMembers', JSON.stringify([...PARTNERS, ...ADVOCATEN]))
+
+      const res = await fetch('/api/handovers/parse-document', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (res.ok) {
+        const { cases: newCases, afgekapt } = await res.json()
+        if (newCases && newCases.length > 0) {
+          const existing = getCases(activeTab)
+          const merged = [...existing, ...newCases.map((c: any) => ({
+            dossiernaam: c.dossiernaam || '',
+            contactpersoon: c.contactpersoon || null,
+            beschrijving: c.beschrijving || null,
+            waarnemers: c.waarnemers || '',
+          }))]
+          setEditedCases(prev => ({ ...prev, [activeTab]: merged }))
+          setHasChanges(prev => ({ ...prev, [activeTab]: true }))
+          setToastMessage(
+            `${newCases.length} dossier${newCases.length !== 1 ? 's' : ''} ingelezen — controleer en klik op Opslaan${afgekapt ? ' (document was lang, alleen het eerste deel is gelezen)' : ''}`
+          )
+          setTimeout(() => setToastMessage(null), 8000)
+        } else {
+          setToastMessage('Geen dossiers gevonden in dit document')
+          setTimeout(() => setToastMessage(null), 5000)
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        setToastMessage(errData.error || 'Kon het document niet verwerken')
+        setTimeout(() => setToastMessage(null), 8000)
+      }
+    } catch {
+      setToastMessage('Fout bij verwerken van het document')
       setTimeout(() => setToastMessage(null), 3000)
     } finally {
       setIsProcessing(false)
@@ -1441,6 +1491,38 @@ export default function OverdrachtPage() {
                         </>
                       )}
                     </button>
+                  )}
+
+                  {/* Word/Excel inlezen — voor wie de overdracht nog in een
+                      document bijhoudt. */}
+                  {currentUser && activeHandover.userId === currentUser.id && (
+                    <>
+                      <input
+                        ref={uploadInputRef}
+                        type="file"
+                        accept=".docx,.xlsx,.xls,.csv,.txt,.md"
+                        className="hidden"
+                        onChange={(e) => {
+                          const bestand = e.target.files?.[0]
+                          if (bestand) uploadDocument(bestand)
+                          // Leegmaken zodat hetzelfde bestand opnieuw gekozen kan worden
+                          e.target.value = ''
+                        }}
+                      />
+                      <button
+                        onClick={() => uploadInputRef.current?.click()}
+                        disabled={isProcessing || isRecording}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                          isProcessing || isRecording
+                            ? 'bg-white/5 text-gray-500'
+                            : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20'
+                        }`}
+                        title="Zet een bestaand Word- of Excel-overdrachtsdocument om in dossiers"
+                      >
+                        <Icons.upload size={14} />
+                        Word/Excel inlezen
+                      </button>
+                    </>
                   )}
                 </div>
 
