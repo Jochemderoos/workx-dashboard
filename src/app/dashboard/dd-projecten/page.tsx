@@ -832,7 +832,7 @@ export default function DDProjectenPage() {
                                 <div className="w-[18px] h-[18px] rounded-md bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                                   <span className="text-[8px] font-medium text-white">{naam.charAt(0)}</span>
                                 </div>
-                                {naam}
+                                {naam.split(' ')[0]}
                                 {isIn && <Icons.check size={10} />}
                               </button>
                             )
@@ -1386,8 +1386,9 @@ export default function DDProjectenPage() {
                           background: isSelected ? undefined : 'var(--color-bg-tertiary)',
                           color: isSelected ? undefined : 'var(--color-text-tertiary)',
                         }}
+                        title={`${naam} — extern, geen uren uit het urensysteem`}
                       >
-                        {naam}
+                        {naam.split(' ')[0]}
                       </button>
                     )
                   })}

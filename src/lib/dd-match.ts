@@ -7,7 +7,7 @@ export const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law', 'Strauswolfs', 'Cleber'
 // hebben. Ze zijn wél toe te voegen aan een project, zodat het teamoverzicht
 // klopt. Hun uren komen niet uit het urensysteem — die blijven op 0 staan.
 // Een nieuwe externe toevoegen is één naam in deze lijst.
-export const DD_EXTERNEN = ['Nienke']
+export const DD_EXTERNEN = ['Nienke Louwmans']
 
 // Varianten in projectnamen → canonieke clientnaam.
 export const CLIENT_ALIASES: Record<string, string> = {
