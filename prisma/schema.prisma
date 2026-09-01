@@ -2428,16 +2428,20 @@ model DDProjectEstimate {
 model DDProjectMember {
   id        String   @id @default(cuid())
   projectId String
-  userId    String
+  // Leeg voor externen (zzp'ers) die geen dashboard-account hebben; dan staat
+  // de naam in externalName. Precies één van de twee is gevuld.
+  userId       String?
+  externalName String?
   role      String   @default("medewerker") // partner, medewerker
   hours     Float    @default(0) // totaal uren geschreven
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   project   DDProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id])
+  user      User?     @relation(fields: [userId], references: [id])
 
   @@unique([projectId, userId])
+  @@unique([projectId, externalName])
   @@index([projectId])
   @@index([userId])
 }

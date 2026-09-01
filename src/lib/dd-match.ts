@@ -3,6 +3,12 @@
 
 export const DD_CLIENTS = ['De Breij', 'Stek', 'JB Law', 'Strauswolfs', 'Cleber']
 
+// Externen (zzp'ers) die aan DD-projecten meewerken maar geen dashboard-account
+// hebben. Ze zijn wél toe te voegen aan een project, zodat het teamoverzicht
+// klopt. Hun uren komen niet uit het urensysteem — die blijven op 0 staan.
+// Een nieuwe externe toevoegen is één naam in deze lijst.
+export const DD_EXTERNEN = ['Nienke']
+
 // Varianten in projectnamen → canonieke clientnaam.
 export const CLIENT_ALIASES: Record<string, string> = {
   debreij: 'De Breij',

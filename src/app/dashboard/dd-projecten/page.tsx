@@ -5,16 +5,22 @@ import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import { Icons } from '@/components/ui/Icons'
 import { getPhotoUrl } from '@/lib/team-photos'
-import { DD_CLIENTS, matchDDClient, hasDDKeyword, ddKeywords, keywordsOverlap } from '@/lib/dd-match'
+import { DD_CLIENTS, DD_EXTERNEN, matchDDClient, hasDDKeyword, ddKeywords, keywordsOverlap } from '@/lib/dd-match'
 import toast from 'react-hot-toast'
 
 interface Member {
   id: string
-  userId: string
+  // Leeg bij een externe (zzp'er) zonder dashboard-account; dan staat de naam
+  // in externalName.
+  userId: string | null
+  externalName: string | null
   role: string
   hours: number
-  user: { id: string; name: string; role: string }
+  user: { id: string; name: string; role: string } | null
 }
+
+/** Naam van een projectlid, of het nu een collega of een externe is. */
+const ledenNaam = (m: Member): string => m.user?.name || m.externalName || 'Onbekend'
 
 interface Project {
   id: string
@@ -137,7 +143,7 @@ export default function DDProjectenPage() {
   const [editingEstimate, setEditingEstimate] = useState<string | null>(null) // fullProjectName being edited
   const [estimateInput, setEstimateInput] = useState('')
   const [addingMemberTo, setAddingMemberTo] = useState<string | null>(null) // fullProjectName for member picker
-  const [form, setForm] = useState({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] as string[], expectedHours: '' })
+  const [form, setForm] = useState({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [] as string[], externalNames: [] as string[], expectedHours: '' })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRole = (session?.user as any)?.role
 
@@ -300,9 +306,9 @@ export default function DDProjectenPage() {
     // Add manual project members
     for (const p of unmatched) {
       for (const m of p.members) {
-        if (!teamProjectsMap.has(m.user.name)) teamProjectsMap.set(m.user.name, [])
-        const existing = teamProjectsMap.get(m.user.name)!.find(tp => tp.projectName === p.name)
-        if (!existing) teamProjectsMap.get(m.user.name)!.push({ projectName: p.name, client: p.client, hours: 0 })
+        if (!teamProjectsMap.has(ledenNaam(m))) teamProjectsMap.set(ledenNaam(m), [])
+        const existing = teamProjectsMap.get(ledenNaam(m))!.find(tp => tp.projectName === p.name)
+        if (!existing) teamProjectsMap.get(ledenNaam(m))!.push({ projectName: p.name, client: p.client, hours: 0 })
       }
     }
 
@@ -377,14 +383,15 @@ export default function DDProjectenPage() {
       name: project.name,
       client: project.client,
       description: project.description || '',
-      memberIds: project.members.map(m => m.userId),
+      memberIds: project.members.filter(m => m.userId).map(m => m.userId as string),
+      externalNames: project.members.filter(m => m.externalName).map(m => m.externalName as string),
       expectedHours: project.expectedHours?.toString() || '',
     })
     setShowForm(true)
   }
 
   const resetForm = () => {
-    setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [], expectedHours: '' })
+    setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [], externalNames: [], expectedHours: '' })
     setShowForm(false)
     setEditingProject(null)
   }
@@ -452,6 +459,7 @@ export default function DDProjectenPage() {
       client: DD_CLIENTS.includes(c.client) ? c.client : DD_CLIENTS[0],
       description: '',
       memberIds: teamMembers.filter(u => c.memberNames.includes(u.name)).map(u => u.id),
+      externalNames: DD_EXTERNEN.filter(n => c.memberNames.includes(n)),
       expectedHours: c.expectedHours ? String(c.expectedHours) : '',
     })
     setShowForm(true)
@@ -684,7 +692,7 @@ export default function DDProjectenPage() {
             </h2>
           </div>
           <button
-            onClick={() => { setShowForm(true); setEditingProject(null); setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [], expectedHours: '' }) }}
+            onClick={() => { setShowForm(true); setEditingProject(null); setForm({ name: '', client: DD_CLIENTS[0], description: '', memberIds: [], externalNames: [], expectedHours: '' }) }}
             className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
           >
             <Icons.plus size={14} />
@@ -728,17 +736,17 @@ export default function DDProjectenPage() {
                     <div className="ml-[46px] flex flex-wrap gap-2 items-center">
                       {project.members.map((m, mi) => {
                         const color = MEMBER_COLORS[mi % MEMBER_COLORS.length]
-                        const photo = getPhotoUrl(m.user.name)
+                        const photo = getPhotoUrl(ledenNaam(m))
                         return (
                           <div key={m.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ background: 'var(--color-bg-tertiary)' }}>
                             {photo ? (
-                              <Image src={photo} alt={m.user.name} width={24} height={24} className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
+                              <Image src={photo} alt={ledenNaam(m)} width={24} height={24} className="w-6 h-6 rounded-md object-cover flex-shrink-0" />
                             ) : (
                               <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                                <span className="text-[9px] font-medium text-white">{m.user.name.charAt(0)}</span>
+                                <span className="text-[9px] font-medium text-white">{ledenNaam(m).charAt(0)}</span>
                               </div>
                             )}
-                            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{m.user.name}</span>
+                            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{ledenNaam(m)}</span>
                           </div>
                         )
                       })}
@@ -761,7 +769,7 @@ export default function DDProjectenPage() {
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {teamMembers.map(u => {
-                            const isIn = project.members.some(m => m.user.name === u.name)
+                            const isIn = project.members.some(m => ledenNaam(m) === u.name)
                             const photo = getPhotoUrl(u.name)
                             return (
                               <button
@@ -791,6 +799,40 @@ export default function DDProjectenPage() {
                                   </div>
                                 )}
                                 {u.name.split(' ')[0]}
+                                {isIn && <Icons.check size={10} />}
+                              </button>
+                            )
+                          })}
+                          {/* Externen (zzp) — zelfde knoppen, maar zonder account */}
+                          {DD_EXTERNEN.map(naam => {
+                            const isIn = project.members.some(m => m.externalName === naam)
+                            return (
+                              <button
+                                key={`ext-${naam}`}
+                                onClick={async () => {
+                                  const huidige = project.members
+                                    .filter(m => m.externalName)
+                                    .map(m => m.externalName as string)
+                                  const nieuwe = isIn ? huidige.filter(n => n !== naam) : [...huidige, naam]
+                                  try {
+                                    await fetch('/api/dd-projecten', {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ id: project.id, externalNames: nieuwe }),
+                                    })
+                                    fetchAll()
+                                  } catch { toast.error('Kon team niet bijwerken') }
+                                }}
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all border ${
+                                  isIn ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30' : 'border-transparent hover:border-white/10'
+                                }`}
+                                style={!isIn ? { background: 'var(--color-bg-secondary)', color: 'var(--color-text-tertiary)' } : undefined}
+                                title={`${naam} — extern, geen uren uit het urensysteem`}
+                              >
+                                <div className="w-[18px] h-[18px] rounded-md bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                                  <span className="text-[8px] font-medium text-white">{naam.charAt(0)}</span>
+                                </div>
+                                {naam}
                                 {isIn && <Icons.check size={10} />}
                               </button>
                             )
@@ -1307,6 +1349,45 @@ export default function DDProjectenPage() {
                           <Image src={photo} alt={m.name} width={18} height={18} className="w-[18px] h-[18px] rounded object-cover" />
                         ) : null}
                         {m.name.split(' ')[0]}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              {/* Externen: zzp'ers zonder dashboard-account. Wel op het project
+                  te zetten voor het overzicht; hun uren komen niet uit het
+                  urensysteem. */}
+              <div>
+                <label className="block text-sm mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                  Externen
+                  <span className="ml-1.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>zzp — geen uren uit het systeem</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {DD_EXTERNEN.map(naam => {
+                    const isSelected = form.externalNames.includes(naam)
+                    return (
+                      <button
+                        key={naam}
+                        type="button"
+                        onClick={() => {
+                          setForm(f => ({
+                            ...f,
+                            externalNames: f.externalNames.includes(naam)
+                              ? f.externalNames.filter(n => n !== naam)
+                              : [...f.externalNames, naam],
+                          }))
+                        }}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                          isSelected
+                            ? 'bg-workx-lime/15 text-workx-lime border-workx-lime/30'
+                            : 'border-transparent'
+                        }`}
+                        style={{
+                          background: isSelected ? undefined : 'var(--color-bg-tertiary)',
+                          color: isSelected ? undefined : 'var(--color-text-tertiary)',
+                        }}
+                      >
+                        {naam}
                       </button>
                     )
                   })}

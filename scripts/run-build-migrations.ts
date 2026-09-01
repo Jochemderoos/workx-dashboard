@@ -44,6 +44,7 @@ import { main as addDevelopmentPlanItemsTable } from './add-development-plan-ite
 import { main as addDevelopmentPlanReviewColumns } from './add-development-plan-review-columns'
 import { main as addDevelopmentPlanAiSummaryColumns } from './add-development-plan-ai-summary-columns'
 import { main as addDevelopmentPlanPartnerInput } from './add-development-plan-partner-input'
+import { main as addDdExternalMembers } from './add-dd-external-members'
 import { main as addTrainingCategoryColumns } from './add-training-category-columns'
 import { main as addYearAgendaTable } from './add-year-agenda-table'
 import { main as addWorkxOutingsTables } from './add-workx-outings-tables'
@@ -134,6 +135,7 @@ const TASKS: { name: string; run: (p: PrismaClient) => Promise<void> }[] = [
   { name: 'add-development-plan-review-columns', run: addDevelopmentPlanReviewColumns },
   { name: 'add-development-plan-ai-summary-columns', run: addDevelopmentPlanAiSummaryColumns },
   { name: 'add-development-plan-partner-input', run: addDevelopmentPlanPartnerInput },
+  { name: 'add-dd-external-members', run: addDdExternalMembers },
   { name: 'add-training-category-columns', run: addTrainingCategoryColumns },
   { name: 'add-year-agenda-table', run: addYearAgendaTable },
   { name: 'add-workx-outings-tables', run: addWorkxOutingsTables },

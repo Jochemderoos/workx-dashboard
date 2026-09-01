@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { name, client, description, memberIds, expectedHours } = await req.json()
+  const { name, client, description, memberIds, externalNames, expectedHours } = await req.json()
   if (!name?.trim() || !client?.trim()) {
     return NextResponse.json({ error: 'Naam en client zijn verplicht' }, { status: 400 })
   }
@@ -48,11 +48,18 @@ export async function POST(req: NextRequest) {
       client: client.trim(),
       description: description?.trim() || null,
       expectedHours: expectedHours || null,
-      members: memberIds?.length ? {
-        create: memberIds.map((userId: string) => ({
-          userId,
-          role: 'medewerker',
-        })),
+      members: (memberIds?.length || externalNames?.length) ? {
+        create: [
+          ...(memberIds ?? []).map((userId: string) => ({
+            userId,
+            role: 'medewerker',
+          })),
+          // Externen (zzp'ers) hebben geen account, alleen een naam.
+          ...(externalNames ?? []).map((naam: string) => ({
+            externalName: naam,
+            role: 'medewerker',
+          })),
+        ],
       } : undefined,
     },
     include: {
@@ -75,7 +82,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
   }
 
-  const { id, name, client, description, status, memberIds, expectedHours } = await req.json()
+  const { id, name, client, description, status, memberIds, externalNames, expectedHours } = await req.json()
   if (!id) {
     return NextResponse.json({ error: 'ID is verplicht' }, { status: 400 })
   }
@@ -91,14 +98,15 @@ export async function PUT(req: NextRequest) {
     else updateData.completedAt = null
   }
 
-  // Update members if provided
+  // Update members if provided — teamleden (met account) en externen (alleen
+  // een naam) worden los van elkaar bijgewerkt, zodat het meesturen van de een
+  // de ander niet wist.
   if (memberIds !== undefined) {
-    // Get current members
     const currentMembers = await prisma.dDProjectMember.findMany({
-      where: { projectId: id },
+      where: { projectId: id, userId: { not: null } },
       select: { userId: true },
     })
-    const currentIds = currentMembers.map(m => m.userId)
+    const currentIds = currentMembers.map(m => m.userId as string)
     const toAdd = (memberIds as string[]).filter(uid => !currentIds.includes(uid))
     const toRemove = currentIds.filter(uid => !(memberIds as string[]).includes(uid))
 
@@ -110,6 +118,28 @@ export async function PUT(req: NextRequest) {
     if (toAdd.length > 0) {
       await prisma.dDProjectMember.createMany({
         data: toAdd.map(userId => ({ projectId: id, userId, role: 'medewerker' })),
+      })
+    }
+  }
+
+  if (externalNames !== undefined) {
+    const huidigeExternen = await prisma.dDProjectMember.findMany({
+      where: { projectId: id, externalName: { not: null } },
+      select: { externalName: true },
+    })
+    const huidigeNamen = huidigeExternen.map(m => m.externalName as string)
+    const gevraagd = externalNames as string[]
+    const toevoegen = gevraagd.filter(naam => !huidigeNamen.includes(naam))
+    const verwijderen = huidigeNamen.filter(naam => !gevraagd.includes(naam))
+
+    if (verwijderen.length > 0) {
+      await prisma.dDProjectMember.deleteMany({
+        where: { projectId: id, externalName: { in: verwijderen } },
+      })
+    }
+    if (toevoegen.length > 0) {
+      await prisma.dDProjectMember.createMany({
+        data: toevoegen.map(naam => ({ projectId: id, externalName: naam, role: 'medewerker' })),
       })
     }
   }
