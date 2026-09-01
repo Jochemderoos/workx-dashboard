@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import Anthropic from '@anthropic-ai/sdk'
 import mammoth from 'mammoth'
 import * as XLSX from 'xlsx'
+import { htmlNaarTekst } from '@/lib/docx-tekst'
 
 // Word/Excel is groot genoeg voor een overdracht; hierboven is het vrijwel
 // zeker geen overdrachtsdocument meer.
@@ -14,14 +15,19 @@ const MAX_BYTES = 8 * 1024 * 1024
 const MAX_TEKENS = 60_000
 
 export const runtime = 'nodejs'
+// Een overdrachtsdocument kan tientallen dossiers bevatten; die omzetten duurt
+// langer dan de standaard-limiet van een serverless functie.
+export const maxDuration = 300
 
 /** Haalt platte tekst uit een Word-, Excel- of tekstbestand. */
 async function leesDocument(bestandsnaam: string, buffer: Buffer): Promise<string> {
   const naam = bestandsnaam.toLowerCase()
 
   if (naam.endsWith('.docx')) {
-    const { value } = await mammoth.extractRawText({ buffer })
-    return value
+    // Via HTML in plaats van extractRawText: overdrachten staan meestal in een
+    // tabel, en extractRawText gooit de kolomindeling weg. Zie docx-tekst.ts.
+    const { value } = await mammoth.convertToHtml({ buffer })
+    return htmlNaarTekst(value)
   }
 
   if (naam.endsWith('.doc')) {
@@ -94,9 +100,12 @@ export async function POST(req: NextRequest) {
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    const response = await client.messages.create({
+    // Streamen omdat een overdracht met tientallen dossiers een lang antwoord
+    // oplevert; zonder streamen loopt de HTTP-verbinding het risico te
+    // verlopen voordat het antwoord compleet is.
+    const stream = client.messages.stream({
       model: 'claude-opus-5',
-      max_tokens: 8000,
+      max_tokens: 32000,
       messages: [{
         role: 'user',
         content: `Je bent een assistent voor een advocatenkantoor. Hieronder staat een overdrachtsdocument (uit Word of Excel) waarin een advocaat zijn of haar dossiers overdraagt aan collega's tijdens afwezigheid. Zet dit om in gestructureerde overdracht-cases.
@@ -128,6 +137,7 @@ Regels:
       }]
     })
 
+    const response = await stream.finalMessage()
     const text = response.content.find(b => b.type === 'text')
     const antwoord = text && text.type === 'text' ? text.text : ''
 
