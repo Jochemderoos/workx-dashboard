@@ -17,6 +17,7 @@ const NAME_MAP: Record<string, string> = {
   'Erika': 'Erika van Zadelhof',
   'Barbara': 'Barbara Rip',
   'Heleen': 'Heleen Pesser',
+  'Laetitia': 'Laetitia Wezenbeek',
 }
 
 function extractTextFromDocxXml(xml: string): {

@@ -61,6 +61,15 @@ export const PARTNERS = [
   'Juliette Niersman',
 ]
 
+// Schrijven uren en horen dus thuis in de werkdruk- en urenoverzichten, maar
+// zijn geen advocaat: Diyar is juridisch medewerker, Nienke werkt als zzp'er
+// mee. Apart gehouden zodat ze niet als advocaat worden gelabeld in de
+// overzichten die op ADVOCATEN leunen (werkverdelingsgesprekken bijvoorbeeld).
+export const OVERIGE_UURSCHRIJVERS = [
+  'Diyar Wakkas',
+  'Nienke Louwmans',
+]
+
 // Lijst van advocaten (voor werkdruk tracking)
 export const ADVOCATEN = [
   'Justine Schellekens',
@@ -73,6 +82,9 @@ export const ADVOCATEN = [
   'Barbara Rip',
   'Julia Groen',
   'Alexander Collot d\'Escury',
+  // In dienst per 1 september 2026. Foto volgt; tot die tijd tonen de
+  // overzichten een initiaal-blokje.
+  'Laetitia Wezenbeek',
   // Lodewijk van Thiel — niet meer werkzaam bij Workx; uit team/dropdowns
   // gehaald. Zijn foto blijft in TEAM_PHOTOS voor historische weergave
   // (gemaakte uren, zaken).

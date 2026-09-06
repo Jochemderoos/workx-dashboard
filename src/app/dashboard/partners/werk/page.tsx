@@ -8,7 +8,7 @@ import DatePicker from '@/components/ui/DatePicker'
 import YearPicker from '@/components/ui/YearPicker'
 import { formatDateForAPI } from '@/lib/date-utils'
 import Image from 'next/image'
-import { TEAM_PHOTOS, ADVOCATEN, PARTNERS, getPhotoUrl } from '@/lib/team-photos'
+import { TEAM_PHOTOS, ADVOCATEN, PARTNERS, OVERIGE_UURSCHRIJVERS, getPhotoUrl } from '@/lib/team-photos'
 import ZakenToewijzing from '@/components/zaken/ZakenToewijzing'
 import { useLopendeZaken } from '@/lib/hooks/useData'
 import SpotlightCard from '@/components/ui/SpotlightCard'
@@ -178,7 +178,12 @@ export default function PartnersWerkPage() {
     const first = day === 0 || day === 6
       || (day === 5 && hour >= 20)
       || (day === 1 && hour < 20)
-    return { partnersFirst: first, peopleToShow: first ? [...PARTNERS, ...ADVOCATEN] : [...ADVOCATEN, ...PARTNERS] }
+    return {
+      partnersFirst: first,
+      peopleToShow: first
+        ? [...PARTNERS, ...ADVOCATEN, ...OVERIGE_UURSCHRIJVERS]
+        : [...ADVOCATEN, ...OVERIGE_UURSCHRIJVERS, ...PARTNERS],
+    }
   }, [refreshTick])
 
   // Helper to check if a date is a weekend
@@ -859,7 +864,10 @@ export default function PartnersWerkPage() {
             <ScrollReveal staggerChildren={0.05}>
             <div className="divide-y divide-white/5">
               {peopleToShow.map((person) => {
-                const photoUrl = TEAM_PHOTOS[person]
+                // Via getPhotoUrl in plaats van TEAM_PHOTOS rechtstreeks: wie
+                // nog geen foto heeft krijgt zo een initiaal in plaats van een
+                // kapot plaatje.
+                const photoUrl = getPhotoUrl(person)
                 const firstName = person.split(' ')[0]
                 const isPartner = PARTNERS.includes(person)
                 const weekTotal = getWeekTotal(person)
@@ -871,11 +879,17 @@ export default function PartnersWerkPage() {
                     style={{ gridTemplateColumns: `minmax(56px, 130px) repeat(${last3Workdays.length}, 1fr) minmax(36px, 52px)` }}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                      <img
-                        src={photoUrl}
-                        alt={person}
-                        className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg object-cover ring-2 ring-white/10 flex-shrink-0"
-                      />
+                      {photoUrl ? (
+                        <img
+                          src={photoUrl}
+                          alt={person}
+                          className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg object-cover ring-2 ring-white/10 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg ring-2 ring-white/10 flex-shrink-0 bg-workx-lime/15 flex items-center justify-center text-xs font-bold text-workx-lime">
+                          {firstName.charAt(0)}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <p className="font-medium text-white text-xs sm:text-sm whitespace-nowrap truncate">{firstName}</p>
                         {isPartner && <p className="text-[9px] text-workx-lime/60 leading-none">Partner</p>}

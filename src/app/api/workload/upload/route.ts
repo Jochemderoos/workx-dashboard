@@ -18,6 +18,7 @@ const MEDEWERKERS = [
   'Barbara Rip',
   'Lotte van Sint Truiden',
   'Julia Groen',
+  'Laetitia Wezenbeek',
   'Lodewijk van Thiel',
   'Marnix Ritmeester',
   'Jochem de Roos',

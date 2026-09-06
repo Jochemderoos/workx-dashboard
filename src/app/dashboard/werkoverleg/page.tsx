@@ -47,7 +47,7 @@ const TEAM_MEMBERS = [
   'Hele Team',
   'Marnix', 'Jochem', 'Maaike', 'Bas', 'Juliette', 'Hanna',
   'Justine', 'Marlieke', 'Wies', 'Emma', 'Kay',
-  'Erika', 'Barbara', 'Julia', 'Heleen', 'Lotte'
+  'Erika', 'Barbara', 'Julia', 'Heleen', 'Laetitia', 'Lotte'
 ]
 
 // Voorzitterslijst: het team (zonder 'Hele Team') plus Bente en Diyar, die wel

@@ -74,7 +74,7 @@ interface SearchResult {
 const TEAM_MEMBERS_NOTULEN = [
   'Marnix', 'Jochem', 'Maaike', 'Bas', 'Juliette', 'Hanna',
   'Justine', 'Marlieke', 'Wies', 'Emma', 'Kay',
-  'Erika', 'Barbara', 'Julia', 'Heleen'
+  'Erika', 'Barbara', 'Julia', 'Heleen', 'Laetitia'
 ]
 
 export default function NotulenPage() {
